@@ -1185,4 +1185,68 @@ describe('SpaceHub', () => {
             expect(screen.queryByRole('button', { name: /^Trash/ })).toBeNull()
         })
     })
+
+    // 2026-10-07: the list view had no Manage and nobody could archive a space.
+    // Archive keeps the space whole (PATCH archived), takes it out of the default
+    // list and shows it under "Archived", where Unarchive is the same one action.
+    describe('list view Manage and archive', () => {
+        const spacesNow = () => ([
+            { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+            { id: 'old', label: 'Old Show', isOwner: true, archivedAt: 1760000000000 },
+        ])
+        const manageBtn = (spaceId) => [...rowOf(spaceId).querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === 'Manage')
+        const listPanelBtn = (label) => [...document.querySelectorAll('.ssh-list-manage .ssh-card-btn')].find((b) => b.textContent === label)
+
+        it('shows Manage on a list row, and it opens the same actions the card has', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            fireEvent.click(manageBtn('mine'))
+            expect(['Rename', 'Archive', 'Delete'].every((l) => listPanelBtn(l))).toBe(true)
+        })
+
+        it('keeps an archived space out of the default list and out of All', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            expect(rowOf('old')).toBeNull()
+            expect(screen.getByRole('button', { name: /^Archived/ }).textContent).toContain('1')
+        })
+
+        it('Archive sends archived: true and reloads', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            fireEvent.click(manageBtn('mine'))
+            fireEvent.click(listPanelBtn('Archive'))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { archived: true }))
+        })
+
+        it('the Archived filter lists it, and Unarchive sends archived: false', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            fireEvent.click(screen.getByRole('button', { name: /^Archived/ }))
+            await waitFor(() => expect(rowOf('old')).toBeTruthy())
+            expect(rowOf('mine')).toBeNull()
+            expect(rowOf('old').textContent).toContain('archived')
+            fireEvent.click(manageBtn('old'))
+            fireEvent.click(listPanelBtn('Unarchive'))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('old', { archived: false }))
+        })
+
+        it('offers no Archive to someone who does not manage the space', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue([{ id: 'theirs', label: 'Theirs', isOwner: false, isPublic: true }])
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('theirs')).toBeTruthy())
+            expect(manageBtn('theirs')).toBeUndefined()
+        })
+    })
 })

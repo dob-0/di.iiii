@@ -387,7 +387,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds, archived } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -525,6 +525,7 @@ function registerSpaceRoutes(router, {
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {}),
         ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
         ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
+        ...(archived !== undefined ? { archived: Boolean(archived) } : {}),
         ...(slug !== undefined ? { slug: nextSlug } : {}),
         ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {}),
         ...(trustedUserIds !== undefined ? { trustedUserIds: nextTrustedUserIds } : {})

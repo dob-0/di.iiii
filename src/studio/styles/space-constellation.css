@@ -369,7 +369,7 @@
     /* The name gets the room; what opens sits beside it rather than adrift in
        the middle of a wide screen, and the two right columns are fixed so every
        row's state and buttons line up down the page. */
-    grid-template-columns: minmax(170px, 1.1fr) minmax(120px, 1fr) 130px 128px;
+    grid-template-columns: minmax(170px, 1.1fr) minmax(120px, 1fr) 130px 210px;
     align-items: center;
     gap: var(--di-space-4);
     padding: var(--di-space-2) var(--di-space-4);
@@ -402,6 +402,13 @@
 .ssh-list-state--nodoor { color: var(--di-warning); }
 .ssh-list-acts { display: flex; gap: var(--di-space-2); justify-content: flex-end; }
 .ssh-list-acts .ssh-card-btn { text-decoration: none; }
+/* Manage opens under its row, the same panel the card shows. */
+.ssh-list-manage {
+    padding: 0 var(--di-space-4) var(--di-space-3);
+    border-bottom: 1px solid var(--di-line);
+    background: var(--di-surface-2, transparent);
+}
+.ssh-list-manage .ssh-card-actions { margin-top: 0; border-top: none; padding-top: var(--di-space-2); }
 
 @media (max-width: 720px) {
     .ssh-list-head { display: none; }
