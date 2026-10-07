@@ -1482,6 +1482,7 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://diiii.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'One link opens it: http://diiii.localhost/ — the same link on every machine with di.iiii, and each one opens its own. A browser treats a .localhost name as safe, so the camera, the microphone and VR work there with no certificate. di status shows the link when it answers as this di.iiii and says why when it does not; di open opens it. On Linux, port 80 needs a one-time permission for di\'s own Node (di logs names it when it is missing). A phone or a headset cannot use this link — localhost always means the device in your hand — so they open the address di up --lan shows.',
             'Your work is files. `di save my-show` writes one file — my-show.diiii — holding everything that space is made of: the scene, every edit ever made to it, the projects inside it, the images and models, and its light show — the fixtures, scenes, looks and MIDI map the lighting desk keeps for that space, without the wiring of the machine it was made on, so opening it never sends light at somebody else\'s rig. Copy it to a stick, email it, keep it for ten years; `di open my-show.diiii` puts it back, on this machine or anyone else’s. It is the same idea as a Blender file, with one difference worth knowing: a space is live, so there is nothing to lose by forgetting to save — di.iiii is already keeping it. Saving is how you get a copy you can carry, not how the work survives.',
             'You do not need the terminal for this. Every space on the Spaces page has a Save to file button, and Open a file sits next to + Create — the same file, either way. If a space of that name is already there, di.iiii asks what to call this one instead of refusing.',
             'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
@@ -1511,8 +1512,8 @@ export const WIKI_ARTICLES = [
             'A space can also be shared with another artist\u2019s di.iiii directly, over the same wifi, with no internet and no account in the middle — see \u201cTwo artists, two machines, one space\u201d.',
             'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
         ],
-        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-10-02'
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate', 'diiii.localhost', 'link', 'address'],
+        updated: '2026-10-07'
     },
     {
         id: 'tools-room',
