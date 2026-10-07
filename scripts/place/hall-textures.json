@@ -1,0 +1,13 @@
+{
+  "what": "CC0 PBR texture sets for the parametric hall (hall.py --textures). Pinned: each zip's sha256 is checked before use.",
+  "licence": "Creative Commons CC0 1.0 Universal — https://docs.ambientcg.com/license/ (\"copy, modify, distribute and perform the assets, even for commercial purposes, all without asking permission\"; no attribution required)",
+  "source": "https://ambientcg.com",
+  "retrieved": "2026-10-07",
+  "choice": "Picked by eye against the owner's real photographs of the hall (~/Downloads/moxir-for-emily-2026-10-02/): pale cream concrete on columns and walls, dark pitted floor, painted grey steel with rust streaks, heavy rust. Stand-ins until the owner photographs the hall's own surfaces.",
+  "sets": {
+    "Concrete046": { "url": "https://ambientcg.com/get?file=Concrete046_1K-JPG.zip", "sha256": "72bf4321acbb39ddbc3b786f5996813b2a3cede12efefb47955e97ea9668985b", "tile_m": 2.0, "for": ["concrete", "block"] },
+    "Concrete044D": { "url": "https://ambientcg.com/get?file=Concrete044D_1K-JPG.zip", "sha256": "0fe08e81f7149769fea26b4f270763c0bcbfa42428e3114226eeb2d2a46e64fd", "tile_m": 3.0, "for": ["floor"] },
+    "Metal055B": { "url": "https://ambientcg.com/get?file=Metal055B_1K-JPG.zip", "sha256": "ffcebec0dbd6c111f3d6179af0d75e87f3d428ea6a5461ae3bce7121e24a4940", "tile_m": 1.5, "for": ["frame", "steel", "girder", "crane", "deck", "machine"] },
+    "Metal053C": { "url": "https://ambientcg.com/get?file=Metal053C_1K-JPG.zip", "sha256": "ca2073be9915e8a6d48ec707d03b068854eff4364f6dd9eec0487895664065a5", "tile_m": 1.5, "for": ["rust"] }
+  }
+}

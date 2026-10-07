@@ -218,7 +218,7 @@ DOUBLE_SIDED = {'frame', 'glass', 'skylight'}
 
 def parse_cli():
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    opts = {'out': None, 'dims': [], 'preview': False, 'preview_camera': None, 'overrides': {}}
+    opts = {'out': None, 'dims': [], 'preview': False, 'preview_camera': None, 'overrides': {}, 'textures': None}
     i = 0
     while i < len(argv):
         flag = argv[i]
@@ -230,6 +230,8 @@ def parse_cli():
             opts['out'] = argv[i + 1]; i += 2
         elif flag == '--dims':
             opts['dims'].append(argv[i + 1]); i += 2
+        elif flag == '--textures':
+            opts['textures'] = os.path.abspath(argv[i + 1]); i += 2
         elif flag == '--preview':
             opts['preview'] = True; i += 1
         elif flag == '--preview-camera':
@@ -480,6 +482,8 @@ class Builder:
                 bpy.ops.mesh.normals_make_consistent(inside=False)
                 bpy.ops.object.mode_set(mode='OBJECT')
                 obj.select_set(False)
+            if TEXTURES and name in TEXTURES['tile_m']:
+                box_project_uvs(mesh, TEXTURES['tile_m'][name])
             obj.data.materials.append(material(name))
             objects.append(obj)
         return objects
@@ -513,7 +517,36 @@ def material(name):
         bsdf.inputs['Emission Color'].default_value = (*emissive, 1.0)
         bsdf.inputs['Emission Strength'].default_value = EMISSION_STRENGTH.get(name, 0.6)
     mat.use_backface_culling = name not in DOUBLE_SIDED
+    if TEXTURES and name in TEXTURES['tile_m']:
+        nodes, links = mat.node_tree.nodes, mat.node_tree.links
+        colour_tex = nodes.new('ShaderNodeTexImage')
+        colour_tex.image = bpy.data.images.load(os.path.join(TEXTURES['dir'], f'{name}_color.jpg'))
+        links.new(colour_tex.outputs['Color'], bsdf.inputs['Base Color'])
+        normal_tex = nodes.new('ShaderNodeTexImage')
+        normal_tex.image = bpy.data.images.load(os.path.join(TEXTURES['dir'], f'{name}_normal.jpg'))
+        normal_tex.image.colorspace_settings.name = 'Non-Color'
+        normal_map = nodes.new('ShaderNodeNormalMap')  # the maps are OpenGL-style (+Y up), as glTF wants
+        links.new(normal_tex.outputs['Color'], normal_map.inputs['Color'])
+        links.new(normal_map.outputs['Normal'], bsdf.inputs['Normal'])
     return mat
+
+
+# Texture sets baked by hall-textures.py (--textures <dir>): {'dir', 'tile_m': {material: metres per repeat}}.
+# None = the flat table colours, exactly as before.
+TEXTURES = None
+
+
+def box_project_uvs(mesh, tile_m):
+    """Box (cube) projection in metres: each face takes the two world axes across its dominant normal axis,
+    so a texture repeats every `tile_m` metres whatever the face's size (the meshes are merged boxes, with no
+    UVs of their own). Blender frame, z up. Established method: box/cube mapping (Blender UV Project / Triplanar)."""
+    layer = mesh.uv_layers.new(name='UVMap')
+    for poly in mesh.polygons:
+        n = poly.normal
+        axes = (0, 1) if abs(n.z) >= abs(n.x) and abs(n.z) >= abs(n.y) else ((1, 2) if abs(n.x) >= abs(n.y) else (0, 2))
+        for li in poly.loop_indices:
+            co = mesh.vertices[mesh.loops[li].vertex_index].co
+            layer.data[li].uv = (co[axes[0]] / tile_m, co[axes[1]] / tile_m)
 
 
 # ── the hall ────────────────────────────────────────────────────────────────────
@@ -1108,7 +1141,7 @@ def export(objects, glb_path):
     bpy.ops.export_scene.gltf(
         filepath=glb_path, export_format='GLB', use_selection=True,
         export_yup=True, export_apply=True, export_normals=True,
-        export_texcoords=False, export_materials='EXPORT')
+        export_texcoords=bool(TEXTURES), export_materials='EXPORT')
 
 
 def preview(path, dims, camera=None):
@@ -1154,6 +1187,9 @@ def main():
     os.makedirs(out, exist_ok=True)
     dims, origin, dims_source, dims_notes = resolve_dims(opts)
 
+    global TEXTURES
+    if opts['textures']:
+        TEXTURES = {'dir': opts['textures'], **json.load(open(os.path.join(opts['textures'], 'textures.json')))}
     bpy.ops.wm.read_factory_settings(use_empty=True)
     builder, geometry = build(dims)
     objects = builder.to_objects()

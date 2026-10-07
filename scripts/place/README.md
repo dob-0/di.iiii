@@ -674,3 +674,19 @@ package to be under 88 °C before each.
 The Meshroom invocation in `reconstruct.py` is written from the 2025.1.0
 documentation. The rest of the Colab step — sign-in, session, chunked upload,
 detached start, polling, download, stop — has been run against a real box.
+
+## Textured hall (opt-in, CC0)
+
+`hall.py` draws flat colours by default. With `--textures <dir>` the hall's concrete, floor, steel and rust get
+CC0 PBR surfaces (colour + normal map, box-projected UVs, one repeat per `tile_m` metres):
+
+```bash
+python3 scripts/place/hall-textures.py --out /tmp/hall-tex          # fetches the pinned sets, checks sha256, bakes
+blender -b -P scripts/place/hall.py -- --out <dir> --textures /tmp/hall-tex <the usual --dims …>
+```
+
+Source, licence, date and sha256 per set: `hall-textures.json` (ambientCG, CC0 1.0, retrieved 2026-10-07; guard
+`hall-textures.test.js`). The colour map is tinted so its linear-light mean equals the photo-sampled colour in
+`MATERIALS`; roughness stays the table's scalar. These are stand-ins picked by eye against the owner's photographs
+— replace with photographs of the hall's own surfaces when they exist. The GLB grows (3.2 → 6.1 MB measured, one copy
+of each map per material; deduping is owed). Not yet re-imported into any project.
