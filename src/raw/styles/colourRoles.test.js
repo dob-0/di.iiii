@@ -118,7 +118,7 @@ describe('raw colour roles', () => {
         const base = readFileSync(join(stylesDir, '../../styles/base.css'), 'utf8')
         const bare = [...css.matchAll(/var\((--[a-z0-9-]+)\s*\)/gi)].map((m) => m[1])
         // Set inline by a component, which is a definition — just not in a file.
-        const setByComponents = new Set(['--card-family', '--window-accent', '--raw-scaffold-top'])
+        const setByComponents = new Set(['--card-family', '--window-accent', '--raw-scaffold-top', '--raw-zoom'])
         // Declared by the one bar's own stylesheet. The only rules here that read
         // its height apply while the bar is drawn (.is-under-sbar), and drawing it
         // loads that sheet — so the token is always there when it is read.
