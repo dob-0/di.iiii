@@ -1,10 +1,11 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
 import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { bloomOf } from './bloom.js'
+import { useHoldFrames } from '../../studio/utils/renderDemand.jsx'
 import { surfacesOf } from './surfaces.js'
 import SurfaceOverrides from './SurfaceOverrides.jsx'
 import BeamMirrors from './BeamMirrors.jsx'
@@ -85,7 +86,20 @@ export default function RenderSettingsEffect({ renderSettings }) {
     const surfaces = surfacesOf(renderSettings)
     // a room with a physical haze: what its openings show takes the haze's veil (NightOutside.jsx)
     const hazy = Boolean(renderSettings?.atmosphere?.haze)
-    if (!bloomOf(renderSettings) && !governed && !surfaces && !hazy) return null
+    const heavyRoom = Boolean(bloomOf(renderSettings) || governed || surfaces || hazy)
+    // Under Studio's on-demand loop a bloom or haze scene is still when its haze is even:
+    // HdrBloom draws its own frame each time one is asked for, the governor only rates the
+    // continuous bursts (it ignores an on-demand loop), and the scene walks poll during the
+    // burst after a load. Only the drifting eddies (uHazeTime, patchiness > 0) move by
+    // themselves, so only an uneven haze holds the loop.
+    const [patchy, setPatchy] = useState(() => (getHazeField(gl)?.patchiness || 0) > 0)
+    useEffect(() => {
+        const read = () => setPatchy((getHazeField(gl)?.patchiness || 0) > 0)
+        read()
+        return subscribeHazeField(gl, read)
+    }, [gl])
+    useHoldFrames(heavyRoom && patchy, 'haze-eddies')
+    if (!heavyRoom) return null
     return (
         <Suspense fallback={null}>
             {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}

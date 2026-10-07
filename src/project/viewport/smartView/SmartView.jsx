@@ -582,8 +582,12 @@ export default function SmartView({
         boundary: new THREE.Box3()
     }), [])
 
-    useFrame((_, delta) => {
+    useFrame((frameState, delta) => {
         const state = live.current
+        // On-demand frame loop (Studio): this callback keeps asking for the next frame only while
+        // something here is still moving — a model that may still be loading, the cutaway, the fog,
+        // the occlusion fade. At rest it asks for none.
+        let moving = false
         state.sinceScan += delta
         // Fast while a model may still be loading, slow once measured, and slower still in
         // a room that turns out to hold no building at all.
@@ -593,7 +597,7 @@ export default function SmartView({
             state.misses = state.frame ? 0 : (state.misses || 0) + 1
         }
         const frame = state.frame
-        if (!frame) return
+        if (!frame) { if ((state.misses || 0) <= 20) frameState.invalidate(); return }
         if (!state.building) {
             state.building = true
             onBuildingRef.current?.(true)
@@ -616,6 +620,7 @@ export default function SmartView({
                 state.slots[i] = null
             } else {
                 state.slots[i] = approach(state.slots[i] ?? edges[i], goal, delta, 0.1)
+                if (Math.abs(state.slots[i] - goal) > 0.01) moving = true
             }
         }
         const s = state.slots
@@ -648,6 +653,7 @@ export default function SmartView({
             // a haze worked out from its machines, seen from outside: no veil on the surfaces (farthestCornerDistance)
             if (base !== fogBase && plan.roof !== null) goal = Math.max(goal, farthestCornerDistance(cam.toArray(), frame.bounds))
             state.fogOffset = approach(state.fogOffset, goal, delta, 0.15)
+            if (Math.abs(state.fogOffset - goal) > 0.01) moving = true
             scene.fog.near = base.near + state.fogOffset
             scene.fog.far = base.far + state.fogOffset
         }
@@ -679,6 +685,7 @@ export default function SmartView({
             state.goal = blocked && !state.atPreset ? 1 : 0
         }
         state.strength = approach(state.strength, state.goal, delta, state.goal > state.strength ? 0.08 : 0.2)
+        if (Math.abs(state.strength - state.goal) > 0.002) moving = true
         uniforms.uSvStrength.value = state.strength < 0.002 ? 0 : state.strength
         if (uniforms.uSvStrength.value > 0) {
             gl.getDrawingBufferSize(scratch.buffer)
@@ -739,6 +746,7 @@ export default function SmartView({
                 cc.setPosition(c[0], c[1], c[2], false)
             }
         }
+        if (moving) frameState.invalidate()
     })
 
     // Give BVH memory back with the geometry's owner — the model disposes geometry itself;
