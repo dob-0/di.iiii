@@ -23,3 +23,7 @@
   The reviewer's six tests are in the suite (`syncKeyManage.review.test.js`). Results: 23/23 key suites,
   contracts 199/199, follow integration 54/54 on one run and 53/54 on the other; the one failure is the
   pre-existing "start from now" flake, which also fails on #800's branch (2 of 5 runs there, 1 of 5 here).
+- Round 3 (review round 2, "merge after fixes"): R2-A communal/guest space refused by id, token scopes counted,
+  fail closed; R2-B positive `via:'signin'` stamp + one re-issue helper; R2-C session mints off when the cookie key
+  is a token (startup warning); R2-D follower reads the address pin. Key suites incl. the reviewer's round-2 file:
+  32/32. The full batch was stopped by the session for low memory and is owed.
