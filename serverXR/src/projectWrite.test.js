@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 const require = createRequire(import.meta.url)
 const store = require('./projectStore.js')
 const { initDb, closeDb, getDb } = require('./db.js')
-const { withProjectWriteLock, commitProjectWrite } = require('./projectWrite.js')
+const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite } = require('./projectWrite.js')
 
 const SPACE = 'room'
 const PROJECT = 'test'
@@ -192,4 +192,58 @@ describe('the project write lock holds across processes', () => {
         await new Promise((resolve) => (holder.exitCode !== null ? resolve() : holder.once('exit', resolve)))
         expect(existsSync(lockfilePath)).toBe(false)
     }, 15_000)
+})
+
+// A project move renames the project's own directory, and the cross-process lock
+// is a file inside it — so a move holds only the in-process half. What must stay
+// true is that it still queues with THIS server's own writes to the same project
+// (the one thing the old single in-process lock gave the move route), and that
+// it leaves no lock file in the directory it is about to rename.
+describe('a move holds the in-process lock only, and still queues with the writes', () => {
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 40))
+
+    it('waits for a write that holds the project, and a write waits for it', async () => {
+        const spacesDir = await makeSpacesDir()
+        await store.ensureProject(spacesDir, SPACE, PROJECT)
+        const lockOpts = { spacesDir, spaceId: SPACE, projectId: PROJECT, log: quietLog }
+
+        // A write is inside its lock: a move of the same project queues behind it.
+        const order = []
+        let letGo
+        const held = new Promise((resolve) => { letGo = resolve })
+        const write = withProjectWriteLock(lockOpts, async () => { order.push('write:start'); await held; order.push('write:end') })
+        await tick()
+        const move = withProjectInProcessLock(PROJECT, async () => { order.push('move') })
+        await tick()
+        expect(order).toEqual(['write:start'])
+        letGo()
+        await Promise.all([write, move])
+        expect(order).toEqual(['write:start', 'write:end', 'move'])
+
+        // And the other way round: a write queues behind a move in progress.
+        const back = []
+        let letGoMove
+        const heldMove = new Promise((resolve) => { letGoMove = resolve })
+        const moving = withProjectInProcessLock(PROJECT, async () => { back.push('move:start'); await heldMove; back.push('move:end') })
+        await tick()
+        const writing = withProjectWriteLock(lockOpts, async () => { back.push('write') })
+        await tick()
+        expect(back).toEqual(['move:start'])
+        letGoMove()
+        await Promise.all([moving, writing])
+        expect(back).toEqual(['move:start', 'move:end', 'write'])
+    })
+
+    it('leaves no lock file inside the project directory the move renames, and does not hold up another project', async () => {
+        const spacesDir = await makeSpacesDir()
+        await store.ensureProject(spacesDir, SPACE, PROJECT)
+        await store.ensureProject(spacesDir, SPACE, 'other')
+        const { documentPath } = store.getProjectPaths(spacesDir, SPACE, PROJECT)
+        let otherRan = false
+        await withProjectInProcessLock(PROJECT, async () => {
+            expect(existsSync(`${documentPath}.lock`)).toBe(false)
+            await withProjectInProcessLock('other', async () => { otherRan = true })
+        })
+        expect(otherRan).toBe(true)
+    })
 })

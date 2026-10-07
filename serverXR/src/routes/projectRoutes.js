@@ -5,7 +5,7 @@ const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore')
 const { receiveBodyToTempFile } = require('../verbatimAsset')
-const { withProjectWriteLock, commitProjectWrite: commitWrite } = require('../projectWrite')
+const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite: commitWrite } = require('../projectWrite')
 const logger = require('../logger')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
@@ -459,7 +459,10 @@ function registerProjectRoutes(router, {
           return res.status(403).json({ error: 'Only an admin, or the owner of both spaces, can move a project between them.' })
         }
       }
-      const report = await withProjectLock(project.projectId, () => moveProject({
+      // In this process only, on purpose: the move renames the project's own
+      // directory, and the lock another server would respect is a file inside
+      // it (projectWrite.js, withProjectInProcessLock).
+      const report = await withProjectInProcessLock(project.projectId, () => moveProject({
         projectId: project.projectId,
         toSpaceId,
         unpublish: req.body?.unpublish === true,

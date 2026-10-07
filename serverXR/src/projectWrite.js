@@ -87,6 +87,17 @@ const withProjectWriteLock = ({ spacesDir, spaceId, projectId, log = console, st
     }
   })
 
+/**
+ * The in-process half alone, for work that renames the project's own directory
+ * (projectMove.js moves `<space>/projects/<id>/`). The lock file lives inside
+ * that directory, so it cannot be held across a move: it would travel with the
+ * rename and be left in the other space. This still lines the work up with
+ * every write THIS server makes to the project — the same keyed lock, the same
+ * key — and says nothing to another server on the data folder.
+ * Owed: a move is not yet guarded across processes.
+ */
+const withProjectInProcessLock = (projectId, fn) => inProcess(projectId, fn)
+
 const describeHealed = (healed) =>
   `[projects] ${healed.projectId}: ${healed.moved} op(s) v${healed.from}–v${healed.to} were above the version it stands at (v${healed.documentVersion}) — moved to project_ops_quarantine before this write; document kept as it is. Reason: ${healed.reason}`
 
@@ -133,4 +144,4 @@ const recoverAllStagedDocuments = async ({ spacesDir, projects = [], log = conso
   return count
 }
 
-module.exports = { withProjectWriteLock, commitProjectWrite, recoverAllStagedDocuments, STALE_MS }
+module.exports = { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite, recoverAllStagedDocuments, STALE_MS }
