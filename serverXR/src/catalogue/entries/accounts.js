@@ -149,7 +149,7 @@ module.exports = [
         properties: { telegramId: { type: "string", pattern: "^[0-9]{1,20}$" } }
       }
     },
-    note: "guarded by the x-telegram-login-secret header. 404 {bound:false} for an id with no account — it never creates one. The token is refused on /api/auth/*, /api/users*, sync keys, integrations, DMs, approvals, invite redeem and space ownership (serverXR/src/actTokenGate.js); every write it makes is logged and stamped 'via di.bo'."
+    note: "guarded by the x-telegram-login-secret header. 404 {bound:false} for an id with no account — it never creates one. The token is refused on /api/auth/*, /api/users*, sync keys, integrations, DMs, approvals, invite redeem and space ownership (serverXR/src/actTokenGate.js); every write it makes is logged and stamped 'via di.bo'. Tiers (actTokenTier.js, server env ACT_TOKEN_ROOT_TELEGRAM_IDS / ACT_TOKEN_ADMIN_TELEGRAM_IDS): root = the account's reach; admin = that minus platform settings (config, /api/admin, estate, commons moderation, deleting a whole space); member (default) = role capped at editor, own spaces only, same refusals as admin."
   },
   {
     route: "POST /api/invites/redeem",

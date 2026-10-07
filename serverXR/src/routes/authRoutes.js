@@ -450,13 +450,20 @@ const registerAuthRoutes = (router, {
           tokenVersion: user.tokenVersion,
           ttlMs: telegram.actTokenTtlMs
         })
-        logger.info(`[act-token] minted ${JSON.stringify({ tokenId: id, subject: user.id, actor: 'di.bo', expiresAt })}`)
+        // The tier is named so di.bo can say what it may do; the server
+        // re-reads it on every request (actTokenTier.js), so this is a label,
+        // not the grant.
+        const { tierFor, capForTier } = require('../actTokenTier')
+        const tier = tierFor(telegramId, { rootIds: telegram.actTokenRootIds, adminIds: telegram.actTokenAdminIds })
+        const reach = capForTier(tier, { role: user.role, isUnrestricted: false })
+        logger.info(`[act-token] minted ${JSON.stringify({ tokenId: id, subject: user.id, actor: 'di.bo', tier, expiresAt })}`)
         res.status(201).json({
           token,
           expiresAt,
           userId: user.id,
-          role: user.role,
-          note: 'Send as Authorization: Bearer <token>. It acts as this person, with their own access; account, key and approval routes refuse it.'
+          role: reach.role,
+          tier,
+          note: 'Send as Authorization: Bearer <token>. It acts as this person, never past their own access, at this tier; account, key and approval routes refuse it, and below root so do the platform settings.'
         })
       } catch (error) { next(error) }
     })

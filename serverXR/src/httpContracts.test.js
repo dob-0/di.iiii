@@ -3409,8 +3409,8 @@ describe('di.bo acting as a person (act-token)', () => {
         try { return db.prepare(sql).run(...params) } finally { db.close() }
     }
     // A person who signed in with Telegram once, reaching one space.
-    const setup = async () => {
-        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+    const setup = async (extraEnv = {}) => {
+        const server = await startServer({ requireAuth: true, extraEnv: { ...withTelegram, ...extraEnv } })
         await createSpaceWithScene(server, { spaceId: 'tg-mine', scene: { objects: [{ id: 'floor' }], assets: [] } })
         await createSpaceWithScene(server, { spaceId: 'tg-other', scene: { objects: [{ id: 'floor' }], assets: [] } })
         const now = Date.now()
@@ -3508,8 +3508,9 @@ describe('di.bo acting as a person (act-token)', () => {
     })
 
     it('refuses the routes a borrowed key must never reach, whatever the person\'s role', async () => {
-        const server = await setup()
-        // Even an admin's token is refused here: the list is about the key, not the role.
+        // Even root's token, on an admin account, is refused here: the list is
+        // about the key, not the role or the tier.
+        const server = await setup({ ACT_TOKEN_ROOT_TELEGRAM_IDS: TG_ID })
         writeDb(server, "UPDATE users SET role = 'admin' WHERE id = ?", PERSON)
         const { token } = await (await mint(server)).json()
         const refused = [
@@ -3565,6 +3566,71 @@ describe('di.bo acting as a person (act-token)', () => {
         const logout = await fetch(`${server.baseUrl}/api/auth/session`, { method: 'DELETE', headers: { Cookie: mintSessionCookie(PERSON) } })
         expect(logout.status).toBe(204)
         expect((await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(live.token) })).status).toBe(401)
+    })
+
+    // The owner, 2026-10-07: "make me root, Emilya admin, and make the right
+    // privileges" (actTokenTier.js). Three admin ACCOUNTS, three tiers: the
+    // tier, not the account, decides how far di.bo reaches, and only downward.
+    it('reaches by tier — root, admin, member — and never past the account', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: { ...withTelegram, ACT_TOKEN_ROOT_TELEGRAM_IDS: '111111', ACT_TOKEN_ADMIN_TELEGRAM_IDS: '222222, 444444' }
+        })
+        await createSpaceWithScene(server, { spaceId: 'tg-a', scene: { objects: [], assets: [] } })
+        await createSpaceWithScene(server, { spaceId: 'tg-b', scene: { objects: [], assets: [] } })
+        await createSpaceWithScene(server, { spaceId: 'tg-c', scene: { objects: [], assets: [] } })
+        const now = Date.now()
+        for (const [id, tg, role] of [['u-root', '111111', 'admin'], ['u-admin', '222222', 'admin'], ['u-member', '333333', 'admin'], ['u-listed-editor', '444444', 'editor']]) {
+            writeDb(server, `
+                INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+                VALUES (?, 'telegram', ?, NULL, ?, ?, ?, ?, ?)
+            `, id, tg, id, role, JSON.stringify(role === 'editor' ? ['tg-a'] : []), now, now)
+        }
+        const tokenFor = async (tg) => (await mint(server, tg)).json()
+        const root = await tokenFor('111111')
+        const admin = await tokenFor('222222')
+        const member = await tokenFor('333333')
+        const editor = await tokenFor('444444')
+        expect([root.tier, admin.tier, member.tier, editor.tier]).toEqual(['root', 'admin', 'member', 'admin'])
+        expect(member.role).toBe('editor')
+        const status = async (token, method, url, body) => {
+            const res = await fetch(`${server.baseUrl}${url}`, {
+                method, headers: as(token, body ? json : {}), ...(body ? { body: JSON.stringify(body) } : {})
+            })
+            return { status: res.status, body: await res.json().catch(() => null) }
+        }
+
+        // A member's admin account acts as an editor of its own spaces: tg-b is not its.
+        expect((await status(member.token, 'GET', '/api/spaces/tg-b/projects')).status).toBe(403)
+        // An admin tier keeps the account's admin reach across spaces.
+        expect((await status(admin.token, 'GET', '/api/spaces/tg-b/projects')).status).toBe(200)
+        // Listed as admin, but the account is an editor: the tier never adds reach.
+        expect((await status(editor.token, 'GET', '/api/spaces/tg-b/projects')).status).toBe(403)
+        expect((await status(editor.token, 'GET', '/api/spaces/tg-a/projects')).status).toBe(200)
+
+        // The platform settings: refused below root, by rule, with the tier named.
+        for (const [method, url, body] of [
+            ['GET', '/api/estate/map'],
+            ['PATCH', '/api/config', { defaultSpaceId: 'tg-a' }],
+            ['DELETE', '/api/spaces/tg-c']
+        ]) {
+            for (const [who, token] of [['admin', admin.token], ['member', member.token]]) {
+                const r = await status(token, method, url, body)
+                expect(r.status, `${who} ${method} ${url}`).toBe(403)
+                expect(r.body).toMatchObject({ error: 'not_through_di_bo', tier: who })
+            }
+            const r = await status(root.token, method, url, body)
+            expect(r.body?.error, `root ${method} ${url}`).not.toBe('not_through_di_bo')
+        }
+        // Root really did it: the space is gone (to the trash or for good).
+        expect((await status(root.token, 'GET', '/api/spaces/tg-c/projects')).status).not.toBe(200)
+        // And root still meets the common refusals.
+        expect((await status(root.token, 'GET', '/api/users')).body).toMatchObject({ error: 'not_through_di_bo' })
+
+        // Every write line carries the tier.
+        const lines = () => server.logs().split('\n').filter((l) => l.includes('[act-token] write'))
+        for (let i = 0; i < 40 && !lines().some((l) => l.includes('"tier":"root"')); i += 1) await wait(50)
+        expect(lines().map((l) => JSON.parse(l.slice(l.indexOf('{'))))).toContainEqual(expect.objectContaining({ subject: 'u-root', tier: 'root', method: 'DELETE', path: '/api/spaces/tg-c' }))
     })
 })
 

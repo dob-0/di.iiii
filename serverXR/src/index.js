@@ -91,6 +91,7 @@ const {
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const { resolveActToken, PREFIX: actTokenPrefix } = require('./telegramActTokenStore')
 const { createActTokenGate } = require('./actTokenGate')
+const { tierFor, capForTier } = require('./actTokenTier')
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
@@ -781,19 +782,24 @@ const resolveActTokenState = (req, token) => {
       ? getFreshDbIdentity(claim.userId)
       : null
     if (fresh && fresh.dbRole) {
+      // The tier (actTokenTier.js) only ever lowers what the account has.
+      const tg = config.oauth?.telegram || {}
+      const actTier = tierFor(claim.telegramId, { rootIds: tg.actTokenRootIds, adminIds: tg.actTokenAdminIds })
+      const reach = capForTier(actTier, { role: fresh.dbRole, isUnrestricted: fresh.dbUnrestricted })
       state = {
         ...buildAuthState({
           authenticated: true,
           type: 'session',
-          role: fresh.dbRole,
+          role: reach.role,
           subject: claim.userId,
           label: claim.label,
           spaces: fresh.dbSpaces,
-          isUnrestricted: fresh.dbUnrestricted,
+          isUnrestricted: reach.isUnrestricted,
           session: { subject: claim.userId, expiresAt: claim.expiresAt, tokenVersion: claim.tokenVersion }
         }),
         actor: 'di.bo',
-        actTokenId: claim.tokenId
+        actTokenId: claim.tokenId,
+        actTier
       }
     }
   }

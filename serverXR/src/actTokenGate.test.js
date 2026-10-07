@@ -126,7 +126,7 @@ describe('the gate', () => {
         res.finish()
         const line = logger.info.mock.calls.map((c) => c[0]).find((l) => l.startsWith('[act-token] write'))
         expect(JSON.parse(line.replace('[act-token] write ', ''))).toEqual({
-            subject: 'u-1', actor: 'di.bo', tokenId: 't-1', method: 'POST', path: '/api/spaces/mine/projects', status: 201
+            subject: 'u-1', actor: 'di.bo', tokenId: 't-1', tier: 'member', method: 'POST', path: '/api/spaces/mine/projects', status: 201
         })
     })
 
@@ -149,5 +149,53 @@ describe('the gate', () => {
         res.setHeader('Content-Type', 'application/json')
         expect(res.headers['content-type']).toBe('application/json')
         expect(logger.warn).toHaveBeenCalled()
+    })
+})
+
+describe('tiers (actTokenTier.js) — the owner, 2026-10-07', () => {
+    const { parseTelegramIds, tierFor, capForTier } = require('./actTokenTier')
+    const { REFUSED_BELOW_ROOT, tierRefusalFor } = require('./actTokenGate')
+    const lists = { rootIds: parseTelegramIds('111, x, 222 '), adminIds: parseTelegramIds('333') }
+
+    it('reads the tier from server env lists, member by default', () => {
+        expect(tierFor('111', lists)).toBe('root')
+        expect(tierFor('333', lists)).toBe('admin')
+        expect(tierFor('999', lists)).toBe('member')
+        expect(tierFor('', lists)).toBe('member')
+        expect(tierFor('111', {})).toBe('member')
+    })
+
+    it('only ever lowers the account', () => {
+        expect(capForTier('member', { role: 'admin', isUnrestricted: true })).toEqual({ role: 'editor', isUnrestricted: false })
+        expect(capForTier('member', { role: 'viewer', isUnrestricted: false })).toEqual({ role: 'viewer', isUnrestricted: false })
+        expect(capForTier('admin', { role: 'editor', isUnrestricted: false })).toEqual({ role: 'editor', isUnrestricted: false })
+        expect(capForTier('root', { role: 'admin', isUnrestricted: true })).toEqual({ role: 'admin', isUnrestricted: true })
+    })
+
+    it('refuses the platform settings below root, and nothing else', () => {
+        for (const [method, path] of [['PATCH', '/api/config'], ['POST', '/api/admin/sandboxes/purge'], ['GET', '/api/estate/map'], ['DELETE', '/api/commons/assets/a1'], ['DELETE', '/api/spaces/s1']]) {
+            expect(tierRefusalFor('admin', method, path)?.rule).toBeTruthy()
+            expect(tierRefusalFor('member', method, path)?.rule).toBeTruthy()
+            expect(tierRefusalFor('root', method, path)).toBeNull()
+        }
+        for (const [method, path] of [['GET', '/api/config'], ['PATCH', '/api/spaces/s1'], ['DELETE', '/api/spaces/s1/projects/p1'], ['DELETE', '/api/projects/p1']]) {
+            expect(tierRefusalFor('member', method, path)).toBeNull()
+        }
+        for (const entry of REFUSED_BELOW_ROOT) expect(entry.reason.length).toBeGreaterThan(30)
+    })
+
+    it('treats a state with no tier as a member, and a dead token still answers 401', () => {
+        const res = () => ({ statusCode: 200, status (c) { this.statusCode = c; return this }, json (b) { this.body = b; return this }, setHeader () { return this }, on () { return this } })
+        const gate = (state) => createActTokenGate({ prefix: 'dii_tgact_', readToken: (r) => r.token, resolveState: () => state, cookieName: 'c', logger: { info () {}, warn () {} } })
+        const r1 = res()
+        gate({ subject: 'u' })({ token: 'dii_tgact_a.b', method: 'GET', path: '/api/estate/map' }, r1, () => {})
+        expect(r1.statusCode).toBe(403)
+        expect(r1.body).toMatchObject({ tier: 'member' })
+        const r2 = res()
+        gate(null)({ token: 'dii_tgact_a.b', method: 'GET', path: '/api/estate/map' }, r2, () => {})
+        expect(r2.statusCode).toBe(401)
+        const next = vi.fn()
+        gate({ subject: 'u', actTier: 'root' })({ token: 'dii_tgact_a.b', method: 'GET', path: '/api/estate/map' }, res(), next)
+        expect(next).toHaveBeenCalled()
     })
 })

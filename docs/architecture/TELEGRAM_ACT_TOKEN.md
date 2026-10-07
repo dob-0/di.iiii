@@ -40,7 +40,32 @@ over a cookie on the same request, and on a `di up` install loopback does not
 turn it into the owner.
 
 So it can do what the person can do in their own browser, in their own
-spaces, and nothing outside them.
+spaces, and nothing outside them — and, below root, less.
+
+### Tiers (the owner, 2026-10-07: "make me root, Emilya admin, and make the right privileges")
+
+`serverXR/src/actTokenTier.js`. di.iiii decides the tier from the token's
+Telegram id, on every request, from server env. di.bo has no say, and a tier
+only ever takes reach away from the account:
+
+| Tier | Who | Reach |
+|---|---|---|
+| root | `ACT_TOKEN_ROOT_TELEGRAM_IDS` (the owner) | the account's own reach, minus the refusals below |
+| admin | `ACT_TOKEN_ADMIN_TELEGRAM_IDS` (Emilya) | the account's own reach, minus the refusals below, minus the platform settings (`REFUSED_BELOW_ROOT`) |
+| member | everyone else, and everyone when both are unset | role capped at `editor`, unrestricted off: own and scoped spaces only, even for an admin account; the same platform refusals as admin |
+
+`REFUSED_BELOW_ROOT` (`actTokenGate.js`), judged after the token resolves, so
+a dead token still answers 401 and says nothing about tiers:
+
+| Rule | Why |
+|---|---|
+| `PATCH /api/config` | the default and shared space of the whole server. |
+| `/api/admin/**` | blocking callers, purging sandboxes: acts on everyone. |
+| `/api/estate/**` | names every machine, address and store. |
+| `DELETE /api/commons/assets/:id` | moderating the public commons is a judgement made in the browser. |
+| `DELETE /api/spaces/:id` | a whole space, with its history, is deleted by a person in the browser. |
+
+The mint answer names the tier, and every write log line carries it.
 
 ## What it can never do
 

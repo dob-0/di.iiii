@@ -18,7 +18,10 @@
 //      not turn into a 12-hour browser session by way of a route that
 //      re-issues the caller's cookie (space creation does, for a person).
 //   4. Every write (anything but GET/HEAD/OPTIONS) is logged once, when the
-//      response finishes: subject, actor di.bo, token id, method, path, status.
+//      response finishes: subject, actor di.bo, token id, tier, method, path,
+//      status.
+//   5. Below root, the platform's settings (REFUSED_BELOW_ROOT); the tier and
+//      the cap it puts on the account are actTokenTier.js.
 
 // Each rule: which requests, and why they stay in the person's own hands.
 // Paths are matched against req.path inside the router (so `/api/...`, with
@@ -69,6 +72,44 @@ const REFUSED_THROUGH_DI_BO = Object.freeze([
     reason: 'Who owns a space, and who else may edit it, is changed by a person, in person.'
   }
 ])
+
+// The platform's own settings: refused to every tier but root (actTokenTier.js).
+// Judged after the token resolves — the tier lives on the state — so a probe
+// with a dead token still hears 401, never which tier would have been refused.
+const REFUSED_BELOW_ROOT = Object.freeze([
+  {
+    rule: 'PATCH /api/config',
+    test: (method, path) => method === 'PATCH' && /^\/api\/config\/?$/i.test(path),
+    reason: 'The default and shared space of the whole server are the platform\'s settings; only root changes them through di.bo.'
+  },
+  {
+    rule: 'ANY /api/admin/**',
+    test: (method, path) => /^\/api\/admin(?:\/|$)/i.test(path),
+    reason: 'Blocking callers and purging sandboxes act on everyone; only root does that through di.bo.'
+  },
+  {
+    rule: 'ANY /api/estate/**',
+    test: (method, path) => /^\/api\/estate(?:\/|$)/i.test(path),
+    reason: 'The estate map names every machine, address and store; it is not read through a chat below root.'
+  },
+  {
+    rule: 'DELETE /api/commons/assets/:assetId',
+    test: (method, path) => method === 'DELETE' && /^\/api\/commons\/assets\/[^/]+\/?$/i.test(path),
+    reason: 'Moderating the public commons is a judgement made in the browser, below root.'
+  },
+  {
+    rule: 'DELETE /api/spaces/:spaceId',
+    test: (method, path) => method === 'DELETE' && /^\/api\/spaces\/[^/]+\/?$/i.test(path),
+    reason: 'A whole space — scene, history, projects — is deleted in the browser, by a person, below root.'
+  }
+])
+
+const tierRefusalFor = (tier, method, path) => {
+  if (tier === 'root') return null
+  const verb = String(method || '').toUpperCase()
+  const where = String(path || '')
+  return REFUSED_BELOW_ROOT.find((entry) => entry.test(verb, where)) || null
+}
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -129,6 +170,14 @@ const createActTokenGate = ({ prefix, readToken, resolveState, cookieName, logge
     })
   }
 
+  // A state with no tier is a member's: the narrowest reach is the default.
+  const tier = state.actTier || 'member'
+  const tierRefusal = tierRefusalFor(tier, req.method, req.path)
+  if (tierRefusal) {
+    logger.info(`[act-token] refused ${JSON.stringify({ method: req.method, path: req.path, rule: tierRefusal.rule, tier })}`)
+    return res.status(403).json({ error: 'not_through_di_bo', rule: tierRefusal.rule, reason: tierRefusal.reason, tier })
+  }
+
   holdBackSessionCookie(res, cookieName, () => {
     logger.warn(`[act-token] held back a session cookie ${JSON.stringify({ subject: state.subject, method: req.method, path: req.path })}`)
   })
@@ -140,6 +189,7 @@ const createActTokenGate = ({ prefix, readToken, resolveState, cookieName, logge
         subject: state.subject,
         actor: 'di.bo',
         tokenId: state.actTokenId || null,
+        tier,
         method: req.method,
         path,
         status: res.statusCode
@@ -149,4 +199,4 @@ const createActTokenGate = ({ prefix, readToken, resolveState, cookieName, logge
   next()
 }
 
-module.exports = { REFUSED_THROUGH_DI_BO, refusalFor, createActTokenGate, WRITE_METHODS }
+module.exports = { REFUSED_THROUGH_DI_BO, REFUSED_BELOW_ROOT, refusalFor, tierRefusalFor, createActTokenGate, WRITE_METHODS }

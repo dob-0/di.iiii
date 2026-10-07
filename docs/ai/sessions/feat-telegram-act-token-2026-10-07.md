@@ -20,3 +20,14 @@
 - Doc: `docs/architecture/TELEGRAM_ACT_TOKEN.md`.
 - Not done here (owed to later di.bo steps): di.bo does not call the route yet; it is HTTP only (sockets do not accept
   it); there is no route to revoke a token early (the store has `revokeActToken`, and signing out revokes it).
+- **Tiers** (the owner, 2026-10-07: "keep the refusals"; "make me root, Emilya admin, and make the right privileges"):
+  - `actTokenTier.js`: di.iiii reads the tier on every request from the token's Telegram id, using server env
+    `ACT_TOKEN_ROOT_TELEGRAM_IDS` and `ACT_TOKEN_ADMIN_TELEGRAM_IDS`. Anyone unlisted is a member, the default.
+  - A tier only lowers reach. A member's admin account acts as an editor of its own spaces.
+  - `REFUSED_BELOW_ROOT` (`actTokenGate.js`, judged after resolution, so a dead token is still 401): `PATCH /api/config`,
+    `/api/admin/**`, `/api/estate/**`, `DELETE /api/commons/assets/:id`, `DELETE /api/spaces/:id`.
+  - The mint answer and every write log line name the tier. The env vars are added to `docker-compose.yml`, so the Mac's
+    server.env carries them.
+  - Tests: 4 unit, 1 over real HTTP (three admin accounts at three tiers, plus a listed admin on an editor account).
+    The refusal test now runs as root, since its rename needs real reach. Contracts 206/206, vitest 8807/8807.
+  - Mutations caught: no member cap, no tier refusal, unlisted = root.

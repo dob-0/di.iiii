@@ -394,7 +394,12 @@ const config = {
       // How long a di.bo act token lives (POST /api/auth/telegram/act-token).
       // Minutes, 15 by default; telegramActTokenStore clamps it to 1..60 so a
       // typo in an env file can never mint a day-long key.
-      actTokenTtlMs: (Number(process.env.TELEGRAM_ACT_TOKEN_TTL_MINUTES) || 15) * 60 * 1000
+      actTokenTtlMs: (Number(process.env.TELEGRAM_ACT_TOKEN_TTL_MINUTES) || 15) * 60 * 1000,
+      // Who acts through di.bo at which tier (actTokenTier.js): comma-separated
+      // Telegram ids. Anyone not listed — and everyone, when both are unset —
+      // is a member. A tier never reaches past the account's own role.
+      actTokenRootIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ROOT_TELEGRAM_IDS),
+      actTokenAdminIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ADMIN_TELEGRAM_IDS)
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset
