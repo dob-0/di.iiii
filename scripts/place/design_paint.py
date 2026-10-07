@@ -239,7 +239,38 @@ def far_options():
     return out
 
 
+# ------------------------------------------------------------------ the near crane where the photos show it
+GLB_AS_PHOTOGRAPHED = '/mnt/data/footage/place-moxir-hall-v8-show-2026-10-07'
+
+
+def crane_as_photographed(fx):
+    """The lasers against the hall as PHOTOGRAPHED: the near crane parked at z 4.8 (hall v8-show), not at z 21 where
+    beta v0.9 moves it. Says which cubes depend on that move."""
+    if not os.path.exists(os.path.join(GLB_AS_PHOTOGRAPHED, 'hall.glb')):
+        return None
+    g = json.load(open(os.path.join(GLB_AS_PHOTOGRAPHED, 'hall.json')))['geometry']
+    ob = O.Obstacles(os.path.join(GLB_AS_PHOTOGRAPHED, 'hall.glb'), g, L.rig_boxes(), L.TRUSS, L.crane_boxes())
+    keep, OC.OB = OC.OB, ob
+    try:
+        out = []
+        for f in fx:
+            if f['kind'] == 'laser' and not f['spare']:
+                r = OC.analyse_laser(f)
+                out.append({'id': f['id'], 'name': f.get('name'), 'pass': r['pass'], 'errors': sorted({e for x in r['_rays'] for e in x['errors']})[:2]})
+        return out
+    finally:
+        OC.OB = keep
+
+
 # ------------------------------------------------------------------ (2) the point cloud
+def cloud_cam_centres():
+    d = np.load(os.path.join(A.vggt, 'predictions.npz'))
+    al = json.load(open(os.path.join(A.vggt, 'align', 'init_cams.json')))
+    s, Q, T = al['scale'], np.array(al['Q']), np.array(al['T'])
+    E = d['extrinsic'].astype(float)
+    return np.array([s * Q @ (-E[i, :, :3].T @ E[i, :, 3]) + T for i in range(len(E))])
+
+
 def load_cloud(cache):
     if cache and os.path.exists(cache):
         z = np.load(cache)
@@ -305,7 +336,12 @@ def model_distance(q):
     return dm
 
 
-def cloud_pass(f, t_end, pts):
+CLOUD_NEAR_CAM_M = 25.0     # VGGT depth error grows with distance; points seen from farther are not used as evidence
+CLOUD_OFF_MODEL_M = 1.5     # 2 x the alignment's 0.73 m rms: closer to a model surface is that surface
+CLOUD_MIN_PTS, CLOUD_MIN_VIEWS = 15, 2
+
+
+def cloud_pass(f, t_end, pts, cam_of=None, cam_c=None):
     """Cloud points inside the beam's cone (+0.35 m), between the lens + 0.5 m and the model's surface - 0.7 m,
     farther than 0.7 m from every model surface: clutter the model lacks. Also the cloud's density along the path."""
     p, d = f['p'], f['d']
@@ -316,10 +352,13 @@ def cloud_pass(f, t_end, pts):
     near_path = (s > 0.5) & (s < t_end) & (rad < 2.0)
     inside = (s > 0.5) & (s < t_end - 0.7) & (rad <= s * math.tan(half) + 0.35)
     idx = np.nonzero(inside)[0]
-    if len(idx) > 400:
-        idx = idx[np.argsort(s[idx])][:: max(1, len(idx) // 400)]
-    clutter = [i for i in idx if model_distance(pts[i].astype(float)) > 0.7]
-    out = {'cloud_points_within_2m_of_path': int(near_path.sum()), 'in_cone': int(inside.sum()), 'clutter': len(clutter)}
+    if len(idx) > 200:                                   # a sample of 200 is enough to say "something is there"
+        idx = idx[np.argsort(s[idx])][:: max(1, len(idx) // 200)]
+    if cam_of is not None:
+        idx = idx[np.linalg.norm(pts[idx] - cam_c[cam_of[idx]], axis=1) <= CLOUD_NEAR_CAM_M]
+    clutter = [i for i in idx if model_distance(pts[i].astype(float)) > CLOUD_OFF_MODEL_M]
+    views = len(set(cam_of[clutter].tolist())) if (cam_of is not None and clutter) else 0
+    out = {'cloud_points_within_2m_of_path': int(near_path.sum()), 'in_cone': int(inside.sum()), 'clutter': len(clutter), 'clutter_views': views}
     if clutter:
         cq = pts[clutter].astype(float)
         out['clutter_at'] = [round(float(x), 1) for x in np.median(cq, 0)]
@@ -354,21 +393,29 @@ def path_points(f, t_end, n=24):
     return np.array([f['p'] + f['d'] * s for s in np.linspace(0.3, t_end, n)])
 
 
-def photo_pass(f, t_end, cams):
-    P = path_points(f, t_end)
+PHOTO_MAX_M = 35.0          # beyond this a 4032 px phone photo resolves ~1.5 cm/px at best and haze/dark hides clutter: not evidence
+
+
+def photo_pass(f, t_end, cams, n=12):
+    """The photo that sees the most of the path (share of n points along it that are in frame, in front of the camera
+    and not behind a model surface). Line-of-sight casts are cone-culled per camera."""
+    P = path_points(f, t_end, n)
     best = None
     for cam in cams:
         uv, z = project(cam, P)
         W, H = cam['size']
         inframe = (z > 0.5) & (uv[:, 0] >= 0) & (uv[:, 0] < W) & (uv[:, 1] >= 0) & (uv[:, 1] < H)
-        if inframe.sum() < 3:
+        if inframe.sum() < 2 or (best and inframe.sum() / len(P) <= best['seen']):
             continue
-        seen = 0
-        for k in np.nonzero(inframe)[0]:
-            v = P[k] - cam['C']
-            Ld = float(np.linalg.norm(v))
-            h = OB.cast(cam['C'], v / Ld, 0.3, Ld - 0.4)
-            seen += h[0] is None
+        if np.linalg.norm(P[inframe].mean(0) - cam['C']) > PHOTO_MAX_M:
+            continue            # too far to show what is on the path
+        Q = P[inframe]
+        v = Q - cam['C']
+        dist = np.linalg.norm(v, axis=1)
+        axis = L.unit(v.mean(0))
+        spread = float(np.max(np.arccos(np.clip((v / dist[:, None]) @ axis, -1, 1))))
+        sub = OB.subset(cam['C'], axis, spread + 0.01, float(dist.max()))
+        seen = sum(1 for q, Ld in zip(v, dist) if OB.cast(cam['C'], q / Ld, 0.3, Ld - 0.4, sub)[0] is None)
         frac = seen / len(P)
         if best is None or frac > best['seen']:
             best = {'photo': cam['name'], 'seen': round(frac, 2), 'distance_m': round(float(np.linalg.norm(P.mean(0) - cam['C'])), 1), 'approx': cam['approx']}
@@ -385,11 +432,12 @@ DOC_FINDINGS = [
     {'what': 'a long pipe stack lying on the floor', 'where': 'x 5-10, z 25-38', 'status': 'CONFIRMED by eye, position SUSPECTED', 'rule': 'the house-right arch beams at x 9.6 z 30 and 36 stand in it: clear it or move them 0.5 m', 'src': 'PHOTO_ANALYSIS §0.2'},
     {'what': 'five loose pressure vessels lying on the floor', 'where': 'x -6..0, z -2..8', 'status': 'CONFIRMED by eye, position SUSPECTED', 'rule': 'under the mid lasers\' crossing (>= 5 m above): no beam effect; trip hazard for the crew', 'src': 'PHOTO_ANALYSIS §0.3'},
     {'what': 'the near crane girder underside never measured (7.95 m is the far crane\'s)', 'where': 'z 21', 'status': 'ASSUMED', 'rule': 'the truss and the bridge-up PARs move 1:1 with it', 'src': 'MODEL_VS_REAL §0.2'},
+    {'what': 'loose stock on the floor in the photos: bulk bags, scrap, pipes, cylinders', 'where': 'all over the nave, z 0-40 (contact sheets)', 'status': 'CONFIRMED in the photos', 'rule': 'every floor fixture and every low path assumes the show hall cleared as moxir-hall-show-cleared-2026-10-17.json lists it: the clear-out is a precondition, not a given', 'src': 'the contact sheets, PHOTO_ANALYSIS §0.2'},
     {'what': 'no file says how far the cranes can travel; the far half was never photographed for a second crane', 'where': 'z -54..-10', 'status': 'UNKNOWN', 'rule': 'the far trio hangs on the far crane as parked; the owner saw cranes at about z -33 and -18 (his yellow): count and place them on 10-08', 'src': 'MODEL_VS_REAL §0.4, the painted plan'},
 ]
 
 
-def audit(fx, beams, lasers, pts, cams):
+def audit(fx, beams, lasers, pts, cams, cam_of=None, cam_c=None):
     rows = []
     byb = {b['id']: b for b in beams}
     byl = {l['id']: l for l in lasers}
@@ -406,16 +454,19 @@ def audit(fx, beams, lasers, pts, cams):
             t_end = (b['axis_first_hit']['t'] or OC.reach_of(f))
             model = 'clear' if b['blocked_pct'] == 0 else 'BLOCKED %.0f %%: %s' % (b['blocked_pct'], b['blockers'][0]['what'])
             blk = b['blocked_pct'] > 0
-        cl = cloud_pass(f, t_end, pts) if pts is not None else None
+        cl = cloud_pass(f, t_end, pts, cam_of, cam_c) if pts is not None else None
         ph = photo_pass(f, t_end, cams) if cams else {'photo': None, 'seen': 0.0}
         if blk:
             verdict = model
-        elif cl and cl['clutter'] >= 15:
-            verdict = 'CHECK: %d cloud points in the cone the model lacks, %s-%s m from the lens, about %s' % (cl['clutter'], cl['clutter_s_m'][0], cl['clutter_s_m'][1], cl['clutter_at'])
+        elif cl and cl['clutter'] >= CLOUD_MIN_PTS and cl['clutter_views'] >= CLOUD_MIN_VIEWS:
+            verdict = 'CHECK: %d cloud points (%d photos) in the cone that the model lacks, %s-%s m from the lens, about %s' % (cl['clutter'], cl['clutter_views'], cl['clutter_s_m'][0], cl['clutter_s_m'][1], cl['clutter_at'])
         elif ph['seen'] >= 0.5:
             verdict = 'CLEAR (model + cloud; photo %s sees %d %% of the path)' % (ph['photo'], round(100 * ph['seen']))
         else:
             verdict = 'UNKNOWN: no photo sees half of the path (best %s %d %%)' % (ph['photo'] or 'none', round(100 * ph['seen']))
+        eye = REC.get('eye_review', {}).get(f['id'])
+        if eye and not blk:
+            verdict = '%s: by eye on the contact sheet, %s (the automatic verdict was: %s)' % (eye['verdict'], eye['note'], verdict)
         rows.append({'id': f['id'], 'group': f['groupName'], 'type': f['type'], 'at': [round(v, 2) for v in f['p']], 'path_m': round(t_end, 1),
                      'model': model, 'cloud': cl, 'photo': ph, 'verdict': verdict})
     return rows
@@ -433,9 +484,9 @@ def shot_list(rows, fx):
     by = {f['id']: f for f in fx}
     groups = {}
     for r in rows:
-        if not r['verdict'].startswith('UNKNOWN'):
+        if not r['verdict'].startswith(('UNKNOWN', 'CHECK')):
             continue
-        groups.setdefault(r['group'], []).append(r)
+        groups.setdefault(r['group'] + (' (check)' if r['verdict'].startswith('CHECK') else ''), []).append(r)
     shots = []
     for g, rs in groups.items():
         fs = [by[r['id']] for r in rs]
@@ -445,6 +496,9 @@ def shot_list(rows, fx):
         stand = np.array([c[0] + (6.0 if c[0] < 0 else -6.0) * (abs(c[0]) > 14), 1.6, c[2] + 10.0])   # 10 m toward the entry, in the open
         if abs(c[0]) <= 14:
             stand[0] = c[0] * 0.5
+        ez = G['end_wall_inner_y_m'] - 1.5                        # stay inside the hall
+        stand[2] = float(np.clip(stand[2], -ez, ez))
+        stand[0] = float(np.clip(stand[0], G['walls_x_m'][0] + 1.5, G['walls_x_m'][1] - 1.5))
         yaw, pitch = yaw_pitch(stand, c)
         kind = rs[0]['type']
         look = {'ext-lc-ultra-mk2': 'the whole path from the cube\'s mount to the roof: the crane girder or column it hangs on, anything hung under the roof, and the END: deck (corrugated, solid) or glass / panels / open sky',
@@ -452,6 +506,11 @@ def shot_list(rows, fx):
                 'up-250bsw': 'the floor spot, the wall it washes (windows, doors, posts), anything stacked against the wall',
                 'up-pl5403': 'the column base (is there room for a PAR, 0.7 m off the face?) and the column face up to the roof: posts, pipes, boxes on it',
                 'up-b380f': 'the floor spot and the beam path up to the roof'}.get(kind, 'the path')
+        checks = [r for r in rs if r['verdict'].startswith('CHECK')]
+        if checks:
+            at = [r['cloud']['clutter_at'] for r in checks if r.get('cloud') and r['cloud'].get('clutter_at')]
+            look = ('WHAT IS THERE: %s. ' % ('the cloud shows points the model lacks at about ' + '; '.join('(%g, %g, %g)' % tuple(a) for a in at[:3])
+                    if at else checks[0]['verdict'].split(': ', 1)[-1][:220])) + 'then the whole beam path from the fixture to where it lands'
         shots.append({'for': g, 'fixtures': [SHORT(r['id']) for r in rs], 'stand_m': [round(float(v), 1) for v in stand],
                       'point_yaw_deg': yaw, 'point_pitch_deg': pitch, 'aim_at_m': [round(float(v), 1) for v in c],
                       'covers_x_m': [round(float(lo[0]), 1), round(float(hi[0]), 1)], 'covers_z_m': [round(float(lo[2]), 1), round(float(hi[2]), 1)],
@@ -476,7 +535,7 @@ BG, FG, DIM = '#07090c', '#e3e6ea', '#8f969e'
 CLS_COL = {'floor': '#121518', 'roof deck': '#2a3038', 'space frame': '#3b4148', 'lantern glass': '#24384a', 'lantern frame': '#33404c',
            'wall glass': '#1f3140', 'end wall': '#262b31', 'side wall': '#22272d', 'column': '#3a3f45', 'column head': '#41464c',
            'upper column': '#3a3f45', 'runway': '#4a4e54', 'crane': '#b89400', 'machine': '#4d4339', 'steel': '#3f444a', 'block wall': '#30353b',
-           'truss': '#e8ebee', 'rigging': '#8a929b', 'pa': '#16191d', 'booth': '#454b53', 'barrier': '#2c3138', 'stage': '#454b53', 'other': '#333'}
+           'truss': '#e8ebee', 'rigging': '#8a929b', 'pa': '#16191d', 'booth': '#454b53', 'barrier': '#2c3138', 'stage': '#454b53', 'other': '#333333'}
 LIGHT = L.unit([0.35, 0.8, 0.45])
 
 
@@ -500,11 +559,11 @@ def hall_items(cam, items, fade=1.0):
             poly = cam.scr(np.array(cc))
         if np.abs(poly).max() > 1e5:
             continue
-        col = L.rgba(CLS_COL.get(cls, '#333'), 1.0, shade[i] * fade)
+        col = L.rgba(CLS_COL.get(cls, '#333333'), 1.0, shade[i] * fade)
         dep = (np.linalg.norm(V[i] - cam.E, axis=1).max() + 5.0) if cls in far_cls else dist[i]
         items.append((float(dep), poly, col, (0, 0, 0, 0), 0))
     for b, name, cls in OB.boxes:
-        L.add_box(items, cam, b, CLS_COL.get(cls, '#555'), None, 1.0, lw=0, maxlen=1.0)
+        L.add_box(items, cam, b, CLS_COL.get(cls, '#555555'), None, 1.0, lw=0, maxlen=1.0)
 
 
 def cone_items(items, cam, p, d, t1, half_deg, colour, a0, fall=30.0, ap0=0.1, step=0.8):
@@ -550,19 +609,18 @@ def fixture_items(items, cam, f, lit):
         return
     a = RES.get(f['id'])
     if k == 'laser':
-        for ray in a['_rays']:
-            if abs(ray['dir'][1] - f['d'][1]) > 0.02 and len(a['_rays']) > 9:
-                pass
-            d = np.array(ray['dir'])
-            cone_items(items, cam, f['p'], d, ray['t'], 0.06, '#3cff3c', 0.9, fall=200, ap0=0.006, step=2.0)
+        for k, ray in enumerate(a['_rays']):
+            if k % 5 != 2:            # the field's middle row of rays (9 of 45): the web as it reads
+                continue
+            cone_items(items, cam, f['p'], np.array(ray['dir']), ray['t'], 0.06, '#3cff3c', 0.75, fall=200, ap0=0.006, step=2.0)
         return
     t = (a['axis_first_hit']['t'] or OC.reach_of(f)) if a else OC.reach_of(f)
     half = OC.half_of(f)
     if k in ('wash', 'spot') or (k == 'par' and f['groupName'].startswith('wash')):
-        cone_items(items, cam, f['p'], f['d'], t, half, f['colour'], 0.05 if k == 'wash' else 0.08, fall=25)
+        cone_items(items, cam, f['p'], f['d'], t, half, f['colour'], 0.07 if k == 'wash' else 0.1, fall=25)
         if a:
             rim = [r for r in a['_rays'][1:]][-24:]
-            pool_items(items, cam, [r['blocked']['at'] if r['blocked'] else r['land'] for r in rim], f['colour'], 0.33 if k != 'par' else 0.5)
+            pool_items(items, cam, [r['blocked']['at'] if r['blocked'] else r['land'] for r in rim], f['colour'], 0.55 if k != 'par' else 0.7)
         return
     lay = {'par': (0.11, 11.0), 'beam': (0.6, 40.0)}.get(k, (0.1, 20))
     cone_items(items, cam, f['p'], f['d'], t, half, f['colour'], lay[0], fall=lay[1], ap0=0.1 if k == 'par' else 0.07, step=0.5 if k == 'par' else 1.0)
@@ -575,7 +633,7 @@ def render_view(fx, lit, path, title, sub, eye, look, vfov=66.0, W=1600, H=900):
     from matplotlib.collections import PolyCollection
     cam = L.Camera(np.array(eye, float), np.array(look, float), vfov, W, H)
     items = []
-    hall_items(cam, items)
+    hall_items(cam, items, fade=0.42)       # the hall dark, as at night: what is lit reads
     for f in fx:
         if f['spare'] or f['kind'] not in ('par', 'beam', 'laser', 'wash', 'spot'):
             continue
@@ -662,6 +720,8 @@ def plan_fixtures(ax, fx, lasers_only=False):
         elif a and k in ('wash', 'spot') or (a and f['groupName'].startswith('wash')):
             rim = a['_rays'][-24:]
             pts = [((r['blocked']['at'] if r['blocked'] else r['land'])[0], (r['blocked']['at'] if r['blocked'] else r['land'])[2]) for r in rim]
+            import paint_zones as PZ
+            pts = PZ.hull([(round(a, 2), round(b, 2)) for a, b in pts])
             ax.add_patch(Polygon(pts, closed=True, fc=f['colour'], ec='#9fb4d8', alpha=0.25, lw=0.4, zorder=5))
             ax.plot([f['p'][0], np.mean([q[0] for q in pts])], [f['p'][2], np.mean([q[1] for q in pts])], color='#9fb4d8', lw=0.5, alpha=0.6, zorder=5)
         elif a and k in ('par', 'beam') and f['d'] is not None:
@@ -683,8 +743,8 @@ def fig_plan(fx, zones, path):
     plan_hall(ax, zones=zones)
     plan_fixtures(ax, fx)
     fig.text(0.05, 0.975, 'The design from his painted plan, from above: the whole building', color=FG, fontsize=14, fontweight='bold', family='DejaVu Sans Mono', va='top')
-    fig.text(0.05, 0.952, 'his paint underneath (teal: wash, green: where lasers can be, yellow: crane bridges) · ^ laser + its field · squares/pools: the washes where they land · '
-             'o PAR · <> beam · hatched: lantern glass · dotted orange: SUSPECTED open roof (aerial)', color=DIM, fontsize=7.6, family='DejaVu Sans Mono', va='top')
+    fig.text(0.05, 0.952, 'his paint underneath (teal: wash, green: where lasers can be, yellow: crane bridges) · ^ laser + its field · pools: the washes where they land\n'
+             'o PAR · <> beam · s HK1915 · p 250BSW · hatched: lantern glass · dotted orange: SUSPECTED open roof (aerial)', color=DIM, fontsize=7.6, family='DejaVu Sans Mono', va='top')
     fig.savefig(path, facecolor=BG)
     plt.close(fig)
     return path
@@ -767,8 +827,9 @@ def fig_lasers(fx, path):
     fig.text(0.03, 0.965, 'The 6 lasers, all behind the stage: every ray of every field (9 x 5) to where it ends', color=FG, fontsize=13, fontweight='bold', family='DejaVu Sans Mono')
     y = 0.47
     for l in RES['_lasers']:
-        fig.text(0.42, y, '%-26s at (%s)  ends: %s  past z %.1f max  floor sees %d %%  %s' % (
-            l['name'], ', '.join('%g' % v for v in l['at']), ', '.join('%s %d' % kv for kv in l['ends'].items()), l['zmax'], round(100 * l['seen_from_floor']),
+        ab = lambda k: k.replace('space frame diagonals / top chord', 'frame diag').replace('space frame bottom chord', 'frame chord').replace('roof deck', 'deck')
+        fig.text(0.42, y, '%-26s at (%s)  ends: %s  max z %.1f  floor sees %d %%  %s' % (
+            l['name'], ', '.join('%g' % v for v in l['at']), ', '.join('%s %d' % (ab(k), v) for k, v in l['ends'].items()), l['zmax'], round(100 * l['seen_from_floor']),
             'PASS' if l['pass'] else 'FAIL'), color='#c4c9cf' if l['pass'] else '#ff5a4f', fontsize=7.6, family='DejaVu Sans Mono')
         y -= 0.033
     fig.text(0.42, y - 0.01, 'Static-beam NOHD %d m (LaserCube Ultra MK2 10 W, 4 mm, 1 mrad; IEC 60825-1:2014 Table A.1, MPE %.1f W/m2 at 0.25 s): no beam may reach an eye.' % (round(L.NOHD_M), L.MPE_E),
@@ -778,3 +839,244 @@ def fig_lasers(fx, path):
     fig.savefig(path, facecolor=BG)
     plt.close(fig)
     return path
+
+
+# ------------------------------------------------------------------ contact sheets (the photos, the beams drawn on them)
+VCOL = {'BLOCKED': (255, 70, 60), 'CHECK': (255, 170, 60), 'CLEAR': (60, 255, 90), 'UNKNOWN': (150, 155, 165)}
+
+
+def verdict_key(v):
+    return v.split(':')[0].split(' (')[0].split(' ')[0]
+
+
+def contact_sheets(rows, fx, cams, out_dir, per=16, cols=4, tw=480, th=320):
+    from PIL import Image, ImageDraw, ImageFont
+    try:
+        font = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSansMono.ttf', 13)
+        fontb = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSansMono-Bold.ttf', 15)
+    except OSError:
+        font = fontb = ImageFont.load_default()
+    by = {f['id']: f for f in fx}
+    cm = {c['name']: c for c in cams}
+    tiles = []
+    cache = {}
+    for r in rows:
+        ph = r['photo']
+        if not ph.get('photo'):
+            continue
+        cam, f = cm[ph['photo']], by[r['id']]
+        if cam['path'] not in cache:
+            im = Image.open(cam['path'])
+            W0, H0 = im.size
+            im.draft('RGB', (W0 // 4, H0 // 4))
+            im = im.convert('RGB')
+            cache.clear()
+            cache[cam['path']] = (im, im.size[0] / cam['size'][0])
+        im, k = cache[cam['path']]
+        P = path_points(f, r['path_m'], 40)
+        uv, z = project(cam, P)
+        ok = z > 0.5
+        if ok.sum() < 2:
+            continue
+        uv = uv[ok] * k
+        W, H = im.size
+        x0, y0 = np.clip(uv.min(0) - 120 * k * 4, 0, [W, H])
+        x1, y1 = np.clip(uv.max(0) + 120 * k * 4, 0, [W, H])
+        if x1 - x0 < 60 or y1 - y0 < 40:
+            continue
+        ar = tw / th
+        cw, ch = x1 - x0, y1 - y0
+        if cw / ch < ar:
+            cx = (x0 + x1) / 2; cw = ch * ar; x0, x1 = max(0, cx - cw / 2), min(W, cx + cw / 2)
+        else:
+            cy = (y0 + y1) / 2; ch = cw / ar; y0, y1 = max(0, cy - ch / 2), min(H, cy + ch / 2)
+        crop = im.crop((int(x0), int(y0), int(x1), int(y1))).resize((tw, th))
+        d = ImageDraw.Draw(crop)
+        sx, sy = tw / max(1, x1 - x0), th / max(1, y1 - y0)
+        pts = [((u - x0) * sx, (v - y0) * sy) for u, v in uv]
+        col = VCOL.get(verdict_key(r['verdict']), (200, 200, 200))
+        d.line(pts, fill=(0, 0, 0), width=7)
+        d.line(pts, fill=col, width=3)
+        d.ellipse([pts[0][0] - 6, pts[0][1] - 6, pts[0][0] + 6, pts[0][1] + 6], outline=col, width=3)
+        d.rectangle([0, th - 44, tw, th], fill=(0, 0, 0))
+        d.text((6, th - 42), '%s  %s' % (SHORT(r['id']), verdict_key(r['verdict'])), fill=col, font=fontb)
+        d.text((6, th - 22), 'photo %s, sees %d %% of the path%s' % (ph['photo'][:22], round(100 * ph['seen']), ' (approx. lens)' if ph.get('approx') else ''), fill=(220, 220, 225), font=font)
+        tiles.append(crop)
+    paths = []
+    for s0 in range(0, len(tiles), per):
+        chunk = tiles[s0:s0 + per]
+        rws = (len(chunk) + cols - 1) // cols
+        sheet = Image.new('RGB', (cols * tw + (cols + 1) * 6, rws * th + (rws + 1) * 6 + 40), (7, 9, 12))
+        dd = ImageDraw.Draw(sheet)
+        dd.text((8, 10), 'MOXIR design from the painted plan: every beam drawn on the photo that sees most of it (green clear, red blocked, orange check, grey unknown). Sheet %d' % (s0 // per + 1),
+                fill=(227, 230, 234), font=fontb)
+        for i, t in enumerate(chunk):
+            sheet.paste(t, (6 + (i % cols) * (tw + 6), 46 + (i // cols) * (th + 6)))
+        p = os.path.join(out_dir, 'audit-sheet-%d.jpg' % (s0 // per + 1))
+        sheet.save(p, quality=84, optimize=True)            # photos: JPEG keeps the page under 16 MB
+        paths.append(p)
+    return paths
+
+
+# ------------------------------------------------------------------ the looks
+def looks(fx, gl):
+    out = []
+    for lk in REC['looks']:
+        lit = {f['id'] for f in fx if not f['spare'] and any(f['groupName'].startswith(g) for g in lk['groups'])}
+        out.append({'id': lk['id'], 'title': lk['title'], 'layers': lk['layers'], 'n_layers': len(lk['layers']), 'lit': len(lit),
+                    'eyes_in_field': sum(gl[i]['eyes_in_field'] for i in lit if i in gl), '_lit': lit})
+    return out
+
+
+def summary(fx, beams, lasers, gl, lks, opts):
+    return {'counts': counts(fx), 'inventory': REC['inventory'],
+            'beams': len(beams), 'beams_blocked': [b['id'] for b in beams if b['blocked_pct'] > 0],
+            'lasers': len(lasers), 'lasers_pass': sum(l['pass'] for l in lasers), 'laser_rays': sum(l['rays'] for l in lasers),
+            'laser_rays_in_glass': sum(l['in_glass'] for l in lasers), 'laser_max_z': max(l['zmax'] for l in lasers),
+            'laser_min_over_floor_m': min(l['min_over_floor_m'] for l in lasers),
+            'laser_seen_from_floor': {l['id']: l['seen_from_floor'] for l in lasers},
+            'eyes_in_any_field': sum(v['eyes_in_field'] for v in gl.values()), 'front_row_max_lux': max([v['front_row_max_lux'] for v in gl.values()], default=0.0),
+            'looks': [{k: v for k, v in lk.items() if not k.startswith('_')} for lk in lks], 'far_options': opts,
+            'nohd_m': round(L.NOHD_M), 'mpe_w_m2': round(L.MPE_E, 1)}
+
+
+# ------------------------------------------------------------------ the page
+def write_page(out, S, rows, shots, pngs, sheets):
+    import base64
+    b64 = lambda p: 'data:image/%s;base64,' % ('jpeg' if p.endswith('.jpg') else 'png') + base64.b64encode(open(p, 'rb').read()).decode()
+    data = {'S': S, 'rows': rows, 'shots': shots, 'docs': DOC_FINDINGS, 'png': {k: b64(v) for k, v in pngs.items()}, 'pngName': {k: os.path.basename(v) for k, v in pngs.items()},
+            'sheets': [b64(p) for p in sheets], 'sheetNames': [os.path.basename(p) for p in sheets], 'rec': {k: REC[k] for k in ('owner', 'lasers', 'washes', 'inventory', 'rules')}}
+    html = PAGE.replace('__DATA__', json.dumps(data, default=lambda v: v.tolist() if hasattr(v, 'tolist') else str(v)))
+    p = os.path.join(out, 'design-paint.html')
+    open(p, 'w').write(html)
+    return p
+
+
+PAGE = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOXIR painted design</title></head><body><main id="root"></main>
+<script>
+"use strict";
+const C={bg:"#0b0c0d",panel:"#121416",line:"#2a2e33",fg:"#e3e6ea",sub:"#a3aab1",dim:"#8f969e",ok:"#3cff3c",bad:"#ff5a4f",warn:"#ffb36b",accent:"#27ff4a",laser:"#ff8a80"};
+const D=__DATA__;const F="ui-monospace,'DejaVu Sans Mono',monospace";
+const el=(t,s,h)=>{const e=document.createElement(t);if(s)Object.assign(e.style,s);if(h!=null)e.innerHTML=h;return e;};
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const wrap=t=>{const w=el("div",{overflowX:"auto",maxWidth:"100%"});w.appendChild(t);return w;};
+const td=(t,s)=>el("td",Object.assign({border:"1px solid "+C.line,padding:"5px 8px",verticalAlign:"top"},s||{}),t);
+const table=(head,rows)=>{const t=el("table",{borderCollapse:"collapse",width:"100%",font:"12.5px/1.45 "+F,color:"#c4c9cf"});
+  const h=el("tr");for(const k of head)h.appendChild(td(esc(k),{color:C.fg}));t.appendChild(h);
+  for(const r of rows){const tr=el("tr");for(const c of r)tr.appendChild(typeof c==="object"&&c&&c.html!=null?td(c.html,c.style):td(esc(c)));t.appendChild(tr);}return wrap(t);};
+const img=(src,alt)=>{const i=el("img",{display:"block",width:"100%",height:"auto",background:"#000",margin:"8px 0 4px"});i.src=src;i.alt=alt;return i;};
+Object.assign(document.documentElement.style,{background:C.bg});
+Object.assign(document.body.style,{margin:"0",background:C.bg,color:C.fg,font:"16px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif"});
+const root=document.getElementById("root");Object.assign(root.style,{maxWidth:"1240px",margin:"0 auto",padding:"36px 16px 60px",boxSizing:"border-box"});
+const h2=(n,t)=>root.appendChild(el("h2",{font:"600 18px/1.3 "+F,margin:"34px 0 10px"},"<span style='color:"+C.accent+";margin-right:10px'>"+n+"</span>"+t));
+const p=(t)=>root.appendChild(el("p",{color:C.sub,margin:"0 0 10px"},t));
+const note=(t)=>root.appendChild(el("div",{color:C.dim,font:"12px/1.5 "+F,margin:"4px 0 12px"},t));
+const S=D.S;const vk=v=>v.split(":")[0].split(" (")[0].split(" ")[0];
+const vcol={BLOCKED:C.bad,CHECK:C.warn,CLEAR:C.ok,UNKNOWN:C.dim};
+const cnt={};for(const r of D.rows){const k=vk(r.verdict);cnt[k]=(cnt[k]||0)+1;}
+root.appendChild(el("h1",{font:"600 22px/1.25 "+F,margin:"0 0 14px"},"MOXIR beta v0.9 &middot; the design from your painted plan, and the full blocking audit"));
+h2("1","The answer");
+const ans=el("div",{background:C.panel,border:"1px solid "+C.line,padding:"14px 16px",font:"15px/1.6 system-ui,sans-serif"});
+ans.innerHTML=["<b>1.</b> 6 lasers, all behind the stage, never over the crowd: 3 on the far crane where it is parked (z &minus;22), 2 on the nave columns at z &minus;6, 1 on the x +12 column at the joint, into the right span. "+S.lasers_pass+" of "+S.lasers+" pass every ray of their field ("+S.laser_rays+" rays): none in glass, none past the truss plane, lowest "+S.laser_min_over_floor_m+" m over any floor.",
+ "<b>2.</b> The building washed, as you painted it: both side spans end to end, the far end wall, the nave columns behind the stage, beside the dance floor: 8 UP-HK1915 + 12 UP-250BSW from the rental order (not in the beta yet: confirm they are booked) and 15 of the beta's PARs, re-used.",
+ "<b>3.</b> Kept: the silhouette, the truss wall, the arches. 0 eyes in any lamp's field (front row 0 lux). Every look &le; 3 layers.",
+ "<b>4.</b> The audit: "+Object.entries(cnt).map(([k,v])=>v+" "+k).join(", ")+" of "+D.rows.length+" beams. UNKNOWN = no photo sees that path yet: the shot list (section 10) is for today's visit."].join("<br>");
+root.appendChild(ans);note("Pictures only: nothing is built into any project. Laser numbers are planning, not a safety sign-off.");
+h2("2","Your paint, read back");
+p("The painted file, compared pixel by pixel with the clean plan you started from (your canvas was 13 px lower: registered back), colours named, your typed notes masked out. The outlines are the zones in hall metres; the design takes them as written below.");
+root.appendChild(img(D.png.paint,"the painted plan, zones outlined"));note(esc(D.pngName.paint));
+h2("3","From the dance floor");
+for(const k of ["hallset","web","plot"]){if(D.png["view_"+k]){root.appendChild(img(D.png["view_"+k],k));note(esc(D.pngName["view_"+k]));}}
+p("Drawn from the hall model's own 55 000 triangles (matplotlib, painter's sort, no WebGL): a picture of intent, not a render or a lux plot.");
+h2("4","From above, the whole building");root.appendChild(img(D.png.plan,"plan"));note(esc(D.pngName.plan));
+h2("5","Side section");root.appendChild(img(D.png.section,"section"));note(esc(D.pngName.section));
+h2("6","The lasers");
+root.appendChild(img(D.png.lasers,"lasers"));
+root.appendChild(table(["cube","at","mount","rays end on","floor sees","verdict"],D.rec.lasers.cubes.map(c=>{const r=D.rows.find(x=>x.id===c.id)||{};const l=(S.laser_seen_from_floor||{})[c.id];return [c.name,"("+c.p.join(", ")+")",c.mount,"",l==null?"":Math.round(100*l)+" %",{html:esc(r.verdict||""),style:{color:vcol[vk(r.verdict||"UNKNOWN")]}}];})));
+p("<b>The far three: the options, measured.</b> "+esc(D.rec.lasers.option_far));
+root.appendChild(table(["option","all pass","mean share seen from the floor","per cube"],S.far_options.map(o=>[o.option,o.all_pass?"yes":"no",Math.round(100*o.mean_seen)+" %",o.cubes.map(c=>c.cube+": "+(c.pass?"pass":"FAIL ("+c.errors.join("; ")+")")+", seen "+Math.round(100*c.seen_from_floor)+" %").join(" | ")])));
+if(S.lasers_with_the_crane_as_photographed){const bad=S.lasers_with_the_crane_as_photographed.filter(x=>!x.pass);root.appendChild(el("p",{color:bad.length?C.warn:C.sub,margin:"6px 0"},"<b>Depends on the near crane moving.</b> Every photo shows the near crane parked at z 4.8; beta v0.9 moves it to z 21. Against the hall as photographed (hall v8-show, crane at z 4.8): "+(bad.length?bad.map(x=>esc(x.name)+" FAILS ("+esc(x.errors.join("; "))+")").join("; ")+". So the mid pair needs the crane moved, as the beta has it (the venue's OK and its operator).":"all 6 still pass.")));}
+note("Static-beam NOHD "+S.nohd_m+" m (LaserCube Ultra MK2 10 W, 4 mm, 1 mrad; IEC 60825-1:2014 Table A.1, MPE "+S.mpe_w_m2+" W/m&sup2; at 0.25 s): longer than the hall, so no beam may ever reach an eye. Rules held per ray: mounted &ge; 3 m, rising, &ge; 3 m over any floor, ends on roof structure (deck or space frame) and never glass, never on the deck inside the aerial's SUSPECTED open bands, &ge; 0.3 m from steel, and every point at z &le; "+D.rec.rules.lasers_behind+" (the truss plane).");
+root.appendChild(el("p",{color:C.laser,font:"600 14px/1.5 "+F},"Planning, not a sign-off: a laser safety officer signs (IEC 60825-1, IEC TR 60825-3) before any emission. Cranes move on their runway only with the venue's OK; the clamps need the rigging sign-off."));
+h2("7","The washes, counted");
+root.appendChild(table(["group","type","n","zoom","why"],D.rec.washes.map(w=>[w.name,w.type.toUpperCase(),w.ids.length,(w.beam_deg||"")+(w.beam_deg?"°":""),w.why])));
+const inv=D.rec.inventory;note("Fixtures in this design: "+Object.entries(S.counts).map(([k,v])=>k.toUpperCase()+" "+v).join(", ")+". The beta has "+Object.entries(inv.beta_v0_9).map(([k,v])=>k.toUpperCase()+" "+v).join(", ")+"; HK1915 and 250BSW come from the rental order ("+esc(inv.order_source)+"). "+esc(inv.not_used));
+h2("8","Looks, layers, eyes");
+root.appendChild(table(["look","layers","fixtures lit","eyes in a lamp's field"],S.looks.map(l=>[l.title,l.layers.join(" + ")+" ("+l.n_layers+")",l.lit,l.eyes_in_field])));
+note("Eyes: every 0.5 m x 1 m over the dance floor (x ±5.35, z 25.8-48) at 1.6 m, line of sight tested; field = the full beam angle. Front row: "+S.front_row_max_lux+" lux.");
+h2("9","The audit: every beam against every piece of evidence");
+p("(1) the hall model's triangles + the rig's solids; (2) the VGGT point cloud of 56 photos and frames, in the hall frame (0.73 m rms): cloud points inside a cone, short of the model's surface and &gt; 0.7 m from every model surface, are clutter the model lacks; (3) the photos: each path projected with each photo's fitted camera, seen where in frame and not behind a model surface; (4) the analysis docs (below).");
+root.appendChild(table(["fixture","group","path m","model","cloud (points near path / clutter)","best photo","verdict"],D.rows.map(r=>[r.id.replace("rig-",""),r.group,r.path_m,r.model,r.cloud?(r.cloud.cloud_points_within_2m_of_path+" / "+r.cloud.clutter):"",r.photo.photo?(r.photo.photo+" "+Math.round(100*r.photo.seen)+" %"):"none",{html:esc(r.verdict),style:{color:vcol[vk(r.verdict)]}}])));
+for(let i=0;i<D.sheets.length;i++){root.appendChild(img(D.sheets[i],"contact sheet"));note(esc(D.sheetNames[i]));}
+root.appendChild(el("h3",{font:"600 15px/1.3 "+F,margin:"18px 0 8px"},"(4) from the analysis docs"));
+root.appendChild(table(["what","where","status","what it means for the lights","source"],D.docs.map(d=>[d.what,d.where,d.status,d.rule,d.src])));
+h2("10","Shots to take today (2026-10-08)");
+p("Every UNKNOWN or CHECK path, grouped, as a place to stand and a way to point (yaw 0 = toward the far gate, + toward house right; pitch + up). Also added to a local copy of the survey page, beside this one.");
+root.appendChild(table(["#","for","stand at (x, y, z)","point: yaw / pitch","covers","look for","how"],D.shots.map((s,i)=>["L"+(i+1),s.for+" ("+s.fixtures.length+")","("+s.stand_m.join(", ")+")",s.point_yaw_deg+"° / "+s.point_pitch_deg+"°","x "+s.covers_x_m.join("..")+", z "+s.covers_z_m.join(".."),s.look_for,s.how])));
+h2("11","Limits");
+p("The hall model's numbers carry hall.json's confidence (the near crane girder ASSUMED; the pipe racks LOW; the far half and the side spans never photographed). The cloud is VGGT's depth (&plusmn;0.7 m) and only where photos looked. The photos' cameras are pinhole fits with no lens distortion (959 fisheye and 024 ultra-wide approximate). PAR / beam / wash intensities are borrowed equivalents. Pictures, not renders.");
+root.appendChild(el("div",{color:C.dim,font:"12px/1.55 "+F,marginTop:"26px",borderTop:"1px solid "+C.line,paddingTop:"12px"},"Generated by scripts/place/design_paint.py (PR #823) from rigs/moxir-design-paint-2026-10-08.json, the blocking-fixed mix, the hall GLB (sha256 pinned in occlusion_lib.py), vggt-2026-10-07c and its alignment, and the owner's painted plan."));
+</script></body></html>
+"""
+
+
+# ------------------------------------------------------------------ main
+if __name__ == '__main__':
+    beams, lasers, gl = model_pass(FX)
+    for b in beams:
+        RES[b['id']] = b
+    for l in lasers:
+        RES[l['id']] = l
+    RES['_lasers'] = lasers
+    opts = far_options()
+    lks = looks(FX, gl)
+    S = summary(FX, beams, lasers, gl, lks, opts)
+    S['lasers_with_the_crane_as_photographed'] = crane_as_photographed(FX)
+    if A.check or not A.out:
+        print(json.dumps({'summary': S, 'beams': [{k: v for k, v in b.items() if not k.startswith('_')} for b in beams],
+                          'lasers': [{k: v for k, v in l.items() if not k.startswith('_')} for l in lasers]}, indent=1, default=lambda v: v.tolist() if hasattr(v, 'tolist') else str(v)))
+        sys.exit(0)
+    od = os.path.expanduser(A.out)
+    os.makedirs(od, exist_ok=True)
+    pts, cam_of = (None, None) if A.no_photos else load_cloud(os.path.join(od, 'cache', 'vggt-cloud-hall.npz'))
+    cams = [] if A.no_photos else photo_cams()
+    rows = audit(FX, beams, lasers, pts, cams, cam_of, None if A.no_photos else cloud_cam_centres())
+    shots = shot_list(rows, FX)
+    zones = json.load(open(os.path.expanduser(A.paint))) if os.path.exists(os.path.expanduser(A.paint)) else None
+    P = lambda n: os.path.join(od, 'design-paint-%s.png' % n)
+    pngs = {}
+    eye, look_at = [0.0, 1.6, 47.0], [0.0, 6.5, -14.0]
+    for lk in lks:
+        if lk['id'] in ('hallset', 'web'):
+            pngs['view_' + lk['id']] = render_view(FX, lk['_lit'], P('view-' + lk['id']), '%s (%s)' % (lk['title'], ' + '.join(lk['layers'])),
+                                                   'from the back of the dance floor, eye 1.6 m, z 47 (the hall model\'s triangles, matplotlib, no WebGL): a picture of intent, not a render', eye, look_at)
+    pngs['view_plot'] = render_view(FX, {f['id'] for f in FX if not f['spare']}, P('view-plot'), 'The whole design at home aims (a checking picture, never a show state)',
+                                    'every fixture lit at once so every place and aim can be seen; in the show at most 3 layers burn', eye, look_at)
+    pngs['plan'] = fig_plan(FX, zones, P('plan'))
+    pngs['section'] = fig_section(FX, P('section'), title='Side section, the whole length (seen from house left; everything projected onto one plane)')
+    pngs['lasers'] = fig_lasers(FX, P('lasers'))
+    pz = os.path.join(od, 'paint-zones-full-place.png')
+    if os.path.exists(pz):
+        from PIL import Image
+        im = Image.open(pz).convert('RGB')
+        im.thumbnail((1400, 1600))
+        im.save(P('paint'))
+        pngs['paint'] = P('paint')
+    sheets = contact_sheets(rows, FX, cams, od) if cams else []
+    import csv
+    with open(os.path.join(od, 'audit-table.csv'), 'w', newline='') as fh:
+        w = csv.writer(fh)
+        w.writerow(['fixture', 'group', 'type', 'at', 'path m', 'model', 'cloud points within 2 m of the path', 'cloud clutter points', 'clutter where', 'best photo', 'share of path seen', 'verdict'])
+        for r in rows:
+            c = r['cloud'] or {}
+            w.writerow([r['id'], r['group'], r['type'], r['at'], r['path_m'], r['model'], c.get('cloud_points_within_2m_of_path', ''), c.get('clutter', ''),
+                        c.get('clutter_at', ''), r['photo'].get('photo') or '', r['photo'].get('seen'), r['verdict']])
+    with open(os.path.join(od, 'shot-list.json'), 'w') as fh:
+        json.dump(shots, fh, indent=1)
+    with open(os.path.join(od, 'design-paint.json'), 'w') as fh:
+        json.dump({'summary': S, 'audit': rows, 'shots': shots}, fh, indent=1, default=lambda v: v.tolist() if hasattr(v, 'tolist') else str(v))
+    page = write_page(od, S, rows, shots, pngs, sheets)
+    for v in list(pngs.values()) + sheets + [page]:
+        print('wrote', v)

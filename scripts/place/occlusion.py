@@ -164,10 +164,11 @@ def trace_beam(f, dirs, sub):
     mount = mount_of(f)
     t_fam = None
     fam_cls = set()
-    if T is not None:
-        # a target ON the building's skin (a wall, the deck): any hit on that same skin is the beam arriving
+    if T is not None and f['aim'].get('rule') in ('point', 'targets'):
+        # a target ON the building's skin (a wall, the floor, the deck): any hit on that same skin is the beam arriving.
+        # Not the space frame: a crossing point in the air that happens to sit in a chord is a block, not a target.
         ta = OB.cast(p, unit_(T - p), 0.35, 1e9, sub, skip_cls=NON_SHELL)
-        if ta[0] is not None and abs(ta[0] - float(np.linalg.norm(T - p))) < 0.6:
+        if ta[0] is not None and abs(ta[0] - float(np.linalg.norm(T - p))) < 0.6 and ta[2] in ('end wall', 'side wall', 'floor', 'roof deck'):
             fam_cls.add(ta[2])
     if fam and T is None:
         h = OB.cast(p, f['d'], 0.35, reach, sub, mount=mount)

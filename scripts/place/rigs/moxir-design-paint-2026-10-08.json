@@ -666,5 +666,28 @@
     "the curtain (truss)"
    ]
   }
- ]
+ ],
+ "eye_review": {
+  "_how": "2026-10-08: the contact sheets (audit-sheet-*.png) looked at by eye, tile by tile; where a photo contradicts the automatic verdict, this entry wins and the page says so. A pinhole projection cannot see a real object that the model lacks in FRONT of the path.",
+  "new-hk1915-03": {
+   "verdict": "UNKNOWN",
+   "note": "frame 963 t0.3 is a close-up of machinery (pipes, a steel frame) in the foreground: the path behind it is not visible, so this photo does not see it"
+  },
+  "new-bsw250-10": {
+   "verdict": "UNKNOWN",
+   "note": "photo 011: a concrete column face fills the foreground where the path is drawn: the path is not visible"
+  },
+  "rig-par-press-cut-03": {
+   "verdict": "CHECK",
+   "note": "photo 867: a steel lattice crosses the drawn path, probably the near crane where it is parked today (z 4.8, underside 7.95 m), above the beam's 5 m target if so: confirm on site"
+  },
+  "rig-par-press-sides-01": {
+   "verdict": "CHECK",
+   "note": "photo 867: as press-cut-03"
+  },
+  "rig-par-press-sides-02": {
+   "verdict": "CHECK",
+   "note": "photo 867: as press-cut-03"
+  }
+ }
 }
