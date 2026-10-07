@@ -130,12 +130,15 @@ export const rigTruss = async ({ production, version, detail = false } = {}) => 
     const rigFile = rigFileFor(versions, spec, version)
     const rig = read(rigFile)
     const truss = rig.truss || { kind: 'none' }
-    const out = { production: set, version, rigFile, hall: rig.hall, truss: detail ? truss : terse(truss) }
+    const out = { production: set, version, rigFile, hall: rig.hall }
+    // a hung line with picks gets the short summary; detail (or any other truss) gets the block itself
+    if (detail || !Array.isArray(truss.rigging?.picks)) out.truss = detail ? truss : terse(truss)
     if (truss.rigging) {
         const r = truss.rigging
         out.summary = {
-            kind: truss.kind, shape: truss.shape || null, width_m: truss.width_m ?? null, slope_deg: truss.slope_deg ?? null,
-            trim_m: truss.trim_m ?? null, ends: truss.ends || null,
+            kind: truss.kind, shape: truss.shape || null, width_m: truss.width_m ?? null, pieces_m: truss.pieces_m || null,
+            slope_deg: truss.slope_deg ?? null, trim_m: truss.trim_m ?? null, rise_m: truss.rise_m ?? null, ends: truss.ends || null,
+            lowest_m: truss.clearance?.lowest_m ?? null, hoists: r.hoists ?? null, hoist_kg: r.hoist_kg ?? null,
             picks: (r.picks || []).map((p) => ({ u_m: p.u_m, kg_on_line: p.line_kg, kg_on_bridge: p.on_bridge_kg, leg_kg: p.leg_kg, bridle_included_deg: p.bridle_included_deg, apex_m: p.apex_m })),
             tieoffs: (r.tieoffs || []).map((t) => ({ id: t.id, from_m: t.from_m, to_m: t.to_m, length_m: t.length_m })),
             load_total_kg: r.load?.total_kg ?? null,

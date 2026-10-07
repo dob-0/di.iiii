@@ -108,6 +108,8 @@ export const RIG_KIT_LINES = [RIG_ROOM, ...RIG_STEPS, RIG_LIGHT]
 
 // The four tools the agent door registers (sdk/mcp.mjs).
 export const MCP_TOOL_NAMES = ['di_find', 'di_describe', 'di_call', 'di_run']
+// And its four read-only rig tools (sdk/rig.js): they read a checkout's rig files and change nothing.
+export const MCP_RIG_TOOL_NAMES = ['di_rig_versions', 'di_rig_check', 'di_rig_truss', 'di_production_archive_plan']
 
 // What a saved space unpacks to — the paths inside a .diiii, read from
 // scripts/space-bundle.mjs (the test checks each name appears there).
@@ -548,13 +550,13 @@ export const KIT_TOOLS = [
         id: 'mcp',
         group: 'agents',
         name: 'The agent door',
-        line: 'An agent such as Claude connects to your own di.iiii over MCP and reaches, through four tools, everything the live catalogue opens to it — never more than your own key can.',
+        line: 'An agent such as Claude connects to your own di.iiii over MCP and reaches, through four tools, everything the live catalogue opens to it — never more than your own key can. In a checkout, four more read a production\'s rig and change nothing.',
         where: install,
         try: null,
-        preview: preview.text([...help('di mcp'), '', ...MCP_TOOL_NAMES.map((name) => `  ${name}`)]),
+        preview: preview.text([...help('di mcp'), '', ...[...MCP_TOOL_NAMES, ...MCP_RIG_TOOL_NAMES].map((name) => `  ${name}`)]),
         show: [{ label: 'the live catalogue', href: '/serverXR/api/catalogue' }],
         madeWith: ['mcp', 'zod'],
-        sources: ['sdk/mcp.mjs', 'sdk/door.js', 'serverXR/src/catalogue/index.js', 'docs/architecture/SPEC_agent_door.md'],
+        sources: ['sdk/mcp.mjs', 'sdk/door.js', 'sdk/rig.js', 'serverXR/src/catalogue/index.js', 'docs/architecture/SPEC_agent_door.md'],
         wiki: 'api-and-agents'
     }
 ]

@@ -225,7 +225,7 @@ export const createMcpServer = (door, { McpServer, fromJsonSchema }) => {
     // ── the rig tools: read only, nothing here writes (spec §5.1) ──
     const LOCAL_READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     const PRODUCTION = { type: 'string', description: 'the production\'s set id or a unique prefix, e.g. "moxir" (default: the only one)' }
-    const VERSION = { type: 'string', description: 'a version, variant or candidate id from di_rig_versions, e.g. "known-full"' }
+    const RIG_VERSION = { type: 'string', description: 'a version, variant or candidate id from di_rig_versions, e.g. "known-full"' }
 
     server.registerTool('di_rig_versions', {
         title: 'List a production\'s rig versions',
@@ -239,7 +239,7 @@ export const createMcpServer = (door, { McpServer, fromJsonSchema }) => {
         description: 'Run the existing rig checks on the committed files and return pass/fail with numbers: generated files fresh, bridle angles within limit, every look built with nothing refused or clashing, lasers at least 3 m up and rising, the ground-mover policy. Geometry only; a human signs the rigging.',
         inputSchema: schema({
             production: PRODUCTION,
-            version: { ...VERSION, description: 'check only this one (default: all, a few seconds)' },
+            version: { ...RIG_VERSION, description: 'check only this one (default: all, a few seconds)' },
             hall: { type: 'string', description: 'check against another committed hall file in scripts/place/rigs (default: the hall each rig names)' }
         }),
         annotations: LOCAL_READ
@@ -247,8 +247,8 @@ export const createMcpServer = (door, { McpServer, fromJsonSchema }) => {
 
     server.registerTool('di_rig_truss', {
         title: 'Show one version\'s truss',
-        description: 'The truss of one version: ends, picks with kg and bridle angles, tie-offs, load and sign-off, plus the bridle check. Reasons and sources are left out unless detail is true.',
-        inputSchema: schema({ production: PRODUCTION, version: VERSION, detail: { type: 'boolean', description: 'include every why/source/basis/note field' } }, ['version']),
+        description: 'The truss of one version: ends, picks with kg and bridle angles, tie-offs, load and sign-off, plus the bridle check against its hall. detail: true returns the whole truss block with every reason and source.',
+        inputSchema: schema({ production: PRODUCTION, version: RIG_VERSION, detail: { type: 'boolean', description: 'include every why/source/basis/note field' } }, ['version']),
         annotations: LOCAL_READ
     }, (input) => door.rigTruss(input))
 

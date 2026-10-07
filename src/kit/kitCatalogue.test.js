@@ -10,6 +10,7 @@ import {
     KIT_GROUPS,
     KIT_LIBS,
     KIT_TOOLS,
+    MCP_RIG_TOOL_NAMES,
     MCP_TOOL_NAMES,
     SANDBOX_PLACEHOLDER,
     kitAppPaths,
@@ -155,9 +156,9 @@ describe('the kit catalogue — what it says is made of, exists', () => {
         for (const line of INSTALL_LINES) expect(wiki).toContain(line)
     })
 
-    it('names the four tools the agent door registers', () => {
+    it('names the tools the agent door registers, the four door tools and the four rig tools', () => {
         const mcp = readFileSync(join(repoDir, 'sdk/mcp.mjs'), 'utf8')
-        for (const name of MCP_TOOL_NAMES) expect(mcp).toContain(`registerTool('${name}'`)
+        for (const name of [...MCP_TOOL_NAMES, ...MCP_RIG_TOOL_NAMES]) expect(mcp).toContain(`registerTool('${name}'`)
     })
 
     it('names what a .diiii file holds, as the bundle tool writes it', () => {
