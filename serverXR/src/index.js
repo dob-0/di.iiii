@@ -120,6 +120,7 @@ const { registerPlaceRoutes } = require('./routes/placeRoutes')
 // actually are, which is what the place lane has to copy footage out of.
 const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
+const { certificateNames, registerGuestAddressRoute } = require('./guestAddress')
 const { startLocalName } = require('./localName')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
@@ -2721,6 +2722,17 @@ registerConfigRoutes(router, {
   machine: thisMachine
 })
 
+// The place address for devices without di (serverXR/src/guestAddress.js):
+// the certificate this server actually serves, set once https is up below.
+// null until then, and null for good on an install that serves plain http.
+let servedCertificate = null
+registerGuestAddressRoute(router, {
+  getCertificate: () => servedCertificate,
+  port: config.port,
+  listen: describeListenNow,
+  requireAuth: config.requireAuth
+})
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -2918,6 +2930,7 @@ initStorage()
       ? https.createServer({ cert: tlsFiles.cert, key: tlsFiles.key }, app)
       : http.createServer(app)
     if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
+    servedCertificate = tlsFiles ? certificateNames(tlsFiles.cert) : null
 
     initializeSocket(httpServer, {
       ...config,
