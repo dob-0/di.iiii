@@ -58,7 +58,7 @@ import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
-import { listInvites, mintInvite, revokeInvite } from './share.mjs'
+import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import {
@@ -1049,7 +1049,26 @@ const cmdInvite = async (args) => {
         return
     }
 
-    const minted = await mintInvite({ base, spaceId, token, label: 'follow' })
+    // `--actions` — what this space's keys did to its projects (the key log).
+    if (args.flags.actions) {
+        const answer = await listKeyActions({ base, spaceId, token })
+        if (!answer.ok) { fail(ui.inviteRefused(spaceId, answer.reason)); process.exitCode = 1; return }
+        say(ui.inviteActions(spaceId, answer.actions))
+        return
+    }
+
+    // `--undo KEYID` — take that key back and undo what it did (the key log names the id).
+    if (args.flags.undo) {
+        const answer = await undoKey({ base, spaceId, keyId: String(args.flags.undo), token })
+        if (!answer.ok) { fail(ui.inviteRefused(spaceId, answer.reason)); process.exitCode = 1; return }
+        say(ui.keyUndone(spaceId, answer))
+        return
+    }
+
+    // `--manage` — a key that may also trash, hide and move this space's
+    // projects (SPEC_space_sync_keys.md §13). Off unless asked, every time.
+    const manage = Boolean(args.flags.manage)
+    const minted = await mintInvite({ base, spaceId, token, label: manage ? 'follow (manage)' : 'follow', manage })
     if (!minted.ok) {
         fail(ui.inviteRefused(spaceId, minted.reason))
         process.exitCode = 1
@@ -1062,7 +1081,7 @@ const cmdInvite = async (args) => {
     const from = reach?.lan && reach.addresses[0]
         ? lanUrl(reach.addresses[0], port)
         : base.replace(/\/serverXR$/, '')
-    say(ui.invited(spaceId, from, minted.key))
+    say(ui.invited(spaceId, from, minted.key, { manage }))
 }
 
 /** The bare hostname out of whatever a person typed for --from, for a message

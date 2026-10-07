@@ -46,6 +46,21 @@ export const isTrustedCleartext = (url, address = null) => {
 }
 
 /**
+ * A manage key (its id starts with 'm': serverXR/src/syncKeyStore.js) is never
+ * sent over plain http to another machine — not on a LAN, not on Tailscale,
+ * not with --insecure (SPEC_space_sync_keys.md §13.4; review L2). Loopback only.
+ */
+export const isManageKey = (key) => /^dii_sync_m/.test(String(key || '').trim())
+export const manageKeyMayTravel = (url, address = null) => {
+    let parsed
+    try { parsed = new URL(url) } catch { return false }
+    if (parsed.protocol === 'https:') return true
+    if (parsed.protocol !== 'http:') return false
+    const host = (address || parsed.hostname).replace(/^\[|\]$/g, '').toLowerCase()
+    return host === 'localhost' || host === '::1' || /^127\./.test(host)
+}
+
+/**
  * Is there already a space of that name in the data folder of an install that is
  * NOT running? Spaces live in di.db. Anything unreadable counts as "yes": the
  * refusal is a flag away (--into), an overwrite is not.
@@ -75,6 +90,7 @@ export const followSpace = async ({ home, spaceId, from, key = null, into = null
     // Refuse before touching anything: a key must not travel in clear to a public
     // host, and a follows.json that does not parse must not be written over.
     if (!insecure && !isTrustedCleartext(from, address)) return { ok: false, reason: 'cleartext' }
+    if (isManageKey(key) && !manageKeyMayTravel(from, address)) return { ok: false, reason: 'manage-cleartext' }
     if (inspectFollows(paths(home).data).state === 'corrupt') return { ok: false, reason: 'corrupt' }
 
     const resolved = await resolveBase(from, { address })

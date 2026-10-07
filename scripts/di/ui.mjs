@@ -96,6 +96,17 @@ export const followSettingsLines = (settings) => (Array.isArray(settings?.notes)
 export const followProjectLines = (projects) => (Array.isArray(projects?.notes) ? projects.notes : [])
     .map(note => (/not carried/.test(note) ? style.yellow(`projects: ${note}`) : style.dim(`projects: ${note}`)))
 
+/**
+ * A follow's key, 14 days before it expires (owner, 2026-10-07: a manage key
+ * lives 90 days, an ordinary one a year). Said in yellow, with what to do.
+ */
+export const followKeyLines = (spaceId, entry, key, now = Date.now()) => {
+    if (!key?.expiresAt || !key.expiresSoon) return []
+    const days = Math.max(0, Math.ceil((key.expiresAt - now) / (24 * 60 * 60 * 1000)))
+    const from = String(entry?.remote || '').replace(/\/serverXR$/, '')
+    return [style.yellow(`key: ${key.scope || 'edit'} key ${days === 0 ? 'expires today' : `expires in ${days} ${days === 1 ? 'day' : 'days'}`} — ask the host's owner for a new one, then: ${CMD} follow ${spaceId} --from ${from} --key - --into ${spaceId}`)]
+}
+
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
     // ids and how to stop — and everything else di.iiii can do was a thing you
@@ -156,8 +167,11 @@ export const ui = {
     // ── one space, two installs ───────────────────────────────────────────
     // The words a person reads off one laptop and types into another. The key
     // is shown once and belongs to that space alone.
-    invited: (spaceId, url, key) => [
+    invited: (spaceId, url, key, { manage = false } = {}) => [
         `${style.cyan(spaceId)} is open to one other di.iiii.`,
+        // A manage key is said out loud, every time it is made: it can move this
+        // space's projects to the trash (SPEC_space_sync_keys.md §13).
+        manage ? style.yellow('this is a MANAGE key: their trash, hiding and moves of projects in this space reach here too (never purge, never public; limited per hour). undo all it did: the key log and undo on the host.') : null,
         '',
         'on their machine:',
         `  ${style.cyan(`${CMD} follow ${spaceId} --from ${url} --key ${key}`)}`,
@@ -167,7 +181,23 @@ export const ui = {
         '',
         style.dim('that key opens this space and nothing else, and you can take it back:'),
         style.dim(`  ${CMD} invite ${spaceId} --revoke`)
+    ].filter(line => line !== null).join('\n'),
+
+    keyUndone: (spaceId, report) => [
+        `took back key ${report.key?.id || ''} for ${style.cyan(spaceId)}${report.revoked ? '' : ' (it was already taken back)'}.`,
+        `restored ${report.restored.length}, made public again ${report.madePublic.length}, moved back ${report.movedBack.length}.`,
+        ...report.notUndone.map(row => style.yellow(`not undone: ${row.action} ${row.projectId} — ${row.why}`))
     ].join('\n'),
+
+    /** The space's key log (GET …/sync-keys/actions), newest first. */
+    inviteActions: (spaceId, actions) => (actions.length
+        ? [`what the keys of ${style.cyan(spaceId)} did:`, ...actions.map(row => {
+            const when = new Date(row.at).toISOString().replace('T', ' ').slice(0, 16)
+            const what = `${row.action}${row.projectId ? ` ${row.projectId}` : ''}${row.toSpaceId ? ` → ${row.toSpaceId}` : ''}`
+            const line = `  ${when}  ${row.keyId}  ${String(row.keyLabel || '').slice(0, 28).padEnd(28)}  ${what}`
+            return row.outcome === 'done' ? line : style.yellow(`${line}  refused: ${row.reason || ''}`)
+        })].join('\n')
+        : `no key has trashed, hidden, moved or restored anything in ${spaceId}.`),
 
     inviteRefused: (spaceId, reason) => [
         `could not open ${spaceId} to anyone.`,
@@ -205,6 +235,7 @@ export const ui = {
             'local-space': 'this install could not make room for it — is di.iiii running here?',
             itself: 'that address is this di.iiii — a space cannot follow itself.',
             cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
+            'manage-cleartext': 'that is a MANAGE key, and a manage key is sent only over https (or to this machine) — on any network, --insecure or not. use the https address, or ask for an ordinary key.',
             corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
         }[reason] || `could not follow ${where}.`
         // Only on a plain, un-pinned "unreachable": the address pin is the fix
@@ -241,9 +272,12 @@ export const ui = {
             const state = byId.get(id)
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
-            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
+            // The key's scope (SPEC_space_sync_keys.md §13): manage carries this
+            // install's trash, hiding and moves to the host; edit does not.
+            const scope = state.key?.scope ? ` · key: ${state.key.scope}` : ''
+            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}${scope}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followSettingsLines(state.settings), ...followProjectLines(state.projects), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
+            return [line, ...followKeyLines(id, entry, state.key), ...followSettingsLines(state.settings), ...followProjectLines(state.projects), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         }).join('\n')
     },
 
@@ -484,6 +518,10 @@ export const ui = {
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
+        `                  (${CMD} invite SPACE --manage: a key whose trash, hiding and moves of projects`,
+        '                  made here reach the host too — the host\'s owner gives it on purpose;',
+        `                  ${CMD} invite SPACE --actions on the host lists what keys did;`,
+        `                  ${CMD} invite SPACE --undo KEYID takes one back and undoes what it did)`,
         '  --at ADDRESS    the ADDRESS PIN — the name in --from stays, but the socket goes',
         '                  to this address instead of whatever it resolves to. For when',
         '                  --from names a machine this one can only reach somewhere else —',

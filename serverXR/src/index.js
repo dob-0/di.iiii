@@ -88,7 +88,12 @@ const {
   getUserTokenVersion,
   bumpUserTokenVersion
 } = require('./userStore')
-const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const syncKeyActions = require('./syncKeyActions')
+// Said once, where the operator reads the log (review R2-C).
+if (config.requireAuth && !config.auth.sessionSecretSeparate) {
+  logger.warn('[auth] AUTH_SESSION_SECRET is not set apart from the API tokens: session cookies are signed with a token, so manage sync keys cannot be minted from a session (only by the owner at the machine). Set AUTH_SESSION_SECRET to its own random value.')
+}
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
@@ -719,6 +724,16 @@ const readAuthSession = (req) => {
 // Only past halfway, so an ordinary page load does not re-sign a cookie on
 // every request; and only for real session cookies, never for the API-token or
 // sync-key identities, which have no cookie to refresh.
+// Every cookie re-issued from an existing session goes through here, so how the
+// session began — `via: 'signin'` (a person signed in) or `via: 'token'` (made
+// from an API token) — is carried by construction and can never be dropped
+// (review R2-B). Only the sign-in doors set `via` in the first place.
+const reissueSessionValue = (previous, { ttlMs = config.authSession.ttlMs, session }) => createAuthSessionValue({
+  secret: config.auth.sessionSecret,
+  ttlMs,
+  session: { ...session, ...(previous?.via ? { via: previous.via } : {}) }
+})
+
 const refreshSessionCookieIfStale = (req, res, state) => {
   if (!state?.authenticated || state.type !== 'session') return
   const session = state.session
@@ -731,8 +746,7 @@ const refreshSessionCookieIfStale = (req, res, state) => {
   // has begun streaming.
   if (res.headersSent) return
   try {
-    const next = createAuthSessionValue({
-      secret: config.auth.sessionSecret,
+    const next = reissueSessionValue(session, {
       ttlMs: ttl,
       session: {
         subject: session.subject,
@@ -749,6 +763,9 @@ const refreshSessionCookieIfStale = (req, res, state) => {
     // the person actually made.
   }
 }
+
+// The one route that reads a second sync key (§13.3).
+const MOVE_ROUTE = /\/api\/projects\/[^/?]+\/move\/?(?:\?|$)/
 
 const getAuthState = (req, res = null) => {
   const sessionState = readAuthSession(req)
@@ -774,14 +791,41 @@ const getAuthState = (req, res = null) => {
   if (token && token.startsWith(syncKeyPrefix)) {
     const sk = resolveSyncKey(token)
     if (sk) {
-      return buildAuthState({
-        authenticated: true,
-        type: 'sync-key',
-        role: 'editor',
-        subject: `sync-key:${sk.keyId}`,
-        label: sk.label || 'Sync Key',
-        spaces: [sk.spaceId]
-      })
+      // A second key, for the one action that needs two spaces: moving a
+      // project between them (SPEC_space_sync_keys.md §13.3, T11). Read only
+      // here, by the same resolver, only behind a sync key; it must itself be
+      // a manage key, and it is NOT added to `spaces` — it widens nothing but
+      // the move route's check. One that does not resolve fails the request.
+      // It travels in the move's JSON body (`alsoSyncKey`), never in a header
+      // (proxies and log pipelines redact Authorization, not custom headers —
+      // review L4), is read ONLY for POST /api/projects/:id/move, and is taken
+      // out of the body here so nothing downstream can echo or log it.
+      let alsoSyncKey = null
+      const isMove = req.method === 'POST' && MOVE_ROUTE.test(String(req.originalUrl || ''))
+      const alsoRaw = isMove && req.body && typeof req.body === 'object' ? normalizeAuthToken(String(req.body.alsoSyncKey || '')) : ''
+      if (isMove && req.body && typeof req.body === 'object') delete req.body.alsoSyncKey
+      if (alsoRaw) {
+        const also = resolveSyncKey(alsoRaw)
+        if (!also || also.scope !== 'manage' || also.keyId === sk.keyId) {
+          return buildAuthState({ authenticated: false, type: 'sync-key', reason: 'second-key' })
+        }
+        alsoSyncKey = { keyId: also.keyId, label: also.label || '', spaceId: also.spaceId, scope: also.scope, ownerUserId: also.ownerUserId || null }
+      }
+      return {
+        ...buildAuthState({
+          authenticated: true,
+          type: 'sync-key',
+          role: 'editor',
+          subject: `sync-key:${sk.keyId}`,
+          label: sk.label || 'Sync Key',
+          spaces: [sk.spaceId]
+        }),
+        // The key's own record, for the action log and the manage check.
+        syncKey: { keyId: sk.keyId, label: sk.label || '', spaceId: sk.spaceId, scope: sk.scope, ownerUserId: sk.ownerUserId || null, expiresAt: sk.expiresAt || null },
+        // Spaces whose projects this identity may trash, hide and move (§13.2).
+        manageSpaces: sk.scope === 'manage' ? [sk.spaceId] : [],
+        ...(alsoSyncKey ? { alsoSyncKey } : {})
+      }
     }
   }
   return sessionState
@@ -862,9 +906,7 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   try { setUserSpacesNow(userId, nextSpaces) } catch { return }
   if (req.authState?.type === 'session' && config.auth.sessionSecret) {
     try {
-      const session = createAuthSessionValue({
-        secret: config.auth.sessionSecret,
-        ttlMs: config.authSession.ttlMs,
+      const session = reissueSessionValue(req.authState.session, {
         session: {
           subject: userId,
           label: req.authState.label,
@@ -1110,7 +1152,9 @@ const issueSessionForUser = async (req, res, user) => {
       role: user.role,
       spaces: Array.isArray(user.spaces) ? user.spaces : [],
       ...(user.isUnrestricted ? { isUnrestricted: true } : {}),
-      tokenVersion: user.tokenVersion
+      tokenVersion: user.tokenVersion,
+      // A person signed in: the one stamp that may mint a manage key (§13.4).
+      via: 'signin'
     }
   })
   setAuthSessionCookie(res, session.value)
@@ -1166,9 +1210,7 @@ router.get('/api/auth/session', async (req, res, next) => {
           const sortedDb = [...dbSpaces].sort().join(',')
           const sortedCookie = [...(state.spaces || [])].sort().join(',')
           if (dbRole !== state.role || sortedDb !== sortedCookie || dbUnrestricted !== Boolean(state.isUnrestricted)) {
-            const fresh = createAuthSessionValue({
-              secret: config.auth.sessionSecret,
-              ttlMs: config.authSession.ttlMs,
+            const fresh = reissueSessionValue(state.session, {
               session: { subject: state.subject, label: state.label, role: dbRole, spaces: dbSpaces, isUnrestricted: dbUnrestricted, tokenVersion: dbUser.tokenVersion }
             })
             setAuthSessionCookie(res, fresh.value)
@@ -1281,7 +1323,10 @@ router.post('/api/auth/session', authAttemptLimiter, async (req, res) => {
       label: identity.label,
       role: identity.role,
       spaces: identity.spaces,
-      isUnrestricted: identity.isUnrestricted
+      isUnrestricted: identity.isUnrestricted,
+      // Made from a token, not by a person signing in: it never mints a
+      // manage key or undoes one (SPEC_space_sync_keys.md §13.4, T10).
+      via: 'token'
     }
   })
   setAuthSessionCookie(res, session.value)
@@ -1407,6 +1452,72 @@ const isSpaceOwnerOrAdminState = (state, meta) => {
   if (meta?.kind === 'sandbox' && meta.id && !isGuestSubject(state.subject) &&
     meta.id === getOwnSandboxSpaceId(state.subject)) return true
   return Boolean(meta?.ownerUserId) && meta.ownerUserId === state.subject
+}
+
+// The four project actions a `manage` sync key adds (SPEC_space_sync_keys.md
+// §13.2): move to the trash, make private, and — with a manage key of the
+// other space too — move between spaces (restore was already an editor's).
+// Everything isSpaceOwnerOrAdminState allows, plus a sync key whose scope is
+// manage AND whose space is this one. isSpaceOwnerOrAdminState itself is NOT
+// widened: the space's own settings, its keys, members and owner stay with it.
+const canManageProjectsState = (state, meta) => {
+  if (isSpaceOwnerOrAdminState(state, meta)) return true
+  if (!state?.authenticated || state.type !== 'sync-key' || !meta?.id) return false
+  return Array.isArray(state.manageSpaces) && state.manageSpaces.includes(meta.id)
+}
+
+// A move made with two manage keys must not let anybody new see the project
+// (owner, 2026-10-07; review C1). Who can reach a space, as far as the server
+// can count: its owner, the accounts whose scope lists it, its trusted list,
+// and — not countable — whoever holds one of its invite links or another of
+// its sync keys. So the space it goes to may have no holder the space it
+// leaves lacks: its countable members must all be members of the source, and
+// it may have no live or used invite and no live key but the move's own. A
+// project that is not private may not go into a space open to visitors unless
+// it came from one. Returns the reason to refuse, or null.
+const keyMoveWidensAccess = async ({ fromMeta, toMeta, project, alsoKeyId }) => {
+  // Fail closed (review R2-A): any audience this cannot count is a refusal,
+  // and so is any error while counting.
+  try {
+    if (!fromMeta || !toMeta) return 'one of the two spaces is not there'
+    if (toMeta.kind && toMeta.kind !== 'normal') return `"${toMeta.id}" is a ${toMeta.kind} space, open to more people`
+    // The communal open space: every signed-in identity, every guest cookie
+    // included, reaches it (authAccess.js canAccessSpace) — whatever its kind
+    // says, since an admin can point the open space at an existing normal one.
+    const guestSpaces = new Set([getCommunalSpaceId(), await resolveOpenSpaceId(), ...(Array.isArray(GUEST_SPACES) ? GUEST_SPACES : [])]
+      .map(id => (id ? normalizeSpaceId(String(id)) || String(id) : null)).filter(Boolean))
+    if (guestSpaces.has(toMeta.id) || guestSpaces.has('*')) return `"${toMeta.id}" is the open space every guest reaches`
+    if (project?.meta?.visibility !== 'private' && toMeta.isPublic && !fromMeta.isPublic) {
+      return `"${toMeta.id}" is open to every visitor and "${fromMeta.id}" is not`
+    }
+    const membersOf = (meta) => {
+      const ids = new Set([meta.ownerUserId, ...(meta.trustedUserIds || [])].filter(Boolean).map(id => `account:${id}`))
+      const rows = getDb().prepare('SELECT id, spaces FROM users WHERE spaces LIKE ?').all(`%${JSON.stringify(meta.id)}%`)
+      for (const row of rows) {
+        // An unreadable row is not "nobody": it is an audience that cannot be counted.
+        const spaces = JSON.parse(row.spaces || '[]')
+        if (spaces.includes(meta.id)) ids.add(`account:${row.id}`)
+      }
+      // Static API-token identities with a space list (AUTH_IDENTITIES,
+      // *_ALLOWED_SPACES): a token scoped to the destination gains access too.
+      // An admin or unrestricted token reaches both spaces alike.
+      for (const identity of config.auth.identities || []) {
+        const spaces = Array.isArray(identity?.spaces) ? identity.spaces.map(id => normalizeSpaceId(String(id)) || String(id)) : null
+        if (spaces && spaces.includes(meta.id)) ids.add(`token:${identity.subject}`)
+      }
+      return ids
+    }
+    const source = membersOf(fromMeta)
+    const newcomers = [...membersOf(toMeta)].filter(id => !source.has(id))
+    if (newcomers.length) return `"${toMeta.id}" is shared with ${newcomers.length} ${newcomers.length === 1 ? 'account or token' : 'accounts or tokens'} "${fromMeta.id}" is not`
+    const now = Date.now()
+    const invites = getDb().prepare('SELECT COUNT(*) AS n FROM space_invites WHERE space_id = ? AND (use_count > 0 OR (revoked = 0 AND (expires_at IS NULL OR expires_at > ?)))').get(toMeta.id, now).n
+    if (invites > 0) return `"${toMeta.id}" has invite links out, and who holds them cannot be counted`
+    if (otherLiveKeys(toMeta.id, alsoKeyId, now).length) return `"${toMeta.id}" has other sync keys out, and who holds them cannot be counted`
+    return null
+  } catch (error) {
+    return `who could see it in "${toMeta?.id || 'the other space'}" could not be counted (${error?.message || error})`
+  }
 }
 
 // Route-level gate for space management writes. Sits on top of
@@ -1807,9 +1918,10 @@ router.use('/api/projects/:projectId', async (req, res, next) => {
     req.requiredSpaceId = project?.spaceId || null
     if (req.method === 'DELETE' && (req.path === '/' || req.path === '')) {
       // Deleting a project is owner-or-admin, like managing its space: keep
-      // the admin requirement unless the caller owns the parent space.
+      // the admin requirement unless the caller owns the parent space — or is
+      // a manage sync key of it (§13.2; the soft delete only, limits in the route).
       const meta = project?.spaceId ? await loadSpaceMeta(project.spaceId) : null
-      if (!isSpaceOwnerOrAdminState(req.authState || {}, meta)) {
+      if (!canManageProjectsState(req.authState || {}, meta)) {
         req.requiredWriteRole = 'admin'
       }
     }
@@ -2191,14 +2303,59 @@ const requireSpaceOwnerOrAdmin = async (req, res) => {
   return { spaceId, meta, state }
 }
 
+// A manage key (SPEC_space_sync_keys.md §13.4) is minted only by a person:
+// a signed-in session of the space's owner or an admin (the owner at the
+// machine counts — localOwner.js), or a server with auth off, where every
+// request is already admin. Never by a bearer token — the static admin token
+// and every sync key included: a token never makes a stronger token (T3, T10).
+// A "person" here is an account that signed in (OAuth or password — a users
+// row) or the owner at the machine. A session made from an API token is marked
+// `via: 'token'` and refused; one made before that mark existed has no users
+// row (its subject is the token's configured subject), so it is refused too
+// (review H1).
+const mayMintManageKey = (state) => {
+  if (!config.requireAuth) return true
+  if (!state?.authenticated) return false
+  if (state.type === 'disabled') return true
+  if (state.type !== 'session' || isGuestSubject(state.subject)) return false
+  // The owner at the machine (localOwner.js): no cookie at all, so nothing to forge or carry.
+  if (state.subject === 'local-owner' && !state.session) return true
+  // A cookie must say a person signed in (review R2-B: a positive stamp, not
+  // the absence of a token mark), the cookie key must be its own secret
+  // (R2-C), and the account must exist.
+  if (state.session?.via !== 'signin') return false
+  if (!config.auth.sessionSecretSeparate) return false
+  try { return Boolean(findUserById(state.subject)) } catch { return false }
+}
+
 router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, res, next) => {
   try {
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
     if (!ctx) return
     const label = String(req.body?.label || 'github-actions').slice(0, 80)
-    const ttlMs = 365 * 24 * 60 * 60 * 1000 // default: 1 year
-    const ownerUserId = ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null)
-    const { token, key } = mintSyncKey({ spaceId: ctx.spaceId, ownerUserId, label, ttlMs })
+    const manage = req.body?.manage === true
+    // An edit key lives a year, a manage key 90 days (owner, 2026-10-07).
+    const ttlMs = manage ? SYNC_KEY_TTL_MS.manage : SYNC_KEY_TTL_MS.edit
+    // A manage key belongs to the SPACE's owner, whoever minted it (an admin
+    // may): a move between two spaces needs both keys to belong to the one
+    // owner of both (review C1). A space with no owner gives a key that can
+    // never move anything — fail closed.
+    const ownerUserId = manage
+      ? (ctx.meta.ownerUserId || null)
+      : (ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null))
+    if (manage && !mayMintManageKey(ctx.state) && config.requireAuth && !config.auth.sessionSecretSeparate && ctx.state.subject !== 'local-owner') {
+      return res.status(403).json({
+        error: 'This server signs its session cookies with an API token (AUTH_SESSION_SECRET is not set apart), so a session cannot prove a person signed in. Set AUTH_SESSION_SECRET, or mint the manage key at the machine.',
+        code: 'manage_needs_session_secret'
+      })
+    }
+    if (manage && !mayMintManageKey(ctx.state)) {
+      return res.status(403).json({
+        error: "A manage key is minted from a signed-in session of the space's owner (or an admin), never with a token.",
+        code: 'manage_needs_session'
+      })
+    }
+    const { token, key } = mintSyncKey({ spaceId: ctx.spaceId, ownerUserId, label, ttlMs, scope: manage ? 'manage' : 'edit' })
     res.status(201).json({
       ok: true,
       token,
@@ -2225,6 +2382,106 @@ router.delete('/api/spaces/:spaceId/sync-keys/:id', async (req, res, next) => {
     }
     res.json({ ok: true, revoked: req.params.id })
   } catch (error) { next(error) }
+})
+
+// What the keys of this space did to its projects (SPEC_space_sync_keys.md
+// §13.6): every manage action, done or refused, and every restore. The owner's
+// view, like the key list. `?key=<id>` narrows it to one key.
+router.get('/api/spaces/:spaceId/sync-keys/actions', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const keyId = typeof req.query.key === 'string' && req.query.key ? req.query.key : null
+    res.json({ actions: syncKeyActions.listActions(ctx.spaceId, { keyId, limit: req.query.limit }), limits: syncKeyActions.LIMITS })
+  } catch (error) { next(error) }
+})
+
+// Undo everything one key did, in one action (§13.7): revoke it first, then
+// restore what it trashed, make public again what it made private, and move
+// back what it moved out of this space — each only while it is still where the
+// key left it. A person's action, so session-only like minting a manage key.
+router.post('/api/spaces/:spaceId/sync-keys/:id/undo', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    if (!mayMintManageKey(ctx.state)) {
+      return res.status(403).json({ error: "Undoing a key is done from a signed-in session of the space's owner (or an admin).", code: 'undo_needs_session' })
+    }
+    const key = getSyncKey(ctx.spaceId, req.params.id)
+    if (!key) return res.status(404).json({ error: 'Key not found.' })
+    const revoked = revokeSyncKey(ctx.spaceId, key.id)
+    const by = { keyId: key.id, keyLabel: key.label, spaceId: ctx.spaceId }
+    if (revoked) syncKeyActions.recordAction({ ...by, action: 'undo-revoke', outcome: 'done' })
+    const report = { revoked, restored: [], madePublic: [], movedBack: [], notUndone: [] }
+    const done = syncKeyActions.doneByKey(key.id)
+    // The last thing the key did to each project is the one to undo.
+    const last = new Map()
+    for (const row of done) if (row.projectId && ['trash', 'private', 'move'].includes(row.action)) last.set(`${row.action === 'move' ? 'move' : row.action}|${row.projectId}`, row)
+    // What the project's row says NOW, including when its visibility last
+    // changed and when it was last trashed — read straight from the database,
+    // never from the public meta.
+    const rowNow = (id) => getDb().prepare('SELECT id, space_id, visibility, visibility_at, deleted_at FROM projects WHERE id = ?').get(id) || null
+    const touched = new Set()
+    for (const row of last.values()) {
+      const id = row.projectId
+      try {
+        const now = rowNow(id)
+        if (row.action === 'trash' && row.spaceId === ctx.spaceId) {
+          // Only while it is still in the trash where the key put it, and not
+          // trashed again since by someone else (review M1, the restore half).
+          if (!now || now.space_id !== ctx.spaceId || !now.deleted_at) { report.notUndone.push({ projectId: id, action: 'trash', why: 'no longer in this space\'s trash' }); continue }
+          if (now.deleted_at > row.at) { report.notUndone.push({ projectId: id, action: 'trash', why: 'trashed again since — left in the trash' }); continue }
+          await restoreProject(id)
+          report.restored.push(id)
+          touched.add(ctx.spaceId)
+          syncKeyActions.recordAction({ ...by, action: 'undo-restore', projectId: id })
+        } else if (row.action === 'private' && row.spaceId === ctx.spaceId) {
+          // Never more public than the owner's own latest choice (review M1):
+          // only while it is private, here, and nobody changed who sees it
+          // after the key did.
+          if (!now || now.deleted_at || now.space_id !== ctx.spaceId || now.visibility !== 'private') { report.notUndone.push({ projectId: id, action: 'private', why: 'no longer private here' }); continue }
+          if ((now.visibility_at || 0) !== row.at) { report.notUndone.push({ projectId: id, action: 'private', why: 'who sees it was changed after the key — left as it is' }); continue }
+          await setProjectVisibility(id, 'public')
+          report.madePublic.push(id)
+          touched.add(ctx.spaceId)
+          syncKeyActions.recordAction({ ...by, action: 'undo-public', projectId: id })
+        } else if (row.action === 'move' && row.toSpaceId) {
+          // A move the key made out of this space (it was the bearer), or into
+          // it (it was the second key): back to where it came from, while it
+          // is still where the key put it. Both spaces have one owner (C1).
+          if (row.spaceId !== ctx.spaceId && row.toSpaceId !== ctx.spaceId) continue
+          if (!now || now.deleted_at || now.space_id !== row.toSpaceId) { report.notUndone.push({ projectId: id, action: 'move', why: `no longer in ${row.toSpaceId}` }); continue }
+          const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(row.spaceId), loadSpaceMeta(row.toSpaceId)])
+          if (!isSpaceOwnerOrAdminState(ctx.state, fromMeta) || !isSpaceOwnerOrAdminState(ctx.state, toMeta)) { report.notUndone.push({ projectId: id, action: 'move', why: `you do not own both ${row.spaceId} and ${row.toSpaceId}` }); continue }
+          await moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, projectId: id, toSpaceId: row.spaceId })
+          report.movedBack.push(id)
+          touched.add(row.spaceId).add(row.toSpaceId)
+          syncKeyActions.recordAction({ ...by, action: 'undo-move', projectId: id, toSpaceId: row.spaceId })
+        }
+      } catch (error) {
+        report.notUndone.push({ projectId: id, action: row.action, why: error?.message || String(error) })
+      }
+    }
+    for (const spaceId of touched) {
+      try { require('./follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+      try { require('./follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+    }
+    res.json({ ok: true, key: { ...key, revoked: true }, ...report })
+  } catch (error) { next(error) }
+})
+
+// A sync key asking what it is: its id, space, label and scope — never the
+// secret. `di follow` reads it to know whether its trash, privacy and moves
+// may reach the host (SPEC_follow.md, "With a manage key"). Anything that is
+// not a sync key gets 404, the answer an older host gives too.
+router.get('/api/sync-keys/self', (req, res) => {
+  const state = req.authState || {}
+  if (!state.authenticated || state.type !== 'sync-key' || !state.syncKey) {
+    return res.status(404).json({ error: 'Not a sync key.' })
+  }
+  const { keyId, label, spaceId, scope, expiresAt } = state.syncKey
+  // expiresAt: the follower warns 14 days before (owner, 2026-10-07).
+  res.json({ key: { id: keyId, label, spaceId, scope, expiresAt: expiresAt || null }, limits: scope === 'manage' ? syncKeyActions.LIMITS : null })
 })
 
 // Space invites — owner-minted share links. Management mirrors sync keys
@@ -2303,8 +2560,7 @@ router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) =
         return res.status(503).json({ error: 'Sessions are unavailable.' })
       }
       const nextSpaces = [...(state.spaces || []), spaceId]
-      const session = createAuthSessionValue({
-        secret: config.auth.sessionSecret,
+      const session = reissueSessionValue(state.session, {
         ttlMs: GUEST_SESSION_TTL_MS,
         session: {
           subject: state.subject,
@@ -2462,6 +2718,10 @@ registerProjectRoutes(router, {
   setProjectVisibility,
   loadSpaceMeta,
   isSpaceOwnerOrAdminState,
+  canManageProjectsState,
+  keyMoveWidensAccess,
+  visibilityStampOf: (projectId) => getDb().prepare('SELECT visibility_at FROM projects WHERE id = ?').get(projectId)?.visibility_at || null,
+  syncKeyActions,
   moveProject: (args) => moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, ...args }),
   TRASH_TTL_MS,
   listCollections,

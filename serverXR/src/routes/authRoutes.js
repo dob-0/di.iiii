@@ -156,7 +156,10 @@ const registerAuthRoutes = (router, {
         role: user.role,
         spaces: Array.isArray(user.spaces) ? user.spaces : [],
         ...(user.isUnrestricted ? { isUnrestricted: true } : {}),
-        tokenVersion: user.tokenVersion
+        tokenVersion: user.tokenVersion,
+        // A person signed in (OAuth, the hub, Telegram): the one stamp that may
+        // mint a manage sync key (SPEC_space_sync_keys.md §13.4).
+        via: 'signin'
       }
     })
     setAuthSessionCookie(res, session.value)

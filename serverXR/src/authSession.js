@@ -37,7 +37,12 @@ const createAuthSessionValue = ({
     ...(normalizedSession.role ? { role: String(normalizedSession.role).trim().toLowerCase() } : {}),
     ...(Array.isArray(normalizedSession.spaces) ? { spaces: normalizedSession.spaces } : {}),
     ...(Number.isFinite(normalizedSession.tokenVersion) ? { tokenVersion: normalizedSession.tokenVersion } : {}),
-    ...(normalizedSession.isUnrestricted ? { isUnrestricted: true } : {})
+    ...(normalizedSession.isUnrestricted ? { isUnrestricted: true } : {}),
+    // How the session was made, when it was not a person signing in: 'token'
+    // for POST /api/auth/session with an API token. Signed with the rest, so
+    // it cannot be dropped; a token-made session never mints a manage key
+    // (SPEC_space_sync_keys.md §13.4, T10).
+    ...(normalizedSession.via ? { via: String(normalizedSession.via) } : {})
   })).toString('base64url')
   return {
     value: `${payload}.${signPayload(payload, secret)}`,

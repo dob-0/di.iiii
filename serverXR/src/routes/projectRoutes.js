@@ -15,6 +15,12 @@ const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 
 const withProjectLock = createKeyedLock()
+// One sync key's limited actions run one at a time, so two requests at once
+// cannot both pass the same last unit of its budget (SPEC_space_sync_keys.md §13.5).
+const withKeyLock = createKeyedLock()
+
+/** The sync key a request came with, when that is all it is (not an owner, not an admin). */
+const syncKeyOf = (req) => (req.authState?.authenticated && req.authState.type === 'sync-key' ? req.authState.syncKey || null : null)
 
 // A change to a project's row (title, slug, visibility, trash, its space) is
 // not an op, so nothing else tells a follow about it: wake this install's
@@ -67,6 +73,12 @@ function registerProjectRoutes(router, {
   setProjectVisibility = null,
   loadSpaceMeta = null,
   isSpaceOwnerOrAdminState = null,
+  // A manage sync key's project actions (SPEC_space_sync_keys.md §13): the
+  // check, and the log + limits. Absent: no key gets past the owner's gate.
+  canManageProjectsState = null,
+  keyMoveWidensAccess = null,
+  visibilityStampOf = null,
+  syncKeyActions = null,
   // projectMove.js bound to the live database and spaces dir. Absent on a
   // router built without it: the route then answers 501.
   moveProject = null,
@@ -352,7 +364,26 @@ function registerProjectRoutes(router, {
         const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
         if (config.requireAuth && typeof isSpaceOwnerOrAdminState === 'function' &&
           !isSpaceOwnerOrAdminState(req.authState || {}, spaceMeta)) {
-          return res.status(403).json({ error: 'Only the space owner or an admin can change who sees a project.' })
+          // A manage sync key of this space may make a project private, never
+          // public: showing work to every visitor stays the owner's call (§13.2).
+          const key = syncKeyOf(req)
+          const manages = key && typeof canManageProjectsState === 'function' && canManageProjectsState(req.authState, spaceMeta)
+          if (!manages) {
+            return res.status(403).json({ error: 'Only the space owner or an admin can change who sees a project.' })
+          }
+          if (nextVisibility !== 'private') {
+            const why = "A sync key never makes a project public — the space's owner does."
+            syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, outcome: 'refused', reason: why })
+            return res.status(403).json({ error: why, code: 'sync_key_never_public' })
+          }
+          if (project.meta?.visibility !== 'private' && syncKeyActions) {
+            const budget = syncKeyActions.checkBudget({ keyId: key.keyId, action: 'private' })
+            if (!budget.ok) {
+              syncKeyActions.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, outcome: 'refused', reason: budget.reason })
+              return res.status(429).json({ error: budget.reason, code: 'sync_key_limit', action: 'private', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs })
+            }
+            req.syncKeyAction = { action: 'private' }
+          }
         }
         if (nextVisibility === 'private' && spaceMeta?.publishedProjectId === project.projectId) {
           return res.status(409).json({
@@ -382,12 +413,35 @@ function registerProjectRoutes(router, {
         }
         nextSlug = normalized
       }
+      // A manage key making a project private: the budget is checked again,
+      // the change made and the action recorded under the key's lock, as for
+      // a trash and a move — never relying on the calls in between being
+      // synchronous (review L1). Done before the title, so a refusal changes nothing.
+      let keyVisibilityMeta = null
+      if (req.syncKeyAction?.action === 'private') {
+        const key = syncKeyOf(req)
+        const answer = await withKeyLock(key.keyId, async () => {
+          const budget = syncKeyActions.checkBudget({ keyId: key.keyId, action: 'private' })
+          if (!budget.ok) {
+            syncKeyActions.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, outcome: 'refused', reason: budget.reason })
+            return { refused: { error: budget.reason, code: 'sync_key_limit', action: 'private', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs } }
+          }
+          const meta = await setProjectVisibility(project.projectId, nextVisibility)
+          // Stamped with the visibility change's own time: the undo re-opens it
+          // only while that stamp is still the project's (review M1).
+          const stamp = typeof visibilityStampOf === 'function' ? visibilityStampOf(project.projectId) : null
+          syncKeyActions.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, ...(stamp ? { now: stamp } : {}) })
+          return { meta }
+        })
+        if (answer.refused) return res.status(429).json(answer.refused)
+        keyVisibilityMeta = answer.meta
+      }
       let nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
         ...(req.body?.title !== undefined ? { title: req.body.title } : {}),
         ...(req.body?.slug !== undefined ? { slug: nextSlug } : {})
       })
       if (nextVisibility !== undefined) {
-        nextMeta = await setProjectVisibility(project.projectId, nextVisibility)
+        nextMeta = keyVisibilityMeta ? { ...nextMeta, visibility: keyVisibilityMeta.visibility } : await setProjectVisibility(project.projectId, nextVisibility)
         // Any open stream a visitor holds on this project is closed by the
         // broadcast itself (index.js drops listeners who may no longer see it).
         if (typeof broadcastProjectLiveEvent === 'function') {
@@ -422,6 +476,30 @@ function registerProjectRoutes(router, {
       // Soft: the row is marked and the bytes are left alone until the trash
       // sweep passes TRASH_TTL_MS. The response says when it stops being
       // recoverable, so a client can offer the undo rather than inventing one.
+      const key = config.requireAuth ? syncKeyOf(req) : null
+      if (key) {
+        // Only a manage key reaches here (index.js raises the role otherwise).
+        // Its own limits and its log (§13.5, §13.6); never the front door.
+        const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'trash', projectId: project.projectId, outcome, reason })
+        const answer = await withKeyLock(key.keyId, async () => {
+          const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
+          if (spaceMeta?.publishedProjectId === project.projectId) {
+            const why = "This project is the space's front door; a sync key does not move it to the trash. The space's owner can unpublish it first."
+            record('refused', why)
+            return { status: 409, body: { error: why, code: 'sync_key_front_door' } }
+          }
+          const budget = syncKeyActions ? syncKeyActions.checkBudget({ keyId: key.keyId, action: 'trash' }) : { ok: true }
+          if (!budget.ok) {
+            record('refused', budget.reason)
+            return { status: 429, body: { error: budget.reason, code: 'sync_key_limit', action: 'trash', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs } }
+          }
+          const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
+          record('done')
+          return { status: 200, body: { ok: true, trashed: true, ...(receipt || {}) } }
+        })
+        if (answer.status === 200) tellFollows(project.spaceId)
+        return res.status(answer.status).json(answer.body)
+      }
       const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
       tellFollows(project.spaceId)
       res.json({ ok: true, trashed: true, ...(receipt || {}) })
@@ -449,21 +527,82 @@ function registerProjectRoutes(router, {
       if (!toSpaceId) {
         return res.status(400).json({ error: 'toSpace must name the space to move the project into.' })
       }
+      let key = null
       if (config.requireAuth) {
         const state = req.authState || {}
         const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(project.spaceId), loadSpaceMeta(toSpaceId)])
         if (!toMeta) return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
-        if (!canAccessSpace(state, toSpaceId) ||
-          !isSpaceOwnerOrAdminState(state, fromMeta) || !isSpaceOwnerOrAdminState(state, toMeta)) {
-          return res.status(403).json({ error: 'Only an admin, or the owner of both spaces, can move a project between them.' })
+        const asOwner = canAccessSpace(state, toSpaceId) &&
+          isSpaceOwnerOrAdminState(state, fromMeta) && isSpaceOwnerOrAdminState(state, toMeta)
+        if (!asOwner) {
+          // Two manage sync keys (§13.2 item 4): the bearer of the space the
+          // project is in (the route's own scope gate already checked it
+          // reaches that space), and `alsoSyncKey` in the body for the space it
+          // goes to (index.js reads it, only on this route). Both spaces must
+          // have the SAME owner, both keys must be that owner's, and nobody
+          // new may gain access (review C1; owner, 2026-10-07). Anything else
+          // is a person's move: signed in.
+          key = syncKeyOf(req)
+          const also = state.alsoSyncKey
+          const record = (why) => key && syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome: 'refused', reason: why, alsoKeyId: also?.keyId || null })
+          const managesFrom = key && typeof canManageProjectsState === 'function' && canManageProjectsState(state, fromMeta)
+          const managesTo = Boolean(also && also.scope === 'manage' && also.spaceId === toMeta.id)
+          if (!managesFrom || !managesTo) {
+            const why = key
+              ? 'A sync key moves a project only with a manage key of BOTH spaces: this one as the bearer, the other as alsoSyncKey in the body.'
+              : 'Only an admin, or the owner of both spaces, can move a project between them.'
+            record(why)
+            return res.status(403).json({ error: why, ...(key ? { code: 'sync_key_needs_both' } : {}) })
+          }
+          const owner = fromMeta?.ownerUserId || null
+          if (!owner || toMeta.ownerUserId !== owner || key.ownerUserId !== owner || also.ownerUserId !== owner) {
+            const why = 'A sync key moves a project only between two spaces of the same owner, with both keys his — do this signed in.'
+            record(why)
+            return res.status(403).json({ error: why, code: 'sync_key_not_same_owner' })
+          }
+          // Never more public, never the space's settings: a key does not
+          // unpublish a front door (that changes the space).
+          let why = null
+          if (req.body?.unpublish === true) why = "A sync key does not unpublish a space's front door — the space's owner does."
+          else {
+            const widens = typeof keyMoveWidensAccess === 'function' ? await keyMoveWidensAccess({ fromMeta, toMeta, project, alsoKeyId: also.keyId }) : 'this server cannot check who would gain access'
+            if (widens) why = `${widens}; a sync key does not move a project where somebody new could see it — do this signed in.`
+          }
+          if (why) {
+            record(why)
+            return res.status(403).json({ error: why, code: 'sync_key_never_public' })
+          }
         }
       }
-      const report = await withProjectLock(project.projectId, () => moveProject({
+      const doMove = () => withProjectLock(project.projectId, () => moveProject({
         projectId: project.projectId,
         toSpaceId,
         unpublish: req.body?.unpublish === true,
         dryRun: req.body?.dryRun === true
       }))
+      let report
+      if (key) {
+        const alsoKeyId = req.authState?.alsoSyncKey?.keyId || null
+        const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome, reason, alsoKeyId })
+        const refused = await withKeyLock(key.keyId, async () => {
+          const budget = syncKeyActions ? syncKeyActions.checkBudget({ keyId: key.keyId, action: 'move' }) : { ok: true }
+          if (!budget.ok) {
+            record('refused', budget.reason)
+            return { error: budget.reason, code: 'sync_key_limit', action: 'move', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs }
+          }
+          try {
+            report = await doMove()
+          } catch (error) {
+            if (error?.name === 'MoveRefused') record('refused', error.message)
+            throw error
+          }
+          if (!report?.dryRun) record('done')
+          return null
+        })
+        if (refused) return res.status(429).json(refused)
+      } else {
+        report = await doMove()
+      }
       if (!report?.dryRun) tellFollows(project.spaceId, toSpaceId)
       res.json({
         ok: true,
@@ -537,6 +676,9 @@ function registerProjectRoutes(router, {
       }
       await ensureSpaceWritable(trashed.spaceId)
       const project = await restoreProject(projectId)
+      // Any key's restore is in the space's key log (§13.6); it is never limited.
+      const key = config.requireAuth ? syncKeyOf(req) : null
+      if (key) syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: trashed.spaceId, action: 'restore', projectId })
       tellFollows(trashed.spaceId)
       res.json({ project })
     } catch (error) {
