@@ -40,7 +40,9 @@ ap.add_argument('--hall', default='scripts/place/rigs/moxir-hall-2026-10-07-v8-s
 ap.add_argument('--types', default='src/rigbuild/types/moxir.json')
 ap.add_argument('--out', default=None)
 ap.add_argument('--check', action='store_true', help='print the checks as JSON and draw nothing')
-a = ap.parse_args()
+# Imported by lights_beta_mix.py as a library: then only the shared paths are read (parse_known_args ignores the
+# importer's own flags) and the option drawing below does not run.
+a = ap.parse_args() if __name__ == '__main__' else ap.parse_known_args()[0]
 
 R = lambda p: json.load(open(os.path.join(a.repo, p)))
 SNAP, OPTS, HALL = R(a.snapshot), R(a.options), R(a.hall)
@@ -1003,25 +1005,26 @@ root.appendChild(el("div",{color:C.dim,font:"12px/1.55 "+F,marginTop:"28px",bord
 
 
 # ------------------------------------------------------------------ main (check)
-OPTIONS = [{'id': 'today', 'title': 'Today: beta v0.9 as built (the cut moved, nothing re-aimed)', 'groups': []}] + OPTS['options']
-PAGE_ORDER = ['A', 'B', 'C', 'today']
-FX = {o['id']: apply_option(o) for o in OPTIONS}
-CHECKS = {o['id']: check_option(o['id'], FX[o['id']]) for o in OPTIONS}
-for o in OPTIONS:
-    CHECKS[o['id']]['laser_verdict'] = laser_verdict(CHECKS[o['id']])
-FLOOR = floor_report(FX['today'])
-SUMMARY = {'nohd_m': round(NOHD_M), 'mpe_w_m2': round(MPE_E, 1), 'mpe_basis': 'IEC 60825-1:2014 Table A.1, 400-700 nm, t = 0.25 s, C6 = 1',
-           'options': {k: {kk: v[kk] for kk in ('counts', 'laser_pass', 'laser_verdict', 'laser_min_over_audience_m', 'laser_min_over_floor_m',
-                                                 'laser_min_steel_m', 'truss_pars_glaring', 'max_eye_lux_truss', 'beams_into_eyes',
-                                                 'dj_narrow', 'mover_eye_zone')} | {'moves': len(v['moves'])}
-                       for k, v in CHECKS.items()},
-           'floor': FLOOR,
-           # the stored rotation must give back the aimed direction (spotLightAim.js convention), for every lamp of every option
-           'aim_roundtrip_max_deg': round(max(math.degrees(math.acos(max(-1.0, min(1.0, float(aim_dir(f['r']) @ f['d'])))))
-                                              for fx in FX.values() for f in fx if f['d'] is not None), 6)}
+if __name__ == '__main__':
+    OPTIONS = [{'id': 'today', 'title': 'Today: beta v0.9 as built (the cut moved, nothing re-aimed)', 'groups': []}] + OPTS['options']
+    PAGE_ORDER = ['A', 'B', 'C', 'today']
+    FX = {o['id']: apply_option(o) for o in OPTIONS}
+    CHECKS = {o['id']: check_option(o['id'], FX[o['id']]) for o in OPTIONS}
+    for o in OPTIONS:
+        CHECKS[o['id']]['laser_verdict'] = laser_verdict(CHECKS[o['id']])
+    FLOOR = floor_report(FX['today'])
+    SUMMARY = {'nohd_m': round(NOHD_M), 'mpe_w_m2': round(MPE_E, 1), 'mpe_basis': 'IEC 60825-1:2014 Table A.1, 400-700 nm, t = 0.25 s, C6 = 1',
+               'options': {k: {kk: v[kk] for kk in ('counts', 'laser_pass', 'laser_verdict', 'laser_min_over_audience_m', 'laser_min_over_floor_m',
+                                                     'laser_min_steel_m', 'truss_pars_glaring', 'max_eye_lux_truss', 'beams_into_eyes',
+                                                     'dj_narrow', 'mover_eye_zone')} | {'moves': len(v['moves'])}
+                           for k, v in CHECKS.items()},
+               'floor': FLOOR,
+               # the stored rotation must give back the aimed direction (spotLightAim.js convention), for every lamp of every option
+               'aim_roundtrip_max_deg': round(max(math.degrees(math.acos(max(-1.0, min(1.0, float(aim_dir(f['r']) @ f['d'])))))
+                                                  for fx in FX.values() for f in fx if f['d'] is not None), 6)}
 
-if a.check:
-    print(json.dumps({'summary': SUMMARY, 'checks': CHECKS}, indent=1, default=float))
-    sys.exit(0)
+    if a.check:
+        print(json.dumps({'summary': SUMMARY, 'checks': CHECKS}, indent=1, default=float))
+        sys.exit(0)
 
-draw_all()
+    draw_all()
