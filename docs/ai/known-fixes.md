@@ -65,6 +65,12 @@ sentence in the same log line.
 
 **Fix:** `scripts/di/atomicWrite.mjs` — temp file in the same directory, fsync, rename, fsync the directory (the pattern `follows.json` already used), mode applied on every write. An unreadable `credentials.json` is copied aside (`.corrupt-<time>`, 0600) before a write replaces it; the server's config goes through `jsonStore.writeJson`, which now also removes its temp file when a write fails (a full disk left the half-written one behind). Guards: `scripts/di/stateWritesSurviveACrash.test.js` injects a write that lands half its bytes and throws ENOSPC (5 of 5 failed before the fix), `serverXR/src/configStore.test.js`, `serverXR/src/jsonStore.test.js`. **Still plain writes**, not covered: the Drive-import asset writes in `spaceRoutes.js` (a content-addressed file written under its final name), `lighting/library.js` (a cache), `machineIdentity.js`, the `stage.mjs` manifests.
 
+## A server that never said it was listening was left running — the test helper threw and lost the only handle
+
+`serverXR/src/testSupport/spawnServer.mjs` boots a real serverXR child for a contract test and returns when the child prints its listen line. When a loaded machine let its 15 s guard fire, it rejected with "Server did not become ready in time" and left that child RUNNING: the caller receives an Error and no handle, so nothing could stop it, and it outlived the test run (an orphan `node serverXR/src/index.js` seen running for 22 minutes on the laptop with the fan fault, by lane M1 of the 2026-10-07 sweep). The EADDRINUSE retry started the next server beside the one it had not stopped.
+
+**Fix:** a child that is still running is killed before the retry or the throw (`stopChild`); the guard is an option (`readyTimeoutMs`, default 15 s) so the case can be tested. Guard: `serverXR/src/testSupport/spawnServer.test.js` — a stub that stays alive and never listens: after the failure the process is gone, and so is every one of the three retry attempts'. A server that DID come up is still the caller's to stop (`afterAll` in the contract suites).
+
 ## A follow's gaps: new key ignored, remote stored without its mount, files owed in silence, settings not carried, follower-only project refused
 
 Found on the owner's install 2026-10-04/05 (di.laser, moxir, space `open`). Five faults in `serverXR/src/follow/` and
