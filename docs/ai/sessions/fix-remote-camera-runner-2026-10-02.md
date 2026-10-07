@@ -24,3 +24,21 @@
 - Hosted tiers: every page there is AWAY (no browser runs on the server), so an operator
   set to run on the hosted server's machine runs nowhere — before, every visitor's browser
   claimed to be that machine.
+
+## 2026-10-07 — brought current with dev; the two guards that failed CI fixed (bug sweep, lane M2)
+
+- The branch was 296 commits behind `dev` and GitHub showed it conflicting. `git merge origin/dev` into the
+  branch gave two conflicts, both documentation. `docs/ai/known-fixes.md`: dev appended three rows to the same
+  table where this branch appended one; all four kept, this branch's row first. `src/wiki/wikiContent.js`: the
+  picture-operators article's `updated` (this branch 2026-10-02, dev 2026-10-05); dev's later date kept in the
+  merge, this branch's "WHICH PAGE ANSWERS" paragraph sits beside dev's own edits to the same article. No source
+  file conflicted. Dev's one change to a file this branch also edits (`TopInsidePanel.jsx`, the header kicker) is
+  far from the Camera section this branch changes, and `raw.css` only gained unrelated rules.
+- The branch's last CI run (2026-10-02) failed `build-and-test` on its own two additions, not on staleness: the
+  new wiki paragraph said "Raw" where the vocabulary says "Nodes" (`src/copyVocabulary.test.js`), and
+  `.raw-top-picture-refusal` had `padding: 8px`, off the rhythm ladder (`src/styles/spine.test.js`). Both guards
+  existed at the branch's base; its validation had run only `src/project`, `src/raw`, `src/hooks`, `src/wiki`
+  and `src/map`. Now the paragraph says "Open Nodes from your own machine's di", the padding is
+  `var(--di-space-2)` (7 px, the nearest step to 8), and the article's `updated` is 2026-10-07.
+- Still undone, as before: `away: true` from a real second computer has not been seen, and asuz (0.4.16) drops
+  the new hello fields until it is updated.

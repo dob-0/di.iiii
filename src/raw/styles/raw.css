@@ -5612,7 +5612,7 @@
     position: absolute;
     left: 8px;
     margin: 0;
-    padding: 8px;
+    padding: var(--di-space-2);
     box-sizing: border-box;
     overflow: hidden;
     color: rgba(255, 255, 255, 0.78);
