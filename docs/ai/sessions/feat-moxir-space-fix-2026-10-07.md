@@ -90,3 +90,6 @@ The scratch stack `moxir-flip` (web :5335, api :4323) holds project `moxir-known
 - Carry the v5 hall into the live Known · full (local, then dev), as ops on a followed space. This is not done here.
 - `realism.mjs` was not run on the scratch project. swap-hall's header says the night copy of the hall is made from
   the model.
+- The scratch room drew NO hall after swap-hall (asset on disk, entity pointing at it, manifest without it). swap-hall.mjs now
+  lists the model (`upsertAsset`) before pointing at it, repairs a missing listing on re-run, and reads back. Re-run on scratch:
+  "listed; version 6"; seen on the owner's screen 10-07: columns, crane, press, machines and his truss line drawn.
