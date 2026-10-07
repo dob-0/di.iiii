@@ -9,7 +9,7 @@ import {
     fetchServerSpacesIndex,
     createServerSpace,
     updateServerSpace,
-    deleteServerSpace,
+    listTrashedSpaces,
     getServerConfig,
     purgeStaleSandboxes,
     uploadServerAsset,
@@ -26,6 +26,7 @@ import {
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
+import { SpaceDeleteDialog, SpaceTrashPanel } from './SpaceTrash.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
 import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
@@ -384,6 +385,11 @@ export default function SpaceHub() {
     const [manageId, setManageId] = useState(null)
     // The space whose own-domain panel is open (SpaceDomainPanel), or null.
     const [domainsSpaceId, setDomainsSpaceId] = useState(null)
+    // Delete is a dialog that names what goes (SpaceTrash.jsx), and the Trash
+    // is where it goes: spaces this account owns, restorable for 30 days.
+    const [deleting, setDeleting] = useState(null)
+    const [trash, setTrash] = useState({ spaces: [], ttlMs: 0 })
+    const [showTrash, setShowTrash] = useState(false)
     // 'grid' = the card shelves (default); 'list' = one dense row per space, which
     // is the only view that stays readable past ~20 spaces; 'map' = the spatial lens.
     const [viewMode, setViewMode] = useState(() => {
@@ -461,6 +467,14 @@ export default function SpaceHub() {
     }, [])
 
     useEffect(() => { loadSpaces() }, [loadSpaces])
+
+    // The trash is worth knowing about before anyone asks for it: the button
+    // shows only when something is in it. A server without the route (older
+    // copy) simply has no trash to show.
+    const loadTrash = useCallback(async () => {
+        try { setTrash(await listTrashedSpaces()) } catch { setTrash({ spaces: [], ttlMs: 0 }) }
+    }, [])
+    useEffect(() => { if (isAccount) loadTrash() }, [isAccount, loadTrash])
 
     // The lighting desk is the one tool that lives beside the spaces rather
     // than inside one, and until now nothing anywhere led to it: it could only
@@ -598,16 +612,10 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
-    const handleDelete = useCallback(async (space, e) => {
-        e.stopPropagation()
-        if (!window.confirm(`Delete "${space.label || space.id}"? This cannot be undone.`)) return
-        try {
-            await deleteServerSpace(space.id)
-            await loadSpaces()
-        } catch (err) {
-            alert(err.message || 'Could not delete space.')
-        }
-    }, [loadSpaces])
+    const handleDelete = useCallback((space, e) => {
+        e?.stopPropagation?.()
+        setDeleting(space)
+    }, [])
 
     // `which`: 'share' (default, the constellation's one Copy link) hands out the
     // space's own domain when it has one; 'platform' / 'domain' are the card's
@@ -907,6 +915,17 @@ export default function SpaceHub() {
                                 <button type="button" className={viewMode === 'map' ? 'on' : ''} onClick={() => selectView('map')} aria-pressed={viewMode === 'map'}>Map</button>
                             </div>
                         )}
+                        {isAccount && trash.spaces.length > 0 && (
+                            <button
+                                type="button"
+                                className={`ssh-card-btn${showTrash ? ' ssh-card-btn--active' : ''}`}
+                                aria-expanded={showTrash}
+                                onClick={() => setShowTrash(v => !v)}
+                                title="Spaces you deleted, held for 30 days"
+                            >
+                                Trash · {trash.spaces.length}
+                            </button>
+                        )}
                         {isAccount && (
                             <>
                                 <input
@@ -994,6 +1013,27 @@ export default function SpaceHub() {
                         )}
                     </div>
                 </div>
+
+                {isAccount && showTrash && (
+                    <SpaceTrashPanel
+                        trash={trash}
+                        onClose={() => setShowTrash(false)}
+                        onChanged={async () => { await Promise.all([loadSpaces(), loadTrash()]) }}
+                    />
+                )}
+                {deleting && (
+                    <SpaceDeleteDialog
+                        space={deleting}
+                        isAdmin={isAdmin}
+                        onClose={() => setDeleting(null)}
+                        onDone={async (receipt) => {
+                            setDeleting(null)
+                            setManageId(null)
+                            await Promise.all([loadSpaces(), loadTrash()])
+                            if (receipt?.status === 'pending_approval') setStatus('Waiting for approval before it moves to the Trash.')
+                        }}
+                    />
+                )}
 
                 {isGuest && (
                     <p className="ssh-guest-banner">

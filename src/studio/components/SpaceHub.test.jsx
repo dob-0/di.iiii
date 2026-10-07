@@ -20,6 +20,10 @@ const deleteServerSpace = vi.fn()
 const getApiAuthProviders = vi.fn()
 const uploadServerAsset = vi.fn()
 const purgeStaleSandboxes = vi.fn()
+const listTrashedSpaces = vi.fn()
+const getSpaceFootprint = vi.fn()
+const restoreServerSpace = vi.fn()
+const purgeServerSpace = vi.fn()
 
 let authState
 // Admin-only summary the hub's collapsed sandbox row renders from.
@@ -41,6 +45,10 @@ vi.mock('../../services/serverSpaces.js', () => ({
     createServerSpace: vi.fn(),
     updateServerSpace: (...args) => updateServerSpace(...args),
     deleteServerSpace: (...args) => deleteServerSpace(...args),
+    listTrashedSpaces: (...args) => listTrashedSpaces(...args),
+    getSpaceFootprint: (...args) => getSpaceFootprint(...args),
+    restoreServerSpace: (...args) => restoreServerSpace(...args),
+    purgeServerSpace: (...args) => purgeServerSpace(...args),
     patchServerConfig: vi.fn(),
     uploadServerAsset: (...args) => uploadServerAsset(...args),
     getServerSpaceAssetUrl: (spaceId, assetId) => `/serverXR/api/spaces/${spaceId}/assets/${assetId}`,
@@ -148,6 +156,12 @@ describe('SpaceHub', () => {
         updateServerSpace.mockReset()
         uploadServerAsset.mockReset()
         purgeStaleSandboxes.mockReset()
+        deleteServerSpace.mockReset()
+        listTrashedSpaces.mockReset()
+        listTrashedSpaces.mockResolvedValue({ spaces: [], ttlMs: 0 })
+        getSpaceFootprint.mockReset()
+        restoreServerSpace.mockReset()
+        purgeServerSpace.mockReset()
         probeLightingDesk.mockReset()
         probeLightingDesk.mockResolvedValue(false)
         sandboxSummary = null
@@ -1064,5 +1078,111 @@ describe('SpaceHub', () => {
         await findCard('mine')
 
         expect(screen.getByRole('button', { name: /^Only you/ })).toBeTruthy()
+    })
+
+    // 2026-10-05: Delete was a window.confirm that said "cannot be undone" and
+    // removed the directory. It is a dialog that names what goes now, and the
+    // space waits in the Trash.
+    describe('delete and the trash', () => {
+        const clickDelete = (spaceId) => {
+            const card = openManageFor(spaceId)
+            fireEvent.click([...card.querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === 'Delete'))
+        }
+
+        it('names the projects and the size, says 30 days in the Trash, and moves the space there', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 3, bytes: 2 * 1024 * 1024, protected: null, holdMs: 30 * 24 * 3600 * 1000 })
+            deleteServerSpace.mockResolvedValue({ ok: true, trashed: true, projects: 3 })
+            const confirmSpy = vi.spyOn(window, 'confirm')
+
+            render(<SpaceHub />)
+            await findCard('mine')
+            clickDelete('mine')
+
+            const dialog = await screen.findByRole('dialog')
+            expect(dialog.textContent).toContain('Delete the space “Mine”?')
+            await waitFor(() => expect(dialog.textContent).toContain('3 projects go with it, 2.0 MB in all.'))
+            expect(dialog.textContent).toContain('Trash for 30 days')
+            // not the old browser confirm
+            expect(confirmSpy).not.toHaveBeenCalled()
+            expect(deleteServerSpace).not.toHaveBeenCalled()
+
+            fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }))
+            await waitFor(() => expect(deleteServerSpace).toHaveBeenCalledWith('mine'))
+            await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+            confirmSpy.mockRestore()
+        })
+
+        it('Cancel deletes nothing', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 0, bytes: 0, protected: null })
+            render(<SpaceHub />)
+            await findCard('mine')
+            clickDelete('mine')
+            await screen.findByText(/It is empty: no projects/)
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+            expect(screen.queryByRole('dialog')).toBeNull()
+            expect(deleteServerSpace).not.toHaveBeenCalled()
+        })
+
+        it('a permanent space is refused up front; an admin can unmark it first', async () => {
+            authState = { ...authState, role: 'admin' }
+            listServerSpaces.mockResolvedValue([{ id: 'kept', label: 'Kept', isOwner: true, permanent: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 1, bytes: 10, protected: 'permanent' })
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await findCard('kept')
+            clickDelete('kept')
+            const dialog = await screen.findByRole('dialog')
+            await waitFor(() => expect(dialog.textContent).toContain('marked permanent'))
+            expect(screen.queryByRole('button', { name: 'Move to Trash' })).toBeNull()
+            fireEvent.click(screen.getByRole('button', { name: 'Unmark permanent' }))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('kept', { permanent: false }))
+            expect(await screen.findByRole('button', { name: 'Move to Trash' })).toBeTruthy()
+        })
+
+        it('the Trash lists what was deleted with days left, and Restore brings it back', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            listTrashedSpaces.mockResolvedValue({
+                spaces: [{ id: 'old-one', label: 'Old One', projectCount: 2, restorableUntil: Date.now() + 5 * 24 * 3600 * 1000 }],
+                ttlMs: 30 * 24 * 3600 * 1000
+            })
+            restoreServerSpace.mockResolvedValue({ ok: true })
+            render(<SpaceHub />)
+            await findCard('mine')
+            fireEvent.click(await screen.findByRole('button', { name: /^Trash · 1/ }))
+            const row = await waitFor(() => {
+                const el = document.querySelector('[data-trashed-space="old-one"]')
+                if (!el) throw new Error('no trash row')
+                return el
+            })
+            expect(row.textContent).toContain('Old One')
+            expect(row.textContent).toContain('2 projects · 5 days left')
+            fireEvent.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Restore'))
+            await waitFor(() => expect(restoreServerSpace).toHaveBeenCalledWith('old-one'))
+        })
+
+        it('Delete forever asks a second time before it purges', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            listTrashedSpaces.mockResolvedValue({
+                spaces: [{ id: 'old-one', label: 'Old One', projectCount: 0, restorableUntil: Date.now() + 3 * 24 * 3600 * 1000 }],
+                ttlMs: 0
+            })
+            purgeServerSpace.mockResolvedValue({ ok: true })
+            render(<SpaceHub />)
+            await findCard('mine')
+            fireEvent.click(await screen.findByRole('button', { name: /^Trash · 1/ }))
+            fireEvent.click(await screen.findByRole('button', { name: 'Delete forever…' }))
+            expect(purgeServerSpace).not.toHaveBeenCalled()
+            fireEvent.click(await screen.findByRole('button', { name: 'Remove for good' }))
+            await waitFor(() => expect(purgeServerSpace).toHaveBeenCalledWith('old-one'))
+        })
+
+        it('shows no Trash button when nothing is in it', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            render(<SpaceHub />)
+            await findCard('mine')
+            expect(screen.queryByRole('button', { name: /^Trash/ })).toBeNull()
+        })
     })
 })

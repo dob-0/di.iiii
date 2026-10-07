@@ -140,8 +140,11 @@ const s = () => {
     // Ordered by the shelf, then by hand, then by recency — a project that has
     // never been dragged keeps exactly the order it had before collections.
     selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? AND deleted_at IS NULL ORDER BY position ASC, updated_at DESC'),
-    selectTrashed:    db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
-    selectTrashedInSpace: db.prepare('SELECT * FROM projects WHERE space_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
+    // A project that went to the trash WITH its space (same stamp) belongs to
+    // the space's entry in the trash, not to this list: restoring it alone would
+    // put live work inside a space nobody can open.
+    selectTrashed:    db.prepare('SELECT p.* FROM projects p WHERE p.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM spaces s WHERE s.id = p.space_id AND s.deleted_at IS NOT NULL) ORDER BY p.deleted_at DESC'),
+    selectTrashedInSpace: db.prepare('SELECT p.* FROM projects p WHERE p.space_id = ? AND p.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM spaces s WHERE s.id = p.space_id AND s.deleted_at IS NOT NULL) ORDER BY p.deleted_at DESC'),
     selectPurgeable:  db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL AND deleted_at < ?'),
     softDelete:       db.prepare('UPDATE projects SET deleted_at = ?, updated_at = ? WHERE id = ?'),
     restore:          db.prepare('UPDATE projects SET deleted_at = NULL, updated_at = ? WHERE id = ?'),
