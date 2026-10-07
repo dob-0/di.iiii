@@ -42,6 +42,13 @@ await di.run('space.frontDoor', { space: 'library', project: 'di-library' })
 loopback needs no token at all, because it runs with auth off; anything
 reachable by another machine must still prove who it is.
 
+`di login` is what writes that file for a person: one entry per tier (`dev`,
+`prod`, `local`) and one per origin for any other host, so
+`connect({ base: 'https://example.org/serverXR' })` finds the login made with
+`di login --to https://example.org`. Such a login reads and edits the person's
+spaces and projects; the server refuses it anything public (publish, delete,
+invites) and anything that changes who has access — `docs/architecture/CLI_LOGIN.md`.
+
 ## Safety: reach
 
 Every move declares how far it reaches.

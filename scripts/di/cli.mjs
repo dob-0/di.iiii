@@ -68,6 +68,7 @@ import {
 import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
+import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
 const HOME = () => {
@@ -560,7 +561,8 @@ const cmdMove = async (args) => {
     const headers = { 'Content-Type': 'application/json' }
     if (from && from !== true) {
         base = `${String(from).replace(/\/+$/, '')}/serverXR`
-        const token = args.flags.token === '-' ? (await readStdin()).trim() : String(process.env.DI_TOKEN || '').trim()
+        // stdin, else DI_TOKEN, else the login `di login` stored for that very address
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
         if (token) headers.Authorization = `Bearer ${token}`
     } else {
         const home = HOME()
@@ -1005,7 +1007,7 @@ const cmdMcp = async (args) => {
     const entry = candidates.find((p) => fs.existsSync(p))
     if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
     const port = resolvePort(HOME(), args.flags?.port)
-    const child = spawn(process.execPath, [entry, '--base', `http://localhost:${port}/serverXR`], { stdio: 'inherit' })
+    const child = spawn(process.execPath, [entry, ...mcpArgs({ flags: args.flags, port })], { stdio: 'inherit' })
     await new Promise((resolve) => child.on('exit', resolve))
 }
 
@@ -1589,6 +1591,9 @@ const COMMANDS = {
     keeper: cmdKeeper,
     ndi: cmdNdi,
     mcp: cmdMcp,
+    login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    logout: (args) => runLogout(args),
+    whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }
 
