@@ -14,6 +14,7 @@ import {
 } from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import ModeMark from './components/ModeMark.jsx'
+import TreeChip from './components/TreeChip.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -928,6 +929,7 @@ export default function RootApp() {
         <BrowserRouter>
             <AuthReturnNotice />
             <ModeMark />
+            <TreeChip />
             <AppRouter />
         </BrowserRouter>
     )

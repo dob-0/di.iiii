@@ -1073,6 +1073,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'dev-copy-label',
+        category: 'For developers',
+        title: 'Which copy is this tab?',
+        summary: 'A tab running a developer copy of di.iiii wears a small label at the bottom right: "dev copy · <tree>".',
+        body: [
+            'A developer copy is di.iiii run from a git checkout (a "tree") by the di-dev tool, so a change can be tried without touching your real di. It looks the same as your real di, so it says so: a small label at the bottom right of every surface reads "dev copy · <tree> · your di\'s data", with the checkout\'s name.',
+            { list: [
+                'your di\'s data — the copy shows your real di\'s spaces and projects, and what you change there is saved there.',
+                'SCRATCH data, thrown away (red) — the copy has its own throwaway data; nothing done in it is kept.'
+            ] },
+            'Your installed di and the live sites never show this label. Hover it for the one-sentence explanation.'
+        ],
+        tags: ['dev copy', 'tree', 'checkout', 'di-dev', 'developers'],
+        updated: '2026-10-02'
+    },
+    {
         id: 'license-and-openness',
         category: 'For developers',
         title: 'License & openness',
