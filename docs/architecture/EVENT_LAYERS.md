@@ -1,7 +1,10 @@
 # Event layers — how a venue job runs layer by layer, who repeats it, and how an agent reaches it
 
-Status: DESIGN + DRAFT, 2026-09-30. Nothing here is built except what a row says exists. No code changed.
-Draft agent files: `docs/architecture/event-agents/` (move into `.claude/agents/` only with the owner's word).
+Status: DESIGN 2026-09-30; the nine agents ACTIVE 2026-10-07. Nothing else here is built except what a row says exists.
+Agents ACTIVE since 2026-10-07 (the owner's word): `.claude/agents/` (venue-capture, hall-modeller, equipment-verifier,
+rig-planner, patch-planner, scene-writer, show-check, rental-and-paper, rigging-safety-checklist).
+**Runbook — read before any venue work: `.claude/skills/venue-show/SKILL.md`** (where each fact lives, the command
+for each job, which agent per layer, the traps already paid for).
 
 Owner, 2026-09-30: *"what we do now we will do next with other places and events, so we need agents who
 will do these things in future again, and also MCP … we need a smart system where we can work layer by
@@ -98,7 +101,7 @@ passing and the time taken. Whether today's MOXIR Minimal obeys 0.6 m is **UNVER
 
 ## 2. The agent roles
 
-### 2.0 Contract every role shares (referenced by each draft file)
+### 2.0 Contract every role shares (referenced by each agent file; each file's "Today's rules" win where they differ)
 
 | rule | text |
 |---|---|
@@ -107,7 +110,7 @@ passing and the time taken. Whether today's MOXIR Minimal obeys 0.6 m is **UNVER
 | facts | every number carries value, method and source; an assumption is written `ASSUMED:` and never enters a document as a fact (`assumedProfiles.js` is the model: separate, labelled, reversible) |
 | data | state written only through scripts that emit ops (author = person, via = the agent's key label); before a replacing write, `copy-version.mjs` keeps a labelled copy |
 | stop | no LOOK, no SIGN, no waiver. If a step needs one, stop and name it |
-| report | one report at the end, 10 lines, files and numbers; no repeated reports; no narration of the request back |
+| report | one report to a FILE at the end, files and numbers, and a reply of at most 8 lines sent once (owner, 2026-10-07); no repeated reports; no narration of the request back |
 | budget | the caps below are tool-call caps; at 80 percent, write what is done and what is owed and stop |
 
 ### 2.1 Roles
@@ -135,7 +138,7 @@ Sources: the owner's list on 2026-09-30 (reported to this task, not re-checked) 
 
 | seen | guard in the role files |
 |---|---|
-| agents repeated their reports (owner, 09-30) | one report, 10 lines, at the end; no interim restatement |
+| agents repeated their reports (owner, 09-30) | one report to a file, an 8-line reply, once; no interim restatement |
 | agents ran out of context, and five Opus agents hit the usage limit together 2026-09-29 (`reference_model_routing.md`) | tool-call caps; cheaper model for routine; stop at 80 percent and write what is owed |
 | an agent wrote to the wrong tier (owner, 09-30; `reference_dii_prod_data_writes.md` exists for the prod case) | first line of every report names the tier; default local; `--api` explicit, never inferred |
 | an agent said "cloud" when it ran locally (owner, 09-30) | say "local" or name the cloud sandbox; a claim of where it ran needs the command line that shows it |
@@ -226,7 +229,7 @@ prints. The MCP's own checks are courtesy only (SPEC §2: the server is the only
 
 ## 4. Runbook: the next venue in 12 steps
 
-Agents named are the drafts in `docs/architecture/event-agents/`. A step is finished only with its CHECK; LOOK
+Agents named are in `.claude/agents/`; the commands and traps are in `.claude/skills/venue-show/SKILL.md`. A step is finished only with its CHECK; LOOK
 and SIGN marks are the person's.
 
 | # | step | command or agent | CHECK | person |
@@ -252,7 +255,7 @@ and SIGN marks are the person's.
 | policy file, `policy-check.mjs`, `policy.test.js`, waiver rules; a measured first run on MOXIR | L5 does not exist |
 | move sheet and policy logic to `shared/` so the server can compute them | MCP phase 1 read tools |
 | door phases 1 to 2 merged (`feat/mcp-catalogue`, PR #567, UNVERIFIED) | the MCP surface rests on them |
-| agent files moved into `.claude/agents/` after the owner's look | drafts only here |
+| ~~agent files moved into `.claude/agents/`~~ | DONE 2026-10-07 with the owner's word |
 | a bake-off of routing (sonnet vs opus per role) | routing is a rule, not a measurement |
 | VGGT licence (CC BY-NC) decision for paid jobs | legal, the owner's |
 | a real console import of the MVR; a real phone; the owner's LOOK on all of L4 to L8 | owed since RIG_BUILD §8, §12.7, §18.8 |
