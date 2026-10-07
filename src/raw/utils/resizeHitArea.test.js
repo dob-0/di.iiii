@@ -10,7 +10,9 @@ describe('card resize handle hit area (P2)', () => {
     it('is >= 24 screen px, 44 on touch, divided by the canvas zoom, capped so the card still drags', () => {
         const base = rule('.raw-graph-node-resize')
         expect(base).toContain('--resize-hit: 24px')
-        expect(base).toMatch(/width: min\(calc\(var\(--resize-hit\) \/ var\(--raw-zoom, 1\)\), 45%\)/)
+        expect(base).toMatch(/width: min\(calc\(var\(--resize-hit\) \/ var\(--raw-zoom\)\), 45%\)/)
+        // Zoom 1 when nothing sets it: a registered default, not a var() fallback (spine).
+        expect(css).toMatch(/@property --raw-zoom \{[^}]*initial-value: 1;/)
         expect(css).toMatch(/pointer: coarse\)[^}]*--resize-hit: 44px/)
         expect(base).toContain('border-radius: 0')
     })

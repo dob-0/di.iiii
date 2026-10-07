@@ -406,7 +406,7 @@
 .ssh-list-manage {
     padding: 0 var(--di-space-4) var(--di-space-3);
     border-bottom: 1px solid var(--di-line);
-    background: var(--di-surface-2, transparent);
+    background: var(--di-surface-2);
 }
 .ssh-list-manage .ssh-card-actions { margin-top: 0; border-top: none; padding-top: var(--di-space-2); }
 

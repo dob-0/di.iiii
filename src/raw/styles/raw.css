@@ -2688,6 +2688,15 @@
     border-color: rgba(var(--di-cyan-rgb), 0.55);
 }
 
+/* --raw-zoom is set inline on .raw-graph-stage (RawGraphSurface.jsx). Registered
+   with an initial value of 1, so a card drawn outside the stage still gets a
+   handle, without a var() fallback (spine: a fallback is a second palette). */
+@property --raw-zoom {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 1;
+}
+
 .raw-graph-node-resize {
     /* The hit area is a rectangle of at least 24 screen px (44 on touch),
        whatever the zoom: the canvas is scaled by --raw-zoom, so the size is
@@ -2697,8 +2706,8 @@
     position: absolute;
     right: -1px;
     bottom: -1px;
-    width: min(calc(var(--resize-hit) / var(--raw-zoom, 1)), 45%);
-    height: min(calc(var(--resize-hit) / var(--raw-zoom, 1)), 45%);
+    width: min(calc(var(--resize-hit) / var(--raw-zoom)), 45%);
+    height: min(calc(var(--resize-hit) / var(--raw-zoom)), 45%);
     border-radius: 0;
     cursor: nwse-resize;
     z-index: 3;
