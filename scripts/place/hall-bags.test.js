@@ -42,4 +42,11 @@ describe('moxir hall: bags check layer (2026-10-07)', () => {
     expect(all.some((m) => /bag/i.test(m.id))).toBe(false)
     expect(layer.movable_note.items.some((s) => /bulk bags/.test(s))).toBe(true)
   })
+  it('has the roller conveyor the owner marked beside bag 7, low and inside the stage area, its doubt stated', () => {
+    const c = layer.massing_add.find((m) => m.id === 'roller-conveyor')
+    expect(c.photos).toMatch(/owner/)
+    expect(c.y_m[1]).toBeLessThan(1.2)
+    expect(c.z_m[1]).toBeLessThanOrEqual(24.5)
+    expect(c.confidence).toMatch(/did not close/)
+  })
 })
