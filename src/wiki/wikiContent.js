@@ -588,6 +588,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'terminal-sign-in',
+        category: 'Spaces & access',
+        title: 'Sign a terminal in, and sign it out',
+        summary: 'di login shows a short code. Type it at /device, approve it, and that terminal acts as you, in your own spaces, until you end it.',
+        body: [
+            'If you work in a terminal — with the di command, or with Claude in a terminal — you can sign it in as yourself once. After that it does not send you to the browser for every space.',
+            { list: [
+                'In the terminal, run di login. It shows a code of eight letters, like BDFG-HJKL.',
+                'In the browser, open /device. Sign in with your account if you are not already. Type the code yourself: it is never pre-filled, and no link carries it.',
+                'Read what is asking: the name the terminal gave itself, when it asked and where from. Approve it only if you just started it yourself. If you did not, press Deny.',
+                'The terminal then says who it is signed in as. If that is not you, run di logout.'
+            ] },
+            'A code works once, for ten minutes.',
+            'A signed-in terminal acts as you in the spaces that are yours, and no further. It cannot open a space to the public, make an invite, delete a project or a space, change a space’s settings, or touch accounts and keys. Those stay in the browser, with you.',
+            'To end a terminal, run di logout in it, or open /device and press Revoke beside it under “Terminals signed in as you”. Signing out of the browser does not end it. A terminal nobody has used for 90 days ends by itself, and none lasts longer than a year.'
+        ],
+        tags: ['terminal', 'cli', 'login', 'di login', 'di logout', 'sign in', 'token', 'claude', 'revoke', 'device'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'public-page-node',
         category: 'Editing',
         title: 'The Public page window',
