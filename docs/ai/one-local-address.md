@@ -168,7 +168,7 @@ opens that name gets a padlock, a secure context, the camera and WebXR.
   - `stacks`, `installed` and `index` are reserved tree names.
 - The Host header is kept, so the app sees its own origin. `X-Forwarded-*` headers are added.
   Websocket upgrades go over TLS when the upstream is https.
-- **Tests: 55 passed**: 41 before, plus 14 new.
+- **Tests: 56 passed**: 41 before, plus 15 new.
   - The file readers, on fixtures.
   - The real router on a spare port against fake http and https upstreams, with name
     verification on and off.
@@ -313,8 +313,8 @@ di follows                                        # moxir followed from dev?
    - the QR panel (D).
 6. Offline follow between two machines in one place: measure with the internet cut.
 7. The dev-router forwards dev trees to the wifi: bind it to loopback or firewall it.
-8. `INSTALLED_DI_UNIT` in di-atlas `tools/di-dev/lib.mjs` says `di-up.service`, but the server
-   runs under `di-server.service`. `di-dev doctor`'s ownership check should be re-checked.
+8. ~~`di-dev doctor` called the installed di UNMANAGED.~~ Fixed in di-atlas #57: it looked only in
+   `di-up.service`, and the server runs under `di-server.service`. Live `doctor` now prints `ok`.
 9. MOXIR beta v0.9 to dev (E), with the owner's calls (a)–(c).
 10. `docs/ai/vocabulary.md`: the local tier's address is now `http://diiii.localhost/` (amended in
     this change).
