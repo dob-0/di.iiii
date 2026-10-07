@@ -5607,6 +5607,20 @@
     pointer-events: none;
 }
 
+/* Why a Camera In shows nothing, over its black picture (TopThumbnail.jsx). */
+.raw-top-picture-refusal {
+    position: absolute;
+    left: 8px;
+    margin: 0;
+    padding: var(--di-space-2);
+    box-sizing: border-box;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: var(--di-text-2);
+    line-height: 1.35;
+    pointer-events: none;
+}
+
 .raw-graph-node-summary {
     position: absolute;
     inset: 0 10px auto 10px;

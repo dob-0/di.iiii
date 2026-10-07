@@ -43,7 +43,11 @@ export default function DeskPanelWindow({ spaceId, onPlace }) {
             {rigRows.map((row) => (
                 <p key={row.key} className="raw-desk-hint" data-rig-visibility={row.key}>{row.text}</p>
             ))}
-            {machines.length < 2 ? (
+            {machine.away ? (
+                <p className="raw-desk-hint" data-desk-away="true">
+                    This browser is on another computer, looking at {machine.name || 'this'}&apos;s di.iiii — so its own camera and screen are not listed here. To add them, open this space in this computer&apos;s own di.iiii.
+                </p>
+            ) : machines.length < 2 ? (
                 <p className="raw-desk-hint">
                     Only this machine so far. Another machine joins while a di.iiii page of this space is open on it.
                 </p>

@@ -69,6 +69,19 @@ describe('getSocketConfigForRuntime', () => {
         })
     })
 
+    it('uses the page origin in dev with no API base, so the socket goes through the Vite proxy', () => {
+        // A second dev stack (VITE_PROXY_API_TARGET=:4361) must not open its
+        // socket on whatever server holds :4000, and a phone must not dial its
+        // own localhost.
+        for (const locationOrigin of ['http://127.0.0.1:5192', 'http://192.168.1.20:5173']) {
+            expect(getSocketConfigForRuntime({ configuredBase: '', isDev: true, locationOrigin })).toEqual({
+                serverUrl: locationOrigin,
+                path: '/serverXR/socket.io',
+                auth: undefined
+            })
+        }
+    })
+
     it('drops malformed socket auth tokens instead of forwarding them', () => {
         expect(getSocketConfigForRuntime({
             configuredBase: '/serverXR',
