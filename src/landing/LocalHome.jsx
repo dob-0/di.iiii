@@ -4,6 +4,11 @@ import './localHome.css'
 import SpaceHub from '../studio/components/SpaceHub.jsx'
 import StudioThemeProvider from '../studio/StudioThemeProvider.jsx'
 import { listServerSpaces } from '../services/serverSpaces.js'
+import GuestAddressPanel from './GuestAddressPanel.jsx'
+
+// `#join` opens the phones-and-headsets panel straight away, so the address can
+// be handed to a screen (di-show http://diiii.localhost/#join) or a wiki link.
+const JOIN_HASH = '#join'
 
 /**
  * What `di up` opens on your own machine.
@@ -22,6 +27,7 @@ import { listServerSpaces } from '../services/serverSpaces.js'
  */
 export default function LocalHome() {
     const [count, setCount] = useState(null)
+    const [joinOpen, setJoinOpen] = useState(() => typeof window !== 'undefined' && window.location.hash === JOIN_HASH)
 
     useEffect(() => {
         let alive = true
@@ -46,6 +52,15 @@ export default function LocalHome() {
                     </>
                 )}
                 <span className="lh-doors">
+                    <button
+                        type="button"
+                        className="lh-door-button"
+                        aria-expanded={joinOpen}
+                        aria-controls="lh-guest"
+                        onClick={() => setJoinOpen((open) => !open)}
+                    >
+                        Phones &amp; headsets
+                    </button>
                     <a href="/tools">Tools</a>
                     <a href="/studio">Studio</a>
                     <a href="/raw">Nodes</a>
@@ -53,6 +68,11 @@ export default function LocalHome() {
                     <a href="/?tour=1">What is di.iiii?</a>
                 </span>
             </div>
+            {joinOpen && (
+                <div id="lh-guest">
+                    <GuestAddressPanel onClose={() => setJoinOpen(false)} />
+                </div>
+            )}
             <SpaceHub />
         </StudioThemeProvider>
     )

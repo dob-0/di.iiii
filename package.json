@@ -73,7 +73,7 @@
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
         "check:works": "node scripts/works-boundary.mjs",
-        "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js serverXR/src/ndiContracts.test.js serverXR/src/placeContracts.test.js serverXR/src/projectVisibilityContracts.test.js serverXR/src/shelfScopeContracts.test.js serverXR/src/localNameContracts.test.js",
+        "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js serverXR/src/ndiContracts.test.js serverXR/src/placeContracts.test.js serverXR/src/projectVisibilityContracts.test.js serverXR/src/shelfScopeContracts.test.js serverXR/src/localNameContracts.test.js serverXR/src/guestAddressContracts.test.js",
         "verify:surfaces": "node scripts/verify-surfaces.mjs",
         "verify:capture": "node scripts/verify-capture.mjs",
         "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
@@ -102,6 +102,7 @@
         "eslint-plugin-react-hooks": "^7.0.1",
         "globals": "^17.12.0",
         "jsdom": "^30.0.1",
+        "jsqr": "1.4.0",
         "playwright": "^1.62.1",
         "prettier": "^3.9.6",
         "vite": "^8.2.1",
@@ -132,7 +133,8 @@
         "socket.io-client": "^4.7.0",
         "three": "^0.185.1",
         "three-mesh-bvh": "^0.7.8",
-        "troika-three-text": "^0.52.4"
+        "troika-three-text": "^0.52.4",
+        "uqr": "0.1.3"
     },
     "overrides": {
         "postcss": "^8.5.10",

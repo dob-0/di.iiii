@@ -230,7 +230,27 @@ Privileged or tier-writing steps are the owner's. Agents never run them.
 6. **The guest path** (D below).
 7. **MOXIR on every install** (E below).
 
-### D. The guest QR code — plan only
+### D. The guest QR code — first slice built (2026-10-07)
+
+**Built** (branch `feat/one-local-address-guest-qr-2026-10-07`):
+- `GET /serverXR/api/guest-address` (`serverXR/src/guestAddress.js`), local runtimes only. The name is
+  the one in the certificate this server serves (CN, else the first DNS name: the same rule `di up --lan`
+  uses for the dns-update hook). The port is the listen port, and `--lan` comes from the bind. Where the
+  name points is looked up on this machine and compared with its own addresses, cached for 30 s.
+  States: `ready`, `not-on-network`, `no-certificate`, `wildcard`. It never makes up an address.
+- The local home gets a **Phones & headsets** door (`/#join` opens it): the address, its QR code
+  (`uqr`, see `docs/ai/dependency-decisions.md`) and one line on who it is for. The code is drawn only
+  when the state is `ready` and the name does not point somewhere else. Every other state names the
+  setting (`~/.di/tls/cert.pem`) or the command (`di up --lan`).
+- Measured on aylmo with its real certificate (read-only): `https://local.thedi.studio/`. Today the
+  name resolves to `127.0.0.1` there, because the hook pointed it at loopback for a start without
+  `--lan`. So under `--lan` the panel shows no code until the hook moves the name.
+
+**Still owed from the design below:** the `/<space>` path in the code; Light's phone panel on the same
+address and the same encoder; scanning with a real phone (padlock, camera, WebXR on the Quest); the
+per-place name and certificate (§5).
+
+Design (written before the slice):
 
 What exists:
 - `serverXR/src/lighting/ui/qr.js` is a hand-written QR encoder. It is fixed at version 3 (42
