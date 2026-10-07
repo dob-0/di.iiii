@@ -47,7 +47,7 @@ module.exports = [
   },
   {
     route: "GET /api/spaces/:spaceId",
-    summary: "read one space's metadata — label, visibility, owner, published project",
+    summary: "read one space's metadata — label, visibility, owner, published project, and `domain` (its live own domain for share links, or null)",
     reach: "read",
     role: "viewer",
     agent: true,

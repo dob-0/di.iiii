@@ -91,6 +91,29 @@ const findActiveSpaceIdForHost = (hostname) => {
   return row ? row.space_id : null
 }
 
+// Of several live names, the one to hand out in a share link: not "www." (the
+// bare name is the address people type), then the oldest. Pure, so the one
+// ordering rule is tested once.
+const pickPrimary = (rows) => {
+  const live = rows.filter((row) => row.state === 'active')
+    .sort((a, b) => Number(a.hostname.startsWith('www.')) - Number(b.hostname.startsWith('www.')) ||
+      a.createdAt - b.createdAt)
+  return live.length ? live[0].hostname : null
+}
+
+/** The live hostname a space's share links should use, or null. */
+const findPrimaryActiveHostForSpace = (spaceId) => pickPrimary(listDomainsForSpace(spaceId))
+
+/** Every space that has a live hostname -> its primary one. One read, for lists. */
+const mapPrimaryActiveHosts = () => {
+  const bySpace = new Map()
+  for (const row of getDb().prepare("SELECT * FROM space_domains WHERE state = 'active'").all().map(rowToDomain)) {
+    if (!bySpace.has(row.spaceId)) bySpace.set(row.spaceId, [])
+    bySpace.get(row.spaceId).push(row)
+  }
+  return new Map([...bySpace].map(([id, rows]) => [id, pickPrimary(rows)]))
+}
+
 const insertDomain = ({ hostname, spaceId, state = 'pending', addedBy = null }) => {
   if (!STATES.includes(state)) throw new Error(`unknown domain state: ${state}`)
   const now = Date.now()
@@ -140,6 +163,8 @@ module.exports = {
   listDomainsInState,
   countDomains,
   findActiveSpaceIdForHost,
+  findPrimaryActiveHostForSpace,
+  mapPrimaryActiveHosts,
   insertDomain,
   updateDomain,
   deleteDomain
