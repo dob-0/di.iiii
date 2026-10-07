@@ -254,4 +254,21 @@ module.exports = [
     agent: true,
     note: "answers from the request's own host; `space` is null for di.iiii's own addresses and for any domain that is not live on a public space. Cached for 60 s."
   },
+  {
+    route: "GET /api/domain-check",
+    summary: "may this hostname have a certificate? Caddy's on-demand TLS `ask` endpoint for a space's own domain",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    input: {
+      query: {
+        type: "object",
+        required: ["domain"],
+        properties: {
+          domain: { type: "string", description: "the hostname Caddy is about to get a certificate for, e.g. yokozo.xyz" }
+        }
+      }
+    },
+    note: "answers 200 only when the hostname is a live domain of a public space, 404 for anything else; Caddy reads only the status (https://caddyserver.com/docs/caddyfile/options#on-demand-tls). Never cached."
+  },
 ]

@@ -111,7 +111,8 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
 const domainStore = require('./domainStore')
 const { createCloudflareSaas } = require('./cloudflareSaas')
-const { createDomainService } = require('./domainService')
+const { createDomainService, chooseDomainProvider } = require('./domainService')
+const { createDnsCheck } = require('./domainDns')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
@@ -2148,10 +2149,20 @@ router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
 
 // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
 // The service is built once and shared with the sweep at startup.
+const domainProvider = chooseDomainProvider(config.customDomains)
+if (domainProvider.problem) logger.warn(`[domains] ${domainProvider.problem}; domains are saved but nothing switches them on`)
+else if (domainProvider.name) logger.info(`[domains] ${domainProvider.name} switches custom domains on`)
 const customDomains = createDomainService({
-  cloudflare: createCloudflareSaas(config.customDomains.cloudflare),
+  cloudflare: domainProvider.name === 'cloudflare' ? createCloudflareSaas(config.customDomains.cloudflare) : null,
+  dns: domainProvider.name === 'caddy'
+    ? createDnsCheck({ target: config.customDomains.caddy.publicTarget, ips: config.customDomains.caddy.publicIps })
+    : null,
   // The CNAME target is ours too: a space must not claim domains.diiii.xyz.
-  platformSuffixes: [...config.customDomains.platformSuffixes, config.customDomains.cloudflare.cnameTarget].filter(Boolean),
+  platformSuffixes: [
+    ...config.customDomains.platformSuffixes,
+    config.customDomains.cloudflare.cnameTarget,
+    config.customDomains.caddy.publicTarget
+  ].filter(Boolean),
   maxDomains: config.customDomains.max,
   maxPerSpace: config.customDomains.maxPerSpace,
   pendingTtlMs: config.customDomains.pendingTtlMs,
@@ -2904,7 +2915,7 @@ initStorage()
     setInterval(sweep, 1000 * 60 * 30)
     // Domains waiting on DNS or a certificate switch on by themselves, and a
     // domain nobody pointed at us is dropped after a week. Nothing to do when
-    // the platform is not connected to Cloudflare.
+    // no provider (Cloudflare or Caddy) is configured.
     if (customDomains.connected) {
       const sweepDomains = () => customDomains.sweep()
         .then((done) => { if (done.activated || done.dropped) logger.info(`[domains] sweep: ${JSON.stringify(done)}`) })
