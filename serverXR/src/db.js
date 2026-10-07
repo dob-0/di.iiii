@@ -384,6 +384,46 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_telegram_act_expiry ON telegram_act_tokens(expires_at);
 
+  -- Signing in from a terminal (cliLoginStore.js, docs/architecture/CLI_LOGIN.md).
+  -- A terminal asking to be signed in: the device code it keeps and the short
+  -- code a person types are both stored as a SHA-256 only. status runs
+  -- pending -> approved | denied -> consumed (given once, to the first poll).
+  -- No SCHEMA_VERSION bump: a new table is invisible to an older build.
+  CREATE TABLE IF NOT EXISTS cli_device_codes (
+    id TEXT PRIMARY KEY,
+    device_hash TEXT NOT NULL UNIQUE,
+    user_code_hash TEXT NOT NULL,
+    label TEXT,
+    created_from TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    user_id TEXT,
+    interval_ms INTEGER NOT NULL,
+    last_poll_at INTEGER,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_cli_device_user_code ON cli_device_codes(user_code_hash);
+  CREATE INDEX IF NOT EXISTS idx_cli_device_expiry ON cli_device_codes(expires_at);
+
+  -- What the approval turns into: a terminal's own login, dii_cli_<id>.<secret>,
+  -- bound to one account, only the SHA-256 of the secret kept. Unlike an act
+  -- token it is NOT tied to the account's token_version: a browser sign-out must
+  -- not end a terminal login. It ends by revoke, by 90 days unused, or 365 days
+  -- after it was made.
+  CREATE TABLE IF NOT EXISTS cli_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    label TEXT,
+    created_from TEXT,
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    expires_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_cli_tokens_user ON cli_tokens(user_id);
+  CREATE INDEX IF NOT EXISTS idx_cli_tokens_expiry ON cli_tokens(expires_at);
+
   -- A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
   -- One row per hostname: yokozo.xyz and www.yokozo.xyz are two rows for the
   -- same space. The host -> space lookup only ever answers for state 'active',
