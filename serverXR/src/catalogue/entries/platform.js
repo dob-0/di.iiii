@@ -120,7 +120,7 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines."
+    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines. One server per data folder carries the follows (follow/lease.js): on any other server on the same folder the list is empty and `carriedHere: false` + `carriedBy` {pid, port} + `message` say which one does."
   },
   {
     route: "GET /api/health",

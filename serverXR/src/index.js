@@ -2852,6 +2852,23 @@ const snapshotOpenSpace = async () => {
 
 initStorage()
   .then(async () => {
+    // A project left with ops above its version (two servers on one data
+    // folder, 2026-10-02) took no write ever again — each one a 500. Healed
+    // here, before anything can write, and said in the log per project
+    // (projectStore.js, "Ops beyond the version"). Then any document a
+    // stopped write committed but never put in place (projectWrite.js).
+    try {
+      const healed = require('./projectStore').healOrphanProjectOps({ log: logger })
+      if (healed.length) logger.warn(`[projects] healed ${healed.length} project(s) at startup — their stray ops are in project_ops_quarantine`)
+      const recovered = await require('./projectWrite').recoverAllStagedDocuments({
+        spacesDir: SPACES_DIR,
+        projects: getDb().prepare('SELECT id, space_id AS spaceId FROM projects').all(),
+        log: logger
+      })
+      if (recovered) logger.warn(`[projects] finished ${recovered} write(s) a stopped server left half done`)
+    } catch (error) {
+      logger.error(`[projects] startup heal failed — the server starts anyway, writes heal each project as they come: ${error?.message || error}`)
+    }
     await ensureDefaultSpace()
     await ensureOpenSpace()
     // A decision can land, then the process dies before executing it. Catch
@@ -2955,7 +2972,24 @@ initStorage()
     // Spaces this install follows on another di.iiii (serverXR/src/follow).
     // Started after listen, never before: a follower reaches this server over
     // its own HTTP routes, so there has to be a server to reach.
+    //
+    // ONE server per data folder carries them (follow/lease.js): a second
+    // server on the same folder — the installed di beside a dev stack — runs
+    // no follower and no machine link, says which server does, and takes over
+    // when that one stops. Two followers into one database is what broke
+    // project `test` on 2026-10-02.
+    const followLease = require('./follow/lease').createFollowLease({
+      dataDir: config.directories.dataDir,
+      port: PORT,
+      log: logger
+    })
+    require('./follow').setFollowLease(followLease)
+    const stopCarrying = () => {
+      try { require('./follow').stopFollows() } catch { /* nothing running */ }
+      try { require('./machines/link').stopMachineLinks() } catch { /* nothing running */ }
+    }
     const startFollowsWhenUp = () => {
+      if (!followLease.held) return
       try {
         const { startFollows } = require('./follow')
         startFollows({
@@ -2995,7 +3029,12 @@ initStorage()
     }
 
     httpServer.listen(PORT, config.host, () => {
-      startFollowsWhenUp()
+      // The first beat decides; later beats refresh it, or take over from a
+      // holder that stopped (onGain), or step down if another server took it
+      // (onLose). startFollowsWhenUp does nothing on a server not holding it.
+      followLease.start({ onGain: startFollowsWhenUp, onLose: stopCarrying })
+        .catch((error) => logger.warn(`[follow] lease not started: ${error?.message || error}`))
+      process.once('exit', () => followLease.stop())
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
       // it, and two seconds is well inside what the CLI promises.
