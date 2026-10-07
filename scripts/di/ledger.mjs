@@ -15,6 +15,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { writeFileAtomicSync } from './atomicWrite.mjs'
 import { paths } from './paths.mjs'
 import { readState, writeState } from './state.mjs'
 
@@ -55,7 +56,8 @@ export const readLedger = (home, remote, spaceId) => {
 export const writeLedger = (home, remote, spaceId, ledger) => {
     const file = ledgerPath(home, remote, spaceId)
     fs.mkdirSync(path.dirname(file), { recursive: true })
-    fs.writeFileSync(file, JSON.stringify(ledger, null, 2) + '\n')
+    // Atomic: a ledger half-written by a freeze reads as "no ledger", and every later sync then refuses as "unknown".
+    writeFileAtomicSync(file, JSON.stringify(ledger, null, 2) + '\n')
     return ledger
 }
 

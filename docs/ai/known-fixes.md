@@ -59,6 +59,12 @@ resolves the server's source as `./src` when there is no `serverXR/` above it.
 ls /app/scripts/space-bundle.mjs`. A tool that is present but crashes prints its own
 sentence in the same log line.
 
+## A write that dies half-way destroyed the file — the install's state files were plain `writeFile`
+
+`scripts/di/state.mjs` (`di.env`: session secret, admin token, port; `state.json`), `credentialsStore.mjs` (the sync keys — a key is shown once and the host cannot hand it back), `ledger.mjs` (sync baselines) and `serverXR/src/configStore.js` wrote with `writeFile`, which truncates the target first. A freeze, a power cut or a full disk between the truncate and the last byte leaves an empty or half file. Every reader degrades an unreadable file to "nothing" (the contract in `state.mjs`), and the next write then saved that nothing over the only copy: an empty `di.env` made `ensureGuestSecrets` mint NEW secrets (every guest signed out) and forgot the port; `writeLink` after an unreadable `credentials.json` dropped every other space's key. This laptop hard-locks, so it is not academic.
+
+**Fix:** `scripts/di/atomicWrite.mjs` — temp file in the same directory, fsync, rename, fsync the directory (the pattern `follows.json` already used), mode applied on every write. An unreadable `credentials.json` is copied aside (`.corrupt-<time>`, 0600) before a write replaces it; the server's config goes through `jsonStore.writeJson`. Guards: `scripts/di/stateWritesSurviveACrash.test.js` injects a write that lands half its bytes and throws ENOSPC (5 of 5 failed before the fix), `serverXR/src/configStore.test.js`. **Still plain writes**, not covered: the Drive-import asset writes in `spaceRoutes.js` (a content-addressed file written under its final name), `lighting/library.js` (a cache), `machineIdentity.js`, the `stage.mjs` manifests.
+
 ## A follow's gaps: new key ignored, remote stored without its mount, files owed in silence, settings not carried, follower-only project refused
 
 Found on the owner's install 2026-10-04/05 (di.laser, moxir, space `open`). Five faults in `serverXR/src/follow/` and
