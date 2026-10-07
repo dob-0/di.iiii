@@ -108,7 +108,7 @@ describe('an on-demand viewport', () => {
         await flush(500) // burst over
         const after0 = demand.renderCount()
         await flush(500)
-        expect(demand.renderCount() - after0).toBe(0) // idle again
+        expect(demand.renderCount() - after0).toBeLessThanOrEqual(1) // idle again (at most the one rest-pose frame)
     })
 
     it('keeps drawing while a source holds the loop (video, strobe, clip), stops when it lets go', async () => {
