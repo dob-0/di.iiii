@@ -3267,6 +3267,7 @@ export default function RawEditor({
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
                     onViewportChange={handleViewportChange}
+                    followViewportLive={visibleViewNodes.some((node) => windowSpaceFor(frameOf(node)) === 'world')}
                     extraBounds={worldWindowBounds}
                 />
                 </GraphWrap>

@@ -41,11 +41,14 @@ describe('openingView (audit row 7)', () => {
         expect(120 * zoom + panX).toBeCloseTo(320 + OPENING_PAD, 6)
     })
 
-    it('opens a phone at the larger of fit-to-width and 50 %, but Fit (everything) shows it all', () => {
+    it('opens a phone at the larger of fit-to-width and the 11 px-legible zoom, but Fit (everything) shows it all', () => {
         const wide = { minX: 0, minY: 0, width: 2000, height: 400 }
-        expect(openingView({ bounds: wide, box: box(390, 760) }).zoom).toBe(0.5)
+        expect(openingView({ bounds: wide, box: box(390, 760) }).zoom).toBeCloseTo(11 / 13, 6)
+        expect(13 * openingView({ bounds: wide, box: box(390, 760) }).zoom).toBeGreaterThanOrEqual(11 - 1e-9)
         expect(openingView({ bounds: wide, box: box(390, 760), everything: true }).zoom).toBeCloseTo((390 - 48) / 2000, 6)
         const narrowGraph = { minX: 0, minY: 0, width: 600, height: 4000 }
-        expect(openingView({ bounds: narrowGraph, box: box(390, 760) }).zoom).toBeCloseTo((390 - 48) / 600, 6)
+        expect(openingView({ bounds: narrowGraph, box: box(390, 760) }).zoom).toBeCloseTo(11 / 13, 6)
+        // a wide surface with a window docked beside the canvas is not a phone
+        expect(openingView({ bounds: wide, box: box(1200, 760, { freeLeft: 0, freeRight: 680 }), surfaceWidth: 1200 }).zoom).toBeCloseTo((680 - 48) / 2000, 6)
     })
 })

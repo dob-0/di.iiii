@@ -17,6 +17,14 @@ export const OPENING_MAX_ZOOM = 1
 // as a smear.
 export const OPENING_NARROW_WIDTH = 700
 export const OPENING_SUMMARY_FLOOR = 0.5
+// Measured choice (2026-10-07, 390x844): at 50 % a card's body text is
+// 13 * 0.5 = 6.5 px and the card is a tall, mostly empty box (summary tier).
+// At 11/13 (= 0.846, the zoom where the full tier starts) the text is the
+// 11 px the token scale allows as its smallest, a card is ~170 px wide, so one
+// card reads whole with the next peeking in — a finger pans to the rest.
+// `OPENING_PHONE_FLOOR` is what a phone opens at; set it back to
+// OPENING_SUMMARY_FLOOR for the 50 % opening.
+export const OPENING_PHONE_FLOOR = 11 / 13
 
 /**
  * @param bounds `{minX, minY, width, height}` of everything to show, graph units
@@ -25,16 +33,18 @@ export const OPENING_SUMMARY_FLOOR = 0.5
  */
 // `everything`: the person asked to see it all (Fit, H) — the narrow rule is for
 // the OPENING view only.
-export const openingView = ({ bounds, box, everything = false, minZoom = 0.1, maxZoom = 4 }) => {
+export const openingView = ({ bounds, box, everything = false, surfaceWidth, minZoom = 0.1, maxZoom = 4 }) => {
     const bandWidth = Math.max(1, (box.freeRight - box.freeLeft) - OPENING_PAD * 2)
     const bandHeight = Math.max(1, (box.freeBottom - box.freeTop) - OPENING_PAD * 2)
     const widthFit = bandWidth / Math.max(1, bounds.width)
     const heightFit = bandHeight / Math.max(1, bounds.height)
-    const narrow = (box.freeRight - box.freeLeft) < OPENING_NARROW_WIDTH
+    // A phone is a narrow SURFACE; a wide one with a window docked beside the
+    // canvas has a narrow free band but is not a phone.
+    const narrow = (surfaceWidth ?? (box.freeRight - box.freeLeft)) < OPENING_NARROW_WIDTH
     const widthView = Math.min(widthFit, OPENING_MAX_ZOOM)
     const wanted = everything
         ? Math.min(widthFit, heightFit, OPENING_MAX_ZOOM)
-        : narrow ? Math.max(widthView, OPENING_SUMMARY_FLOOR) : widthView
+        : narrow ? Math.max(widthView, OPENING_PHONE_FLOOR) : widthView
     const zoom = Math.min(Math.max(wanted, minZoom), maxZoom)
     return {
         zoom,

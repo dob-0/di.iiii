@@ -278,6 +278,7 @@ export default function RawGraphSurface({
     onDeleteNode,
     onMoveNode,
     onResizeNode,
+    followViewportLive = true,
     onDoubleClick,
     // Edits a card's one main field in place (a Text's content). Optional: the
     // read-only wrappers pass none and the card behaves exactly as before.
@@ -393,6 +394,7 @@ export default function RawGraphSurface({
     const [panY, setPanY] = useState(60)
     const [zoom, setZoom] = useState(initialZoom ?? 1)
     // viewportRef mirrors pan+zoom synchronously so event handlers always read current values
+    const stageRef = useRef(null)
     const viewportRef = useRef({ panX: 60, panY: 60, zoom: initialZoom ?? 1 })
     // How much of the graph the last fit could show, and why — drives the
     // transient "showing 5 of 33" line rather than silently lying about it.
@@ -591,7 +593,7 @@ export default function RawGraphSurface({
         const box = visibleBox()
         if (!box) return
         const all = withExtraBounds(boundsOf(cardsInView))
-        const view = openingView({ bounds: all, box, everything, minZoom: GRAPH_MIN_ZOOM, maxZoom: GRAPH_MAX_ZOOM })
+        const view = openingView({ bounds: all, box, everything, surfaceWidth: containerRef.current?.getBoundingClientRect?.().width, minZoom: GRAPH_MIN_ZOOM, maxZoom: GRAPH_MAX_ZOOM })
         applyViewport(view.panX, view.panY, view.zoom)
         lastFitViewportRef.current = { ...viewportRef.current }
         lastBoxRef.current = box
@@ -1430,10 +1432,21 @@ export default function RawGraphSurface({
             const ny = panStartRef.current.panY + dy
             viewportRef.current.panX = nx
             viewportRef.current.panY = ny
-            setPanX(nx)
-            setPanY(ny)
+            if (followViewportLive) {
+                setPanX(nx)
+                setPanY(ny)
+            } else {
+                // Nothing outside the canvas follows the pan, so the move goes
+                // straight to the stage's transform: no React render of every
+                // card (and of the whole editor, through onViewportChange) per
+                // pointer move. The state catches up once, on release.
+                const stage = stageRef.current
+                if (stage) stage.style.transform = `translate(${nx}px,${ny}px) scale(${viewportRef.current.zoom})`
+            }
         }
         const up = () => {
+            setPanX(viewportRef.current.panX)
+            setPanY(viewportRef.current.panY)
             setIsPanning(false)
             setIsPanMoving(false)
         }
@@ -1779,7 +1792,8 @@ export default function RawGraphSurface({
             ) : null}
             <div
                 className="raw-graph-stage"
-                style={{ '--raw-zoom': zoom, transform: `translate(${panX}px,${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
+                ref={stageRef}
+                style={{ '--raw-zoom': zoom, transform: `translate(${viewportRef.current.panX}px,${viewportRef.current.panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
             >
                     <svg
                         // 1×1, not 100%: the stage collapses to zero height (all
