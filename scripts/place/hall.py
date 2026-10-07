@@ -270,6 +270,15 @@ def resolve_dims(opts):
         if given.get('massing_add'):
             dims['massing'] = list(dims['massing']) + list(given['massing_add'])
             origin['massing'] = f"{origin.get('massing', 'placeholder')} + {len(given['massing_add'])} from {os.path.basename(dims_path)}"
+        # `massing_move`: items with the id of an earlier item replace those fields (a measured move, sources kept on the item)
+        if given.get('massing_move'):
+            moves = {m['id']: m for m in given['massing_move']}
+            missing = [k for k in moves if k not in {it.get('id') for it in dims['massing']}]
+            if missing:
+                raise SystemExit(f'hall.py: massing_move names unknown ids {missing} ({os.path.basename(dims_path)})')
+            dims['massing'] = [dict(it, **{k: v for k, v in moves[it['id']].items() if k != 'id'}) if it.get('id') in moves else it
+                               for it in dims['massing']]
+            origin['massing'] = f"{origin.get('massing', 'placeholder')}; {len(moves)} moved by {os.path.basename(dims_path)}"
         for key in KEYS_FROM_DIMS:
             if key not in given or given[key] is None:
                 continue

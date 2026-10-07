@@ -93,3 +93,39 @@ The scratch stack `moxir-flip` (web :5335, api :4323) holds project `moxir-known
 - The scratch room drew NO hall after swap-hall (asset on disk, entity pointing at it, manifest without it). swap-hall.mjs now
   lists the model (`upsertAsset`) before pointing at it, repairs a missing listing on re-run, and reads back. Re-run on scratch:
   "listed; version 6"; seen on the owner's screen 10-07: columns, crane, press, machines and his truss line drawn.
+
+## The bags check (2026-10-07, evening): fixed metal behind the white bulk bags
+
+Owner: "behind the white bags there are metal things", and "analyse, not only from one side".
+
+**Method.** The method is VGGT-1B on 56 views (run `vggt-2026-10-07c`: the 44 views of `-07b`, plus the sharpest frames of 954, 958 and 963, plus the stills 959, 964 and 965). It is aligned to the hall on 032's floor in the same way as before (Umeyama+RANSAC, 0.73 m rms).
+- The rotation of 954 @3.6 s was refitted on the hall-axis vanishing point (Hough segments + RANSAC, 9 segments, median 0.38°). VGGT's pitch was 2.3° too low: it put the ducts at camera height.
+- The picks (`scripts/place/picks/bags-objects.json`) were triangulated by DLT from 954 (the entry side, z 36.7) and 023 (the press end, z 7.2, looking +z). Each pick also has the per-view VGGT depth as a second number.
+- Floor hits come from the fitted 954 camera.
+- Script: `scripts/place/bags_multiview.py` (plan / tri / draw / fit954). Camera: `scripts/place/picks/cam-954-3.6.json`.
+
+**Changes in `moxir-hall-dims-2026-10-07.json`**
+- `massing_move` is new in hall.py. It moves an earlier item by id.
+- **blower** moved from x 5–7, z 20–25, y 0–3 to x 5.8–8.0, z 17.5–21.5, y 0–1.7. Two directions; the z spread is 18.5–21.1.
+- Added (`massing_add`):
+  - `duct-lower` (z 16–18.5, axis 2.05 m, dia ≈ 0.4) and `duct-elbow-hopper` at its −x end. Both from two directions, with a z spread of 16.3–21.7.
+  - `duct-upper` (2.7–3.1 m) and `blower-cyclone`. Both are seen from 954 only, so SUSPECTED.
+- The bags, the loose floor pipes and the brown cabinet are in `movable_note`.
+- Unchanged: the canopy and drum-tank (consistent with 954, 023 and 032).
+
+**Hall v6.** Built at `/mnt/data/footage/place-moxir-hall-v6-2026-10-07` with the chain above, without preview.
+- The CPU was at 55–58 °C during the build.
+- 55 536 triangles. hall.glb sha256 `4e3420f4…`. Record: `scripts/place/rigs/moxir-hall-2026-10-07-v6.hall.json`.
+- Scratch only: `swap-hall.mjs` on `moxir-known-full-flip` reported "b9037692 → 4e3420f4 (listed); version 9".
+
+**Check pictures** in `~/Downloads/moxir/`:
+- `objects-on-frame-954.png`
+- `objects-on-photo-032.png`. This one was overwritten; the earlier version was not kept.
+- `objects-on-photo-023.png`
+- `objects-on-frame-963.png`
+
+**Not done (owed)**
+- 963 is at z −27, about 50 m from the bags, and gives no usable picks. 958 at z 15 looks away from the bags.
+- 959, with the owner's marks (pink columns, blue bags, red blower group), is a fisheye. It needs undistortion and a fit before it can be a third direction or count the left row.
+- A point-based PnP for 954 was not reached: fewer than 4 known points could be read reliably. 954's x and z come from VGGT (±0.7 m).
+- On 10-08: a side photo of the blower, the cyclone and the upper duct, and a tape from the bags to the blower foot.
