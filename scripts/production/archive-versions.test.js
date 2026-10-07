@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planArchive } from './archive-versions.mjs'
+import { planArchive, undoFileName } from './archive-versions.mjs'
 
 const p = (id, state = 'live', visibility = 'public') => ({ id, title: id, state, visibility })
 
@@ -27,3 +27,13 @@ describe('planArchive', () => {
         expect(step.change).toEqual({})
     })
 })
+
+describe('undoFileName', () => {
+    it('names each run by its time, so a re-run never overwrites the first run\'s undo', () => {
+        const a = undoFileName({ space: 'moxir', host: 'localhost_4323', at: '2026-10-07T16:51:10.120Z' })
+        const b = undoFileName({ space: 'moxir', host: 'localhost_4323', at: '2026-10-07T16:52:00.670Z' })
+        expect(a).toBe('undo-moxir-localhost_4323-2026-10-07T16-51-10-120Z.json')
+        expect(a).not.toBe(b)
+    })
+})
+

@@ -18,6 +18,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** The plan for one server: pure. `projects` as the server lists them. */
+// One undo file per run, named by its time. A second run must never overwrite the first one's file: on
+// 2026-10-07 a re-run (to finish the one project the first run could not change) wrote over it, and the four
+// projects the first run had hidden lost their recorded "before" (live/public) — the re-run only saw them hidden.
+export const undoFileName = ({ space, host, at }) => `undo-${space}-${host}-${String(at).replace(/[:.]/g, '-')}.json`
+
 export const planArchive = ({ projects, keep }) => {
     const keepSet = new Set(keep)
     const missing = keep.filter((id) => !projects.some((p) => p.id === id))
@@ -96,8 +101,9 @@ const main = async () => {
         for (const s of plan.steps) console.log(`  ${s.id}: ${s.before.state}/${s.before.visibility} → ${JSON.stringify(s.change)}`)
         if (!apply) continue
         const host = new URL(base).host.replace(/[^a-z0-9.-]/gi, '_')
-        const undoFile = path.join(undoDir, `undo-${space}-${host}.json`)
+        const undoFile = path.join(undoDir, undoFileName({ space, host, at: new Date().toISOString() }))
         fs.mkdirSync(undoDir, { recursive: true })
+        if (fs.existsSync(undoFile)) throw new Error(`refusing to overwrite the undo file ${undoFile}`)
         fs.writeFileSync(undoFile, `${JSON.stringify({ space, base, at: new Date().toISOString(), keep, steps: plan.steps }, null, 2)}\n`)
         console.log(`  undo file written first: ${undoFile}`)
         for (const s of plan.steps) {
