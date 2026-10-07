@@ -53,3 +53,8 @@
   names kept true) and leaves the other 74, the world and the render settings byte-identical. On scratch:
   `moxir-known-full-flip` = local Known · full + the mirror (hall df837baa, 74/127 transforms unchanged, world and
   render identical). Its whole-document write is for scratch only; a followed space (dev) needs ops — owed.
+- **The flip is UNDONE.** The owner, on the scratch room with a line drawn: "look from the side of the audience — the
+  pink line is the truss": LOW house left, HIGH house right — the 09-29 cut as it always was. "Flip" was my misread.
+  Known · full no longer names the flipped overlay (the file stays, unused); regenerated: ends x −6.04 @ 3.24 m /
+  x 5.55 @ 6.35 m on the 7.95 m girder of #772; bridles 26/42/119°; tie-off hr 0.23 m under the cab (her anchor).
+  safety.test.js now reads the low end's side from the data (either slope). Rig tests 923/923.

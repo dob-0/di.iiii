@@ -4362,7 +4362,7 @@
       "id": "known-full",
       "candidateOf": "full",
       "title": "Known · full · the cut, movers on the ground",
-      "summary": "The area, used smart (emily-41 spec 5, Emily 2026-10-02: \"analyse the area, use it smart, a really cool stage\"). Five layers from the floor: the cut's slash (a curtain of 7 UP-PL5403 and the X of 6) over the DJ silhouette, the press sculpted by 5 PARs, the booth row of 7 UP-B380F behind it, and a 50 m vista behind that: 8 PARs up the column pairs behind the press and a lighthouse (the 18th B380F) at the far back. Over the crowd the 10 column-base beams light the roof lantern as a box; sideways, 4 deep-red PARs at the neighbour spans make a forest. Statics only on the cut (6 X + 4 bridge + 7 curtain + the 2 fixed UP-LA40WF, held dark until the laser sign-off); every mover on the floor. All 50 UP-PL5403 and all 18 UP-B380F of the order. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed. 2026-10-07, the owner: 'flip the truss' — the cut mirrored: high house left, low house right over the press (moxir-crane-cut-flipped-2026-10-07.json).",
+      "summary": "The area, used smart (emily-41 spec 5, Emily 2026-10-02: \"analyse the area, use it smart, a really cool stage\"). Five layers from the floor: the cut's slash (a curtain of 7 UP-PL5403 and the X of 6) over the DJ silhouette, the press sculpted by 5 PARs, the booth row of 7 UP-B380F behind it, and a 50 m vista behind that: 8 PARs up the column pairs behind the press and a lighthouse (the 18th B380F) at the far back. Over the crowd the 10 column-base beams light the roof lantern as a box; sideways, 4 deep-red PARs at the neighbour spans make a forest. Statics only on the cut (6 X + 4 bridge + 7 curtain + the 2 fixed UP-LA40WF, held dark until the laser sign-off); every mover on the floor. All 50 UP-PL5403 and all 18 UP-B380F of the order. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed. 2026-10-07: a mirrored cut was tried and UNDONE — the owner, looking from the audience: low on the left, high on the right (the 09-29 cut) is right.",
       "truss": "crane-cut",
       "policy": {
         "movingFixtures": {
@@ -5297,8 +5297,7 @@
         "one-beam",
         "slow-sweep"
       ],
-      "defaultLook": "k-monolith",
-      "craneCut": "scripts/place/rigs/moxir-crane-cut-flipped-2026-10-07.json"
+      "defaultLook": "k-monolith"
     },
     {
       "id": "known-ground",

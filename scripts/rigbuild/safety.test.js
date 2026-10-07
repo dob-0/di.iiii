@@ -1,8 +1,9 @@
 // @vitest-environment node
 //
-// The shared safety geometry (safety.mjs) and the flipped cut's clearance (2026-10-07): since the flip the
-// −x end of Known · full is its HIGH end, and versions.mjs read only uEnds[0] for the clearance — right only
-// because a hung lamp sat on the low end. These hold that the build reads BOTH ends, the low one first.
+// The shared safety geometry (safety.mjs) and the cut's clearance (2026-10-07). versions.mjs used to read only
+// uEnds[0] for the clearance — right only while the −x end was the low one. A mirrored cut was tried that night
+// (high house left) and undone by the owner; these hold, for EITHER slope, that the build reads both ends, the
+// low one first.
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -24,14 +25,16 @@ describe('clearUnderCab', () => {
     })
 })
 
-describe('Known · full (flipped): the clearance reads both ends, the low one first', () => {
+describe('Known · full: the clearance reads both ends, the low one first', () => {
     const t = read('scripts/place/rigs/moxir-2026-10-17-known-full.json').truss
     const lowest = Math.min(...t.ends.map((e) => e.bottom_chord_m))
-    it('names the lower end, house right since the flip, and nothing on the line is lower than the lowest', () => {
+    it('names the lower end by its side, and nothing on the line is lower than the lowest', () => {
+        const lowEnd = t.ends.find((e) => e.bottom_chord_m === lowest)
+        const side = lowEnd.x_m < 0 ? 'house-left' : 'house-right'
         expect(t.clearance.low_end.bottom_chord_m).toBe(lowest)
-        expect(t.clearance.low_end.side).toBe('house-right')
+        expect(t.clearance.low_end.side).toBe(side)
         expect(t.clearance.lowest_m).toBeLessThanOrEqual(lowest)
-        expect(t.clearance.note).toMatch(/house-right/)
+        expect(t.clearance.note).toMatch(new RegExp(side))
     })
     it('keeps the 0.5 m raised-hands margin at the low end, and every tie-off under any cab it crosses', () => {
         expect(t.clearance.low_end.over_raised_hands_m).toBeGreaterThanOrEqual(0.5)
