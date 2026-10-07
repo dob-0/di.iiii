@@ -877,6 +877,7 @@ export const ui = {
     loginTargetBoth: () => `--tier or --to, not both — ${CMD} login --tier dev|prod|local, or ${CMD} login --to https://example.org`,
     loginBadTier: (tier) => `${tier ? `no such tier: ${String(tier).slice(0, 40)}` : '--tier wants a name'} — one of dev, prod, local. for any other di.iiii: ${CMD} login --to https://example.org`,
     loginBadAddress: (text) => `${text ? `"${String(text).slice(0, 60)}" is not an address` : '--to wants an address'} — for example ${CMD} login --to https://example.org`,
+    loginAddressHasPath: (site) => `${String(site).slice(0, 60)} is an address with a path — a login is for the whole di.iiii, not one page. use just the address: ${CMD} login --to ${String(site).slice(0, 60)}`,
     loginEnvWins: () => style.yellow(`DI_TOKEN is set in this environment and wins: the SDK, ${CMD} mcp and ${CMD} move use that token, not the login ${CMD} login keeps.`),
     /** The command that signs in to this target again, flags included. */
     loginAgain: ({ key, site }) => `${CMD} login${key === 'dev' ? '' : (['local', 'prod'].includes(key) ? ` --tier ${key}` : ` --to ${site}`)}`,

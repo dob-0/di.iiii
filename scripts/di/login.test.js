@@ -402,6 +402,8 @@ describe('di login — who it signs in as, and what it keeps', () => {
             [['--tier', 'dev', '--to', 'https://example.org'], '--tier or --to, not both'],
             [['--to', 'example.org'], '"example.org" is not an address'],
             [['--to'], '--to wants an address'],
+            [['--to', 'https://example.org/some/path'], 'is an address with a path'],
+            [['--to', 'https://example.org/?x=1'], 'is an address with a path'],
             [['--tier'], '--tier wants a name']
         ]
         for (const [argv, words] of cases) {

@@ -113,6 +113,9 @@ export const resolveTarget = (flags = {}) => {
     if (toGiven) {
         const site = originOf(flags.to)
         if (!site) return { error: ui.loginBadAddress(flags.to) }
+        // A path, a query or a fragment would be cut off silently and the login would go to the host: say so instead.
+        const extra = new URL(String(flags.to))
+        if ((extra.pathname && extra.pathname !== '/') || extra.search || extra.hash) return { error: ui.loginAddressHasPath(site) }
         return { site, base: `${site}/serverXR`, key: loginKeyFor({ to: site }), host: new URL(site).host }
     }
     const tier = tierGiven ? flags.tier : 'dev'
