@@ -13,9 +13,13 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { paths } from './paths.mjs'
-import { probeHealth } from './probe.mjs'
+import { probeDoorConfig, probeHealth } from './probe.mjs'
 
 export const DEFAULT_PORT = 4000
+// The one local address (docs/ai/one-local-address.md): the same link on every
+// machine with di, opening that machine's own di.iiii.
+export const ONE_LOCAL_NAME = 'diiii.localhost'
+export const oneLocalUrl = (name = ONE_LOCAL_NAME) => `http://${name}/`
 
 export const readState = (home) => {
     const p = paths(home)
@@ -225,4 +229,48 @@ export const humanSize = (bytes) => {
     const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
     const value = bytes / (1024 ** exponent)
     return `${value >= 10 || exponent === 0 ? Math.round(value) : value.toFixed(1)} ${units[exponent]}`
+}
+
+/**
+ * Is http://diiii.localhost/ THIS install? Asked, never inferred: the same
+ * question goes to the install directly and through the door on :80, and the
+ * answer counts only when both name the same machine id. Whoever holds :80 —
+ * this server's own door, or a dev-router forwarding to it — passes; another
+ * program on :80, or another di.iiii, does not.
+ *
+ * Pure over the two answers so a test can hand it any pair.
+ * Returns { url, why }: url is the address to print, or null and why not.
+ */
+export const judgeOneAddress = (selfConfig, door, name = ONE_LOCAL_NAME) => {
+    const selfId = selfConfig?.machine?.id || null
+    if (!door) return { url: null, why: 'nothing answers on port 80' }
+    if (door.status === 421) return { url: null, why: `port 80 answers, but not for ${name}` }
+    const doorId = door.config?.machine?.id || null
+    if (!doorId) return { url: null, why: `another program answers on port 80 (HTTP ${door.status})` }
+    if (!selfId) return { url: null, why: 'this di.iiii did not say who it is' }
+    if (doorId !== selfId) return { url: null, why: `${name} opens another di.iiii on this machine` }
+    return { url: oneLocalUrl(name), why: null }
+}
+
+const fetchConfig = async (base) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 2000)
+    try {
+        const response = await fetch(`${base}/api/config`, { signal: controller.signal })
+        return response.ok ? ((await response.json())?.config ?? null) : null
+    } catch {
+        return null
+    } finally {
+        clearTimeout(timer)
+    }
+}
+
+/** judgeOneAddress over the live answers. */
+export const oneAddress = async (home, port, { askSelf = fetchConfig, askDoor = probeDoorConfig } = {}) => {
+    // DI_LOCAL_NAME=off turns this server's own door off, not the name: a
+    // dev-router may still forward it here, so the default name is still asked.
+    const configured = String(readEnv(home).DI_LOCAL_NAME || '').trim().toLowerCase()
+    const name = configured && !['off', '0', 'false', 'no'].includes(configured) ? configured : ONE_LOCAL_NAME
+    const [self, door] = await Promise.all([askSelf(apiBase(home, port)), askDoor(name)])
+    return judgeOneAddress(self, door, name)
 }

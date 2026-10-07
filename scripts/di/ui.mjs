@@ -281,6 +281,13 @@ export const ui = {
         ].filter(Boolean).join('\n')
     },
 
+    // The one local address (docs/ai/one-local-address.md): the same link on
+    // every machine with di. Printed only when it was asked and answered as
+    // THIS di.iiii; otherwise one dim line says why not.
+    oneAddress: ({ url, why }) => url
+        ? `open it: ${style.cyan(url)}${style.dim('  (the same link on every machine with di — each opens its own)')}`
+        : style.dim(`http://diiii.localhost/ is not this di.iiii yet: ${why}`),
+
     stopped: (dataDir) => `stopped. your work is safe in ${dataDir}`,
     notRunning: () => 'not running.',
 

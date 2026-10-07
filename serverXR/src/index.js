@@ -120,6 +120,7 @@ const { registerPlaceRoutes } = require('./routes/placeRoutes')
 // actually are, which is what the place lane has to copy footage out of.
 const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
+const { startLocalName } = require('./localName')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
 const { registerMachineRoutes } = require('./machines/routes')
@@ -2986,6 +2987,10 @@ initStorage()
 
     httpServer.listen(PORT, config.host, () => {
       startFollowsWhenUp()
+      // The one local address: http://diiii.localhost/ on loopback :80, a door
+      // into this same server (serverXR/src/localName.js). Personal installs
+      // only; stands aside by name when :80 is taken or not allowed.
+      startLocalName({ mainServer: httpServer, log: (line) => logger.info(line) })
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
       // it, and two seconds is well inside what the CLI promises.

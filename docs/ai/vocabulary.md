@@ -297,7 +297,7 @@ The owner, plainly: "we have not staging anymore." The word leaves our language 
 
 | Tier | Is | Address |
 | --- | --- | --- |
-| **local** | your machine | `localhost` (the router: `dii.localhost:8088`) |
+| **local** | your machine | `http://diiii.localhost/` — this machine's installed di, the same link on every machine (amended 2026-10-07, `docs/ai/one-local-address.md`); dev trees at `http://<tree>.diiii.localhost/` |
 | **dev** | the rehearsal server, built from branch `dev` | `https://dev.diiii.xyz` |
 | **prod** | the live site, built from branch `main` | `https://diiii.xyz` |
 

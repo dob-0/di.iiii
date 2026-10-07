@@ -52,7 +52,7 @@ import * as node from './runner-node.mjs'
 import { DEFAULT_UNIT, activeService, installService, removeService, systemdUsable, unitStatus, validUnitName } from './service.mjs'
 import {
     alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    ensureGuestSecrets, lanUrl, localUrl, nameUrl, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, oneAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
@@ -341,6 +341,7 @@ const cmdStatus = async () => {
     // loopback may give the whole one, so it is asked before settling for it.
     const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
     const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
+    say(ui.oneAddress(await oneAddress(home, port)))
     say(ui.rigVisibility(rig))
     if (svc) say(unit.active ? ui.supervisorLine(svc, unit) : ui.unsupervisedWhileInstalled(svc))
     autoLines()
@@ -355,8 +356,12 @@ const cmdOpen = async (args) => {
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
     if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
-    say(publicUrl(home, port))
-    openBrowser(publicUrl(home, port))
+    // The one local address when it is this di.iiii (asked, see oneAddress);
+    // else the address this install has always opened.
+    const one = await oneAddress(home, port)
+    const url = one.url || publicUrl(home, port)
+    say(url)
+    openBrowser(url)
 }
 
 /**
