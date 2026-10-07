@@ -34,6 +34,12 @@ export const APP_PAGE_TOOLS = 'tools'
 // app, a script or an AI should identify itself, and the limits it meets. The
 // server's 429 and 403 answers point here, so no space may take the word.
 export const APP_PAGE_FOR_APPS = 'for-apps'
+// The browser half of `di login` — /device (src/pages/DeviceLoginPage.jsx): a
+// terminal shows a code, the person types it here and approves it. Reserved so no
+// space or project can take the word. Checked before reserving, 2026-10-07:
+// /serverXR/api/spaces/device and /serverXR/api/projects/device answer 404 on prod
+// (diiii.xyz) and on the dev tier (the local install was not running to ask).
+export const APP_PAGE_DEVICE = 'device'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
@@ -43,6 +49,7 @@ export const RESERVED_APP_SEGMENTS = [
     // Checked before reserving: /serverXR/api/spaces/for-apps 404s on prod and
     // on staging (2026-09-13), so nothing holds the word.
     APP_PAGE_FOR_APPS,
+    APP_PAGE_DEVICE,
     'beta',
     'raw',
     'seed',
@@ -304,6 +311,7 @@ export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLower
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
+export const isDevicePageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_DEVICE
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
@@ -379,6 +387,12 @@ export const getAppLocationState = (locationLike = null) => {
         if (isForAppsPageSegment(segment)) {
             return {
                 page: APP_PAGE_FOR_APPS,
+                spaceId: null
+            }
+        }
+        if (isDevicePageSegment(segment)) {
+            return {
+                page: APP_PAGE_DEVICE,
                 spaceId: null
             }
         }
