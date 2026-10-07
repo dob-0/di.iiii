@@ -1,0 +1,61 @@
+{
+  "stage": "moxir-stage-line-2026-10-07",
+  "title": "MOXIR — the stage on the owner's stage line (z 24.5), the crane parked at z 24",
+  "writtenAt": "2026-10-07",
+  "status": "PLAN for the owner's look, built on the scratch stack only (moxir-flip, 127.0.0.1:4323). Not on dev, not on the installed di. Every height of the crane is the far crane's photo value carried to the near crane (ASSUMED); the 2026-10-08 site visit tapes them.",
+  "owner": "2026-10-07, his own marks on video frame 954 @ 3.6 s (~/Downloads/moxir/,dob fixed last places bags-from-video-954.jpg): a green STAGE LINE across the floor at the front of the white bags, the DJ (teal) behind it, speakers (blue) L and R on it, the audience (orange) everything in front, toward the entry. Earlier the same day: \"we can move the crane\". His order: stage → crane place → truss → lights.",
+  "source": {
+    "marks": "scripts/place/picks/marks-954-stage-2026-10-07.json — the painted pixels' floor contacts (the lowest painted pixel in each 16-px column band) projected onto the floor y = 0 by scripts/place/project_floor_marks.py",
+    "camera": "scripts/place/picks/cam-954-3.6.json — rotation from the hall-axis vanishing point (9 Hough segments, median 0.38°), position from VGGT-1B aligned to the hall (±0.7 m in x and z, camera height 1.43 m ±0.3 m)",
+    "accuracy": "the stage line's z is ±2.5 m (a ±0.3 m error in camera height at a 12 m range); x of the DJ and speaker marks ±0.7 m. His stroke leans 9° across the frame; read as the camera's unfitted roll, so the line is drawn square across the hall."
+  },
+  "stage_line": {
+    "z_m": 24.5,
+    "faces": "entry",
+    "why": "his green stroke projects to z 24.0–26.0 (mean 24.4) across x −2.3 … 7.9; drawn square at z 24.5, ½ m in front of the column grid line z 24 (grid row 6)"
+  },
+  "booth": {
+    "drawn_x_m": [0.84, 4.05],
+    "centre_x_m": 2.445,
+    "front_z_m": 24.5,
+    "depth_m": 2.0,
+    "why": "his teal mark, kept where he drew it: NOT on the nave axis. The riser stays the base rig's 3 × 2 m (three 2 × 1 m decks, 1.2 m high, table, stair on the left — moxir-2026-10-17.json stage); its 3.0 m width centred on his 3.21 m mark (x 0.945 … 3.945). Front edge on the line, the riser behind it (toward the press)."
+  },
+  "pa": {
+    "placeholder": true,
+    "why": "the version has NO speaker entities (checked: 127 entities of moxir-known-full-flip, none a loudspeaker). The two main stacks are drawn as labelled boxes the size of a real product, not a sound design: the count, splay and delays are the sound engineer's, from the rental house's prediction (e.g. L-Acoustics Soundvision) — owed.",
+    "stack": [
+      { "code": "L-Acoustics KS28", "what": "subwoofer, 2 high", "n_high": 2, "w_m": 1.34, "h_m": 0.55, "d_m": 0.719, "kg": 79, "source": "https://www.l-acoustics.com/products/ks28/ (read 2026-10-07): 1340 × 550 × 719 mm, 79 kg" },
+      { "code": "L-Acoustics KARA II", "what": "full-range, 3 ground-stacked on the subs", "n_high": 3, "w_m": 0.733, "h_m": 0.252, "d_m": 0.5, "kg": 26, "source": "https://www.l-acoustics.com/products/kara-ii/ (read 2026-10-07): 733 × 252 × 500 mm, 26 kg" }
+    ],
+    "stack_note": "one stack each side, identical (a stereo pair): 1.34 m wide, 1.856 m high, front face on the stage line facing the audience (+z). His blue marks are 1.2 m (L) and 2.3 m (R) wide — the difference is read as drawing/perspective, not a request for unequal stacks (owner to confirm).",
+    "sides": [
+      { "id": "L", "drawn_x_m": [-2.4, -1.2], "centre_x_m": -1.8 },
+      { "id": "R", "drawn_x_m": [4.9, 7.2], "centre_x_m": 6.05 }
+    ],
+    "front_z_m": 24.5
+  },
+  "barrier": {
+    "z_m": 25.8,
+    "pit_m": 1.3,
+    "x_m": [-3.47, 7.72],
+    "h_m": 1.1,
+    "why": "the base rig's pit (1.3 m in front of the riser, moxir-2026-10-17.json stage.barrier) kept; widened from 9 m to run 1 m past each PA stack so no one stands at a cabinet's face (design choice; the event's crowd-safety plan sets the final line — owed)"
+  },
+  "crane": {
+    "z_m": 24.0,
+    "hall_overlay": "scripts/place/rigs/moxir-hall-stage-line-2026-10-07.json",
+    "hall_record": "scripts/place/rigs/moxir-hall-2026-10-07-v7-show-stage24.hall.json",
+    "candidates_m": [22, 24, 26],
+    "chosen_by": "scripts/rigbuild/stage-line.mjs parkOptions (the numbers are in stage-line.test.js and the scratch report)"
+  },
+  "truss": {
+    "cut": "scripts/place/rigs/moxir-crane-cut-stage-line-2026-10-07.json",
+    "axis_x_m": 0,
+    "why_axis": "the cut keeps the nave axis (u = 0 at x 0, the same line as today, x −6.04 … 5.55). Sliding it +2.445 to sit over the DJ puts its high end at x 7.99, 0.36 m from the crane cab (x 8.35 … 10.35, bottom 5.85) — the house-right tie-off then cannot pass under the cab (it would need its anchor below the floor)."
+  },
+  "lights": {
+    "move_with_truss": "everything on the cut (mirror-cut.mjs CUT_PREFIXES): the 4 truss pieces, the 17 UP-PL5403 (par-cut-x 6, -bridge 4, -curtain 7), the 6 LaserCubes, the picks, bridles, hoists, chains, safety steels and the two tie-offs — translated Δz +19.2 m, the rigging re-derived (craneCut) for the new place",
+    "stay": "every floor fixture: par-columns 16, par-press-cut 3, par-press-sides 2, par-vista 8, par-neighbour 4, beam380-backstage 7, beam380-columns 10, beam380-lighthouse 1, hazers 6, smoke 4 — none of them was placed relative to the DJ (they hang off the columns, the press or the far end). Lights are the next step; the owner chooses."
+  }
+}

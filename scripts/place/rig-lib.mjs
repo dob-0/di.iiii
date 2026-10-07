@@ -78,7 +78,7 @@ export const trussSlopeOf = (rig) => (isCraneHung(rig) ? (Number(rig.truss.slope
 export const linePoint = (stage, u, face = 'axis') => {
     const th = stage.trussSlope || 0
     const t = stage.trussSection
-    const cx = stage.axis + u * Math.cos(th)
+    const cx = (stage.trussAxis ?? stage.axis) + u * Math.cos(th)
     const cy = stage.trussH - t / 2 + t / 2 / Math.cos(th) + u * Math.sin(th)
     const k = face === 'top' ? 1 : face === 'bottom' ? -1 : 0
     return [cx - k * (t / 2) * Math.sin(th), cy + k * (t / 2) * Math.cos(th), stage.trussZ]
@@ -152,6 +152,13 @@ export const stageFrame = (rig, hall) => {
             : backdrop?.face ?? 0
         back = wall + into * (s.gap_m ?? 1)
         front = back + into * s.depth_m
+        // `front_z_m`: the riser's front edge stated, not derived from the backdrop — the owner's stage line
+        // (2026-10-07, scripts/place/rigs/moxir-stage-line-2026-10-07.json). The backdrop stays as named.
+        if (s.front_z_m !== undefined) {
+            front = Number(s.front_z_m)
+            back = front - into * s.depth_m
+            wall = back - into * (s.gap_m ?? 1)
+        }
         trussZ = back + into * (truss.from_stage_back_m ?? 0)
     } else if (s.zone) {
         const zone = g.zones?.[s.zone]
@@ -196,6 +203,10 @@ export const stageFrame = (rig, hall) => {
     return {
         crane,
         halo,
+        // `truss_axis_x_m`: the x the hung line's u = 0 sits over, when it is not the booth's own axis (the stage
+        // line, 2026-10-07: the booth moved to x 2.445 as drawn, the cut stays on the nave axis — the crane cab
+        // at the bridge's right end leaves no room to slide it; scripts/rigbuild/stage-line.mjs)
+        trussAxis: s.truss_axis_x_m ?? axis,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
         trussSlope: trussSlopeOf(rig),
         // crane-x: the length of each arm and the junction's size across (null for a line)

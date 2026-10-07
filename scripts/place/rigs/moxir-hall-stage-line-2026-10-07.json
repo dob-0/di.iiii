@@ -1,0 +1,156 @@
+{
+  "_what": "MOXIR, the stage on the owner's stage line (2026-10-07): the nave's entry-end crane rolls from z 4.8 to z 24.0 (its bridge's centre line on the column grid line z 24, 0.5 m behind the stage line z 24.5), trolley still parked at the right-hand end; the dance and stage zones follow the line. Layered LAST, after moxir-hall-show-cleared-2026-10-17.json (the show hall: the prefab cabin out, owner 2026-10-07). The same crane, moved — not a second one. The far crane stays where it was seen.",
+  "_source": "the owner's marks on video frame 954 @ 3.6 s (2026-10-07; projected with scripts/place/picks/cam-954-3.6.json, the points in scripts/place/picks/marks-954-stage-2026-10-07.json); the park z is chosen in scripts/rigbuild/stage-line.mjs (parkOptions: z 22 / 24 / 26 compared) and recorded in scripts/place/rigs/moxir-stage-line-2026-10-07.json. A PLAN, not a survey: the crane's travel from z 4.8 to 24 along the runway, its brakes, lock-out and rated load are unchecked (rigging sign-off owed).",
+  "source": "plan (the owner's stage line, 2026-10-07)",
+  "cranes_from_door_m": [
+    30.0,
+    76.2
+  ],
+  "crane_trolley_x_m": [
+    7.6,
+    null
+  ],
+  "zones": {
+    "dance": {
+      "colour": "blue",
+      "label": "dance floor",
+      "marked": {
+        "x_m": [
+          -8.7,
+          2.0
+        ],
+        "z_m": [
+          27.7,
+          39.7
+        ],
+        "note": "the part visible in 0387927a; the photo's bottom edge (the crane girder) cuts it at D 10.5 m"
+      },
+      "used": {
+        "x_m": [
+          -5.35,
+          5.35
+        ],
+        "z_m": [
+          25.8,
+          48.0
+        ]
+      },
+      "range": {
+        "front_edge_z_m": [
+          6.5,
+          9.0
+        ],
+        "near_edge_z_m": [
+          44.0,
+          50.0
+        ]
+      },
+      "why_used_differs": "2026-09-28 (hall fix): the owner's blue mark is 10.7 m wide (x -8.7..2.0 by the photo-032 fit; about 10-11 m by eye in his 0387927a), and he asked for THAT width, centred on the nave axis like the DJ booth: x -5.35..5.35. Its depth is kept: from the crowd barrier (z 7.5) to under the crane (z 48). Was 20 m wide (x -10..10) from 04:13 to the hall fix.",
+      "clear": "the white bulk bags (x -0.8..2.2, z 22..26.5) are cleared for the stage line (assumed movable, owner 2026-10-07); the drum tank (x 8..11, z 22..28) and the pipe racks (x 10..12) stay — both outside x 5.35.",
+      "width_m": {
+        "value": 10.7,
+        "range": [
+          10.0,
+          11.5
+        ],
+        "how": "the blue mark's width on the floor by the photo-032 fit (x -8.7..2.0); ±8 % of the distance plus the marker's hand"
+      },
+      "used_before_2026_10_07": {
+        "x_m": [
+          -5.35,
+          5.35
+        ],
+        "z_m": [
+          7.5,
+          48.0
+        ]
+      },
+      "why_used_differs_2026_10_07": "The owner's stage line (frame 954 @ 3.6 s, 2026-10-07): the audience is everything in front of the line z 24.5 toward the entry. The floor starts at the crowd barrier, z 25.8 = the stage line + the base rig's 1.3 m pit (moxir-2026-10-17.json stage.barrier.pit_m), not at 25.0: the pit is not dance floor. It ends at z 48 as before (the column pair 1.2-1.5 m before the entry end wall). Width kept x -5.35..5.35 (his 10.7 m blue mark, centred by his 09-28 call); the PA's centre is now x +2.1 (L -1.8, R +6.05) — a PA-centred floor (x -3.25..7.45) is an owner/sound-designer choice, not taken here."
+    },
+    "stage": {
+      "colour": "green",
+      "label": "DJ place",
+      "marked": {
+        "x_m": [
+          -12.0,
+          2.7
+        ],
+        "z_m": [
+          6.2,
+          23.5
+        ],
+        "note": "near edge at the white bulk bags (D 26.7 m; the bags stand at z 22-26.5, x -0.8..2.2); the far edge runs along the press (photo 1c3956d1)"
+      },
+      "used": {
+        "x_m": [
+          -2.47,
+          6.72
+        ],
+        "z_m": [
+          22.5,
+          24.5
+        ]
+      },
+      "range": {
+        "riser_centre_x_m": [
+          0.5,
+          3.5
+        ],
+        "press_face_z_m": [
+          2.0,
+          4.5
+        ]
+      },
+      "faces": "the entry (+z, NW): the crowd stands between the barrier and the crane end",
+      "why_used_differs": "the owner, 2026-09-28: the stage is a DJ place, small, a bit raised; then (04:13) 'in center'. Used = the booth area on the nave axis: the 3 x 2 m riser at x -1.5..1.5, 1 m in front of the press face, the goalpost towers at x -3.5 and 3.5, the pit to the crowd barrier (z 7.5).",
+      "used_before_2026_10_07": {
+        "x_m": [
+          -3.8,
+          3.8
+        ],
+        "z_m": [
+          3.6,
+          7.5
+        ]
+      },
+      "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.945..3.945, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) — the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+    },
+    "backstage": {
+      "colour": "red",
+      "label": "backstage",
+      "marked": {
+        "x_m": [
+          -12.5,
+          1.2
+        ],
+        "z_m": [
+          -1.4,
+          -0.1
+        ],
+        "note": "only the near edge is on the floor in 0387927a (D 50-52 m); the rest of the red line is drawn over machines. Photo 1c3956d1: behind the press, to the left"
+      },
+      "used": {
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "z_m": [
+          -10.0,
+          -1.0
+        ]
+      },
+      "range": {
+        "near_edge_z_m": [
+          1.0,
+          4.0
+        ],
+        "far_edge_z_m": [
+          -15.0,
+          -4.0
+        ]
+      },
+      "why_used_differs": "the owner's red (photo 024 = 1c3956d1) runs behind the press and to its left. Re-centred on the axis behind the press, clear of the machine line's back (z -0.5): x -6..6, z -10..-1; the DJ walks to the treads (x -2) past the press's left side (x < 0.25). Depth still a GUESS; the part of his red further left (x < -6) is not used."
+    },
+    "_label": "owner marked 2026-09-28 on photos; metres estimated. Revised the same day after his note on the DJ place ('not big ... near the metal thing ... a bit top and centre of the metal things')"
+  }
+}
