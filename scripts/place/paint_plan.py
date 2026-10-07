@@ -7,19 +7,24 @@ the stage as built (stage line, DJ step, PA, crane bridge + truss, barrier, danc
 the dance floor sees it: the stage at the top, the entry at the bottom, house left on the LEFT.
 
   python3 scripts/place/paint_plan.py --hall <hall.json> --stage <moxir-stage-line.json> --out plan.png [--ppm 40]
-Pixel ↔ hall: x_px = M + (x + 14) * ppm, y_px = M + (z - Z0) * ppm (written into the PNG's text chunk too).
+Pixel ↔ hall: x_px = M + (x - X0) * ppm, y_px = M + (z - Z0) * ppm (written into the PNG's text chunk too).
 """
 import argparse, json
 from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
 
-X0, X1, Z0, Z1, M = -14.0, 14.0, -2.0, 55.0, 70
+M = 70
+X0, X1, Z0, Z1 = -14.0, 14.0, -2.0, 55.0   # the nave only; --full takes the whole building from hall.json
 
 def main():
     a = argparse.ArgumentParser()
     a.add_argument('--hall', required=True); a.add_argument('--stage', required=True)
     a.add_argument('--out', required=True); a.add_argument('--ppm', type=float, default=40.0)
+    a.add_argument('--full', action='store_true', help='the whole building, wall to wall and end to end')
     o = a.parse_args()
     g = json.load(open(o.hall))['geometry']; st = json.load(open(o.stage))
+    global X0, X1, Z0, Z1
+    if o.full:
+        (X0, X1), (Z0, Z1) = (g['walls_x_m'][0] - 1.5, g['walls_x_m'][1] + 1.5), (-g['end_wall_outer_y_m'] - 1.5, g['end_wall_outer_y_m'] + 1.5)
     P = o.ppm
     W, H = int(2 * M + (X1 - X0) * P), int(2 * M + (Z1 - Z0) * P)
     px = lambda x, z: (M + (x - X0) * P, M + (z - Z0) * P)
@@ -31,10 +36,20 @@ def main():
     except OSError:
         f = fb = fs = ImageFont.load_default()
     # grid every 6 m along, every 6 m across
-    for z in range(0, 55, 6):
+    for z in (range(-54, 55, 6) if o.full else range(0, 55, 6)):
         d.line([px(X0, z), px(X1, z)], fill=(48, 52, 58), width=1); d.text((8, px(0, z)[1] - 9), f'{z} m', fill=(140, 146, 156), font=fs)
-    for x in (-12, -6, 0, 6, 12):
+    for x in (range(-36, 61, 12) if o.full else (-12, -6, 0, 6, 12)):
         d.line([px(x, Z0), px(x, Z1)], fill=(48, 52, 58), width=1); d.text((px(x, 0)[0] - 10, H - M + 12), f'{x:+d}' if x else '0', fill=(140, 146, 156), font=fs)
+    if o.full:
+        wx0, wx1 = g['walls_x_m']; ez = g['end_wall_inner_y_m']
+        d.rectangle(rect(wx0, wx1, -ez, ez), outline=(200, 200, 210), width=4)
+        dr = g['door']; d.rectangle(rect(-dr['w_m'] / 2, dr['w_m'] / 2, ez - 0.4, ez + 0.4), fill=(30, 32, 36)); d.text(px(0, ez + 1.0), 'ENTRY door', fill=(220, 220, 225), font=fs, anchor='mm')
+        fg = g['far_gate']; d.rectangle(rect(-fg['w_m'] / 2, fg['w_m'] / 2, -ez - 0.4, -ez + 0.4), fill=(30, 32, 36)); d.text(px(0, -ez - 1.0), 'far gate', fill=(220, 220, 225), font=fs, anchor='mm')
+        rows = g['rows_x_m']
+        for a_, b_ in zip(rows[:-1], rows[1:]):
+            d.text(px((a_ + b_) / 2, -ez + 1.5), 'NAVE (the show)' if a_ == -12 else 'span', fill=(120, 126, 136), font=f, anchor='mm')
+        d.line([px(wx0, g.get('expansion_joint_z_m', 0)), px(wx1, g.get('expansion_joint_z_m', 0))], fill=(70, 74, 80), width=1)
+        d.text((px(wx0, 0)[0] + 6, px(0, 0)[1] - 18), 'expansion joint', fill=(120, 126, 136), font=fs)
     # glazed lanterns (no laser may end in glass)
     for L in g['lanterns']:
         (x0, x1), (z0, z1) = L['x_m'], L['z_m']
@@ -43,7 +58,7 @@ def main():
             d.rectangle(rect(x0, x1, z0, z1), outline=(80, 120, 170), width=2)
             d.text((px(x0, z0)[0] + 6, px(x0, z0)[1] + 6), 'roof glass above (lantern) — no laser ends here', fill=(110, 150, 200), font=fs)
     # columns
-    for x in g['column_row_x_m']:
+    for x in (g.get('rows_x_m') if o.full else g['column_row_x_m']):
         for z in g['column_grid_z_m']:
             if Z0 <= z <= Z1: d.rectangle(rect(x - 0.35, x + 0.35, z - 0.35, z + 0.35), fill=(150, 156, 166))
     d.text((px(-12, 52)[0] - 40, px(-12, 52)[1]), 'columns', fill=(170, 176, 186), font=fs)
@@ -78,7 +93,7 @@ def main():
     d.rectangle(rect(bc - bw / 2, bc + bw / 2, zf - b.get('depth_m', 2.0), zf), fill=(20, 150, 135))
     d.text(px(bc, zf - 1.0), f"DJ step {b.get('deck_h_m', 0.4):g} m", fill=(10, 20, 20), font=f, anchor='mm')
     for sx in (-5.4, 5.4): d.rectangle(rect(sx - 0.67, sx + 0.67, zf - 0.72, zf), fill=(70, 90, 240)); d.text(px(sx, zf - 0.36), 'PA', fill=(255, 255, 255), font=fs, anchor='mm')
-    d.line([px(X0 + 0.5, zf), px(X1 - 0.5, zf)], fill=(60, 255, 60), width=3); d.text((px(X1 - 0.5, zf)[0], px(0, zf)[1] + 4), 'stage line', fill=(60, 255, 60), font=fs, anchor='ra')
+    d.line([px(-12, zf), px(12, zf)], fill=(60, 255, 60), width=3); d.text((px(12, zf)[0], px(0, zf)[1] + 4), 'stage line', fill=(60, 255, 60), font=fs, anchor='ra')
     bz = st['barrier']['z_m']; bx = st['barrier'].get('x_m', [-5.35, 5.35])
     d.line([px(bx[0], bz), px(bx[1], bz)], fill=(235, 235, 235), width=3)
     d.rectangle(rect(-5.35, 5.35, bz, 48), outline=(255, 160, 100), width=2)
@@ -86,9 +101,9 @@ def main():
     # titles
     d.text((M, 18), 'MOXIR beta v0.9 — from above. Paint: where lasers can be, and what we light.', fill=(235, 235, 240), font=fb)
     d.text((M, H - 34), 'stage at the top, entry at the bottom, house left on the LEFT (as the dance floor sees it) · grid 6 m · heights = permanent objects', fill=(160, 166, 176), font=fs)
-    d.text(px(0, Z1 - 0.6), 'ENTRY', fill=(200, 200, 205), font=f, anchor='mm')
+    if not o.full: d.text(px(0, Z1 - 0.6), 'ENTRY', fill=(200, 200, 205), font=f, anchor='mm')
     meta = PngImagePlugin.PngInfo()
-    meta.add_text('di-plan-map', json.dumps({'x0': X0, 'z0': Z0, 'margin_px': M, 'px_per_m': P, 'x_px': 'M+(x-x0)*ppm', 'y_px': 'M+(z-z0)*ppm'}))
+    meta.add_text('di-plan-map', json.dumps({'x0': X0, 'z0': Z0, 'x1': X1, 'z1': Z1, 'margin_px': M, 'px_per_m': P, 'x_px': 'M+(x-x0)*ppm', 'y_px': 'M+(z-z0)*ppm'}))
     im.save(o.out, pnginfo=meta)
     print(o.out, im.size)
 
