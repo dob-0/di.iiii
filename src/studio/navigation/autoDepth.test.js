@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene } from 'three'
-import { clientToNdc, isNavigationHelper, pickPivot, selectionCenter } from './autoDepth.js'
+import { clientToNdc, contentBoundary, isNavigationHelper, pickHit, pickPivot, selectionCenter } from './autoDepth.js'
 
 const geo = new BoxGeometry(1, 1, 1)
 const mat = new MeshBasicMaterial()
@@ -92,5 +92,59 @@ describe('helpers', () => {
         const c = selectionCenter([box(0, -2), box(0, 2)])
         expect(c.x).toBeCloseTo(0, 5)
         expect(selectionCenter([])).toBeNull()
+    })
+})
+
+describe('contentBoundary', () => {
+    const cuboid = (min, max) => {
+        const g = new BoxGeometry(max[0] - min[0], max[1] - min[1], max[2] - min[2])
+        const m = new Mesh(g)
+        m.position.set((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2)
+        m.updateMatrixWorld(true)
+        return m
+    }
+    it('no content, no limit', () => {
+        expect(contentBoundary([])).toBeNull()
+        expect(contentBoundary(null)).toBeNull()
+    })
+    it('a 120 m hall is bounded by half its size on every side (60 m)', () => {
+        const b = contentBoundary([cuboid([-60, 0, -60], [60, 20, 60])])
+        expect(b.min.x).toBeCloseTo(-120, 3)
+        expect(b.max.z).toBeCloseTo(120, 3)
+        expect(b.min.y).toBeCloseTo(-60, 3)
+    })
+    it('a small thing still gets the 30 m minimum margin', () => {
+        const b = contentBoundary([cuboid([0, 0, 0], [2, 2, 2])])
+        expect(b.min.x).toBeCloseTo(-30, 3)
+    })
+    it('skips hidden roots', () => {
+        const hidden = cuboid([500, 0, 500], [600, 10, 600])
+        hidden.visible = false
+        const b = contentBoundary([cuboid([0, 0, 0], [2, 2, 2]), hidden])
+        expect(b.max.x).toBeLessThan(100)
+    })
+})
+
+describe('pickHit', () => {
+    it('names the tagged root that was hit', () => {
+        const root = new Group()
+        root.userData.svEntityId = 'lamp-1'
+        const m = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial())
+        root.add(m)
+        root.position.set(0, 0, -5)
+        root.updateMatrixWorld(true)
+        const camera = new PerspectiveCamera(50, 1, 0.1, 100)
+        camera.position.set(0, 0, 5)
+        camera.lookAt(0, 0, 0)
+        camera.updateMatrixWorld(true)
+        const hit = pickHit({ camera, ndc: [0, 0], objects: [root] })
+        expect(hit.root).toBe(root)
+        expect(hit.point.z).toBeCloseTo(-4.5, 3)
+    })
+    it('nothing under the pointer: null', () => {
+        const camera = new PerspectiveCamera(50, 1, 0.1, 100)
+        camera.position.set(0, 0, 5)
+        camera.updateMatrixWorld(true)
+        expect(pickHit({ camera, ndc: [0, 0], objects: [] })).toBeNull()
     })
 })

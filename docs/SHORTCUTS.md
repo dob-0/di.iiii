@@ -52,7 +52,7 @@ With nothing selected, `G`/`R`/`S` just set the drag-handle gizmo mode.
 | `Ctrl+V` | Paste |
 | `Ctrl+X` | Cut (copy + delete) |
 | `X` / `Delete` / `Backspace` | Delete selected |
-| `F` or `.` | Frame selected (focus camera on it) |
+| `F` or `.` | Frame selected (focus camera on it). Nothing selected + pointer over a thing: fly to that thing. Over empty space: frame the whole room |
 | `Escape` | Deselect |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo |

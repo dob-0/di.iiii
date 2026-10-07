@@ -38,7 +38,10 @@ import {
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
 import { useNavigationPreference } from '../navigation/preference.js'
-import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { useCameraNavigation, entityRoots } from '../navigation/useCameraNavigation.js'
+import { contentBoundary } from '../navigation/autoDepth.js'
+import { useFocusUnderPointer } from '../navigation/useFocusUnderPointer.js'
+import { clipPlanesFor, controlSpeedsFor, maxPolarAboveFloor, useCameraSettings } from '../navigation/cameraSettings.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
@@ -507,7 +510,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     )
 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
+function StudioOrbit({ controlsRef, cameraView, lensFov = null, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
     const isXrPresenting = useXR((state) => state.session != null)
     const scene = useThree((state) => state.scene)
     const getScene = useCallback(() => scene, [scene])
@@ -517,11 +520,17 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     const navigation = useNavigationPreference()
     const preset = getNavigationPreset(navigation.preset)
     const isOrtho = (cameraView?.fov ?? 50) < 20
+    const { settings: camSettings } = useCameraSettings()
+    const speeds = useMemo(() => controlSpeedsFor(camSettings), [camSettings])
+    useFocusUnderPointer({ controlsRef, getScene, selectedEntityIds, active: enabled && !isXrPresenting })
+    const authoredFar = useRef(cameraView?.far || 0)
+    const boundaryTick = useRef(0)
     useCameraNavigation({
         controlsRef,
         presetId: preset.id,
         ortho: isOrtho,
         orbitSelection: navigation.orbitSelection,
+        pointerPivot: camSettings.pointerPivot,
         selectedEntityIds,
         getScene,
         active: enabled && !isXrPresenting,
@@ -553,7 +562,9 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Track target FOV when the view changes
     useEffect(() => {
         if (cameraView?.fov != null) targetFovRef.current = cameraView.fov
-    }, [cameraView?.fov, targetFovRef])
+        // The camera panel's lens wins over the view's own (a fixed opening shot has one).
+        if (lensFov != null) targetFovRef.current = lensFov
+    }, [cameraView?.fov, lensFov, targetFovRef])
 
     // Writable copies for camera-controls, made once per preset (navigation/
     // mappings.js controlBindingsFor): it keeps the object it is given, and
@@ -577,10 +588,38 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         if (!cc) return
         const cam = cc._camera
         if (!cam?.isPerspectiveCamera) return
+        // Clip planes follow the distance, so zooming out never leaves the room behind
+        // the far plane (cameraSettings.js clipPlanesFor).
+        // The orbit point stays near the content: re-measured every two seconds, so a
+        // moved or added object is in the box without a listener.
+        boundaryTick.current += 1
+        if (boundaryTick.current % 120 === 1) {
+            cc.boundaryEnclosesCamera = false
+            const box = contentBoundary(entityRoots(scene))
+            if (box) cc.setBoundary(box)
+        }
+        const { near, far } = clipPlanesFor(cc.distance, authoredFar.current)
+        let dirty = false
+        if (Math.abs(cam.near - near) > near * 0.05) { cam.near = near; dirty = true }
+        if (Math.abs(cam.far - far) > far * 0.05) { cam.far = far; dirty = true }
+        // Zooming out glides up, never through the floor (a camera below the target would
+        // otherwise end up under the room). Ortho views look straight down/up on purpose.
+        if (camSettings.keepAboveFloor && !isOrtho) {
+            const limit = maxPolarAboveFloor(cc._target.y, cc.distance)
+            cc.maxPolarAngle = limit
+            // camera-controls only applies the limit when you rotate; a zoom-out changes the
+            // distance and leaves the angle, so lift it here (a few degrees per frame at most
+            // would feel like a hand; one step keeps the camera exactly on the limit).
+            if (cc.polarAngle > limit + 1e-3) cc.rotatePolarTo(limit, false)
+        } else {
+            cc.maxPolarAngle = Math.PI
+        }
         const target = targetFovRef.current
-        if (Math.abs(cam.fov - target) < 0.05) return
-        cam.fov += (target - cam.fov) * 0.08
-        cam.updateProjectionMatrix()
+        if (Math.abs(cam.fov - target) >= 0.05) {
+            cam.fov += (target - cam.fov) * 0.08
+            dirty = true
+        }
+        if (dirty) cam.updateProjectionMatrix()
     })
 
     // Break out of ortho when the user starts rotating
@@ -604,8 +643,15 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             dollyToCursor={preset.dollyToCursor}
             smoothTime={0.15}
             draggingSmoothTime={0.0}
-            minDistance={0.35}
-            maxDistance={500}
+            // Past the minimum the wheel carries the pivot forward instead of stopping
+            // dead (owner, Cascade club, 2026-09-02; branch fix/orbit-infinity-dolly).
+            infinityDolly
+            minDistance={0.05}
+            maxDistance={800}
+            dollySpeed={speeds.dollySpeed}
+            truckSpeed={speeds.truckSpeed}
+            azimuthRotateSpeed={speeds.azimuthRotateSpeed}
+            polarRotateSpeed={speeds.polarRotateSpeed}
             mouseButtons={bindings.mouseButtons}
             touches={bindings.touches}
             onControlEnd={() => {
@@ -1051,6 +1097,7 @@ export default function StudioViewport({
     onCursorMove,
     onCursorLeave,
     cameraView,
+    lensFov = null,
     onCameraChange,
     onRotateStart,
     controlsRef,
@@ -1186,6 +1233,7 @@ export default function StudioViewport({
                     <StudioOrbit
                         controlsRef={controlsRef}
                         cameraView={camera}
+                        lensFov={lensFov}
                         onCameraChange={onCameraChange}
                         onRotateStart={onRotateStart}
                         enabled={enableNavigation}

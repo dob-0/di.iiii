@@ -44,6 +44,8 @@ export default function StudioPresentationSurface({
     onCursorMove,
     onCursorLeave,
     cameraView,
+    // The lens the camera panel set (null = the view's own); wins over a fixed shot's lens.
+    lensFov = null,
     controlsRef,
     xrStore,
     onCameraChange,
@@ -164,6 +166,7 @@ export default function StudioPresentationSurface({
             onCursorMove={onCursorMove}
             onCursorLeave={onCursorLeave}
             cameraView={resolvedCamera}
+            lensFov={lensFov}
             controlsRef={controlsRef}
             xrStore={xrStore}
             onCameraChange={onCameraChange}

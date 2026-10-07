@@ -3,6 +3,8 @@ import StudioPresentationSurface from './StudioPresentationSurface.jsx'
 import StudioGraphSurface from './StudioGraphSurface.jsx'
 import StudioWorldSurface from './StudioWorldSurface.jsx'
 import { isGraphViewEnabled } from '../utils/graphViewFlag.js'
+import CameraPanel from './CameraPanel.jsx'
+import { runViewCommand } from '../utils/viewCommands.js'
 
 // All views use PerspectiveCamera. "Ortho" views fake it: large distance + small FOV ≈ parallel projection.
 // This lets every transition (including ortho↔perspective) animate smoothly with setLookAt.
@@ -93,10 +95,15 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
         }
     })
 
+    // The lens the camera panel set for this pane. Null = the view's own (the project's
+    // saved view, or the preset). A view change drops it, like any other camera edit.
+    const [lensFov, setLensFov] = useState(null)
+
     const switchView = useCallback((key) => {
         if (key === viewKey) return
         const to = VIEWS[key]
         setViewKey(key)
+        setLensFov(null)
         const cc = controlsRef.current
         if (cc) {
             const [px, py, pz] = to.position
@@ -108,7 +115,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
     // Break out of any ortho preset to perspective when the user starts rotating.
     // Don't call setLookAt here — let the rotation continue from the current position.
     const onRotateStart = useCallback(() => {
-        if (VIEWS[viewKey]?.ortho) setViewKey('perspective')
+        if (VIEWS[viewKey]?.ortho) { setViewKey('perspective'); setLensFov(null) }
     }, [viewKey])
 
     const view = VIEWS[viewKey]
@@ -125,6 +132,15 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
             fov:      view.fov,
         }
     }, [viewKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    const runFrame = useCallback((kind) => {
+        const ids = new Set(shared.selectedEntityIds || [])
+        const entities = shared.document?.entities || []
+        runViewCommand(controlsRef.current, { kind }, {
+            entities,
+            selectedEntities: entities.filter((e) => ids.has(e.id)),
+        })
+    }, [shared.document, shared.selectedEntityIds])
 
     return (
         <div className="svl-pane">
@@ -149,9 +165,13 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
             </div>
 
             {/* View label — bottom-left like Blender */}
-            <div className="svl-view-label">
-                {view.label}{view.ortho ? ' · Ortho' : ''}
-            </div>
+            <CameraPanel
+                label={view.label}
+                ortho={view.ortho}
+                getFov={() => controlsRef.current?._camera?.fov ?? cameraView.fov}
+                onFov={setLensFov}
+                onFrame={runFrame}
+            />
 
             <div className="svl-canvas">
                 <StudioPresentationSurface
@@ -176,6 +196,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     onTransformCommitMany={shared.onTransformCommitMany}
                     onTransformCancel={shared.onTransformCancel}
                     cameraView={cameraView}
+                    lensFov={view.ortho ? null : lensFov}
                     controlsRef={controlsRef}
                     onRotateStart={onRotateStart}
                     showHelp={shared.showHelp}

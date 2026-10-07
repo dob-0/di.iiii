@@ -39,6 +39,9 @@ export function useCameraNavigation({
     presetId,
     ortho = false,
     orbitSelection = false,
+    // Orbit/zoom about the surface under the pointer in ANY preset (Blender's Auto Depth
+    // is on in its own preset already). cameraSettings.js `pointerPivot`.
+    pointerPivot = false,
     selectedEntityIds = null,
     getScene,
     // Re-run when the controls mount/unmount (Studio hides them in XR / when disabled).
@@ -50,7 +53,8 @@ export function useCameraNavigation({
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
-        if (!active || !cc || preset.id === 'studio') return undefined
+        const autoDepth = preset.autoDepth || pointerPivot
+        if (!active || !cc || (preset.id === 'studio' && !pointerPivot && !orbitSelection)) return undefined
         const element = cc._domElement
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
@@ -63,7 +67,7 @@ export function useCameraNavigation({
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
                 if (center) { applyPivot(cc, center); return }
             }
-            if (!preset.autoDepth) return
+            if (!autoDepth) return
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
             if (!ndc) return
             applyPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) }))
@@ -97,5 +101,5 @@ export function useCameraNavigation({
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             doc.removeEventListener('wheel', onWheel, { capture: true })
         }
-    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene])
+    }, [active, controlsRef, presetId, ortho, orbitSelection, pointerPivot, getScene])
 }
