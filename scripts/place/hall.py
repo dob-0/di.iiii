@@ -64,7 +64,8 @@ the nave, +1 the next span to the right looking from the entry, -1 to the
 left), "neighbour_spans" {"left": n, "right": n}, "column_head"
 ("two_sided_console"), "column_head_width_m", "crane_girders_each_row",
 "crane_girder_depth_m", "expansion_joint_m" (along the hall from its centre),
-"paired_columns_at_joint". Features: "door_w_m"/"door_h_m", "entry_platform",
+"paired_columns_at_joint", "end_wall_in_from_grid_m" (the end walls' inner face out
+from the end grid line; default 0.5). Features: "door_w_m"/"door_h_m", "entry_platform",
 "far_gate_w_m"/"far_gate_h_m", "cranes_from_door_m", "neighbour_cranes_from_door_m",
 "low_walls", "bracing_bays_from_door_m", "massing", "zones", "track_x_m"
 (massing and zones in the HALL frame: x across, z along with + toward the
@@ -135,6 +136,12 @@ PLACEHOLDER = {
     'neighbour_spans': {'left': 0, 'right': 0},
     'expansion_joint_m': None,
     'paired_columns_at_joint': False,
+    # The end walls' inner face, out from the end grid line (+ outward). 0.5 = the v1-v3 value (outer face at
+    # L/2 + 0.8, a 109.6 m hall for 18 x 6). 2026-10-07: the aerial survey (docs/moxir/AERIAL_2026-10-07.md)
+    # reads the roof 108.2 +- 0.6 m long, the outer faces at +-54.1 +- 0.3, so MOXIR's layer sets -0.2. The grid,
+    # the column lines and the end columns' axes do not move; an end column is clipped flush with the wall's
+    # outer face and the runway girders end at its inner face.
+    'end_wall_in_from_grid_m': 0.5,
     'door_w_m': 6.0,          # the big gate in the entry end wall
     'door_h_m': 6.0,
     'entry_platform': True,   # a raised platform with stairs beside the entry gate
@@ -162,7 +169,7 @@ KEYS_FROM_DIMS = [
     'crane_girder_inner_gap_m', 'crane_girder_w_m', 'crane_cab_inset_m', 'crane_cab_w_m', 'crane_bridge_bottom_basis',
     'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'space_frame_member_m', 'space_frame_node_m',
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
-    'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
+    'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint', 'end_wall_in_from_grid_m',
     'door_w_m', 'door_h_m', 'entry_platform', 'far_gate_w_m', 'far_gate_h_m', 'aisle_w_m',
     'track_x_m', 'track_z_range_m', 'track_cross_z_m', 'cranes_from_door_m', 'crane_trolley_x_m', 'neighbour_cranes_from_door_m', 'low_walls',
     'bracing_bays_from_door_m', 'massing', 'zones', 'cameras',
@@ -296,7 +303,7 @@ def resolve_dims(opts):
     for key in ('span_m', 'pitch_m', 'crane_rail_h_m', 'truss_bottom_h_m', 'truss_top_h_m', 'ridge_h_m',
                 'lantern_w_m', 'lantern_h_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'column_head_width_m',
                 'crane_girder_depth_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'crane_girder_inner_gap_m', 'crane_girder_w_m',
-                'crane_cab_inset_m', 'crane_cab_w_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
+                'crane_cab_inset_m', 'crane_cab_w_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'end_wall_in_from_grid_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
         dims[key] = float(dims[key])
     L = dims['length_m']
     dims['cranes_from_door_m'] = [min(L - 3, max(3.0, float(v))) for v in dims['cranes_from_door_m']]
@@ -551,7 +558,7 @@ def build(dims):
     wall_t = 0.3
     wall_in = (x_left - cd / 2, x_right + cd / 2)                   # the outer walls' inside faces
     wall_out = (wall_in[0] - wall_t, wall_in[1] + wall_t)
-    end_in = L / 2 + 0.5
+    end_in = L / 2 + dims['end_wall_in_from_grid_m']
     end_out = end_in + wall_t
     deck_t = 0.15
     parapet = top + deck_t + 0.55
@@ -596,7 +603,8 @@ def build(dims):
         outer = ax in (x_left, x_right)
         inward = 1 if ax == x_left else -1
         for y in column_y:
-            y0, y1 = y - cw / 2, y + cw / 2
+            # an end column never pokes through the end wall's outer face (no-op while the wall is 0.5 m out)
+            y0, y1 = max(y - cw / 2, -end_out), min(y + cw / 2, end_out)
             b.box('concrete', (ax - cd / 2, y0, 0.0), (ax + cd / 2, y1, flare_start))
             if outer:
                 x_face = ax + inward * cd / 2
@@ -612,12 +620,12 @@ def build(dims):
                                         (ax - hw, head_top), (ax - hw, flare_start + flare)], y0, y1)
                 b.box('concrete', (ax - ud / 2, y - ud / 2, head_top), (ax + ud / 2, y + ud / 2, bottom))
             # A steel cap plate where the frame bears on the column.
-            b.box('frame', (ax - 0.35, y - 0.35, bottom - 0.12), (ax + 0.35, y + 0.35, bottom))
+            b.box('frame', (ax - 0.35, max(y - 0.35, -end_out), bottom - 0.12), (ax + 0.35, min(y + 0.35, end_out), bottom))
         sides = [inward] if outer else [-1, 1]
         for side in sides:
             gx = ax + side * girder_off
             nave_face = (not outer) and abs(ax) < S and ((ax < 0 and side > 0) or (ax > 0 and side < 0))
-            y_lo, y_hi = -L / 2 - cw / 2, L / 2 + cw / 2
+            y_lo, y_hi = max(-L / 2 - cw / 2, -end_in), min(L / 2 + cw / 2, end_in)   # end at the end wall's inner face
             # A plate girder: top flange, web, bottom flange.
             b.box('girder', (gx - 0.22, y_lo, head_top), (gx + 0.22, y_hi, head_top + 0.04))
             b.box('girder', (gx - 0.02, y_lo, head_top + 0.04), (gx + 0.02, y_hi, head_top + girder_depth - 0.04))
@@ -936,6 +944,8 @@ def build(dims):
         'rows_x_m': [round(v, 3) for v in rows],
         'spans': {'left': left, 'right': right, 'span_m': S},
         'end_wall_inner_y_m': round(end_in, 3),
+        'end_wall_outer_y_m': round(end_out, 3),
+        'outer_length_m': round(2 * end_out, 3),
         'runway_top_m': round(head_top + girder_depth, 3),
         'runway_bottom_m': round(head_top, 3),
         'crane_rail_x_m': round(nave_rail, 3),

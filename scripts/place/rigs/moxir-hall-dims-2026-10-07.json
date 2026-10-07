@@ -1,0 +1,64 @@
+{
+  "site": "MOXIR hall, Charentsavan. Owner's pin 40.406524, 44.636560 (inside span 3).",
+  "date": "2026-10-07",
+  "source": "aerial survey (two Esri/Maxar captures 2020 and 2024, OSM, Microsoft ML footprints) and photo 007 crane metrology; read off pictures, not taped",
+  "layer": "Layered LAST, after moxir-hall-dims-2026-09-28.json, moxir-hall-features-2026-09-28.json, moxir-hall-crane-dj-2026-09-28.json and moxir-hall-dims-2026-10-02.json. Nothing in those files is edited. The 10-08 site visit's tape layer (moxir-hall-measured-2026-10-08.json) goes after this one when it is filled.",
+  "frame": "x along hall, y across, z up from floor; metres. lantern_segments_m: metres along the hall from its centre (the expansion joint), + toward the far end. Same frame as the 09-28 and 10-02 layers.",
+  "lantern_segments_m": {
+    "value": [[-46.9, -6.0], [6.0, 46.9]],
+    "range": "each end +-0.8 (joint side) / +-0.7 (roof-edge side); segment length 41.3 +- 1.0; gap at the joint 11.5 +- 1.2",
+    "confidence": "medium: the two captures agree within +-0.8 m; ends read at the sunlit lantern top after the cast shadow (NW) and from the NE shadow band + 2.2 m (SE)",
+    "source": "docs/moxir/AERIAL_2026-10-07.md (table 'What to change', row 'Lantern segments'); scripts/place/rigs/moxir-aerial-2026-10-07.json result.lantern_from_joint_m and model_corrections.lantern_segments_m",
+    "method": "Esri World Imagery Wayback captures 2020-10-30 and 2024-08-22, deskewed to the hall axis (144.1 deg true), lantern ends read along four lantern edges, measured from the roof's joint line; scripts/place/aerial_measure.py",
+    "pm_m": 0.8,
+    "was": [[-45.75, -7.25], [7.25, 45.75]],
+    "date": "2026-10-07"
+  },
+  "end_wall_in_from_grid_m": {
+    "value": -0.2,
+    "range": [-0.5, 0.1],
+    "confidence": "medium for the mean; the two ends differ (entry/NW 53.3 +- 0.5, far/SE 54.9 +- 0.6 from the joint line) and the model keeps them symmetric until the tape (survey item 14, docs/moxir/MODEL_VS_REAL_2026-10-07.md)",
+    "source": "docs/moxir/AERIAL_2026-10-07.md (rows 'Bays / length' and 'End walls'); moxir-aerial-2026-10-07.json result.length_m 108.2 +- 0.6 and model_corrections.end_wall_outer_face_z_m mean 54.1",
+    "method": "roof edge to roof edge along the hall in both captures (108.2, 108.25). The outer face sits at 108.2 / 2 = 54.1 from the centre. hall.py puts the inner face at L/2 + this key and the wall is 0.3 m thick, so 54.0 + (-0.2) + 0.3 = 54.1. The 6 m grid, 18 bays and the column axes stay; the end columns are clipped flush with the outer face (Soviet practice sets end columns 0.5 m in from the end grid line, with the wall on the line; that is NOT applied here because no picture shows it)",
+    "pm_m": 0.3,
+    "was": 0.5,
+    "date": "2026-10-07"
+  },
+  "crane_bridge_bottom_h_m": {
+    "value": 7.95,
+    "range": [7.69, 8.24],
+    "confidence": "medium (photo metrology, not taped). Per crane: far crane (76.2 m from the door) MEASURED by photo; near crane (49.2 m, over the DJ) ASSUMED the same type",
+    "source": "photo 007 (2026-09-29), far crane; restated here from moxir-hall-dims-2026-10-02.json (Emilya's #772 merge) so this layer carries the per-crane basis with the aerial corrections. The value does not change.",
+    "method": "fronto-parallel two-depth metrology (Criminisi et al. 2000), scripts/place/crane_height.py; Monte Carlo 5-95 % 7.69-8.24",
+    "pm_m": 0.28,
+    "per_crane": [
+      {"from_door_m": 49.2, "name": "near (entry-end) crane, parked over the DJ", "value": 7.95, "basis": "ASSUMED same type as the far crane (same runway, same yellow double-girder bridge with slotted side plates, photos 004/010/012/032)", "assumed_for_near_crane": true},
+      {"from_door_m": 76.2, "name": "far crane", "value": 7.95, "basis": "measured by photo 007, 2026-09-29", "assumed_for_near_crane": false}
+    ],
+    "assumed_for_near_crane": true,
+    "date": "2026-09-29 (measured), restated 2026-10-07"
+  },
+  "crane_bridge_bottom_basis": [
+    "ASSUMED-same-type: the NEAR (entry-end) crane, parked over the DJ, was never measured; it takes the FAR crane's 7.95 m (photo 007, 2026-09-29) as the same type of bridge (same runway, same yellow double-girder bridge, photos 004/010/012/032). Range 7.7-8.25 m. MEASURE on 2026-10-08 (moxir-hall-measured-2026-10-08.json).",
+    "measured by photo (not taped): 7.95 m (5-95 % 7.69-8.24), photo 007, fronto-parallel two-depth metrology (Criminisi et al. 2000), 2026-09-29"
+  ],
+  "held": {
+    "span_m": "24.0 +- 0.3 (aerial) — holds, unchanged",
+    "pitch_m": "6.0 +- 0.4 (aerial FFT, 2020 capture) — holds, unchanged",
+    "bays": "18 (108.2 / 6) — holds, unchanged",
+    "width_outer_m": "97.3 +- 0.4 against the model's 97.4 — holds, unchanged",
+    "lantern_w_m": "12.3 +- 0.4 including flashing, against 12.0 — holds, unchanged",
+    "lantern_spans": "the nave and its right (SW) neighbour — holds",
+    "lantern_h_m": "3.4 +- 0.4 from the 2020 shadow against 3.2 — agrees, UNVALIDATED method, unchanged",
+    "columns": "photo 032: the owner's marks land on every model column of the left row (docs/moxir/PHOTO_ANALYSIS_2026-10-07.md) — confirmed, unchanged",
+    "joint_pair": "photo estimate 1.2 m apart against the model's 1.0 — within the +-0.6 fit error, unchanged",
+    "right_row_y_columns": "8 Y-columns by eye (photo analysis) — consistent with the grid, unchanged"
+  },
+  "suspected": {
+    "solar_roof": "SUSPECTED: since 2024 (capture 2024-08-22) a solar plant covers the roof: ~40 panel rows over spans 1 and 4 and panels on or inside the lantern frames. The lanterns' daylight (the emissive 'skylight' material in hall.py) may be partly blocked; the model still draws the lanterns open. A dark lattice band along the nave's right row (x +12) and across spans 2-3 at the joint: stripped deck, cable trays or walkways, unknown. Owed to the 10-08 visit: one photo straight up at x +12 and one at z 0."
+  },
+  "notes": [
+    "2026-10-07 aerial corrections (docs/moxir/AERIAL_2026-10-07.md): (1) lanterns 2.8 m too short — segments [[-46.9,-6.0],[6.0,46.9]] (were +-7.25...+-45.75); (2) end walls 0.7 m too far out at each end — outer faces +-54.8 -> +-54.1, overall 109.6 -> 108.2, via the new hall.py key end_wall_in_from_grid_m (0.5 -> -0.2); the grid is unchanged. (3) the crane girder underside 7.95 restated per crane with its basis.",
+    "Not read by hall.py, kept as its own record: moxir-hall-features-2026-10-07-photos.json (occupied-floor polygons, column checks, zone suggestions). hall.py reads none of its keys, so it is not in the --dims chain."
+  ]
+}
