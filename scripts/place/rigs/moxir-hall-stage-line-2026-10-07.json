@@ -83,8 +83,8 @@
       },
       "used": {
         "x_m": [
-          -2.47,
-          6.72
+          -6.07,
+          6.07
         ],
         "z_m": [
           22.5,
@@ -113,7 +113,7 @@
           7.5
         ]
       },
-      "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.5..3.5 — moved 0.445 m to house left, clear of the roller conveyor, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) — the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+      "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (one 0.2 m step, 3 x 2 m, centred on the nave axis — 'keep max dj center') and the two main PA stacks (placeholders, centres x ±5.4, clear of the roller conveyor), all with their front on the line z 24.5 — the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
     },
     "backstage": {
       "colour": "red",

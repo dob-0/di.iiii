@@ -41,6 +41,7 @@ crane = g['cranes'][0]
 CZ = crane['z_m']
 pos = lambda d, i: d[i]['components']['transform']['position']
 os.makedirs(a.out, exist_ok=True)
+DECK = design['booth'].get('deck_h_m', 1.2)
 FOOT = ('Sources: hall record %s (hall.py, show hall: cabin out); design scripts/place/rigs/moxir-stage-line-2026-10-07.json; '
         'cut derived by scripts/rigbuild/stage-line.mjs (versions.mjs craneCut); positions read back from the scratch copy. '
         'Crane heights ASSUMED from the far crane (photo 007) — tape on 2026-10-08.' % os.path.basename(design['crane']['hall_record']))
@@ -109,10 +110,18 @@ ax.text(CZ - 0.6, 7.6, 'tie-off hr → x +11.6\n@ %.2f m: %.2f under cab' % (tru
 # stage line, booth, PA, barrier (positions read back from the copy)
 L = design['stage_line']['z_m']
 ax.plot([L, L], [-11.6, 11.6], color=GREEN, lw=3, zorder=6)
-ax.text(L + .25, -7.6, 'STAGE LINE z %.1f' % L, color=GREEN, fontsize=10, fontweight='bold', zorder=7)
+ax.text(L - .6, -6.9, 'STAGE LINE z %.1f' % L, color=GREEN, fontsize=10, fontweight='bold', zorder=7, ha='right')
 xs = [pos(doc, i)[0] for i in doc if i.startswith('rig-deck-')]
 zs = [pos(doc, i)[2] for i in doc if i.startswith('rig-deck-')]
 ax.add_patch(Rectangle((min(zs) - 1, min(xs) - .5), 2, max(xs) - min(xs) + 1, color=TEAL, alpha=.9, zorder=6))
+sp = design['pa'].get('spacing')
+if sp:
+    lx, rx = doc['rig-pa-l-subs']['components']['transform']['position'][0], doc['rig-pa-r-subs']['components']['transform']['position'][0]
+    ax.annotate('PA in the copy: L %.2f / R +%.2f (as you placed them by hand)\nproposal: symmetric ±%.1f, the least that clears the conveyor\n(as first drawn, ~±3.9 m, R would stand on it) — QUESTION for you' % (lx, rx, sp['centre_x_m']),
+                xy=(L - 0.2, lx), xytext=(26.3, -8.3), color=BLUE, fontsize=8, arrowprops=dict(arrowstyle='->', color=BLUE), zorder=8,
+                bbox=dict(fc=BG, ec='none', alpha=.85))
+    dc = design['booth']['drawn_centre_x_m']
+    ax.add_patch(Rectangle((min(zs) - 1, dc - 1.5), 2, 3, fill=False, ec=TEAL, ls='--', lw=1, alpha=.7, zorder=7))
 mv = design['booth'].get('moved')
 if mv:
     dc = design['booth']['drawn_centre_x_m']
@@ -120,7 +129,7 @@ if mv:
     ax.annotate('booth moved %.2f m to house left:\nclear of the roller conveyor by %.1f m\n(dashed = as you drew it) — QUESTION for you' % (-mv['by_m'][0], design['booth']['clear_of_fixed_m']),
                 xy=(min(zs) - 1, dc - 1.5), xytext=(8.0, -6.6), color=TEAL, fontsize=8, arrowprops=dict(arrowstyle='->', color=TEAL), zorder=8,
                 bbox=dict(fc=BG, ec='none', alpha=.85))
-ax.text(min(zs), (min(xs) + max(xs)) / 2, 'DJ\n3×2 m\n1.2 m', color='#04130f', fontsize=8, ha='center', va='center', fontweight='bold', zorder=7)
+ax.text(min(zs), (min(xs) + max(xs)) / 2, 'DJ\n3×2 m\n%.1f m step' % DECK, color='#04130f', fontsize=8, ha='center', va='center', fontweight='bold', zorder=7)
 for side in ('l', 'r'):
     e = doc['rig-pa-%s-subs' % side]['components']['transform']
     (x, _, z), (w, _, d) = e['position'], e['scale']
@@ -133,6 +142,15 @@ ax.text(b['position'][2] + .3, b['position'][0] + b['scale'][0] / 2 + .2, 'barri
 cam = R('scripts/place/picks/cam-954-3.6.json')
 ax.plot(cam['C'][2], cam['C'][0], 'o', color='white', ms=6, zorder=7)
 ax.text(cam['C'][2] + .5, cam['C'][0] + .6, 'video 954 camera', color=FG, fontsize=7.5)
+# the room's entry camera and view buttons, as the copy holds them
+ps = J(a.doc)['document'].get('presentationState') or {}
+for name, v, col in [('entry camera', ps.get('fixedCamera'), '#ffffff')] + [('view “%s”' % p.get('label', p['id']), p, '#c0c8ff') for p in ps.get('viewPresets', [])]:
+    if not v: continue
+    (px, _, pz), (tx, _, tz) = v['position'], v['target']
+    ax.annotate('', xy=(pz + (tz - pz) * .55, px + (tx - px) * .55), xytext=(pz, px), arrowprops=dict(arrowstyle='->', color=col, lw=1.2), zorder=8)
+    ax.plot(pz, px, 'D', color=col, ms=5, zorder=8)
+    dy = {'entry camera': -0.9, 'view “Floor”': 0.6}.get(name, -1.9)
+    ax.text(pz + .4 if 'DJ' not in name else pz - 1.6, px + dy, name, color=col, fontsize=7.5, zorder=8, ha='left' if 'DJ' not in name else 'right')
 ax.set_xlim(-4, 55); ax.set_ylim(-14.5, 13.8)
 ax.set_aspect('equal')
 ax.set_xlabel('z, metres from the press end (joint) → entry', color=DIM)
@@ -176,11 +194,13 @@ for m in g['massing']:
         ax.text((x0 + x1) / 2, y1 + .08, m['id'] + ('' if here else ' (behind, z %g–%g)' % (z0, z1)), color=FG if here else DIM, fontsize=7, ha='center', va='bottom', zorder=5)
 # booth, DJ, PA (on the line, 0.5 m in front of the section — drawn in it)
 xs = [pos(doc, i)[0] for i in doc if i.startswith('rig-deck-')]
-ax.add_patch(Rectangle((min(xs) - .5, 0), max(xs) - min(xs) + 1, 1.2, color=TEAL, alpha=.85, zorder=4))
+ax.add_patch(Rectangle((min(xs) - .5, 0), max(xs) - min(xs) + 1, DECK, color=TEAL, alpha=.85, zorder=4))
 djx = design['booth']['centre_x_m']
-ax.add_patch(Rectangle((djx - .25, 1.2), .5, 1.75, color='#e8e8e8', alpha=.8, zorder=5))
-ax.add_patch(Rectangle((djx - .3, 2.95), .6, .6, color='#e8e8e8', alpha=.5, zorder=5, ls='--', fill=False))
-ax.text(djx, 3.65, 'DJ (raised hands %.2f)' % (1.2 + 2.5), color=FG, fontsize=7.5, ha='center')
+ax.add_patch(Rectangle((djx - .25, DECK), .5, 1.75, color='#e8e8e8', alpha=.8, zorder=5))
+ax.add_patch(Rectangle((djx - .3, DECK + 1.75), .6, .75, color='#e8e8e8', alpha=.5, zorder=5, ls='--', fill=False))
+ax.text(djx, DECK + 2.6, 'DJ on a %.1f m step (raised hands %.2f)' % (DECK, DECK + 2.5), color=FG, fontsize=7.5, ha='center')
+tb = doc['rig-dj-table']['components']['transform']
+ax.add_patch(Rectangle((tb['position'][0] - tb['scale'][0] / 2, tb['position'][1]), tb['scale'][0], tb['scale'][1], color='#3a3d42', zorder=4))
 for side in ('l', 'r'):
     s = doc['rig-pa-%s-subs' % side]['components']['transform']; t = doc['rig-pa-%s-tops' % side]['components']['transform']
     ax.add_patch(Rectangle((s['position'][0] - s['scale'][0] / 2, 0), s['scale'][0], s['scale'][1], color=BLUE, zorder=4))
@@ -216,8 +236,17 @@ ax.annotate('tie-off hr to the column at %.2f m:\n%.2f under the cab · 0.20 ove
             xy=(9.2, 5.25), xytext=(-10.9, 6.55), color=YELLOW, fontsize=7.5, arrowprops=dict(arrowstyle='->', color=YELLOW, alpha=.6))
 ax.text(-11.3, 9.9, 'Section at z %g (the crane\'s bridge plane), seen FROM THE AUDIENCE: house left ←  → house right. Same cut as today: ends %.2f / %.2f m, bridles %s°, trim %.2f.'
         % (CZ, ya, yb, '/'.join(str(p['bridle_included_deg']) for p in truss['picks']), truss['trim_m']), color=FG, fontsize=10)
+cr = {c['deck_h_m']: c for c in ev.get('crowd', [])}
+if cr:
+    c0 = cr.get(DECK)
+    lines = ['Can the crowd see the DJ? level floor, C-value over the head in front (60 mm min · 90 recommended):']
+    for h in sorted(cr):
+        c = cr[h]
+        lines.append('  %.1f m step: front row %d mm · %d rows ≥ 60 mm · %d rows ≥ 90 mm · DJ\'s eye %.2f over front-row heads%s'
+                     % (h, c['c_front_row_mm'], c['rows_c60'], c['rows_c90'], c['dj']['over_front_row_heads_m'], '   ← THIS COPY' if abs(h - DECK) < 1e-6 else ''))
+    fig.text(.13, .035, '\n'.join(lines), color=FG, fontsize=7.6, va='bottom', family='monospace')
 ax.set_xlim(-12.6, 12.6); ax.set_ylim(-.3, 10.4); ax.set_aspect('equal')
-ax.set_xlabel('x (m)', color=DIM); ax.set_ylabel('height (m)', color=DIM)
+ax.set_ylabel('height (m) · x (m) along the axis below', color=DIM)
 fig.text(.01, .012, FOOT, color=DIM, fontsize=7)
 fig.savefig(os.path.join(a.out, 'stage24-side.png'), facecolor=BG, bbox_inches='tight')
 plt.close(fig)
@@ -253,8 +282,9 @@ fig.subplots_adjust(0, 0, 1, 1)
 ax.imshow(im); ax.set_xlim(0, W); ax.set_ylim(H, 0); ax.axis('off')
 seg(ax, (-11.6, 0, L), (11.6, 0, L), color=GREEN, lw=3)
 bx0, bx1 = min(xs) - .5, max(xs) + .5
-boxw(ax, bx0, bx1, 0, 1.2, L - 2, L, color=TEAL, lw=2)
-boxw(ax, djx - .9, djx + .9, 1.2, 2.15, L - 1.0, L - 0.2, color=TEAL, lw=1)
+boxw(ax, bx0, bx1, 0, DECK, L - 2, L, color=TEAL, lw=2)
+boxw(ax, djx - .9, djx + .9, DECK, DECK + .95, L - 1.0, L - 0.2, color=TEAL, lw=1)
+boxw(ax, djx - .25, djx + .25, DECK, DECK + 1.75, L - 1.5, L - 1.2, color='white', lw=1, alpha=.7)
 for side in ('l', 'r'):
     for part in ('subs', 'tops'):
         t = doc['rig-pa-%s-%s' % (side, part)]['components']['transform']
@@ -274,9 +304,15 @@ def label(P, s, col, dy=0):
     if p and 0 < p[0] < W and 0 < p[1] < H:
         ax.text(p[0], p[1] + dy, s, color=col, fontsize=13, fontweight='bold', ha='center', bbox=dict(fc='black', ec='none', alpha=.55))
 label((-6, 0, L + 3), 'stage line z 24.5', GREEN)
-label((djx, 1.4, L), 'DJ booth', TEAL, -40)
-label((-1.8, 2.1, L), 'PA L', BLUE, -10)
-label((6.05, 2.1, L), 'PA R', BLUE, -10)
+label((djx, DECK + 2.0, L - 1.3), 'DJ on the step', TEAL, -10)
+for side in ('l', 'r'):
+    t = doc['rig-pa-%s-subs' % side]['components']['transform']['position']
+    q = proj((t[0], 2.1, L))
+    if q and 0 < q[0] < W:
+        label((t[0], 2.1, L), 'PA %s' % side.upper(), BLUE, -10)
+    elif q:
+        ax.text(12 if q[0] <= 0 else W - 12, H * .62, '← PA %s (x %.1f, out of frame)' % (side.upper(), t[0]) if q[0] <= 0 else 'PA %s (x %.1f, out of frame) →' % (side.upper(), t[0]),
+                color=BLUE, fontsize=12, fontweight='bold', ha='left' if q[0] <= 0 else 'right', bbox=dict(fc='black', ec='none', alpha=.55))
 for k in np.linspace(0, 1, 60):  # the first point of the cut inside the frame carries its label
     P = (xa + (xb - xa) * k, ya + (yb - ya) * k + .15, CZ)
     q = proj(P)

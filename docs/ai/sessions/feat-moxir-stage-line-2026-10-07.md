@@ -71,3 +71,51 @@ The reference `moxir-known-full-flip` is untouched: version 9, hall v6 `4e3420f4
   rental house's prediction.
 - Crowd safety: the barrier line (11.19 m, 1.3 m pit) is to be set by the event's crowd-safety plan.
 - The owner's look at http://moxir-flip.dii.localhost/moxir/p/moxir-known-full-stage24.
+
+## Owner direction, later on 10-07: "keep max dj center … just one step thing"
+
+- **Booth**
+  - On the nave axis: x 0 under the cut's axis, front on the line z 24.5, 2.1 m clear of the conveyor.
+  - One 0.2 m step instead of the 1.2 m riser: 3 × StageDex Topline 2 × 1 m on SM-L-20A legs, kept as one 3 × 2 m level.
+    A single 2 × 1 m deck would leave 0.2 m behind the table, so the 3 × 2 m level is kept (owner to confirm).
+  - The 0.20 m height is assumed from the leg's code.
+  - The stair is deleted; the table stays 0.95 m high on the step.
+- **PA**
+  - Symmetric at ±5.4 m: the smallest symmetric spacing outside the conveyor (4.6 + 0.1 + 0.67), 0.13 m clear.
+  - At his ~±3.9 m the right stack would stand on the conveyor. **This is a question for the owner.**
+  - The ±1 m uncertainty in the conveyor's x is bigger than that 0.13 m clearance: tape it.
+- **Crowd sightline** (`crowdSightline`, the C-value on a level floor): with the step, the front row gets C 45 mm, so on
+  a level floor nobody gets even the 60 mm minimum.
+
+  | riser | C 60 mm | C 90 mm |
+  |---|---|---|
+  | 0.2 m | 0 rows | 0 rows |
+  | 0.6 m | 6 rows | 2 rows |
+  | 1.2 m | 16 rows | 9 rows |
+
+  The DJ's eye line passes 0.07 m over the front row's heads (0.96 m on the old riser). The cut still leaves the front
+  row 2.29 m of clear view to the DJ. This is a trade-off for the owner, not decided here.
+- **Crane z 24 is unchanged.** The 1 m DJ rule reads the riser's depth, not its height; a test holds that.
+- **Views:** `scripts/rigbuild/aim-views.mjs` derives the entry camera and the Floor / DJ buttons from the design's
+  `views` block and writes them in one `setPresentationState` op.
+- **Conflict guard:** `stage-line.mjs --last <doc>` and `aim-views.mjs --last <doc>` keep and list anything someone else
+  moved since the script's last write. Ops only, never a whole-document write.
+
+### The owner edited the copy by hand (kept, never written over)
+
+His edits, from the op log (two editor clients):
+
+- **PA L:** subs −1.8 → −3.08 → **−5.18**, tops → −5.22.
+- **PA R:** subs 6.05 → **5.49**, tops → 5.44.
+- **Stair treads:** he deleted all six (v115–v120). That matches the design.
+- **Booth:** nudged to centre x **0.128**, z −0.01 (decks −0.872 / 0.128 / 1.128, table 0.128).
+- **Barrier:** z 25.79.
+
+The copy ended at version 164.
+
+**Guard incident.** One run used a `--last` document that already held his booth and barrier nudges. The run put
+those five entities back (v154–158). I restored his exact transforms (v160–164) and read them back.
+
+The guard now reads the **op log** (`theirsFromOps`): any entity a non-script client ever touched is kept. It refuses
+to write when the log does not reach version 1, and the server keeps a 500-op window. `aim-views.mjs` refuses to write
+the views if someone else set them.

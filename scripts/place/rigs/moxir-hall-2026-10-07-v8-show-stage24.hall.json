@@ -1,7 +1,7 @@
 {
   "tool": "scripts/place/hall.py",
   "version": 2,
-  "createdAt": "2026-10-07T14:03:01.073450+00:00",
+  "createdAt": "2026-10-07T14:32:07.192002+00:00",
   "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
   "dims": {
     "span_m": 24.0,
@@ -568,8 +568,8 @@
         },
         "used": {
           "x_m": [
-            -2.47,
-            6.72
+            -6.07,
+            6.07
           ],
           "z_m": [
             22.5,
@@ -598,7 +598,7 @@
             7.5
           ]
         },
-        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.5..3.5 \u2014 moved 0.445 m to house left, clear of the roller conveyor, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (one 0.2 m step, 3 x 2 m, centred on the nave axis \u2014 'keep max dj center') and the two main PA stacks (placeholders, centres x \u00b15.4, clear of the roller conveyor), all with their front on the line z 24.5 \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
       },
       "backstage": {
         "colour": "red",
@@ -1791,8 +1791,8 @@
         },
         "used": {
           "x_m": [
-            -2.47,
-            6.72
+            -6.07,
+            6.07
           ],
           "z_m": [
             22.5,
@@ -1821,7 +1821,7 @@
             7.5
           ]
         },
-        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.5..3.5 \u2014 moved 0.445 m to house left, clear of the roller conveyor, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (one 0.2 m step, 3 x 2 m, centred on the nave axis \u2014 'keep max dj center') and the two main PA stacks (placeholders, centres x \u00b15.4, clear of the roller conveyor), all with their front on the line z 24.5 \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
       },
       "backstage": {
         "colour": "red",

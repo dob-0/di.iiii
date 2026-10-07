@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 import { slopedLineRigging, stageFrame } from '../place/rig-lib.mjs'
 import { tieoffCabClashes } from './safety.mjs'
-import { hallWithCraneAt, loadInputs, nearestMassing, paEntities, parkOptions, pickPark, riserClearance, stageLineOps, stageLineRig } from './stage-line.mjs'
+import { crowdSightline, djEyeLine, hallWithCraneAt, theirsFromOps, loadInputs, nearestMassing, ownerMoves, paEntities, parkOptions, pickPark, riserClearance, stageLineOps, stageLineRig } from './stage-line.mjs'
 
 const inputs = loadInputs()
 const { design, hall, oldHall, oldRig } = inputs
@@ -30,11 +30,12 @@ describe('the stage line: the design file and the hall record agree', () => {
 
 describe('stageFrame: a booth with its front stated (front_z_m)', () => {
     const s = stageFrame(rig, hall)
-    it('puts the riser behind the line at the x he drew, the cut on the nave axis', () => {
+    it('puts the one-step riser behind the line on the nave axis, under the cut\'s axis (owner: "keep max dj center")', () => {
         expect(s.front).toBe(24.5)
         expect(s.back).toBe(22.5)
-        expect(s.axis).toBe(2)
+        expect(s.axis).toBe(0)
         expect(s.trussAxis).toBe(0)
+        expect(s.deck).toBe(0.2)
         expect(s.trussZ).toBe(24)
     })
     it('changes nothing for a rig that does not state it (the trussAxis is the booth axis)', () => {
@@ -78,29 +79,52 @@ describe('the cut at z 24: the shape the owner decided, unchanged', () => {
         expect(at(4.86).clash).toBe(true)
         expect(at(4.58).gap).toBeLessThan(0.1)
     })
-    it('could not slide over the DJ: the high end would stand 0.8 m from the cab and craneCut refuses its tie-off', () => {
-        const slidEnd = t.ends[1].x_m + design.booth.centre_x_m
-        expect(hall.geometry.cranes[0].cab.x_m[0] - slidEnd).toBeCloseTo(0.8, 2)
-        expect(() => stageLineRig({ ...inputs, design: { ...design, truss: { ...design.truss, axis_x_m: design.booth.centre_x_m } } })).toThrow(/passes through a crane cab/)
+    it('still refuses a line slid along the bridge toward the cab (+2 m: its hr tie-off crosses the cab)', () => {
+        expect(() => stageLineRig({ ...inputs, design: { ...design, truss: { ...design.truss, axis_x_m: 2 } } })).toThrow(/passes through a crane cab/)
+    })
+    it('gives the DJ on the step 2.16 m over raised hands to the line\'s centre (bottom chord 4.86 − 0.2 − 2.5)', () => {
+        expect(t.clearance.over_dj_raised_hands_m).toBe(2.16)
     })
 })
 
-describe('the roller conveyor (hall v8, owner 2026-10-07): the booth moved the least that clears it', () => {
+describe('the roller conveyor (hall v8, owner 2026-10-07): the centred booth and the PA clear it', () => {
     const s = stageFrame(rig, hall)
-    it('clears every fixed thing by the stated 0.1 m, the conveyor nearest', () => {
-        const near = riserClearance(s, hall)
-        expect(near.id).toBe('roller-conveyor')
-        expect(near.gap_m).toBeCloseTo(design.booth.clear_of_fixed_m, 3)
-    })
-    it('would overlap it where he drew it, and the move is no more than that needs', () => {
+    const conveyor = hall.geometry.massing.find((m) => m.id === 'roller-conveyor')
+    const stack = (side) => paEntities(design).find((e) => e.id === `rig-pa-${side}-subs`).components.transform
+    it('keeps the centred riser 2.1 m from it (it overlapped where he first drew it)', () => {
+        expect(riserClearance(s, hall)).toEqual({ id: 'roller-conveyor', gap_m: 2.1 })
         expect(riserClearance({ ...s, axis: design.booth.drawn_centre_x_m }, hall)).toEqual({ id: 'roller-conveyor', gap_m: 0 })
-        expect(riserClearance({ ...s, axis: design.booth.centre_x_m + 0.01 }, hall).gap_m).toBeLessThan(design.booth.clear_of_fixed_m)
-        expect(design.booth.moved.by_m[0]).toBeCloseTo(design.booth.centre_x_m - design.booth.drawn_centre_x_m, 6)
     })
-    it('leaves PA R clear of it (0.78 m) without a move', () => {
-        const r = paEntities(design).find((e) => e.id === 'rig-pa-r-subs').components.transform
-        const conveyor = hall.geometry.massing.find((m) => m.id === 'roller-conveyor')
-        expect(r.position[0] - r.scale[0] / 2 - conveyor.x_m[1]).toBeCloseTo(0.78, 2)
+    it('sets the stereo pair symmetric about the DJ, at the smallest spacing outside the conveyor with the 0.1 m clearance', () => {
+        const [l, r] = [stack('l'), stack('r')]
+        expect(l.position[0]).toBe(-r.position[0])
+        expect(r.position[0] - r.scale[0] / 2 - conveyor.x_m[1]).toBeCloseTo(0.13, 2)
+        expect(r.position[0] - 0.1 - r.scale[0] / 2 - conveyor.x_m[1]).toBeLessThan(design.booth.clear_of_fixed_m)
+        // where he drew them (~3.9 m from the DJ) the right stack would stand on the conveyor
+        expect(3.9 + r.scale[0] / 2 > conveyor.x_m[0] && 3.9 - r.scale[0] / 2 < conveyor.x_m[1]).toBe(true)
+    })
+})
+
+describe('can the crowd see a DJ on one step? (owner: "just one step thing")', () => {
+    const s = stageFrame(rig, hall)
+    const djZ = s.back + s.into * (s.depth / 2 - 0.2)
+    const at = (h) => crowdSightline({ deckH: h, djZ, barrierZ: design.barrier.z_m })
+    it('on a level floor nobody behind the front row clears even C 60 mm over the head in front at 0.2 m; the old 1.2 m gave 9 rows at C 90', () => {
+        expect(at(0.2)).toMatchObject({ front_row_m: 2.8, c_front_row_mm: 45, rows_c60: 0, rows_c90: 0 })
+        expect(at(0.6)).toMatchObject({ rows_c60: 6, rows_c90: 2 })
+        expect(at(1.2)).toMatchObject({ rows_c60: 16, rows_c90: 9, rows_c120: 5 })
+    })
+    it('leaves the DJ\'s own eye line 0.07 m over the front row\'s heads (0.96 m on the old riser)', () => {
+        const back = hall.geometry.zones.dance.used.z_m[1]
+        expect(djEyeLine({ deckH: 0.2, djZ, barrierZ: design.barrier.z_m, backZ: back }).over_front_row_heads_m).toBe(0.07)
+        expect(djEyeLine({ deckH: 1.2, djZ, barrierZ: design.barrier.z_m, backZ: back }).over_front_row_heads_m).toBe(0.96)
+    })
+    it('does not change the crane park: the 1 m rule reads the riser\'s depth, not its height', () => {
+        const low = parkOptions({ rig, hall, design })
+        const high = parkOptions({ rig: stageLineRig({ ...inputs, design: { ...design, booth: { ...design.booth, deck_h_m: 1.2 } } }), hall, design })
+        expect(low.map((o) => [o.z_m, o.dj_offset_m, o.fails.length])).toEqual(high.map((o) => [o.z_m, o.dj_offset_m, o.fails.length]))
+        expect(pickPark(low).z_m).toBe(24)
+        expect(low.find((o) => o.z_m === 24).sightline_to_dj_m).toBe(2.29)
     })
 })
 
@@ -142,6 +166,7 @@ const oldDoc = () => {
             ent('rig-line-1', 'truss line (hung from the crane bridge, sloped)', [-4.588, 3.98, 4.8]),
             ent('rig-deck-2', 'DJ riser', [0, 0, 5.2]),
             ent('rig-dj-table', 'DJ table', [0, 1.2, 5.6]),
+            ent('rig-dj-stair-1', 'Booth stair tread 1/6', [-2, 0, 5.83]),
             ent('rig-crowd-barrier', 'Crowd barrier 9 m, 1.3 m pit', [0, 0, 7.5]),
             ent('rig-par-cut-x-01', 'UP-PL5403 par-cut-x 1', [-4.69, 3.58, 4.8]),
             ent('rig-par-columns-07', 'UP-PL5403 par-columns 7', [-11.16, 0.31, 24])
@@ -152,6 +177,7 @@ const apply = (doc, ops) => {
     const out = JSON.parse(JSON.stringify(doc))
     for (const op of ops) {
         if (op.type === 'createEntity') out.entities.push(op.payload.entity)
+        if (op.type === 'deleteEntity') out.entities = out.entities.filter((x) => x.id !== op.payload.entityId)
         const e = out.entities.find((x) => x.id === op.payload.entityId)
         if (op.type === 'updateComponent') e.components[op.payload.component] = { ...e.components[op.payload.component], ...op.payload.patch }
         if (op.type === 'updateEntity') Object.assign(e, op.payload.patch)
@@ -164,9 +190,11 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
     const { ops } = stageLineOps({ doc, rig, hall, oldRig, oldHall, design })
     const next = apply(doc, ops)
     const pos = (d, id) => d.entities.find((e) => e.id === id).components.transform.position
-    it('moves the booth to the line at the x he drew', () => {
-        expect(pos(next, 'rig-deck-2')).toEqual([2, 0, 23.5])
-        expect(pos(next, 'rig-dj-table')).toEqual([2, 1.2, 23.9])
+    it('moves the booth to the line on the nave axis as one 0.2 m step, the table on it, the stair gone', () => {
+        expect(pos(next, 'rig-deck-2')).toEqual([0, 0, 23.5])
+        expect(next.entities.find((e) => e.id === 'rig-deck-2').components.transform.scale).toEqual([1, 0.2, 1])
+        expect(pos(next, 'rig-dj-table')).toEqual([0, 0.2, 23.9])
+        expect(next.entities.some((e) => e.id === 'rig-dj-stair-1')).toBe(false)
     })
     it('translates the cut 19.2 m along z: its rigging re-derived equals the old rigging moved, the tie-offs excepted', () => {
         for (const e of doc.entities.filter((x) => /^rig-hoist-/.test(x.id))) {
@@ -184,7 +212,7 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
         expect(plan.overhead.find((o) => o.id === 'crane-1').line[0][1]).toBe(24)
         expect(plan.zones.find((z) => z.id === 'dance').rects[0]).toEqual([-5.35, 25.8, 5.35, 48])
     })
-    it('stands every PA stack on the line, facing the audience, inside its drawn mark', () => {
+    it('stands every PA stack on the line, facing the audience, at the design\'s x', () => {
         for (const p of paEntities(design).filter((e) => e.id.endsWith('subs'))) {
             const [x, y, z] = p.components.transform.position
             const [w, , d] = p.components.transform.scale
@@ -208,12 +236,62 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
     it('is a no-op the second time, moves only the booth when its x changed, and refuses a riser in neither place', () => {
         expect(stageLineOps({ doc: next, rig, hall, oldRig, oldHall, design }).ops).toEqual([])
         const shifted = JSON.parse(JSON.stringify(next))
-        for (const e of shifted.entities) if (/^rig-(deck|dj-)/.test(e.id)) e.components.transform.position[0] += 0.445
+        for (const e of shifted.entities) if (/^rig-(deck|dj-)/.test(e.id)) e.components.transform.position[0] += 2.0
         const again = stageLineOps({ doc: shifted, rig, hall, oldRig, oldHall, design })
         expect(again.moved.map((m) => m.id).sort()).toEqual(['rig-deck-2', 'rig-dj-table'])
-        expect(pos(apply(shifted, again.ops), 'rig-deck-2')).toEqual([2, 0, 23.5])
+        expect(pos(apply(shifted, again.ops), 'rig-deck-2')).toEqual([0, 0, 23.5])
         const odd = oldDoc()
         odd.entities.find((e) => e.id === 'rig-deck-2').components.transform.position = [0, 0, 12]
         expect(() => stageLineOps({ doc: odd, rig, hall, oldRig, oldHall, design })).toThrow(/refusing/)
+    })
+})
+
+describe('the conflict guard: what someone else moved is kept', () => {
+    const doc = oldDoc()
+    const next = apply(doc, stageLineOps({ doc, rig, hall, oldRig, oldHall, design }).ops)
+    it('finds his moves against the document this script last wrote', () => {
+        const his = JSON.parse(JSON.stringify(next))
+        his.entities.find((e) => e.id === 'rig-pa-l-subs').components.transform.position = [-4, 0, 24.14]
+        expect(ownerMoves(next, his)).toEqual([expect.objectContaining({ id: 'rig-pa-l-subs', what: 'moved' })])
+        expect(ownerMoves(next, next)).toEqual([])
+    })
+    it('never writes over them', () => {
+        const his = JSON.parse(JSON.stringify(next))
+        his.entities.find((e) => e.id === 'rig-pa-l-subs').components.transform.position = [-4, 0, 24.14]
+        for (const e of his.entities) if (/^rig-(deck|dj-)/.test(e.id)) e.components.transform.position[0] += 1
+        const keep = new Set(['rig-pa-l-subs', 'rig-deck-2'])
+        const r = stageLineOps({ doc: his, rig, hall, oldRig, oldHall, design, keep: new Set(keep) })
+        expect(r.ops.some((o) => keep.has(o.payload.entityId))).toBe(false)
+        // the booth is one unit: a hand-moved deck keeps the table where he left it too
+        expect(r.kept.sort()).toEqual(['rig-deck-2', 'rig-dj-table', 'rig-pa-l-subs'])
+        expect(r.moved).toEqual([])
+    })
+})
+
+describe('planKey: the same plan whatever the server did to its words', () => {
+    it('ignores a shortened label, not a moved solid', async () => {
+        const { planKey } = await import('./stage-line.mjs')
+        const a = { zones: [], solids: [{ id: 'c', label: 'a long label', rect: [1, 2, 3, 4], top: 1 }], overhead: [], columns: [], outline: [] }
+        expect(planKey(a)).toBe(planKey({ ...a, solids: [{ ...a.solids[0], label: 'a long' }] }))
+        expect(planKey(a)).not.toBe(planKey({ ...a, solids: [{ ...a.solids[0], rect: [1, 2, 3, 5] }] }))
+    })
+})
+
+describe('theirsFromOps: the op log says who touched what', () => {
+    const ops = [
+        { version: 1, clientId: 'server', type: 'replaceDocument', payload: {} },
+        { version: 2, clientId: 'stage-line', type: 'updateComponent', payload: { entityId: 'rig-deck-1', component: 'transform' } },
+        { version: 3, clientId: 'b9fff4ed-9dc', type: 'updateComponent', payload: { entityId: 'rig-deck-1', component: 'transform' } },
+        { version: 4, clientId: 'b9fff4ed-9dc', type: 'deleteEntity', payload: { entityId: 'rig-dj-stair-1' } },
+        { version: 5, clientId: 'b9fff4ed-9dc', type: 'updateComponent', payload: { entityId: 'rig-par-columns-01', component: 'light' } },
+        { version: 6, clientId: 'stage-line', type: 'updateComponent', payload: { entityId: 'rig-deck-2', component: 'transform' } }
+    ]
+    it('names what another client moved or removed, not what the scripts did, not other components', () => {
+        const t = theirsFromOps(ops)
+        expect(t.ids.map((x) => x.id)).toEqual(['rig-deck-1', 'rig-dj-stair-1'])
+        expect(t).toMatchObject({ views: false, complete: true })
+    })
+    it('says when the log is only a window (cannot vouch for older edits)', () => {
+        expect(theirsFromOps(ops.slice(2)).complete).toBe(false)
     })
 })

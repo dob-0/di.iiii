@@ -3,7 +3,7 @@
   "title": "MOXIR — the stage on the owner's stage line (z 24.5), the crane parked at z 24",
   "writtenAt": "2026-10-07",
   "status": "PLAN for the owner's look, built on the scratch stack only (moxir-flip, 127.0.0.1:4323). Not on dev, not on the installed di. Every height of the crane is the far crane's photo value carried to the near crane (ASSUMED); the 2026-10-08 site visit tapes them.",
-  "owner": "2026-10-07, his own marks on video frame 954 @ 3.6 s (~/Downloads/moxir/,dob fixed last places bags-from-video-954.jpg): a green STAGE LINE across the floor at the front of the white bags, the DJ (teal) behind it, speakers (blue) L and R on it, the audience (orange) everything in front, toward the entry. Earlier the same day: \"we can move the crane\". His order: stage → crane place → truss → lights.",
+  "owner": "2026-10-07, his own marks on video frame 954 @ 3.6 s (~/Downloads/moxir/,dob fixed last places bags-from-video-954.jpg): a green STAGE LINE across the floor at the front of the white bags, the DJ (teal) behind it, speakers (blue) L and R on it, the audience (orange) everything in front, toward the entry. Earlier the same day: \"we can move the crane\". His order: stage → crane place → truss → lights. Later the same day: \"keep max dj center and we dont need to 2n floor stage for dj just one step thing\" — the booth on the nave axis, one low step instead of the 1.2 m riser.",
   "source": {
     "marks": "scripts/place/picks/marks-954-stage-2026-10-07.json — the painted pixels' floor contacts (the lowest painted pixel in each 16-px column band) projected onto the floor y = 0 by scripts/place/project_floor_marks.py",
     "camera": "scripts/place/picks/cam-954-3.6.json — rotation from the hall-axis vanishing point (9 Hough segments, median 0.38°), position from VGGT-1B aligned to the hall (±0.7 m in x and z, camera height 1.43 m ±0.3 m)",
@@ -20,20 +20,72 @@
       4.05
     ],
     "drawn_centre_x_m": 2.445,
-    "centre_x_m": 2.0,
+    "centre_x_m": 0.0,
     "front_z_m": 24.5,
     "depth_m": 2.0,
+    "width_m": 3.0,
+    "deck_h_m": 0.2,
+    "stairs": false,
     "clear_of_fixed_m": 0.1,
-    "why": "his teal mark, kept where he drew it as far as the fixed metal allows: NOT on the nave axis. The riser stays the base rig's 3 × 2 m (three 2 × 1 m decks, 1.2 m high, table, stair on the left — moxir-2026-10-17.json stage); front edge on the line, the riser behind it (toward the press).",
-    "moved": {
-      "by_m": [
-        -0.445,
-        0,
-        0
-      ],
-      "from_centre_x_m": 2.445,
-      "why": "the roller conveyor the owner marked beside the bags (hall v8, massing roller-conveyor: x 3.6–4.6, z 16.5–24.0, top 0.85 m, ±1 m x / ±2.5 m z) runs under the riser as drawn: centred on his mark (x 0.945–3.945, z 22.5–24.5) the riser overlaps it by 0.345 m in x and 1.5 m in z. The least move that clears it: 0.345 m toward house left to touch, + 0.1 m clear (a deck needs its legs and edge free of a fixed machine) = 0.445 m, riser x 0.5–3.5. Still inside his mark's ±0.7 m accuracy. Moving it toward the audience instead would put the front 1.5 m past his line; shrinking it to two decks would change the booth.",
-      "question_for_owner": "The conveyor's end reaches the booth as you drew it. I moved the booth 0.45 m to house left (centre x 2.0 instead of 2.45) so it stands clear. OK, or should the conveyor's end be cleared / the booth be 2 decks wide? (The conveyor's place is ±1 m: tape it on 10-08.)"
+    "why": "the owner, 2026-10-07 (later): \"keep max dj center\" — the booth on the nave axis (x 0), front on the stage line, the riser behind it; \"we dont need to 2n floor stage for dj just one step thing\" — ONE low step, 0.2 m, so no stair. It stands 2.1 m clear of the roller conveyor (x ≥ 3.6).",
+    "deck": {
+      "what": "one step: 3 × StageDex Topline deck 2 × 1 m on 20 cm standard legs, as one 3 × 2 m level",
+      "deck_code": "Prolyte StageDex Topline deck SM-D-T-200100, 2 × 1 m, 35.6 kg self weight, 750 kg/m² UDL",
+      "deck_source": "https://www.prolyte.com/products/portable-stages/stagedex/topline-deck/sm-d-t-200100-topline-deck-200x100cm (read 2026-10-07)",
+      "leg_code": "StageDex standard leg SM-L-20A (the 20 cm stage-height leg; the leg itself 175 mm)",
+      "leg_source": "https://prolyte.com/products/portable-stages/stagedex/stagedex-legs (\"lengths ranging from 20-100cm\", read 2026-10-07); https://cuesale.com/product/prolyte-stagedex-standard-leg/ (\"The SM-L-20A … only 175mm in height\", read 2026-10-07)",
+      "height_basis": "0.20 m finished height ASSUMED from the leg's code (175 mm leg + the deck frame): the maker's data sheet that states the code → height relation was not opened. The rental house's own decks are owed.",
+      "why_three": "\"one step\" read as one LEVEL, not one 2 × 1 m deck: a single deck leaves 0.2 m behind the 0.8 m deep DJ table for the DJ to stand — the 3 × 2 m base footprint is kept (owner to confirm)"
+    },
+    "table_note": "the DJ table stays 0.95 m high on the step (top 1.15 m from the floor) — moxir-2026-10-17.json stage.table",
+    "superseded": {
+      "by_owner": "2026-10-07, 'keep max dj center'",
+      "was": {
+        "centre_x_m": 2.0,
+        "deck_h_m": 1.2,
+        "moved": {
+          "by_m": [
+            -0.445,
+            0,
+            0
+          ],
+          "from_centre_x_m": 2.445,
+          "why": "the roller conveyor the owner marked beside the bags (hall v8, massing roller-conveyor: x 3.6–4.6, z 16.5–24.0, top 0.85 m, ±1 m x / ±2.5 m z) runs under the riser as drawn: centred on his mark (x 0.945–3.945, z 22.5–24.5) the riser overlaps it by 0.345 m in x and 1.5 m in z. The least move that clears it: 0.345 m toward house left to touch, + 0.1 m clear (a deck needs its legs and edge free of a fixed machine) = 0.445 m, riser x 0.5–3.5. Still inside his mark's ±0.7 m accuracy. Moving it toward the audience instead would put the front 1.5 m past his line; shrinking it to two decks would change the booth.",
+          "question_for_owner": "The conveyor's end reaches the booth as you drew it. I moved the booth 0.45 m to house left (centre x 2.0 instead of 2.45) so it stands clear. OK, or should the conveyor's end be cleared / the booth be 2 decks wide? (The conveyor's place is ±1 m: tape it on 10-08.)"
+        }
+      }
+    },
+    "stairs_note": "the owner also deleted the six stair treads by hand (ops v115–v120) — the same as this file's stairs: false",
+    "owner_hand_moves": {
+      "seen": "op log b9fff4ed v131–v147: he moved the booth to x −1.2 and back, then nudged it",
+      "final": {
+        "rig-deck-1": [
+          -0.872,
+          0,
+          23.49
+        ],
+        "rig-deck-2": [
+          0.128,
+          0,
+          23.5
+        ],
+        "rig-deck-3": [
+          1.128,
+          0,
+          23.49
+        ],
+        "rig-dj-table": [
+          0.128,
+          0.2,
+          23.89
+        ],
+        "rig-crowd-barrier": [
+          0.0,
+          0,
+          25.79
+        ]
+      },
+      "reads_as": "the booth centred at x 0.13 (0.13 m house right of the axis), decks 1 and 3 0.01 m forward of deck 2 — read as hand placement, not a new design; carry it or keep x 0? (owner)"
     }
   },
   "pa": {
@@ -69,7 +121,7 @@
           -2.4,
           -1.2
         ],
-        "centre_x_m": -1.8
+        "centre_x_m": -5.4
       },
       {
         "id": "R",
@@ -77,18 +129,54 @@
           4.9,
           7.2
         ],
-        "centre_x_m": 6.05
+        "centre_x_m": 5.4
       }
     ],
     "front_z_m": 24.5,
-    "conveyor_check": "PA R (x 5.38–6.72) stands 0.78 m clear of the roller conveyor (x ≤ 4.6); PA L is 5 m away. No move."
+    "conveyor_check": "R stack x 4.73–6.07: 0.13 m clear of the conveyor (x ≤ 4.6); L stack mirrored.",
+    "spacing": {
+      "centre_x_m": 5.4,
+      "why": "a stereo pair symmetric about the DJ (now x 0). His drawing put the stacks 3.6–4.2 m either side of the DJ; at +3.9 m the R stack (1.34 m wide, z 23.78–24.5) would stand on the roller conveyor (x 3.6–4.6, z 16.5–24.0). The smallest symmetric spacing OUTSIDE the conveyor with the booth's 0.1 m clearance: 4.6 + 0.1 + 0.67 = 5.37 → ±5.4 m (0.13 m clear). The narrower symmetric option INSIDE it, ±2.8 m (0.13 m clear of x 3.6, 0.63 m from the riser), puts the mains 1.3 m from the DJ's ears — not taken.",
+      "uncertainty": "the conveyor's x is ±1 m (one direction only); 0.13 m is NOT enough against that — tape its edge on 2026-10-08 before the stacks are set",
+      "question_for_owner": "Your speakers were ~4 m either side of the DJ; with the DJ centred, the right one would stand on the roller conveyor. I put both at 5.4 m (symmetric, at the dance floor's edges). OK, or closer in (±2.8 m, right beside the booth)?"
+    },
+    "owner_hand_moves": {
+      "seen": "scratch project moxir-known-full-stage24, op log (clients 21ae90bd v111–v120 and b9fff4ed v131–v149 — the owner's editor on scratch), read 2026-10-07; KEPT in the copy, never written over",
+      "while": "the booth still stood at x 2.0 (before 'keep max dj center')",
+      "moves": [
+        {
+          "id": "rig-pa-l-subs",
+          "from_x_m": -1.8,
+          "to_x_m": -5.183,
+          "via": "-3.079 (v112), then -5.183 (v148)"
+        },
+        {
+          "id": "rig-pa-l-tops",
+          "from_x_m": -1.8,
+          "to_x_m": -5.217,
+          "via": "-3.113 (v113), then -5.217 (v149)"
+        },
+        {
+          "id": "rig-pa-r-subs",
+          "from_x_m": 6.05,
+          "to_x_m": 5.488
+        },
+        {
+          "id": "rig-pa-r-tops",
+          "from_x_m": 6.05,
+          "to_x_m": 5.438
+        }
+      ],
+      "reads_as": "L ≈ −5.2, R ≈ +5.5 about the DJ near x 0.13: close to the symmetric ±5.4 this file proposes (L 0.2 m in, R 0.1 m out; the tops 0.03–0.05 m off their subs). R subs x 4.82–6.16 stand 0.22 m clear of the conveyor.",
+      "open": "which he wants: his hand placement (L −3.1 / R +5.5), or the symmetric pair this file proposes (±5.4)? The copy keeps his; this file's `sides` stay the proposal until he says."
+    }
   },
   "barrier": {
     "z_m": 25.8,
     "pit_m": 1.3,
     "x_m": [
-      -3.47,
-      7.72
+      -7.07,
+      7.07
     ],
     "h_m": 1.1,
     "why": "the base rig's pit (1.3 m in front of the riser, moxir-2026-10-17.json stage.barrier) kept; widened from 9 m to run 1 m past each PA stack so no one stands at a cabinet's face (design choice; the event's crowd-safety plan sets the final line — owed)"
@@ -102,7 +190,8 @@
       24,
       26
     ],
-    "chosen_by": "scripts/rigbuild/stage-line.mjs parkOptions (the numbers are in stage-line.test.js and the scratch report)"
+    "chosen_by": "scripts/rigbuild/stage-line.mjs parkOptions (the numbers are in stage-line.test.js and the scratch report)",
+    "dj_rule_note": "the rig-lib rule (a crane-hung line within 1 m of the performer) reads the DJ's z from the riser's DEPTH (back + depth/2 − 0.2 = z 23.3), not its height: the one-step booth leaves the park table as it was (z 24 picked; stage-line.test.js)."
   },
   "truss": {
     "cut": "scripts/place/rigs/moxir-crane-cut-stage-line-2026-10-07.json",
@@ -111,6 +200,26 @@
   },
   "lights": {
     "move_with_truss": "everything on the cut (mirror-cut.mjs CUT_PREFIXES): the 4 truss pieces, the 17 UP-PL5403 (par-cut-x 6, -bridge 4, -curtain 7), the 6 LaserCubes, the picks, bridles, hoists, chains, safety steels and the two tie-offs — translated Δz +19.2 m, the rigging re-derived (craneCut) for the new place",
-    "stay": "every floor fixture: par-columns 16, par-press-cut 3, par-press-sides 2, par-vista 8, par-neighbour 4, beam380-backstage 7, beam380-columns 10, beam380-lighthouse 1, hazers 6, smoke 4 — none of them was placed relative to the DJ (they hang off the columns, the press or the far end). Lights are the next step; the owner chooses."
+    "stay": "every floor fixture: par-columns 16, par-press-cut 3, par-press-sides 2, par-vista 8, par-neighbour 4, beam380-backstage 7, beam380-columns 10, beam380-lighthouse 1, hazers 6, smoke 4 — none of them was placed relative to the DJ (they hang off the columns, the press or the far end). Lights are the next step; the owner chooses.",
+    "note_2026_10_07": "the booth at x 0 is under the cut's axis again (u = 0); nothing on the truss moved for this change"
+  },
+  "views": {
+    "why": "the room's entry camera and view buttons aimed at the old stage (z 4–6); scripts/rigbuild/aim-views.mjs derives them from this file",
+    "entry": {
+      "from_z_m": 41,
+      "eye_m": 1.65,
+      "fov": 55,
+      "aim": "between the DJ's head and the crane girder over the line, as the 09-28 opening framed it (the bridge and the cut over the DJ)"
+    },
+    "floor": {
+      "from_z_m": 41,
+      "eye_m": 1.7,
+      "fov": 60,
+      "aim": "the DJ's head"
+    },
+    "dj": {
+      "fov": 75,
+      "aim": "from the DJ's eye on the step, out to the middle of the dance floor at a standing eye"
+    }
   }
 }
