@@ -7,7 +7,7 @@ module.exports = [
     reach: "public",
     role: "admin",
     agent: true,
-    note: "owner-or-admin: the router upgrades the write-role check to admin unless the caller owns the project's space (session), who may delete at plain editor. Soft delete — restore with POST /api/projects/:projectId/restore before the trash TTL passes."
+    note: "owner-or-admin: the router upgrades the write-role check to admin unless the caller owns the project's space (session), who may delete at plain editor — or is a MANAGE sync key of that one space (SPEC_space_sync_keys.md §13), limited to 10 trashes an hour and 30 a day per key (429 sync_key_limit), never the space's front door (409 sync_key_front_door), written to the key log. An ordinary (edit) sync key gets 403. Soft delete — restore with POST /api/projects/:projectId/restore before the trash TTL passes."
   },
   {
     route: "GET /api/projects/:projectId",
@@ -33,7 +33,7 @@ module.exports = [
         }
       }
     },
-    note: "slug is independent of id and unique only within the owning space; a reserved word or a slug already taken there is refused (400/409). Changing visibility needs the space owner or an admin (403 otherwise); the space's published project cannot be made private (409 published_project_private)."
+    note: "slug is independent of id and unique only within the owning space; a reserved word or a slug already taken there is refused (400/409). Changing visibility needs the space owner or an admin (403 otherwise) — except that a MANAGE sync key of the project's space may set 'private' (never 'public': 403 sync_key_never_public), at most 30 an hour and 100 a day per key (429 sync_key_limit), recorded in the key log. The space's published project cannot be made private (409 published_project_private)."
   },
   {
     route: "POST /api/projects/:projectId/assets",
@@ -162,12 +162,13 @@ module.exports = [
         properties: {
           toSpace: { type: "string", description: "the space to move the project into" },
           unpublish: { type: "boolean", description: "required when the source space's front door is this project; clears that front door as part of the move" },
-          dryRun: { type: "boolean", description: "report what would move; change nothing" }
+          dryRun: { type: "boolean", description: "report what would move; change nothing" },
+          alsoSyncKey: { type: "string", description: "only when the bearer is a MANAGE sync key: a manage key of the target space (read once, never echoed). Not for agents" }
         },
         required: ["toSpace"]
       }
     },
-    note: "admin, or the owner of BOTH spaces (403 otherwise). 409 on a slug already used in the target, on a front-door project without unpublish, or a directory already there. All-or-nothing: files, rewritten links and the database row are put back if any step fails. Writes a project_moves line, so the old bare link answers with where the project went. A follow does not carry a move yet: each install that follows either space runs the same move."
+    note: "admin, or the owner of BOTH spaces (403 otherwise). Two MANAGE sync keys may also move (SPEC_space_sync_keys.md §13.2): the bearer is the source space's key and alsoSyncKey the target's; both spaces must have the same owner and both keys be his (403 sync_key_not_same_owner); nobody new may gain access — never into the communal open space, into an open space unless the project is private, or into a space with accounts, token scopes, invite links or other keys the source lacks (403 sync_key_never_public: do this signed in); never with unpublish; at most 10 an hour and 30 a day per key (429). 409 on a slug already used in the target, on a front-door project without unpublish, or a directory already there. All-or-nothing: files, rewritten links and the database row are put back if any step fails. Writes a project_moves line, so the old bare link answers with where the project went. A follow does not carry a move yet: each install that follows either space runs the same move."
   },
   {
     route: "PATCH /api/projects/:projectId/shelf",
