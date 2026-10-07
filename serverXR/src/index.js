@@ -88,7 +88,7 @@ const {
   getUserTokenVersion,
   bumpUserTokenVersion
 } = require('./userStore')
-const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const syncKeyActions = require('./syncKeyActions')
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
@@ -741,7 +741,9 @@ const refreshSessionCookieIfStale = (req, res, state) => {
         role: state.role,
         spaces: state.spaces,
         ...(state.isUnrestricted ? { isUnrestricted: true } : {}),
-        tokenVersion: session.tokenVersion
+        tokenVersion: session.tokenVersion,
+        // A token-made session stays marked through every refresh (§13.4).
+        ...(session.via ? { via: session.via } : {})
       }
     })
     setAuthSessionCookie(res, next.value)
@@ -750,6 +752,9 @@ const refreshSessionCookieIfStale = (req, res, state) => {
     // the person actually made.
   }
 }
+
+// The one route that reads a second sync key (§13.3).
+const MOVE_ROUTE = /\/api\/projects\/[^/?]+\/move\/?(?:\?|$)/
 
 const getAuthState = (req, res = null) => {
   const sessionState = readAuthSession(req)
@@ -780,14 +785,20 @@ const getAuthState = (req, res = null) => {
       // here, by the same resolver, only behind a sync key; it must itself be
       // a manage key, and it is NOT added to `spaces` — it widens nothing but
       // the move route's check. One that does not resolve fails the request.
-      const alsoRaw = normalizeAuthToken(String(req.get('x-di-sync-key-also') || ''))
+      // It travels in the move's JSON body (`alsoSyncKey`), never in a header
+      // (proxies and log pipelines redact Authorization, not custom headers —
+      // review L4), is read ONLY for POST /api/projects/:id/move, and is taken
+      // out of the body here so nothing downstream can echo or log it.
       let alsoSyncKey = null
+      const isMove = req.method === 'POST' && MOVE_ROUTE.test(String(req.originalUrl || ''))
+      const alsoRaw = isMove && req.body && typeof req.body === 'object' ? normalizeAuthToken(String(req.body.alsoSyncKey || '')) : ''
+      if (isMove && req.body && typeof req.body === 'object') delete req.body.alsoSyncKey
       if (alsoRaw) {
         const also = resolveSyncKey(alsoRaw)
         if (!also || also.scope !== 'manage' || also.keyId === sk.keyId) {
           return buildAuthState({ authenticated: false, type: 'sync-key', reason: 'second-key' })
         }
-        alsoSyncKey = { keyId: also.keyId, label: also.label || '', spaceId: also.spaceId, scope: also.scope }
+        alsoSyncKey = { keyId: also.keyId, label: also.label || '', spaceId: also.spaceId, scope: also.scope, ownerUserId: also.ownerUserId || null }
       }
       return {
         ...buildAuthState({
@@ -799,7 +810,7 @@ const getAuthState = (req, res = null) => {
           spaces: [sk.spaceId]
         }),
         // The key's own record, for the action log and the manage check.
-        syncKey: { keyId: sk.keyId, label: sk.label || '', spaceId: sk.spaceId, scope: sk.scope },
+        syncKey: { keyId: sk.keyId, label: sk.label || '', spaceId: sk.spaceId, scope: sk.scope, ownerUserId: sk.ownerUserId || null, expiresAt: sk.expiresAt || null },
         // Spaces whose projects this identity may trash, hide and move (§13.2).
         manageSpaces: sk.scope === 'manage' ? [sk.spaceId] : [],
         ...(alsoSyncKey ? { alsoSyncKey } : {})
@@ -1303,7 +1314,10 @@ router.post('/api/auth/session', authAttemptLimiter, async (req, res) => {
       label: identity.label,
       role: identity.role,
       spaces: identity.spaces,
-      isUnrestricted: identity.isUnrestricted
+      isUnrestricted: identity.isUnrestricted,
+      // Made from a token, not by a person signing in: it never mints a
+      // manage key or undoes one (SPEC_space_sync_keys.md §13.4, T10).
+      via: 'token'
     }
   })
   setAuthSessionCookie(res, session.value)
@@ -1441,6 +1455,39 @@ const canManageProjectsState = (state, meta) => {
   if (isSpaceOwnerOrAdminState(state, meta)) return true
   if (!state?.authenticated || state.type !== 'sync-key' || !meta?.id) return false
   return Array.isArray(state.manageSpaces) && state.manageSpaces.includes(meta.id)
+}
+
+// A move made with two manage keys must not let anybody new see the project
+// (owner, 2026-10-07; review C1). Who can reach a space, as far as the server
+// can count: its owner, the accounts whose scope lists it, its trusted list,
+// and — not countable — whoever holds one of its invite links or another of
+// its sync keys. So the space it goes to may have no holder the space it
+// leaves lacks: its countable members must all be members of the source, and
+// it may have no live or used invite and no live key but the move's own. A
+// project that is not private may not go into a space open to visitors unless
+// it came from one. Returns the reason to refuse, or null.
+const keyMoveWidensAccess = ({ fromMeta, toMeta, project, alsoKeyId }) => {
+  if (!fromMeta || !toMeta) return 'one of the two spaces is not there'
+  if (toMeta.kind && toMeta.kind !== 'normal') return `"${toMeta.id}" is a ${toMeta.kind} space, open to more people`
+  if (project?.meta?.visibility !== 'private' && toMeta.isPublic && !fromMeta.isPublic) {
+    return `"${toMeta.id}" is open to every visitor and "${fromMeta.id}" is not`
+  }
+  const membersOf = (meta) => {
+    const ids = new Set([meta.ownerUserId, ...(meta.trustedUserIds || [])].filter(Boolean))
+    const rows = getDb().prepare('SELECT id, spaces FROM users WHERE spaces LIKE ?').all(`%${JSON.stringify(meta.id)}%`)
+    for (const row of rows) {
+      try { if (JSON.parse(row.spaces || '[]').includes(meta.id)) ids.add(row.id) } catch { /* unreadable row: not counted */ }
+    }
+    return ids
+  }
+  const source = membersOf(fromMeta)
+  const newcomers = [...membersOf(toMeta)].filter(id => !source.has(id))
+  if (newcomers.length) return `"${toMeta.id}" is shared with ${newcomers.length} ${newcomers.length === 1 ? 'account' : 'accounts'} "${fromMeta.id}" is not`
+  const now = Date.now()
+  const invites = getDb().prepare('SELECT COUNT(*) AS n FROM space_invites WHERE space_id = ? AND (use_count > 0 OR (revoked = 0 AND (expires_at IS NULL OR expires_at > ?)))').get(toMeta.id, now).n
+  if (invites > 0) return `"${toMeta.id}" has invite links out, and who holds them cannot be counted`
+  if (otherLiveKeys(toMeta.id, alsoKeyId, now).length) return `"${toMeta.id}" has other sync keys out, and who holds them cannot be counted`
+  return null
 }
 
 // Route-level gate for space management writes. Sits on top of
@@ -2229,11 +2276,19 @@ const requireSpaceOwnerOrAdmin = async (req, res) => {
 // machine counts — localOwner.js), or a server with auth off, where every
 // request is already admin. Never by a bearer token — the static admin token
 // and every sync key included: a token never makes a stronger token (T3, T10).
+// A "person" here is an account that signed in (OAuth or password — a users
+// row) or the owner at the machine. A session made from an API token is marked
+// `via: 'token'` and refused; one made before that mark existed has no users
+// row (its subject is the token's configured subject), so it is refused too
+// (review H1).
 const mayMintManageKey = (state) => {
   if (!config.requireAuth) return true
   if (!state?.authenticated) return false
   if (state.type === 'disabled') return true
-  return state.type === 'session' && !isGuestSubject(state.subject)
+  if (state.type !== 'session' || isGuestSubject(state.subject)) return false
+  if (state.session?.via === 'token') return false
+  if (state.subject === 'local-owner' && !state.session) return true
+  try { return Boolean(findUserById(state.subject)) } catch { return false }
 }
 
 router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, res, next) => {
@@ -2241,9 +2296,16 @@ router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, re
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
     if (!ctx) return
     const label = String(req.body?.label || 'github-actions').slice(0, 80)
-    const ttlMs = 365 * 24 * 60 * 60 * 1000 // default: 1 year
-    const ownerUserId = ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null)
     const manage = req.body?.manage === true
+    // An edit key lives a year, a manage key 90 days (owner, 2026-10-07).
+    const ttlMs = manage ? SYNC_KEY_TTL_MS.manage : SYNC_KEY_TTL_MS.edit
+    // A manage key belongs to the SPACE's owner, whoever minted it (an admin
+    // may): a move between two spaces needs both keys to belong to the one
+    // owner of both (review C1). A space with no owner gives a key that can
+    // never move anything — fail closed.
+    const ownerUserId = manage
+      ? (ctx.meta.ownerUserId || null)
+      : (ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null))
     if (manage && !mayMintManageKey(ctx.state)) {
       return res.status(403).json({
         error: "A manage key is minted from a signed-in session of the space's owner (or an admin), never with a token.",
@@ -2311,37 +2373,56 @@ router.post('/api/spaces/:spaceId/sync-keys/:id/undo', async (req, res, next) =>
     const done = syncKeyActions.doneByKey(key.id)
     // The last thing the key did to each project is the one to undo.
     const last = new Map()
-    for (const row of done) if (row.projectId && ['trash', 'private', 'move'].includes(row.action)) last.set(`${row.action}|${row.projectId}`, row)
-    const trashed = await listTrashedProjects()
+    for (const row of done) if (row.projectId && ['trash', 'private', 'move'].includes(row.action)) last.set(`${row.action === 'move' ? 'move' : row.action}|${row.projectId}`, row)
+    // What the project's row says NOW, including when its visibility last
+    // changed and when it was last trashed — read straight from the database,
+    // never from the public meta.
+    const rowNow = (id) => getDb().prepare('SELECT id, space_id, visibility, visibility_at, deleted_at FROM projects WHERE id = ?').get(id) || null
+    const touched = new Set()
     for (const row of last.values()) {
       const id = row.projectId
       try {
+        const now = rowNow(id)
         if (row.action === 'trash' && row.spaceId === ctx.spaceId) {
-          if (!trashed.some(p => p.id === id && p.spaceId === ctx.spaceId)) { report.notUndone.push({ projectId: id, action: 'trash', why: 'no longer in this space\'s trash' }); continue }
+          // Only while it is still in the trash where the key put it, and not
+          // trashed again since by someone else (review M1, the restore half).
+          if (!now || now.space_id !== ctx.spaceId || !now.deleted_at) { report.notUndone.push({ projectId: id, action: 'trash', why: 'no longer in this space\'s trash' }); continue }
+          if (now.deleted_at > row.at) { report.notUndone.push({ projectId: id, action: 'trash', why: 'trashed again since — left in the trash' }); continue }
           await restoreProject(id)
           report.restored.push(id)
+          touched.add(ctx.spaceId)
           syncKeyActions.recordAction({ ...by, action: 'undo-restore', projectId: id })
         } else if (row.action === 'private' && row.spaceId === ctx.spaceId) {
-          const project = await resolveProjectContext(id)
-          if (!project || project.spaceId !== ctx.spaceId || project.meta?.visibility !== 'private') { report.notUndone.push({ projectId: id, action: 'private', why: 'no longer private here' }); continue }
+          // Never more public than the owner's own latest choice (review M1):
+          // only while it is private, here, and nobody changed who sees it
+          // after the key did.
+          if (!now || now.deleted_at || now.space_id !== ctx.spaceId || now.visibility !== 'private') { report.notUndone.push({ projectId: id, action: 'private', why: 'no longer private here' }); continue }
+          if ((now.visibility_at || 0) !== row.at) { report.notUndone.push({ projectId: id, action: 'private', why: 'who sees it was changed after the key — left as it is' }); continue }
           await setProjectVisibility(id, 'public')
           report.madePublic.push(id)
+          touched.add(ctx.spaceId)
           syncKeyActions.recordAction({ ...by, action: 'undo-public', projectId: id })
-        } else if (row.action === 'move' && row.spaceId === ctx.spaceId && row.toSpaceId) {
-          const project = await resolveProjectContext(id)
-          if (!project || project.spaceId !== row.toSpaceId) { report.notUndone.push({ projectId: id, action: 'move', why: `no longer in ${row.toSpaceId}` }); continue }
-          const toMeta = await loadSpaceMeta(row.toSpaceId)
-          if (!isSpaceOwnerOrAdminState(ctx.state, toMeta)) { report.notUndone.push({ projectId: id, action: 'move', why: `you do not own ${row.toSpaceId}` }); continue }
-          await moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, projectId: id, toSpaceId: ctx.spaceId })
+        } else if (row.action === 'move' && row.toSpaceId) {
+          // A move the key made out of this space (it was the bearer), or into
+          // it (it was the second key): back to where it came from, while it
+          // is still where the key put it. Both spaces have one owner (C1).
+          if (row.spaceId !== ctx.spaceId && row.toSpaceId !== ctx.spaceId) continue
+          if (!now || now.deleted_at || now.space_id !== row.toSpaceId) { report.notUndone.push({ projectId: id, action: 'move', why: `no longer in ${row.toSpaceId}` }); continue }
+          const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(row.spaceId), loadSpaceMeta(row.toSpaceId)])
+          if (!isSpaceOwnerOrAdminState(ctx.state, fromMeta) || !isSpaceOwnerOrAdminState(ctx.state, toMeta)) { report.notUndone.push({ projectId: id, action: 'move', why: `you do not own both ${row.spaceId} and ${row.toSpaceId}` }); continue }
+          await moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, projectId: id, toSpaceId: row.spaceId })
           report.movedBack.push(id)
-          syncKeyActions.recordAction({ ...by, action: 'undo-move', projectId: id, toSpaceId: ctx.spaceId })
+          touched.add(row.spaceId).add(row.toSpaceId)
+          syncKeyActions.recordAction({ ...by, action: 'undo-move', projectId: id, toSpaceId: row.spaceId })
         }
       } catch (error) {
         report.notUndone.push({ projectId: id, action: row.action, why: error?.message || String(error) })
       }
     }
-    try { require('./follow').nudgeFollow(ctx.spaceId) } catch { /* no follows here */ }
-    try { require('./follow/waiters').noteChange(ctx.spaceId) } catch { /* nobody waiting */ }
+    for (const spaceId of touched) {
+      try { require('./follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+      try { require('./follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+    }
     res.json({ ok: true, key: { ...key, revoked: true }, ...report })
   } catch (error) { next(error) }
 })
@@ -2355,8 +2436,9 @@ router.get('/api/sync-keys/self', (req, res) => {
   if (!state.authenticated || state.type !== 'sync-key' || !state.syncKey) {
     return res.status(404).json({ error: 'Not a sync key.' })
   }
-  const { keyId, label, spaceId, scope } = state.syncKey
-  res.json({ key: { id: keyId, label, spaceId, scope }, limits: scope === 'manage' ? syncKeyActions.LIMITS : null })
+  const { keyId, label, spaceId, scope, expiresAt } = state.syncKey
+  // expiresAt: the follower warns 14 days before (owner, 2026-10-07).
+  res.json({ key: { id: keyId, label, spaceId, scope, expiresAt: expiresAt || null }, limits: scope === 'manage' ? syncKeyActions.LIMITS : null })
 })
 
 // Space invites — owner-minted share links. Management mirrors sync keys
@@ -2595,6 +2677,8 @@ registerProjectRoutes(router, {
   loadSpaceMeta,
   isSpaceOwnerOrAdminState,
   canManageProjectsState,
+  keyMoveWidensAccess,
+  visibilityStampOf: (projectId) => getDb().prepare('SELECT visibility_at FROM projects WHERE id = ?').get(projectId)?.visibility_at || null,
   syncKeyActions,
   moveProject: (args) => moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, ...args }),
   TRASH_TTL_MS,

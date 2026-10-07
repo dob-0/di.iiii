@@ -219,6 +219,27 @@ const startCursorAt = async (side, stream, at) => {
 // between two followed spaces is moved on the host with both spaces' keys, when
 // both are manage keys (SPEC_follow.md "With a manage key").
 const KEY_SCOPE_EVERY_MS = 10 * 60 * 1000
+// `di follows` (and the sync light) warn this long before a key expires (owner, 2026-10-07).
+const KEY_EXPIRY_WARN_MS = 14 * 24 * 60 * 60 * 1000
+
+/**
+ * A manage key is never sent over plain http to another machine — on any
+ * network, a LAN or a VPN included (review L2; owner, 2026-10-07). Its id
+ * starts with 'm' (syncKeyStore.js), so the token's own text says so before it
+ * leaves this machine. Loopback is the one exception: nothing crosses a wire.
+ * Returns the reason to refuse, or null.
+ */
+const MANAGE_TOKEN = /^dii_sync_m/
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+const cleartextManageRefusal = (base, token) => {
+    if (!MANAGE_TOKEN.test(String(token || '').trim())) return null
+    let url
+    try { url = new URL(base) } catch { return 'a manage key needs an https address' }
+    if (url.protocol === 'https:') return null
+    const host = url.hostname.toLowerCase()
+    if (LOOPBACK_HOSTS.has(host) || /^127\./.test(host)) return null
+    return `a manage key is sent only over https (or to this machine) — ${url.host} is plain http; follow it at an https address, or with an ordinary key`
+}
 const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null, start = 'now', direction = null, onDirectionDone = null, sameHostFollows = () => false, sameHostSides = () => [] }) => {
     // Where this follower had got to, kept on disk between runs (index.js,
     // followStore.js). Without it a restart forgot both cursors and every opId
@@ -247,12 +268,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // 'edit' (and a host too old to say: 404) does not. Asked at the start and
     // every KEY_SCOPE_EVERY_MS; an unanswered ask keeps what was known.
     let keyScope = null
+    let keyExpiresAt = null
     let keyScopeAt = 0
     const readKeyScope = async () => {
         if (keyScope && Date.now() - keyScopeAt < KEY_SCOPE_EVERY_MS) return keyScope
         const answer = await request(remote.url('/api/sync-keys/self'), { token: remote.token, servername: remote.servername, address: remote.address })
         if (answer.ok && answer.payload?.key) {
             keyScope = answer.payload.key.scope === 'manage' ? 'manage' : 'edit'
+            keyExpiresAt = Number.isFinite(answer.payload.key.expiresAt) ? answer.payload.key.expiresAt : null
             keyScopeAt = Date.now()
         } else if ([401, 403, 404].includes(answer.status)) {
             keyScope = 'edit'
@@ -537,14 +560,31 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             if (answer.ok) { projectsCarried += 1; log.info?.(`[follow] ${local.spaceId}: ${id} was taken out of the trash here — restored on the host`) }
             else sayProjectOnce(`${id}|restore-there|${answer.status}`, `could not restore ${id} on the host (${failed(answer)})`)
         }
+        const trashedThere = []
         for (const id of plan.trashThere) {
             if (stopped) return changedHere
             const answer = await send(remote, remote.url(`/api/projects/${encodeURIComponent(id)}`), 'DELETE')
-            if (answer.ok) { projectsCarried += 1; log.info?.(`[follow] ${local.spaceId}: ${id} was trashed here — moved to the host's trash (restorable)`) }
+            if (answer.ok) trashedThere.push(id)
             else {
                 keepOld(id)
                 failedThere.add(id)
                 sayProjectOnce(`${id}|trash-there|${answer.status}`, `could not move ${id} to the host's trash (${failed(answer)})`)
+            }
+        }
+        // Believed only once the host's own trash lists it (review L3): a host
+        // that answers 200 and keeps the project live must not get this install
+        // to take its own trash back on the next pass ("in both trashes, the
+        // host took it out" would restore it here).
+        if (trashedThere.length) {
+            const check = await send(remote, remote.url(`/api/trash?space=${encodeURIComponent(remote.spaceId)}`), 'GET')
+            const listed = new Set(listOf(check)?.map(row => row?.id) || [])
+            for (const id of trashedThere) {
+                if (listed.has(id)) { projectsCarried += 1; log.info?.(`[follow] ${local.spaceId}: ${id} was trashed here — moved to the host's trash (restorable)`) }
+                else {
+                    keepOld(id)
+                    failedThere.add(id)
+                    sayProjectOnce(`${id}|trash-there|unconfirmed`, `the host said it moved ${id} to its trash, but its trash does not list it — not taken as done`)
+                }
             }
         }
         for (const [to, list] of [[local, plan.patchHere], [remote, plan.patchThere]]) {
@@ -635,8 +675,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             if (!found.ok || found.payload?.project?.spaceId !== other.spaceId) continue
             const moved = await request(remote.url(`/api/projects/${encodeURIComponent(projectId)}/move`), {
                 method: 'POST', token: other.token, servername: remote.servername, address: remote.address,
-                headers: { 'X-Di-Sync-Key-Also': remote.token },
-                body: { toSpace: remote.spaceId }
+                // The second key rides in the body, read once by the host and
+                // never in a header a proxy might log (review L4).
+                body: { toSpace: remote.spaceId, alsoSyncKey: remote.token }
             })
             if (!moved.ok) {
                 sayProjectOnce(`${projectId}|move-there|${moved.status}|${moved.payload?.code || ''}`, `could not move ${projectId} on the host from ${other.spaceId} (${moved.status || 'no answer'}: ${moved.payload?.error || moved.error || 'refused'})`)
@@ -952,7 +993,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 resumed: started.resumed,
                 settings: { carried: settingsCarried, notes: settingsNotes },
                 projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort() },
-                key: { scope: keyScope }
+                key: {
+                    scope: keyScope,
+                    expiresAt: keyExpiresAt,
+                    // Said in `di follows` (and by the sync light) from 14 days before.
+                    expiresSoon: Boolean(keyExpiresAt && keyExpiresAt - Date.now() <= KEY_EXPIRY_WARN_MS)
+                }
             }
         }
 
@@ -1035,7 +1081,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         }
     }
 
-    loop()
+    // Refused before a single request carries the key (review L2).
+    const refusal = cleartextManageRefusal(remote.base, remote.token)
+    if (refusal) {
+        state = { ...state, status: 'refused', lastError: refusal }
+        log.warn?.(`[follow] ${local.spaceId}: ${refusal}`)
+        onState({ spaceId: local.spaceId, remote: remote.base, ...state, files: chase.files })
+    } else {
+        loop()
+    }
     return {
         stop() { stopped = true; chase.stop() },
         wake() {
@@ -1052,4 +1106,4 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 }
 
-module.exports = { side, readOps, carry, startFollowing, startCursorAt, FLOOR_MS, CEILING_MS }
+module.exports = { side, readOps, carry, startFollowing, startCursorAt, cleartextManageRefusal, FLOOR_MS, CEILING_MS, KEY_EXPIRY_WARN_MS }

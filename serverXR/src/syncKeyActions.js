@@ -15,6 +15,12 @@ const { getDb } = require('./db')
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 const KEEP_MS = 180 * DAY
+// Refusals are capped (review M2): a leaked key sending refused requests at
+// request speed must neither grow the table without end nor push its own done
+// actions out of the owner's view. The oldest refusals go first; a done row is
+// never removed by a cap.
+const MAX_REFUSED_PER_KEY = 100
+const MAX_REFUSED_TOTAL = 5000
 
 /** Per key. Restore is not limited: it is the undo. */
 const LIMITS = Object.freeze({
@@ -66,13 +72,24 @@ const checkBudget = ({ keyId, action, now = Date.now() }) => {
 }
 
 /** One row. Never throws into the route that called it: the log must not break the action. */
-const recordAction = ({ keyId, keyLabel = '', spaceId, action, projectId = null, toSpaceId = null, outcome = 'done', reason = null, now = Date.now() }) => {
+const recordAction = ({ keyId, keyLabel = '', spaceId, action, projectId = null, toSpaceId = null, alsoKeyId = null, outcome = 'done', reason = null, now = Date.now() }) => {
   if (!keyId || !spaceId || !action) return
   try {
-    getDb().prepare(
-      `INSERT INTO sync_key_actions (key_id, key_label, space_id, action, project_id, to_space_id, outcome, reason, at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(String(keyId), String(keyLabel || '').slice(0, 80), String(spaceId), String(action), projectId, toSpaceId, String(outcome), reason ? String(reason).slice(0, 300) : null, now)
+    const db = getDb()
+    db.prepare(
+      `INSERT INTO sync_key_actions (key_id, key_label, space_id, action, project_id, to_space_id, also_key_id, outcome, reason, at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(String(keyId), String(keyLabel || '').slice(0, 80), String(spaceId), String(action), projectId, toSpaceId, alsoKeyId, String(outcome), reason ? String(reason).slice(0, 300) : null, now)
+    if (outcome !== 'done') {
+      db.prepare(
+        `DELETE FROM sync_key_actions WHERE id IN (
+           SELECT id FROM sync_key_actions WHERE key_id = ? AND outcome != 'done' ORDER BY at DESC, id DESC LIMIT -1 OFFSET ?)`
+      ).run(String(keyId), MAX_REFUSED_PER_KEY)
+      db.prepare(
+        `DELETE FROM sync_key_actions WHERE id IN (
+           SELECT id FROM sync_key_actions WHERE outcome != 'done' ORDER BY at DESC, id DESC LIMIT -1 OFFSET ?)`
+      ).run(MAX_REFUSED_TOTAL)
+    }
     prune(now)
   } catch { /* the action stands; the log is best-effort */ }
 }
@@ -85,23 +102,30 @@ const rowToPublic = (row) => ({
   action: row.action,
   projectId: row.project_id || null,
   toSpaceId: row.to_space_id || null,
+  alsoKeyId: row.also_key_id || null,
   outcome: row.outcome,
   reason: row.reason || null,
   at: row.at
 })
 
-/** The space's log, newest first: actions IN this space, and moves INTO it. */
+/**
+ * The space's log, newest first: actions IN this space, and moves INTO it.
+ * Done actions and refusals are read apart, `limit` of each, then merged — so
+ * refusals, however many, never push a done action out of view (review M2).
+ */
 const listActions = (spaceId, { keyId = null, limit = 200 } = {}) => {
   const max = Math.max(1, Math.min(1000, Number(limit) || 200))
-  const rows = keyId
-    ? getDb().prepare('SELECT * FROM sync_key_actions WHERE key_id = ? AND (space_id = ? OR to_space_id = ?) ORDER BY at DESC, id DESC LIMIT ?').all(keyId, spaceId, spaceId, max)
-    : getDb().prepare('SELECT * FROM sync_key_actions WHERE space_id = ? OR to_space_id = ? ORDER BY at DESC, id DESC LIMIT ?').all(spaceId, spaceId, max)
-  return rows.map(rowToPublic)
+  const read = (done) => (keyId
+    ? getDb().prepare(`SELECT * FROM sync_key_actions WHERE (key_id = ? OR also_key_id = ?) AND (space_id = ? OR to_space_id = ?) AND ${done ? "outcome = 'done'" : "outcome != 'done'"} ORDER BY at DESC, id DESC LIMIT ?`).all(keyId, keyId, spaceId, spaceId, max)
+    : getDb().prepare(`SELECT * FROM sync_key_actions WHERE (space_id = ? OR to_space_id = ?) AND ${done ? "outcome = 'done'" : "outcome != 'done'"} ORDER BY at DESC, id DESC LIMIT ?`).all(spaceId, spaceId, max))
+  return [...read(true), ...read(false)]
+    .sort((a, b) => (b.at - a.at) || (b.id - a.id))
+    .map(rowToPublic)
 }
 
-/** Everything one key did that is still in effect-able order, oldest first — for the undo. */
+/** Everything one key did — as the bearer, or as the second key of a move — oldest first, for the undo. */
 const doneByKey = (keyId) => getDb().prepare(
-  "SELECT * FROM sync_key_actions WHERE key_id = ? AND outcome = 'done' ORDER BY at ASC, id ASC"
-).all(keyId).map(rowToPublic)
+  "SELECT * FROM sync_key_actions WHERE (key_id = ? OR also_key_id = ?) AND outcome = 'done' ORDER BY at ASC, id ASC"
+).all(keyId, keyId).map(rowToPublic)
 
-module.exports = { LIMITS, ACTIONS, checkBudget, recordAction, listActions, doneByKey, HOUR, DAY }
+module.exports = { LIMITS, ACTIONS, checkBudget, recordAction, listActions, doneByKey, HOUR, DAY, MAX_REFUSED_PER_KEY, MAX_REFUSED_TOTAL }

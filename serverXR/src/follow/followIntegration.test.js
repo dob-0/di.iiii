@@ -1611,9 +1611,18 @@ describe('with a manage key, a project\'s life made here reaches the host', () =
     beforeAll(async () => {
         hosting = await startServer({ requireAuth: true })
         following = await startServer()
+        // The host's owner is a real account (a manage key is minted only by a
+        // person who signed in), and owns the spaces: a key moves a project only
+        // between two spaces of one owner (SPEC_space_sync_keys.md §13.2).
+        const db = new DatabaseSync(path.join(hosting.dataRoot, 'di.db'))
+        const now = Date.now()
+        db.prepare('INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .run('host-owner', 'github', 'host-owner', 'host-owner@example.com', 'Owner', 'admin', '[]', now, now)
+        db.close()
         for (const spaceId of [SPACE, OTHER, EDIT_ROOM]) {
             await createSpace(hosting, spaceId)
             await createSpace(following, spaceId)
+            expect((await api(hosting, `/api/spaces/${spaceId}`, { method: 'PATCH', body: { ownerUserId: 'host-owner' } })).status).toBe(200)
         }
         for (const server of [hosting, following]) {
             for (const [spaceId, slug] of [[SPACE, 'keep-a'], [SPACE, 'keep-b'], [SPACE, 'trash-me'], [SPACE, 'hide-me'], [SPACE, 'move-me'], [OTHER, 'other-keep'], [EDIT_ROOM, 'edit-keep'], [EDIT_ROOM, 'edit-trash']]) {

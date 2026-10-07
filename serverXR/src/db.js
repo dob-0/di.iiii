@@ -588,6 +588,10 @@ function initDb(dbPath) {
   // in the product. Deleted work now waits out TRASH_TTL_MS before anything
   // touches the bytes.
   ensureColumn(db, 'projects', 'deleted_at', 'INTEGER')
+  // When the project's visibility last changed (SPEC_space_sync_keys.md §13.7).
+  ensureColumn(db, 'projects', 'visibility_at', 'INTEGER')
+  // The second key of a move made with two manage keys (§13.6), so that key's undo sees it too.
+  ensureColumn(db, 'sync_key_actions', 'also_key_id', 'TEXT')
   ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
