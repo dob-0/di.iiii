@@ -161,68 +161,90 @@ stronger. It is a second, **opt-in** scope that the owner gives to one key, for 
 
 ### 13.2 What a key can be
 
-| scope | how it is made | what it may do on ITS ONE space |
-|---|---|---|
-| `edit` (every key minted before this, and every key minted without asking) | `POST /api/spaces/:id/sync-keys` as today | exactly what it could before: editor on that space (§6, §12). Nothing changes for existing keys. |
-| `manage` | the same route with `{ "manage": true }`, **from a signed-in session of the space's owner or an admin** (or the owner at the machine, `di invite <space> --manage`) | everything `edit` may, plus the four project actions below, and nothing else |
+| scope | how it is made | lifetime | what it may do on ITS ONE space |
+|---|---|---|---|
+| `edit` (every key minted before this, and every key minted without asking) | `POST /api/spaces/:id/sync-keys` as today | 1 year | exactly what it could before: editor on that space (§6, §12). Nothing changes for existing keys. |
+| `manage` | the same route with `{ "manage": true }`, **only by a person who signed in** (§13.4) | **90 days** (owner, 2026-10-07) | everything `edit` may, plus the four project actions below, and nothing else |
+
+A manage key's id starts with `m` (`dii_sync_m…`); an edit key's id is hex only. The scope is always read from
+the key's row; the mark exists only so a client can tell a manage key from its text and refuse to send it over
+plain http before it leaves the machine (§13.4).
 
 The four actions a `manage` key adds, each through the route a person uses (no new write path):
 
 1. **Move a project to the trash** — `DELETE /api/projects/:id`, the soft delete: the project, its files and its log
-   stay for 30 days and come back with one restore. Never a purge (there is no purge route a key can reach; the trash
-   sweep is the server's own, after 30 days).
-2. **Restore it** — `POST /api/projects/:id/restore`. (Already allowed to every editor of the space, `edit` keys
-   included, before this change — the route checks the space scope only. Unchanged, so existing keys keep their
-   rights; recorded in the key's log when a key does it.)
-3. **Make a project private** — `PATCH /api/projects/:id` with `{ visibility: "private" }`. **Never public.** Making
-   a project public shows it to every visitor of the space; that is a publishing decision and stays the owner's.
-   The reason for the asymmetry is the leaked-key case: a leaked key that can only hide things can embarrass no one
-   and leak nothing; one that can publish can expose work that was private on purpose. The space's front door cannot
-   be made private (the route's own 409, unchanged).
-4. **Move a project between two spaces** — `POST /api/projects/:id/move`, only when the request proves `manage` on
-   **both** spaces: the bearer key is a `manage` key of the space the project is in (the route's scope gate checks it
-   reaches that space) and the `X-Di-Sync-Key-Also` header carries a `manage` key of the space it goes to. A key is
-   scoped to one space by design (T2), so a move needs two keys, the same way it needs the owner of both spaces from a
-   person. Two more refusals keep a move from publishing anything: a key never passes `unpublish` (that changes the
-   space's front door), and never moves a project that is not private out of a space closed to visitors into one open
-   to every visitor (make it private first; the owner can do either).
+   stay for 30 days and come back with one restore. Never a purge (no purge route is reachable by a key; the trash
+   sweep is the server's own, after 30 days). Never the space's front door (409).
+2. **Restore it** — `POST /api/projects/:id/restore`. Already allowed to every editor of the space, `edit` keys
+   included, before this change (the route checks the space scope only). Unchanged; recorded in the key log when a
+   key does it.
+3. **Make a project private** — `PATCH /api/projects/:id` with `{ visibility: "private" }`. **Never public**: showing
+   work to every visitor is the owner's call, and a leaked key that can only hide things exposes nothing.
+4. **Move a project between two spaces** — `POST /api/projects/:id/move`, only when ALL of these hold (review C1;
+   owner, 2026-10-07); otherwise 403 with "do this signed in":
+   - the bearer is a `manage` key of the space the project is in (the route's scope gate checks it reaches it), and
+     the body's `alsoSyncKey` is a `manage` key of the space it goes to;
+   - the two spaces have the **same, non-empty owner** (`ownerUserId`), and both keys belong to that owner (a manage
+     key stores the space's owner as its `owner_user_id` at mint, whoever minted it). A space with no owner (made by
+     the admin token, a sandbox) never takes a key's move — fail closed;
+   - **nobody new gains access**: the space it goes to is a `normal` space; if the project is not private, it is not
+     open to visitors unless the source is too; every account the destination is shared with (its owner, its trusted
+     list, every account whose scope lists it) is also one of the source's; and the destination has no live or used
+     invite link and no live sync key other than the move's own second key — the holders of those cannot be counted,
+     so they are treated as newcomers;
+   - the body does not ask to `unpublish` (that changes a space's front door).
 
-What a `manage` key can **never** do, on any space: purge or empty the trash; trash, rename, publish or change the
-settings of the space itself (label, isPublic, front door); mint, list or revoke keys or invites; add members or
-change ownership; make anything public; act on any other space. Those routes check `isSpaceOwnerOrAdminState`,
-which a sync key never satisfies — that function is **not** changed; the four actions above use a new check,
-`canManageProjectsState`, which is `isSpaceOwnerOrAdminState(...) OR (a sync key whose scope is manage AND whose
-space is this one)`.
+What a `manage` key can **never** do, on any space: purge or empty the trash; change the space itself (label,
+isPublic, front door, owner, trusted list); mint, list, revoke or undo keys or invites; read the key log; make
+anything public; act on any other space; move a project where somebody new could see it. Those routes check
+`isSpaceOwnerOrAdminState`, which a sync key never satisfies — that function is **not** changed. The four actions
+above use `canManageProjectsState` = `isSpaceOwnerOrAdminState(...) OR (a sync key whose scope is manage AND whose
+space is this one)`, and the move adds the checks in item 4 (`keyMoveWidensAccess` in index.js).
 
 ### 13.3 Where it is enforced (one auth path)
 
-- `syncKeyStore.resolveSyncKey` returns the key's `scope` with its space (new column `scope TEXT NOT NULL DEFAULT
-  'edit'`; an older row reads as `edit`).
+- `syncKeyStore.resolveSyncKey` returns the key's `scope`, `ownerUserId` and `expiresAt` with its space (column
+  `scope TEXT NOT NULL DEFAULT 'edit'`; an older row reads as `edit`).
 - `getAuthState` (index.js) builds the sync-key identity exactly as before (role `editor`, `spaces: [its space]`)
   and adds `manageSpaces: [its space]` only for a `manage` key. The second key of a move is read in the same
-  function, by the same `resolveSyncKey`, only when the bearer is itself a sync key; it is kept apart
-  (`alsoSyncKey`) and widens nothing but the move route's check — it is not added to `spaces`, so it grants no
-  read, write or editor right on the second space. A second key that does not resolve makes the whole request
+  function, by the same `resolveSyncKey`, **only** for `POST /api/projects/:id/move` and only behind a sync key; it
+  is taken from the JSON body (`alsoSyncKey`) and deleted from the body at once, so nothing downstream can echo or
+  log it (review L4: proxies redact `Authorization`, not custom headers — the earlier `X-Di-Sync-Key-Also` header is
+  no longer read). It must itself be a `manage` key; it is kept apart (`alsoSyncKey`) and is not added to `spaces`,
+  so it grants no read, write or editor right. A second key that does not resolve makes the request
   unauthenticated (fail closed).
 - The four routes call `canManageProjectsState` where they called `isSpaceOwnerOrAdminState`. Nothing else does.
 
 ### 13.4 Who can mint one (T3 holds)
 
-`manage: true` is honoured only when the minting request is a **signed-in session** (type `session`, not a guest)
-of the space's owner or an admin, or a server with auth switched off (where every request is already admin, so the
-key adds nothing on that server). A bearer token — the static `ADMIN_API_TOKEN` included, and every sync key — gets
-`403 "a manage key is minted from a signed-in session of the space's owner"`. Tokens stay leaves: no token can make
-a stronger token. The scope is fixed at mint; to change it, mint a new key and revoke the old one.
+`manage: true` (and the undo, §13.7) is honoured only for a **person who signed in**: a session (type `session`,
+not a guest) whose subject is a real account row (OAuth or password) and that was not made from a token, or the
+owner at the machine (`local-owner`, `localOwner.js`), or a server with auth switched off (where every request is
+already admin). Refused with `403 manage_needs_session`:
+- every bearer token, the static `ADMIN_API_TOKEN` included, and every sync key;
+- a session made from a token (`POST /api/auth/session {token}`): it is stamped `via: 'token'` in the signed cookie,
+  kept through every refresh (review H1). One made before the stamp existed has no account row (its subject is
+  the token's configured subject), so it is refused by the account check.
 
-On a personal install the person at the machine is the owner (`localOwner.js`), so `di invite <space> --manage`
-works there. On a hosted di.iiii (dev.diiii.xyz) a manage key is minted from the owner's signed-in browser session;
-**there is no sync-key panel in the interface yet** (§8 is still owed), so today that means the API from a signed-in
-session. The panel, with a "may trash, hide and move projects" checkbox that is off by default, is owed.
+**When the admin token is rotated:** keys already minted are not touched — an `edit` key minted with the old token
+stays valid until it expires or is revoked (the key list and `di invite SPACE --revoke` take them back); no manage
+key can have been minted with it. Rotating the token does not revoke keys; revoking keys is the key list's job.
+
+On a personal install the person at the machine is the owner, so `di invite <space> --manage` works there. Note
+(review I4): on a `DI_LOCAL` install *any* local process counts as the owner at the machine — that is the existing
+rule for every admin route, not new here. On a hosted di.iiii (dev.diiii.xyz) a manage key is minted from the
+owner's signed-in browser session; **there is no sync-key panel in the interface yet** (§8 is still owed).
+
+**A manage key never travels in the clear.** `di follow` refuses `--from http://…` with a manage key to any other
+machine — a LAN, Tailscale, `--insecure` or not — and a follower given one over http does not start and says why
+(`follower.js cleartextManageRefusal`; loopback is the only exception). The server cannot tell TLS behind every
+proxy, so this refusal is the client's; the key's `m` mark makes it possible before the first request.
 
 ### 13.5 Limits on the host (not only on the follower)
 
-The follower already refuses more than 5 trashes in one pass and never empties a copy (SPEC_follow.md guard 3). The
-host does not trust that; it counts per key, from the key's own action log (so a restart does not reset it):
+The follower refuses more than 5 trashes in one pass and never empties a copy (SPEC_follow.md guard 3). The host
+does not trust that; it counts per key, from the key's own action log (so a restart does not reset it), and checks
+and records each of the three limited actions under a per-key lock (trash, move and — review L1 — make private):
 
 | action by one key | per hour | per 24 hours |
 |---|---|---|
@@ -231,49 +253,68 @@ host does not trust that; it counts per key, from the key's own action log (so a
 | make private | 30 | 100 |
 | restore | not limited (it is the undo) | — |
 
-Over the limit the host answers `429` with `code: "sync_key_limit"`, the action, the limit and when it frees up
-("this key has moved 10 projects to the trash in the last hour, the most a key may; the space's owner can, or wait
-41 min"). The refusal is logged in the key's action log too. A manage key may also not move the space's front door
-to the trash (`409`, "unpublish it first" — the owner's job).
+Over the limit the host answers `429` with `code: "sync_key_limit"`, the action, the limit and when it frees up.
+The limits hold within one server process; two processes on one database are never supported (PR #728).
 
 ### 13.6 The key's action log (who, what, when)
 
-New table `sync_key_actions` (id, key_id, key_label, space_id, action, project_id, to_space_id, outcome, reason,
-at). Every manage action a key attempts on a project — done or refused, and every restore by any key — is one row.
-The owner reads it with `GET /api/spaces/:id/sync-keys/actions` (owner or admin, like the key list) and `di invite
-<space> --actions`; the key list (`GET …/sync-keys`, `di follows` on the follower) shows each key's scope. Rows older
-than 180 days are removed when new ones are written. The log never holds a secret: the key id is the public half.
+Table `sync_key_actions` (id, key_id, key_label, space_id, action, project_id, to_space_id, also_key_id, outcome,
+reason, at). Every manage action a key attempts — done or refused — and every restore by a key is one row; a move
+names its second key too. The owner reads it with `GET /api/spaces/:id/sync-keys/actions` (owner or admin;
+`?key=<id>` narrows it to one key, as bearer or as second key) and `di invite <space> --actions`. Done actions and
+refusals are read apart and merged, so refusals never push a done action out of view. **Refusals are capped**
+(review M2): at most 100 per key and 5,000 in all, the oldest dropped first; a done row is never dropped by a cap.
+All rows older than 180 days are removed. The log never holds a secret: the key id is the public half.
 
 ### 13.7 Undo in one action
 
-`POST /api/spaces/:id/sync-keys/:keyId/undo` (owner or admin, session-only like mint): **revokes the key, then**
-restores every project this key moved to the trash that is still there, makes public again every project it made
-private that is still private and was public before, and moves back into this space every project it moved out
-that is still where it put it (when the caller may move it). It answers with what it did and what it could not, and
-each step is written to the action log. A purged project (after 30 days) cannot come back; the 30 days are the window.
+`POST /api/spaces/:id/sync-keys/:keyId/undo` or `di invite SPACE --undo KEYID` (a person who signed in, §13.4):
+**revokes the key, then**, for the last thing the key did to each project:
+- **trashed:** restored, while it is still in this space's trash and was not trashed again since;
+- **made private:** made public again only while the key's own change is still the project's latest visibility
+  change (the project keeps a strictly increasing `visibility_at`; the key's row records it). **Never more public
+  than the owner's current choice** (review M1): any later change, by anyone, leaves it as it is and says so;
+- **moved** (as the bearer, out of this space, or as the second key, into it): moved back to where it came from,
+  while it is still where the key put it. Both spaces have the one owner (§13.2), so the owner can always do it.
 
-### 13.8 Threats added
+It answers with what it did and what it did not, and why; each step is written to the log. A purged project
+(after 30 days) cannot come back; the 30 days are the window.
+
+### 13.8 Threats added (as the code holds them)
 
 | # | Threat | Defence |
 |---|---|---|
-| T7 | A `manage` key leaks | Worst case on its one space: projects moved to the trash (≤ 10 an hour, ≤ 30 a day), or made private (≤ 30 an hour). Nothing is destroyed: the trash keeps everything 30 days. The owner sees it in the key's log and undoes it all with one action (§13.7), which also revokes the key. No reading of anything the `edit` key could not already read. |
-| T8 | Two `manage` keys of the same owner leak together (a follower's follows.json holds one per space) | Projects moved between those two spaces (≤ 10 an hour). Both spaces are the owner's; nothing leaves them, nothing becomes public, and §13.7 moves them back. |
-| T9 | A `manage` key used to publish or expose | Making a project public, the space's own isPublic and front door all stay owner-or-admin (`isSpaceOwnerOrAdminState`, unchanged). A move into a space open to every visitor is refused unless the project is private; `unpublish` on a move is refused. **Limit:** a move between two closed spaces of the owner can show a project to the second space's members (shared-with accounts); both spaces are the owner's and both keys his, but that is wider than "never more public" in the strict sense — question for the auditor. |
-| T10 | A key (or a bearer token) mints a `manage` key, or upgrades itself | Mint with `manage` needs a signed-in session (§13.4); the scope is fixed at mint, there is no route that changes it. |
-| T11 | A second key smuggled in to widen a request | `X-Di-Sync-Key-Also` is read only when the bearer is a sync key, must itself be a valid `manage` key, is not added to the editor scope, and only the move route reads it. A bad one fails the request closed. |
-| T12 | Mass trash through many requests | Host-side counts per key (§13.5), from the persistent log; the follower's own 5-per-pass and never-empty guards on top. |
+| T7 | A `manage` key leaks | Worst case on its one space: projects moved to the trash (≤ 10 an hour, ≤ 30 a day) or made private (≤ 30 an hour). Nothing is destroyed: the trash keeps everything 30 days. It reads nothing the `edit` key could not. It cannot move a project out on its own (a move needs a second manage key of the same owner). The owner sees it in the key's log and undoes it in one action, which revokes the key. The key dies by itself after 90 days. |
+| T8 | Two `manage` keys of the same owner leak together (a follower's follows.json holds one per followed space) | Projects moved between those two spaces (≤ 10 an hour), only where nobody new gains access (§13.2 item 4). The undo of either key moves them back. A key of **another** owner never pairs with it (review C1: an account anyone can register cannot be the second key). |
+| T9 | A `manage` key used to publish or expose | Making a project public, the space's own settings and `unpublish` stay owner-or-admin. A key's move is refused into a space open to visitors (unless the project is private or the source is open too), into a space shared with an account the source is not shared with, or into one with invite links or other keys out. |
+| T10 | A key or a token mints a `manage` key, or upgrades itself | Mint needs a person who signed in (§13.4): bearer tokens, sync keys and sessions made from a token are refused. The scope is fixed at mint; no route changes it. |
+| T11 | A second key smuggled in to widen a request | `alsoSyncKey` is read only on the move route, only behind a sync key, must itself be a valid `manage` key of the same owner, and is not added to the editor scope. A bad one fails the request closed. It travels in the body, not a header a proxy might log. |
+| T12 | Mass trash or log flooding through many requests | Host-side counts per key under a per-key lock (§13.5), from the persistent log; refusals capped so they cannot hide done actions or grow the table (§13.6); the follower's own 5-per-pass and never-empty guards on top. |
+| T13 | A manage key sent over plain http and sniffed | Refused by the client before it is sent, on any network (§13.4). |
+| T14 | A lying (or intercepted) host makes the follower take back its own trash | The follower believes a trash made on the host only once the host's trash lists it (SPEC_follow.md). |
 
-### 13.9 Open questions for the auditor and the owner
+### 13.9 Review resolution (independent security review of #811, 2026-10-07)
 
-- A move between two closed spaces with different members (T9 limit): refuse unless the project is private, or
-  accept because both spaces are the owner's? Accepted in this draft.
-- The per-key limits are counted under a per-key lock in one server process; two serverXR processes on one database
-  (never supported, PR #728) could each pass the last unit once.
+| finding | resolution | guard |
+|---|---|---|
+| C1 critical: a stranger's manage key as the second key moves a project out; undo could not bring it back | same owner on both spaces and both keys; nobody new gains access; undo moves back as bearer or second key | `syncKeyManage.review.test.js` C1 (two tests, non-admin owner); `syncKeyManage.test.js` move cases |
+| H1 high: the admin token becomes a session that mints a manage key | token sessions stamped `via:'token'`; mint and undo need a real account row or `local-owner` | review H2 test; "a token never can through a session made from it" |
+| M1: undo published a project the owner hid again | exact `visibility_at` comparison | review M4 test; undo test `rehidden` |
+| M2: refusals buried the done actions and grew without end | refusal caps; done rows listed apart | review M5 test; "caps a key's refusals" |
+| L1: make-private budget outside the lock | under `withKeyLock` | review M3 race test (80 parallel → ≤ 30) |
+| L2: manage key over cleartext LAN | refused by `di follow` and the follower, any network but loopback | `follower.test.js`, `followFiles.test.js` |
+| L3: lying host undoes the follower's trash | trash-there confirmed against the host's trash | code path in `follower.js`; no dedicated test yet (owed: a fake-host harness) |
+| L4: second key in a custom header | moved into the move's JSON body, deleted on read | "the old header is not read at all" |
+| L5: one owner sees another's key activity | moot after C1 (both spaces share an owner) | — |
+| I5: lifetime | manage keys 90 days (owner, 2026-10-07); `di follows` warns 14 days before | `followFiles.test.js` |
 
-- The limits in §13.5 are a first guess sized to "a person tidying a space"; the owner may want them lower.
-- Restore was already open to every editor key before this (§13.2 item 2). Keep (it is the undo), or make it
-  `manage`-only? Kept here, because changing it would take a right away from existing keys.
-- Should a `manage` key expire sooner than a year (e.g. 90 days)? Proposed: same year as other keys; the owner can
-  revoke any time and the undo revokes.
+### 13.10 Open questions
+
 - The interface panel (§8, §13.4) is owed; until it lands, minting on a hosted di.iiii needs a signed-in session
-  calling the API.
+  calling the API. The sync light (PR #724) should show the same 14-day warning `di follows` shows (the follow
+  state carries `key.expiresAt` and `key.expiresSoon`).
+- `di invite --manage` prints the key to the terminal, the 10-05 leak path (review I5); writing it to a 0600 file or
+  a pairing step is owed.
+- Many installs follow dev with their own keys; a destination space that other installs follow has other keys out,
+  so a key-made move into it is refused and the owner moves it signed in. A per-holder identity for keys would let
+  the server count those holders; owed if this proves too strict.

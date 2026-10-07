@@ -214,16 +214,20 @@ key is an editor. A key minted with the **`manage`** scope (opt-in, by the space
 gates for its one space, so the follow carries them too. With an ordinary key nothing changes: the notes stay.
 
 **How the follow knows.** At its start, and again every 10 minutes, the follow asks the host what its key is
-(`GET /api/sync-keys/self`: id, space, scope — never the secret). A host older than this answers 404, which reads as
-`edit`. `di follows` shows the scope on each follow ("key: manage" or "key: edit").
+(`GET /api/sync-keys/self`: id, space, scope, expiry — never the secret). A host older than this answers 404, which
+reads as `edit`. `di follows` shows the scope on each follow ("key: manage" or "key: edit"), and from 14 days before
+a key expires (a manage key lives 90 days) says so in yellow with the command to take a new one.
+
+**Never over plain http.** A manage key (its id starts with `m`) is not sent to another machine over http on any
+network: `di follow` refuses it, and a follower given one does not start and says why. Loopback is the exception.
 
 | change made on this install | with an `edit` key (today) | with a `manage` key |
 |---|---|---|
-| moved to the trash | said: "a follow cannot trash on the host" | moved to the host's trash (`DELETE`, the soft delete, 30 days). Same guards as the other way: only a project both sides held (in the base) and that is in THIS install's trash; never more than 5 in one pass, never every project the host holds (when it holds more than one) — over that, none, and said. The host adds its own per-key limit (10 an hour, 30 a day). |
+| moved to the trash | said: "a follow cannot trash on the host" | moved to the host's trash (`DELETE`, the soft delete, 30 days). Same guards as the other way: only a project both sides held (in the base) and that is in THIS install's trash; never more than 5 in one pass, never every project the host holds (when it holds more than one) — over that, none, and said. The host adds its own per-key limit (10 an hour, 30 a day). Taken as done only once the host's trash lists it, so a host that answers yes and keeps it live can never make this install take its own trash back. |
 | restored from the trash | said | restored on the host, when this follow saw it in both trashes |
 | made private | said | made private on the host, when the base says the host's copy was public and the host has not changed it since (so a project the owner made public on the host is never hidden again by a stale private copy here). The base now keeps `visibility` beside title and slug; a base from before keeps none, and a difference with no base is said, not carried. |
 | made public | not carried | **not carried** — never more public, either way |
-| moved to another space | said | moved on the host the same way, when this install follows BOTH spaces from the same host and both keys are `manage`: the follow of the space it arrived in finds it here, not on the host's copy of that space, and on the host in the space it left; it asks the host to move it, with the old space's key as the bearer and its own in `X-Di-Sync-Key-Also`. Its log then starts from now (both copies already hold its ops). With either key `edit`, or the other space not followed here: said, not moved. |
+| moved to another space | said | moved on the host the same way, when this install follows BOTH spaces from the same host and both keys are `manage`: the follow of the space it arrived in finds it here, not on the host's copy of that space, and on the host in the space it left; it asks the host to move it, with the old space's key as the bearer and its own as `alsoSyncKey` in the body. The host moves it only between two spaces of one owner, with both keys his, and only where nobody new gains access (no account, invite link or other key on the destination the source lacks; never into a space open to visitors unless the project is private) — SPEC_space_sync_keys.md §13.2. Its log then starts from now (both copies already hold its ops). Otherwise, or with either key `edit`, or the other space not followed here: said, not moved — the owner moves it signed in. |
 
 The host's refusals (its limit, the front door, a key that is not `manage` after all) are said once in the log and
 stay in `di follows` until they clear; the base is kept, so the next pass tries again and nothing is lost.
