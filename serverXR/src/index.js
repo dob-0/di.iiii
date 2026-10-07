@@ -89,6 +89,9 @@ const {
   bumpUserTokenVersion
 } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const { resolveActToken, PREFIX: actTokenPrefix } = require('./telegramActTokenStore')
+const { createActTokenGate } = require('./actTokenGate')
+const { tierFor, capForTier } = require('./actTokenTier')
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
@@ -601,6 +604,18 @@ const guestBook = createGuestBook({ getDb, log: logger })
 router.use(createVisitorRecorder({ guestBook, log: logger }))
 router.use(express.static(PUBLIC_DIR, { setHeaders: allowNullOrigin }))
 
+// A di.bo act token is judged here, before any route — the auth routes below
+// included: refused routes (actTokenGate.js REFUSED_THROUGH_DI_BO) answer 403,
+// a dead token 401, every write is logged, and no session cookie leaves.
+// The functions it calls are defined further down; they run per request.
+router.use(createActTokenGate({
+  prefix: actTokenPrefix,
+  readToken: (req) => normalizeAuthToken(readAuthToken(req)),
+  resolveState: (req, token) => resolveActTokenState(req, token),
+  cookieName: config.authSession.cookieName,
+  logger
+}))
+
 // `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
 // can toggle it, which is why it is a function and not a constant.
 const isLocalInstall = () => process.env.DI_LOCAL === '1'
@@ -750,7 +765,61 @@ const refreshSessionCookieIfStale = (req, res, state) => {
   }
 }
 
+// di.bo acting as a person (telegramActTokenStore.js, actTokenGate.js). The
+// token names an account; the state is built from that account's row exactly
+// as a session's is — role, spaces and unrestricted read fresh from the DB,
+// and the same token_version check a cookie gets, so signing out everywhere
+// ends it too. The one addition is the marker: `actor: 'di.bo'`.
+// Memoised per request: the gate and the auth-state middleware both ask.
+const actTokenStates = new WeakMap()
+const resolveActTokenState = (req, token) => {
+  if (actTokenStates.has(req)) return actTokenStates.get(req)
+  let state = null
+  const claim = resolveActToken(token)
+  if (claim) {
+    const current = lookupSessionTokenVersion(claim.userId)
+    const fresh = Number.isFinite(current) && current === claim.tokenVersion
+      ? getFreshDbIdentity(claim.userId)
+      : null
+    if (fresh && fresh.dbRole) {
+      // The tier (actTokenTier.js) only ever lowers what the account has.
+      const tg = config.oauth?.telegram || {}
+      const actTier = tierFor(claim.telegramId, { rootIds: tg.actTokenRootIds, adminIds: tg.actTokenAdminIds })
+      const reach = capForTier(actTier, { role: fresh.dbRole, isUnrestricted: fresh.dbUnrestricted })
+      state = {
+        ...buildAuthState({
+          authenticated: true,
+          type: 'session',
+          role: reach.role,
+          subject: claim.userId,
+          label: claim.label,
+          spaces: fresh.dbSpaces,
+          isUnrestricted: reach.isUnrestricted,
+          session: { subject: claim.userId, expiresAt: claim.expiresAt, tokenVersion: claim.tokenVersion }
+        }),
+        actor: 'di.bo',
+        actTokenId: claim.tokenId,
+        actTier
+      }
+    }
+  }
+  actTokenStates.set(req, state)
+  return state
+}
+
+const carriesActToken = (req) => {
+  const token = normalizeAuthToken(readAuthToken(req))
+  return Boolean(token) && token.startsWith(actTokenPrefix)
+}
+
 const getAuthState = (req, res = null) => {
+  // A di.bo token wins over anything else the request carries: a request that
+  // says it is di.bo's errand is judged as one, never as the cookie beside it.
+  const bearer = normalizeAuthToken(readAuthToken(req))
+  if (bearer && bearer.startsWith(actTokenPrefix)) {
+    return resolveActTokenState(req, bearer)
+      || buildAuthState({ authenticated: false, type: 'act-token', reason: 'act-token' })
+  }
   const sessionState = readAuthSession(req)
   if (sessionState.authenticated) {
     if (res) refreshSessionCookieIfStale(req, res, sessionState)
@@ -803,7 +872,9 @@ const getAuthState = (req, res = null) => {
 // `di up` puts no proxy in front of itself. Everyone on the network arrives as
 // a guest, which is the entire point of the mode.
 const getPublicAuthState = (req, res = null) => {
-  if (config.requireAuth && isOwnerAtTheMachine(req)) {
+  // Not for a di.bo token: on a `di up` install with di.bo on the same machine,
+  // loopback would otherwise turn the person's errand into the owner's.
+  if (config.requireAuth && isOwnerAtTheMachine(req) && !carriesActToken(req)) {
     return buildAuthState({
       authenticated: true,
       type: 'session',
@@ -860,7 +931,9 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   if (!user || !Array.isArray(user.spaces) || user.spaces.includes(spaceId)) return
   const nextSpaces = [...user.spaces, spaceId]
   try { setUserSpacesNow(userId, nextSpaces) } catch { return }
-  if (req.authState?.type === 'session' && config.auth.sessionSecret) {
+  // Not for di.bo's errand: its request holds a short token, not a cookie,
+  // and re-issuing one here would hand the bot a 12-hour browser session.
+  if (req.authState?.type === 'session' && !req.authState.actor && config.auth.sessionSecret) {
     try {
       const session = createAuthSessionValue({
         secret: config.auth.sessionSecret,
@@ -2773,9 +2846,12 @@ initStorage()
     // one row per sign-in forever. Rides the space sweep rather than running
     // on every mint, so a room full of people signing in at once pays nothing.
     const { pruneLoginTokens } = require('./telegramLoginStore')
+    const { pruneActTokens } = require('./telegramActTokenStore')
     const sweep = () => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
       try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
+      // di.bo's act tokens, expired or revoked: same reasoning, same sweep.
+      try { pruneActTokens() } catch (error) { logger.warn('Failed to prune act tokens', error) }
       // The trash. Deleting marks the row and leaves the bytes; this is the
       // only path that removes them, and only after TRASH_TTL_MS. Rides the
       // same half-hour sweep — a deletion is not urgent, and its whole value
