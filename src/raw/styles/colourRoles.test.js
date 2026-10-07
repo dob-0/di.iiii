@@ -123,8 +123,12 @@ describe('raw colour roles', () => {
         // its height apply while the bar is drawn (.is-under-sbar), and drawing it
         // loads that sheet — so the token is always there when it is read.
         const bar = readFileSync(join(stylesDir, '../../components/surfaceBar.css'), 'utf8')
+        // raw.css's first line imports the Nodes chrome sheet, which declares
+        // the --raw-* scale (spacing, type, cell) on :root.
+        const chrome = readFileSync(join(stylesDir, 'rawChrome.css'), 'utf8')
+        expect(css.startsWith('@import "./rawChrome.css";')).toBe(true)
         const missing = [...new Set(bare)].filter((token) => (
-            !setByComponents.has(token) && !base.includes(`${token}:`) && !css.includes(`${token}:`) && !bar.includes(`${token}:`)
+            !setByComponents.has(token) && !base.includes(`${token}:`) && !css.includes(`${token}:`) && !bar.includes(`${token}:`) && !chrome.includes(`${token}:`)
         ))
         expect(missing, `raw.css uses undefined token(s) with no fallback: ${missing.join(', ')}`).toEqual([])
     })

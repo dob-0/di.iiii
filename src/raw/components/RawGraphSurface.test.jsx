@@ -259,73 +259,103 @@ describe('RawGraphSurface', () => {
         expect(zoom).toBeLessThanOrEqual(1)
     })
 
-    // Owner 2026-10-02: six cards covered ~9 % of a 2560-wide canvas because
-    // the fit never magnified. It may now, up to 2 — and no further.
-    it('magnifies a small graph on a big screen, but no further than 2', () => {
+    // Audit 2026-10-05 §3.7 (row 7). The opening view: everything in view, top-left
+    // aligned 24px in, never magnified past 100 % (it opened at 141 % and sat under the bar).
+    const transformOf = (container) => {
+        const [panX, panY, zoom] = /translate\(([-\d.]+)px,\s*([-\d.]+)px\) scale\(([-\d.]+)\)/
+            .exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        return { panX, panY, zoom }
+    }
+    const withRect = (width, height, fn) => {
         const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-            x: 0, y: 0, left: 0, top: 0, right: 2560, bottom: 1250, width: 2560, height: 1250, toJSON: () => ({})
+            x: 0, y: 0, left: 0, top: 0, right: width, bottom: height, width, height, toJSON: () => ({})
         })
-        try {
+        try { fn() } finally { rect.mockRestore() }
+    }
+
+    it('opens a small graph at 100 % at most, its first card 24px from the top-left', () => {
+        withRect(2560, 1250, () => {
             const small = [
-                makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 }),
-                makeNode('value.number', { id: 'b', graphX: 300, graphY: 0 })
+                makeNode('value.number', { id: 'a', graphX: 120, graphY: 60 }),
+                makeNode('value.number', { id: 'b', graphX: 420, graphY: 60 })
             ]
             const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
-            const stage = container.querySelector('.raw-graph-stage')
-            const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
-            expect(zoom).toBeCloseTo(2, 5)
-        } finally {
+            const { panX, panY, zoom } = transformOf(container)
+            expect(zoom).toBe(1)
+            expect(120 * zoom + panX).toBeCloseTo(24, 5)
+            expect(60 * zoom + panY).toBeCloseTo(24, 5)
+        })
+    })
+
+    it('opens the same view on every load (same cards, same box, same zoom within 1 %)', () => {
+        withRect(1440, 805, () => {
+            const cards = [120, 349, 560, 780].map((x, i) => makeNode('value.number', { id: `c${i}`, graphX: x, graphY: 40 + i * 30 }))
+            const zooms = [1, 2, 3, 4, 5].map(() => {
+                const view = render(<RawGraphSurface nodes={cards} edges={[]} />)
+                const { zoom } = transformOf(view.container)
+                view.unmount()
+                return zoom
+            })
+            zooms.forEach((z) => expect(Math.abs(z / zooms[0] - 1)).toBeLessThan(0.01))
+        })
+    })
+
+    it('waits for the card font before the first fit, then fits once', async () => {
+        let done
+        const ready = new Promise((resolve) => { done = resolve })
+        const fonts = { status: 'loading', ready, addEventListener() {}, removeEventListener() {} }
+        Object.defineProperty(document, 'fonts', { value: fonts, configurable: true })
+        try {
+            withRect(1440, 805, () => {})
+            const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+                x: 0, y: 0, left: 0, top: 0, right: 1440, bottom: 805, width: 1440, height: 805, toJSON: () => ({})
+            })
+            const cards = [120, 349].map((x, i) => makeNode('value.number', { id: `f${i}`, graphX: x, graphY: 40 }))
+            const { container } = render(<RawGraphSurface nodes={cards} edges={[]} />)
+            // Still loading: no fit yet (the view is where a fresh canvas starts).
+            const beforeFonts = transformOf(container).panX
+            expect(120 * transformOf(container).zoom + beforeFonts).not.toBeCloseTo(24, 0)
+            fonts.status = 'loaded'
+            await act(async () => { done() })
+            expect(120 * transformOf(container).zoom + transformOf(container).panX).toBeCloseTo(24, 5)
             rect.mockRestore()
+        } finally {
+            delete document.fonts
         }
     })
 
-    // F7, 2026-10-02: a List docking on the right re-fit eight cards to 50 %
-    // at 1200 × 760. The re-fit nobody asked for keeps them readable instead.
-    it('keeps cards readable when a docked window narrows the view', () => {
-        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-            x: 0, y: 0, left: 0, top: 0, right: 1200, bottom: 760, width: 1200, height: 760, toJSON: () => ({})
-        })
-        try {
+    // F7, 2026-10-02: a List docking on the right re-fit eight cards to 50 % at
+    // 1200 x 760. The fit now keeps EVERY card in the free band, and says so with
+    // a smaller card (the summary tier), not with "showing 3 of 8".
+    it('keeps every card in view beside a docked window, with no "showing N of M"', () => {
+        withRect(1200, 760, () => {
             const grid = [0, 400, 800].flatMap((x, col) => [0, 260].map((y, row) => (
                 makeNode('value.number', { id: `n${col}${row}`, graphX: x, graphY: y })
             )))
-            const zoomOf = (container) => Number(/scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform)[1])
             const { container, rerender } = render(<RawGraphSurface nodes={grid} edges={[]} selectedNodeId="n00" />)
-            expect(zoomOf(container)).toBeGreaterThan(0.9)
             rerender(<RawGraphSurface nodes={grid} edges={[]} selectedNodeId="n00" contentInsets={{ left: 0, right: 520, top: 0, bottom: 0 }} />)
-            expect(zoomOf(container)).toBeGreaterThanOrEqual(0.8)
-            // and says honestly that some cards are now behind the window
-            const notice = container.textContent.match(/showing (\d+) of (\d+)/)
-            expect(notice).not.toBeNull()
-            expect(Number(notice[1])).toBeLessThan(Number(notice[2]))
-        } finally {
-            rect.mockRestore()
-        }
+            const { panX, zoom } = transformOf(container)
+            expect(container.textContent).not.toMatch(/showing \d+ of \d+/)
+            // the right-most card ends inside the free band (1200 - 520)
+            expect((800 + 200) * zoom + panX).toBeLessThanOrEqual(680)
+        })
     })
 
-    // 2026-10-03, NOPA on a 390 × 844 phone: the graph was too wide to fit
-    // legibly but short, and the partial view left it in the lower half under
-    // a blank band — the axis that fits was never centred.
-    it('centres a short, too-wide graph vertically on a phone', () => {
-        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-            x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 760, width: 390, height: 760, toJSON: () => ({})
-        })
-        try {
+    // A phone opens at the larger of fit-to-width and the summary tier (0.5),
+    // first card top-left.
+    it('opens on a phone at the larger of fit-to-width and 50 %, first card top-left', () => {
+        withRect(390, 760, () => {
             const row = [0, 600, 1200, 1800].flatMap((x) => [
                 makeNode('value.number', { id: `t${x}`, graphX: x, graphY: 0 }),
                 makeNode('value.number', { id: `b${x}`, graphX: x, graphY: 240 })
             ])
             const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
-            const [, panY, zoom] = /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/
-                .exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
-            expect(container.textContent).toMatch(/showing \d+ of 8/)
-            const bottom = (240 + cardHeight(row[1])) * zoom + panY
-            const top = panY
-            // the blank band above equals the one below
-            expect(Math.abs(top - (760 - bottom))).toBeLessThan(2)
-        } finally {
-            rect.mockRestore()
-        }
+            const { panX, panY, zoom } = transformOf(container)
+            expect(container.textContent).not.toMatch(/showing \d+ of 8/)
+            expect(zoom).toBe(0.5)
+            expect(panX).toBeCloseTo(24, 5)
+            expect(panY).toBeCloseTo(24, 5)
+        })
     })
 
     // 2026-10-03, owner's screen: a new window opened at 800 × 600 and was
@@ -1202,5 +1232,19 @@ describe('the card menu names what happens', () => {
         fireEvent.contextMenu(container.querySelector('[data-card-id="t"]'), { clientX: 500, clientY: 100 })
         expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => el.textContent.includes('Open'))).toBe(true)
         expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => /Go inside|Open its window/.test(el.textContent))).toBe(false)
+    })
+})
+
+describe('RawGraphSurface zoom strip (audit row 6, §3.8)', () => {
+    it('is [−] [100%] [+] [Fit] with no frame button, and the value resets to 100%', () => {
+        const node = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(<RawGraphSurface nodes={[node]} edges={[]} initialZoom={1.5} selectedNodeId="color-1" />)
+        const strip = container.querySelector('.raw-graph-zoom-controls')
+        expect([...strip.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual([
+            'Zoom out', 'Reset zoom to 100%', 'Zoom in', 'Fit graph'
+        ])
+        expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('150%')
+        fireEvent.click(strip.querySelector('.raw-graph-zoom-value'))
+        expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('100%')
     })
 })

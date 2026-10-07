@@ -1696,6 +1696,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-03'
     },
     {
+        id: 'nodes-one-bar',
+        category: 'Editing',
+        title: 'Nodes: one bar, one Help sheet, one opening view',
+        summary: 'The node canvas has one 40-pixel bar, a ? for Help, your account as its last square, and a canvas that opens the same way every time.',
+        body: [
+            'On a project\'s node canvas the tools sit in the same bar as every other surface — there is no second toolbar under it, and the project is named once. On the right, in one style of small square cells: Scene, the node count (it opens the outliner), Chat, ? (Help) and ⋯. Your account is the last square of the bar; it no longer floats over the canvas. Standing inside a node, the bar shows ← Back (Esc) and where you are. Projects, Spaces and the Wiki are in the ⋯ menu.',
+            'Help is one sheet, with no tabs. Press ? or the ? cell. Its first line is about the canvas you have open — “5 nodes · nothing wired yet” — followed by seven lines: Make, Wire, Open, Back, Move, Zoom, Delete. Every key on it is read from the canvas\'s own key table, and “Every key and mouse action” lists the rest.',
+            'The zoom strip is one small row at the bottom left: − 100% + Fit. Press the percentage to return to 100%; H fits everything, F frames the selected node. On a touch screen it is Fit alone, because you pinch.',
+            'The canvas opens with every card in view, the first card 24 pixels from the top-left corner, and never larger than 100%. It waits for the card font to arrive, so the same project opens at the same zoom every time. Card text is 13 units; when the zoom would make it smaller than 11 pixels on screen the card shows a summary instead (its title, each group\'s name and row count), and below half size just its title. A fit therefore always shows every card — there is no “showing 3 of 5”.'
+        ],
+        tags: ['nodes', 'raw', 'bar', 'help', 'zoom', 'fit', 'account', 'canvas', 'opening view'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A canvas with nothing on it',
