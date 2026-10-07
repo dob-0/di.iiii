@@ -415,6 +415,27 @@ export default function RawGraphSurface({
             return node
         })
     }, [nodesProp, dragPos, resizePos])
+    // While a card is held, only that card changes. The other cards' elements
+    // are built once when the drag starts and handed back as the SAME element
+    // objects every frame, so React skips their whole subtrees instead of
+    // re-rendering all of them per pointer move (P6: at 150 cards the card drag
+    // p95 was 100+ ms in Firefox). Rebuilt if the selection changes mid-drag, and
+    // dropped the moment the card is let go.
+    const frozenCardsRef = useRef(null)
+    if (!draggingNodeId) frozenCardsRef.current = null
+    const frozenCardOr = (node, build) => {
+        if (!draggingNodeId || node.id === draggingNodeId) return build()
+        let frozen = frozenCardsRef.current
+        if (!frozen || frozen.sig !== selectedNodeId || frozen.tier !== tier) {
+            frozen = { sig: selectedNodeId, tier, map: new Map() }
+            frozenCardsRef.current = frozen
+        }
+        const hit = frozen.map.get(node.id)
+        if (hit && hit.node === node) return hit.element
+        const element = build()
+        frozen.map.set(node.id, { node, element })
+        return element
+    }
     // The document's own nodes: what a drag starts from and what its effect
     // follows, so a held card moving does not restart the effect every frame.
     const nodePropById = useMemo(() => new Map(nodesProp.map((node) => [node.id, node])), [nodesProp])
@@ -1846,7 +1867,7 @@ export default function RawGraphSurface({
                             />
                         ) : null}
                     </svg>
-                    {paintOrder(nodes).map((node) => {
+                    {paintOrder(nodes).map((node) => frozenCardOr(node, () => {
                         const inputs = getNodeInputs(node, portScopeNodes)
                         const outputs = getNodeOutputs(node, portScopeNodes)
                         const childCount = childCounts?.get(node.id) || 0
@@ -2188,7 +2209,7 @@ export default function RawGraphSurface({
                                 </div>
                             </div>
                         )
-                    })}
+                    }))}
                     {/* The things. Same stage, so they pan and zoom with the
                         nodes and read as being in the same place — they ARE
                         in the same project. The node card's own classes, so a
