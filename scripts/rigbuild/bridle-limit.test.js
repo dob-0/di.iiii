@@ -45,7 +45,10 @@ export const violations = (rig, hall) => {
 // OWED to the owner, NOT fixed here: tape the girder underside on site, repoint `hall` in the versions
 // file to the measured hall, re-derive the trims and bridles (versions.mjs), re-check the crane-clash
 // rule for the lasers — then this list must become empty and these tests say so.
-const KNOWN_AGAINST_MEASURED = [{ u: 5.25, included_deg: 144.4, max: 120 }]
+// Known · full hangs the cut MIRRORED since 2026-10-07 (the owner: "flip the truss" → high house left), so its
+// high pick — the one over the limit — is the mirror one, u −5.25: the same violation, on the other end.
+const FLIPPED = new Set(['moxir-2026-10-17-known-full.json'])
+const KNOWN_AGAINST_MEASURED = (file) => [{ u: FLIPPED.has(file) ? -5.25 : 5.25, included_deg: 144.4, max: 120 }]
 
 describe('bridle limit: included angle of every built pick', () => {
     it('finds the bridled rigs (so the guard is not an empty loop)', () => {
@@ -65,7 +68,7 @@ describe('bridle limit: included angle of every built pick', () => {
     })
 
     it.each(rigs.map((r) => [r.file, r.rig]))('%s: against the measured 09-29 hall the violations are exactly the recorded ones', (file, rig) => {
-        expect(violations(rig, read(MEASURED_HALL)), `${file} against ${MEASURED_HALL}`).toEqual(KNOWN_AGAINST_MEASURED)
+        expect(violations(rig, read(MEASURED_HALL)), `${file} against ${MEASURED_HALL}`).toEqual(KNOWN_AGAINST_MEASURED(file))
     })
 
     it('can fail: a hall whose girder is 0.2 m lower than the rig was derived for is caught', () => {

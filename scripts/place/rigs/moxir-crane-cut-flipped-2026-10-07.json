@@ -79,17 +79,17 @@
                 "u_m": -5.75,
                 "side": -1,
                 "y_m": 5.5,
-                "what": "mirrored (2026-10-07) from the house-right tie of the 09-29 cut: house-right end down to the nave column at x +11.6 on grid line z 6.0, at 5.5 m — under the crane runway beam (6.56–7.46 m on the column line); same strap or steel"
+                "what": "house-left (HIGH) end down to the nave column at x −11.6 (inner face) on grid line z 6.0, at 5.5 m — under the crane runway beam (6.56–7.46 m on the column line); a 2 t LC ratchet strap (EN 12195-2) or a 6 mm steel with a turnbuckle. Mirrored 2026-10-07 from the 09-29 cut's house-right tie."
             },
             {
                 "id": "hr",
                 "u_m": 6.25,
                 "side": 1,
                 "y_m": "end",
-                "what": "mirrored (2026-10-07) from the house-left tie of the 09-29 cut: house-left end to the nave column at x −11.6 (inner face) on grid line z 6.0, at the end's own height — a 2 t LC ratchet strap (EN 12195-2) or a 6 mm steel with a turnbuckle"
+                "what": "house-right (LOW) end to the nave column at x +11.6 (inner face) on grid line z 6.0, at the end's own height — runs about 2 m under the crane cab (cab bottom ≈ 5.75 m); same strap or steel. Mirrored 2026-10-07 from the 09-29 cut's house-left tie."
             }
         ],
-        "tieoffs_why": "mirrored (2026-10-07) — CHECK ON SITE: the high (now house-left) end ties at its own height; the low (house-right) end ties at 5.5 m like before, which now sits ABOVE that end, so the strap runs up, not down. the V bridles hold the line across the bridge; ALONG the line (x) each V still swings from its leg tops, and slings on a sloped chord want to creep downhill. Two opposed tie-offs, tensioned against each other (hand-tight, ~50 daN, ESTIMATE), hold it along x; each sling is choked against a node (a vertical brace) so it cannot slide down the slope (Prolyte user manual: loads applied at the nodes).",
+        "tieoffs_why": "mirrored 2026-10-07: the HIGH end (now house left) ties down to 5.5 m under the runway beam; the LOW end (now house right, the cab's side) ties level at its own height, well under the cab. CHECK ON SITE 10-08. Before: the V bridles hold the line across the bridge; ALONG the line (x) each V still swings from its leg tops, and slings on a sloped chord want to creep downhill. Two opposed tie-offs, tensioned against each other (hand-tight, ~50 daN, ESTIMATE), hold it along x; each sling is choked against a node (a vertical brace) so it cannot slide down the slope (Prolyte user manual: loads applied at the nodes).",
         "truss_kg_per_m": 6.3,
         "truss_kg_per_m_source": "Prolyte H30V standard lengths table: H30V-L300 3.00 m 18.90 kg (https://www.prolyte.com/products/aluminium-truss/square-truss/h30v-l100-square-30-length-100-cm, read 2026-09-29) → 6.3 kg/m",
         "extras_fraction": 0.1,
