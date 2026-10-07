@@ -247,7 +247,7 @@ export const craneCut = ({ spec, base, groups, classes }) => {
         trim_m: trim,
         trim_why: `derived (versions.mjs craneCut): the high pick's bridle at its ${r.bridle.max_included_deg}° limit puts its apex at ${r2(apexMax)} m; the hoist's shortest drop under it (${r2(drop)} m) and the chords at that pick leave ${trim} m for the bottom chord over the axis`,
         ends: uEnds.map((u) => ({ u_m: u, x_m: r2(u * Math.cos(th) + stage0.axis), bottom_chord_m: r2(bottomAt(u)) })),
-        rise_m: r2(cut.truss.width_m * Math.sin(th)),
+        rise_m: r2(cut.truss.width_m * Math.abs(Math.sin(th))),
         rigging: { ...clone(r), hoists: r.picks_u_m.length, drop_m: r2(drop), bridle: { ...clone(r.bridle), leg_spread_m: r2(legSpread) }, source: spec.craneCut }
     }
     const rig = { stage: base.stage, truss }
@@ -471,7 +471,8 @@ export const versionRig = ({ spec, base, id }) => {
     const truss = v.truss === 'none'
         ? { kind: 'none', note: 'this version hangs nothing overhead: no goalpost, the floor line is the rig' }
         : v.truss === 'crane' ? craneTruss(spec, groups, classes)
-            : v.truss === 'crane-cut' ? craneCut({ spec, base, groups, classes })
+            // a version may name its own cut overlay (known-full-flipped, 2026-10-07: the same line mirrored)
+            : v.truss === 'crane-cut' ? craneCut({ spec: v.craneCut ? { ...spec, craneCut: v.craneCut } : spec, base, groups, classes })
             : v.truss === 'halo' ? haloTruss(v, groups, classes)
             : v.truss === 'crane-x' ? craneTruss(spec, groups, classes, 'craneX')
                 : clone(base.truss)
@@ -489,7 +490,7 @@ export const versionRig = ({ spec, base, id }) => {
         assumptions: [
             ...base.assumptions.slice(0, 3),
             ...(truss.kind === 'none' ? ['No truss: this version stands every fixture on the floor (the booth line, the pit, the column bases, the press).']
-                : truss.shape === 'slope' ? [`No stage deck, no towers: the DJ stand alone. THE CUT: one straight ${truss.width_m} m line of ${truss.section_class}, sloped ${truss.slope_deg}° in the bridge's plane — bottom chord ${truss.ends[0].bottom_chord_m} m at house left (x ${truss.ends[0].x_m}) to ${truss.ends[1].bottom_chord_m} m at house right (x ${truss.ends[1].x_m}) — on ${truss.rigging.hoists} bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ ${truss.rigging.load.total_kg[0]} kg, ${truss.rigging.load.per_point_kg.join(' / ')} kg a pick (house left → right, ESTIMATE). ${truss.rigging.signoff.split(':')[0]}.`]
+                : truss.shape === 'slope' ? [`No stage deck, no towers: the DJ stand alone. THE CUT: one straight ${truss.width_m} m line of ${truss.section_class}, sloped ${Math.abs(truss.slope_deg)}° in the bridge's plane — bottom chord ${truss.ends[0].bottom_chord_m} m at house left (x ${truss.ends[0].x_m}) to ${truss.ends[1].bottom_chord_m} m at house right (x ${truss.ends[1].x_m}) — on ${truss.rigging.hoists} bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ ${truss.rigging.load.total_kg[0]} kg, ${truss.rigging.load.per_point_kg.join(' / ')} kg a pick (house left → right, ESTIMATE). ${truss.rigging.signoff.split(':')[0]}.`]
                 : truss.shape === 'triangle' ? [`No stage deck, no towers: the DJ stand alone. A flat equilateral triangle of ${truss.section_class}, ${truss.side_m} m a side, lies at ${truss.trim_m} m (bottom chord) centred under the crane bridge over the DJ, its apex toward the ${truss.apex || 'audience'}, on 3 chain hoists (one per corner, each on a two-leg bridle) with safety steels; load ≈ ${truss.rigging.load.total_kg} kg, corners ${truss.rigging.load.per_point_kg.apex} / ${truss.rigging.load.per_point_kg.left} / ${truss.rigging.load.per_point_kg.right} kg (apex / left / right). ${truss.rigging.signoff.split(':')[0]}.`]
                 : truss.kind === 'crane-hung' ? [`No stage deck, no towers: the DJ stand alone. One ${truss.width_m} m line of ${truss.section_class} hangs from the bridge of the overhead crane parked over the DJ, bottom chord ${truss.trim_m} m, on ${truss.rigging.hoists} chain hoists with safety steels; load on the line ≈ ${truss.rigging.load.total_kg[0]}–${truss.rigging.load.total_kg[1]} kg, ≈ ${truss.rigging.load.per_point_kg[0]}–${truss.rigging.load.per_point_kg[1]} kg a point. ${truss.rigging.signoff.split(':')[0]}.`]
                     : truss.kind === 'crane-x' ? [`No stage deck, no towers: the DJ stand alone. Two ${truss.arm_m} m arms of ${truss.section_class} cross FLAT at a 4-way junction (${truss.junction.code}) under the bridge of the overhead crane parked over the DJ, one arm along the bridge, one across it pointing out over the crowd; bottom chord ${truss.trim_m} m, on ${truss.rigging.load.points} climbing chain hoists, each on a two-leg bridle from the girders, a safety steel each, and two restraint steels at every arm end; load on the X ≈ ${truss.rigging.load.total_kg[0]} kg, on the crane ≈ ${truss.rigging.load.on_crane_kg[0]} kg. ${truss.rigging.signoff.split(':')[0]}.`]
