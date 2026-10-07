@@ -1550,10 +1550,10 @@ export const WIKI_ARTICLES = [
         title: 'The Keeper: a language model as a node',
         summary: 'Point a Keeper node at a model — one on this machine, or a box on the same network — and its answer becomes a value the rest of the graph can use.',
         body: [
-            'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
+            'Add a Keeper from the palette (category Agent — or search for local, llm or llama) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
             'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine, and it works with no internet at all — which is the situation it was built for.',
             { list: [
-                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. Anything with a path is used as given.',
+                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. An OpenAI base URL, the address ending in /v1 that llama.cpp, vLLM and LM Studio give their clients (http://127.0.0.1:8090/v1), is completed to its chat route too. Anything with a longer path is used as given.',
                 'Model — the model name that server knows, for example qwen3.',
                 'System — an optional instruction that shapes every answer.'
             ] },
@@ -1562,7 +1562,7 @@ export const WIKI_ARTICLES = [
             'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
         ],
         tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama', 'llama.cpp'],
-        updated: '2026-09-11'
+        updated: '2026-10-07'
     },
     {
         id: 'the-toybox',
