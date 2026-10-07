@@ -30,7 +30,7 @@ function Lightbox({ item, onClose }) {
 
 export default function App() {
     const [view, setView] = useState('overview')
-    const [show, setShow] = useState({ hall: true, lamps: true, beams: true, rig: true })
+    const [show, setShow] = useState({ hall: true, roof: false, lamps: true, beams: true, rig: true })
     const [strength, setStrength] = useState(1)
     const [lb, setLb] = useState(null)
     const [ready, setReady] = useState(false)
@@ -56,9 +56,9 @@ export default function App() {
                 {ready && <Guard><Scene view={view} show={show} strength={strength} onInteract={() => {}} /></Guard>}
                 <div className="hud"><b>MOXIR beta v0.9</b><br />{lights.length} light sources · {COUNT.par} PAR · {COUNT.beam} beam · {COUNT.laser} laser<br />drag to orbit · scroll to zoom · right-drag to pan</div>
                 <div className="bar">
-                    <div className="grp" role="group" aria-label="Camera">{Object.keys(VIEWS).map((k) => <button key={k} className="btn" aria-pressed={view === k} onClick={() => setView(k)}>{names[k]}</button>)}</div>
+                    <div className="grp" role="group" aria-label="Camera">{Object.keys(VIEWS).map((k) => <button key={k} className="btn" aria-pressed={view === k} onClick={() => { setView(k); setShow((s) => ({ ...s, roof: VIEWS[k].roof !== false })) }}>{names[k]}</button>)}</div>
                     <div className="grp" role="group" aria-label="Layers">
-                        {[['hall', 'Hall'], ['rig', 'Truss + stage'], ['lamps', 'Lamps'], ['beams', 'Beams']].map(([k, l]) => <button key={k} className="btn" aria-pressed={show[k]} onClick={() => tog(k)}>{l}</button>)}
+                        {[['hall', 'Hall'], ['roof', 'Roof'], ['rig', 'Truss + stage'], ['lamps', 'Lamps'], ['beams', 'Beams']].map(([k, l]) => <button key={k} className="btn" aria-pressed={show[k]} onClick={() => tog(k)}>{l}</button>)}
                     </div>
                     <div className="grp" role="group" aria-label="Haze"><button className="btn" aria-pressed={strength < 1} onClick={() => setStrength(0.5)}>Light haze</button><button className="btn" aria-pressed={strength === 1} onClick={() => setStrength(1)}>Haze</button><button className="btn" aria-pressed={strength > 1} onClick={() => setStrength(2)}>Heavy haze</button></div>
                 </div>
