@@ -175,6 +175,46 @@ module.exports = [
     note: "public, unauthenticated, rate-limited — registered ahead of the /api auth gates; the rate limiter's per-IP key is the only guard and is never persisted."
   },
   {
+    route: "GET /api/shoot/:key",
+    summary: "a film crew's shared shoot sheet (?rev= answers {unchanged:true} for pollers)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "public, unauthenticated, rate-limited — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "POST /api/shoot/:key/ops",
+    summary: "apply crew edits to a shoot sheet: tick, note, link, add or remove a prop, set a cast member's details",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "anyone holding the link may edit — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "PUT /api/shoot/:key/plan",
+    summary: "write a shoot sheet's whole plan (the seed); this replaces the crew's ticks",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "anyone holding the link may rewrite it — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "GET /api/shoot/:key/files/:name",
+    summary: "one costume or prop picture of a shoot sheet (webp, jpg or png)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves image bytes, not JSON — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "PUT /api/shoot/:key/files/:name",
+    summary: "upload one picture (webp, jpg or png, up to 5 MB) to a shoot sheet",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "body is the raw image bytes — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
     route: "GET /api/trash",
     summary: "trashed (soft-deleted) projects, optionally filtered to one space, with the trash TTL",
     reach: "read",
