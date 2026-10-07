@@ -59,6 +59,18 @@ resolves the server's source as `./src` when there is no `serverXR/` above it.
 ls /app/scripts/space-bundle.mjs`. A tool that is present but crashes prints its own
 sentence in the same log line.
 
+## A follow did not carry what happens TO a project: trash, rename, private, move (2026-10-07)
+
+Owed item 6a (owner's rule "dev and local stay one"). A project's row is not an op, so a follow never carried it: a
+project trashed on the host stayed live on the follower; a rename kept the old title; a project the host moved to
+another space made the follow fail on it every pass (its key cannot read the project in the new space: 403, said as
+"the other di.iiii is not answering"). Fix: `serverXR/src/follow/followProjects.js` keeps a base (the last agreed
+state, Unison's archive) to tell which side changed; `follower.js` carries through each install's own routes; the
+project routes wake the follow. A project the follow itself makes enters the base at once, or one made and trashed
+within one park (20 s) was never trashed on the other side. Guards: `followProjects.test.js`,
+`followIntegration.test.js` "a project's life crosses a follow" and "a follow never empties this copy" (they fail
+with the carry off). SPEC_follow.md "A project trashed, restored, renamed or moved".
+
 ## A follow's gaps: new key ignored, remote stored without its mount, files owed in silence, settings not carried, follower-only project refused
 
 Found on the owner's install 2026-10-04/05 (di.laser, moxir, space `open`). Five faults in `serverXR/src/follow/` and
