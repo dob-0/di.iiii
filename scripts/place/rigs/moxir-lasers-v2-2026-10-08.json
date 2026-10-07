@@ -303,7 +303,7 @@
   "ash white": "#e8e4dc",
   "ember red": "#ff3a12"
  },
- "colour_note": "LaserCube Ultra MK2: three diodes 455 / 525 / 638 nm, 10 W optical together (LASEROS-MK2). 'Ash white' = all three at once (a grey-white whose tint depends on the mix; the three beams overlap only as well as the cube's convergence, which the datasheet does not give: fringes possible). 'Ember red' = the 638 nm diode alone (deep red); an orange ember needs red + a little 525 nm green (a mix, not a wavelength). No per-colour power is in the datasheet the repo holds: the visibility numbers below take an equal third per colour (ASSUMED).",
+ "colour_note": "LaserCube Ultra MK2, per colour (scripts/place/fixtures/fixtures.json lasercube.specs.variants_mw, the maker's ULTRA MK2 Guide spec tables): 10 W unit 455 nm 5000 mW, 525 nm 2800 mW, 638 nm 2800 mW; 6 W unit 2700 / 1500 / 1800 mW; 4 mm beam, 1 mrad, Class 4. 'Ash white' = all three diodes at once (a grey-white whose tint depends on the mix; the three beams overlap only as well as the cube's convergence, which the datasheet does not give: colour fringes possible). 'Ember red' = the 638 nm diode alone (deep red); an orange ember needs red + a little green, a mix. The owner's cubes are taken as the 10 W unit: NOT confirmed (a photo of a cube's label is on today's shot list).",
  "haze": {
   "sigma_per_m": 0.02,
   "source": "moxir-versions-2026-10-17.json looksWhy: 'the room is written at sigma 0.02/m (realism.mjs --scattering 0.02, fog far ~80 m) ... from the club-haze research (0.004-0.02)'; the joint sigma call is still owed",
@@ -376,5 +376,6 @@
    "wash: beside the audience (BSW250, up)": "#e8e4dc"
   },
   "washes_why": "roof pools ash white (the cold underside of a burnt roof), the columns and the far walls ember red-orange (what still glows at the base): RGBW PARs and the HK1915 mix both; the UP-250BSW reaches orange only through its colour wheel (its slots are not in the repo: ASSUMED one is orange/red)."
- }
+ },
+ "maker_warning": "The maker's own manual (ULTRA MK2 Guide): lasers for display or entertainment should be Class 1, 2 or visible-beam 3R; the Ultra MK2 is Class 4, and a Class 4 show needs a laser safety officer and the local permit (fixtures.json lasercube.specs.laser_class)."
 }

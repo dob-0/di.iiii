@@ -22,8 +22,8 @@
 #         L = sigma * p_HG(theta, g) * P(s) / (w(s) * sin theta) * exp(-sigma d)          [W m^-2 sr^-1]
 #     (the line of sight crosses the beam over w / sin theta; d = eye to beam). There is no inverse-square fall-off with
 #     the eye's distance (radiance is conserved): a collimated beam 80 m away is as bright as at 10 m but for the haze's
-#     own transmission exp(-sigma d) on the way. Photometric: x 683 lm/W x V(lambda) (CIE 1924), one third of P0 per
-#     colour (ASSUMED: the datasheet in the repo gives no split). sigma = 0.02 /m is the rig's written haze.
+#     own transmission exp(-sigma d) on the way. Photometric: x 683 lm/W x V(lambda) (CIE 1924) per diode, with the
+#     datasheet's per-colour power (fixtures.json lasercube.specs.variants_mw). sigma = 0.02 /m is the rig's written haze.
 import argparse, json, math, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -43,9 +43,21 @@ O, OC, L, MX, G = D.O, D.OC, D.L, D.MX, D.G
 V2 = json.load(open(os.path.join(A2.repo, A2.v2)))
 R = V2['rules']
 EYE = np.array([0.0, 1.6, 38.0])
-V_LAMBDA = {455: 0.048, 525: 0.793, 638: 0.205}          # CIE 1924 photopic V(lambda), interpolated to 1 nm tables
-LM_PER_W_WHITE = 683 * sum(V_LAMBDA.values()) / 3          # equal thirds (ASSUMED)
-LM_PER_W_RED = 683 * V_LAMBDA[638]
+V_LAMBDA = {455: 0.048, 525: 0.786, 638: 0.193}          # CIE 1924 photopic V(lambda), linear between the 10 nm table values
+FX_SPECS = json.load(open(os.path.join(A2.repo, 'scripts/place/fixtures/fixtures.json')))['kinds']['lasercube']['specs']
+VARIANTS = {k: {int(c.rstrip('nm')): mw / 1000.0 for c, mw in v.items()} for k, v in FX_SPECS['variants_mw']['value'].items()}   # W per wavelength
+VARIANT = '10W'            # the owner's cubes taken as the 10 W unit: NOT confirmed (shot list: a cube's label)
+
+
+def colour_power(colour, variant=VARIANT):
+    """(watts, lumens) of a beam: ember red = the 638 nm diode alone; ash white = all three diodes."""
+    w = VARIANTS[variant]
+    lam = [638] if colour == 'ember red' else [455, 525, 638]
+    return sum(w[l] for l in lam), sum(683 * V_LAMBDA[l] * w[l] for l in lam)
+
+
+def nohd_for(P):
+    return (math.sqrt(4 * P / (math.pi * L.MPE_E)) - L.LASER_A_M) / L.LASER_PHI
 
 
 # ------------------------------------------------------------------ obstacle models per option for the far trio
@@ -167,8 +179,8 @@ def p_hg(theta, g):
 def visibility(b, res, ob, n=9):
     """Luminance (cd/m2) of the beam as the floor eye (z 38) sees it at n points, with the line of sight tested."""
     sig, g = V2['haze']['sigma_per_m'], V2['haze']['g']
-    eff = LM_PER_W_RED if b['colour_name'] == 'ember red' else LM_PER_W_WHITE
-    P0 = L.LASER_W / 3 if b['colour_name'] == 'ember red' else L.LASER_W      # red: one diode; white: all three
+    P0, lm = colour_power(b['colour_name'])                                  # the datasheet's per-colour watts
+    eff = lm / P0
     t_end = res['length_m']
     pts = []
     for s in np.linspace(1.0, t_end - 0.5, n):
@@ -187,7 +199,16 @@ def visibility(b, res, ob, n=9):
 
 
 def nohd():
-    return {'mpe_w_m2': round(L.MPE_E, 1), 'nohd_m': round(L.NOHD_M), 'basis': 'IEC 60825-1:2014 Table A.1, visible CW, t = 0.25 s, H = 18 t^0.75 J/m2; NOHD = (sqrt(4P/(pi E)) - a)/phi; 10 W, 4 mm, 1 mrad (LASEROS-MK2): the static-beam (scanner-failure) case IEC TR 60825-3 asks the show to plan for'}
+    """Static-beam NOHD per variant and colour. The visible wavelengths act on the same retinal hazard, so the powers add."""
+    rows = []
+    for v in ('10W', '6W'):
+        for colour in ('ash white', 'ember red'):
+            P, _ = colour_power(colour, v)
+            rows.append({'variant': v, 'colour': colour, 'power_w': round(P, 2), 'nohd_m': round(nohd_for(P))})
+    return {'mpe_w_m2': round(L.MPE_E, 1), 'nohd_m': round(nohd_for(colour_power('ash white')[0])), 'nohd_10w_nominal_m': round(L.NOHD_M), 'table': rows,
+            'check': 'the 703 m of the 10-07 report is the 10 W nominal total; the 10 W unit\'s three diodes add to %.1f W (5.0 + 2.8 + 2.8): %d m' % (colour_power('ash white')[0], round(nohd_for(colour_power('ash white')[0]))),
+            'basis': 'IEC 60825-1:2014 Table A.1, visible CW, t = 0.25 s, H = 18 t^0.75 J/m2 -> MPE 25.5 W/m2; NOHD = (sqrt(4P/(pi E)) - a)/phi with a 4 mm, phi 1 mrad (fixtures.json lasercube.specs); the static-beam (scanner-failure) case IEC TR 60825-3 asks the show to plan for',
+            'maker_warning': V2.get('maker_warning')}
 
 
 # ------------------------------------------------------------------ the pass
@@ -370,9 +391,11 @@ if(S.with_the_crane_as_photographed){const bad=S.with_the_crane_as_photographed.
 h2("6","Every beam");
 root.appendChild(table(["beam","colour","from","to (stop)","what it does","length","rays","lowest over a floor","mirror worst case","seen from floor","cd/m² seen","verdict"],D.beams.map(b=>[b.id,b.colour,"("+b.from.join(", ")+")","("+b.to.join(", ")+") "+b.stop,b.what,b.length_m+" m",b.rays,b.min_over_floor_m+" m",b.mirror_zmax==null?"":"back to z "+b.mirror_zmax+", "+b.mirror_lowest_m+" m up",Math.round(100*D.vis[b.id].seen_share)+" %",D.vis[b.id].cd_m2_seen_median,{html:esc((D.rows.find(r=>r.id==="v2-"+b.id)||{}).verdict||(b.pass?"pass":"FAIL")),style:{color:vcol[vk((D.rows.find(r=>r.id==="v2-"+b.id)||{}).verdict||"UNKNOWN")]}}])));
 note("Each beam is one static point of its cube's scan, held by the controller to &plusmn;"+V.cubes[0].fan_deg[0]+"&deg; (5 x 5 rays tested). Rules per ray: its first hit is its stop; &ge; 3 m over every floor; never past z "+V.rules.behind_z+" (the truss plane); no other steel within 0.3 m; the mirror worst case off the stop stays behind z 21 and &ge; 3 m up. Mounts: "+V.cubes.filter(c=>c.mount).map(c=>c.n+": "+esc(c.mount)).join(" | "));
-root.appendChild(el("p",{color:C.laser,font:"600 14px/1.5 "+F},"NOHD "+S.nohd.nohd_m+" m (MPE "+S.nohd.mpe_w_m2+" W/m&sup2;): "+esc(S.nohd.basis)+". Every beam stops on steel; no beam reaches the dance floor. Planning, not a sign-off."));
+root.appendChild(table(["unit","colour","power","static-beam NOHD"],S.nohd.table.map(r=>[r.variant+(r.variant===S.variant?" (assumed)":" (if the label says so)"),r.colour,r.power_w+" W",r.nohd_m+" m"])));
+note(esc(S.nohd.check)+". "+esc(S.nohd.basis)+".");
+root.appendChild(el("p",{color:C.laser,font:"600 14px/1.5 "+F},"Every beam stops on steel; no beam reaches the dance floor. Planning, not a sign-off. "+esc(S.nohd.maker_warning||"")));
 h2("7","Can the far beams be seen? (power vs haze)");
-p("Method: single scattering of a collimated beam in haze. Radiance seen across the beam L = &sigma; &middot; p<sub>HG</sub>(&theta;) &middot; P(s) / (w(s) sin&theta;) &middot; e<sup>&minus;&sigma;d</sup> (Beer&ndash;Lambert; Henyey &amp; Greenstein 1941). It does not fall with the square of the eye's distance: a beam 80 m away is as bright as at 10 m, but for the haze's own transmission on the way. Haze: &sigma; = "+V.haze.sigma_per_m+" /m ("+esc(V.haze.source)+"); g = "+V.haze.g+" ("+esc(V.haze.g_basis)+"). Width w = 4 mm + 1 mrad &middot; s; power 10 W white, one third for ember red (ASSUMED split).");
+p("Method: single scattering of a collimated beam in haze. Radiance seen across the beam L = &sigma; &middot; p<sub>HG</sub>(&theta;) &middot; P(s) / (w(s) sin&theta;) &middot; e<sup>&minus;&sigma;d</sup> (Beer&ndash;Lambert; Henyey &amp; Greenstein 1941). It does not fall with the square of the eye's distance: a beam 80 m away is as bright as at 10 m, but for the haze's own transmission on the way. Haze: &sigma; = "+V.haze.sigma_per_m+" /m ("+esc(V.haze.source)+"); g = "+V.haze.g+" ("+esc(V.haze.g_basis)+"). Width w = 4 mm + 1 mrad &middot; s. Power per colour from the datasheet (fixtures.json): ash white = 455 + 525 + 638 nm, ember red = 638 nm alone; the haze is taken as the same at the three wavelengths. Unit taken: "+S.variant+" (not confirmed). If the cubes are the 6 W unit, every figure below scales by "+S.six_watt_ratio["ash white"]+" for ash white and "+S.six_watt_ratio["ember red"]+" for ember red: still far above a dark club.");
 root.appendChild(table(["beam","eye distance m","angle to the beam","seen","cd/m²"],D.beams.filter(b=>b.cube<=3).flatMap(b=>D.vis[b.id].points.filter((x,i)=>i%2===0).map(x=>[b.id,x.eye_m,x.theta_deg+"°",x.seen?"yes":"hidden",x.cd_m2]))));
 note("Looking back toward the cubes (beams coming toward the crowd) is forward scatter: the brightest view. A dark club background is about 0.01 cd/m&sup2; (ASSUMED): every seen point is far above it. What limits the far options is coverage: haze has to fill the far half too (the 2 hazers moved to z &minus;18 in the painted design; the far half needs its own, owed).");
 h2("8","My advice on top of your placement");for(const a of V.advice)p("&middot; "+esc(a));
@@ -401,6 +424,8 @@ def main():
          'min_over_floor_m': min(r['min_over_floor_m'] for r in res), 'max_z': max(max(x['end'][2] for x in r['_rays']) for r in res),
          'moved': {o['id']: o.get('moves') for o in opts}}
     S['with_the_crane_as_photographed'] = crane_as_photographed(bs)
+    S['variant'] = VARIANT
+    S['six_watt_ratio'] = {c: round(colour_power(c, '6W')[1] / colour_power(c, '10W')[1], 2) for c in ('ash white', 'ember red')}
     pub = lambda r: {k: v for k, v in r.items() if not k.startswith('_')}
     if A2.check or not A2.out:
         print(json.dumps({'summary': S, 'beams': [pub(r) for r in res], 'vis': {k: {kk: vv for kk, vv in v.items() if kk != 'points'} for k, v in vis.items()}}, indent=1))
@@ -425,6 +450,10 @@ def main():
                   'stand_m': [0.0, 1.6, 12.0], 'point_yaw_deg': 0, 'point_pitch_deg': 15, 'aim_at_m': [0.0, 8.0, -20.0], 'covers_x_m': [-10, 10], 'covers_z_m': [-41, 20],
                   'look_for': 'the v2 beams run at 6.5-8.4 m down the whole nave. The point cloud shows a layer at 7.5-8.7 m over z 2-48 that the model lacks (2-6 photos agree), and photo 953 shows pendant lamps. Photograph the nave from the floor, level and 15 deg up, both ways; note the lowest point of every lamp, cable and hook, and where the near crane is parked',
                   'how': 'from z +12 toward the far gate, then from z -20 toward the stage; a laser-meter reading to the lowest lamp'})
+    shots.append({'for': 'the LaserCubes themselves: 10 W or 6 W?', 'fixtures': ['all 6 cubes'], 'stand_m': [0.0, 1.6, 0.0], 'point_yaw_deg': 0, 'point_pitch_deg': -60,
+                  'aim_at_m': [0.0, 0.5, -1.0], 'covers_x_m': [0, 0], 'covers_z_m': [0, 0],
+                  'look_for': 'the label on the back of each cube (model, output power, class): the plan takes 10 W (455 nm 5000 / 525 nm 2800 / 638 nm 2800 mW); a 6 W unit (2700 / 1500 / 1800 mW) changes the NOHD and the brightness',
+                  'how': 'one sharp photo of each label, wherever the cubes are'})
     zp = os.path.join(od, 'paint-zones-lasers-v2.json')
     zones = json.load(open(zp)) if os.path.exists(zp) else None
     P = lambda n: os.path.join(od, 'lasers-v2-%s.png' % n)
@@ -440,7 +469,7 @@ def main():
     finally:
         D.OB = OC.OB
     beams_pub = [pub(r) for r in res]
-    data = {'S': S, 'V2': {k: V2[k] for k in ('open', 'options_far', 'chosen_far', 'cubes', 'colours', 'colour_note', 'haze', 'advice', 'palette', 'looks', 'rules')},
+    data = {'S': S, 'V2': {k: V2[k] for k in ('open', 'options_far', 'chosen_far', 'cubes', 'colours', 'colour_note', 'haze', 'advice', 'palette', 'looks', 'rules', 'maker_warning')},
             'beams': beams_pub, 'vis': vis, 'rows': rows, 'shots': shots}
     import base64
     data['png'] = {k: 'data:image/png;base64,' + base64.b64encode(open(v, 'rb').read()).decode() for k, v in pngs.items()}
