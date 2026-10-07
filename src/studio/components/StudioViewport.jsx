@@ -18,6 +18,7 @@ import EntityContent from '../../project/viewport/EntityContent.jsx'
 import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
+import FormLight from '../../project/viewport/FormLight.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
@@ -733,6 +734,8 @@ function StudioSceneContent({
                     intensity={document.worldState?.environmentIntensity}
                 />
             )}
+            {/* the viewer's own Form look: a dim environment fill (viewLook.js); nothing in the Current look */}
+            <FormLight skip={Boolean(document.worldState?.environmentAssetId)} />
             {/* an authored 0 is dark (worldLights.js) */}
             <ambientLight color={arrivalLights.ambient.color} intensity={arrivalLights.ambient.intensity} />
             <directionalLight
