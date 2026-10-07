@@ -95,7 +95,7 @@ const SpaceContentsPage = lazy(() => import('./pages/SpaceContentsPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 const ForAppsPage = lazy(() => import('./pages/ForAppsPage.jsx'))
-const ShootPage = lazy(() => import('./shoot/ShootPage.jsx'))
+const ShootPage = lazy(() => import('./pages/shoot/ShootPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).

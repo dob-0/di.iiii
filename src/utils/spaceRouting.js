@@ -34,7 +34,7 @@ export const APP_PAGE_TOOLS = 'tools'
 // app, a script or an AI should identify itself, and the limits it meets. The
 // server's 429 and 403 answers point here, so no space may take the word.
 export const APP_PAGE_FOR_APPS = 'for-apps'
-// The shoot sheet — /shoot/{key} (src/shoot/ShootPage.jsx): a film crew's shared
+// The shoot sheet — /shoot/{key} (src/pages/shoot/ShootPage.jsx): a film crew's shared
 // plan for one shoot day, opened by its link. The key is the second segment and
 // the only credential (serverXR/src/routes/shootRoutes.js).
 export const APP_PAGE_SHOOT = 'shoot'

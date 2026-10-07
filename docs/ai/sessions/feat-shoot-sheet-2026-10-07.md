@@ -4,7 +4,7 @@
   di.iiii so the crew can tick props, write under them ("it's in Moct") and add things, from a shared link.
 - **Route** `/shoot/{key}` (`APP_PAGE_SHOOT`, reserved in `spaceRouting.js` and `shared/reservedSegments.cjs`; checked
   first that `/serverXR/api/spaces/shoot` and `/resolve/shoot` 404 on diiii.xyz and dev.diiii.xyz). Lazy page
-  `src/shoot/ShootPage.jsx`, its own scroll container (base.css pins the body).
+  `src/pages/shoot/ShootPage.jsx` (a plain page like /for-apps, so it lives under src/pages), its own scroll container (base.css pins the body).
 - **Server** `serverXR/src/routes/shootRoutes.js`, registered before the `/api` auth gates like `/api/track`:
   `GET /api/shoot/:key` (`?rev=` answers `{unchanged:true}` for pollers), `POST …/ops` (item.set / item.add /
   item.remove / cast.set / text.set, serialized per sheet with `createKeyedLock`), `PUT …/plan` (the seed),
@@ -20,6 +20,6 @@
   (`applyLocally` mirrors `applyShootOps`). Verified with two browsers on a local stack: a tick + note on one showed on
   the other in ~3 s, an added prop crossed the other way; desktop 1440 and phone 390 screenshots looked at.
 - Wiki: new entry `shoot-sheet`. Tests: `serverXR/src/routes/shootRoutes.test.js` (ops, link cleaning, mounted routes,
-  concurrent edits, file names), `src/shoot/shoot.test.js` (routing, picture matching, call-time order).
+  concurrent edits, file names), `src/pages/shoot/shoot.test.js` (routing, picture matching, call-time order).
 - Not done: no realtime push (polling only); no per-sheet admin or revoke other than removing the hash; photos can be
   replaced by anyone with the link (by design, same trust as ticking).

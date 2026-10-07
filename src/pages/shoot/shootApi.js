@@ -1,4 +1,4 @@
-import { apiBaseUrl } from '../services/apiClient.js'
+import { apiBaseUrl } from '../../services/apiClient.js'
 
 // The shoot sheet's whole conversation with the server (serverXR/src/routes/shootRoutes.js).
 // The key is the credential, so it only ever travels in the path, never in a

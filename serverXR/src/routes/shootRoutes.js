@@ -1,4 +1,4 @@
-// The shoot sheet — /shoot/{key} (src/shoot/ShootPage.jsx). A film crew's plan
+// The shoot sheet — /shoot/{key} (src/pages/shoot/ShootPage.jsx). A film crew's plan
 // for one shoot day: who arrives when, what each actor wears and brings, and a
 // tick box per prop that the whole crew shares.
 //

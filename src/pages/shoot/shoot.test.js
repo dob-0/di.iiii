@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { applyLocally, byCallTime, linkLabel, propPicture } from './shootApi.js'
-import { APP_PAGE_SHOOT, getAppLocationState, isReservedAppSegment } from '../utils/spaceRouting.js'
+import { APP_PAGE_SHOOT, getAppLocationState, isReservedAppSegment } from '../../utils/spaceRouting.js'
 
 const at = (pathname) => getAppLocationState({ pathname, search: '' })
 
