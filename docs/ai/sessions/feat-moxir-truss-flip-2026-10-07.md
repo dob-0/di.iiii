@@ -46,3 +46,10 @@
   unchanged at the defaults. (2) the room's hall GLB (A-08) and the project on dev/local: no server writes
   here. (3) tape the near crane's girder underside and gap on 10-08; at 7.70 the low end is 2.99 m, under the
   0.5 m margin. (4) rigging sign-off by a rigger.
+- Owner, after the scratch rebuild came back on an OLD hall (load-version copies the hall from its `--from`
+  project; the rehearsal took archived `moxir-hall`, GLB 70a52a79, not Known · full's df837baa): "you just
+  need to flip the truss, nothing to change — why did the crane place change?". New `scripts/rigbuild/mirror-cut.mjs`
+  mirrors ONLY the cut's 53 entities about x = 0 in an existing project (position x → −x, Euler (a,b,c) → (a,−b,−c),
+  names kept true) and leaves the other 74, the world and the render settings byte-identical. On scratch:
+  `moxir-known-full-flip` = local Known · full + the mirror (hall df837baa, 74/127 transforms unchanged, world and
+  render identical). Its whole-document write is for scratch only; a followed space (dev) needs ops — owed.
