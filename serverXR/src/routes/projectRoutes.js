@@ -55,6 +55,9 @@ function registerProjectRoutes(router, {
   setProjectVisibility = null,
   loadSpaceMeta = null,
   isSpaceOwnerOrAdminState = null,
+  // projectMove.js bound to the live database and spaces dir. Absent on a
+  // router built without it: the route then answers 501.
+  moveProject = null,
   TRASH_TTL_MS,
   listCollections,
   getCollection,
@@ -287,6 +290,11 @@ function registerProjectRoutes(router, {
         ...(source ? { source } : {}),
         ...(visibility ? { visibility } : {})
       })
+      // A followed space carries a project made with nothing in it (it has no
+      // ops to wake anyone): wake this install's follower, and release any
+      // di.iiii parked on the room's log. Never fatal.
+      try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+      try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
       res.status(201).json({
         project: meta,
         document: await readProjectDocument(spacesDir, spaceId, projectId)
@@ -404,6 +412,53 @@ function registerProjectRoutes(router, {
       const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
       res.json({ ok: true, trashed: true, ...(receipt || {}) })
     } catch (error) {
+      next(error)
+    }
+  })
+
+  // Move a project into another space of this install. Admin, or the owner of
+  // BOTH spaces: the move takes the work out of one space and puts it into
+  // another, so it needs the standing to change each. The body names the
+  // target; the project id never changes (it is global), so /api/projects/:id
+  // and /{space}/p/{id} keep working, and the old bare link answers through
+  // the project_moves line this writes (see projectMove.js).
+  router.post('/api/projects/:projectId/move', async (req, res, next) => {
+    try {
+      if (typeof moveProject !== 'function') {
+        return res.status(501).json({ error: 'Moving a project is not available on this server.' })
+      }
+      const project = await resolveProjectContext(req.params.projectId)
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      const toSpaceId = normalizeSpaceId(req.body?.toSpace)
+      if (!toSpaceId) {
+        return res.status(400).json({ error: 'toSpace must name the space to move the project into.' })
+      }
+      if (config.requireAuth) {
+        const state = req.authState || {}
+        const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(project.spaceId), loadSpaceMeta(toSpaceId)])
+        if (!toMeta) return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
+        if (!canAccessSpace(state, toSpaceId) ||
+          !isSpaceOwnerOrAdminState(state, fromMeta) || !isSpaceOwnerOrAdminState(state, toMeta)) {
+          return res.status(403).json({ error: 'Only an admin, or the owner of both spaces, can move a project between them.' })
+        }
+      }
+      const report = await withProjectLock(project.projectId, () => moveProject({
+        projectId: project.projectId,
+        toSpaceId,
+        unpublish: req.body?.unpublish === true,
+        dryRun: req.body?.dryRun === true
+      }))
+      res.json({
+        ok: true,
+        ...report,
+        stableLink: `/${toSpaceId}/p/${project.projectId}`
+      })
+    } catch (error) {
+      if (error?.name === 'MoveRefused') {
+        return res.status(error.status || 400).json({ error: error.message, code: error.code })
+      }
       next(error)
     }
   })
@@ -741,7 +796,8 @@ function registerProjectRoutes(router, {
       // The author, from the session — never from the ops — and, at the first
       // change of a new burst in this space, a restore point before it lands.
       const actor = actorFromAuthState(req.authState)
-      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor)
+      const wholeReplace = normalizedOps.some(op => op.type === 'replaceScene' || op.type === 'replaceDocument')
+      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor, wholeReplace ? { reason: 'before-whole-replace-op' } : {})
 
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the

@@ -63,6 +63,8 @@ export default function StudioPresentationSurface({
     onCloseHelp,
     overlays,
     rigMirror = false,
+    // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
+    graphRoom = null,
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -81,7 +83,15 @@ export default function StudioPresentationSurface({
     const rawHtml = hasFiles
         ? bundleCodeFiles(presentationState.codeFiles)
         : (presentationState.codeHtml || '')
-    const previewDocument = buildPresentationPreviewDocument(rawHtml)
+    // The page's own host, as the public view passes it (PublicProjectViewer):
+    // a page that loads its assets from `${diiPageOrigin}/serverXR/...` got an
+    // empty origin here and hung on its loader in Studio (di.laser's chapter,
+    // owner's screenshot 2026-10-05). The sandbox's opaque origin cannot supply it.
+    const previewDocument = buildPresentationPreviewDocument(
+        rawHtml,
+        '',
+        typeof window !== 'undefined' ? window.location.origin : ''
+    )
 
     if (showCodeView) {
         const isUrlSource = presentationState.codeSourceType === 'url'
@@ -175,6 +185,7 @@ export default function StudioPresentationSurface({
             overlays={overlays}
             rigMirror={rigMirror}
             smartView={STUDIO_SMART_VIEW}
+            graphRoom={graphRoom}
         />
     )
 }

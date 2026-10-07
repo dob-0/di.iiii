@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TOP_OPERATORS } from '../../../project/tops/topOperators.js'
+import { getNodeType } from '../../../project/nodeRegistry.js'
 import { SHADER_PREAMBLE, checkShader, shaderSourceFor } from '../../../project/tops/topEngine.js'
 import { registerTopThumbnail } from '../../../project/tops/topThumbnails.js'
 import { setInspectedTop, useTopReport } from '../../../project/tops/topReports.js'
@@ -41,7 +42,7 @@ export default function TopInsidePanel({ node, machines = [], top = 0, onPatchVa
         <div className="raw-top-inside" style={{ top }}>
             <header className="raw-top-inside-head">
                 <div>
-                    <p className="raw-top-inside-kicker">inside · {node.typeId}</p>
+                    <p className="raw-top-inside-kicker">inside · {getNodeType(node.typeId)?.label || 'operator'}</p>
                     <h2>{node.label || operator.label}</h2>
                 </div>
                 <p className="raw-top-inside-where">runs on <strong>{where}</strong></p>

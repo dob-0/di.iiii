@@ -15,9 +15,14 @@ export const parseArgs = (argv) => {
         if (name === 'port') { args.flags.port = argv[++i]; continue }
         if (name === 'out') { args.flags.out = argv[++i]; continue }
         if (name === 'from') { args.flags.from = argv[++i]; continue }
+        // `di update --channel dev` — which release channel, one value.
+        if (name === 'channel') { args.flags.channel = argv[++i]; continue }
         if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
+        // `di move PROJECT --to SPACE [--token -]`
+        if (name === 'to') { args.flags.to = argv[++i]; continue }
+        if (name === 'token') { args.flags.token = argv[++i]; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
         // `di stage join` — which mapping, which Chromium, what this machine

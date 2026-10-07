@@ -189,12 +189,13 @@ export const WIKI_ARTICLES = [
             'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
             'WHICH PAGE ANSWERS. A camera that runs on another machine is opened by a page on THAT machine that has the same project open — a projector page showing a different project cannot send it. Open Raw from your own machine\'s di (localhost), not from the other machine\'s address: a page over plain http from another machine cannot open any camera, and the Camera In card then says so instead of staying black. A browser that opens another machine\'s di by its address is a VISITOR there: the Desk says so, it lists none of that machine\'s devices, and that machine\'s operators reach it as pictures.',
             'WHEN BOTH CHANGE THE SAME THING. Edits to different things always reach both machines. If two people change the same thing at the same moment — both move one box — both machines settle on the HOST\'s version (the install that ran `di invite`), and the other change is undone; a restore point is kept first. A follow also remembers where it was, so a restart picks up without sending old edits again.',
-            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
+            'THE SPACE\'S OWN SETTINGS come from the host: its name, whether it is public, and which project is its front door. A host that keeps the space private makes your copy private; a public host never makes a copy you kept private public — `di follows` says so. A project only you hold is copied whole to the host the first time the two are compared. To give an existing follow a new key, run `di follow` again with `--key -` — it takes effect while di runs.',
+            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. After a restart it checks again what the project lists against what the other machine holds, and carries what is missing; `di follows` says how many files are still coming, out of how many are listed. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
             'SEND OUT puts a picture on the network so OTHER programs can use it — Resolume, OBS, a media server, somebody else\'s rig, or a machine that cannot run the patch. End a chain in a Send Out, give it a name, and that name appears as a source on the local network for anything that speaks NDI to pick up. No name means it sends nothing, which is the default. Between two linked di.iiii machines you do not need this at all: the patch itself travels and the wall draws it natively, at better quality than any encoding. It needs the NDI runtime installed on the machine that sends — di.iiii never ships it, and the operator says so plainly when it is missing. NDI\u00ae is a registered trademark of Vizrt NDI AB.',
             'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
         tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock', 'send', 'ndi', 'resolume', 'obs'],
-        updated: '2026-10-02'
+        updated: '2026-10-05'
     },
     {
         id: 'vj-deck-and-clip-in',
@@ -630,18 +631,19 @@ export const WIKI_ARTICLES = [
         body: [
             'A List window holds a list with headings: what a project needs, what it would be nice to have, what is already done. It is the alternative to keeping a list as written text, where moving one line from one heading to another means retyping two paragraphs and hoping nothing was lost on the way.',
             { list: [
-                'Type in a line to change it.',
-                'The arrows move a line up or down inside its own heading.',
-                'The dropdown beside a line moves it to a different heading.',
-                '× removes a line.',
+                'Type in a line to change it. A long line wraps instead of being cut off.',
+                '⋯ beside a line opens what you can do with it: move it up or down inside its own heading, move it to a different heading, or remove it (×).',
+                'Alt+↑ and Alt+↓ move the line you are typing in without opening ⋯.',
                 '+ Add puts a new line under the heading you pressed it on.'
             ] },
             'The headings are yours. Type in one to rename it — every line under it comes along, so nothing is stranded. “+ Add a group” makes another. Removing a heading never removes work: its lines move to the first heading rather than disappearing with it.',
             'Everything saves as you go, undo works on all of it, and anyone who can edit the project can maintain the list — including a collaborator who arrived by invite. If two of you have it open you will see each other working.',
-            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.'
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card. On a computer it opens docked on the right at full height, so the whole list is readable and the cards stay in view beside it; on a phone it opens over the canvas.',
+            'You do not have to open it to read it: the List’s card on the canvas shows its lines under their headings, and a Text card shows its first lines. A long list ends in “+ N more”.',
+            'Its card gives the list out on two joints: Rows (the lines, one per line, heading by heading) and Count. Wire Rows into a Text or a Scene’s Title to show the list somewhere else.'
         ],
-        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo'],
-        updated: '2026-08-21'
+        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo', 'card', 'docked'],
+        updated: '2026-10-02'
     },
     {
         id: 'free-spaces',
@@ -735,6 +737,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'space-own-domain',
+        category: 'Spaces & access',
+        title: 'Your space on your own domain',
+        summary: 'Type a domain you own into the space, add one DNS record, and that domain shows your space. You keep editing on di.iiii.',
+        body: [
+            'Open Manage on your space card on the Spaces page (/studio) and choose Own domain. Type the domain, for example yokozo.xyz, and press Add domain. Only the space\'s owner (or an admin) can do this, and only for a public space.',
+            'The panel then shows the record to add at the company that runs your domain\'s DNS: a CNAME pointing your domain at domains.diiii.xyz, and sometimes a TXT record that proves the domain is yours. A bare domain (yokozo.xyz rather than www.yokozo.xyz) needs a DNS provider that can flatten a CNAME at the root, such as Cloudflare.',
+            'Nothing else is needed. di.iiii checks every two minutes and switches the domain on by itself once the record is in place and the certificate is issued; Check now asks straight away. A domain that never gets its record is let go after 7 days, so nobody can hold someone else\'s name.',
+            'Once it is live, yourdomain.com shows the space and yourdomain.com/<project> shows that project, exactly as on di.iiii, with your domain staying in the address bar. It is the same space, not a copy: what you change on di.iiii shows on your domain at once.',
+            'Editing stays on di.iiii. Opening the editor, the admin page or sign-in on your domain takes you to the same place on di.iiii, where your session lives.',
+            'Add www.yourdomain.com as a second domain if you want both. Remove takes a domain off the space at once. A space can have up to 3 domains.'
+        ],
+        tags: ['domain', 'custom domain', 'own domain', 'dns', 'publishing', 'owner', 'spaces'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'space-ownership',
         category: 'Spaces & access',
         title: 'Who owns a space, and how to hand one over',
@@ -800,6 +818,26 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['studio', 'files', 'assets', 'code', 'content'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'studio-inside-a-geo',
+        category: 'Editing',
+        title: 'Studio inside a Geo',
+        summary: 'Open a Geo made in Nodes in Studio: Create puts things into it, Objects lists what stands in it, and Nodes sees every change live.',
+        body: [
+            'A Geo is the place you build in Nodes. Studio can stand inside one, and then it edits what stands there — the same things Nodes shows, in the same project, written the same way Nodes writes them. Nothing is copied: move a box in Studio and it has moved in Nodes.',
+            { list: [
+                'Getting in: on a Geo card in Nodes, the small ↗ in its header opens Studio inside that Geo. Standing inside a Geo in Nodes, the ⋯ menu has “Open … in Studio” (the easier tap on a phone). In Studio, the Geo menu at the top of the Create window lists the project’s Geos — “Whole room” is Studio as it always was — and “+ Geo” makes a new, empty Geo and steps into it.',
+                'The address says where you are: the project’s Studio address with ?geo= and the Geo’s id. Share or bookmark it and it opens inside the same Geo. The plain address still opens the whole room.',
+                'Create inside a Geo offers what exists as a node: box, sphere, cone, cylinder, plane, torus and the Point lamp, and files — a model, a video or a sound — from Import or the Files list. Each lands inside the Geo, as a card on the Geo’s own canvas in Nodes.',
+                'Objects lists what stands directly in the Geo. Select one there or in the room; in Edit mode the gizmo moves, turns and scales it, and the inspector edits its position, rotation, scale, colour and its other plain values. Double-click a row to rename it. Delete removes it, with what stands inside it, and undo brings it back.',
+                'The room shows the Geo’s inside, as Nodes does after ›: positions are the Geo’s own, so a thing at 0,0,0 stands at the Geo’s centre wherever the Geo itself stands.',
+                'In the whole room, Studio now also draws what Nodes made — every Geo with what stands in it, where Nodes draws it. There it is to look at; step into the Geo to change it.'
+            ] },
+            'Limits, plainly: Studio’s own objects (text, groups, portals, images, the spot, directional and ambient lights) cannot stand inside a Geo yet — Create inside a Geo leaves them out and says so if one is dropped in. Grouping, duplicating and copy/paste are for Studio’s objects and are off inside a Geo. The whole room keeps Studio’s own sky and lights; a Scene node’s sky or an Environment node’s light show in Nodes only. Nodes inside a Geo that are wiring, not things (a Time, a Math), stay a Nodes matter and are not listed.'
+        ],
+        tags: ['studio', 'geo', 'nodes', 'raw', 'container', 'editing'],
+        updated: '2026-10-02'
     },
     {
         id: 'scenes-that-show-themselves',
@@ -1195,7 +1233,7 @@ export const WIKI_ARTICLES = [
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the scene, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
                 'While you drag a wire, every input that can take it lights up and every input that cannot goes quiet — an incompatible drop no longer fails silently.',
                 'Starting from nothing: a blank canvas shows a “Build an example” button in the canvas’s lower band (out of the double-click zone). It builds a scene with a light, a cube, a colour wired into that cube, and an empty Model node waiting for your own file — plus a note giving the moves in plain words. It only offers itself on a truly blank canvas at the top level: inside a container the empty state stays yours (a stray double-click used to inject the whole demo INTO the container being filled); the ⋯ menu still offers it deliberately, anywhere. It is there because a blank canvas opens with no toolbar at all, so the ⋯ menu (which also offers it) does not exist for the person most likely to want it.',
-                'The Geo is the plain container — TouchDesigner’s Geometry COMP, by name. It arrives empty but is visibly a place (a faint floor tile marks its footprint), you enter it and collect what you need — objects, models, Lights — and everything renders inside it and travels with it. It adds nothing of its own — no shell, no rules — and it gives out what it collects: a Geometry port carrying everything standing in it as one shape, so Geo → Merge → Constructor composes collected scenes, and a Geo standing inside a Geo carries through. When in doubt, build in a Geo. A Geo stands on the floor, and in the scene a click picks up the whole Geo — drag it or set its Position to part two geos; enter the Geo to handle one thing inside. A place shows only what stands IN it: objects made in Studio’s Create window live in the project’s top scene and never appear inside a container.',
+                'The Geo is the plain container — TouchDesigner’s Geometry COMP, by name. It arrives empty but is visibly a place (a faint floor tile marks its footprint), you enter it and collect what you need — objects, models, Lights — and everything renders inside it and travels with it. It adds nothing of its own — no shell, no rules — and it gives out what it collects: a Geometry port carrying everything standing in it as one shape, so Geo → Merge → Constructor composes collected scenes, and a Geo standing inside a Geo carries through. When in doubt, build in a Geo. A Geo stands on the floor, and in the scene a click picks up the whole Geo — drag it or set its Position to part two geos; enter the Geo to handle one thing inside. A place shows only what stands IN it: objects made in Studio’s Create window live in the project’s top scene and never appear inside a container — except when Studio is standing inside a Geo (Studio inside a Geo), where Create makes nodes inside it.',
                 'Light and Environment are two nodes now, because they were always two things. A Light is a lamp: a real point light with a glowing marker, standing wherever you put it — top level or inside any container, no disappearing act. An Environment is the scene’s settings: the ambient wash and one sun (colour, intensity, direction), one per level, the ● toggle picking the active one. Old projects made before the split keep their old Light nodes and light exactly as they did.',
                 'The Camera is the authored eye. Placing one never steals the view: it stands in the scene as a small housing until the ● toggle on its card marks it as the eye for this level. Marked, the scene is seen through it — Position, Look At and FOV are inputs like any other, so a wire can move the shot — its housing disappears, and orbiting is off because the shot is authored. Unmark (or delete) it to look around freely again.',
                 'The projector cable: /out. Every project has an output address — /{space}/raw/projects/{id}/out — that renders just the scene, read-only, no toolbar, following every edit live. A space\'s own canvas has /{space}/raw/out (same browser only — a local canvas lives in that browser). Add ?scope= to output a container\'s scene; mark a Camera ● there and the output holds the authored shot. If the space is public, /out is public with it — open it on the show machine, press F11, walk away, no sign-in anywhere. In a private space it stays behind the same gate as the editor, so that machine has to be signed in as someone with access. The space\'s own canvas /out is always gated: it renders whatever is in THAT browser, so there is nothing in it to show anyone else.',
@@ -1217,7 +1255,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing', 'projects', 'list'],
-        updated: '2026-09-23'
+        updated: '2026-10-02'
     },
     {
         id: 'studio-node',
@@ -1281,21 +1319,59 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'scene-objects-and-picture',
+        category: 'Editing',
+        title: 'Wiring into a Scene, and a Scene as a picture',
+        summary: 'A Scene takes Objects in by wire and gives its Picture out. Text and List give what they say, so they can feed a Scene, a Plane or another Text.',
+        body: [
+            'A Scene is still a place you can go into (›) and fill by hand. It can now also be fed from outside, the way TouchDesigner’s Render takes geometry in and gives an image out.',
+            { list: [
+                'Objects: wire any shape (a Cube, a Sphere, a Transform, a Merge) into the Scene’s Objects joint and it stands on the Scene’s stage. For several, chain them through Merge first: one joint takes one wire.',
+                'Picture: the Scene’s Picture joint gives what its window shows, as a picture. Wire it into an Image, a picture operator or a Plane’s Texture. It is the same kind of picture a webcam gives, so anything that takes a webcam takes a Scene.',
+                'Text gives what it says on its Content joint (right side of the same row). List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
+            ] },
+            'Limits, stated plainly: the Picture is there only while the Scene’s own window is open in the editor; a closed window draws nothing, so it gives nothing. The /out page and Studio do not give a Scene’s Picture yet. The picture is the size of the window.'
+        ],
+        tags: ['raw', 'scene', 'objects', 'picture', 'texture', 'render', 'text', 'list', 'wire', 'nodes', 'merge'],
+        updated: '2026-10-02'
+    },
+    {
+        id: 'nodes-settings-column-and-inside',
+        category: 'Editing',
+        title: 'Nodes: the settings column and inside a node',
+        summary: 'Select a card and its column opens on the right — name, settings, ports with their live values, Open, and Delete at the bottom. Open a node and you see what it is made of at once: a List as a table, a Text as text, code as inputs, lines and outputs.',
+        body: [
+            'The right side of Nodes holds one thing at a time, beside the canvas and never over it: the selected card’s settings, the Outliner, Chat, Help, or a card’s reading (what it is made of). Opening one replaces whatever was there, and the canvas gives up the width and re-fits.',
+            { list: [
+                'The column opens a moment after a click, once a double-click can no longer be on its way, so a double-click always goes inside instead of landing in the column.',
+                'The column, top to bottom: the node’s name (click it, or press F2, to rename) and its kind; its settings, when it has any beyond what is typed in the card; its ports, each with what is in it now and where it is wired from or to; Open; and Delete, pinned to the bottom. It is never empty. A Text’s words are typed in its card: click the text of a selected Text card.',
+                'Open — double-click the card, press Enter, or the Open button — goes inside, every time. A container (Scene, Geo, Kiosk…) shows the nodes in it. A List opens as an editable table, a Text as a text editor, each with its ports down the sides. A maths, value or logic node opens as its inputs, its own settings above the platform’s lines that work it out (read-only — they are the same code for every project), and its outputs. A Cube or another shape shows what you placed in it above and its code below. A tool (Outliner, Library, Webcam…) fills the canvas.',
+                'The strip under the bar says where you are: ← Back, the node’s name, its kind and its counts. Escape goes back too.',
+                'On a phone the column is a sheet at the bottom, with Open first and Delete at the foot.'
+            ] }
+        ],
+        tags: ['nodes', 'raw', 'settings', 'inside', 'editing'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'raw-windows-travel-with-the-canvas',
         category: 'Editing',
         title: 'Panel windows: travelling with the canvas, or pinned to the screen',
-        summary: 'An unpinned panel window (Scene, Text, Image, List) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
+        summary: 'An unpinned panel window (Scene, Image, Browser, Monitor) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
         body: [
-            'A panel node — Text, Scene, Image, List, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
+            'Text and List have no window any more, on a computer or a phone: the card is where you read them and opening one is where you edit it (see “Nodes: the settings column and inside a node”).',
+            'A panel node — Scene, Image, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
                 'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
-                'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.'
+                'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
+                'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
+                'Escape closes the window in front that you opened or clicked — one per press. Windows the project opened with stay, and Escape still leaves a level when no such window is open. Closing only hides a window; double-click its card to open it again.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor'],
-        updated: '2026-09-03'
+        tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
+        updated: '2026-10-05'
     },
     {
         id: 'raw-on-a-phone',
@@ -1308,13 +1384,16 @@ export const WIKI_ARTICLES = [
                 'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
                 'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
                 'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
-                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'The ⤢ button fits every card, at whatever zoom that takes — on a phone a wide graph can land small, and pinching in from there is one gesture. Fits nobody asked for (opening, resizing) stop at a readable size and say "showing N of M".',
+                'Resizing the window (or turning the phone) keeps the cards: a view you have not moved fits again; a view you panned or zoomed keeps the same point in the middle, and if no card is left on screen it fits.',
+                'Which card is selected is yours alone. Selecting no longer writes to the project, so a click does not move anyone else\'s selection.',
+                'Tap a wire to mark it, then tap Remove wire to delete it — the tap area is much wider than the line you see, so a stray tap never removes anything.',
                 'Panel windows (Scene, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
             ] },
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
         ],
-        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
-        updated: '2026-08-19'
+        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor', 'fit', 'resize'],
+        updated: '2026-10-02'
     },
     {
         id: 'br-id-ge',
@@ -1407,6 +1486,7 @@ export const WIKI_ARTICLES = [
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, whether the room can reach it, and how much space your work takes',
+                'di service install — on Linux, hands the server to systemd: it starts at login and is started again within seconds if it ever stops without being asked (a crash, a stray kill). di down still stops it for good; di service remove undoes it',
                 'di up --lan — answers on this wifi too, so a phone in the room can open it (the lighting desk’s Touch page, for one). Auth is off on a local di.iiii, so this means anyone on that network can edit — di up says so every time, and it lasts for that start only: the next di up is back to this machine alone',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing',
                 'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
@@ -1418,7 +1498,7 @@ export const WIKI_ARTICLES = [
             'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-09-23'
+        updated: '2026-10-02'
     },
     {
         id: 'tools-room',
@@ -1770,6 +1850,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-29'
     },
     {
+        id: 'room-quality-lite-full',
+        category: 'Spaces & access',
+        title: 'Lite and Full — a room light enough for a phone',
+        summary: 'A published room is drawn two ways. Full is the work renderer: every lamp a real light, shadows, bloom, the floor\'s reflection. Lite is what everyone else sees: the same room following the same desk, light enough for a phone. The Full / Lite button under Walk / Fly switches between them.',
+        body: [
+            'Who gets which, by itself: a phone or a tablet, and anyone opening the room from another address, gets Lite. The machine the room is made on, with a mouse, gets Full. The button changes it and this browser remembers the choice; ?quality=lite or ?quality=full in the address wins over both.',
+            { list: [
+                'Lite keeps every beam and its lens, and the haze — the light you see in the air.',
+                'The light falling on the room comes from four real lights that follow the lamps that matter most in the look that plays, so the floor and the walls still answer the show.',
+                'Lite leaves out shadows, bloom, the floor\'s reflection and edge smoothing, and draws at one pixel per screen pixel.',
+                'Your saved room is never changed: Lite draws a copy.'
+            ] },
+            'Measured on a laptop\'s built-in graphics, a 70-lamp room: Full still had nothing on screen after a minute of preparing its shaders; Lite drew the hall and the beams in seconds and ran at over 200 frames a second at phone size.',
+            'The real lights never depend on this: the desk sends DMX from the server on its own clock, whatever any screen is doing.'
+        ],
+        tags: ['lite', 'full', 'quality', 'phone', 'mobile', 'performance', 'fps', 'lag', 'slow', 'shadows', 'bloom', 'output', 'visitor', 'moxir', 'rig', 'room'],
+        updated: '2026-10-04'
+    },
+    {
         id: 'rig-show-loop',
         category: 'Spaces & access',
         title: 'A show that loops — the cue list played by the desk, the room following it',
@@ -1826,12 +1925,14 @@ export const WIKI_ARTICLES = [
             'Open any version of a set and a row of names sits at the top of the room, one name per version. The version you are in is the pale one. Tap another and that version opens. The row lists only versions the space really holds and that you are allowed to see: a version that was archived, removed or is private to someone else is never a link, so a tap never lands on "Project not found". It is the same list, in the same order, from every version, so it does not reshuffle as you move between them.',
             'Old versions (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old versions (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
             'A room with only one version, or one that belongs to no set, shows no row at all. While the list is still being read the row shows only the version you are in, as a label with no links.',
+            'For the show. A production keeps one list of its versions in its space, and the list says what each one is: a candidate, a kept copy, a concept, archived, or the one for the show. At most one is for the show, and none is until someone chooses. Members of the space see the row in the list\'s order: the version for the show first, marked "for the show", then the candidates, then the kept copies folded, then the concepts folded; an archived version is not on the row. The row never chooses; a status is set from the terminal (scripts/production/versions.mjs). Anyone who is not a member sees the row as described above.',
+            'Concepts (n). A version kept on purpose as an idea is a concept. It is never deleted and is not on the main row: all the concepts fold behind one button, "Concepts (3)" for three of them, next to "Old versions". Tap it to open them, tap it again to close. A concept you are standing in stays on the row. A concept is not a copy of an older state (that is a kept copy) and not archived (an archived version is not on the row at all). Set from the terminal with versions.mjs, one version or all but the named ones.',
             'Walking in the room. In walk mode the top of the screen belongs to the room\'s own header, so the row folds to a single button under it, "Versions · " and the name of the version you are in. Tap it to open the column of versions, tap a name to go there; you do not have to leave walk mode first.',
             'On a phone held upright the row does not fit beside the Walk / Fly and Sound buttons, so it takes a line of its own under them, and the show chip moves down one line. If the names are wider than the screen the row scrolls sideways, with a soft fade on the edge where it goes on. Every name and button is a 44 px tap target. Not yet: the walk-mode button has been checked in tests, not yet on a real phone screen.',
             'What it does not do: it never copies, merges or deletes a version, and it does not tell you which one is better. Making a version, and keeping a copy of one, is done from the terminal with the rig scripts (docs/architecture/RIG_BUILD.md, the versions section).'
         ],
-        tags: ['rig', 'versions', 'version', 'switch', 'old versions', 'copy', 'walk', 'phone', 'moxir', 'minimal', 'full', 'set', 'room', 'compare'],
-        updated: '2026-09-30'
+        tags: ['rig', 'versions', 'version', 'switch', 'old versions', 'copy', 'walk', 'phone', 'moxir', 'minimal', 'full', 'set', 'room', 'compare', 'for the show', 'production', 'status', 'candidate', 'archived'],
+        updated: '2026-10-04'
     },
     {
         id: 'rig-patch-sheet-flags',

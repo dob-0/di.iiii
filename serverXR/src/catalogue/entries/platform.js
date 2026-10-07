@@ -206,4 +206,12 @@ module.exports = [
     agent: false,
     note: "serves an HTML page for crawlers, not JSON; a private space's card never distinguishes 'private' from 'does not exist'."
   },
+  {
+    route: "GET /api/host",
+    summary: "which space this host shows — how a space's own domain (yokozo.xyz) knows it is that space",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "answers from the request's own host; `space` is null for di.iiii's own addresses and for any domain that is not live on a public space. Cached for 60 s."
+  },
 ]

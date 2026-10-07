@@ -85,9 +85,15 @@ const main = async () => {
     const wantCues = args.cues ? String(args.cues).split(',').map((n) => Number(n) - 1) : null
     const sharp = (await import('sharp')).default
     const { chromium } = await import('playwright')
-    // A HEADED Chromium on the NVIDIA card through PRIME render offload, ANGLE on
+    // On Windows (ponyo): the installed Chrome, headless, on ANGLE's Direct3D 11 — the
+    // laptop's own GPU; Playwright's bundled Chromium is not installed there.
+    // Elsewhere: a HEADED Chromium on the NVIDIA card through PRIME render offload, ANGLE on
     // Vulkan — the combination that reached the RTX 3080 on aylmo (rig-look.mjs).
-    const browser = await chromium.launch({
+    const browser = process.platform === 'win32' ? await chromium.launch({
+        channel: 'chrome',
+        headless: true,
+        args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--ignore-certificate-errors']
+    }) : await chromium.launch({
         headless: false,
         env: {
             ...process.env,

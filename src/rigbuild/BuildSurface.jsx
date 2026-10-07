@@ -447,10 +447,19 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const runOf = useCallback((id) => runs.find((r) => r.ids.includes(id)) || null, [runs])
     const chosenLamp = chosenId ? model.lampById.get(chosenId) : null
     const aimedLamp = aim.lampId ? model.lampById.get(aim.lampId) : null
-    // A phone has no room for the project's name beside the exit (at 844 × 390 it wrapped
-    // the exit button under the build switch): the mode alone.
     const mode = crew ? 'crew' : building ? 'build' : 'walk'
-    const title = phone ? mode : `${projectDocument?.projectMeta?.title || projectId} · ${mode}`
+    // The bar above already names the project, and a phone has no room for it beside the exit
+    // (at 844 × 390 it wrapped the exit button under the build switch): the room's header says
+    // the mode alone, so the long name does not run across the truss.
+    const title = mode
+    // The tab says which show this is, like the other rig pages (the index.html default names
+    // the platform, not the show).
+    const projectTitle = projectDocument?.projectMeta?.title || projectId
+    useEffect(() => {
+        const prev = document.title
+        document.title = `${crew ? 'Crew' : 'Build'} — ${projectTitle}`
+        return () => { document.title = prev }
+    }, [crew, projectTitle])
     const hint = building && !crew
         ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/Z · up/down &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
         : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>

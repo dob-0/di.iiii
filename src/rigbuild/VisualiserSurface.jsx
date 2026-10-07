@@ -94,12 +94,16 @@ export default function VisualiserSurface({ spaceId, projectId, library: baseLib
     // (?probe=1, visProbe.js) so its fps can be read here and a harness can time it.
     const deskHref = useMemo(() => {
         const path = lightingDeskPath({ spaceId, projectId, label: title })
-        return `${path}${path.includes('?') ? '&' : '?'}from=visualise`
+        // #touch: the desk opens on its looks and cue bar, the page a person tests a show from —
+        // not on Setup (the desk's default), whose Patch/Unpatch sit one click from a slip
+        return `${path}${path.includes('?') ? '&' : '?'}from=visualise#touch`
     }, [spaceId, projectId, title])
     // In the split the room is a window inside this page (?embed=1: no bar, no badge, no
     // Walk/Fly of its own — PublicProjectViewer); popped out it is the whole room page.
     const roomHref = useMemo(() => `${buildPublicProjectPath(spaceId, projectId)}?probe=1`, [spaceId, projectId])
-    const roomFrameSrc = `${roomHref}&embed=1`
+    // &views=1: the room keeps its view chips (Floor, DJ, Top…) inside the split — a look is
+    // judged from where the audience stands, and the opening close-up hid 9 of 20 looks
+    const roomFrameSrc = `${roomHref}&embed=1&views=1`
 
     // The room's readout: its own drawn fps and the stream it listens to (same origin).
     useEffect(() => {
@@ -209,9 +213,10 @@ export default function VisualiserSurface({ spaceId, projectId, library: baseLib
             <RigBar spaceId={spaceId} projectId={projectId} projectLabel={title} here="visualise" progress={progress} isLocalInstall={localInstall.isLocal} layout="flow" />
             <div className="vis-line" role="toolbar" aria-label="Visualiser layout">
                 <span className="vis-title">visualiser</span>
-                <button type="button" className={pill(!layout.only)} onClick={() => set({ only: null })} aria-pressed={!layout.only}>both</button>
-                <button type="button" className={pill(layout.only === 'desk')} onClick={() => set({ only: 'desk' })} aria-pressed={layout.only === 'desk'}>desk only</button>
-                <button type="button" className={pill(layout.only === 'room')} onClick={() => set({ only: 'room' })} aria-pressed={layout.only === 'room'}>room only</button>
+                {/* lit by what is actually on this page: a side popped into its own window is not here */}
+                <button type="button" className={pill(showDesk && showRoom)} onClick={() => set({ only: null })} aria-pressed={showDesk && showRoom}>both</button>
+                <button type="button" className={pill(showDesk && !showRoom)} onClick={() => set({ only: 'desk' })} aria-pressed={showDesk && !showRoom}>desk only</button>
+                <button type="button" className={pill(showRoom && !showDesk)} onClick={() => set({ only: 'room' })} aria-pressed={showRoom && !showDesk}>room only</button>
                 <button type="button" className="vis-btn" onClick={() => set({ swapped: !layout.swapped })} title="Swap the two sides">⇄ swap</button>
                 {popped.desk
                     ? <button type="button" className="vis-btn is-on" onClick={() => bringBack('desk')}>desk back in</button>
@@ -219,9 +224,11 @@ export default function VisualiserSurface({ spaceId, projectId, library: baseLib
                 {popped.room
                     ? <button type="button" className="vis-btn is-on" onClick={() => bringBack('room')}>room back in</button>
                     : <button type="button" className="vis-btn" onClick={() => popOut('room')} title="Open the room in its own window (or on another machine) — it stays in sync">room ↗</button>}
-                <span className="vis-read" aria-live="off">
+                {/* in words a person reads: is the room smooth, is the desk connected (the frame counts
+                    "desk 0 frames/s pushed" read as a failure on a show that is simply holding a look) */}
+                <span className="vis-read" aria-live="off" title={readout.mode === 'stream' ? `desk stream: ${readout.stream ?? 0} changes/s` : undefined}>
                     {readout.fps != null ? `room ${readout.fps} fps` : 'room …'}
-                    {readout.mode === 'stream' ? ` · desk ${readout.stream ?? '…'} frames/s pushed` : readout.mode === 'poll' ? ' · desk polled 10/s' : ''}
+                    {readout.mode === 'stream' || readout.mode === 'poll' ? ' · desk connected' : ' · desk …'}
                 </span>
             </div>
             {assumed.length ? (

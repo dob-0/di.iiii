@@ -11,6 +11,10 @@
  *       --space moxir --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 --label "old hall 09-29" \
  *       [--suffix oldhall-0929] [--siblings <file>] [--dry-run]
  *   node scripts/rigbuild/copy-version.mjs … --undo --to moxir-hall-minimal-oldhall-0929   # delete the copy (only it)
+ *   node scripts/rigbuild/copy-version.mjs --api https://dev.diiii.xyz/serverXR --token-file <dev token> \
+ *       --from-api http://<ponyo>:4100/serverXR --from-token-file <a DUMMY token file, never the dev key> \
+ *       --space moxir --from moxir-hall-known-full --to moxir-hall-known-full --label "PONYO 10-04"
+ *       # from ANOTHER install: read there, written here
  *   node scripts/rigbuild/copy-version.mjs … --adopt --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 \
  *       --label "old hall 09-29" [--suffix oldhall-0929] [--siblings <file>] [--dry-run]   # give an existing copy its mark back
  *
@@ -281,7 +285,7 @@ export const freshMarkProblem = (entities) => {
 }
 
 /** Every flag this script reads; anything else is a typo, and a typo must never fall through to a write (`--dryrun`). */
-export const KNOWN_FLAGS = ['api', 'token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space']
+export const KNOWN_FLAGS = ['api', 'token-file', 'from-api', 'from-token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space']
 /** The arguments this script does not know: unknown --keys and stray words (an em dash pasted for `--`). Pure. */
 export const unknownArgs = (args) => [...Object.keys(args).filter((k) => k !== '_' && !KNOWN_FLAGS.includes(k)).map((k) => `--${k}`), ...(args._ || [])]
 
@@ -331,6 +335,15 @@ const main = async () => {
     const suffix = String(args.suffix || defaultSuffix(label)) || die('empty suffix')
     const siblings = readSiblings(args.siblings)
     const dry = Boolean(args['dry-run'])
+    // --from-api: the source lives on ANOTHER install (PONYO's room into dev's space, 2026-10-04).
+    // Only read there — meta, document, asset bytes; everything written goes to --api. It takes its
+    // OWN token file, never --token-file's: that is the target's key, and it would travel to the
+    // other install (over plain http on a tailnet) with every read. A local install with auth off
+    // takes any token, so a dummy file is enough there.
+    const fromApi = args['from-api'] ? String(args['from-api']).replace(/\/+$/, '') : null
+    if (fromApi && !args['from-token-file']) die("--from-api needs its own --from-token-file (never the target's token: it would be sent to the other install) — nothing was done")
+    const source$ = fromApi ? makeClient(fromApi, readToken(path.resolve(String(args['from-token-file'])))) : client
+    const where = fromApi ? ` on ${fromApi}` : ''
 
     // 1. the new id must be free — on the whole install, not only in this space
     const taken = await client.get(`/api/projects/${to}`)
@@ -338,15 +351,15 @@ const main = async () => {
     if (taken.status !== 404) die(`checking ${to}: ${taken.status} ${taken.text.slice(0, 200)}`)
 
     // 2. the source, as it is now
-    const meta = await client.get(`/api/projects/${from}`)
-    if (!meta.ok) die(`reading ${from}: ${meta.status}`)
-    const src = await client.get(`/api/projects/${from}/document`)
-    if (!src.ok) die(`reading ${from}'s document: ${src.status}`)
+    const meta = await source$.get(`/api/projects/${from}`)
+    if (!meta.ok) die(`reading ${from}${where}: ${meta.status}`)
+    const src = await source$.get(`/api/projects/${from}/document`)
+    if (!src.ok) die(`reading ${from}'s document${where}: ${src.status}`)
     const source = src.body.document
     // the project's own title (the space's list) ends with the label; the version mark's title
     // carries it before its dash, for the switch's button (copiedEntities)
     const title = `${meta.body.project?.title || source.projectMeta?.title || from} · ${label}`
-    say(`${from} (version ${src.body.version}, ${source.entities.length} entities, ${source.assets.length} assets) → ${to} "${title}"`)
+    say(`${from}${where} (version ${src.body.version}, ${source.entities.length} entities, ${source.assets.length} assets) → ${to} "${title}"`)
     // the new mark must survive the server's normaliser — before anything is created, not after "written"
     const problem = freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings }))
     if (problem) die(`${to}: the copy's version mark would be lost — nothing created: ${problem}`)
@@ -362,7 +375,7 @@ const main = async () => {
     const remap = {}
     const assets = []
     for (const a of source.assets) {
-        const got = await client.bytes(`/api/projects/${from}/assets/${a.id}`)
+        const got = await source$.bytes(`/api/projects/${from}/assets/${a.id}`)
         if (!got.ok) die(`downloading ${a.name} (${a.id}): ${got.status}`)
         const form = new FormData()
         form.append('asset', new Blob([got.buffer], { type: a.mimeType || 'application/octet-stream' }), a.name)
@@ -386,9 +399,89 @@ const main = async () => {
     if (!same) die(`${to}: read back ${back.body?.document?.entities?.length} entities / ${back.body?.document?.assets?.length} assets, the source has ${source.entities.length} / ${source.assets.length}`)
     const backMark = back.body.document.entities.find((e) => e?.id === RIG_SHOW_ID)?.components?.rigVariant
     if (freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings })) === null && source.entities.some((e) => e?.components?.rigVariant) && !backMark?.copyOf) die(`${to}: written, but the version mark did not stay (no rigVariant.copyOf on ${RIG_SHOW_ID} read back) — run --adopt to repair it`)
-    say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from} was only read`)
+    say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from}${where} was only read`)
+}
+
+// ---- the production's version list (docs/architecture/decisions/2026-10-04-production-versions.md) --------
+//
+// Run around main(), not inside it, so main's own lines stay as they are: a copy is listed in the same
+// run that makes it. A new copy → `kept-copy`, made from the source's version; a copy brought from another
+// install under its own id (--from-api, from == to) → a `candidate`; --adopt → registered from its mark (a
+// listed copy keeps its status); --undo → taken out of the list. --dry-run writes no list either. A list
+// write that fails after the copy is made says so and names the command that finishes it.
+
+/** What the list step will do for these arguments: 'undo' | 'adopt' | 'copy' | null (nothing: a dry run, or arguments main refuses). Pure. */
+export const listStepFor = (args) => {
+    if (!args?.api || !args.to || args['dry-run'] || unknownArgs(args).length) return null
+    if (args.undo) return 'undo'
+    if (args.adopt) return args.from && args.label ? 'adopt' : null
+    return args.space && args.from && args.label ? 'copy' : null
+}
+
+/**
+ * The entry fields for a copy just made, from the copy's own mark read back. Pure.
+ * { production, id, status, madeFrom, note } or null when the copy carries no mark (not a version).
+ */
+export const copyListing = (mark, { from, to, fromApi = null }) => {
+    if (!mark?.set || !mark.id) return null
+    const sameId = from === to
+    return {
+        production: mark.set,
+        id: mark.id,
+        status: sameId ? 'candidate' : 'kept-copy',
+        madeFrom: sameId ? null : (mark.copyOf?.id || null),
+        note: sameId ? `Brought from another install${fromApi ? ` (${fromApi})` : ''} under the same id by copy-version.mjs --from-api.` : `A labelled copy of ${from}${mark.copyOf?.label ? ` ("${mark.copyOf.label}")` : ''}.`
+    }
+}
+
+const listStep = async (args, before) => {
+    const step = listStepFor(args)
+    if (!step) {
+        if (args?.['dry-run']) say('--dry-run: the version list is not written either')
+        return
+    }
+    const { makeClient: client$, readToken: token$ } = await import('../place/api.mjs')
+    const versionList = await import('../production/versionList.mjs')
+    const api = String(args.api).replace(/\/+$/, '')
+    const tokenFile = path.resolve(String(args['token-file']))
+    const client = client$(api, token$(tokenFile))
+    const to = String(args.to)
+    if (step === 'undo') {
+        if (!before?.mark?.set) return say(`${to}: carried no version mark, so no version list to update`)
+        const list = await versionList.readList(client, before.mark.set)
+        if (!list.entries.some((v) => v.projectId === to)) return say(`${to}: not in the version list of ${before.mark.set} — nothing to take out`)
+        const id = list.entries.find((v) => v.projectId === to).id
+        await versionList.removeEntry({ client, api, tokenFile, production: before.mark.set, meta: { id: before.mark.set }, log: say }, id)
+        return
+    }
+    const project = await versionList.readProject(client, to)
+    if (!project?.mark?.set) return say(`${to}: carries no version mark — not a version, not listed`)
+    if (step === 'adopt') {
+        const { run } = await import('../production/versions.mjs')
+        await run(['--api', api, '--token-file', tokenFile, 'register', to], { client, log: say })
+        return
+    }
+    const from = String(args.from)
+    const listing = copyListing(project.mark, { from, to, fromApi: args['from-api'] ? String(args['from-api']) : null })
+    await versionList.recordMadeVersion({
+        client, api, tokenFile, space: String(args.space), production: listing.production, title: listing.production,
+        projectId: to, id: listing.id, tool: args['from-api'] ? 'copy-version.mjs --from-api' : 'copy-version.mjs',
+        status: listing.status, madeFrom: listing.madeFrom, note: listing.note, log: say
+    })
+}
+
+/** For --undo the copy is gone after main(): read which production it belonged to first (GET only). */
+const beforeStep = async (args) => {
+    if (listStepFor(args) !== 'undo') return null
+    const { makeClient: client$, readToken: token$ } = await import('../place/api.mjs')
+    const client = client$(String(args.api).replace(/\/+$/, ''), token$(path.resolve(String(args['token-file']))))
+    const got = await client.get(`/api/projects/${args.to}/document`)
+    return { mark: got.ok ? markOf(got.body?.document) : null }
 }
 
 if (isMainModule(import.meta.url)) {
-    main().catch((error) => die(error.stack || error.message))
+    const listArgs = parseArgs()
+    beforeStep(listArgs)
+        .then((before) => main().then(() => listStep(listArgs, before)))
+        .catch((error) => die(error.stack || error.message))
 }

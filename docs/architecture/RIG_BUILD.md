@@ -550,8 +550,8 @@ lists) and `schemaSync.test.js` holds them together.
 Each item carries its sheet cells (`Price list!A6:E6`) and the order's own words. The
 importer refuses a code the sheet does not list. An order above the listed stock is written
 with a note, not refused. The importer also says where the workbook disagrees with itself.
-For MOXIR, the quote calculator's hidden "Price data" sheet has UP-B380F at 19000 AMD a
-day, while the visible list says 20000. The quote sheet itself is blank, so no line of the
+For MOXIR, the quote calculator's hidden "Price data" sheet has a different UP-B380F day rate
+from the visible list (both numbers are in the private repo, not here). The quote sheet itself is blank, so no line of the
 order is confirmed by the rental house.
 
 A card shows `placed n / ordered m` for its type (`rentalCounts`), with its mode, footprint
@@ -846,8 +846,8 @@ from OFL is placed, drawn, patched and counted like a UPlight type.
 Cost of a line = rate × quantity × billed days, billed days = 1 + (days − 1) × 0.5. The rule is
 the spreadsheet's (`"Price list"!A2` "Day 1 full rate; each additional day 50%.", `"Quote 2"!E7`,
 `"Price data"!H2 = 0.5`); `equipment.test.js` holds `billedDays` to the sheet's own 2-day /
-3-day / 1-week columns (20000 → 30000 / 40000 / 80000; 13500 → 20250 / 27000 / 54000).
-Delivery, rigging and de-rig are "On request" (row 36) — the calculator's default 150000 AMD
+3-day / 1-week columns (the multiples 1.5 / 2 / 4 of the day rate; the rates are invented in the test).
+Delivery, rigging and de-rig are "On request" (row 36) — the calculator's default amount
 (`"Quote 2"!G38`) is printed as a term, never added to the total. VAT excluded, as the sheet.
 Power = Σ quantity × datasheet max (items with `watts`). Universes = the list's lamps packed in
 list order, a lamp never split across two (ANSI E1.11) — a planning count; owed modes are
@@ -1083,6 +1083,8 @@ shit"*. Same hall, same DJ booth, same zones; what changes is how much is hung a
 
 ### 15.1 The data model — a version is a PROJECT (decision)
 
+> Since 2026-10-04 the production's version list also has the status `concept`: a version kept on purpose as an idea, folded on the row under one "Concepts (n)" button beside "Old versions (n)" (decision note 2026-10-04-production-versions.md, "Concept").
+
 Each version is a project of the space beside the hall's own: `moxir-hall-minimal`, `-middle`,
 `-full`; the hall's own project (`moxir-hall`, the rig as ordered) is the fourth member of the set.
 Considered and not chosen: a `variant` field on every lamp inside one project. Every view (plot,
@@ -1109,6 +1111,14 @@ copyOf? }, lifted by the server from the cached document read). So archived, dra
 never appear for a viewer who may not see them, a version made later is on every older version's row,
 and the row is the same from each. Order: by project id; labelled copies (`copyOf`) after the live
 versions, behind a divider. A mark with no `siblings` still works. Pure part: `src/rigbuild/rigVariant.js`.
+
+**The switch reads the production's version list first (2026-10-04).** One list per production, kept in the
+space as the project `<set>-versions` (private), one entity per version, each with a status — `for-the-show` ·
+`candidate` · `kept-copy` · `archived`, at most one for the show. With a list, the row is the list: the version
+for the show first and marked "for the show", then candidates, kept copies folded, archived versions not on the
+row; linked only where the space holds the project for this viewer. Without one (a visitor, or an install that
+has none) the row is as above. `siblings` is legacy: read only as the last fallback. Decision, method and
+limits: `docs/architecture/decisions/2026-10-04-production-versions.md`. Tools: `scripts/production/`.
 
 ### 15.2 Made as data, generated, tested
 
@@ -1529,6 +1539,10 @@ copies". A backup and the op log are not enough; he opens old and new side by si
   Notes and the exact commands: `PROGRESS.md` (the note folded at land: "copy-version --adopt").
 - Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes; `--adopt`: the mark given
   back, refusals, idempotence, dry run, one op on the show entity only).
+- **Listed in the same run (2026-10-04).** A new copy goes into the production's version list as `kept-copy`,
+  made from its source version; a copy brought from another install under its own id (`--from-api`) as a
+  `candidate`; `--adopt` registers the copy; `--undo` takes it out of the list; `--dry-run` writes no list.
+  Guard: `copy-version-list.test.js`. The decision: `docs/architecture/decisions/2026-10-04-production-versions.md`.
 
 ### 15.12 Movers on the ground — Minimal and Full with nothing that moves in the air (2026-09-30)
 
@@ -2361,3 +2375,47 @@ yet. KEEP MINE and KEEP BOTH leave the ledger as it was, so the row stays "chang
 takes mine from this copy's export. The ledger lives in one browser: another browser on the same install starts
 with no bases (every differing scene reads "changed on both"). The file's `lastSync` is carried but not read on
 import. Scene ORDER is still not synced (§21).
+
+## 23. The picture from the code — `apply-picture.mjs` (2026-10-04)
+
+**The defect.** On /moxir/p/moxir-hall-known-ground the owner saw a round "porthole". Measured: that project's
+`worldState.fog` was {near 0, far 32} in a 108 m hall, and three.js linear fog (`<fog>` in
+`src/components/LiveProjectScene.jsx`) blacks out everything past `far`. Every rig file in git says
+`night.fog` {near 60, far 250}. Dev's data had drifted into two families: far 32 with `toneMappingExposure`
+3.5 and `atmosphere` σ 0.05, and far 250 (or 80) with exposure 1 and no atmosphere.
+
+**What wrote the values.** `scripts/rigbuild/realism.mjs` (commit bc511e97, 2026-09-29, §20) writes, per
+project and by hand, fog 0…1.6/σ = 32 m (`hazeFog`), exposure 3.5 and the atmosphere. It was run on some
+versions and not others. It stands for the haze's extinction; it was never in the rig file, so a project
+made again from code (load-version → `nightOps`) got 60/250 while a realism project kept 32. `1a96b664`
+(work light) then set the ambient per exposure.
+
+**The tool.** `scripts/rigbuild/apply-picture.mjs` (a new script: `realism.mjs` owns the haze, the hall copy
+and the beam apertures, and refuses any host but a local install; this one writes only the rig file's
+`night` and `budget`, to any install named). For each version it takes the rig file (list entry `rig.file`,
+else the code's versions file, else `rigVariant.source`) and writes background, ambient, directional, fog
+(and `shadows` when the rig says false) through the ops route at the re-read version, reads back, and
+refuses on a mismatch. The previous values go to `~/.di/picture-undo/<project>-<time>.json` first; `--undo
+<file>` puts them back. `--dry-run` prints `before → after` per field. `--fields fog,background` writes
+only some groups. A field the rig file lacks is left and reported "not in the code". `toneMappingExposure`
+and `renderSettings.atmosphere` are in no rig file and are never written; each project reports what it holds.
+The list entry's note becomes "picture from code <rig file>@<blob> — not yet matched to reality (light-meter
++ photo test owed)" and its fingerprint is re-recorded.
+
+**Limit, owed.** The code's ambient (0.5) and directional (0.22) assume exposure 1. On a project still at
+exposure 3.5 they are 3.5 times brighter on screen than the realism night (ambient 0, then the work light
+0.4/3.5). Use `--fields fog,background` on those until the exposure is decided in the code, or decide it. The
+picture is not matched to reality: a light-meter and photo test is owed.
+
+### Supplier prices are private (2026-10-05)
+
+The rental house's prices are the supplier's; this repo is public. No `rate` is committed in
+`scripts/rigbuild/rentals/`, `scripts/place/rigs/` or `src/rigbuild/`; `rental.mjs` reads the rates
+from the spreadsheet for its hidden-sheet check but never writes them; the equipment page shows
+"price: private" and counts units, stock, placed and watts without a price. On the owner's machine,
+`DI_PRIVATE_PRICES=<csv with the columns model,amd_1_night>` (the private repo dob-0/di-atlas,
+`production/rental-house-2026-09-27.csv`) makes the Node scripts (`versions-report.mjs`) price a
+version: `scripts/rigbuild/privatePrices.mjs`. It is never imported by `src/` and never goes into a
+pack. `scripts/rigbuild/noSupplierPrices.test.js` fails if a price field with a number, or a
+"<n> AMD" / "<n>/day" text, comes back. A document that already holds rates (the dev project
+`moxir-hall-known-full`) is data, edited by the owner, not by this code.

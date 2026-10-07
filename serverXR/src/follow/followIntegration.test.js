@@ -2,17 +2,20 @@
 
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { side, startFollowing } = require('./follower.js')
+const { side, startFollowing, startCursorAt } = require('./follower.js')
+const { sceneStream } = require('./streams.js')
 const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClient.js')
+const { CONVERGE_CLIENT } = require('./followConverge.js')
 
 // Two real serverXR processes, real HTTP between them, and the real follower
 // running in this process — nothing here is stubbed, because the thing under
@@ -20,13 +23,11 @@ const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClie
 // A unit test of followPlan.js already proves the rule (followPlan.test.js);
 // only two servers can prove the rule is wired to anything.
 //
-// The budget is generous for one reason, and it is the follower's, not the
-// machine's: the loop parks its read on the other install for WAIT_SECONDS
-// (20s), and a write made HERE cannot leave until that parked read comes back
-// — wake() can cut a sleep but not an in-flight request. So an edit made on
-// the following side can sit for a whole park before it travels. Deadlines
-// below are sized for that; none of them is a sleep, so the file gets faster
-// on its own the day that changes.
+// The budget is generous, though no deadline below is a sleep: the loop parks
+// its read on the other install for WAIT_SECONDS (20s), and an edit that was
+// not woken would sit out a whole park before it travelled. wake() abandons a
+// parked read, and since 2026-10-04 a wake that lands mid-tick is latched — the
+// last describe block holds every crossing under three seconds.
 vi.setConfig({ testTimeout: 45_000, hookTimeout: 60_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -65,7 +66,7 @@ const waitForHealth = async ({ url, child, getLogs }) => {
  * outage case restarts the SAME install rather than a fresh one — a follower
  * that only works against a machine that lost its disk proves nothing.
  */
-const startServer = async ({ port = null, dataRoot = null } = {}) => {
+const startServer = async ({ port = null, dataRoot = null, requireAuth = false } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-cwd-'))
     const sandboxDataRoot = dataRoot || await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
     const listenPort = port || await getFreePort()
@@ -79,7 +80,8 @@ const startServer = async ({ port = null, dataRoot = null } = {}) => {
         API_TOKEN,
         CORS_ORIGINS: '*',
         AUTH_SESSION_SECRET: 'test-session-secret',
-        REQUIRE_AUTH: ''
+        REQUIRE_AUTH: requireAuth ? 'true' : '',
+        ...(requireAuth ? { AUTH_SESSION_COOKIE_SECURE: 'false', AUTH_HUB_URL: 'off' } : {})
     }
     delete childEnv.SPACES_DIR
     delete childEnv.UPLOADS_DIR
@@ -242,10 +244,8 @@ describe('a space that lives on two di.iiii at once', () => {
         expect(log.latestVersion).toBeGreaterThan(0)
     })
 
-    // The slow direction, and the one worth watching: the loop has parked its
-    // read on the host, and this edit cannot leave until that read returns —
-    // measured at a full 20s here. Nothing below waits on a clock; the
-    // deadline is only wide enough to survive the park.
+    // The direction worth watching: the loop has parked its read on the host,
+    // and this edit leaves only because wake() abandons that read.
     it('carries an edit made on the follower back to the host', async () => {
         const written = await writeOp(following, addObject('chair', 'op-follower-chair'))
         expect(written.status).toBe(200)
@@ -292,8 +292,15 @@ describe('a space that lives on two di.iiii at once', () => {
         // back by the side that made it. Without the receiving route's opId
         // dedupe — or without the follower's own seen set — an op would land
         // again each pass and the log would grow on its own, forever.
+        //
+        // Counted as EDITS: the rug and the door landed in a different order on
+        // each side, so the follower may by now have taken the host's copy of
+        // the scene (followConverge.js) — its own write, made once, never
+        // carried. Whether it is there yet is only a matter of how fast the
+        // follow went quiet.
+        const edits = (log) => opIds(log).filter(id => !String(id).startsWith(CONVERGE_CLIENT))
         for (const [name, server] of [['host', hosting], ['follower', following]]) {
-            const ids = opIds(await readOps(server))
+            const ids = edits(await readOps(server))
             const counts = ids.reduce((acc, id) => ({ ...acc, [id]: (acc[id] || 0) + 1 }), {})
             const repeated = Object.entries(counts).filter(([, count]) => count > 1)
             expect(`${name}: ${JSON.stringify(repeated)}`).toBe(`${name}: []`)
@@ -302,8 +309,8 @@ describe('a space that lives on two di.iiii at once', () => {
 
         // And the same four edits, not four different ones each.
         const [hostIds, followerIds] = await Promise.all([
-            readOps(hosting).then(log => opIds(log).sort()),
-            readOps(following).then(log => opIds(log).sort())
+            readOps(hosting).then(log => edits(log).sort()),
+            readOps(following).then(log => edits(log).sort())
         ])
         expect(followerIds).toEqual(hostIds)
     })
@@ -529,7 +536,11 @@ describe('a followed space stays one space', () => {
         expect((await writeOp(hosting, update('box', 'named on the host', 'op-name-host'))).status).toBe(200)
         expect((await writeOp(following, update('box', 'named on the follower', 'op-name-follower'))).status).toBe(200)
 
-        follower = follow()
+        // No saved cursors here, so this restart would start from now — and a
+        // start from now by design carries nothing from the time apart. This
+        // test is about the ops crossing and then the host's value winning, so
+        // it asks for the old start (`start: 'replay'`, `di follow --replay`).
+        follower = follow({ start: 'replay' })
         try {
             await settle('both name edits on both sides', async () => {
                 const [h, f] = await Promise.all([readOps(hosting), readOps(following)])
@@ -577,6 +588,758 @@ describe('a followed space stays one space', () => {
             expect(opIds(await readOps(following))).not.toContain('op-lamp-once')
         } finally {
             follower.stop()
+        }
+    })
+})
+
+// Measured on real machines on 2026-10-04 (aylmo following dev.diiii.xyz): after
+// a quiet spell an edit crossed in half a second, but an edit made RIGHT AFTER
+// one had been carried waited out the whole twenty-second park, in either
+// direction. A tick reads every project, then parks on the scene's log; an edit
+// that lands between the two was lost — the local wake found nothing to wake,
+// and the host's release came before anyone was parked. On loopback that gap
+// is microseconds and nothing shows, so the follow here reaches the host
+// through a proxy that holds every byte for DELAY_MS each way, the way the
+// internet does. It runs as it runs in an install — inside the following
+// server, from its follows.json, woken by that server's own write routes — and
+// each edit is made the moment the last has landed, which is what a person
+// working on both screens does.
+const DELAY_MS = 80
+
+/** A TCP proxy to `port` that delays every chunk, both ways, by `ms`. */
+const startDelayProxy = async (port, ms) => {
+    const sockets = new Set()
+    const later = (fn) => setTimeout(fn, ms)
+    let chunks = 0
+    const server = net.createServer((client) => {
+        const upstream = net.connect(port, '127.0.0.1')
+        sockets.add(client)
+        sockets.add(upstream)
+        // Same delay for every chunk, so timers keep the bytes in order.
+        client.on('data', chunk => { chunks += 1; later(() => upstream.write(chunk)) })
+        upstream.on('data', chunk => { chunks += 1; later(() => client.write(chunk)) })
+        client.on('end', () => later(() => upstream.end()))
+        upstream.on('end', () => later(() => client.end()))
+        const drop = () => later(() => { client.destroy(); upstream.destroy() })
+        client.on('close', drop)
+        upstream.on('close', drop)
+        client.on('error', () => {})
+        upstream.on('error', () => {})
+    })
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+    return {
+        port: server.address().port,
+        get chunks() { return chunks },
+        stop: () => new Promise(resolve => {
+            for (const socket of sockets) socket.destroy()
+            server.close(() => resolve())
+        })
+    }
+}
+
+describe('a followed space answers at once, edit after edit', () => {
+    let hosting = null
+    let following = null
+    let proxy = null
+    const FOLLOWED = 'answer-space'
+    const PIECE = 'answer-piece'
+
+    const projectOps = async (server) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })).json()
+    const writeProjectOp = async (server, opId) => {
+        const { latestVersion } = await projectOps(server)
+        const response = await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ baseVersion: latestVersion, ops: [{ opId, type: 'createEntity', payload: { entity: { id: opId, name: opId } } }] })
+        })
+        expect(response.status).toBe(200)
+    }
+    const projectHasOp = (server, opId) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })
+        if (response.status !== 200) return false
+        return opIds(await response.json()).includes(opId)
+    }
+    /** How long an edit made on `from` takes to be in `to`'s log. */
+    const crossing = async (from, to, opId) => {
+        const startedAt = Date.now()
+        await writeProjectOp(from, opId)
+        await settle(`${opId} crossing`, projectHasOp(to, opId), { timeout: 30_000, every: 25 })
+        return Date.now() - startedAt
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        proxy = await startDelayProxy(hosting.port, DELAY_MS)
+        await createSpace(hosting, FOLLOWED)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${FOLLOWED}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        // A second project, read after the first in every tick (streams are
+        // in id order) — a space like hayfilm holds several, and each one read
+        // after the edited project is one more round trip of gap.
+        const another = await fetch(`${hosting.baseUrl}/api/spaces/${FOLLOWED}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: `${PIECE}-later`, title: `${PIECE}-later` })
+        })
+        expect(another.status).toBe(201)
+
+        // What `di follow` writes: the follow is in the install's own data dir
+        // before it starts, so the server runs it, not this test.
+        const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
+        await writeFile(path.join(dataRoot, 'follows.json'), JSON.stringify({
+            format: 'di.follows',
+            version: 1,
+            follows: { [FOLLOWED]: { remote: `http://127.0.0.1:${proxy.port}/serverXR`, token: API_TOKEN, label: null, followedAt: new Date().toISOString() } }
+        }))
+        following = await startServer({ dataRoot })
+        await settle('the project reaching the follower', async () => (await fetch(`${following.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })).status === 200)
+        // One edit across, so every crossing below starts from a follow that
+        // has carried something and settled.
+        await crossing(hosting, following, 'op-answer-warm')
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop(), proxy?.stop()])
+    })
+
+    it('carries each edit in well under one park, in both directions, one after another', async () => {
+        const times = []
+        for (let round = 0; round < 3; round += 1) {
+            times.push(['follower→host', await crossing(following, hosting, `op-answer-out-${round}`)])
+            times.push(['host→follower', await crossing(hosting, following, `op-answer-in-${round}`)])
+        }
+        // A park is 20s. An edit that waited one out was not woken; a few
+        // round trips through the proxy is the follow doing its job.
+        const slow = times.filter(([, ms]) => ms >= 3000)
+        expect(`${JSON.stringify(slow)} of ${JSON.stringify(times)}`).toBe(`[] of ${JSON.stringify(times)}`)
+    }, 200_000)
+
+    // The latch must not cost the quiet: a follow that goes round "at once"
+    // too often never parks, and hammers the other machine all night.
+    it('parks again once the space is quiet, rather than going round and round', async () => {
+        await wait(2000) // let the last crossing's extra rounds finish
+        const before = proxy.chunks
+        await wait(3000)
+        // One held read is a handful of chunks at most; a loop that stopped
+        // parking would be hundreds in three seconds through this proxy.
+        expect(proxy.chunks - before).toBeLessThan(12)
+    }, 20_000)
+})
+
+// A work whose log holds a whole-work op — a restore, or a pull made with
+// `di sync` — and holds it on BOTH sides, with the same result. Seen on aylmo
+// following dev.diiii.xyz (2026-10-04): every project of the space `wcc` had
+// one, the copies were equal, and the follow said "one side replaced a whole
+// scene" for good. Its cursor stood before the op, because an older log can hold
+// a whole-work op with no opId at all and the cursor only passed ops it could
+// name. Both shapes of log are held here: ids minted, and ids absent.
+describe.each([
+    ['whole-work ops with ids', false],
+    ['whole-work ops from an older log, with no opId', true]
+])('a followed space whose copies already agree past a whole-work op (%s)', (_label, stripIds) => {
+    let hosting = null
+    let following = null
+    const FOLLOWED = 'replaced-space'
+    const PIECE = 'replaced-piece'
+    const document = { entities: [{ id: 'chair', name: 'chair' }], nodes: [], assets: [] }
+
+    const projectOps = async (server) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })).json()
+    const writeProjectOps = async (server, ops) => {
+        const { latestVersion } = await projectOps(server)
+        const response = await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ baseVersion: latestVersion, ops })
+        })
+        expect(response.status).toBe(200)
+    }
+    const hasProjectOp = (server, opId) => async () => opIds(await projectOps(server)).includes(opId)
+    const createEntity = (opId) => ({ opId, type: 'createEntity', payload: { entity: { id: opId, name: opId } } })
+    const followState = async () => {
+        const response = await fetch(`${following.baseUrl}/api/follows`, { headers: authHeaders })
+        return (await response.json()).follows?.find(follow => follow.spaceId === FOLLOWED) || null
+    }
+    // What an older di.iiii left in a log: a replaceDocument with no opId.
+    // Written into the install's own database while it is stopped.
+    const stripReplaceIds = (dataRoot) => {
+        const db = new DatabaseSync(path.join(dataRoot, 'di.db'))
+        try {
+            for (const row of db.prepare('SELECT seq, data FROM project_ops').all()) {
+                const op = JSON.parse(row.data)
+                if (op.type !== 'replaceDocument') continue
+                delete op.opId
+                db.prepare('UPDATE project_ops SET data = ? WHERE seq = ?').run(JSON.stringify(op), row.seq)
+            }
+        } finally {
+            db.close()
+        }
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        for (const [tag, server] of [['host', hosting], ['follower', following]]) {
+            await createSpace(server, FOLLOWED)
+            const made = await fetch(`${server.baseUrl}/api/spaces/${FOLLOWED}/projects`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+            })
+            expect(made.status).toBe(201)
+            // Each side replaced the work with the same document, more than
+            // once, between edits of its own, before any follow exists.
+            for (let round = 0; round < 3; round += 1) {
+                await writeProjectOps(server, [createEntity(`op-${tag}-before-${round}`)])
+                await writeProjectOps(server, [{ opId: `op-${tag}-gone-${round}`, type: 'deleteEntity', payload: { entityId: `op-${tag}-before-${round}` } }])
+                const put = await fetch(`${server.baseUrl}/api/projects/${PIECE}/document`, {
+                    method: 'PUT', headers: authHeaders, body: JSON.stringify(document)
+                })
+                expect(put.status).toBe(200)
+            }
+        }
+        if (stripIds) {
+            const [hostRoot, hostPort] = [hosting.dataRoot, hosting.port]
+            await hosting.stop({ keepData: true })
+            stripReplaceIds(hostRoot)
+            hosting = await startServer({ dataRoot: hostRoot, port: hostPort })
+        }
+        // What `di follow` writes: the follow is in the install's own data dir,
+        // and the server — not this test — runs it, so a local write wakes it
+        // the way it does for a person.
+        const { dataRoot, port } = following
+        await following.stop({ keepData: true })
+        if (stripIds) stripReplaceIds(dataRoot)
+        await writeFile(path.join(dataRoot, 'follows.json'), JSON.stringify({
+            format: 'di.follows',
+            version: 1,
+            follows: { [FOLLOWED]: { remote: hosting.baseUrl, token: API_TOKEN, label: null, followedAt: new Date().toISOString() } }
+        }))
+        following = await startServer({ dataRoot, port })
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('says which work differs, and does not overwrite it, when only one side replaced it', async () => {
+        // The first pass of a follow compares the copies once and finds them
+        // equal; only then is a replacement made on one side alone.
+        await settle('the follow settled', async () => (await followState())?.status === 'following', { timeout: 10_000 })
+        await wait(1500)
+        const other = { entities: [{ id: 'table', name: 'table' }], nodes: [], assets: [] }
+        await writeProjectOps(hosting, [{ opId: 'op-replaced-host-only', type: 'replaceDocument', payload: { document: other } }])
+        const told = await settle('the follow naming the work that differs', async () => {
+            const error = (await followState())?.lastError || ''
+            return error.includes(`project:${PIECE}`) ? error : false
+        }, { timeout: 5000 })
+        expect(told).toMatch(/use di sync/)
+        // Still said a few ticks later, and the follower's copy is untouched.
+        await wait(2500)
+        expect((await followState())?.lastError).toContain(`project:${PIECE}`)
+        const doc = await (await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { headers: authHeaders })).json()
+        expect(JSON.stringify(doc)).not.toContain('table')
+        // The other side makes the same replacement — now they agree, and the
+        // follow lets go of it without anyone running anything.
+        await writeProjectOps(following, [{ opId: 'op-replaced-follower-too', type: 'replaceDocument', payload: { document: other } }])
+        await settle('the follow letting go once the copies agree', async () => (await followState())?.lastError === null, { timeout: 5000 })
+    })
+
+    it('carries an edit made after it, both ways, and stops reporting a replacement', async () => {
+        await writeProjectOps(hosting, [createEntity('op-after-host')])
+        await settle('the host edit reaching the follower', hasProjectOp(following, 'op-after-host'), { timeout: 5000, every: 25 })
+        await writeProjectOps(following, [createEntity('op-after-follower')])
+        await settle('the follower edit reaching the host', hasProjectOp(hosting, 'op-after-follower'), { timeout: 5000, every: 25 })
+        await settle('the follow no longer reporting a replaced work', async () => (await followState())?.lastError === null, { timeout: 5000 })
+    })
+})
+
+// "A project made on either appears on both" — including one with nothing in
+// it yet. Seen 2026-10-04 (aylmo following dev.diiii.xyz): six projects made
+// on the follower and never edited (documentVersion 0, no ops) never reached
+// the host, because a project is only ever made on the other side from its
+// ops, and an empty one has none.
+describe('a project made empty on either side appears on both', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+
+    const makeProject = async (server, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title })
+        })
+        expect(response.status).toBe(201)
+    }
+    const projectRow = (server, slug) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })
+        const { projects } = await response.json()
+        return projects.find(project => project.id === slug) || false
+    }
+
+    beforeAll(async () => {
+        // The host is a real one: auth on, and the follower holds what `di
+        // follow` holds — a per-space sync key (editor, scoped to this space),
+        // never the install's own token. A follow that only worked with an
+        // admin token passed here and did nothing on a real machine.
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const minted = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/sync-keys`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ label: 'follows the host' })
+        })
+        expect(minted.status).toBe(201)
+        const syncKey = (await minted.json()).token
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: syncKey }),
+            log: { warn: message => warned.push(message), info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries an empty project made on the follower to the host, with its title', async () => {
+        await makeProject(following, 'empty-bar', 'The Bar')
+        follower.wake()
+        const row = await settle('the follower project reaching the host', projectRow(hosting, 'empty-bar'), { timeout: 10_000 })
+        expect(row.title).toBe('The Bar')
+    })
+
+    it('carries an empty project made on the host to the follower, with its title', async () => {
+        await makeProject(hosting, 'empty-studio', 'The Studio')
+        const row = await settle('the host project reaching the follower', projectRow(following, 'empty-studio'), { timeout: 10_000 })
+        expect(row.title).toBe('The Studio')
+    })
+
+    // Deletion is not carried, so it must not be undone either: a project in
+    // one side's trash is not made there again by the other side's copy.
+    const trash = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${slug}`, { method: 'DELETE', headers: authHeaders })
+        expect(response.status).toBe(200)
+    }
+    const trashedHere = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/trash?space=${SPACE}`, { headers: authHeaders })
+        return (await response.json()).projects.some(project => project.id === slug)
+    }
+    const tick = async () => { follower.wake(); await wait(1500) }
+
+    it('does not make again, on the host, a project trashed there', async () => {
+        await makeProject(hosting, 'both-a', 'A')
+        await settle('both-a on the follower', projectRow(following, 'both-a'), { timeout: 10_000 })
+        await trash(hosting, 'both-a')
+        await tick(); await tick()
+        expect(await trashedHere(hosting, 'both-a')).toBe(true)
+        expect(await projectRow(hosting, 'both-a')()).toBe(false)
+        expect(warned.filter(message => message.includes('both-a') && message.includes('in the trash'))).toHaveLength(1)
+    })
+
+    it('does not make again, on the follower, a project trashed there', async () => {
+        await makeProject(following, 'both-b', 'B')
+        follower.wake()
+        await settle('both-b on the host', projectRow(hosting, 'both-b'), { timeout: 10_000 })
+        await trash(following, 'both-b')
+        await tick(); await tick()
+        expect(await trashedHere(following, 'both-b')).toBe(true)
+        expect(await projectRow(following, 'both-b')()).toBe(false)
+    })
+})
+
+// Audit F4 (docs/ai/audits/follow-audit-2026-10-04.md), owner 2026-10-04: a
+// follow that starts on an install with a long local history must not replay
+// that history onto the host, and a host-wins comparison must not erase work
+// that exists only here. Real servers, real wire.
+describe('a follow starts from now and never silently erases work only the follower has', () => {
+    let hosting = null
+    let following = null
+    const warnings = []
+    const quiet = { warn: (line) => warnings.push(String(line)), info: () => {} }
+    const open = (space, extra = {}) => startFollowing({
+        local: side({ base: following.baseUrl, spaceId: space, token: API_TOKEN }),
+        remote: side({ base: hosting.baseUrl, spaceId: space, token: API_TOKEN }),
+        log: quiet,
+        ...extra
+    })
+    const sceneOf = (ids) => ({ objects: ids.map(id => ({ id, type: 'box', name: id })) })
+    const replaceScene = (ids, opId) => ({ opId, type: 'replaceScene', payload: { scene: sceneOf(ids) } })
+    const snapshots = async (server, space) => (await (await fetch(`${server.baseUrl}/api/spaces/${space}/snapshots`, { headers: authHeaders })).json()).snapshots || []
+
+    /** Host holds `h1`; the follower holds a, b, c that came through a whole-scene write, which a follow never carries. */
+    const aheadFollower = async (space) => {
+        await createSpace(hosting, space)
+        await createSpace(following, space)
+        expect((await writeOp(hosting, addObject('h1', `op-h1-${space}`), { spaceId: space })).status).toBe(200)
+        expect((await writeOp(following, replaceScene(['a', 'b', 'c'], `op-abc-${space}`), { spaceId: space })).status).toBe(200)
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('does not replay this install\'s history onto the host on a first start', async () => {
+        const space = 'fromnow-history'
+        await createSpace(hosting, space)
+        await createSpace(following, space)
+        expect((await writeOp(hosting, addObject('h1', 'op-h1-hist'), { spaceId: space })).status).toBe(200)
+        for (let i = 1; i <= 30; i += 1) {
+            expect((await writeOp(following, addObject(`l${i}`, `op-local-${i}`), { spaceId: space })).status).toBe(200)
+        }
+        const hostOpsBefore = (await readOps(hosting, space)).ops.length
+
+        const follower = open(space)
+        try {
+            // The copies differ and this one is ahead: said, not resolved.
+            await settle('the refusal being said', async () => /host lacks/.test(follower.state.lastError || ''))
+            const hostLog = await readOps(hosting, space)
+            expect(hostLog.ops.length).toBe(hostOpsBefore)
+            expect(opIds(hostLog).filter(id => id.startsWith('op-local-'))).toEqual([])
+            expect(objectIds(await readScene(hosting, space))).toEqual(['h1'])
+            expect(objectIds(await readScene(following, space)).length).toBe(30)
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('refuses, visibly, a difference where the follower holds work the host lacks', async () => {
+        const space = 'fromnow-refuse'
+        await aheadFollower(space)
+        const follower = open(space)
+        try {
+            await settle('the refusal being said', async () => /host lacks/.test(follower.state.lastError || ''))
+            expect(follower.state.lastError).toContain('3 objects')
+            expect(follower.state.lastError).toContain('--take-host')
+            expect(warnings.some(line => line.includes(space) && line.includes('3 objects') && line.includes('scene:'))).toBe(true)
+            // Nothing was written: the follower still shows its own work.
+            expect(objectIds(await readScene(following, space)).sort()).toEqual(['a', 'b', 'c'])
+            expect(objectIds(await readScene(hosting, space))).toEqual(['h1'])
+            // And it stays said on later ticks, not only on the one that refused (F7).
+            await wait(1800)
+            expect(follower.state.lastError).toContain('3 objects')
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('--take-host: the host wins, a restore point is taken first and named, the direction is spent', async () => {
+        const space = 'fromnow-take-host'
+        await aheadFollower(space)
+        const spent = vi.fn()
+        const follower = open(space, { direction: 'take-host', onDirectionDone: spent })
+        try {
+            await settle('the follower showing the host\'s copy', async () => objectIds(await readScene(following, space)).join() === 'h1')
+            await settle('the direction being spent', async () => spent.mock.calls.length > 0)
+            expect(spent).toHaveBeenCalledWith('take-host')
+            const points = await snapshots(following, space)
+            const before = points.find(point => point.reason === 'before-whole-replace-op')
+            expect(before).toBeTruthy()
+            // The log names it, so a person can find it.
+            expect(warnings.some(line => line.includes(space) && line.includes('--take-host') && line.includes(before.id))).toBe(true)
+            // Nothing travelled to the host from this: it is the host's own copy.
+            expect(objectIds(await readScene(hosting, space))).toEqual(['h1'])
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('--take-mine: this copy becomes the host\'s, with a restore point on the host', async () => {
+        const space = 'fromnow-take-mine'
+        await aheadFollower(space)
+        const spent = vi.fn()
+        const follower = open(space, { direction: 'take-mine', onDirectionDone: spent })
+        try {
+            await settle('the host showing this copy', async () => objectIds(await readScene(hosting, space)).sort().join() === 'a,b,c')
+            await settle('the direction being spent', async () => spent.mock.calls.length > 0)
+            expect(spent).toHaveBeenCalledWith('take-mine')
+            const before = (await snapshots(hosting, space)).find(point => point.reason === 'before-whole-replace-op')
+            expect(before).toBeTruthy()
+            expect(warnings.some(line => line.includes(space) && line.includes('--take-mine') && line.includes(before.id))).toBe(true)
+            expect(objectIds(await readScene(following, space)).sort()).toEqual(['a', 'b', 'c'])
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('after a start from now, an edit made on either side afterwards crosses as usual', async () => {
+        const space = 'fromnow-then-edits'
+        await createSpace(hosting, space)
+        await createSpace(following, space)
+        expect((await writeOp(hosting, addObject('h1', 'op-h1-then'), { spaceId: space })).status).toBe(200)
+        const follower = open(space)
+        try {
+            await settle('the first comparison', async () => follower.state.converged > 0)
+            expect(objectIds(await readScene(following, space))).toEqual(['h1'])
+            expect((await writeOp(following, addObject('late', 'op-late'), { spaceId: space })).status).toBe(200)
+            follower.wake()
+            await settle('the later edit reaching the host', hasOp(hosting, 'op-late', space))
+        } finally {
+            follower.stop()
+        }
+    })
+})
+
+// "From now" is the moment the follow starts, not the moment its first pass
+// reaches a stream (seen in CI 2026-10-04/05: an edit written straight after
+// startFollowing() was folded into the history and never carried). No waiting
+// for the follow to settle here — that wait is exactly what hid the race.
+describe('an edit made the instant a follow starts is carried', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    // The exact rule, independent of how fast the machine is: the starting
+    // point sits just before the first op stamped at or after the start.
+    it('starts just before the first op made after the start, however late it looks', async () => {
+        expect(typeof startCursorAt).toBe('function')
+        const before = await writeOp(hosting, addObject('before-start', 'op-before-start'))
+        expect(before.status).toBe(200)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        const at = Date.now()
+        await new Promise(resolve => setTimeout(resolve, 30))
+        const after = await writeOp(hosting, addObject('after-start', 'op-after-start'))
+        expect(after.status).toBe(200)
+        const log = await readOps(hosting)
+        const versionOf = (opId) => log.ops.find(op => op.opId === opId).version
+        const host = side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN })
+        const cursor = await startCursorAt(host, sceneStream(SPACE), at)
+        expect(cursor.reachable).toBe(true)
+        expect(cursor.latestVersion).toBe(versionOf('op-after-start') - 1)
+        expect(cursor.latestVersion).toBeGreaterThanOrEqual(versionOf('op-before-start'))
+    })
+
+    it('carries both sides\' first edits, made before the follow\'s first pass', async () => {
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+        const [onHost, onFollower] = await Promise.all([
+            writeOp(hosting, addObject('first-host', 'op-first-host')),
+            writeOp(following, addObject('first-follower', 'op-first-follower'))
+        ])
+        expect(onHost.status).toBe(200)
+        expect(onFollower.status).toBe(200)
+        await settle('the host\'s first edit reaching the follower', hasOp(following, 'op-first-host'))
+        await settle('the follower\'s first edit reaching the host', hasOp(hosting, 'op-first-follower'))
+        expect(objectIds(await readScene(following))).toContain('first-host')
+        expect(objectIds(await readScene(hosting))).toContain('first-follower')
+    })
+})
+
+// Gap 5 (2026-10-05, seen on the owner's install: 5 projects in space `open`).
+// A project that exists only on the follower is made EMPTY on the host from the
+// listing. Its content is not a stream of ops a follow carries (it came in as a
+// whole document: an import, a restore), so the host's new copy stayed empty and
+// the comparison refused: "the host's copy is empty and this one is not".
+describe('a project only the follower holds fills the host\'s new copy, with no refusal', () => {
+    let hosting = null
+    let following = null
+    const ONLY = 'only-here'
+    const document = { entities: [{ id: 'chair', name: 'chair' }, { id: 'table', name: 'table' }], nodes: [{ id: 'n1' }], assets: [] }
+    const warned = []
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: ONLY, title: 'Only Here' })
+        })
+        expect(made.status).toBe(201)
+        const put = await fetch(`${following.baseUrl}/api/projects/${ONLY}/document`, {
+            method: 'PUT', headers: authHeaders, body: JSON.stringify(document)
+        })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    const entityIds = async (server) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${ONLY}/document`, { headers: authHeaders })
+        if (response.status !== 200) return []
+        return ((await response.json()).document?.entities || []).map(entity => entity.id).sort()
+    }
+
+    it('writes this copy into the host\'s empty one, once, and says nothing is wrong', async () => {
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} }
+        })
+        try {
+            await settle('the host holding the follower\'s project, with its content', async () => {
+                const ids = await entityIds(hosting)
+                return ids.length === 2 ? ids : false
+            }, { timeout: 15_000 })
+            expect(await entityIds(hosting)).toEqual(['chair', 'table'])
+            // nothing refused, nothing owed
+            await settle('the follow saying nothing is wrong', () => follower.state.lastError === null, { timeout: 10_000 })
+            expect(warned.filter(line => /empty and this one is not/.test(line))).toEqual([])
+            // and the copy on this side is the one it was
+            expect(await entityIds(following)).toEqual(['chair', 'table'])
+        } finally {
+            follower.stop()
+        }
+    })
+})
+
+// Gap 4 (2026-10-05): label, isPublic and the front door (publishedProjectId)
+// differed between dev and the local install for the same space. Host to
+// follower, never more public (followSettings.js).
+describe('a follow carries the space\'s own settings from the host, and never makes it more public', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const FRONT = 'front-door'
+
+    const patchSpace = async (server, body) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify(body) })
+        expect(response.status).toBe(200)
+    }
+    const spaceOf = async (server) => (await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}`, { headers: authHeaders })).json()).space
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: FRONT, title: 'Front' })
+        })
+        expect(made.status).toBe(201)
+        await patchSpace(hosting, { label: 'The Laser Room', publishedProjectId: FRONT, isPublic: false })
+        // this copy was made public on its own
+        await patchSpace(following, { isPublic: true })
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('takes the host\'s label and front door, and a private host makes this copy private', async () => {
+        const mine = await settle('the settings arriving', async () => {
+            const space = await spaceOf(following)
+            return space.label === 'The Laser Room' && space.publishedProjectId === FRONT ? space : false
+        }, { timeout: 20_000 })
+        expect(mine.isPublic).toBe(false)
+    })
+
+    it('does not make a private copy public because the host is', async () => {
+        await patchSpace(hosting, { isPublic: true })
+        // Settings are looked at on each pass, and a host's settings change does
+        // not end the held read, so this may take up to one park (20 s).
+        await settle('the follow saying why', () => (follower.state.settings?.notes || []).some(note => /left private/.test(note)), { timeout: 32_000 })
+        expect((await spaceOf(following)).isPublic).toBe(false)
+    })
+
+    it('carries a changed label later, and clears the front door when the host does', async () => {
+        await patchSpace(hosting, { label: 'Laser, renamed', publishedProjectId: null })
+        const mine = await settle('the change arriving', async () => {
+            const space = await spaceOf(following)
+            return space.label === 'Laser, renamed' && !space.publishedProjectId ? space : false
+        }, { timeout: 20_000 })
+        expect(mine.isPublic).toBe(false)
+    })
+})
+
+// Gap 3 (2026-10-05, di.laser): the document listed 101 files, the follow said
+// "79 files still coming", di was restarted twice and afterwards the host held
+// 29 with nothing said. A restart forgot what was owed; the files named by a
+// document the follow never saw ops for are only known from the listing.
+describe('an interrupted file transfer is resumed after a restart, and says what is owed', () => {
+    let hosting = null
+    let following = null
+    const PIECE = 'laser-show'
+    const COUNT = 6
+    const bytesOf = (seed) => Buffer.from(Array.from({ length: 50_000 }, (_, i) => (i * seed + 3) % 256))
+    const files = []
+
+    const holds = async (server, id) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/assets/${id}/meta`, { headers: authHeaders })).status === 200
+    const heldCount = async (server) => (await Promise.all(files.map(file => holds(server, file.id)))).filter(Boolean).length
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        // The project and its files exist on the follower only, named in its document.
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        for (let n = 1; n <= COUNT; n += 1) {
+            const bytes = bytesOf(n * 7)
+            const form = new FormData()
+            form.append('asset', new Blob([bytes], { type: 'video/mp4' }), `clip-${n}.mp4`)
+            const uploaded = await fetch(`${following.baseUrl}/api/projects/${PIECE}/assets`, { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form })
+            expect(uploaded.status).toBe(200)
+            files.push((await uploaded.json()).asset)
+        }
+        const document = { entities: [], nodes: [], assets: files.map(file => ({ ...file, url: '' })) }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { method: 'PUT', headers: authHeaders, body: JSON.stringify(document) })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries what the first run did not, after a restart, and shows it in the follow\'s state', async () => {
+        let uploads = 0
+        let saved = null
+        const first = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} },
+            onSave: (state) => { saved = state },
+            // Two files cross, then the install is "restarted" with the rest still owed.
+            files: { backoffMs: [200, 200, 200], io: { request: httpRequest, download: httpDownloadToFile, upload: async (...args) => { uploads += 1; if (uploads > 2) return new Promise(() => {}); return httpUploadFile(...args) } } }
+        })
+        await settle('two files having crossed', async () => (await heldCount(hosting)) === 2, { timeout: 20_000 })
+        first.stop()
+        expect(await heldCount(hosting)).toBe(2)
+
+        const second = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} },
+            saved,
+            // slowed a little, so what is still owed can be seen while it is owed
+            files: { backoffMs: [200, 200, 200], io: { request: httpRequest, download: httpDownloadToFile, upload: async (...args) => { await wait(500); return httpUploadFile(...args) } } }
+        })
+        try {
+            // Said while it is owed, in the state `di follows` prints …
+            await settle('the restart saying what is owed', () => second.state.files.listed === COUNT && second.state.files.missing > 0, { timeout: 10_000 })
+            // … and carried.
+            // Before the first park on the quiet room (20 s), not after it.
+            await settle('every listed file on the host', async () => (await heldCount(hosting)) === COUNT, { timeout: 12_000 })
+            await settle('nothing owed any more', () => second.state.files.pending === 0 && second.state.files.missing === 0, { timeout: 10_000 })
+        } finally {
+            second.stop()
         }
     })
 })

@@ -13,9 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a canvas that asks for 'high-performance' must not go black when the browser refuses it
-- the show chip's recording light is square; the rectangle guard reads inline styles right
-- dev's 3D rooms were black: the viewport crashed on frozen camera bindings
+- a space on its own domain (yokozo.xyz shows taronx), set up by the server
 
 Full detail: `PROGRESS.md`.
 

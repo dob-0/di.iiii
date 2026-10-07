@@ -191,6 +191,14 @@ const main = async () => {
     await fsp.writeFile(path.join(stage, 'release.json'), `${JSON.stringify({
         version,
         profile,
+        // The commit this artifact was built from, so `di status` and the dev
+        // channel can say which build is running. null outside a git checkout.
+        gitCommit: (() => {
+            const fromEnv = String(process.env.GITHUB_SHA || '').trim()
+            if (fromEnv) return fromEnv
+            const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' })
+            return git.status === 0 ? git.stdout.trim() : null
+        })(),
         // Which of the studio's own pieces this artifact can open with no
         // network. The difference an artist actually feels, so it is written
         // down rather than inferred from the profile name.
