@@ -71,6 +71,13 @@ export default function ShowSurface({ spaceId, projectId }) {
     const [data, setData] = useState(null)
     const [error, setError] = useState(null) // { status, message }
     const [notice, setNotice] = useState('')
+    // A notice answers one tap; it goes after a few seconds, or a phone left on the page would
+    // keep saying "on Light now" about a cue the list moved past long ago (seen 2026-10-08).
+    useEffect(() => {
+        if (!notice) return undefined
+        const timer = setTimeout(() => setNotice(''), 6000)
+        return () => clearTimeout(timer)
+    }, [notice])
     const [sending, setSending] = useState(false)
     const [name, setName] = useState(readName)
     const now = useNow()

@@ -93,4 +93,19 @@ describe('the show page', () => {
         expect(await screen.findByRole('alert')).toBeTruthy()
         expect(screen.getByRole('alert').textContent).toBe('This show is private to its space.')
     })
+
+    it('the answer to a tap goes after a few seconds', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        try {
+            vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer()))
+            render(<ShowSurface spaceId="moxir" projectId="v1-0" />)
+            await screen.findByRole('heading', { level: 1 })
+            await act(async () => { fireEvent.click(document.querySelector('[data-cue="2"]')) })
+            expect(screen.getByRole('status').textContent).toMatch(/on Light now/)
+            await act(async () => { vi.advanceTimersByTime(6500) })
+            expect(screen.queryByRole('status')).toBe(null)
+        } finally {
+            vi.useRealTimers()
+        }
+    })
 })
