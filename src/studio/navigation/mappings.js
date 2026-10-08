@@ -131,7 +131,8 @@ export function actionFor(presetId, button, mods = {}, { ortho = false } = {}) {
     if (!preset.modifierGestures) return resting[name]
 
     const { shift = false, ctrl = false, alt = false } = mods
-    const modified = () => (shift ? CC_ACTION.TRUCK : ctrl ? CC_ACTION.DOLLY : CC_ACTION.ROTATE)
+    // Blender 5.2 manual: MMB orbit, Shift-MMB pan, Ctrl-MMB zoom, Shift-Ctrl-MMB Dolly View (zoom that keeps going: see the hook)
+    const modified = () => (shift && ctrl ? CC_ACTION.DOLLY : shift ? CC_ACTION.TRUCK : ctrl ? CC_ACTION.DOLLY : CC_ACTION.ROTATE)
     if (name === 'middle') return modified()
     if (name === 'left' && alt) return modified() // Emulate 3 Button Mouse
     return CC_ACTION.NONE

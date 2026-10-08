@@ -5,6 +5,7 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-
 import { fitCameraToAspect, getFovForArm } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
 import { hazeFogBase, setCameraOutside } from '../../../objectComponents/atmosphereStore.js'
+import { getViewSettings } from '../viewSettings.js'
 import {
     approach,
     classifyArchitecture,
@@ -701,13 +702,23 @@ export default function SmartView({
             if (lockBox) cc.minDistance = INSIDE_MIN_DISTANCE
             else if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? Number.EPSILON
             if (state.baseMinDistance === undefined && !lockBox) state.baseMinDistance = cc.minDistance
-            const b = lockBox ? { min: [lockBox.min[0] + INSIDE_TARGET_INSET, lockBox.min[1], lockBox.min[2] + INSIDE_TARGET_INSET], max: [lockBox.max[0] - INSIDE_TARGET_INSET, lockBox.max[1] - 0.7, lockBox.max[2] - INSIDE_TARGET_INSET] } : targetBoundary(frame)
-            const key = `${b.min.join(',')}|${b.max.join(',')}`
+            // The viewer's own limits (viewSettings.js): outside the Inside lock, the closest/farthest distance are the person's, and
+            // with Dolly through there is no target box at all (infinityDolly pushes the target through the scene); the farthest zoom-out is
+            // always a quarter of Clip End (Blender: nothing beyond Clip End is drawn).
+            const vs = getViewSettings()
+            const unlimited = vs.unlimitedZoom && !lockBox
+            if (!lockBox) { cc.minDistance = vs.minDistance; cc.maxDistance = vs.clipEnd / 4 }
+            const b = lockBox ? { min: [lockBox.min[0] + INSIDE_TARGET_INSET, lockBox.min[1], lockBox.min[2] + INSIDE_TARGET_INSET], max: [lockBox.max[0] - INSIDE_TARGET_INSET, lockBox.max[1] - 0.7, lockBox.max[2] - INSIDE_TARGET_INSET] } : unlimited ? null : targetBoundary(frame)
+            const key = b ? `${b.min.join(',')}|${b.max.join(',')}` : 'none'
             if (key !== state.boundaryKey && cc.setBoundary) {
                 state.boundaryKey = key
-                scratch.boundary.min.fromArray(b.min)
-                scratch.boundary.max.fromArray(b.max)
-                cc.setBoundary(scratch.boundary)
+                if (b) {
+                    scratch.boundary.min.fromArray(b.min)
+                    scratch.boundary.max.fromArray(b.max)
+                    cc.setBoundary(scratch.boundary)
+                } else {
+                    cc.setBoundary(undefined)
+                }
             }
             // Inside: camera-controls' own collision pulls the camera in front of whatever building mesh (column,
             // wall, press, girder) stands between it and its target, instead of letting it pass through. The BVH

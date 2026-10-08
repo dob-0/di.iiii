@@ -51,6 +51,12 @@ export function useCameraNavigation({
     getScene,
     // Re-run when the controls mount/unmount (Studio hides them in XR / when disabled).
     active = true,
+    // The viewer's own switch (viewSettings.js 'autoDepth'); undefined = the preset's.
+    autoDepth,
+    // "Dolly through" (viewSettings.js unlimitedZoom): a wheel notch that zooms IN keeps moving through the scene at the closest distance;
+    // a notch that zooms out never pushes the target away. undefined = leave infinityDolly alone. `invertWheel` flips what counts as in.
+    dollyThrough,
+    invertWheel = false,
 }) {
     // Read at gesture time, so a new selection does not re-register listeners.
     const selectionRef = useRef(selectedEntityIds)
@@ -58,7 +64,8 @@ export function useCameraNavigation({
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
-        if (!active || !cc || (preset.id === 'studio' && !preset.autoDepth)) return undefined
+        const wantsAutoDepth = autoDepth ?? preset.autoDepth
+        if (!active || !cc || (preset.id === 'studio' && !wantsAutoDepth && dollyThrough === undefined)) return undefined
         const element = cc._domElement
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
@@ -76,7 +83,7 @@ export function useCameraNavigation({
             }
             // Auto Depth serves PAN and ZOOM (distance-scaled gestures). ROTATE keeps the target it has: re-pivoting an orbit
             // onto a surface 50 m down a hall swept the camera 30 m in one frame (measured 2026-10-08, Inside).
-            if (!preset.autoDepth || action === CC_ACTION.ROTATE) return
+            if (!wantsAutoDepth || action === CC_ACTION.ROTATE) return
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
             if (!ndc) return
             applyPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) }), { force: gestureStart })
@@ -92,6 +99,12 @@ export function useCameraNavigation({
             const action = actionFor(preset.id, event.button,
                 { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
             cc.mouseButtons[name] = action
+            // Shift-Ctrl-MMB is Blender's Dolly View: the zoom keeps going past where it stops (camera-controls infinityDolly) for this gesture
+            if (preset.modifierGestures && name === 'middle' && event.shiftKey && event.ctrlKey) {
+                const before = cc.infinityDolly
+                cc.infinityDolly = true
+                doc.addEventListener('pointerup', () => { cc.infinityDolly = before }, { once: true, capture: true })
+            }
             if (action !== CC_ACTION.NONE) { settleForGesture(cc); pivotAt(event, action, true) }
         }
 
@@ -101,7 +114,10 @@ export function useCameraNavigation({
             const now = performance.now()
             const quiet = now - lastWheel > WHEEL_PICK_QUIET_MS
             lastWheel = now
-            if (quiet) { settleForGesture(cc); pivotAt(event, CC_ACTION.DOLLY, true) }
+            if (dollyThrough !== undefined) cc.infinityDolly = Boolean(dollyThrough) && ((event.deltaY < 0) !== Boolean(invertWheel))
+            // Blender 5.2 manual: Shift-Wheel pans (vertically; sideways with a horizontal wheel), the plain wheel zooms
+            if (preset.modifierGestures) cc.mouseButtons.wheel = event.shiftKey ? CC_ACTION.TRUCK : CC_ACTION.DOLLY
+            if (quiet && !event.shiftKey) { settleForGesture(cc); pivotAt(event, CC_ACTION.DOLLY, true) }
         }
 
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })
@@ -110,5 +126,5 @@ export function useCameraNavigation({
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             doc.removeEventListener('wheel', onWheel, { capture: true })
         }
-    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene])
+    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene, autoDepth, dollyThrough, invertWheel])
 }

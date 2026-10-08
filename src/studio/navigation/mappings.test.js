@@ -37,6 +37,7 @@ describe('blender preset (Blender 5.2 manual behaviour)', () => {
         // button, mods, expected
         [1, {}, ROTATE, 'MMB orbit'],
         [1, { shift: true }, TRUCK, 'Shift-MMB pan'],
+        [1, { shift: true, ctrl: true }, DOLLY, 'Shift-Ctrl-MMB Dolly View (manual: keeps moving past where zoom stops)'],
         [1, { ctrl: true }, DOLLY, 'Ctrl-MMB zoom'],
         [0, {}, NONE, 'LMB does not navigate'],
         [0, { shift: true }, NONE, 'Shift-LMB does not navigate'],

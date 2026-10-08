@@ -1,3 +1,4 @@
+import ViewSettingsButton from '../../project/viewport/ViewSettingsPanel.jsx'
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 import StudioCueStrip from './StudioCueStrip.jsx'
@@ -155,6 +156,7 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
+                                <ViewSettingsButton className="scc-btn" label="View settings" />
                                 {!minimal && (
                                     <button className="scc-btn" onClick={onBackToHub} title="Back to projects">← Projects</button>
                                 )}

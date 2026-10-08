@@ -19,6 +19,7 @@ import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import FormLight from '../../project/viewport/FormLight.jsx'
+import { clipFor, controlsPropsFor, useViewSettings } from '../../project/viewport/viewSettings.js'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
@@ -516,6 +517,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
     const navigation = useNavigationPreference()
+    const viewSettings = useViewSettings()
     const preset = getNavigationPreset(navigation.preset)
     const isOrtho = (cameraView?.fov ?? 50) < 20
     useCameraNavigation({
@@ -526,6 +528,9 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         selectedEntityIds,
         getScene,
         active: enabled && !isXrPresenting,
+        autoDepth: viewSettings.autoDepth,
+        dollyThrough: viewSettings.unlimitedZoom,
+        invertWheel: viewSettings.invertWheel,
     })
 
     // The lens the camera eases toward. Shared with the smart view when there is one
@@ -572,6 +577,22 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOrtho, preset.id])
 
+    // Clip planes follow the distance (viewSettings.js clipFor): with unlimited zoom the camera can be kilometres from the scene, and
+    // a fixed far of 400 m would cut the hall off. Whatever raised `far` before us (the smart view's preset framing) is the floor.
+    const clipRef = useRef({ near: null, far: null, baseFar: null })
+    useFrame(() => {
+        const cc = controlsRef.current
+        const cam = cc?._camera
+        if (!cam?.isPerspectiveCamera) return
+        const mine = clipRef.current
+        if (mine.far === null || cam.far !== mine.far) mine.baseFar = cam.far // someone else set it: that is the floor
+        const { near, far } = clipFor(cc.distance, viewSettings, { baseFar: mine.baseFar })
+        if (Math.abs(near - cam.near) / cam.near < 0.02 && Math.abs(far - cam.far) / cam.far < 0.02) return
+        cam.near = near; cam.far = far
+        cam.updateProjectionMatrix()
+        mine.near = near; mine.far = far
+    })
+
     // Smooth FOV lerp — runs every frame inside the R3F canvas
     useFrame(() => {
         const cc = controlsRef.current
@@ -602,11 +623,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         <CameraControls
             ref={controlsRef}
             makeDefault
-            dollyToCursor={preset.dollyToCursor}
-            smoothTime={0.15}
+            {...controlsPropsFor(viewSettings, preset)}
             draggingSmoothTime={0.0}
-            minDistance={0.35}
-            maxDistance={500}
             mouseButtons={bindings.mouseButtons}
             touches={bindings.touches}
             onControlEnd={() => {

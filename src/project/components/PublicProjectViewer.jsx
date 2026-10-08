@@ -39,6 +39,7 @@ import { useViewportMode } from '../../hooks/useViewportMode.js'
 import useOutputMode from '../viewport/useOutputMode.js'
 import { outputDocument } from '../viewport/outputMode.js'
 import { FORM_LIGHT_MAX, setFormLight, setViewLook, useViewLook } from '../viewport/viewLook.js'
+import ViewSettingsButton from '../viewport/ViewSettingsPanel.jsx'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -701,6 +702,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     >
                         {viewLook.look === 'form' ? 'Form' : 'Current'}
                     </button>
+                    <ViewSettingsButton style={{ ...overlayButtonStyle, minHeight: 44, minWidth: 104 }} />
                     {viewLook.look === 'form' ? (
                         <label style={{ ...overlayButtonStyle, display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                             Light {viewLook.light.toFixed(2)}
