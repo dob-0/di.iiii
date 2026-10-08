@@ -3,7 +3,7 @@
   "date": "2026-10-07",
   "layer": "show-cleared",
   "source": "owner's decision",
-  "notes": "What is cleared out of the hall for the 17 Oct show. Apply this layer LAST and only for the show hall: the as-found layers (dims 10-02, 10-07) still describe the hall as it stands. Each entry names who decided and when; the move is checked on site.",
+  "notes": "What is cleared out of the hall for the 17 Oct show. Apply this layer LAST and only for the show hall: the as-found layers (dims 10-02, 10-07) still describe the hall as it stands. Each entry names who decided and when; the move is checked on site. `cleared_not_modelled` lists what is also cleared but was never in the hall model's massing (the bulk bags, kept out on purpose, see hall-bags.test.js); hall.py does not read it, so the show hall's geometry is unchanged by it.",
   "massing_remove": [
     {
       "id": "prefab-cabin",
@@ -11,7 +11,9 @@
       "why": "It stands inside the audience area (z > 24.5, the stage line from the owner's marks on video 954).",
       "said_by": "owner, 2026-10-07: \"cabin will go it small thing from left\"",
       "check_on_site": "2026-10-08: confirm it can be moved (no foundation, no services) and who moves it before 17 Oct."
-    },
+    }
+  ],
+  "cleared_not_modelled": [
     {
       "id": "white-bags",
       "label": "the white bulk bags behind the DJ place (z 22-26.5, in the photos; not in the hall model's massing)",
