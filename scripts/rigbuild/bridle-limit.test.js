@@ -42,10 +42,12 @@ export const violations = (rig, hall) => {
 
 // Against the measured 09-29 hall (girder underside 7.95 m, not the 8.15 m guess) the high pick's apex
 // (7.56 m) leaves the clamp 0.24 m above it: 144.4 deg, legs at about 1.63 x the load (geometry only).
-// OWED to the owner, NOT fixed here: tape the girder underside on site, repoint `hall` in the versions
-// file to the measured hall, re-derive the trims and bridles (versions.mjs), re-check the crane-clash
-// rule for the lasers — then this list must become empty and these tests say so.
-const KNOWN_AGAINST_MEASURED = [{ u: 5.25, included_deg: 144.4, max: 120 }]
+// 2026-10-05 (audit A-01, Emilya, PR #772): the 10-02 hall now carries the 09-29 MEASURED crane (girder underside
+// 7.95 m) and versions.mjs re-derived every trim and bridle from it — so against the measured hall there is no
+// violation left, and this list is empty. 2026-10-07: Known · full hangs the cut MIRRORED (high house left); its
+// trim is re-derived from the same 7.95 m girder, so the mirrored rig is held to the same empty list.
+// Still OWED on site: tape the NEAR crane's girder underside (7.95 is the far crane's, range 7.7-8.25 m).
+const KNOWN_AGAINST_MEASURED = []
 
 describe('bridle limit: included angle of every built pick', () => {
     it('finds the bridled rigs (so the guard is not an empty loop)', () => {

@@ -6,8 +6,10 @@ import { OUTPUT_STORAGE_KEY, outputModeWanted } from './outputMode.js'
 // the address alone (loopback or LAN, deployMode.js), decided before the first frame: a
 // later answer from /api/config would swap the renderer under a room already compiling.
 // A LAN phone still gets the output (coarse pointer); hosted addresses always do.
+// The choice lives for THIS TAB (sessionStorage): every new visit starts in Lite (owner 2026-10-08). Before, a Full chosen
+// once stayed in localStorage for good, and the room opened heavy ever after.
 const readStored = () => {
-    try { return window.localStorage.getItem(OUTPUT_STORAGE_KEY) } catch { return null }
+    try { return window.sessionStorage.getItem(OUTPUT_STORAGE_KEY) } catch { return null }
 }
 const coarsePointer = () => {
     try { return window.matchMedia('(pointer: coarse)').matches } catch { return false }
@@ -25,7 +27,7 @@ export default function useOutputMode() {
     })
     const setOn = useCallback((next) => {
         const value = next ? 'lite' : 'full'
-        try { window.localStorage.setItem(OUTPUT_STORAGE_KEY, value) } catch { /* private window */ }
+        try { window.sessionStorage.setItem(OUTPUT_STORAGE_KEY, value) } catch { /* private window */ }
         setStored(value)
     }, [])
     return [on, setOn]

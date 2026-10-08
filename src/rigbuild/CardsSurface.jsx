@@ -19,7 +19,8 @@ import { dealOps } from './deal.js'
 import { deleteOps } from './plotEdits.js'
 import { plotModel, titleTotals } from './plotModel.js'
 import { barTitle, patchBars, UNIVERSE_SIZE } from './patchBars.js'
-import { deskLookId, deskLooks, lookIdOfDesk, lookPoses, restOps, rigLooksOf } from './looks.js'
+import { deskLookId, lookIdOfDesk, lookPoses, restOps, rigLooksOf } from './looks.js'
+import { deskLooksWithValues } from './deskLookValues.js'
 import { cueOps, fireCue } from '../map/cueFiring.js'
 import { cueClockWords, cueListSignature, deskCues, nextCueIndex } from './cueRun.js'
 import { lightingApiUrl, lightingDeskPath, probeLightingDesk } from '../map/lightingLink.js'
@@ -210,7 +211,7 @@ function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk,
             ) : looks ? <p className="rigplot-hint">The cue list is empty. Put the looks on it; each cue fires its look on the desk, and the room follows.</p> : null}
             {!desk ? <p className="rigplot-hint">{NO_DESK_SENTENCE} GO here plays the list in this tab{readOnly ? '' : ' and writes nothing to a desk'}.</p> : null}
             <p className="rigcards-foot rigplot-mono rigplot-status__dim">
-                a cue fires its look on the desk&apos;s cue layer; the room poses every lamp by the look&apos;s rules · the DMX values need each type&apos;s channel list, which is owed — the desk carries the look, not yet its channels · their console drives it once console input lands (#599)
+                a cue fires its look on the desk&apos;s cue layer; the room poses every lamp by the look&apos;s rules · the desk carries each look WITH its DMX for every type that has a channel list (ASSUMED lists are marked); a type with none shows by the look&apos;s rule · their console drives it once console input lands (#599)
             </p>
         </section>
     )
@@ -341,14 +342,19 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
             // never on opening the page (a reader never writes).
             await patchRoom()
             const rig = await (await fetch(lightingApiUrl(`api/rig?project=${encodeURIComponent(projectId)}`))).json()
-            const list = deskLooks(looks, rig.fixtures || [])
+            // WITH their DMX (deskLookValues.js, as show-loop.mjs sends them): the room draws every patched lamp from
+            // the desk's DMX ("DMX wins", useRigLook.js), so an empty shell left each lamp at the desk's idle full white —
+            // MOXIR v1.0, 2026-10-08: the glare, the flat hall, a black that was not black. A lamp whose type has no
+            // channel list still gets none and shows by its look's rule.
+            const list = deskLooksWithValues(looks, rig.fixtures || [], { entities, library })
             for (const look of list) {
                 await fetch(lightingApiUrl('api/looks/add'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ look }) })
             }
-            setStatus(`${list.length} looks on the desk, over ${(rig.fixtures || []).length} patched fixtures — their DMX values are owed (no channel lists)`)
+            const valued = new Set(list.flatMap((l) => Object.keys(l.steps?.[0]?.values || {}))).size
+            setStatus(`${list.length} looks on the desk, over ${(rig.fixtures || []).length} patched fixtures — DMX values for ${valued}; ${(rig.fixtures || []).length - valued} have no channel list (shown by the look's rule)`)
             readDesk()
         } catch (error) { setStatus(`the desk did not take the looks: ${error.message}`) }
-    }, [looks, projectId, readDesk, patchRoom])
+    }, [looks, projectId, readDesk, patchRoom, entities, library])
     const addCues = useCallback((list) => {
         const ops = list.map((l) => ({ type: 'createMappingCue', payload: { cue: { id: `cue-${deskLookId(l.id)}`, name: l.title, fade: 2, hold: 0, lightLook: deskLookId(l.id) } } }))
         edit(ops, `${list.length} looks on the cue list`)

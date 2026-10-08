@@ -1,0 +1,212 @@
+{
+ "photo": "953-FXT51095.JPG",
+ "f_px": 7565.0,
+ "f_source": "EXIF FocalLength 23 mm x FocalPlaneXResolution 3289 px/cm (X-T5) = 7565 px; VGGT 7423 px",
+ "snap": 20,
+ "prior_cy": [
+  1.3,
+  0.3
+ ],
+ "note": "Floor at x ~3.6, z ~15 looking along the right row (x +12) toward the far end. Shaft edges N1-N3 re-read on crops-953.jpg (native px); upper-column edges (0.45 m) read on sheet-953.jpg and snapped +-20 px. Identities from the order along the row (nearest visible = z 12). N3 (taken as the joint) is held out and measured.",
+ "edges": [
+  {
+   "col": "N1 z12 right silhouette",
+   "x": 12.4,
+   "z": 12.25,
+   "p0": [
+    6775,
+    3720
+   ],
+   "p1": [
+    6775,
+    4000
+   ]
+  },
+  {
+   "col": "N2 z6 left silhouette",
+   "x": 11.6,
+   "z": 5.75,
+   "p0": [
+    4009,
+    2950
+   ],
+   "p1": [
+    4009,
+    3240
+   ]
+  },
+  {
+   "col": "N2 z6 right silhouette",
+   "x": 12.4,
+   "z": 6.25,
+   "p0": [
+    4662,
+    2950
+   ],
+   "p1": [
+    4662,
+    3240
+   ]
+  },
+  {
+   "col": "N3 joint z+0.5 left silhouette",
+   "x": 11.6,
+   "z": 0.25,
+   "p0": [
+    2940,
+    2560
+   ],
+   "p1": [
+    2940,
+    2850
+   ],
+   "check": true
+  },
+  {
+   "col": "N3 joint z+0.5 right silhouette",
+   "x": 12.4,
+   "z": 0.75,
+   "p0": [
+    3313,
+    2560
+   ],
+   "p1": [
+    3313,
+    2850
+   ],
+   "check": true
+  },
+  {
+   "col": "N2 z6 upper left silhouette",
+   "x": 11.775,
+   "z": 5.775,
+   "p0": [
+    4057,
+    100
+   ],
+   "p1": [
+    4057,
+    850
+   ]
+  },
+  {
+   "col": "N2 z6 upper right silhouette",
+   "x": 12.225,
+   "z": 6.225,
+   "p0": [
+    4405,
+    100
+   ],
+   "p1": [
+    4405,
+    850
+   ]
+  },
+  {
+   "col": "N3 joint z+0.5 upper left silhouette",
+   "x": 11.775,
+   "z": 0.275,
+   "p0": [
+    3091,
+    400
+   ],
+   "p1": [
+    3091,
+    1500
+   ],
+   "check": true
+  },
+  {
+   "col": "N3 joint z+0.5 upper right silhouette",
+   "x": 12.225,
+   "z": 0.725,
+   "p0": [
+    3323,
+    400
+   ],
+   "p1": [
+    3323,
+    1500
+   ],
+   "check": true
+  },
+  {
+   "col": "N4 z-6 upper left silhouette",
+   "x": 11.775,
+   "z": -6.225,
+   "p0": [
+    2357,
+    950
+   ],
+   "p1": [
+    2357,
+    1800
+   ]
+  },
+  {
+   "col": "N4 z-6 upper right silhouette",
+   "x": 12.225,
+   "z": -5.775,
+   "p0": [
+    2550,
+    950
+   ],
+   "p1": [
+    2550,
+    1800
+   ]
+  },
+  {
+   "col": "N5 z-12 upper left silhouette",
+   "x": 11.775,
+   "z": -12.225,
+   "p0": [
+    1874,
+    1300
+   ],
+   "p1": [
+    1874,
+    2100
+   ]
+  },
+  {
+   "col": "N5 z-12 upper right silhouette",
+   "x": 12.225,
+   "z": -11.775,
+   "p0": [
+    2048,
+    1300
+   ],
+   "p1": [
+    2048,
+    2100
+   ]
+  },
+  {
+   "col": "N6 z-18 upper left silhouette",
+   "x": 11.775,
+   "z": -18.225,
+   "p0": [
+    1526,
+    1600
+   ],
+   "p1": [
+    1526,
+    2280
+   ]
+  },
+  {
+   "col": "N6 z-18 upper right silhouette",
+   "x": 12.225,
+   "z": -17.775,
+   "p0": [
+    1623,
+    1600
+   ],
+   "p1": [
+    1623,
+    2280
+   ]
+  }
+ ]
+}

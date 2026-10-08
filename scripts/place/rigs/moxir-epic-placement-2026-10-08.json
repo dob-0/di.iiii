@@ -1,0 +1,352 @@
+{
+ "set": "moxir-epic-placement-2026-10-08",
+ "title": "MOXIR beta v0.9, the epic plot, phase 1: where every device goes (placement options, measured)",
+ "writtenAt": "2026-10-08",
+ "status": "PROPOSAL, sketches and numbers only, nothing built. Phase 1 of the epic plot: placement. The owner picks one option per group; phase 2 (looks, cues, fixture schedule, crew sheet, the rig file moxir-epic-2026-10-08.json) builds on his picks. Drawn and measured by scripts/place/epic_placement.py on top of rigs/moxir-lasers-v2-2026-10-08.json (lasers) and rigs/moxir-design-paint-2026-10-08.json (everything else).",
+ "owner": [
+  "2026-10-08: 'I want the EPIC placement: we have 6 LaserCubes, beams, wash and all info. Make the epic one please.'",
+  "2026-10-08 (order changed): 'yes go, but let's start from the PLACEMENT: give advice and sketches for the re-placement.'"
+ ],
+ "fixed": [
+  {
+   "what": "the stage line z 24.5, the DJ centred on a 0.4 m step, PA at x +-5.4",
+   "by": "owner 2026-10-07",
+   "src": "rigs/moxir-stage-line-2026-10-07.json"
+  },
+  {
+   "what": "the cut (12 m Prolyte H30V): NOT flipped, LOW 3.24 m house left, HIGH 6.35 m house right, hung from the near crane at z 21 behind the DJ, slid 1 m house left",
+   "by": "owner 2026-10-07",
+   "src": "rigs/moxir-stage-line-2026-10-07.json truss, rigs/moxir-crane-cut-stage-line-2026-10-07.json"
+  },
+  {
+   "what": "the audience z 25.8-48 (x +-5.35 used); hall v8-show; the whole building (4 spans, far crane z -22.2)",
+   "by": "the hall record",
+   "src": "moxir-hall-2026-10-07-v8-show-back21.hall.json"
+  },
+  {
+   "what": "the 6 LaserCube places as he painted them (lasers v2): 1-3 at the far end, 4/5 on the nave columns by the far crane, 6 mid-nave; the two moves safety forced (4/5 onto the column's nave corner, 3 to x 7.3 on the goal post)",
+   "by": "owner 2026-10-08 ('dob edit paint-lasers-v2.png')",
+   "src": "rigs/moxir-lasers-v2-2026-10-08.json"
+  },
+  {
+   "what": "no moving head on the truss; statics on the truss; no laser on the truss",
+   "by": "owner 2026-09-30 and 2026-10-07",
+   "src": "rigs/moxir-lights-beta-mix-2026-10-08-blocking.json rules_kept"
+  }
+ ],
+ "laser_model": {
+  "visibility_variant": "6W",
+  "visibility_variant_why": "the brief: treat the cubes as the 6 W unit (2700 / 1500 / 1800 mW) for what the floor sees, the conservative case",
+  "safety_variant": "10W",
+  "safety_variant_why": "the brief: the 10 W unit (5000 / 2800 / 2800 mW, NOHD 724 m) for every safety figure until a cube's label is read",
+  "beams_per_cube": 2,
+  "duty_per_beam": 0.45,
+  "duty_why": "a cube drawing 2 static beams is a 2-point scan: the galvos move the one beam between the two points, so each beam is on for at most half the time, less the blanked moves between them (blanking 10 % ASSUMED: not in the datasheet). The eye integrates a beam scanned far above flicker fusion to its time average (the Talbot-Plateau law), so the brightness seen per beam is 0.45 x the colour's power. The NOHD does NOT drop: IEC TR 60825-3 asks the show to plan for a scan failure, when the whole power stays in one beam."
+ },
+ "groups": [
+  {
+   "id": "far",
+   "title": "Lasers 1-3 (the far trio)",
+   "colour": "#ff4d4d",
+   "fixed": "his places; only HOW they hang is a choice",
+   "options": [
+    {
+     "id": "b",
+     "title": "goal-post truss at z -41.5 (his lean)",
+     "far": "b",
+     "shows": "6 beams from 64 m behind the DJ, rising 1-2 m over 60 m: lines converging on the stage, the far half of the hall as the depth",
+     "rigging": "a 12 m Prolyte H30V span (4 x L300) on two towers with base plates and outriggers; cubes on half-couplers + safeties under the bottom chord at 6.6 m",
+     "safety": "cube 3 moves 2.5 m house left (x 7.3) or its beams hit the far crane's cab; tower stability check owed (ANSI E1.21 class)",
+     "cost": "rental: 4 x H30V-L300, 2 towers (about 7 m), 2 base plates, 4 outriggers, 2 top corner blocks; no crane operator"
+    },
+    {
+     "id": "a",
+     "title": "the far crane rolled to z -41",
+     "far": "a",
+     "shows": "the most beam the floor sees (the trio sits clear of the far crane, because it IS the far crane)",
+     "rigging": "girder clamps + 0.5 m drop arms on the far crane's front girder; the venue rolls the crane",
+     "safety": "the crane locked out after the move (its operator, the venue's OK); no file says how far it can travel",
+     "cost": "no truss rental; the venue's crane operator for the move and back"
+    },
+    {
+     "id": "c",
+     "title": "'far, far away': towers at z -51.5",
+     "far": "c",
+     "shows": "the longest lines (about 73 m), but the floor sees the least of them: the far crane and the goal post's own span hide more",
+     "rigging": "the same goal post 2.3 m in front of the far end wall",
+     "safety": "as b; the sources sit about 90 m from the dance floor, deep in the haze the far half does not have yet",
+     "cost": "as b"
+    }
+   ],
+   "advice": "b",
+   "why": "Keep the goal post. With the honest power model (6 W, each cube's power split between its 2 beams) all three homes pass 6 of 6 and stay thousands of times above a dark club: a 299, b 227, c 149 cd/m2 per beam, seen on 74 / 65 / 54 % of their length. a is the brightest but needs the venue to roll a crane whose travel no file states; c is both dimmer (longer path through haze) and more hidden. 'Epic' does not argue for c: for the floor the lines are not longer, they are hidden more. b is his lean, the venue moves nothing."
+  },
+  {
+   "id": "mid",
+   "title": "Lasers 4-6 (the column pair and the mid-nave cube)",
+   "colour": "#ff9a3c",
+   "fixed": "his places, with 4/5 on the nave column's inner corner at 5.0 m (safety) and 6 on a 6.5 m tower at z -9.2",
+   "options": [
+    {
+     "id": "his",
+     "title": "as he painted them (lasers v2)",
+     "shows": "4a/5a cross the side spans to the far runway girders (the spans' columns lit edge-on); 4b/5b and 6a/6b run down the nave to the near crane's back girder and frame the DJ",
+     "rigging": "column clamps (strap + bracket on concrete, the venue's OK) for 4/5; a 6.5 m H30V tower on a base plate with outriggers for 6",
+     "safety": "every beam ends on steel; the near crane must be at z 21 (the beam stop) before any stage-ward emission",
+     "cost": "1 tower (6.5 m) + base + outriggers; 2 column brackets"
+    }
+   ],
+   "advice": "his",
+   "why": "Fixed by his paint; all 6 beams pass."
+  },
+  {
+   "id": "truss",
+   "title": "The cut's lights (the X, the curtain, the bridge-up PARs)",
+   "colour": "#f2f2f2",
+   "fixed": "the truss and its 17 PARs stay as the plot has them (the silhouette and the truss wall)",
+   "options": [
+    {
+     "id": "kept",
+     "title": "17 UP-PL5403 as in the plot",
+     "shows": "the slash (X), the lit sheet straight down behind the DJ (curtain), the wall carried up through the bridge gap (bridge-up)",
+     "rigging": "half-couplers on the H30V; 17 x 8 kg",
+     "safety": "every beam in the plane z 21 or rising: no eye in a cone",
+     "cost": "owned order"
+    }
+   ],
+   "advice": "kept",
+   "why": "Fixed with the truss."
+  },
+  {
+   "id": "stagefloor",
+   "title": "The stage floor lights (the halo, the backlight fan, the spine, the press crown)",
+   "colour": "#ffd23f",
+   "fixed": "kept from the blocking-fixed mix: the silhouette's backlight",
+   "options": [
+    {
+     "id": "kept",
+     "title": "5 halo PARs + 7 beams + 1 spine behind the step; 5 PARs on the press crown",
+     "shows": "the DJ black against light rising behind him; the press's crown over his head",
+     "rigging": "floor, on the strip between the truss and the step",
+     "safety": "beams meet 10 m up over the DJ, behind his body",
+     "cost": "owned order"
+    }
+   ],
+   "advice": "kept",
+   "why": "The silhouette is his reference 1; it already passes."
+  },
+  {
+   "id": "columns",
+   "title": "Column washes (the building's bones: 15 wall columns + 8 far nave columns)",
+   "colour": "#b48cff",
+   "members": [
+    "wash: left span wall columns (PAR uplights)",
+    "wash: right span wall columns (PAR uplights)",
+    "the vista (far columns)"
+   ],
+   "options": [
+    {
+     "id": "feet",
+     "title": "on the floor at the column feet, grazing up",
+     "shows": "each column lit from about 3 m up to its flared head (6.7 m): the upper shaft and the head, the hall's capitals, catch the light",
+     "rigging": "none: the PAR on its own floor bracket 0.7 m off the face; cable along the wall",
+     "safety": "the side spans are not dance floor; tape the cables; no eye in a cone",
+     "cost": "owned order (23 x UP-PL5403)"
+    },
+    {
+     "id": "col35",
+     "title": "clamped on the column at 3.5 m, aimed up",
+     "shows": "only the last metre under the head (5.6-6.7 m): a glow at the capital, the shaft below dark",
+     "rigging": "23 column brackets (strap + plate around 0.8 x 0.5 m concrete), a ladder or lift per unit, the venue's OK to strap its columns",
+     "safety": "a safety bond per unit at 3.5 m; working at height x 23",
+     "cost": "23 brackets + straps to make or rent; about 2-3 crew hours more"
+    },
+    {
+     "id": "runway",
+     "title": "on the crane runway girder (8 m), aimed down the column",
+     "shows": "the lower shaft (0.5-4.4 m) lit from above, top-down; the head and the capital stay dark",
+     "rigging": "a lift to 8 m at every unit; clamps on a crane rail's girder",
+     "safety": "the nave runways are the crane rails (the far crane stays on them): a unit there must be outside the crane's travel or the crane locked out; working at 7.5 m x 23",
+     "cost": "a lift (MEWP) for the day; 23 girder clamps"
+    }
+   ],
+   "advice": "feet",
+   "why": "Feet and runway light about the same length of column (3.7 m vs 3.9 m), but the feet light the top half and the flared head, which is what reads from the floor as the hall's bones, and need no lift, no clamp and no crane lock-out. 3.5 m lights only the last metre. 2 of the 8 far nave units clip X bracing with a lens edge (1 % of their rays): slide them 0.3 m on the day. With the PAR's optional 25 deg lens the band would start lower, about 2 m (geometry, not run)."
+  },
+  {
+   "id": "roof",
+   "title": "Roof pools (8 x UP-HK1915 in the side spans)",
+   "colour": "#3cd68a",
+   "members": [
+    "wash: left span roof (HK1915, up)",
+    "wash: right span roof (HK1915, up)"
+   ],
+   "options": [
+    {
+     "id": "floor",
+     "title": "on the floor, straight up, zoomed wide",
+     "shows": "4 pools of about 12 m on the space frame's underside per span: the roof as a lit ceiling end to end",
+     "rigging": "none (floor, in the span's middle)",
+     "safety": "straight up: no eye in a cone",
+     "cost": "rental order (8 of 14 in stock)"
+    },
+    {
+     "id": "runway",
+     "title": "on the runway girder top (8.2 m), straight up",
+     "shows": "pools of about 4 m right over the columns, and the upper columns cut 4 of the 8: the frame's nodes, not the roof",
+     "rigging": "a lift to 8 m per unit; clamps on the girder",
+     "safety": "working at 8 m; the side spans' runways carry no crane in the model (check on site)",
+     "cost": "a lift (MEWP)"
+    }
+   ],
+   "advice": "floor",
+   "why": "From the floor each unit's 60 deg zoom fills about 13 m of roof, clear; from the runway it has 2.6 m to spread in and half the units hit the upper columns."
+  },
+  {
+   "id": "farwall",
+   "title": "The far end wall (4 x UP-250BSW in the nave; the side spans' 4 stay on the floor)",
+   "colour": "#ff6fb5",
+   "members": [
+    "wash: the far end wall (BSW250)"
+   ],
+   "options": [
+    {
+     "id": "floor",
+     "title": "on the floor at z -49.5, aimed up the wall",
+     "shows": "the far wall lit from 4 m up to the roof (13 m), seen under the far crane, 75 m behind the DJ",
+     "rigging": "none",
+     "safety": "aimed away from the crowd",
+     "cost": "rental order"
+    },
+    {
+     "id": "goalpost",
+     "title": "on the goal post (z -41.5, 6.3 m), aimed back at the wall",
+     "shows": "the wall lit 3.7-10.4 m, flatter, from 12 m away; the heads hang in the same truss as the cubes",
+     "rigging": "4 x 14.5 kg more on the goal post (half-couplers + safeties); its towers then carry heads and lasers",
+     "safety": "4 more units over people setting up at 6.3 m; the truss load rises from 20 to 82 kg (of 289.5 kg at third points)",
+     "cost": "no extra rental if the goal post is built anyway"
+    }
+   ],
+   "advice": "floor",
+   "why": "The floor lights the wall's whole height and keeps the goal post for the lasers alone (lighter, nothing beside the cubes). Both are equally seen from the floor (55 / 56 %)."
+  },
+  {
+   "id": "beams",
+   "title": "Floor beams (18 x UP-B380F)",
+   "colour": "#4dd2ff",
+   "members": [
+    "the column arch (floor, column rows)",
+    "the backlight fan (floor, behind the riser)",
+    "the spine (floor, behind the truss)"
+   ],
+   "options": [
+    {
+     "id": "arch",
+     "title": "as the plot: 7 fan + 1 spine behind the DJ, 10 in 5 crossing pairs along the floor's edges",
+     "shows": "a row of pointed arches over the whole dance floor (his video 2) and the fan meeting over the DJ (video 4)",
+     "rigging": "floor",
+     "safety": "no beam through the dance zone below 2.5 m (checked)",
+     "cost": "owned order"
+    },
+    {
+     "id": "depth",
+     "title": "6 arch + 4 moved into the far nave as a vertical comb (z -27 / -33)",
+     "shows": "the arches over the front half of the floor (z 25-36); behind the stage, 4 white columns of light rise out of the dark far half where the lasers come from: the floor sees 70 % of their length past the truss and the cranes",
+     "rigging": "floor; 2 long cable runs to the far nave (with the lasers' power)",
+     "safety": "vertical, behind the stage: no eye",
+     "cost": "owned order"
+    }
+   ],
+   "advice": "depth",
+   "why": "The back two arch pairs (z 42, 48) stand behind most of the crowd and are seen from behind; moved to the far nave they give the depth a vertical rhythm that answers the lasers' horizontal lines, all 18 still clear. If the arches over the back of the floor matter more to him, keep 'arch'."
+  },
+  {
+   "id": "haze",
+   "title": "Haze (6 hazers on the order, 4 smoke machines)",
+   "colour": "#7f9cff",
+   "members": [
+    "hazers"
+   ],
+   "options": [
+    {
+     "id": "now",
+     "title": "the 6 as the painted design has them (2 behind the truss, 2 at z 33, 2 at z -18)",
+     "shows": "the near half hazed; the far trio's birth (z -41 to -33) and the mid-nave by the press (z -3 to 5) out of reach",
+     "rigging": "floor",
+     "safety": "the venue's smoke detection: isolate or not (the venue decides; fire watch)",
+     "cost": "on the order"
+    },
+    {
+     "id": "plus2",
+     "title": "2 of the 6 move from z -18 to z -4 (beside the press), + 2 more at z -37",
+     "shows": "every laser born in haze and fed down the whole nave; the floor's arches keep their 2 hazers",
+     "rigging": "floor; 2 x 16 A power runs to the far end (shared with the trio and the depth comb)",
+     "safety": "as now",
+     "cost": "rental: 2 more EXT-HAZER from the other supplier (rate owed)"
+    },
+    {
+     "id": "spread",
+     "title": "nothing rented: the 2 from z 33 go to z -37, the 2 from z -18 to z -4",
+     "shows": "the lasers as well hazed as plus2; the floor's arches fed only by the 2 behind the truss and the 4 smoke machines",
+     "rigging": "floor",
+     "safety": "as now",
+     "cost": "nothing"
+    }
+   ],
+   "advice": "plus2",
+   "why": "Lasers show only where there is haze. Today the trio's first 20 m are half fed (53 %); plus2 and spread both bring it to 97 % and the whole trio to 92 %. plus2 also keeps the floor's beams fed (100 % vs 88 %). If the supplier has no 2 more, spread is the fallback. The reach is ASSUMED: measure it on site."
+  },
+  {
+   "id": "flash",
+   "title": "Strobes and blinders (6 EXT-STROBE + 8 EXT-BLINDER, other supplier, 'full' version list)",
+   "colour": "#e0ff4f",
+   "options": [
+    {
+     "id": "front",
+     "title": "on the truss's front face, aimed at the crowd",
+     "shows": "the classic peak: the whole floor whited out (every eye in a field, about 40 000 lux at the front row with all 14 at once)",
+     "rigging": "14 units on the cut: 130 kg with clamps, 266 kg with its 17 PARs = 22 kg/m on a truss rated 321.6 kg/m (6 m span)",
+     "safety": "eyes in the cones by design; strobes at most 4 flashes per second and a notice at the door (HSE, The Event Safety Guide HSG195)",
+     "cost": "rental, other supplier (rate owed)"
+    },
+    {
+     "id": "behind",
+     "title": "behind the DJ, aimed up and back (floor strip behind the truss)",
+     "shows": "the flash lights the haze and the steel behind the DJ: a white silhouette at the drop, the building flashing, no eye in a cone",
+     "rigging": "floor, between the truss and the crane's back girder",
+     "safety": "no eye in a cone; the 4 Hz rule still applies to the room",
+     "cost": "rental, other supplier (rate owed)"
+    },
+    {
+     "id": "crane",
+     "title": "under the near crane's front girder (7.7 m), aimed steeply down onto the floor's front",
+     "shows": "the crowd lit from above in the flash (every eye in a field, about 23 000 lux at the front row with all 14), the DJ dark",
+     "rigging": "14 girder clamps at 7.7 m (a lift); on the crane that is the beam stop and the truss's carrier",
+     "safety": "eyes looking up are in the cones; adds load to the crane whose rating is owed",
+     "cost": "rental + a lift"
+    }
+   ],
+   "advice": "behind",
+   "why": "Ash: the flash is the fire behind the DJ, not light in the crowd's eyes. 'behind' keeps every eye out of every field (front row 0 lux), puts no weight on the truss or the crane, and lights the near crane's steel and the machines behind the stage. Facing the crowd ('front', 'crane') is a show choosing glare at the peak: about 40 000 / 23 000 lux at the front row is a white-out; if he wants that hit, it is a choice made knowingly, at reduced intensity."
+  }
+ ],
+ "photometry": {
+  "strobe_cd": {
+   "value": 213800,
+   "basis": "EQUIVALENT: Martin Atomic 3000 LED 180 000 lm (fixtures.json strobe.photometry) spread uniformly over a 60 deg cone (the angle ASSUMED there): I = flux / (2 pi (1 - cos 30 deg))"
+  },
+  "blinder_cd": {
+   "value": 24975,
+   "basis": "EQUIVALENT: Chauvet STRIKE 4, 999 lux at 5 m (fixtures.json blinder.photometry): I = E d^2"
+  },
+  "strobe_beam_deg": 60,
+  "blinder_beam_deg": 49
+ },
+ "haze_model": {
+  "reach_m": 15.0,
+  "reach_basis": "ASSUMED: a hazer feeds the air within about 15 m of it (horizontal) in a still hall; no maker states a coverage. To measure on site with one unit running for 20 min, a beam swept along the nave (owed).",
+  "nave_volume_m3": 33600,
+  "hall_volume_m3": 135000,
+  "volume_basis": "nave 24 m x 107.6 m x 13 m to the deck (hall.json); the 4 spans 96.8 m x 107.6 m x 13 m"
+ }
+}

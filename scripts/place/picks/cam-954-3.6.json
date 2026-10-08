@@ -1,0 +1,48 @@
+{
+ "view": "954-FXT51128-t03.6.jpg",
+ "f": 2004.0,
+ "cx": 1024.0,
+ "cy": 540.0,
+ "width": 2048,
+ "height": 1080,
+ "C": [
+  3.856,
+  1.432,
+  36.722
+ ],
+ "R": [
+  [
+   0.99999,
+   0.000156,
+   0.00449
+  ],
+  [
+   0.000392,
+   -0.998619,
+   -0.052532
+  ],
+  [
+   0.004476,
+   0.052533,
+   -0.998609
+  ]
+ ],
+ "yaw_pitch_roll_deg": [
+  0.257,
+  3.011,
+  0.009
+ ],
+ "vanishing_point_px": [
+  1015.0,
+  645.4
+ ],
+ "vp_inlier_segments": 9,
+ "vp_median_angle_deg": 0.378,
+ "residual_px": 0.0,
+ "vertical_segments": 0,
+ "vertical_rms_deg": 0.0,
+ "n_points": 0,
+ "method": "rotation from the hall-axis vanishing point (Hough segments + RANSAC, Caprile & Torre 1990) and the verticals; f from EXIF (23 mm on the 2048-px video width, 2004 px), principal point at the centre; position C from VGGT-1B aligned to the hall on 032 (run vggt-2026-10-07c, 954 frames spread +-0.7 m).",
+ "which_points": "none: not a point-based PnP. No 4 independent known 3-D points could be read reliably in this frame (column feet hidden, heads dense). Rotation is fitted on lines; position is VGGT.",
+ "position_error_m": "x +-0.7, z +-0.7 (spread of the 5 aligned 954 frames and the 0.73 m alignment rms), y +-0.3"
+}

@@ -516,6 +516,12 @@
                     "basis": "EXACT",
                     "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
                 },
+                "supply_w": {
+                    "value": 200,
+                    "src": "D-CN",
+                    "basis": "EXACT",
+                    "note": "the mains draw the maker states beside the 162 W rating (switch-mode supply with PFC): circuits and power totals are planned on it (audit A-05, 2026-10-05: 16 PARs on C6 = 3200 W at supply, over the 2944 W planning limit, though 2592 W at the rating)"
+                },
                 "dmx_channels": {
                     "value": [
                         8
@@ -1106,6 +1112,23 @@
                     "value": 1,
                     "src": "LASEROS-MK2",
                     "basis": "EXACT"
+                },
+                "beam_diameter_mm": {
+                    "value": 4,
+                    "src": "LASEROS-MK2",
+                    "basis": "EXACT"
+                },
+                "laser_class": {
+                    "value": "Class 4 (IEC 60825-1). The maker's own manual warns: lasers for display or entertainment should be Class 1, 2 or visible-beam 3R; a Class 4 show needs a laser safety officer and the local permit",
+                    "src": "LASEROS-MK2",
+                    "basis": "EXACT"
+                },
+                "variants_mw": {
+                    "value": {"10W": {"455nm": 5000, "525nm": 2800, "638nm": 2800}, "6W": {"455nm": 2700, "525nm": 1500, "638nm": 1800}},
+                    "note": "both are sold as 'Ultra MK2'; the owner's cubes are taken as 10 W — CONFIRM on the cube's label (the 6 W unit has ~half the green)",
+                    "src": "LASEROS-MK2",
+                    "basis": "EXACT",
+                    "read": "ULTRA MK2 Guide spec tables, read 2026-10-08 with pdftotext"
                 },
                 "control": {
                     "value": "Ethernet RJ45 100 Mbps (network stream, LaserOS protocol), WiFi 2.4 GHz, DMX512 in/out, Art-Net, ILDA, SD card playlists, Cube-Link sync",
