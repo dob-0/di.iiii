@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { buildVanityProjectPath } from '../utils/spaceRouting.js'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SIGN_IN_SEGMENT, buildAppSpacePath, buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { buildCardsPath } from './cardsRouting.js'
 import { CHOOSERS, ShowError, chooseCue, choosersLabel, durationWords, fetchShow, groupByAct, liveOf, setChoosers, swatchWords, youWords } from './showApi.js'
 import './show.css'
@@ -17,6 +17,7 @@ import './show.css'
 // No WebGL, no project document, no socket: one small JSON a second. The room is a link.
 
 const POLL_MS = 1000
+const buildSignInPath = () => `${buildAppSpacePath(null).replace(/\/$/, '')}/${SIGN_IN_SEGMENT}`
 const NAME_KEY = 'di.show.name'
 
 const readName = () => {
@@ -72,13 +73,14 @@ export default function ShowSurface({ spaceId, projectId }) {
     const [notice, setNotice] = useState('')
     const [sending, setSending] = useState(false)
     const [name, setName] = useState(readName)
-    const offset = useRef(0)
     const now = useNow()
 
     const take = useCallback((body, t0, t1) => {
         if (!body) return
-        if (Number.isFinite(body.now)) offset.current = body.now - (t0 + t1) / 2
-        setData({ ...body, receivedAt: t1 })
+        // The server's clock minus ours, from this one round trip (its midpoint): the clock
+        // fallback and every countdown read the server's time, not this phone's.
+        const offset = Number.isFinite(body.now) ? body.now - (t0 + t1) / 2 : 0
+        setData({ ...body, receivedAt: t1, offset })
         setError(null)
     }, [])
 
@@ -105,12 +107,12 @@ export default function ShowSurface({ spaceId, projectId }) {
         return () => { gone = true; clearInterval(timer); controller?.abort(); document.removeEventListener('visibilitychange', onVisible) }
     }, [spaceId, projectId, take])
 
-    const serverNow = now + offset.current
+    const serverNow = now + (data?.offset || 0)
     const live = useMemo(() => liveOf(data, serverNow), [data, serverNow])
-    const cues = data?.cues || []
+    const cues = useMemo(() => data?.cues || [], [data])
     const liveCue = live ? cues[live.index] : null
     const nextCue = live && live.nextIndex >= 0 ? cues[live.nextIndex] : null
-    const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - (Date.now() - data.receivedAt)) : 0
+    const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - (now - data.receivedAt)) : 0
     const block = data ? (data.you?.block === 'cooldown' && cooldownLeftMs <= 0 ? '' : data.you?.block) : 'loading'
     const lightBlocked = data && (data.light?.state === 'none' || data.clock?.showSource === 'clock')
     const cardBlock = lightBlocked ? 'no-light' : block
@@ -147,7 +149,12 @@ export default function ShowSurface({ spaceId, projectId }) {
             : error.status === 403 ? 'This show is private to its space.'
                 : error.status === 404 ? 'There is no show at this address.'
                     : error.message
-        return <main className="show-page"><p className="show-empty" role="alert">{sentence}</p></main>
+        return (
+            <main className="show-page">
+                <p className="show-empty" role="alert">{sentence}</p>
+                {error.status === 401 || error.status === 403 ? <p className="show-empty"><a className="show-link" href={buildSignInPath()}>sign in</a></p> : null}
+            </main>
+        )
     }
     if (!data) return <main className="show-page" aria-busy="true"><p className="show-empty">Loading the show…</p></main>
 

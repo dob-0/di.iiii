@@ -659,10 +659,16 @@ function AppRouter() {
 
     // `/{space}/show/{project}` — the show page (src/rigbuild/ShowSurface.jsx, RIG_BUILD.md §24):
     // the live cue and the cue list as cards, for everyone in the space; who may CHOOSE is
-    // the server's answer (serverXR/src/routes/showRoutes.js), never this route's. Seen the
-    // plot's way (RigToolRoute): a member, a visitor to a public space, a private one gated.
+    // the server's answer (serverXR/src/routes/showRoutes.js), never this route's. No gate
+    // here: the page asks the server, and a private show answers 401/403 there, which the page
+    // says in one sentence. (RigToolRoute is not used on purpose: on a `di up --guests`
+    // install it reads `session.local` as "everyone edits" and handed a guest the sign-in card.)
     if (isShowLocation(showState)) {
-        return <RigToolRoute spaceId={showState.spaceId} surface={() => <ShowSurface spaceId={showState.spaceId} projectId={showState.projectId} />} />
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading the show" detail="" />}>
+                <ShowSurface spaceId={showState.spaceId} projectId={showState.projectId} />
+            </Suspense>
+        )
     }
 
     // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the

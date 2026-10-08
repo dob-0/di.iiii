@@ -2419,3 +2419,73 @@ version: `scripts/rigbuild/privatePrices.mjs`. It is never imported by `src/` an
 pack. `scripts/rigbuild/noSupplierPrices.test.js` fails if a price field with a number, or a
 "<n> AMD" / "<n>/day" text, comes back. A document that already holds rates (the dev project
 `moxir-hall-known-full`) is data, edited by the owner, not by this code.
+
+## 24. The show page — everyone sees the cue, the team chooses it (2026-10-08)
+
+Owner, 2026-10-08: *"I need a light-show UI for everyone, so they can see and choose the cue."*
+Then, on who may choose: *"create it now, we decide later; in the cloud version … it will be for
+everyone who is not connected to the system, but that's for the future."*
+
+**Where.** `/{space}/show/{project}` (id or slug) — `src/rigbuild/showRouting.js`,
+`ShowSurface.jsx`, `showApi.js`, `show.css`. The rig tools' address shape (cards, scenes, plot):
+three segments, the word in the middle. A page of its own and not a mode of the room, because the
+room is a WebGL scene and this is a remote for a phone in a dark hall: no canvas, no project
+document, no socket — one JSON a second (measured below). The room is a link ("see the room").
+`show` is NOT added to the reserved words: like `scenes`, the route needs three segments, so a space
+or a project called `show` keeps working (and `projectVisibilityContracts.test.js` uses a space by
+that name).
+
+**The API** (`serverXR/src/routes/showRoutes.js`, rules in `serverXR/src/show/showRemote.js`):
+
+| Call | Does |
+| --- | --- |
+| `GET /api/spaces/:space/show/:project` | the cues (act, title, one line, swatch, laser), the live cue, the setting, who you are and what blocks you |
+| `POST …/choose {index, cueId, name?}` | sends that cue to Light's cue runner (`lighting/cuerun.js`) — the same `load`/`go` the cards page's GO uses, in process |
+| `POST …/control {choosers}` | the operator's setting: `team` · `everyone` · `operator` |
+
+Registered ahead of the blanket `/api` role gates, because a visitor may choose when the setting is
+`everyone` and the blanket write gate refuses every non-editor; each handler makes the
+`requireReadRole` decision itself (public space, or viewer scope), and a private project is 404.
+
+**Who** (`whoIs`): *operator* = the space's owner, an admin, or the person at the machine on a
+`di up --guests` install; *member* = signed in, editor, in the space's scope; *visitor* = anyone
+else who may see the space. With sign-in off, everyone is the operator — what "auth off" has always
+meant (`getPublicAuthState`); the page says so and names `di up --lan --guests`.
+
+**Who may choose — a setting, decided later.** `team` (default: operator + members), `everyone`
+(visitors too), `operator` (choosing locked). The operator may always choose. Stored per project in
+`<DATA_ROOT>/show/control.json` with the last choice, so a restart neither unlocks a locked show nor
+forgets who chose. Open for the cloud mode the owner named: the setting says WHO, `decideChoose`'s
+`light` argument says WHERE Light is (`runtime`, `showSpace`, `runner`), and nothing ties the two. A
+cloud mode needs one new thing — a way for a hosted tier to hand a choice to the local Light (a
+relay; none exists today), not a new permission model.
+
+**Always, for everyone:** one choice per 10 s (`COOLDOWN_MS`, the operator included — his immediate
+hand is GO on the cards page and Light, which this never slows); a **laser moment is refused**
+(`shared/laserMoments.cjs`: the sign-off marker, a lit group of a laser type, or a lit group whose
+name says laser; a look the server cannot read counts as one) — the page shows "laser moment —
+operator only". Also refused, with a sentence: a stale card (`list-changed`), a look Light does not
+hold (`not-on-light`), Light running another space's show or playing another project's list, a show
+that plays by its own clock, a di.iiii with no Light.
+
+`LASER_TYPE_IDS` mirrors the library's `category: "laser"` (`up-la40wf`, `ext-lc-ultra-mk2`);
+`shared/laserMoments.test.js` fails when the library gains one. **Found, not changed:** the scene
+deck's own `LASER_TYPES` (`sceneDeck/model.js`) names only `up-la40wf`, so MOXIR v1.0's LaserCubes
+are invisible to `guardSceneChange` (DMX is still held at 0 by `deskLookValues.js`). Fixing it there
+would refuse every edit of v1.0's four laser looks — the owner's call.
+
+**Why in process and not through `/light`.** `/light` is loopback-only unless the install opened
+its devices to the LAN (`localRuntimeGuard.js`): a device route is a socket someone could aim.
+Going to a named cue of this project's list is not that. Everything else on `/light` stays behind
+its gate. `cuerun.js` now records `firedAt`, so "chosen by" shows only for the firing that choice made.
+
+**Measured (2026-10-08, Playwright Chromium 1234 headless, scratch stack and an auth-on throwaway
+server serving `dist/`):** page usable 330–360 ms after navigation (local); a choice on one phone
+shown on another phone in 266, 189 and 238 ms (three runs; the bound is the 1 s poll + one request);
+0 canvases, 0 three/fiber chunks loaded; corners ≤ 2 px; cards ≥ 90 CSS px tall; no horizontal
+scroll at 390 px. ShowSurface chunk 11.0 kB + 5.8 kB CSS + showClock 2.0 kB (uncompressed).
+
+**Owed:** a real phone on the guest address (needs #826 landed and the venue wifi); the cloud
+relay; the scene deck's laser list (above); `rigToolAccess` reads `session.local` as "everyone
+edits", which on a `di up --guests` install hands a guest the sign-in card on the cards/plot pages
+(found here; this page does not use that gate).

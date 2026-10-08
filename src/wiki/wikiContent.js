@@ -1996,6 +1996,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-30'
     },
     {
+        id: 'rig-show-page',
+        category: 'Spaces & access',
+        title: 'The show page — everyone sees the cue, and the team chooses it',
+        summary: 'A page for a phone in the hall: the cue that is on, what comes next and when, and every cue of the show as a big card. Tap one and it goes to Light; every open page shows the change within a second, with who chose it.',
+        body: [
+            'Open it at /{space}/show/{project} — the project\'s id or its short name. It is a plain page with no 3D, so it opens fast on a phone; "see the room" opens the room itself.',
+            'At the top: the cue that is on, its act, the next cue and how long until it comes, and who chose it. Under it, the cues as cards grouped by act, each with its colours (ember, ash) as small squares.',
+            'Tap a card and that cue goes to Light, the lighting desk on the local di.iiii, which keeps playing the list from there. One choice every 10 seconds for everybody, so a room full of phones does not fight over it. You can type your name at the bottom; it is shown when you choose.',
+            'Who may choose is the operator\'s setting: TEAM (the members of this space — the default), EVERYONE (anyone who can see the show, a guest on a phone too) or OPERATOR ONLY. The operator is the space\'s owner, an admin, or the person at the machine. Everyone else sees the setting\'s effect, not the switch.',
+            'A laser moment is never fired from this page, by anyone: its card says "laser moment — operator only". The operator fires it from the cards page or Light, after the laser safety sign-off.',
+            'On a di.iiii where sign-in is off, everyone who opens the page counts as the operator; for a night with guests, start it with di up --lan --guests. On a hosted di.iiii there is no Light: the page shows the show playing by its own clock, and there is nothing to choose.'
+        ],
+        tags: ['show', 'cue', 'cues', 'choose', 'phone', 'remote', 'light', 'operator', 'team', 'guests', 'laser', 'live', 'moxir'],
+        updated: '2026-10-08'
+    },
+    {
         id: 'rig-version-switch',
         category: 'Spaces & access',
         title: 'Rig versions — the row that switches between them',

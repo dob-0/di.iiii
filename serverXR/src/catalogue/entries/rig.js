@@ -64,4 +64,46 @@ module.exports = [
     agent: false,
     note: "behind requireLocalRuntime — a 403 from this same guard, seen from another machine, IS the answer 'not visible'."
   },
+  {
+    route: "GET /api/spaces/:spaceId/show/:projectId",
+    summary: "the show page: a project's cues (act, line, colours, laser moment), the cue Light is playing, who may choose, and what blocks this caller",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "read like the space (public, or viewer scope); a private project is 404. Registered ahead of the /api role gates and decides for itself (routes/showRoutes.js). Polled once a second by every open show page."
+  },
+  {
+    route: "POST /api/spaces/:spaceId/show/:projectId/choose",
+    summary: "send one cue of the project's list to Light (the desk's cue runner, in process) — the show page's tap",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        properties: {
+          index: { type: "integer", description: "the cue's place in the list the GET returned" },
+          cueId: { type: "string", description: "the cue's id, so a list that changed meanwhile is refused (409) rather than firing another cue" },
+          name: { type: "string", description: "a name the person typed for themselves, shown as who chose (24 characters; an account's own label wins)" }
+        },
+        required: ["index"]
+      }
+    },
+    note: "who may choose is the operator's setting (team by default; everyone; operator only). A laser moment is refused for everyone (403). One choice per 10 s for everybody (429). Light must be on this machine: 409 on a hosted tier. Not for agents: it changes the lights in a room with people in it."
+  },
+  {
+    route: "POST /api/spaces/:spaceId/show/:projectId/control",
+    summary: "the operator sets who may choose on the show page: team, everyone or operator",
+    reach: "public",
+    role: "editor",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        properties: { choosers: { type: "string", enum: ["team", "everyone", "operator"] } },
+        required: ["choosers"]
+      }
+    },
+    note: "operator only (the space's owner, an admin, or the person at the machine). 'everyone' opens choosing to visitors, which is why this is reach public. Stored in <DATA_ROOT>/show/control.json."
+  },
 ]

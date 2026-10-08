@@ -76,6 +76,9 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
 
 .show-operator { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--show-faint); border-radius: 2px; background: var(--show-card); }
 .show-operator__label { display: block; font-family: var(--show-mono); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--show-muted); margin-bottom: 8px; }
+.show-operator__more summary::-webkit-details-marker { display: none; }
+.show-operator__more summary::before { content: '+'; width: 1.5ch; color: var(--show-accent); }
+.show-operator__more[open] summary::before { content: '−'; }
 .show-operator__more summary { min-height: 44px; display: flex; align-items: center; margin-top: 4px; font-family: var(--show-mono); font-size: 0.72rem; letter-spacing: 0.06em; color: var(--show-muted); cursor: pointer; }
 .show-operator__note { margin: 8px 0 0; font-size: 0.8rem; color: var(--show-muted); }
 .show-operator__note code { font-family: var(--show-mono); color: var(--show-text); }
