@@ -22,6 +22,13 @@
       "said_by": "owner, 2026-10-08: \"they will be moved before the show\"",
       "check_on_site": "2026-10-08: who moves them and when; what is in them",
       "seen_2026_10_08": "still there on 10-08, at x -0.6..2.4, z 19-23, up to ~1.9 m (170604, fitted camera; moxir-hall-site-2026-10-08.json as_found.white_bags): about 3 m nearer the press than the 10-07 read"
+    },
+    {
+      "id": "gas-cylinders",
+      "label": "the loose compressed-gas cylinders seen on 10-08 (165547 t=27 s, t=183 s; not in the hall model's massing)",
+      "why": "fire and pressure risk near lamps, cables and the smoke machines",
+      "said_by": "owner, 2026-10-08 night (via the coordinator): \"the gas cylinders will be out\"",
+      "check_on_site": "on the build day: none left in the hall, including the far half"
     }
   ]
 }
