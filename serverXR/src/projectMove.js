@@ -87,7 +87,7 @@ async function moveProjectBetweenSpaces({ db, spacesDir, projectId, toSpaceId, u
   if (!project) throw new MoveRefused(404, `project "${projectId}" not found`, 'project_not_found')
   const fromSpaceId = project.space_id
 
-  const targetSpace = db.prepare('SELECT * FROM spaces WHERE id = ?').get(toSpaceId)
+  const targetSpace = db.prepare('SELECT * FROM spaces WHERE id = ? AND deleted_at IS NULL').get(toSpaceId)
   if (!targetSpace) throw new MoveRefused(404, `target space "${toSpaceId}" not found`, 'target_not_found')
   if (fromSpaceId === toSpaceId) throw new MoveRefused(400, `project "${projectId}" is already in space "${toSpaceId}"`, 'same_space')
 

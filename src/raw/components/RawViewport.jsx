@@ -1,5 +1,6 @@
 import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
+import Canvas from '../../components/GuardedCanvas.jsx'
 import { ContactShadows, Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import ConeObject from '../../objectComponents/ConeObject.jsx'

@@ -1,3 +1,4 @@
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 import { forwardRef, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import JSZip from 'jszip'
 
@@ -527,7 +528,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
                         </div>
                     )}
                     <p className="sfp-empty">
-                        <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
+                        <a className="sfp-link" href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
                     </p>
                 </CollapsibleSection>
             )}
@@ -574,9 +575,18 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                     />
                 </div>
             ) : (
-                <button
+                <div
                     className={`spa-item${selected ? ' active' : ''}`}
+                    role="button"
+                    tabIndex={0}
                     aria-pressed={selected}
+                    onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            event.currentTarget.click()
+                        }
+                    }}
                     style={{
                         ...(depth > 0 ? { paddingLeft: depth * 14 + 8 } : {}),
                         ...(dropTarget ? { outline: '1px dashed currentColor', outlineOffset: -1 } : {})
@@ -650,7 +660,7 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                             {locked ? '■' : '□'}
                         </button>
                     )}
-                </button>
+                </div>
             )}
             {isGroup && expanded && children.map((child) => (
                 <StructureRow
@@ -747,6 +757,7 @@ const clampNumber = (value, min, max) => {
 }
 
 function NumberBox({ value, onChange, min, max, step = 1 }) {
+    const [draft, setDraft] = useState(null)
     const bump = (dir) => {
         const current = Number.isFinite(Number(value)) ? Number(value) : 0
         onChange(clampNumber(parseFloat((current + dir * step).toFixed(10)), min, max))
@@ -756,13 +767,16 @@ function NumberBox({ value, onChange, min, max, step = 1 }) {
             <input
                 type="number"
                 className="insp-input insp-num-input"
-                value={value}
+                value={draft ?? formatNumberDisplay(value)}
                 min={min}
                 max={max}
                 step={step}
+                onFocus={(event) => setDraft(event.target.value)}
+                onBlur={() => setDraft(null)}
                 onChange={(event) => {
+                    setDraft(event.target.value)
                     const next = Number(event.target.value)
-                    if (Number.isFinite(next)) onChange(clampNumber(next, min, max))
+                    if (event.target.value !== '' && Number.isFinite(next)) onChange(clampNumber(next, min, max))
                 }}
             />
             <div className="insp-num-arrows">

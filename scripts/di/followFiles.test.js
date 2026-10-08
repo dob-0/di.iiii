@@ -47,3 +47,20 @@ describe('di follows — files', () => {
         expect(text).toContain('files placed straight in the room itself are not carried yet')
     })
 })
+
+// Two servers on one data folder (serverXR/src/follow/lease.js): the one `di`
+// asks may not be the one carrying the follows. It must say so, not print
+// "(not running)" beside a follow that is running next door.
+describe('di follows — carried by another server on this data folder', () => {
+    it('names the server that carries them instead of calling them not running', () => {
+        const text = ui.followList(
+            { 'test-desk': { remote: 'http://100.72.53.77:4000/serverXR' } },
+            [],
+            { follows: [], carriedHere: false, carriedBy: { pid: 4242, port: 4000, hostname: 'aylmo' } }
+        )
+        const lines = text.split('\n')
+        expect(lines[0]).toBe('another di.iiii server on this data folder carries these follows (pid 4242, port 4000). ask that one how they are doing; this one takes over if it stops.')
+        expect(lines[1]).toContain('(carried by pid 4242, port 4000)')
+        expect(text).not.toContain('not running')
+    })
+})

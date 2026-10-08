@@ -10,15 +10,15 @@ const logger = require('./logger')
 const { isValidAssetId } = require('./assetHash')
 const { serverActor } = require('./opActor')
 const {
-  appendProjectOps,
   ensureProject,
   getProjectPaths,
   listProjectsInSpace,
   loadProjectMeta,
-  normalizeProjectId,
-  upsertProjectMeta,
-  writeProjectDocument
+  normalizeProjectId
 } = require('./projectStore')
+
+// One rule for both: a space waits out the same 30 days a project does.
+const SPACE_TRASH_TTL_MS = require('./projectStore').TRASH_TTL_MS
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 
@@ -186,7 +186,11 @@ function createSpaceStore({
     sceneVersion: row.scene_version || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    lastTouchedAt: row.last_touched_at
+    lastTouchedAt: row.last_touched_at,
+    // Only an archived space carries this: kept whole, hidden from the default list.
+    ...(row.archived_at ? { archivedAt: row.archived_at } : {}),
+    // Only a trashed space carries these (the trash reads, nothing else does).
+    ...(row.deleted_at ? { deletedAt: row.deleted_at, restorableUntil: row.deleted_at + SPACE_TRASH_TTL_MS } : {})
   })
 
   const buildMeta = (spaceId, overrides = {}) => {
@@ -219,13 +223,24 @@ function createSpaceStore({
     if (_s && _dbRef === db) return _s
     _dbRef = db
     _s = {
-      selectById:    db.prepare('SELECT * FROM spaces WHERE id = ?'),
-      selectExists:  db.prepare('SELECT 1 FROM spaces WHERE id = ?'),
-      selectBySlug:  db.prepare('SELECT * FROM spaces WHERE slug = ?'),
-      selectAll:     db.prepare('SELECT * FROM spaces ORDER BY updated_at DESC'),
-      selectStale:   db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
-      selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
-      countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ?'),
+      // The trash: every ordinary lookup excludes a trashed space, so its url,
+      // its slug and its card stop working at once (same rule as projects).
+      selectById:    db.prepare('SELECT * FROM spaces WHERE id = ? AND deleted_at IS NULL'),
+      selectAnyById: db.prepare('SELECT * FROM spaces WHERE id = ?'),
+      selectTrashedSpaces: db.prepare('SELECT * FROM spaces WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
+      selectPurgeableSpaces: db.prepare('SELECT id FROM spaces WHERE deleted_at IS NOT NULL AND deleted_at < ?'),
+      softDeleteSpace: db.prepare('UPDATE spaces SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL'),
+      restoreSpaceRow: db.prepare('UPDATE spaces SET deleted_at = NULL, updated_at = ?, last_touched_at = ? WHERE id = ?'),
+      trashProjectsOf: db.prepare('UPDATE projects SET deleted_at = ?, updated_at = ? WHERE space_id = ? AND deleted_at IS NULL'),
+      restoreProjectsOf: db.prepare('UPDATE projects SET deleted_at = NULL, updated_at = ? WHERE space_id = ? AND deleted_at = ?'),
+      countLiveProjects: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ? AND deleted_at IS NULL'),
+      countProjectsTrashedWith: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ? AND deleted_at = ?'),
+      selectExists:  db.prepare('SELECT 1 FROM spaces WHERE id = ? AND deleted_at IS NULL'),
+      selectBySlug:  db.prepare('SELECT * FROM spaces WHERE slug = ? AND deleted_at IS NULL'),
+      selectAll:     db.prepare('SELECT * FROM spaces WHERE deleted_at IS NULL ORDER BY updated_at DESC'),
+      selectStale:   db.prepare("SELECT id FROM spaces WHERE deleted_at IS NULL AND permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
+      selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE deleted_at IS NULL AND permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
+      countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ? AND deleted_at IS NULL'),
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
       selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
       countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
@@ -246,7 +261,16 @@ function createSpaceStore({
 
   const loadSpaceMeta = async (spaceId) => rowToMeta(s().selectById.get(spaceId))
 
+  // A trashed space still owns its id: creating over it would INSERT OR
+  // REPLACE the row and the cascade would take its trashed projects with it.
+  const refuseIfTrashed = (spaceId) => {
+    if (s().selectAnyById.get(spaceId)?.deleted_at) {
+      throw Object.assign(new Error(`"${spaceId}" is in the trash. Restore it, or purge it, before using the name again.`), { status: 409, code: 'space_in_trash' })
+    }
+  }
+
   const saveSpaceMeta = async (spaceId, meta) => {
+    refuseIfTrashed(spaceId)
     s().upsert.run(
       spaceId,
       meta.slug ?? null,
@@ -280,6 +304,7 @@ function createSpaceStore({
     return db.transaction(() => {
       const row = selectById.get(spaceId)
       if (!row) {
+        refuseIfTrashed(spaceId)
         const meta = buildMeta(spaceId, updates)
         insert.run(spaceId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0, serializeTrusted(meta.trustedUserIds))
         return meta
@@ -296,9 +321,11 @@ function createSpaceStore({
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
       const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
+      const nextArchived  = 'archived'         in updates ? (updates.archived ? (row.archived_at || now) : null)                                       : (row.archived_at ?? null)
       const nextTrusted   = 'trustedUserIds'   in updates ? serializeTrusted(updates.trustedUserIds)                                                       : (row.trusted_user_ids ?? null)
+      db.prepare('UPDATE spaces SET archived_at=? WHERE id=?').run(nextArchived, spaceId)
       update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, nextTrusted, spaceId)
-      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted })
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted, archived_at: nextArchived })
     })()
   }
 
@@ -346,6 +373,102 @@ function createSpaceStore({
     commonsStore.deleteBySpace(spaceId)
     const { spaceDir } = getSpacePaths(spaceId)
     await fsp.rm(spaceDir, { recursive: true, force: true })
+  }
+
+  // ── The space trash ──────────────────────────────────────────────────────
+  // Same promise as a project's: delete marks, it does not shred. The space AND
+  // its projects share ONE timestamp, which is what lets a restore bring back
+  // exactly the work that went with the space — a project the owner trashed
+  // on its own, earlier, stays in the project trash.
+  const protectedReason = (meta) => {
+    if (!meta) return null
+    if (meta.permanent) return 'permanent'
+    if (meta.kind === 'global') return 'global'
+    if (meta.kind === 'sandbox') return 'sandbox'
+    if (meta.id === (normalizeSpaceId(defaultSpaceId) || defaultSpaceId)) return 'front-room'
+    return null
+  }
+
+  const trashSpace = async (spaceId) => {
+    const db = getDb()
+    const meta = rowToMeta(s().selectById.get(spaceId))
+    if (!meta) return null
+    const reason = protectedReason(meta)
+    if (reason) {
+      throw Object.assign(new Error(`"${spaceId}" is a ${reason} space and cannot be deleted.`), { status: 409, code: 'space_protected', reason })
+    }
+    // The stamp is what ties a project to THIS trashing, so it must differ from
+    // any stamp already on the space's projects (one trashed on its own in the
+    // same millisecond would otherwise come back with the space).
+    let now = Date.now()
+    while (s().countProjectsTrashedWith.get(spaceId, now)?.cnt) now += 1
+    let projects = 0
+    db.transaction(() => {
+      projects = s().trashProjectsOf.run(now, now, spaceId).changes
+      s().softDeleteSpace.run(now, now, spaceId)
+    })()
+    return { deletedAt: now, restorableUntil: now + SPACE_TRASH_TTL_MS, projects }
+  }
+
+  const restoreSpace = async (spaceId) => {
+    const db = getDb()
+    const row = s().selectAnyById.get(spaceId)
+    if (!row || !row.deleted_at) return null
+    const now = Date.now()
+    let projects = 0
+    db.transaction(() => {
+      projects = s().restoreProjectsOf.run(now, spaceId, row.deleted_at).changes
+      s().restoreSpaceRow.run(now, now, spaceId)
+    })()
+    return { space: rowToMeta(s().selectAnyById.get(spaceId)), projects }
+  }
+
+  // Trashed spaces, each with the number of projects that went with it.
+  const listTrashedSpaces = async () =>
+    s().selectTrashedSpaces.all().map((row) => ({
+      ...rowToMeta(row),
+      projectCount: s().countProjectsTrashedWith.get(row.id, row.deleted_at)?.cnt || 0
+    }))
+
+  const loadTrashedSpaceMeta = async (spaceId) => {
+    const row = s().selectAnyById.get(spaceId)
+    return row?.deleted_at ? rowToMeta(row) : null
+  }
+
+  // What a delete would take: shown in the confirm so the owner reads it
+  // before the click. Bytes are the space's own directory (scene, assets,
+  // project documents); blobs shared by content hash live outside it.
+  const spaceFootprint = async (spaceId) => {
+    const { spaceDir } = getSpacePaths(spaceId)
+    let bytes = 0
+    const walk = async (dir) => {
+      let entries
+      try { entries = await fsp.readdir(dir, { withFileTypes: true }) } catch { return }
+      for (const entry of entries) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) await walk(full)
+        else if (entry.isFile()) {
+          try { bytes += (await fsp.stat(full)).size } catch { /* vanished mid-walk */ }
+        }
+      }
+    }
+    await walk(spaceDir)
+    return { projects: s().countLiveProjects.get(spaceId)?.cnt || 0, bytes }
+  }
+
+  // The only path that removes a space's bytes. The sweep calls it for spaces
+  // past the hold; the purge route calls it for one the owner names.
+  const purgeTrashedSpace = async (spaceId) => {
+    const row = s().selectAnyById.get(spaceId)
+    if (!row?.deleted_at) return false
+    await deleteSpace(spaceId)
+    return true
+  }
+
+  const purgeSpaceTrash = async ({ now = Date.now(), ttlMs = SPACE_TRASH_TTL_MS } = {}) => {
+    const due = s().selectPurgeableSpaces.all(now - ttlMs).map((r) => r.id)
+    for (const id of due) await deleteSpace(id)
+    return due
   }
 
   const pruneSpaces = async () => {
@@ -703,21 +826,34 @@ function createSpaceStore({
         // snapshot or arriving from a file must come back private.
         ...(meta.visibility === 'private' ? { visibility: 'private' } : {})
       })
-      const current = await loadProjectMeta(spacesDir, spaceId, projectId)
-      const version = (Number(current?.documentVersion) || 0) + 1
-      await writeProjectDocument(spacesDir, spaceId, projectId, document)
-      await restoreProjectAssetManifests(spaceId, projectId, entry.assets)
-      const resetOp = {
-        opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        clientId: 'server',
-        type: 'replaceDocument',
-        payload: { document },
-        version,
-        timestamp: Date.now()
-      }
-      await appendProjectOps(spacesDir, spaceId, projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
-      await upsertProjectMeta(spacesDir, spaceId, projectId, { documentVersion: version })
-      restored.push({ projectId, version, ops: [resetOp] })
+      // The same guarded write as PUT /api/projects/:id/document
+      // (projectWrite.js): the version is read, and the reset op and the new
+      // version committed, while no other server on this data folder can
+      // write the project.
+      const { withProjectWriteLock, commitProjectWrite } = require('./projectWrite')
+      const landed = await withProjectWriteLock({ spacesDir, spaceId, projectId, log: logger }, async () => {
+        const current = await loadProjectMeta(spacesDir, spaceId, projectId)
+        const baseVersion = Number(current?.documentVersion) || 0
+        const version = baseVersion + 1
+        await restoreProjectAssetManifests(spaceId, projectId, entry.assets)
+        const resetOp = {
+          opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          clientId: 'server',
+          type: 'replaceDocument',
+          payload: { document },
+          version,
+          timestamp: Date.now()
+        }
+        const committed = await commitProjectWrite({
+          spacesDir, spaceId, projectId, baseVersion, ops: [resetOp], document,
+          maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor, log: logger
+        })
+        if (!committed.ok) {
+          throw Object.assign(new Error(`Project ${projectId} changed while it was being restored. Restore again.`), { status: 409 })
+        }
+        return { version, resetOp }
+      })
+      restored.push({ projectId, version: landed.version, ops: [landed.resetOp] })
     }
     return restored
   }
@@ -956,6 +1092,15 @@ function createSpaceStore({
     collectSceneAssetRefs,
     countSpacesOwnedBy,
     deleteSpace,
+    trashSpace,
+    protectedReason,
+    restoreSpace,
+    listTrashedSpaces,
+    loadTrashedSpaceMeta,
+    spaceFootprint,
+    purgeTrashedSpace,
+    purgeSpaceTrash,
+    SPACE_TRASH_TTL_MS,
     ensureDefaultSpace,
     ensureSpaceScene,
     ensureSpaceWritable,

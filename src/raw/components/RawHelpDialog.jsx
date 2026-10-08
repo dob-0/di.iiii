@@ -1,43 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-    GUIDE_SECTIONS,
-    getGuideSection
-} from '../utils/rawGuide.js'
+import { useEffect } from 'react'
+import { describeCanvas, helpKeyRows, helpLines } from '../utils/rawGuide.js'
 
-// The graph diagram survives the surface axis: cards and wires are still the
-// truth of the product. The World/View diagrams taught surfaces that no
-// longer exist and are gone with them.
-function GuideDiagram() {
-    return (
-        <div className="raw-help-diagram raw-help-diagram-graph" aria-hidden="true">
-            <div className="raw-help-diagram-wire raw-help-diagram-wire-a" />
-            <div className="raw-help-diagram-wire raw-help-diagram-wire-b" />
-            <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-a" />
-            <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-b" />
-            <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-c" />
-        </div>
-    )
-}
-
+// Help: one sheet, no tabs (audit 2026-10-05 §3.9). The first line is about
+// THIS canvas, counted from the open project, so nothing here can contradict
+// what is on screen. The lines and keys come from rawGuide.js / the keymap.
 export default function RawHelpDialog({
     open,
     onClose,
-    // '?' on the canvas opens straight onto the keys list.
-    initialSection = 'start',
-    // In the right region (audit 2026-10-05 §3.5): no backdrop, no scrim, a
-    // panel in the layout that replaces whatever stood there.
+    nodeCount = 0,
+    wireCount = 0,
+    thingCount = 0,
+    // In the right region (audit 2026-10-05 §3.5, #777): no backdrop, no
+    // scrim, a panel in the layout that replaces whatever stood there.
     inline = false
 }) {
-    const [activeSectionId, setActiveSectionId] = useState(initialSection)
-    const [activeMode, setActiveMode] = useState('basics')
-    const suggestedSection = useMemo(() => getGuideSection(initialSection), [initialSection])
-
-    useEffect(() => {
-        if (!open) return
-        setActiveSectionId(suggestedSection.id)
-        setActiveMode('basics')
-    }, [open, suggestedSection.id])
-
     useEffect(() => {
         if (!open) return undefined
         // Capture phase + preventDefault: closing help is the WHOLE meaning of
@@ -53,8 +29,6 @@ export default function RawHelpDialog({
     }, [open, onClose])
 
     if (!open) return null
-
-    const activeSection = GUIDE_SECTIONS.find((section) => section.id === activeSectionId) || suggestedSection
 
     return (
         <div className={inline ? 'raw-help-inline' : 'raw-help-backdrop'}>
@@ -73,91 +47,32 @@ export default function RawHelpDialog({
                 aria-label="Help"
             >
                 <header className="raw-help-header">
-                    <div className="raw-help-header-mark" aria-hidden="true">
-                        <span>{activeSection.icon}</span>
-                    </div>
                     <div>
-                        <span className="raw-window-kicker">{activeSection.label}</span>
-                        <h3>{activeSection.title}</h3>
-                        <p>{activeSection.description}</p>
+                        <span className="raw-window-kicker">Help</span>
+                        <h3>{describeCanvas({ nodeCount, wireCount, thingCount })}</h3>
                     </div>
-                    <button type="button" onClick={onClose}>Close</button>
+                    <button type="button" className="raw-cell" onClick={onClose}>Close</button>
                 </header>
-
-                <div className="raw-help-mode-tabs" role="tablist" aria-label="Help modes">
-                    {['basics', 'controls'].map((mode) => (
-                        <button
-                            key={mode}
-                            type="button"
-                            role="tab"
-                            aria-selected={activeMode === mode}
-                            className={activeMode === mode ? 'is-active' : ''}
-                            onClick={() => setActiveMode(mode)}
-                        >
-                            {mode === 'basics' ? 'Navigation Basics' : 'All Controls'}
-                        </button>
+                <ul className="raw-help-lines">
+                    {helpLines().map((line) => (
+                        <li key={line.id} className="raw-help-line">
+                            <b>{line.label}</b>
+                            <span>{line.text}</span>
+                            {line.key ? <kbd>{line.key}</kbd> : <span />}
+                        </li>
                     ))}
-                </div>
-
-                <div className="raw-help-tabs" role="tablist" aria-label="Guide sections" hidden={GUIDE_SECTIONS.length < 2}>
-                    {GUIDE_SECTIONS.map((section) => (
-                        <button
-                            key={section.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={section.id === activeSection.id}
-                            className={section.id === activeSection.id ? 'is-active' : ''}
-                            onClick={() => setActiveSectionId(section.id)}
-                        >
-                            {section.label}
-                        </button>
-                    ))}
-                </div>
-
-                <div className={`raw-help-body raw-help-body-${activeMode}`}>
-                    <div className="raw-help-visual-stage">
-                        <GuideDiagram />
-                        <div className="raw-help-callout-row">
-                            {activeSection.callouts.map((item) => (
-                                <article key={item.title} className="raw-help-callout">
-                                    <div className="raw-help-callout-icon" aria-hidden="true">{item.icon}</div>
-                                    <strong>{item.title}</strong>
-                                    <p>{item.detail}</p>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-
-                    {activeMode === 'basics' ? (
-                        <div className="raw-help-side raw-help-side-basics">
-                            <div className="raw-help-step-grid">
-                                {activeSection.steps.map((step, index) => (
-                                    <div key={step} className="raw-help-step-card">
-                                        <span>{index + 1}</span>
-                                        <p>{step}</p>
-                                    </div>
-                                ))}
+                </ul>
+                <details className="raw-help-keys">
+                    <summary>Every key and mouse action</summary>
+                    <dl>
+                        {helpKeyRows().map(([does, how]) => (
+                            <div key={does} style={{ display: 'contents' }}>
+                                <dt>{does}</dt>
+                                <dd>{how}</dd>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="raw-help-side raw-help-side-controls">
-                            <div className="raw-help-controls-list">
-                                {activeSection.controls.map(([label, value]) => (
-                                    <div key={label} className="raw-help-control-row">
-                                        <span>{label}</span>
-                                        <strong>{value}</strong>
-                                    </div>
-                                ))}
-                            </div>
-                            <ul className="raw-help-tip-list">
-                                {activeSection.tips.map((tip) => (
-                                    <li key={tip}>{tip}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-
+                        ))}
+                    </dl>
+                </details>
             </section>
         </div>
     )

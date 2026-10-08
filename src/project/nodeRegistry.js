@@ -2862,6 +2862,11 @@ export const NODE_TYPES = {
         id: 'agent.keeper',
         label: 'Keeper',
         category: 'agent',
+        // "Keeper" is the rite's word for it, not the one anyone searches with.
+        // Without these, typing "local llm", "llama" or "openai" in the palette
+        // found nothing and the node might as well not exist. Same words as the
+        // keeper-node article's tags (src/wiki/wikiContent.js).
+        keywords: ['local', 'llm', 'llama', 'llama.cpp', 'ollama', 'openai', 'model', 'ai', 'offline', 'keeper'],
         runtime: 'web',
         singleton: false,
         inputs: [
