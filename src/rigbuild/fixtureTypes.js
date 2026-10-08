@@ -290,6 +290,8 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             modesOwed: realModes(modes).length === 0,
             assumedMode: modes.find(isAssumedMode)?.name || null,
             power_w: sourced(kind.specs?.power_w),
+            // the mains draw where the maker states one beside the rating (a LED PAR: 162 W rated, 200 W supply)
+            supply_w: sourced(kind.specs?.supply_w),
             weight_kg: sourced(kind.specs?.weight_kg),
             size_mm: sourced(kind.specs?.size_mm),
             pan_tilt_deg: sourced(kind.specs?.pan_tilt_deg),
@@ -345,9 +347,15 @@ export const modeOf = (type, name) => {
 
 export const footprintOf = (type, name) => modeOf(type, name)?.footprint ?? null
 
+// What a lamp draws from the mains, for circuits and totals: the maker's SUPPLY power where it states
+// one beside the rating, else the rating. Planning on the rating put 16 PARs (2592 W rated, 3200 W at
+// supply) on one 16 A circuit over its 2944 W limit (audit A-05, 2026-10-05).
 export const powerOf = (type) => {
-    const w = Number(type?.power_w?.value)
-    return Number.isFinite(w) && w >= 0 ? w : null
+    for (const v of [type?.supply_w?.value, type?.power_w?.value]) {
+        const w = Number(v)
+        if (v != null && Number.isFinite(w) && w >= 0) return w
+    }
+    return null
 }
 
 /**

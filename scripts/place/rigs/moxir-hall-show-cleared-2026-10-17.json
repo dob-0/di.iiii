@@ -1,0 +1,26 @@
+{
+  "site": "MOXIR, Charentsavan",
+  "date": "2026-10-07",
+  "layer": "show-cleared",
+  "source": "owner's decision",
+  "notes": "What is cleared out of the hall for the 17 Oct show. Apply this layer LAST and only for the show hall: the as-found layers (dims 10-02, 10-07) still describe the hall as it stands. Each entry names who decided and when; the move is checked on site.",
+  "massing_remove": [
+    {
+      "id": "prefab-cabin",
+      "label": "white prefab cabin, house left (x -12..-9, z 30.7-35.3)",
+      "why": "It stands inside the audience area (z > 24.5, the stage line from the owner's marks on video 954).",
+      "said_by": "owner, 2026-10-07: \"cabin will go it small thing from left\"",
+      "check_on_site": "2026-10-08: confirm it can be moved (no foundation, no services) and who moves it before 17 Oct."
+    }
+  ],
+  "cleared_not_in_model": [
+    {
+      "id": "white-bags",
+      "label": "the white bulk bags behind the DJ place (z 22-26.5, in the photos; not in the hall model's massing)",
+      "why": "They stand where the stage, the step and the PA go.",
+      "said_by": "owner, 2026-10-08: \"they will be moved before the show\"",
+      "check_on_site": "2026-10-08: who moves them and when; what is in them"
+    }
+  ],
+  "_note_cleared_not_in_model": "Cleared on site but not in the hall model's massing, so hall.py has nothing to remove (it refuses unknown ids in massing_remove). Kept here so the floor plan and the site list still name them."
+}
