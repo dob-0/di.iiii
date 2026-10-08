@@ -255,6 +255,31 @@ describe('a space that lives on two di.iiii at once', () => {
         expect(objectIds(await readScene(hosting))).toContain('chair')
     })
 
+    // A short name chosen on one machine reaches the other with no human in between
+    // (2026-10-08: the MOXIR links). Both directions, over the real wire.
+    it('carries a project short name set on either side to the other', async () => {
+        const listing = async (server) => (await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })).json()).projects || []
+        const slugOn = (server, id) => async () => (await listing(server)).find(row => row.id === id)?.slug || false
+        const make = (server, id) => fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: id, title: id }) })
+        const patch = (server, id, slug) => fetch(`${server.baseUrl}/api/projects/${id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ slug }) })
+
+        expect((await make(hosting, 'slug-proj-up')).status).toBeLessThan(300)
+        expect((await make(hosting, 'slug-proj-down')).status).toBeLessThan(300)
+        const arrived = (id) => async () => (await listing(following)).some(row => row.id === id)
+        await settle('the projects reaching the follower', arrived('slug-proj-up'))
+        await settle('the projects reaching the follower', arrived('slug-proj-down'))
+
+        // follower -> host
+        expect((await patch(following, 'slug-proj-up', 'brief-up')).status).toBe(200)
+        follower.wake()
+        expect(await settle('the follower short name reaching the host', slugOn(hosting, 'slug-proj-up'))).toBe('brief-up')
+
+        // host -> follower
+        expect((await patch(hosting, 'slug-proj-down', 'brief-down')).status).toBe(200)
+        follower.wake()
+        expect(await settle('the host short name reaching the follower', slugOn(following, 'slug-proj-down'))).toBe('brief-down')
+    }, 150_000)
+
     it('converges when both sides edit at the same version at the same moment', async () => {
         // Both write against the version they are looking at, which is the
         // same op history on both sides — the case a single-leader design
