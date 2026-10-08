@@ -1,0 +1,921 @@
+{
+ "release": "44873",
+ "zoom": 18,
+ "res_m": 0.25,
+ "center_utm": [
+  469134.28,
+  4472953.73
+ ],
+ "bearing_grid_deg": 144.33,
+ "frame": "u across (azimuth bearing-90, NE+), v along (azimuth bearing, SE+), metres from center_utm",
+ "pin_uv_m": [
+  15.58,
+  25.13
+ ],
+ "across_edges": [
+  {
+   "at_m": -64.16,
+   "sign": "-",
+   "strength": 13.59
+  },
+  {
+   "at_m": -61.36,
+   "sign": "+",
+   "strength": 8.13
+  },
+  {
+   "at_m": -57.17,
+   "sign": "+",
+   "strength": 5.84
+  },
+  {
+   "at_m": -54.63,
+   "sign": "-",
+   "strength": 4.88
+  },
+  {
+   "at_m": -51.16,
+   "sign": "+",
+   "strength": 29.71
+  },
+  {
+   "at_m": -38.38,
+   "sign": "-",
+   "strength": 6.6
+  },
+  {
+   "at_m": -28.47,
+   "sign": "-",
+   "strength": 2.7
+  },
+  {
+   "at_m": -20.85,
+   "sign": "+",
+   "strength": 6.31
+  },
+  {
+   "at_m": -8.33,
+   "sign": "-",
+   "strength": 37.63
+  },
+  {
+   "at_m": -6.42,
+   "sign": "+",
+   "strength": 33.48
+  },
+  {
+   "at_m": -0.33,
+   "sign": "+",
+   "strength": 5.36
+  },
+  {
+   "at_m": 5.81,
+   "sign": "+",
+   "strength": 3.68
+  },
+  {
+   "at_m": 15.65,
+   "sign": "-",
+   "strength": 36.17
+  },
+  {
+   "at_m": 17.56,
+   "sign": "+",
+   "strength": 33.23
+  },
+  {
+   "at_m": 23.55,
+   "sign": "+",
+   "strength": 4.27
+  },
+  {
+   "at_m": 31.76,
+   "sign": "+",
+   "strength": 3.07
+  },
+  {
+   "at_m": 33.95,
+   "sign": "-",
+   "strength": 3.66
+  },
+  {
+   "at_m": 46.18,
+   "sign": "-",
+   "strength": 68.58
+  },
+  {
+   "at_m": 55.69,
+   "sign": "+",
+   "strength": 11.9
+  },
+  {
+   "at_m": 62.16,
+   "sign": "+",
+   "strength": 6.63
+  }
+ ],
+ "along_edges": [
+  {
+   "at_m": -64.11,
+   "sign": "-",
+   "strength": 9.61
+  },
+  {
+   "at_m": -50.86,
+   "sign": "+",
+   "strength": 9.06
+  },
+  {
+   "at_m": -46.54,
+   "sign": "+",
+   "strength": 57.7
+  },
+  {
+   "at_m": -44.19,
+   "sign": "-",
+   "strength": 12.05
+  },
+  {
+   "at_m": -39.61,
+   "sign": "+",
+   "strength": 13.56
+  },
+  {
+   "at_m": -34.73,
+   "sign": "+",
+   "strength": 1.93
+  },
+  {
+   "at_m": -26.85,
+   "sign": "-",
+   "strength": 2.15
+  },
+  {
+   "at_m": -21.24,
+   "sign": "-",
+   "strength": 1.79
+  },
+  {
+   "at_m": -1.14,
+   "sign": "+",
+   "strength": 2.61
+  },
+  {
+   "at_m": 2.01,
+   "sign": "-",
+   "strength": 2.49
+  },
+  {
+   "at_m": 6.13,
+   "sign": "+",
+   "strength": 5.66
+  },
+  {
+   "at_m": 8.32,
+   "sign": "-",
+   "strength": 12.84
+  },
+  {
+   "at_m": 13.01,
+   "sign": "+",
+   "strength": 13.52
+  },
+  {
+   "at_m": 18.68,
+   "sign": "+",
+   "strength": 1.76
+  },
+  {
+   "at_m": 22.71,
+   "sign": "-",
+   "strength": 1.87
+  },
+  {
+   "at_m": 25.73,
+   "sign": "+",
+   "strength": 1.91
+  },
+  {
+   "at_m": 49.27,
+   "sign": "+",
+   "strength": 1.92
+  },
+  {
+   "at_m": 54.94,
+   "sign": "+",
+   "strength": 2.56
+  },
+  {
+   "at_m": 60.08,
+   "sign": "-",
+   "strength": 28.15
+  },
+  {
+   "at_m": 61.66,
+   "sign": "-",
+   "strength": 27.57
+  }
+ ],
+ "strips": {
+  "-8.1:-6.7": {
+   "along_edges": [
+    {
+     "at_m": -64.11,
+     "sign": "-",
+     "strength": 44.83
+    },
+    {
+     "at_m": -51.07,
+     "sign": "+",
+     "strength": 11.69
+    },
+    {
+     "at_m": -46.48,
+     "sign": "+",
+     "strength": 79.82
+    },
+    {
+     "at_m": -44.31,
+     "sign": "-",
+     "strength": 53.74
+    },
+    {
+     "at_m": -39.63,
+     "sign": "+",
+     "strength": 10.39
+    },
+    {
+     "at_m": -17.89,
+     "sign": "-",
+     "strength": 6.37
+    },
+    {
+     "at_m": -0.46,
+     "sign": "+",
+     "strength": 21.36
+    },
+    {
+     "at_m": 8.45,
+     "sign": "-",
+     "strength": 41.38
+    },
+    {
+     "at_m": 13.15,
+     "sign": "+",
+     "strength": 11.43
+    },
+    {
+     "at_m": 17.61,
+     "sign": "-",
+     "strength": 5.62
+    },
+    {
+     "at_m": 52.07,
+     "sign": "+",
+     "strength": 24.33
+    },
+    {
+     "at_m": 59.82,
+     "sign": "-",
+     "strength": 49.38
+    },
+    {
+     "at_m": 61.85,
+     "sign": "-",
+     "strength": 22.0
+    },
+    {
+     "at_m": 64.03,
+     "sign": "-",
+     "strength": 15.56
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      27.0,
+      0.042
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 26.323,
+      "pm_m": 16.567,
+      "rel_power": 0.96
+     },
+     {
+      "period_m": 6.744,
+      "pm_m": 0.94,
+      "rel_power": 0.03
+     },
+     {
+      "period_m": 4.571,
+      "pm_m": 0.205,
+      "rel_power": 0.006
+     },
+     {
+      "period_m": 3.595,
+      "pm_m": 0.373,
+      "rel_power": 0.004
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "15.8:17.4": {
+   "along_edges": [
+    {
+     "at_m": -46.8,
+     "sign": "+",
+     "strength": 73.24
+    },
+    {
+     "at_m": -44.0,
+     "sign": "-",
+     "strength": 34.37
+    },
+    {
+     "at_m": -39.49,
+     "sign": "+",
+     "strength": 7.78
+    },
+    {
+     "at_m": -33.68,
+     "sign": "+",
+     "strength": 6.43
+    },
+    {
+     "at_m": -16.2,
+     "sign": "-",
+     "strength": 6.66
+    },
+    {
+     "at_m": -11.38,
+     "sign": "+",
+     "strength": 7.13
+    },
+    {
+     "at_m": -0.65,
+     "sign": "+",
+     "strength": 22.16
+    },
+    {
+     "at_m": 5.78,
+     "sign": "+",
+     "strength": 7.83
+    },
+    {
+     "at_m": 8.2,
+     "sign": "-",
+     "strength": 44.43
+    },
+    {
+     "at_m": 13.0,
+     "sign": "+",
+     "strength": 12.83
+    },
+    {
+     "at_m": 52.23,
+     "sign": "+",
+     "strength": 26.27
+    },
+    {
+     "at_m": 54.95,
+     "sign": "+",
+     "strength": 18.1
+    },
+    {
+     "at_m": 59.94,
+     "sign": "-",
+     "strength": 46.9
+    },
+    {
+     "at_m": 61.55,
+     "sign": "-",
+     "strength": 51.54
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      27.0,
+      0.086
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 28.138,
+      "pm_m": 16.491,
+      "rel_power": 0.942
+     },
+     {
+      "period_m": 7.884,
+      "pm_m": 1.138,
+      "rel_power": 0.043
+     },
+     {
+      "period_m": 3.787,
+      "pm_m": 0.38,
+      "rel_power": 0.006
+     },
+     {
+      "period_m": 3.436,
+      "pm_m": 0.611,
+      "rel_power": 0.005
+     },
+     {
+      "period_m": 3.091,
+      "pm_m": 0.628,
+      "rel_power": 0.004
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "-17:-12": {
+   "along_edges": [
+    {
+     "at_m": -64.27,
+     "sign": "-",
+     "strength": 13.69
+    },
+    {
+     "at_m": -62.25,
+     "sign": "-",
+     "strength": 10.56
+    },
+    {
+     "at_m": -46.51,
+     "sign": "+",
+     "strength": 85.64
+    },
+    {
+     "at_m": -44.05,
+     "sign": "-",
+     "strength": 59.71
+    },
+    {
+     "at_m": -39.53,
+     "sign": "+",
+     "strength": 79.66
+    },
+    {
+     "at_m": -32.75,
+     "sign": "-",
+     "strength": 6.07
+    },
+    {
+     "at_m": -18.74,
+     "sign": "-",
+     "strength": 9.94
+    },
+    {
+     "at_m": 3.56,
+     "sign": "+",
+     "strength": 7.29
+    },
+    {
+     "at_m": 6.4,
+     "sign": "+",
+     "strength": 6.27
+    },
+    {
+     "at_m": 8.78,
+     "sign": "-",
+     "strength": 52.64
+    },
+    {
+     "at_m": 13.15,
+     "sign": "+",
+     "strength": 79.37
+    },
+    {
+     "at_m": 19.04,
+     "sign": "+",
+     "strength": 5.46
+    },
+    {
+     "at_m": 53.25,
+     "sign": "-",
+     "strength": 7.97
+    },
+    {
+     "at_m": 60.3,
+     "sign": "-",
+     "strength": 36.98
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      28.25,
+      0.045
+     ],
+     [
+      17.5,
+      -0.068
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 25.5,
+      "pm_m": 12.62,
+      "rel_power": 0.506
+     },
+     {
+      "period_m": 16.825,
+      "pm_m": 13.712,
+      "rel_power": 0.454
+     },
+     {
+      "period_m": 3.358,
+      "pm_m": 0.21,
+      "rel_power": 0.021
+     },
+     {
+      "period_m": 4.857,
+      "pm_m": 99.695,
+      "rel_power": 0.015
+     },
+     {
+      "period_m": 4.34,
+      "pm_m": 161.877,
+      "rel_power": 0.003
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "7:12": {
+   "along_edges": [
+    {
+     "at_m": -64.1,
+     "sign": "-",
+     "strength": 37.54
+    },
+    {
+     "at_m": -50.77,
+     "sign": "+",
+     "strength": 16.53
+    },
+    {
+     "at_m": -46.68,
+     "sign": "+",
+     "strength": 69.55
+    },
+    {
+     "at_m": -44.0,
+     "sign": "-",
+     "strength": 47.86
+    },
+    {
+     "at_m": -39.74,
+     "sign": "+",
+     "strength": 79.24
+    },
+    {
+     "at_m": -20.79,
+     "sign": "-",
+     "strength": 6.34
+    },
+    {
+     "at_m": -8.56,
+     "sign": "-",
+     "strength": 6.82
+    },
+    {
+     "at_m": 0.89,
+     "sign": "+",
+     "strength": 7.39
+    },
+    {
+     "at_m": 8.32,
+     "sign": "-",
+     "strength": 60.09
+    },
+    {
+     "at_m": 12.93,
+     "sign": "+",
+     "strength": 73.64
+    },
+    {
+     "at_m": 49.57,
+     "sign": "+",
+     "strength": 6.66
+    },
+    {
+     "at_m": 55.34,
+     "sign": "+",
+     "strength": 8.93
+    },
+    {
+     "at_m": 59.97,
+     "sign": "-",
+     "strength": 41.87
+    },
+    {
+     "at_m": 61.85,
+     "sign": "-",
+     "strength": 32.7
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      28.75,
+      0.064
+     ],
+     [
+      26.25,
+      0.058
+     ],
+     [
+      17.25,
+      -0.076
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 26.323,
+      "pm_m": 13.722,
+      "rel_power": 0.499
+     },
+     {
+      "period_m": 15.252,
+      "pm_m": 14.313,
+      "rel_power": 0.475
+     },
+     {
+      "period_m": 3.245,
+      "pm_m": 0.677,
+      "rel_power": 0.011
+     },
+     {
+      "period_m": 3.98,
+      "pm_m": 0.7,
+      "rel_power": 0.01
+     },
+     {
+      "period_m": 4.65,
+      "pm_m": 0.251,
+      "rel_power": 0.005
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "-50:-26": {
+   "along_edges": [
+    {
+     "at_m": -50.77,
+     "sign": "+",
+     "strength": 16.03
+    },
+    {
+     "at_m": -46.21,
+     "sign": "+",
+     "strength": 72.6
+    },
+    {
+     "at_m": -42.04,
+     "sign": "-",
+     "strength": 4.33
+    },
+    {
+     "at_m": -35.17,
+     "sign": "+",
+     "strength": 10.82
+    },
+    {
+     "at_m": -31.77,
+     "sign": "-",
+     "strength": 4.57
+    },
+    {
+     "at_m": -7.32,
+     "sign": "-",
+     "strength": 4.37
+    },
+    {
+     "at_m": -1.08,
+     "sign": "+",
+     "strength": 4.53
+    },
+    {
+     "at_m": 6.9,
+     "sign": "+",
+     "strength": 10.49
+    },
+    {
+     "at_m": 8.36,
+     "sign": "-",
+     "strength": 10.67
+    },
+    {
+     "at_m": 12.0,
+     "sign": "+",
+     "strength": 4.65
+    },
+    {
+     "at_m": 48.96,
+     "sign": "+",
+     "strength": 3.44
+    },
+    {
+     "at_m": 56.78,
+     "sign": "-",
+     "strength": 3.51
+    },
+    {
+     "at_m": 60.88,
+     "sign": "-",
+     "strength": 36.82
+    },
+    {
+     "at_m": 62.67,
+     "sign": "-",
+     "strength": 34.11
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      24.25,
+      -0.025
+     ],
+     [
+      11.75,
+      -0.039
+     ],
+     [
+      17.75,
+      -0.053
+     ],
+     [
+      21.25,
+      -0.164
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 5.956,
+      "pm_m": 0.434,
+      "rel_power": 0.402
+     },
+     {
+      "period_m": 11.333,
+      "pm_m": 1.257,
+      "rel_power": 0.246
+     },
+     {
+      "period_m": 8.242,
+      "pm_m": 0.586,
+      "rel_power": 0.246
+     },
+     {
+      "period_m": 4.08,
+      "pm_m": 0.326,
+      "rel_power": 0.084
+     },
+     {
+      "period_m": 3.525,
+      "pm_m": 2.866,
+      "rel_power": 0.022
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "22:46": {
+   "along_edges": [
+    {
+     "at_m": -63.61,
+     "sign": "-",
+     "strength": 5.54
+    },
+    {
+     "at_m": -50.98,
+     "sign": "+",
+     "strength": 10.5
+    },
+    {
+     "at_m": -46.71,
+     "sign": "+",
+     "strength": 84.2
+    },
+    {
+     "at_m": -41.94,
+     "sign": "+",
+     "strength": 5.08
+    },
+    {
+     "at_m": -33.29,
+     "sign": "-",
+     "strength": 2.91
+    },
+    {
+     "at_m": -27.58,
+     "sign": "-",
+     "strength": 2.87
+    },
+    {
+     "at_m": -3.65,
+     "sign": "+",
+     "strength": 3.3
+    },
+    {
+     "at_m": 6.04,
+     "sign": "+",
+     "strength": 9.43
+    },
+    {
+     "at_m": 7.55,
+     "sign": "-",
+     "strength": 7.55
+    },
+    {
+     "at_m": 22.83,
+     "sign": "-",
+     "strength": 5.63
+    },
+    {
+     "at_m": 41.15,
+     "sign": "+",
+     "strength": 3.75
+    },
+    {
+     "at_m": 51.45,
+     "sign": "+",
+     "strength": 3.85
+    },
+    {
+     "at_m": 60.0,
+     "sign": "-",
+     "strength": 47.47
+    },
+    {
+     "at_m": 61.63,
+     "sign": "-",
+     "strength": 49.03
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      30.0,
+      -0.008
+     ],
+     [
+      24.25,
+      -0.011
+     ],
+     [
+      12.5,
+      -0.016
+     ],
+     [
+      19.0,
+      -0.033
+     ],
+     [
+      15.5,
+      -0.05
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 12.458,
+      "pm_m": 1.987,
+      "rel_power": 0.293
+     },
+     {
+      "period_m": 19.902,
+      "pm_m": 37.007,
+      "rel_power": 0.155
+     },
+     {
+      "period_m": 6.022,
+      "pm_m": 0.357,
+      "rel_power": 0.148
+     },
+     {
+      "period_m": 3.145,
+      "pm_m": 0.128,
+      "rel_power": 0.112
+     },
+     {
+      "period_m": 4.976,
+      "pm_m": 0.291,
+      "rel_power": 0.101
+     },
+     {
+      "period_m": 8.727,
+      "pm_m": 50.986,
+      "rel_power": 0.08
+     }
+    ],
+    "length_m": 102.0
+   }
+  }
+ }
+}

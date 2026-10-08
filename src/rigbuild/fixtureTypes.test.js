@@ -74,7 +74,8 @@ describe('the MOXIR type library', () => {
         expect(co2.identified).toBe('EQUIVALENT')
         expect(co2.maker).toBe(null)
         expect(co2.modelledOn).toMatch(/MagicFX/)
-        expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(162)
+        expect(typeById(committed, 'UP-PL5403').power_w.value).toBe(162) // the rating, kept as published
+        expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(200) // what it draws: the stated supply (audit A-05)
         expect(typeById(committed, 'UP-PL5403').power_w).toMatchObject({ basis: 'EXACT', src: 'D-CN' })
     })
 })
