@@ -13,7 +13,7 @@ import { showWords } from './showClock.js'
 //
 // While the clock drives, a small SHOW chip says which look is on and, opened, lists
 // the looks of the loop — the one piece of chrome, small, the room stays the picture.
-export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true }) {
+export default function RoomLookFollower({ document, onEntities, top = '1rem', maxWidth, showChip = true }) {
     const look = useRigLookEntities(document)
     // The light pool (lightPool.js): OFF by default; on, the look's light is carried by N
     // fixed slot lights. Off, `entities` passes through as the same array.
@@ -23,7 +23,7 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
     }, [entities, document, onEntities])
     useEffect(() => () => onEntities(null), [onEntities])
     if (!showChip || look.driver !== 'clock' || !look.clock) return null
-    return <ShowChip show={look.show} state={look.clock} offset={look.clockOffset} top={top} />
+    return <ShowChip show={look.show} state={look.clock} offset={look.clockOffset} top={top} maxWidth={maxWidth} />
 }
 
 const chipStyle = {
@@ -66,13 +66,13 @@ const useSecondTick = () => {
     return now
 }
 
-export function ShowChip({ show, state, offset, top }) {
+export function ShowChip({ show, state, offset, top, maxWidth }) {
     const [open, setOpen] = useState(false)
     const now = useSecondTick() + (offset?.offset || 0)
     const nextInMs = state.nextInMs == null ? null : Math.max(0, state.firedAt + (show.cues[state.index]?.holdMs || 0) - now)
     const line = showWords({ ...state, nextInMs }, show)
     return (
-        <div style={{ ...chipStyle, top }} data-testid="rig-show-chip" data-look={state.lookId} data-cue={state.index}>
+        <div style={{ ...chipStyle, top, ...(maxWidth ? { maxWidth } : {}) }} data-testid="rig-show-chip" data-look={state.lookId} data-cue={state.index}>
             <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)}
                 title="The show plays by the clock: everyone watching sees the same look at the same moment">
                 <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />

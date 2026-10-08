@@ -7,6 +7,12 @@
 // dev.diiii.xyz/moxir, 2026-09-29). So on a compact phone, when a right-hand control is
 // there, the row takes a line of its own under that control line, and the show chip
 // moves down one more line. Everything else keeps the layout it had.
+//
+// 2026-10-08 (owner, on his phone at dev.diiii.xyz/moxir/v1-0: "in mobile ui things is overlap"): the
+// right-hand column grew to three stacked controls (Walk / Fly, Inside, Lite), so "its own line under
+// Walk / Fly" was line 2, under Inside, and the show chip on line 3 ran under Lite (measured at 384x832:
+// the row and the chip each covered the column by 72x41 px). On a compact phone the row and the chip now
+// start under the WHOLE column; on a wider window the chip, like the row, stops before the column.
 
 // One control line: a 44 px tap target plus the gap to the next line.
 export const CONTROL_LINE = '56px'
@@ -19,10 +25,23 @@ export const CONTROL_LINE = '56px'
  * @param {boolean} flags.rightControls  Walk / Fly or Sound is on the top-right of the same line
  * @returns {{ rowTop: string, chipTop: string }}
  */
-export function rigChromeTops(topClear, { rowShown = false, compact = false, rightControls = false } = {}) {
-    if (!rowShown) return { rowTop: topClear, chipTop: topClear }
-    const rowTop = compact && rightControls ? `calc(${topClear} + ${CONTROL_LINE})` : topClear
-    return { rowTop, chipTop: `calc(${rowTop} + ${CONTROL_LINE})` }
+export function rigChromeTops(topClear, { rowShown = false, compact = false, rightControls = false, rightLines = 1 } = {}) {
+    const lines = Math.max(1, Number(rightLines) || 1)
+    const under = !(compact && rightControls) ? topClear
+        : lines === 1 ? `calc(${topClear} + ${CONTROL_LINE})` : `calc(${topClear} + ${lines} * ${CONTROL_LINE})`
+    // with no row the chip is the first thing on the left, so on a phone it too starts under the column
+    if (!rowShown) return { rowTop: topClear, chipTop: under }
+    return { rowTop: under, chipTop: `calc(${under} + ${CONTROL_LINE})` }
+}
+
+/**
+ * How many control lines the room's top-right column holds: Walk / Fly (Sound beside it), Inside
+ * where the room has a building, then Lite / Full — the three are drawn in PublicProjectViewer only
+ * together with Walk / Fly. Without Walk / Fly, Sound alone is one line.
+ */
+export function rigRightColumnLines({ walk = false, building = false, sound = false } = {}) {
+    if (walk) return building ? 3 : 2
+    return sound ? 1 : 0
 }
 
 // In walk mode the room's own header (exit, title, sound, badge) is the first line and the
@@ -52,4 +71,14 @@ export function rigRowMaxWidth({ compact = false, walk = false, sound = false } 
     // the row's own 1rem left margin + the controls' width + a gap
     const reserve = walk && sound ? '18.5rem' : walk ? '10.5rem' : '10rem'
     return `calc(100vw - ${reserve})`
+}
+
+// How wide the show chip may grow. On a compact phone it sits under the whole right column
+// (rigChromeTops), so it has the full width. Elsewhere it never reaches the column: with no row it is
+// on the top line, beside Walk / Fly and Sound (the row's own rule); under a row it is on line 2,
+// beside Inside / Lite, which stand where Walk / Fly stands.
+export function rigChipMaxWidth({ compact = false, walk = false, sound = false, rowShown = false } = {}) {
+    if (compact && (walk || sound)) return 'calc(100vw - 2rem)'
+    if (!rowShown) return rigRowMaxWidth({ compact, walk, sound })
+    return walk ? 'calc(100vw - 10.5rem)' : 'calc(100vw - 2rem)'
 }

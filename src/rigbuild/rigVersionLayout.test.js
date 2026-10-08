@@ -1,12 +1,30 @@
 import { describe, it, expect } from 'vitest'
-import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement, WALK_HEADER_CLEAR, CONTROL_LINE } from './rigVersionLayout.js'
+import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement, rigRightColumnLines, rigChipMaxWidth, WALK_HEADER_CLEAR, CONTROL_LINE } from './rigVersionLayout.js'
 
 describe('rigChromeTops', () => {
     const top = 'calc(1rem)'
 
-    it('leaves a room without a version row where it was', () => {
-        expect(rigChromeTops(top, { rowShown: false, compact: true, rightControls: true }))
+    it('leaves a room without a version row where it was, on a wide viewport', () => {
+        expect(rigChromeTops(top, { rowShown: false, compact: false, rightControls: true }))
             .toEqual({ rowTop: top, chipTop: top })
+    })
+
+    // With no row the chip was the first line on the left and ran under Walk / Fly on a phone.
+    it('puts the chip under the right column on a phone when there is no row', () => {
+        expect(rigChromeTops(top, { rowShown: false, compact: true, rightControls: true }).chipTop)
+            .toBe(`calc(${top} + ${CONTROL_LINE})`)
+    })
+
+    // 384x832, dev.diiii.xyz/moxir/v1-0, 2026-10-08: the column is Walk / Fly, Inside, Lite. The row on
+    // line 2 covered Inside, the chip on line 3 covered Lite. Both now start under the third line.
+    it('starts the row and the chip under a three-line column on a portrait phone', () => {
+        const { rowTop, chipTop } = rigChromeTops(top, { rowShown: true, compact: true, rightControls: true, rightLines: 3 })
+        expect(rowTop).toBe(`calc(${top} + 3 * ${CONTROL_LINE})`)
+        expect(chipTop).toBe(`calc(${rowTop} + ${CONTROL_LINE})`)
+    })
+
+    it('keeps the wide layout whatever the column holds', () => {
+        expect(rigChromeTops(top, { rowShown: true, compact: false, rightControls: true, rightLines: 3 }).rowTop).toBe(top)
     })
 
     it('keeps the row beside Walk / Fly on a wide viewport', () => {
@@ -70,5 +88,32 @@ describe('rigRowMaxWidth', () => {
         const rem = (v) => Number(String(v).match(/- ([\d.]+)rem\)$/)?.[1])
         expect(rem(rigRowMaxWidth({ walk: true }))).toBeGreaterThanOrEqual(8.7)
         expect(rem(rigRowMaxWidth({ walk: true, sound: true }))).toBeGreaterThanOrEqual(16)
+    })
+})
+
+describe('rigRightColumnLines', () => {
+    it('counts Walk / Fly, Inside where there is a building, and Lite', () => {
+        expect(rigRightColumnLines({ walk: true, building: true })).toBe(3)
+        expect(rigRightColumnLines({ walk: true, building: false })).toBe(2)
+    })
+    it('counts Sound alone as one line, and nothing as none', () => {
+        expect(rigRightColumnLines({ walk: false, sound: true })).toBe(1)
+        expect(rigRightColumnLines({})).toBe(0)
+    })
+})
+
+// The chip had no width cap but the window's: on line 2 a long cue name ran under Inside / Lite.
+describe('rigChipMaxWidth', () => {
+    it('has the full width on a phone, where it sits under the column', () => {
+        expect(rigChipMaxWidth({ compact: true, walk: true, rowShown: true })).toBe('calc(100vw - 2rem)')
+    })
+    it('stops before Inside / Lite under the row on a wide viewport', () => {
+        expect(rigChipMaxWidth({ compact: false, walk: true, rowShown: true })).toBe('calc(100vw - 10.5rem)')
+    })
+    it('follows the row rule on the top line when there is no row', () => {
+        expect(rigChipMaxWidth({ compact: false, walk: true, sound: true, rowShown: false })).toBe('calc(100vw - 18.5rem)')
+    })
+    it('keeps the full width when nothing sits on the right', () => {
+        expect(rigChipMaxWidth({ compact: false, rowShown: true })).toBe('calc(100vw - 2rem)')
     })
 })
