@@ -84,6 +84,26 @@ export function useKnownMachines() {
     return list
 }
 
+/**
+ * Why a Camera In on this page shows no picture, in words for the card — or
+ * null when the camera opened. Every failure used to land in the hook's
+ * `error`, which no editor shows, so the card simply stayed black. Seen
+ * 2026-10-02: Raw opened from ANOTHER machine's address over plain http is not
+ * a secure page, so the browser hides the camera API entirely.
+ */
+export const cameraRefusal = ({ secure = true, hasApi = true, errorName = '' } = {}) => {
+    if (!secure) {
+        return 'This page cannot open a camera: it is plain http from another machine. ' +
+            "Open Raw from this machine's own di (localhost), or set Runs on to the machine that has the camera."
+    }
+    if (!hasApi) return 'This browser gives this page no camera access.'
+    if (errorName === 'NotAllowedError' || errorName === 'SecurityError') return 'The camera was not allowed — allow it in the browser, then reload.'
+    if (errorName === 'NotFoundError' || errorName === 'OverconstrainedError') return 'No camera found on this machine.'
+    if (errorName === 'NotReadableError' || errorName === 'AbortError') return 'The camera is busy in another program.'
+    if (errorName) return `The camera did not open (${errorName}).`
+    return null
+}
+
 const THUMBNAIL_EVERY = 3
 const EMPTY = { nodes: [], wires: [] }
 
@@ -122,7 +142,9 @@ export function useTopNetwork({
     })
 
     const hasNodes = network.nodes.length > 0
-    const machineId = linkView.machine?.id || null
+    // A page whose browser is on another computer runs only what runs
+    // anywhere; the machine's own operators reach it as pictures.
+    const machineId = (linkView.machine && !linkView.machine.away && linkView.machine.id) || null
     const scriptsAllowed = linkView.machine?.scripts === true
     const scriptsAllowedRef = useRef(scriptsAllowed)
     useEffect(() => { scriptsAllowedRef.current = scriptsAllowed }, [scriptsAllowed])
@@ -132,6 +154,9 @@ export function useTopNetwork({
     useEffect(() => {
         if (!spaceId || !hasNodes) return undefined
         const { link: shared, release } = acquireMachineLink(spaceId)
+        // Tell the other machines this page runs THIS project, so a viewer
+        // there asks this page for its pictures (runnerOn).
+        const stopRunning = shared.runProject?.(projectId) || (() => {})
         const off = shared.onPeers((peers, machine) => {
             setLinkView({ machine, peers })
             publishMachines(machinesIn(peers, machine))
@@ -139,10 +164,11 @@ export function useTopNetwork({
         setLink(shared)
         return () => {
             off()
+            stopRunning()
             release()
             setLink(null)
         }
-    }, [spaceId, hasNodes])
+    }, [spaceId, hasNodes, projectId])
 
     // --- the engine lives as long as there is anything to run
     useEffect(() => {
@@ -301,8 +327,10 @@ export function useTopNetwork({
         if (!peers || !link) return
         const wants = new Map()
         const remote = new Set(split.remote)
+        const types = new Map(network.nodes.map((node) => [node.id, node.type]))
         for (const [owner, nodeIds] of split.byMachine) {
-            const runner = runnerOn(linkView.peers, owner, link.peerId)
+            const needsCapture = nodeIds.some((nodeId) => TOP_OPERATORS[types.get(nodeId)]?.source === 'camera')
+            const runner = runnerOn(linkView.peers, owner, link.peerId, { projectId, needsCapture })
             if (!runner) continue
             const want = wants.get(runner.peerId) || { video: [], preview: [] }
             for (const nodeId of nodeIds) {
@@ -312,7 +340,7 @@ export function useTopNetwork({
             wants.set(runner.peerId, want)
         }
         peers.setWants(wants)
-    }, [split, linkView, link, thumbnails, inspected])
+    }, [split, linkView, link, thumbnails, inspected, network, projectId])
 
     // What this machine knows about its own operators goes to the pages looking
     // at them, every couple of seconds — a page that connects late still hears.
@@ -380,7 +408,12 @@ export function useTopNetwork({
         const ids = cameras.map(([id]) => id)
         if (!ids.length) return undefined
         const media = globalThis.navigator?.mediaDevices
-        if (!media?.getUserMedia) { setError('no camera access in this browser'); return undefined }
+        if (!media?.getUserMedia) {
+            const refusal = cameraRefusal({ secure: globalThis.isSecureContext !== false, hasApi: false })
+            for (const id of ids) reportTop(id, { camera: { error: refusal, blocked: true } })
+            setError(refusal)
+            return undefined
+        }
         const streams = []
         const tracks = tracksRef.current
         let cancelled = false
@@ -429,7 +462,10 @@ export function useTopNetwork({
                     engineRef.current?.setVideo(id, video)
                 })
                 .catch((caught) => {
-                    if (!cancelled) setError(caught?.name === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
+                    if (cancelled) return
+                    const refusal = cameraRefusal({ errorName: caught?.name || 'Error' })
+                    reportTop(id, { camera: { error: refusal, blocked: true } })
+                    setError(refusal)
                 })
         }
         return () => {

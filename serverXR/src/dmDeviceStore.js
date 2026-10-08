@@ -57,11 +57,13 @@ const publishDevice = ({ userId, publicKey, label = null }) => {
   // A bound, so one account cannot grow an unbounded list. The OLDEST goes:
   // the device somebody has not used in a year is the one they have forgotten,
   // and the one they are holding now is the one that must keep working.
+  // Ties on the millisecond fall back to arrival order (rowid); without it
+  // SQLite returns ties in public-key order and a random device went.
   const count = db.prepare('SELECT COUNT(*) AS c FROM dm_devices WHERE user_id = ?').get(String(userId)).c
   if (count >= MAX_DEVICES_PER_USER) {
     db.prepare(`
       DELETE FROM dm_devices WHERE id IN (
-        SELECT id FROM dm_devices WHERE user_id = ? ORDER BY last_seen_at ASC LIMIT ?
+        SELECT id FROM dm_devices WHERE user_id = ? ORDER BY last_seen_at ASC, rowid ASC LIMIT ?
       )
     `).run(String(userId), count - MAX_DEVICES_PER_USER + 1)
   }
@@ -77,7 +79,7 @@ const publishDevice = ({ userId, publicKey, label = null }) => {
 /** Everything published for one person, newest first. Public by nature. */
 const listDevices = (userId) => {
   if (!userId) return []
-  return getDb().prepare('SELECT * FROM dm_devices WHERE user_id = ? ORDER BY last_seen_at DESC')
+  return getDb().prepare('SELECT * FROM dm_devices WHERE user_id = ? ORDER BY last_seen_at DESC, rowid DESC')
     .all(String(userId)).map(rowToDevice)
 }
 

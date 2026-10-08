@@ -1,0 +1,6 @@
+## 2026-10-02 — A dev copy says so: a "dev copy · <tree>" label on every surface
+
+- Gap from the 2026-10-02 hosting audit: the owner had tabs open on ~24 addresses and could not tell which checkout a tab belonged to; a dev copy looked exactly like his real di.
+- `di-dev` (di-atlas tools/di-dev) starts a dev copy with `VITE_DI_TREE=<tree>` and `VITE_DI_MODE=<frontend|scratch>`. `src/utils/devTree.js` reads them; `src/components/TreeChip.jsx` (one component, mounted once in `RootApp` beside `ModeMark`) shows a fixed bottom-right rectangle: `dev copy · <tree> · your di's data`, or `· SCRATCH data, thrown away` in `--di-danger`. Hover/title explains in one sentence. Unset or blank tree renders nothing (installed di, production build); an unknown mode reads as frontend. Hidden in `?preview=1`, iframes and projector output, as ModeMark is.
+- Tests: `TreeChip.test.jsx` (4: both modes, absent unset/blank, unknown mode). Wiki: new "Which copy is this tab?" article. Doc: `docs/deploy/DEV_COPY_LABEL.md`.
+- Not done: the live look at 1440 and 390 px and `npm run check:toolbar-overlap` against the Raw topbar. CPU package temperature stayed at 96-100 C for 25 minutes, over the 85 C rule, so no browser was started. Owed: run both, then read the screenshots.

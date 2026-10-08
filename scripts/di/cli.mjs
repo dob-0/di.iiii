@@ -1155,7 +1155,7 @@ const cmdFollows = async () => {
     const live = await fetch(`${apiBase(home, port)}/api/follows`)
         .then(response => (response.ok ? response.json() : null))
         .catch(() => null)
-    say(ui.followList(follows, live?.follows || []))
+    say(ui.followList(follows, live?.follows || [], live))
 }
 
 /** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */

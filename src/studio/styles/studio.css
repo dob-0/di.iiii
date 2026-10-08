@@ -539,6 +539,11 @@
     margin: 0;
 }
 
+.sfp-link {
+    color: var(--di-cyan);
+    text-decoration: underline;
+}
+
 .spa-actions {
     display: flex;
     flex-direction: column;

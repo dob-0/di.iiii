@@ -3154,7 +3154,7 @@ describe('saving and opening a space as a file', () => {
         const made = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-            body: JSON.stringify({ label: 'carried file', permanent: true })
+            body: JSON.stringify({ label: 'carried file' })
         })
         expect(made.status).toBe(201)
         const saved = await fetch(`${server.baseUrl}/api/spaces/carried-file/bundle`, { headers: withAuth(server.apiToken) })
@@ -3164,6 +3164,10 @@ describe('saving and opening a space as a file', () => {
         // way the Spaces page sends it, with no `as`.
         const removed = await fetch(`${server.baseUrl}/api/spaces/carried-file`, { method: 'DELETE', headers: withAuth(server.apiToken) })
         expect(removed.status).toBe(200)
+        // Delete is the soft delete now (the space waits in the trash); the file
+        // opens under its own name only once the trash has let go of it.
+        const purged = await fetch(`${server.baseUrl}/api/spaces/carried-file/purge`, { method: 'DELETE', headers: withAuth(server.apiToken) })
+        expect(purged.status).toBe(200)
 
         const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
             method: 'POST',
@@ -3579,6 +3583,15 @@ describe('di.bo acting as a person (act-token)', () => {
         await createSpaceWithScene(server, { spaceId: 'tg-a', scene: { objects: [], assets: [] } })
         await createSpaceWithScene(server, { spaceId: 'tg-b', scene: { objects: [], assets: [] } })
         await createSpaceWithScene(server, { spaceId: 'tg-c', scene: { objects: [], assets: [] } })
+        // tg-c is the space root deletes below. The helper marks spaces permanent,
+        // and a permanent space is refused 409 by design (#789: an admin clears
+        // `permanent` first, on the record) — so clear it here, the documented way.
+        const unpinned = await fetch(`${server.baseUrl}/api/spaces/tg-c`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ permanent: false })
+        })
+        expect(unpinned.status).toBe(200)
         const now = Date.now()
         for (const [id, tg, role] of [['u-root', '111111', 'admin'], ['u-admin', '222222', 'admin'], ['u-member', '333333', 'admin'], ['u-listed-editor', '444444', 'editor']]) {
             writeDb(server, `

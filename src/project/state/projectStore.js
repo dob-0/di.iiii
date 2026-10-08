@@ -35,6 +35,8 @@ export const createProjectStoreState = ({
     sceneStreamState: 'idle',
     sceneStreamError: null,
     pendingSyncError: null,
+    // Edits not yet acknowledged by the server (useProjectDocumentSync).
+    pendingOpCount: 0,
     authExpired: false
 })
 
@@ -143,6 +145,10 @@ export function projectStoreReducer(state, action) {
                 pendingSyncError: action.error || null,
                 authExpired: Boolean(action.authExpired)
             }
+        case 'pending-ops-count': {
+            const count = Math.max(0, Number(action.count) || 0)
+            return count === state.pendingOpCount ? state : { ...state, pendingOpCount: count }
+        }
         default:
             return state
     }

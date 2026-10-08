@@ -764,7 +764,7 @@
     color: rgba(255, 255, 255, 0.72);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     padding: var(--di-space-1) var(--di-space-3);
     cursor: pointer;
 }
