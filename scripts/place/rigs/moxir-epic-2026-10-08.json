@@ -1452,7 +1452,7 @@
   {
    "id": "new-hk1915-01",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1470,7 +1470,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 402,
@@ -1484,7 +1484,7 @@
   {
    "id": "new-hk1915-02",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1502,7 +1502,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 423,
@@ -1516,7 +1516,7 @@
   {
    "id": "new-hk1915-03",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1534,7 +1534,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 360,
@@ -1548,7 +1548,7 @@
   {
    "id": "new-hk1915-04",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1566,7 +1566,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 381,
@@ -1580,7 +1580,7 @@
   {
    "id": "new-hk1915-05",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1598,7 +1598,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 318,
@@ -1612,7 +1612,7 @@
   {
    "id": "new-hk1915-06",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1630,7 +1630,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 339,
@@ -1644,7 +1644,7 @@
   {
    "id": "new-hk1915-07",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1662,7 +1662,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 276,
@@ -1676,7 +1676,7 @@
   {
    "id": "new-hk1915-08",
    "type": "up-hk1915",
-   "position": "floor in the far nave, base down, lens up, zoom 30 deg",
+   "position": "floor in the far nave, base down, lens up, zoom 12 deg",
    "part": "roof",
    "layer": "the hall",
    "status": "held back",
@@ -1694,7 +1694,7 @@
     0.0
    ],
    "colour": "#e8e4dc",
-   "angle_rad": 0.2618,
+   "angle_rad": 0.1047,
    "dmx": {
     "universe": 2,
     "address": 297,

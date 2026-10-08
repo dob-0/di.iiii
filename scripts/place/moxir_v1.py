@@ -304,9 +304,9 @@ def build_units(roof_where):
     if roof_where == 'nave':
         for i, (x, z) in enumerate([(-8.6, -10.0), (8.6, -10.0), (-8.6, -16.0), (8.6, -16.0), (-8.6, -30.0), (8.6, -30.0), (-8.6, -47.0), (8.6, -47.0)]):
             f = aimed(unit_from('new-hk1915-%02d' % (i + 1), p=[x, 0.5, z]), d=[0.0, 1.0, 0.0])
-            f['beam_deg'] = 30.0
+            f['beam_deg'] = 12.0    # 12 deg, not 30 (10-08 by eye: at 30 deg the 350 000 cd / 4 deg bee-eye spreads to ~6 200 cd, ~37 lux on the roof 13 m up, and the roof never appeared; at 12 deg ~39 000 cd, ~230 lux in 2.7 m pools: the bones of the roof, in the zoom's range)
             f['groupName'] = 'wash: the nave roof, far half (HK1915, up)'
-            add(f, 'roof', 'hall', 'held back', ['the roof'], ASH, 'floor in the far nave, base down, lens up, zoom 30 deg')
+            add(f, 'roof', 'hall', 'held back', ['the roof'], ASH, 'floor in the far nave, base down, lens up, zoom 12 deg')
     else:
         for i in range(8):
             add(unit_from('new-hk1915-%02d' % (i + 1)), 'roof', 'hall', 'held back', ['the roof'], ASH, 'floor in the side span, base down, lens up')
