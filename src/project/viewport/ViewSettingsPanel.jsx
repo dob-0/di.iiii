@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { VIEW_SETTINGS, resetViewSettings, setViewSetting, useViewSettings } from './viewSettings.js'
 import { FORM_LIGHT_MAX, setFormLight, setViewLook, useViewLook } from './viewLook.js'
 import { NAVIGATION_PRESETS, NAVIGATION_PRESET_IDS } from '../../studio/navigation/mappings.js'
@@ -11,7 +12,8 @@ import { setNavigationPreference, useNavigationPreference } from '../../studio/n
 // rectangles only), 44 px targets.
 const css = {
     panel: {
-        position: 'fixed', top: '4.2rem', right: '1rem', zIndex: 60, width: 'min(23rem, calc(100vw - 2rem))', maxHeight: 'calc(100vh - 6rem)', overflowY: 'auto',
+        // above the scene's title banner (it scrolled over the title and the close button on a 390 px phone, measured 2026-10-08); a 0.5 rem gutter keeps it on the screen
+        position: 'fixed', top: '0.5rem', right: '0.5rem', zIndex: 1000, boxSizing: 'border-box', width: 'min(23rem, calc(100vw - 1rem))', maxHeight: 'calc(100dvh - 1rem)', overflowY: 'auto', overscrollBehavior: 'contain',
         background: 'var(--di-surface-2, #111114)', border: '1px solid var(--di-line, rgba(77,249,255,0.12))', borderRadius: 'var(--di-radius, 2px)',
         color: 'var(--di-text, #fff)', padding: '0.9rem 1rem 1rem', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', fontFamily: 'var(--di-sans, system-ui, sans-serif)', fontSize: '0.85rem', lineHeight: 1.35
     },
@@ -20,7 +22,7 @@ const css = {
     hint: { gridColumn: '1 / -1', color: 'var(--di-text-muted, rgba(255,255,255,0.5))', fontSize: '0.74rem' },
     value: { fontFamily: 'var(--di-mono, monospace)', color: 'var(--di-cyan, #4df9ff)', fontVariantNumeric: 'tabular-nums' },
     btn: { appearance: 'none', border: '1px solid var(--di-cyan-border, rgba(77,249,255,0.3))', background: 'var(--di-cyan-dim, rgba(77,249,255,0.1))', color: 'var(--di-text, #fff)', borderRadius: 'var(--di-radius, 2px)', padding: '0.5rem 0.8rem', minHeight: 44, cursor: 'pointer', fontSize: '0.85rem' },
-    range: { gridColumn: '1 / -1', width: '100%', accentColor: 'var(--di-cyan, #4df9ff)' }
+    range: { gridColumn: '1 / -1', width: '100%', height: 28, margin: '4px 0', accentColor: 'var(--di-cyan, #4df9ff)', touchAction: 'pan-y' }
 }
 
 const fmt = (spec, v) => {
@@ -35,7 +37,7 @@ function SettingRow({ spec, value }) {
         return (
             <div style={css.row}>
                 <label htmlFor={id}>{spec.label}</label>
-                <input id={id} type="checkbox" checked={Boolean(value)} onChange={(e) => setViewSetting(spec.key, e.target.checked)} style={{ width: 22, height: 22, accentColor: 'var(--di-cyan, #4df9ff)' }} />
+                <input id={id} type="checkbox" checked={Boolean(value)} onChange={(e) => setViewSetting(spec.key, e.target.checked)} style={{ width: 28, height: 28, accentColor: 'var(--di-cyan, #4df9ff)' }} />
                 {spec.hint ? <span style={css.hint}>{spec.hint}</span> : null}
             </div>
         )
@@ -124,7 +126,8 @@ export default function ViewSettingsButton({ className, style, label = 'Settings
             <button type="button" className={className} style={style} aria-haspopup="dialog" aria-expanded={open} title="Navigation, zoom, clip and look settings" onClick={() => setOpen((v) => !v)}>
                 {label}
             </button>
-            {open ? <ViewSettingsPanel onClose={() => setOpen(false)} /> : null}
+            {/* in document.body: the viewer's own layers (the title banner, z 20 in a higher stacking context) drew over a panel rendered inside them */}
+            {open && typeof document !== 'undefined' ? createPortal(<ViewSettingsPanel onClose={() => setOpen(false)} />, document.body) : null}
         </>
     )
 }
