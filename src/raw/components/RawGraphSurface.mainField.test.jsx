@@ -1,6 +1,7 @@
 import { act, fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import RawGraphSurface from './RawGraphSurface.jsx'
+import { cardHeight } from '../utils/cardGeometry.js'
 import { createNode } from '../../project/nodeRegistry.js'
 
 const makeNode = (typeId, overrides = {}) => ({
@@ -60,12 +61,16 @@ describe('in-card editing of the main field', () => {
     it('the editing card never grows into the card below it', () => {
         const long = 'word '.repeat(80)
         const a = makeNode('view.text', { id: 'a', graphX: 0, graphY: 0, values: { content: long } })
-        const b = makeNode('view.text', { id: 'b', graphX: 0, graphY: 190, values: { content: 'x' } })
+        // The card below stands 20 units under a's resting bottom (the card's
+        // own height, which the 13-unit body of audit §3.2 made taller).
+        const gapY = cardHeight(a) + 20
+        const b = makeNode('view.text', { id: 'b', graphX: 0, graphY: gapY, values: { content: 'x' } })
         const { container } = render(<RawGraphSurface nodes={[a, b]} edges={[]} selectedNodeId="a" onSelectNode={() => {}} onEditMainValue={() => {}} />)
         const heightOf = (id) => parseFloat(container.querySelector(`[data-card-id="${id}"]`).style.height)
         const before = heightOf('a')
         clickText(container, 'a')
-        expect(heightOf('a')).toBeLessThanOrEqual(190 - 8)
+        expect(heightOf('a')).toBeLessThanOrEqual(gapY - 8)
+        expect(heightOf('a')).toBeGreaterThan(before)
         expect(heightOf('a')).toBeGreaterThanOrEqual(before - 0.5)
     })
 })

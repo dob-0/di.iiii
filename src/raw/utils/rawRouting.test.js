@@ -181,3 +181,14 @@ describe('the /out route', () => {
         expect(getRawLocationState({ pathname: '/gallery/raw/projects/abc' }).page).toBe(RAW_PAGE_PROJECT)
     })
 })
+
+describe('rawShowsFloatingAccount', () => {
+    it('is off on a project canvas (the bar carries the account) and on the projector cable', async () => {
+        const { rawShowsFloatingAccount } = await import('./rawRouting.js')
+        expect(rawShowsFloatingAccount({ page: RAW_PAGE_PROJECT, projectId: 'p1' })).toBe(false)
+        expect(rawShowsFloatingAccount({ page: RAW_PAGE_OUT, projectId: 'p1' })).toBe(false)
+        // Pages with no bar of their own keep it.
+        expect(rawShowsFloatingAccount({ page: RAW_PAGE_PROJECTS })).toBe(true)
+        expect(rawShowsFloatingAccount({ page: RAW_PAGE_CANVAS })).toBe(true)
+    })
+})

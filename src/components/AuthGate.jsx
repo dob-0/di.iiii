@@ -214,14 +214,25 @@ const ClosedDoorCard = ({
     // Only the "nothing lives here" branch is a 404 — the other card is a real
     // space a session merely isn't scoped to, which is not the same thing and
     // must not say "Not found" over content that exists.
-    useDocumentTitle(!exists ? 'Not found — di.iiii' : null)
+    // One answer for "private" and "missing" when there is a sign-in to offer
+    // (P13, 2026-10-07): a different card for a space that exists confirmed to
+    // any stranger that a private space of that name is there. Same title, same
+    // words, same sign-in door for both; only a local install, which has no
+    // sign-in and no private spaces to protect, keeps the plain not-found card.
+    const uniform = sessionControls
+    useDocumentTitle(uniform || !exists ? 'Not found — di.iiii' : null)
     return (
     <Box sx={cardFrameSx}>
         <Stack spacing={2} sx={{ ...cardSx, width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
             <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                 di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
             </Typography>
-            {exists ? (
+            {uniform ? (
+                <Typography data-testid="closed-door-uniform" variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                    Nothing is open at &ldquo;{missingAddressFromUrl(requiredSpaceId)}&rdquo; — it may not exist,
+                    or it may be private. Check the spelling, or sign in with an account that has access.
+                </Typography>
+            ) : exists ? (
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
                     Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
                     Sign in with an account that has access, or step through one of your own doors.
@@ -270,7 +281,7 @@ const ClosedDoorCard = ({
                     Your private sandbox
                 </Button>
             )}
-            {sessionControls && exists && <ProviderSignInButtons providers={providers} refresh={refresh} />}
+            {sessionControls && <ProviderSignInButtons providers={providers} refresh={refresh} />}
             {sessionControls && <AccountButton authState={authSession} onLogout={refresh} />}
         </Stack>
     </Box>

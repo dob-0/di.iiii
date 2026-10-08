@@ -26,18 +26,25 @@ const rowStyle = {
     overflow: 'hidden'
 }
 
-const scrollerStyle = { display: 'flex', gap: '2px', overflowX: 'auto', scrollbarWidth: 'none' }
+const scrollerStyle = { display: 'flex', gap: '2px', overflowX: 'auto', scrollbarWidth: 'none', position: 'relative' }
 const columnStyle = { display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', minHeight: 0 }
 
-// Edge fade = the cue that the row goes on. Not a control: no pointer events.
+// Edge fade + chevron = the cue that the row goes on (a bare 28 px fade left a half-word showing
+// and read as a clipped label, owner walk 2026-10-07 P14). Not a control: no pointer events.
 const fadeStyle = (side) => ({
     position: 'absolute',
     top: 0,
     bottom: 0,
     [side]: 0,
-    width: '28px',
+    width: '48px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: side === 'right' ? 'flex-end' : 'flex-start',
+    padding: '0 0.45rem',
+    color: '#f5f7fa',
+    fontSize: '1.1rem',
     pointerEvents: 'none',
-    background: `linear-gradient(to ${side === 'right' ? 'left' : 'right'}, rgba(10,16,24,0.95), rgba(10,16,24,0))`
+    background: `linear-gradient(to ${side === 'right' ? 'left' : 'right'}, rgba(10,16,24,1) 35%, rgba(10,16,24,0))`
 })
 
 const linkStyle = (current, extra = {}) => ({
@@ -142,7 +149,11 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
     useLayoutEffect(() => {
         const el = scrollerRef.current
         const cur = curRef.current
-        if (el && cur && !walk) el.scrollLeft = Math.max(0, cur.offsetLeft - (el.clientWidth - cur.offsetWidth) / 2)
+        if (el && cur && !walk) {
+            // Centred; but a title wider than the strip starts just right of the left edge fade (48 px + 4), so its first letter is never under it.
+            const centred = cur.offsetLeft - (el.clientWidth - cur.offsetWidth) / 2
+            el.scrollLeft = Math.max(0, cur.offsetWidth > el.clientWidth ? cur.offsetLeft - 52 : centred)
+        }
         measure()
     }, [links, foldOpen, conceptsOpen, walk])
     useEffect(() => {
@@ -184,8 +195,8 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
     return (
         <nav aria-label="rig versions" style={{ ...rowStyle, top, ...(maxWidth ? { maxWidth } : {}) }}>
             <div ref={scrollerRef} onScroll={measure} style={scrollerStyle}>{items}</div>
-            {cue.left ? <span aria-hidden="true" data-cue="left" style={fadeStyle('left')} /> : null}
-            {cue.right ? <span aria-hidden="true" data-cue="right" style={fadeStyle('right')} /> : null}
+            {cue.left ? <span aria-hidden="true" data-cue="left" style={fadeStyle('left')}>‹</span> : null}
+            {cue.right ? <span aria-hidden="true" data-cue="right" style={fadeStyle('right')}>›</span> : null}
         </nav>
     )
 }

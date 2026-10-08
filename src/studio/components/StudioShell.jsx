@@ -874,6 +874,7 @@ export default function StudioShell({
                     selectTicks={selectTicks}
                     covered={isMobile && Boolean(mobileSheet)}
                     shareOpen={isOpen('publish') || mobileSheet === 'publish'}
+                    createOpen={isOpen('create') || mobileSheet === 'create'}
                     isOpenJam={isJam}
                 />
             )}

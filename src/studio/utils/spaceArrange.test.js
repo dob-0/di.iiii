@@ -88,7 +88,21 @@ describe('filterSpaces', () => {
 
 describe('countStates', () => {
     it('counts what each chip will say', () => {
-        expect(countStates(all)).toEqual({ all: 5, open: 2, nodoor: 1, private: 2 })
+        expect(countStates(all)).toEqual({ all: 5, open: 2, nodoor: 1, private: 2, archived: 0 })
+    })
+
+    it('counts an archived space under Archived only, never in All or a state', () => {
+        const withOld = [...all, { id: 'old', label: 'Old', isPublic: true, publishedProjectId: 'p', archivedAt: 1 }]
+        expect(countStates(withOld)).toEqual({ all: 5, open: 2, nodoor: 1, private: 2, archived: 1 })
+    })
+})
+
+describe('archived spaces', () => {
+    const old = { id: 'old', label: 'Old', isPublic: true, publishedProjectId: 'p', archivedAt: 1 }
+    it('are out of every default view and only in the Archived one', () => {
+        expect(applyView([...all, old], { filter: 'all' }).map(s => s.id)).not.toContain('old')
+        expect(applyView([...all, old], { filter: 'open' }).map(s => s.id)).not.toContain('old')
+        expect(applyView([...all, old], { filter: 'archived' }).map(s => s.id)).toEqual(['old'])
     })
 })
 

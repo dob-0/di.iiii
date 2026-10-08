@@ -6,8 +6,9 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const { initDb, closeDb, getDb } = require('./db.js')
 const store = require('./domainStore.js')
-const { createDomainService } = require('./domainService.js')
+const { createDomainService, chooseDomainProvider } = require('./domainService.js')
 const { CloudflareError, recordsOwed, stateOf } = require('./cloudflareSaas.js')
+const { createDnsCheck } = require('./domainDns.js')
 
 const addSpace = (id) => {
     const now = Date.now()
@@ -193,5 +194,114 @@ describe('reading Cloudflare’s answer', () => {
         const pending = { status: 'pending', ssl: { status: 'pending_validation', validation_records: [{ txt_name: '_acme-challenge.x.xyz', txt_value: 'abc' }] } }
         expect(recordsOwed('x.xyz', pending, 't').map((r) => r.type)).toEqual(['CNAME', 'TXT'])
         expect(recordsOwed('x.xyz', { status: 'active', ssl: { status: 'active' } }, 't').map((r) => r.type)).toEqual(['CNAME'])
+    })
+})
+
+describe('choosing the provider', () => {
+    const CF = { zoneId: 'z', apiToken: 't', cnameTarget: 'domains.diiii.xyz' }
+    const CADDY = { publicTarget: 'domains.diiii.xyz', publicIps: [] }
+
+    it('unset keeps the first behaviour: Cloudflare when configured, otherwise none', () => {
+        expect(chooseDomainProvider({ cloudflare: CF, caddy: CADDY })).toEqual({ name: 'cloudflare', problem: null })
+        expect(chooseDomainProvider({ cloudflare: {}, caddy: CADDY })).toEqual({ name: null, problem: null })
+    })
+
+    it('DOMAINS_PROVIDER=caddy picks Caddy even with Cloudflare values present', () => {
+        expect(chooseDomainProvider({ provider: 'Caddy', cloudflare: CF, caddy: CADDY })).toEqual({ name: 'caddy', problem: null })
+        expect(chooseDomainProvider({ provider: 'caddy', caddy: { publicIps: ['203.0.113.10'] } }).name).toBe('caddy')
+    })
+
+    it('a provider that is asked for but cannot work says why', () => {
+        expect(chooseDomainProvider({ provider: 'caddy', caddy: { publicTarget: '', publicIps: [] } }).problem).toMatch(/DOMAINS_PUBLIC_TARGET or DOMAINS_PUBLIC_IPS/)
+        expect(chooseDomainProvider({ provider: 'cloudflare', cloudflare: { zoneId: 'z' } }).problem).toMatch(/CLOUDFLARE_SAAS_API_TOKEN/)
+        expect(chooseDomainProvider({ provider: 'route53' })).toMatchObject({ name: null, problem: expect.stringMatching(/not one of cloudflare, caddy/) })
+    })
+})
+
+describe('with Caddy: DNS decides, nothing else is called', () => {
+    // A zone we can change between sweeps; node:dns/promises' shape and codes.
+    const fakeZone = () => {
+        const zone = { 'domains.diiii.xyz': { a: ['203.0.113.10'] } }
+        const lookup = (field) => vi.fn(async (name) => {
+            if (zone[name]?.fail) throw Object.assign(new Error('fail'), { code: zone[name].fail })
+            if (!zone[name]) throw Object.assign(new Error('nx'), { code: 'ENOTFOUND' })
+            if (!zone[name][field]?.length) throw Object.assign(new Error('nodata'), { code: 'ENODATA' })
+            return zone[name][field]
+        })
+        return { zone, resolver: { resolveCname: lookup('cname'), resolve4: lookup('a'), resolve6: lookup('aaaa') } }
+    }
+    const caddyService = (resolver, options = {}) => createDomainService({
+        dns: createDnsCheck({ target: 'domains.diiii.xyz', ips: ['203.0.113.10'], resolver }),
+        platformSuffixes: PLATFORM,
+        logger: quiet,
+        ...options
+    })
+
+    it('saves the domain pending with the records owed, and is connected', async () => {
+        const { resolver } = fakeZone()
+        const service = caddyService(resolver)
+        expect(service).toMatchObject({ connected: true, provider: 'caddy' })
+        const { domain } = await service.add({ spaceMeta: PUBLIC, hostname: 'www.yokozo.xyz' })
+        expect(domain).toMatchObject({ state: 'pending', live: false, connected: true, lastError: expect.stringMatching(/No DNS record/) })
+        expect(domain.records).toEqual([{ type: 'CNAME', name: 'www.yokozo.xyz', value: 'domains.diiii.xyz', why: 'points the domain at di.iiii' }])
+        expect(store.getDomain('www.yokozo.xyz').cloudflareId).toBe(null)
+        expect(store.findActiveSpaceIdForHost('www.yokozo.xyz')).toBe(null)
+    })
+
+    it('an apex is asked for its A record', async () => {
+        const { resolver } = fakeZone()
+        const { domain } = await caddyService(resolver).add({ spaceMeta: PUBLIC, hostname: 'yokozo.xyz' })
+        expect(domain.records.map((r) => `${r.type} ${r.value}`)).toEqual(['A 203.0.113.10'])
+    })
+
+    it('a domain already pointed at us is live the moment it is added', async () => {
+        const { zone, resolver } = fakeZone()
+        zone['yokozo.xyz'] = { a: ['203.0.113.10'] }
+        const { domain } = await caddyService(resolver).add({ spaceMeta: PUBLIC, hostname: 'yokozo.xyz' })
+        expect(domain).toMatchObject({ state: 'active', live: true, lastError: null })
+        expect(store.findActiveSpaceIdForHost('yokozo.xyz')).toBe('taronx')
+    })
+
+    it('the sweep switches it on once DNS points here, and off again when DNS moves away', async () => {
+        const { zone, resolver } = fakeZone()
+        const service = caddyService(resolver)
+        await service.add({ spaceMeta: PUBLIC, hostname: 'www.yokozo.xyz' })
+        expect((await service.sweep()).activated).toBe(0)
+        zone['www.yokozo.xyz'] = { cname: ['domains.diiii.xyz'], a: ['203.0.113.10'] }
+        expect(await service.sweep()).toMatchObject({ activated: 1, dropped: 0 })
+        expect(store.findActiveSpaceIdForHost('www.yokozo.xyz')).toBe('taronx')
+        // A day later the owner moved the domain elsewhere.
+        zone['www.yokozo.xyz'] = { a: ['198.51.100.7'] }
+        getDb().prepare('UPDATE space_domains SET checked_at = ?').run(Date.now() - 2 * 24 * 60 * 60 * 1000)
+        await service.sweep()
+        expect(store.getDomain('www.yokozo.xyz')).toMatchObject({ state: 'pending', lastError: expect.stringMatching(/198\.51\.100\.7/) })
+        expect(store.findActiveSpaceIdForHost('www.yokozo.xyz')).toBe(null)
+    })
+
+    it('a resolver failure does not switch a live domain off', async () => {
+        const { zone, resolver } = fakeZone()
+        zone['yokozo.xyz'] = { a: ['203.0.113.10'] }
+        const service = caddyService(resolver)
+        await service.add({ spaceMeta: PUBLIC, hostname: 'yokozo.xyz' })
+        zone['yokozo.xyz'] = { fail: 'ETIMEOUT' }
+        const { domain } = await service.check({ spaceId: 'taronx', hostname: 'yokozo.xyz' })
+        expect(domain).toMatchObject({ state: 'active', lastError: expect.stringMatching(/ETIMEOUT/) })
+    })
+
+    it('drops a domain nobody pointed at us within the window', async () => {
+        const { resolver } = fakeZone()
+        const service = caddyService(resolver, { pendingTtlMs: 1000 })
+        await service.add({ spaceMeta: PUBLIC, hostname: 'squatted.xyz' })
+        getDb().prepare('UPDATE space_domains SET created_at = ?').run(Date.now() - 5000)
+        expect(await service.sweep()).toMatchObject({ dropped: 1 })
+        expect(store.getDomain('squatted.xyz')).toBe(null)
+    })
+
+    it('marking live by hand does nothing: DNS decides', async () => {
+        const { resolver } = fakeZone()
+        const service = caddyService(resolver)
+        await service.add({ spaceMeta: PUBLIC, hostname: 'yokozo.xyz' })
+        const { domain } = await service.check({ spaceId: 'taronx', hostname: 'yokozo.xyz', setState: 'active' })
+        expect(domain.state).toBe('pending')
     })
 })

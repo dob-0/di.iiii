@@ -9,10 +9,12 @@ import {
     isRawLocation,
     RAW_PAGE_OUT,
     RAW_PAGE_PROJECT,
-    RAW_PAGE_PROJECTS
+    RAW_PAGE_PROJECTS,
+    rawShowsFloatingAccount,
 } from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import ModeMark from './components/ModeMark.jsx'
+import TreeChip from './components/TreeChip.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -154,7 +156,7 @@ function RawSurfaceRoute({ rawState, spaceId }) {
             requiredSpaceId={spaceId}
             outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
             // The floating account chip must not hang over the show.
-            showAccountButton={rawState.page !== RAW_PAGE_OUT}
+            showAccountButton={rawShowsFloatingAccount(rawState)}
         >
             {surface}
         </ProtectedSurface>
@@ -940,6 +942,7 @@ export default function RootApp() {
         <BrowserRouter>
             <AuthReturnNotice />
             <ModeMark />
+            <TreeChip />
             <AppRouter />
         </BrowserRouter>
     )
