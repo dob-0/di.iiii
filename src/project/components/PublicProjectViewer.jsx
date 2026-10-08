@@ -34,7 +34,7 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
-import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
+import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement, rigRightColumnLines, rigChipMaxWidth } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import useOutputMode from '../viewport/useOutputMode.js'
 import { outputDocument } from '../viewport/outputMode.js'
@@ -281,11 +281,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
     // The version row and the show chip: on a portrait phone the row gets its own line
     // under Walk / Fly / Sound instead of running under them (rigbuild/rigVersionLayout.js).
+    // The column is Walk / Fly, Inside and Lite stacked (2026-10-08): the row and the chip start under all of it.
+    const rightWalk = navMode === 'orbit' && walkGateOpen
+    const rightSound = state.status === 'ready' && hasSound && !soundLocked && !isPreview
     const { rowTop: rigRowTop, chipTop: rigChipTop } = rigChromeTops(topClear, {
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
-        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview)
+        rightControls: rightWalk || rightSound,
+        rightLines: rigRightColumnLines({ walk: rightWalk, building: hasBuilding, sound: rightSound })
     })
+    const rigChipMaxW = rigChipMaxWidth({ compact: isPhoneCompact, walk: rightWalk, sound: rightSound, rowShown: rigVersionsShown })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
     const rigPlacement = rigVersionPlacement(topClear, {
@@ -679,6 +684,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         onEntities={setLookEntities}
                         showChip={!isPreview && !isEmbed}
                         top={rigChipTop}
+                        maxWidth={rigChipMaxW}
                     />
                 </Suspense>
             ) : null}
