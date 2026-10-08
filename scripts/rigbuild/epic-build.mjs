@@ -156,7 +156,7 @@ export const v1Entities = (rig) => {
 }
 
 /** The looks as rig looks: every unit its own named group, aimed at its own target. Pure. */
-export const v1Looks = (rig, ents, ctx) => {
+export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const units = ents.filter((e) => e.type === 'spotLight')
     const byPart = new Map()
     for (const f of rig.fixtures) {
@@ -193,7 +193,7 @@ export const v1Looks = (rig, ents, ctx) => {
         return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), aims, colours, levels }
     }
     const looks = [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
-    return { source: `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
+    return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
 }
 
 /** The night as a cue list (holds in seconds, a demo of the arc: the real night is busked by GO). Pure. */
@@ -224,6 +224,32 @@ export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT } = {}
     { type: 'setRenderSettings', payload: { patch: { atmosphere: { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
     { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
 ]
+
+/** The room's views: the rig file's own (`views`, MOXIR v1.1 on: derived for its stage) or v1.0's. Pure. */
+export const viewsOf = (rig) => (rig?.views ? { mode: 'fixed-camera', entryView: 'fixed-camera', ...rig.views } : v1Views())
+
+/**
+ * The DJ booth moved with the stage (MOXIR v1.1: the rig file's `stage.move_booth_by`, from `stage.booth_from` [x, z] to
+ * `booth_to`): the decks and the table, by the same offset. Only from the booth's old place (a second run finds it moved
+ * and writes nothing); anywhere else it refuses (someone placed it by hand). Pure. Returns { ops, entities } (entities = the
+ * document's, with the moves applied, for the stage frame the looks are aimed in).
+ */
+export const boothMoveOps = (doc, rig) => {
+    const mv = rig?.stage?.move_booth_by
+    const entities = doc.entities
+    if (!mv) return { ops: [], entities }
+    const booth = entities.filter((e) => /^rig-deck-\d+$/.test(e.id) || e.id === 'rig-dj-table')
+    const decks = booth.filter((e) => e.id.startsWith('rig-deck-'))
+    if (!decks.length) throw new Error('no DJ riser (rig-deck-*) to move')
+    const mid = [0, 2].map((k) => decks.reduce((sum, e) => sum + e.components.transform.position[k], 0) / decks.length)
+    const at = (xz) => Math.abs(mid[0] - xz[0]) < 0.05 && Math.abs(mid[1] - xz[1]) < 0.05
+    if (at(rig.stage.booth_to)) return { ops: [], entities }
+    if (!at(rig.stage.booth_from)) throw new Error(`the booth stands at (${mid.map(r3)}), neither ${rig.stage.booth_from} nor ${rig.stage.booth_to} — refusing (moved by hand?)`)
+    const moved = new Map(booth.map((e) => [e.id, e.components.transform.position.map((v, k) => r3(v + mv[k]))]))
+    const ops = [...moved].map(([entityId, position]) => ({ type: 'updateComponent', payload: { entityId, component: 'transform', patch: { position } } }))
+    const next = entities.map((e) => (moved.has(e.id) ? { ...e, components: { ...e.components, transform: { ...e.components.transform, position: moved.get(e.id) } } } : e))
+    return { ops, entities: next }
+}
 
 export const v1Views = () => ({
     mode: 'fixed-camera', entryView: 'fixed-camera',
@@ -313,10 +339,11 @@ const main = async () => {
         const listId = variant?.set ? `${variant.set}-versions` : null
         const list = listId ? await client.get(`/api/projects/${listId}/document`) : null
         const entry = list?.ok ? list.body.document.entities.find((e) => e.components?.productionVersion?.projectId === project) : null
-        if (entry && entry.components.productionVersion.title !== V1_TITLE) {
-            const out = await client.post(`/api/projects/${listId}/ops`, { baseVersion: list.body.version, ops: [{ type: 'updateComponent', payload: { entityId: entry.id, component: 'productionVersion', patch: { title: V1_TITLE } }, opId: `epic-mark-${Date.now()}`, clientId: 'epic-build' }] })
+        const title = rig.version || V1_TITLE
+        if (entry && entry.components.productionVersion.title !== title) {
+            const out = await client.post(`/api/projects/${listId}/ops`, { baseVersion: list.body.version, ops: [{ type: 'updateComponent', payload: { entityId: entry.id, component: 'productionVersion', patch: { title } }, opId: `epic-mark-${Date.now()}`, clientId: 'epic-build' }] })
             if (!out.ok) die(`the version list ${listId}: ${out.status} ${out.text.slice(0, 200)}`)
-            say(`version list ${listId}: ${entry.id} titled "${V1_TITLE}" (was "${entry.components.productionVersion.title}")`)
+            say(`version list ${listId}: ${entry.id} titled "${title}" (was "${entry.components.productionVersion.title}")`)
         } else say(`version list: ${entry ? 'already titled' : 'no entry for ' + project}`)
         if (args['mark-only']) return
     }
@@ -324,18 +351,21 @@ const main = async () => {
         await deskStep({ api, project, document: doc, cues: doc.mappingState?.cues || [], loop: doc.mappingState?.loop === true })
         return
     }
-    const ctx = lookFrame(doc.entities)
+    let booth
+    try { booth = boothMoveOps(doc, rig) } catch (e) { die(`${project}: ${e.message}`) }
+    const ctx = lookFrame(booth.entities)
     if (!ctx) die(`${project}: no stage frame (riser + venue plan) to aim looks in`)
-    const old = doc.entities.filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
+    const old = doc.entities.filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
     const ents = v1Entities(rig)
-    const looks = v1Looks(rig, ents, ctx)
+    const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
     const cues = v1Cues()
-    const ops = []
+    const ops = [...booth.ops]
     for (const e of old) ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
     for (const e of ents) ops.push({ type: 'createEntity', payload: { entity: e } })
     const bar = rig.solids.find((s) => s.id === 'rig-crowd-barrier')
     if (bar && doc.entities.some((e) => e.id === 'rig-crowd-barrier')) {
         ops.push({ type: 'updateComponent', payload: { entityId: 'rig-crowd-barrier', component: 'transform', patch: { position: bar.p, scale: bar.s } } })
+        if (bar.name && doc.entities.find((e) => e.id === 'rig-crowd-barrier')?.name !== bar.name) ops.push({ type: 'updateEntity', payload: { entityId: 'rig-crowd-barrier', patch: { name: bar.name.slice(0, 200) } } })
     }
     ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigLooks', patch: looks } })
     // No hazer (owner 10-08: "the haze is the 4 smoke machines"): the external hazers come off the rental list, so the cards
@@ -345,11 +375,13 @@ const main = async () => {
         const items = v1RentalItems(rental, rig)
         if (JSON.stringify(items) !== JSON.stringify(rental.items)) ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rentalList', patch: { ...rental, items } } })
     }
-    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: { title: 'MOXIR v1.0 — the epic lights, all wash + all beam hung, used minimally', summary: 'v0.9 + the epic plot (owner 10-08): every wash and beam of the order hung, 6 cubes (12 lines onto one matte ash wall), haze = the 4 smoke machines; looks dark-first, 2 layers (3 at the peak), ash white + ember red. Plan A1.' } } })
+    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.version && rig.version !== V1_TITLE
+        ? { title: `${rig.version} — the stage at the press end, the epic lights moved to it`.slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
+        : { title: 'MOXIR v1.0 — the epic lights, all wash + all beam hung, used minimally', summary: 'v0.9 + the epic plot (owner 10-08): every wash and beam of the order hung, 6 cubes (12 lines onto one matte ash wall), haze = the 4 smoke machines; looks dark-first, 2 layers (3 at the peak), ash white + ember red. Plan A1.' } } })
     for (const c of doc.mappingState?.cues || []) ops.push({ type: 'deleteMappingCue', payload: { cueId: c.id } })
     for (const c of cues) ops.push({ type: 'createMappingCue', payload: { cue: c } })
     ops.push({ type: 'setMappingState', payload: { patch: { loop: true, showEpoch: Date.now() } } })
-    ops.push({ type: 'setPresentationState', payload: { patch: v1Views() } })
+    ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
     ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }))
     say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
@@ -369,6 +401,8 @@ const main = async () => {
     const d2 = back.body.document
     const have = new Map(d2.entities.map((e) => [e.id, e]))
     const missing = ents.filter((e) => !have.has(e.id)).map((e) => e.id)
+    const boothOff = booth.ops.filter((op) => have.get(op.payload.entityId)?.components?.transform?.position?.some((v, k) => Math.abs(v - op.payload.patch.position[k]) > 0.01)).map((op) => op.payload.entityId)
+    if (boothOff.length) die(`read back: the booth did not move (${boothOff.join(', ')})`)
     const stale = old.filter((e) => have.has(e.id) && !ents.some((n) => n.id === e.id)).map((e) => e.id)
     const rl = have.get('rig-show')?.components?.rigLooks
     const lasers = d2.entities.filter((e) => e.id.startsWith('rig-laser-')).length
