@@ -78,7 +78,7 @@ export const trussSlopeOf = (rig) => (isCraneHung(rig) ? (Number(rig.truss.slope
 export const linePoint = (stage, u, face = 'axis') => {
     const th = stage.trussSlope || 0
     const t = stage.trussSection
-    const cx = stage.axis + u * Math.cos(th)
+    const cx = (stage.trussAxis ?? stage.axis) + u * Math.cos(th)
     const cy = stage.trussH - t / 2 + t / 2 / Math.cos(th) + u * Math.sin(th)
     const k = face === 'top' ? 1 : face === 'bottom' ? -1 : 0
     return [cx - k * (t / 2) * Math.sin(th), cy + k * (t / 2) * Math.cos(th), stage.trussZ]
@@ -152,6 +152,13 @@ export const stageFrame = (rig, hall) => {
             : backdrop?.face ?? 0
         back = wall + into * (s.gap_m ?? 1)
         front = back + into * s.depth_m
+        // `front_z_m`: the riser's front edge stated, not derived from the backdrop — the owner's stage line
+        // (2026-10-07, scripts/place/rigs/moxir-stage-line-2026-10-07.json). The backdrop stays as named.
+        if (s.front_z_m !== undefined) {
+            front = Number(s.front_z_m)
+            back = front - into * s.depth_m
+            wall = back - into * (s.gap_m ?? 1)
+        }
         trussZ = back + into * (truss.from_stage_back_m ?? 0)
     } else if (s.zone) {
         const zone = g.zones?.[s.zone]
@@ -185,9 +192,17 @@ export const stageFrame = (rig, hall) => {
     // the bridge's centre line; a crane more than 1 m from the performer is refused (move it).
     let crane = null
     if (isCraneHung(rig)) {
-        crane = craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        // `truss_behind_m`: the line is a BACKDROP (owner 2026-10-07: "the truss at the back of the DJ — where the DJ
+        // stage line finishes, the crane line there"): the bridge nearest a point that far behind the riser's back edge,
+        // and refused unless the line's plane stands at least that far behind it — nothing hung over the performer
+        const behind = s.truss_behind_m
+        crane = behind !== undefined
+            ? craneNearestStage(hall, { front: back - into * behind })
+            : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
         const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
-        if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
+        if (behind !== undefined) {
+            if (!crane || into * (back - crane.z_m) < behind - 1e-6) throw new Error(`truss "crane-hung" behind the DJ: the nearest bridge (z ${crane?.z_m}) is not ${behind} m behind the riser's back edge (z ${back.toFixed(2)}) — park it further back`)
+        } else if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m
     }
     const halo = isHalo(rig)
@@ -196,6 +211,10 @@ export const stageFrame = (rig, hall) => {
     return {
         crane,
         halo,
+        // `truss_axis_x_m`: the x the hung line's u = 0 sits over, when it is not the booth's own axis (the stage
+        // line, 2026-10-07: the booth moved to x 2.445 as drawn, the cut stays on the nave axis — the crane cab
+        // at the bridge's right end leaves no room to slide it; scripts/rigbuild/stage-line.mjs)
+        trussAxis: s.truss_axis_x_m ?? axis,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
         trussSlope: trussSlopeOf(rig),
         // crane-x: the length of each arm and the junction's size across (null for a line)
@@ -483,8 +502,15 @@ const place = {
         .map((x) => ({ pos: [ctx.stage.axis + x, 0, ctx.stage.front + ctx.stage.into * 0.9], orient: 'floor', face: toAudience(ctx) })),
     'nave-columns': (n, ctx) => {
         const cols = audienceColumns(ctx.hall, ctx.stage)
+        // 1.2 m off the column toward the audience — unless that is past an end wall (the last column
+        // pair stands 0.5 m from it: hazer and smoke 04 sat at z 55.2 outside the 54.5 m wall, audit
+        // A-10, 2026-10-05); then on the column's stage side.
+        const g = ctx.hall.geometry || {}
+        const hi = (g.end_wall_inner_y_m ?? Infinity) - END_WALL_CLEAR_M
+        const lo = (g.far_wall_z_m ?? -Infinity) + END_WALL_CLEAR_M
+        const zOf = (c) => { const z = c.z + ctx.stage.into * 1.2; return z > hi || z < lo ? c.z - ctx.stage.into * 1.2 : z }
         return pickEven(n, cols.length).map((i) => cols[i])
-            .map((c) => ({ pos: [c.faceX - c.side * 1.0, 0, c.z + ctx.stage.into * 1.2], orient: 'floor', face: [-c.side, 0, 0] }))
+            .map((c) => ({ pos: [c.faceX - c.side * 1.0, 0, zOf(c)], orient: 'floor', face: [-c.side, 0, 0] }))
     }
 }
 
@@ -639,7 +665,23 @@ export const AIM_RULES = {
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
     // A laser up into the roof over the house — the only rule a laser may use
     // besides one that rises (checkLaser refuses anything else).
-    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
+    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] }),
+    // A laser up onto the SOLID roof deck just beside the lantern over the house, never into it: the
+    // lantern is an opening glazed as a skylight, and a class-4 beam through it may leave the building
+    // (audit A-03, 2026-10-05: laser-into-roof drew all six cubes to one point inside lantern 1). Each
+    // beam goes to its own side of the lantern, fanned by its place on the line, short of the columns.
+    'laser-beside-lantern': (slot, meta, ctx, p = {}) => {
+        const g = ctx.hall.geometry
+        const z = ctx.stage.front + ctx.stage.into * (p.a ?? 14)
+        const ax = axisOf(ctx)
+        const dx = slot.pos[0] - ax
+        const side = dx < 0 ? -1 : 1
+        const lantern = (g.lanterns || []).find((l) => z >= l.z_m[0] && z <= l.z_m[1] && ax >= l.x_m[0] && ax <= l.x_m[1])
+        const edge = lantern ? (side < 0 ? lantern.x_m[0] : lantern.x_m[1]) : ax
+        const inner = (g.column_inner_face_x_m ?? Infinity) - 0.5
+        const x = edge + side * ((p.clear_m ?? 1.5) + Math.abs(dx) * (p.x_spread ?? 0.6))
+        return { target: [Math.max(-inner, Math.min(inner, x)), g.deck_m ?? g.truss_top_centre_m, z] }
+    }
 }
 
 /**
@@ -699,6 +741,11 @@ export const surfaceHit = (from, dir, hall, maxReach = 80) => {
  * stay level) from where it is hung, and be hung at least LASER_MIN_HEIGHT_M
  * up — so every point of its path over the floor is at least that high.
  */
+// Every laser model, not only the rental `laser`: the LaserCube (2026-10-04) got its own model kind,
+// and the laser rules — no beam downward, none under the minimum height, none into crane steel —
+// silently stopped applying to it (audit follow-up, 2026-10-05).
+export const LASER_FIXTURES = new Set(['laser', 'lasercube'])
+
 export const checkLaser = (from, to) => {
     if (from[1] < LASER_MIN_HEIGHT_M) return `hung at ${from[1].toFixed(2)} m, under ${LASER_MIN_HEIGHT_M} m`
     if (to[1] < from[1]) return `aimed downward (${from[1].toFixed(2)} m -> ${to[1].toFixed(2)} m)`
@@ -906,6 +953,8 @@ export const classPhotometry = (rig, manifest) => {
  */
 // Mounts on the building's columns mirror about the nave; everything else
 // about the stage's (the booth's) axis. A group may say `axis: 'nave' | 'booth'`.
+// A floor machine's centre stays this far inside an end wall (half a hazer's length and a hand's room).
+const END_WALL_CLEAR_M = 0.6
 const NAVE_MOUNTS = new Set(['column-bases', 'column-uplight', 'nave-columns', 'crane-bridge'])
 export const groupAxis = (group, stage) => {
     const which = group.axis || (NAVE_MOUNTS.has(group.mount) ? 'nave' : 'booth')
@@ -967,7 +1016,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
     const mid = linePoint(stage, stage.trussX, 'bottom')
     const line = box({
         id: `${RIG_PREFIX}truss-header`,
-        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${rig.truss.slope_deg}° up to house right, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
+        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${Math.abs(rig.truss.slope_deg)}° up to house ${rig.truss.slope_deg < 0 ? 'left' : 'right'}, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
         pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     })
     line.components.transform.rotation = [0, 0, round(stage.trussSlope, 9)]
@@ -1156,7 +1205,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const to = from.map((v, k) => v + dir[k] * reach)
             const label = `${group.id} #${i + 1}`
             if (!posed.reachable) summary.unreachable.push(`${label}: tilt ${posed.tilt} deg is past the head's travel`)
-            if (group.class === 'laser' || cls.fixture === 'laser') {
+            if (group.class === 'laser' || LASER_FIXTURES.has(cls.fixture)) {
                 const why = checkLaser(from, to)
                 if (why) {
                     summary.refused.push(`${label}: ${why}`)
@@ -1168,7 +1217,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             if (hit !== null) {
                 const where = `${label}: beam runs into the crane parked at z ${hit} m`
                 // A laser into a steel girder is a reflection hazard: refused.
-                if (cls.fixture === 'laser') {
+                if (LASER_FIXTURES.has(cls.fixture)) {
                     summary.refused.push(where)
                     return
                 }
