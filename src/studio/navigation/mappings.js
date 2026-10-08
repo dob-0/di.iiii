@@ -46,7 +46,12 @@ export const NAVIGATION_PRESETS = Object.freeze({
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
         dollyToCursor: true,
-        autoDepth: false,
+        // Auto Depth ON (owner, 2026-10-08: "zoom works, but right-drag left/right is stuck"). Measured on the RTX 3080: after the
+        // wheel zoomed in, the orbit point sat 0.35 m from the camera in open air, so a 240 px right-drag moved the camera 0.11 m
+        // (orbit 0.57 m) while the hall is 100 m long. camera-controls pans and orbits in proportion to the distance to that point;
+        // Auto Depth puts the point on the surface under the pointer (Blender manual, Preferences > Navigation > Auto Depth), so a
+        // drag follows what you see. The buttons are unchanged.
+        autoDepth: true,
         modifierGestures: false,
         rows: Object.freeze([
             ['Drag', 'Orbit'],

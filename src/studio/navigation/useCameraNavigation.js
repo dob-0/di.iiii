@@ -1,7 +1,7 @@
 // Applies a navigation preset to a camera-controls instance, per gesture.
 //
-// The 'studio' preset installs nothing here: StudioViewport keeps passing its
-// bindings as props exactly as before. Other presets add one capture-phase
+// The 'studio' preset's BUTTONS are still the props StudioViewport passes (nothing is remapped here); this hook runs for it
+// only to move the orbit point to the surface under the pointer (Auto Depth, which the studio preset now has on). Other presets add one capture-phase
 // pointerdown listener (runs before camera-controls' own pointerdown on the
 // element) that sets mouseButtons[button] from actionFor() for the gesture that
 // is starting — camera-controls reads mouseButtons on every pointermove, so the
@@ -28,10 +28,18 @@ export function entityRoots(scene, ids = null) {
 
 // camera-controls: setOrbitPoint "SHOULD NOT RUN DURING ANIMATIONS".
 // `active` is true while it is still easing toward a goal.
-export function applyPivot(cc, point) {
-    if (!cc || !point || cc.active) return false
+export function applyPivot(cc, point, { force = false } = {}) {
+    if (!cc || !point || (cc.active && !force)) return false
     cc.setOrbitPoint(point.x, point.y, point.z)
     return true
+}
+
+// A gesture is starting, so whatever the camera was easing toward (the slow turn a visitor who touches nothing is shown,
+// a fly-to) is over: stop it, so the pivot below can be set. Measured 2026-10-08 on the public viewer (Inside and Free):
+// camera-controls reported `active` at the start of EVERY gesture, applyPivot refused, Auto Depth never ran and a 240 px
+// right-drag still moved the camera 0.11-0.64 m. applyPivot keeps its own refusal (setOrbitPoint must not run mid-ease).
+export function settleForGesture(cc) {
+    if (cc?.active) cc.stop()
 }
 
 export function useCameraNavigation({
@@ -50,23 +58,28 @@ export function useCameraNavigation({
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
-        if (!active || !cc || preset.id === 'studio') return undefined
+        if (!active || !cc || (preset.id === 'studio' && !preset.autoDepth)) return undefined
         const element = cc._domElement
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
 
-        const pivotAt = (event, action) => {
+        // `gestureStart`: the gesture's own pointerdown/wheel, after settleForGesture stopped any easing: camera-controls still
+        // reports `active` for a frame after stop(), and a pivot that waits for it never lands (measured: the first gesture's pivot
+        // was refused, the second's applied).
+        const pivotAt = (event, action, gestureStart = false) => {
             const scene = getScene?.()
             if (!scene) return
             const selected = selectionRef.current
             if (action === CC_ACTION.ROTATE && orbitSelection && selected?.length) {
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
-                if (center) { applyPivot(cc, center); return }
+                if (center) { applyPivot(cc, center, { force: gestureStart }); return }
             }
-            if (!preset.autoDepth) return
+            // Auto Depth serves PAN and ZOOM (distance-scaled gestures). ROTATE keeps the target it has: re-pivoting an orbit
+            // onto a surface 50 m down a hall swept the camera 30 m in one frame (measured 2026-10-08, Inside).
+            if (!preset.autoDepth || action === CC_ACTION.ROTATE) return
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
             if (!ndc) return
-            applyPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) }))
+            applyPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) }), { force: gestureStart })
         }
 
         const onPointerDown = (event) => {
@@ -79,7 +92,7 @@ export function useCameraNavigation({
             const action = actionFor(preset.id, event.button,
                 { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
             cc.mouseButtons[name] = action
-            if (action !== CC_ACTION.NONE) pivotAt(event, action)
+            if (action !== CC_ACTION.NONE) { settleForGesture(cc); pivotAt(event, action, true) }
         }
 
         let lastWheel = 0
@@ -88,7 +101,7 @@ export function useCameraNavigation({
             const now = performance.now()
             const quiet = now - lastWheel > WHEEL_PICK_QUIET_MS
             lastWheel = now
-            if (quiet) pivotAt(event, CC_ACTION.DOLLY)
+            if (quiet) { settleForGesture(cc); pivotAt(event, CC_ACTION.DOLLY, true) }
         }
 
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })

@@ -9,12 +9,13 @@ const { NONE, ROTATE, TRUCK, DOLLY, TOUCH_DOLLY_TRUCK } = CC_ACTION
 
 describe('studio preset = the bindings Studio shipped before presets', () => {
     // Literal copied from StudioViewport.jsx at origin/dev e5d95ac9 (2026-10-01).
-    it('mouse, touch, dollyToCursor are the old literal', () => {
+    it('mouse, touch, dollyToCursor are the old literal; Auto Depth is the one deliberate change', () => {
         const p = NAVIGATION_PRESETS.studio
         expect({ ...p.mouseButtons }).toEqual({ left: 1, middle: 16, right: 2, wheel: 16 })
         expect({ ...p.touches }).toEqual({ one: 1, two: 4096 })
         expect(p.dollyToCursor).toBe(true)
-        expect(p.autoDepth).toBe(false)
+        // autoDepth was false in the old literal; turned ON 2026-10-08 on purpose (pan/orbit stuck after a wheel zoom: 0.11 m per 240 px)
+        expect(p.autoDepth).toBe(true)
         expect(p.modifierGestures).toBe(false)
     })
     it('ortho view: left drag pans (was: isOrtho ? TRUCK : ROTATE)', () => {
