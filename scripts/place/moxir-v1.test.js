@@ -40,10 +40,12 @@ describe.skipIf(!hasPython || !fs.existsSync(GLB))('moxir_v1.py --check', () => 
         expect(S.check_rows.some((r) => r[2] === 'owed')).toBe(true)
     })
 
-    it('stays minimal and inside the owner\'s caps', () => {
+    it('hangs all the wash and all the beam of the order, 6 cubes, no hazer, inside the owner\'s caps (owner 10-08)', () => {
         expect(S.power.running_total_w).toBeLessThanOrEqual(30000)
-        const nh = S.not_hung.filter((r) => !['UP-LA40WF', 'UP-Q108S', 'UP-YH600F'].includes(r.code)).reduce((a, r) => a + r.not_hung, 0)
-        expect(nh).toBeGreaterThan(30)
+        const row = (code) => S.not_hung.find((r) => r.code === code)
+        for (const code of ['UP-PL5403', 'UP-B380F', 'UP-250BSW', 'UP-HK1915']) expect(row(code).not_hung, code).toBe(0)
+        expect(row('EXT-LC-ULTRA-MK2').hung).toBe(6)
+        expect(row('EXT-HAZER')).toBeUndefined()
         for (const lk of S.looks) for (const [, v] of Object.entries(lk.parts)) if (v[0]) expect(['#e8e4dc', '#9c978d', '#ff3a12', '#a3200c']).toContain(v[0])
     })
 })

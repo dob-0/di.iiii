@@ -20,6 +20,14 @@
  * (deskLookValues.js laserHeld) and the lens never glows (rigBodyLamps.js): this is previs on a scratch stack with no output
  * and no cube connected, not an emission sign-off. `laserSignedOff` is NOT written.
  * Scratch only: refuses any host but localhost / 127.0.0.1. Reads the document right before writing and sends against its version.
+ *
+ * --desk (after --apply, or alone with --desk-only): where a light desk answers (a local stack's /light), the room is drawn
+ * FROM THE DESK'S DMX for every patched lamp (useRigLook.js "DMX wins"), so the desk must carry each look WITH its values.
+ * The cards page's "send looks" sends empty shells (2026-10-08: every lamp then sat at the desk's idle full white: the glare,
+ * the flat brown hall, the black that was not black). This step does what show-loop.mjs does, for THIS project's patch on a
+ * desk running the machine's own show: each look with its DMX (deskLookValues.js: every laser channel 0, the level path holds
+ * the line), another room's rig looks taken off, the runner loaded with the v1.0 cue list and GO 1. It never touches OUTPUT.
+ * Needs the project patched on the desk (patch.mjs --exact). Undo: show-loop.mjs --stop, or the desk's show.prev.json.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -27,7 +35,11 @@ import { fileURLToPath } from 'node:url'
 
 import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
-import { lookFrame } from '../../src/rigbuild/looks.js'
+import { lookFrame, rigLooksOf, staleDeskLooks } from '../../src/rigbuild/looks.js'
+import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
+import { libraryWithShow } from '../../src/rigbuild/rental.js'
+import { loadLibrary } from './library.mjs'
+import { runnerList } from './show-loop.mjs'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -50,8 +62,19 @@ export const candelaOf = (f) => {
 const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30, 'ext-blinder': 25, 'ext-strobe': 20 }
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
-const LASER_INTENSITY = 1004000      // as bright as the brightest beam the room draws (the B380F): a line, not a glow
-const LASER_ANGLE = 0.0105           // the narrowest the beta used; the room clamps beam cones (spotBeam.js)
+// A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
+// wide: seen from the floor, near its axis, every line became a white blob of forward scatter + bloom, and side-on it was a
+// dim smear). Now: the beam's real luminous flux, the 6 W unit (fixtures.json variants_mw, CIE 1924 V(lambda)), its power
+// split between its 2 beams at the scan duty 0.45 (moxir_v1.py beam_vis): ash white 254 lm, ember red 72 lm per beam, into
+// a 2 mrad half-angle (a 4 mm aperture + ~1 mrad divergence + the 0.3 deg zone's wobble drawn as width, about one pixel at
+// 30 m: the narrowest the room can draw without aliasing). I = flux / solid angle, x the rig's one exposure number.
+export const LASER_ANGLE = 0.002
+export const LASER_APERTURE = 0.002
+export const laserIntensity = (colour) => {
+    const lm = String(colour).toLowerCase() === '#ff3a12' ? 72 : 254
+    const omega = 2 * Math.PI * (1 - Math.cos(LASER_ANGLE))
+    return Math.round((lm / omega) * SCALE)
+}
 
 /** The unit's beam direction from its stored rotation (three.js Euler XYZ, a spot's unrotated beam is -Y). Pure. */
 export const dirOfRotation = ([rx, ry, rz]) => {
@@ -65,6 +88,25 @@ export const dirOfRotation = ([rx, ry, rz]) => {
 
 const groupKey = (id, type) => `named-v1-${id}`.slice(0, 40) + `/${type}`
 
+// A look holds at most 100 groups (projectSchema RIG_GROUPS_CAP) and "all wash, all beam" hangs 96 lamps + 12 laser beams.
+// Every lamp keeps its own group (its own aim, to 0.004 deg) EXCEPT the floor lamps of one part that stand straight up or
+// lean straight in toward the stage axis by the same angle: those share one 'vertical' group (lookRules.js), which draws
+// the very same directions. Pure.
+export const verticalLean = (f) => {
+    const d = dirOfRotation(f.r)
+    if (Math.abs(d[2]) > 0.002 || d[1] < 0.9) return null
+    const side = Math.abs(f.p[0] - AXIS) < 0.05 ? 0 : Math.sign(f.p[0] - AXIS)
+    if (side === 0 && Math.abs(d[0]) > 0.002) return null
+    const inDeg = side === 0 ? 0 : Math.round((Math.asin(Math.max(-1, Math.min(1, -d[0] * side))) * 180 / Math.PI) * 10) / 10
+    return inDeg
+}
+const AXIS = 0.13          // the stage axis of the hall frame (the cut's centre line; lookFrame gives the same)
+const sharedKey = (f, inDeg) => `${f.part.replace(/\s+/g, '-')}-in${inDeg}`
+export const positionOf = (f) => {
+    const lean = verticalLean(f)
+    return lean == null ? `named v1 ${f.id}` : `named v1 ${sharedKey(f, lean)}`
+}
+
 /** v1.0's entities from the rig file. Pure. */
 export const v1Entities = (rig) => {
     const out = []
@@ -75,8 +117,8 @@ export const v1Entities = (rig) => {
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
                         appearance: { color: f.colour, opacity: 1 },
-                        light: { color: f.colour, intensity: LASER_INTENSITY, distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
-                        beam: { visible: true, haze: 1 },
+                        light: { color: f.colour, intensity: laserIntensity(f.colour), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
+                        beam: { visible: true, haze: 1, aperture: LASER_APERTURE },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
                         fixture: { type: 'ext-lc-ultra-mk2', unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
                     } })
@@ -89,7 +131,7 @@ export const v1Entities = (rig) => {
             continue
         }
         if (f.angle_rad == null) continue
-        const fixture = { type: f.type, unit: 1, circuit: f.circuit || '', position: `named v1 ${f.id}` }
+        const fixture = { type: f.type, unit: 1, circuit: f.circuit || '', position: positionOf(f) }
         if (f.dmx) Object.assign(fixture, { universe: f.dmx.universe, address: f.dmx.address, mode: `${f.dmx.footprint}ch` })
         out.push({ id: f.id, type: 'spotLight', name: `${f.type.toUpperCase()} ${f.part} (${f.status})`, parentId: null,
             components: {
@@ -120,7 +162,7 @@ export const v1Looks = (rig, ents, ctx) => {
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
             for (const b of f.laser.beams) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
-        } else byPart.set(f.id, { part: f.part, colour: f.colour })
+        } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f) })
     }
     const aimOf = (e) => {
         const p = e.components.transform.position
@@ -135,8 +177,11 @@ export const v1Looks = (rig, ents, ctx) => {
         for (const e of units) {
             const meta = byPart.get(e.id)
             if (!meta) continue
-            const key = groupKey(meta.part === 'laser' ? `laser-${meta.beam}` : e.id, e.components.fixture.type)
-            aims[key] = aimOf(e)
+            const shared = meta.part !== 'laser' ? meta.lean : null
+            const key = shared != null
+                ? `${e.components.fixture.position.replace(/\s+/g, '-')}/${e.components.fixture.type}`
+                : groupKey(meta.part === 'laser' ? `laser-${meta.beam}` : e.id, e.components.fixture.type)
+            aims[key] = shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e)
             let on = null
             if (lk.parts) {
                 if (meta.part === 'laser') on = lk.parts.laser ? [null, 1] : (lk.parts.cube6a && meta.beam === '6a' ? [null, 1] : null)
@@ -160,6 +205,24 @@ export const v1Cues = () => [
     ['dawn', 'Act 4 · dawn: one line returns', 10, 20]
 ].map(([look, name, fade, hold], i) => ({ id: `v1-${String(i + 1).padStart(2, '0')}-${look}`, name, key: '', fade, hold, lightLook: `rig-${look}`, surfaces: {} }))
 
+// The air and the camera (2026-10-08 fix): the room's haze field is worked out from its machines (hazeField.js), and a
+// smoke machine's default level there is 0 (bursts) — with no hazer left (owner: the 4 smoke machines only) the field came
+// out EMPTY (uFill 0): no beam, no laser line could be seen at all. v1.0 draws ONE uniform haze instead, at moxir_v1.py's
+// own figure for the nave where the beams are: 4 UP-YZ31P in bursts, 1 air change an hour, sigma 0.0169/m (haze_plan(),
+// ESTIMATE: yield and k_m assumed; the hall average is 0.0042/m). Measured on the night (card + lux meter) replaces it.
+export const V1_TITLE = 'MOXIR v1.0'
+export const V1_HAZE_SIGMA = 0.0169
+// THE HALL STAYS READABLE (coordinator's check 10-08 14:30, after realism.mjs set the ambient to 0: "the hall is invisible
+// ... dark is not black"): a hall during a show is never black — exit signs, the bar, FOH's desk lights, phones and the
+// lamps' own spill. The room's bounce (rigBounce.js) carries the rig's return; this ambient is that HOUSE SPILL, ASSUMED,
+// chosen by eye on the real GPU in Lite (0.04 read as black, 0.3 shows columns, roof steel and the truss at a low level
+// while every look keeps its contrast). A measured lux reading on the night replaces it.
+export const V1_AMBIENT = 0.3
+export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT } = {}) => [
+    { type: 'setRenderSettings', payload: { patch: { atmosphere: { scattering: sigma, anisotropy: 0.7, haze: null } } } },
+    { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
+]
+
 export const v1Views = () => ({
     mode: 'fixed-camera', entryView: 'fixed-camera',
     fixedCamera: { projection: 'perspective', position: [0, 1.6, 38], target: [0, 6.2, -20], fov: 64, zoom: 1, near: 0.05, far: 400, locked: false },
@@ -171,6 +234,51 @@ export const v1Views = () => ({
     ]
 })
 
+/** Put v1.0's looks WITH their DMX on the desk and start its cue runner (see --desk above). */
+export const deskStep = async ({ api, project, document, cues, loop }) => {
+    const light = api.replace(/\/serverXR$/, '') + '/light'
+    const desk = makeClient(light, null)
+    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
+    if (!rig.ok) die(`no desk at ${light} (${rig.status})`)
+    const fixtures = rig.body.fixtures || []
+    if (!fixtures.length) die(`the desk at ${light} has no fixture patched for ${project}: patch it first (node scripts/rigbuild/patch.mjs --project ${project} --api ${api} --exact)`)
+    const looks = rigLooksOf(document.entities)
+    const library = libraryWithShow(loadLibrary(), document.entities)
+    const deskSet = deskLooksWithValues(looks, fixtures, { entities: document.entities, library })
+    for (const look of deskSet) {
+        const put = await desk.post('/api/looks/add', { look })
+        if (!put.ok) die(`the desk did not take ${look.id}: ${put.status} ${put.text.slice(0, 200)}`)
+    }
+    const onDesk = await desk.get('/api/looks')
+    const stale = onDesk.ok ? staleDeskLooks(onDesk.body.looks, deskSet.map((l) => l.id)) : []
+    for (const id of stale) await desk.post('/api/looks/remove', { id })
+    const valued = new Set(deskSet.flatMap((l) => Object.keys(l.steps[0]?.values || {})))
+    const loaded = await desk.post('/api/cues/load', { project, list: runnerList(cues), loop })
+    if (!loaded.ok) die(`loading the desk's runner: ${loaded.status} ${loaded.text.slice(0, 200)}`)
+    const go = await desk.post('/api/cues/go', { index: 0 })
+    if (!go.ok) die(`GO: ${go.status} ${go.text.slice(0, 200)}`)
+    const summary = await desk.get('/api/summary')
+    say(`desk: ${deskSet.length} looks with DMX for ${valued.size} of ${fixtures.length} patched fixtures${stale.length ? `, ${stale.length} stale looks off` : ''}; runner ${go.body.cues.index + 1}/${go.body.cues.n} ${go.body.cues.name}, loop ${go.body.cues.loop ? 'on' : 'off'}${go.body.cues.missing?.length ? `, MISSING ${go.body.cues.missing.join(', ')}` : ''}; OUTPUT ${summary.body?.output?.enabled ? 'ON' : 'OFF'} (never changed here)`)
+    return { looks: deskSet.length, valued: valued.size, fixtures: fixtures.length }
+}
+
+/**
+ * The cards page's rental list for v1.0 (pure): the beta's lines WITHOUT the external hazers (owner 10-08: the haze is the 4
+ * smoke machines), PLUS a line for every type v1.0 hangs that the beta's list never carried (the 250BSW, the HK1915, the
+ * external strobes and blinders), at moxir_v1.py's order (rig.not_hung). Before, the cards said "112 of 78 placed": 28
+ * units were placed against no line at all.
+ */
+export const v1RentalItems = (rental, rig) => {
+    const items = (rental.items || []).filter((i) => i.type !== 'ext-hazer')
+    const have = new Set(items.map((i) => i.code))
+    for (const r of rig.not_hung || []) {
+        if (have.has(r.code) || !(r.hung > 0)) continue
+        const ext = r.code.startsWith('EXT-')
+        items.push({ code: r.code, type: r.code.toLowerCase(), ordered: r.ordered, label: '', source: `${RIG_FILE} not_hung (moxir_v1.py: the v1.0 order, owner 10-08 "all wash, all beam")`, ...(ext ? { from: 'other', supplier: 'to choose', note: 'external: rate owed' } : {}) })
+    }
+    return items
+}
+
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     const api = String(args.api || '').replace(/\/+$/, '')
@@ -181,9 +289,42 @@ const main = async () => {
     const got = await client.get(`/api/projects/${project}/document`)
     if (!got.ok) die(`reading ${project}: ${got.status}`)
     const doc = got.body.document
+    if (args['render-only']) {
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        if (!out.ok) die(`render ops: ${out.status} ${out.text.slice(0, 300)}`)
+        say(`render: haze sigma ${V1_HAZE_SIGMA}/m uniform, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
+        return
+    }
+    if (args['lasers-only']) {
+        const ops = v1Entities(rig).filter((e) => e.id.startsWith('rig-laser-') && doc.entities.some((d) => d.id === e.id))
+            .flatMap((e) => ['light', 'beam'].map((component) => ({ type: 'updateComponent', payload: { entityId: e.id, component, patch: e.components[component] } })))
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-lasers-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        if (!out.ok) die(`laser ops: ${out.status} ${out.text.slice(0, 300)}`)
+        say(`lasers: ${ops.length / 2} beams at ${laserIntensity('#e8e4dc')} (ash) / ${laserIntensity('#ff3a12')} (ember), half-angle ${LASER_ANGLE} rad → version ${out.body.newVersion}`)
+        return
+    }
+    if (args['mark-only'] || args.apply) {
+        // The version row's chip reads the production's VERSION LIST (`<set>-versions`), not this document: the copy's entry
+        // was still titled with the beta's long name ("Known · full · the cut, movers on the ground · PONYO 10-04"). Its title
+        // becomes "MOXIR v1.0"; its status is not changed (promoting a version is the owner's call).
+        const variant = doc.entities.find((e) => e.id === 'rig-show')?.components?.rigVariant
+        const listId = variant?.set ? `${variant.set}-versions` : null
+        const list = listId ? await client.get(`/api/projects/${listId}/document`) : null
+        const entry = list?.ok ? list.body.document.entities.find((e) => e.components?.productionVersion?.projectId === project) : null
+        if (entry && entry.components.productionVersion.title !== V1_TITLE) {
+            const out = await client.post(`/api/projects/${listId}/ops`, { baseVersion: list.body.version, ops: [{ type: 'updateComponent', payload: { entityId: entry.id, component: 'productionVersion', patch: { title: V1_TITLE } }, opId: `epic-mark-${Date.now()}`, clientId: 'epic-build' }] })
+            if (!out.ok) die(`the version list ${listId}: ${out.status} ${out.text.slice(0, 200)}`)
+            say(`version list ${listId}: ${entry.id} titled "${V1_TITLE}" (was "${entry.components.productionVersion.title}")`)
+        } else say(`version list: ${entry ? 'already titled' : 'no entry for ' + project}`)
+        if (args['mark-only']) return
+    }
+    if (args['desk-only']) {
+        await deskStep({ api, project, document: doc, cues: doc.mappingState?.cues || [], loop: doc.mappingState?.loop === true })
+        return
+    }
     const ctx = lookFrame(doc.entities)
     if (!ctx) die(`${project}: no stage frame (riser + venue plan) to aim looks in`)
-    const old = doc.entities.filter((e) => (e.type === 'spotLight' && e.id.startsWith('rig-')) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
+    const old = doc.entities.filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
     const ents = v1Entities(rig)
     const looks = v1Looks(rig, ents, ctx)
     const cues = v1Cues()
@@ -195,11 +336,19 @@ const main = async () => {
         ops.push({ type: 'updateComponent', payload: { entityId: 'rig-crowd-barrier', component: 'transform', patch: { position: bar.p, scale: bar.s } } })
     }
     ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigLooks', patch: looks } })
-    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: { title: 'MOXIR v1.0 — the epic lights, elite + minimal', summary: 'v0.9 + the epic plot (owner 10-08): 6 signature moments over 4 acts, ash white + ember red, 2 layers (3 at the peak), 12 laser lines onto one matte ash wall, Plan A1 (both cranes moved). Tape numbers still ASSUMED.' } } })
+    // No hazer (owner 10-08: "the haze is the 4 smoke machines"): the external hazers come off the rental list, so the cards
+    // page stops asking to place 6 of them.
+    const rental = doc.entities.find((e) => e.id === 'rig-show')?.components?.rentalList
+    if (rental?.items) {
+        const items = v1RentalItems(rental, rig)
+        if (JSON.stringify(items) !== JSON.stringify(rental.items)) ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rentalList', patch: { ...rental, items } } })
+    }
+    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: { title: 'MOXIR v1.0 — the epic lights, all wash + all beam hung, used minimally', summary: 'v0.9 + the epic plot (owner 10-08): every wash and beam of the order hung, 6 cubes (12 lines onto one matte ash wall), haze = the 4 smoke machines; looks dark-first, 2 layers (3 at the peak), ash white + ember red. Plan A1.' } } })
     for (const c of doc.mappingState?.cues || []) ops.push({ type: 'deleteMappingCue', payload: { cueId: c.id } })
     for (const c of cues) ops.push({ type: 'createMappingCue', payload: { cue: c } })
     ops.push({ type: 'setMappingState', payload: { patch: { loop: true, showEpoch: Date.now() } } })
     ops.push({ type: 'setPresentationState', payload: { patch: v1Views() } })
+    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }))
     say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })
@@ -228,6 +377,7 @@ const main = async () => {
     const groupsPerLook = Math.max(...rl.looks.map((l) => Object.keys(l.aims).length))
     if (args.out) fs.writeFileSync(path.join(String(args.out), `epic-build-${project}-after.json`), JSON.stringify(back.body))
     say(`written, version ${version}; read back: ${d2.entities.length} entities, ${lasers} laser beams, ${rl.looks.length} looks (up to ${groupsPerLook} groups each), ${nCues} cues, loop ${d2.mappingState.loop}, showEpoch ${d2.mappingState.showEpoch}`)
+    if (args.desk) await deskStep({ api, project, document: d2, cues: d2.mappingState.cues, loop: d2.mappingState.loop === true })
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

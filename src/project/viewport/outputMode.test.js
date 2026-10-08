@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { OUTPUT_POOL_SLOTS, outputDocument, outputModeWanted, outputRenderSettings } from './outputMode.js'
 
 describe('outputModeWanted', () => {
-    it('gives the work machine with a mouse the full room, everyone else the output', () => {
-        expect(outputModeWanted({ workMachine: true })).toBe(false)
+    it('starts everyone in Lite, the work machine with a mouse too (owner 2026-10-08)', () => {
+        expect(outputModeWanted({ workMachine: true })).toBe(true)
         expect(outputModeWanted({ workMachine: true, coarse: true })).toBe(true)
         expect(outputModeWanted({ workMachine: false })).toBe(true)
     })
@@ -12,7 +12,7 @@ describe('outputModeWanted', () => {
         expect(outputModeWanted({ coarse: true, stored: 'lite', search: '?x=1&quality=FULL' })).toBe(false)
         expect(outputModeWanted({ coarse: true, stored: 'full' })).toBe(false)
         expect(outputModeWanted({ workMachine: true, stored: 'lite' })).toBe(true)
-        expect(outputModeWanted({ workMachine: true, stored: 'junk', search: '?quality=max' })).toBe(false)
+        expect(outputModeWanted({ workMachine: true, stored: 'junk', search: '?quality=max' })).toBe(true) // junk and an unknown quality fall back to Lite
     })
 })
 

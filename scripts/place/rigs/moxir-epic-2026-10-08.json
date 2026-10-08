@@ -202,7 +202,7 @@
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C03"
+   "circuit": "C04"
   },
   {
    "id": "rig-par-cut-curtain-06",
@@ -236,7 +236,7 @@
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C03"
+   "circuit": "C04"
   },
   {
    "id": "rig-par-cut-curtain-07",
@@ -561,7 +561,7 @@
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C03"
+   "circuit": "C04"
   },
   {
    "id": "rig-par-cut-bridge-04",
@@ -621,7 +621,7 @@
    "angle_rad": 0.1309,
    "dmx": {
     "universe": 1,
-    "address": 202,
+    "address": 218,
     "footprint": 8,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
@@ -654,13 +654,13 @@
    "angle_rad": 0.1309,
    "dmx": {
     "universe": 1,
-    "address": 210,
+    "address": 234,
     "footprint": 8,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C04"
+   "circuit": "C05"
   },
   {
    "id": "rig-beam380-backstage-02",
@@ -686,7 +686,7 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 1,
-    "address": 218,
+    "address": 266,
     "footprint": 16,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
@@ -718,7 +718,7 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 1,
-    "address": 234,
+    "address": 282,
     "footprint": 16,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
@@ -750,7 +750,7 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 1,
-    "address": 250,
+    "address": 298,
     "footprint": 16,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
@@ -782,13 +782,13 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 1,
-    "address": 266,
+    "address": 314,
     "footprint": 16,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
    },
    "power_w": 500,
-   "circuit": "C04"
+   "circuit": "C05"
   },
   {
    "id": "rig-beam380-backstage-06",
@@ -814,13 +814,13 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 1,
-    "address": 282,
+    "address": 330,
     "footprint": 16,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
    },
    "power_w": 500,
-   "circuit": "C04"
+   "circuit": "C05"
   },
   {
    "id": "rig-beam380-lighthouse-01",
@@ -847,7 +847,7 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 1,
-    "address": 186,
+    "address": 194,
     "footprint": 16,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
@@ -880,13 +880,13 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 2,
-    "address": 195,
+    "address": 227,
     "footprint": 16,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 500,
-   "circuit": "C09"
+   "circuit": "C13"
   },
   {
    "id": "rig-beam380-columns-02",
@@ -913,13 +913,13 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 2,
-    "address": 211,
+    "address": 243,
     "footprint": 16,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 500,
-   "circuit": "C10"
+   "circuit": "C13"
   },
   {
    "id": "rig-beam380-columns-03",
@@ -946,13 +946,13 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 2,
-    "address": 155,
+    "address": 171,
     "footprint": 16,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 500,
-   "circuit": "C12"
+   "circuit": "C10"
   },
   {
    "id": "rig-beam380-columns-04",
@@ -979,13 +979,13 @@
    "angle_rad": 0.0157,
    "dmx": {
     "universe": 2,
-    "address": 171,
+    "address": 187,
     "footprint": 16,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 500,
-   "circuit": "C10"
+   "circuit": "C12"
   },
   {
    "id": "rig-beam380-columns-05",
@@ -1018,7 +1018,7 @@
     "node": "NODE-FAR"
    },
    "power_w": 500,
-   "circuit": "C12"
+   "circuit": "C10"
   },
   {
    "id": "rig-beam380-columns-06",
@@ -1078,13 +1078,13 @@
    "angle_rad": 0.1309,
    "dmx": {
     "universe": 2,
-    "address": 227,
+    "address": 259,
     "footprint": 8,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 200,
-   "circuit": "C09"
+   "circuit": "C13"
   },
   {
    "id": "rig-par-vista-02",
@@ -1111,13 +1111,13 @@
    "angle_rad": 0.1309,
    "dmx": {
     "universe": 2,
-    "address": 235,
+    "address": 267,
     "footprint": 8,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 200,
-   "circuit": "C09"
+   "circuit": "C13"
   },
   {
    "id": "rig-par-vista-07",
@@ -1150,7 +1150,7 @@
     "node": "NODE-FAR"
    },
    "power_w": 200,
-   "circuit": "C12"
+   "circuit": "C11"
   },
   {
    "id": "rig-par-vista-08",
@@ -1414,7 +1414,7 @@
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C04"
+   "circuit": "C05"
   },
   {
    "id": "rig-par-press-sides-01",
@@ -1441,13 +1441,13 @@
    "angle_rad": 0.1309,
    "dmx": {
     "universe": 1,
-    "address": 177,
+    "address": 185,
     "footprint": 8,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C04"
+   "circuit": "C05"
   },
   {
    "id": "new-hk1915-01",
@@ -1473,13 +1473,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 370,
+    "address": 402,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C09"
+   "circuit": "C13"
   },
   {
    "id": "new-hk1915-02",
@@ -1505,13 +1505,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 391,
+    "address": 423,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C09"
+   "circuit": "C13"
   },
   {
    "id": "new-hk1915-03",
@@ -1537,13 +1537,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 328,
+    "address": 360,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C09"
+   "circuit": "C13"
   },
   {
    "id": "new-hk1915-04",
@@ -1569,13 +1569,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 349,
+    "address": 381,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C10"
+   "circuit": "C12"
   },
   {
    "id": "new-hk1915-05",
@@ -1601,13 +1601,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 286,
+    "address": 318,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C12"
+   "circuit": "C10"
   },
   {
    "id": "new-hk1915-06",
@@ -1633,13 +1633,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 307,
+    "address": 339,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C10"
+   "circuit": "C12"
   },
   {
    "id": "new-hk1915-07",
@@ -1665,13 +1665,13 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 244,
+    "address": 276,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
    },
    "power_w": 350,
-   "circuit": "C12"
+   "circuit": "C10"
   },
   {
    "id": "new-hk1915-08",
@@ -1697,7 +1697,7 @@
    "angle_rad": 0.2618,
    "dmx": {
     "universe": 2,
-    "address": 265,
+    "address": 297,
     "footprint": 21,
     "branch": "U2-B the roof (far nave)",
     "node": "NODE-FAR"
@@ -1799,7 +1799,7 @@
     "node": "NODE-STAGE"
    },
    "power_w": 286,
-   "circuit": "C03"
+   "circuit": "C04"
   },
   {
    "id": "new-blinder-04",
@@ -1831,7 +1831,7 @@
     "node": "NODE-STAGE"
    },
    "power_w": 286,
-   "circuit": "C04"
+   "circuit": "C05"
   },
   {
    "id": "new-strobe-01",
@@ -1851,19 +1851,19 @@
    "r": [
     -3.141593,
     0.0,
-    0.0
+    0.291457
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.5236,
    "dmx": {
     "universe": 2,
-    "address": 187,
+    "address": 219,
     "footprint": 4,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 740,
-   "circuit": "C09"
+   "circuit": "C14"
   },
   {
    "id": "new-strobe-02",
@@ -1883,19 +1883,19 @@
    "r": [
     -3.141593,
     0.0,
-    0.0
+    -0.291457
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.5236,
    "dmx": {
     "universe": 2,
-    "address": 191,
+    "address": 223,
     "footprint": 4,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 740,
-   "circuit": "C10"
+   "circuit": "C12"
   },
   {
    "id": "new-strobe-03",
@@ -1910,24 +1910,24 @@
    "p": [
     -8.0,
     0.3,
-    -38.0
+    -32.0
    ],
    "r": [
     -3.141593,
     0.0,
-    0.0
+    0.291457
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.5236,
    "dmx": {
     "universe": 2,
-    "address": 145,
+    "address": 163,
     "footprint": 4,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 740,
-   "circuit": "C12"
+   "circuit": "C10"
   },
   {
    "id": "new-strobe-04",
@@ -1942,24 +1942,1224 @@
    "p": [
     8.0,
     0.3,
-    -38.0
+    -32.0
    ],
    "r": [
     -3.141593,
     0.0,
-    0.0
+    -0.291457
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.5236,
    "dmx": {
     "universe": 2,
-    "address": 149,
+    "address": 167,
     "footprint": 4,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 740,
+   "circuit": "C12"
+  },
+  {
+   "id": "rig-par-columns-06",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket",
+   "part": "halo",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "silhouette"
+   ],
+   "p": [
+    0.13,
+    0.3,
+    21.55
+   ],
+   "r": [
+    -2.792527,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 1,
+    "address": 226,
+    "footprint": 8,
+    "branch": "U1-B the stage floor",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-neighbour-01",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket",
+   "part": "halo",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "silhouette"
+   ],
+   "p": [
+    -2.8,
+    0.3,
+    21.55
+   ],
+   "r": [
+    -2.792527,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 1,
+    "address": 210,
+    "footprint": 8,
+    "branch": "U1-B the stage floor",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-neighbour-04",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket",
+   "part": "halo",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "silhouette"
+   ],
+   "p": [
+    3.05,
+    0.3,
+    21.55
+   ],
+   "r": [
+    -2.792527,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 1,
+    "address": 242,
+    "footprint": 8,
+    "branch": "U1-B the stage floor",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-press-sides-02",
+   "type": "up-pl5403",
+   "position": "floor at the press crown, on its own bracket (out of reach)",
+   "part": "still smoking",
+   "layer": "machines",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "ash falling"
+   ],
+   "p": [
+    1.0,
+    0.3,
+    9.0
+   ],
+   "r": [
+    2.204222,
+    0.0,
+    0.222921
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 1,
+    "address": 177,
+    "footprint": 8,
+    "branch": "U1-B the stage floor",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-par-vista-03",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column's face",
+   "part": "far columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire",
+    "still smoking"
+   ],
+   "p": [
+    -11.157,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141592,
+    0.0,
+    -0.070693
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 2,
+    "address": 203,
+    "footprint": 8,
+    "branch": "U2 the far half",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-vista-04",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column's face",
+   "part": "far columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire",
+    "still smoking"
+   ],
+   "p": [
+    11.157,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141592,
+    0.0,
+    0.070693
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 2,
+    "address": 211,
+    "footprint": 8,
+    "branch": "U2 the far half",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C12"
+  },
+  {
+   "id": "rig-par-vista-05",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column's face",
+   "part": "far columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire",
+    "still smoking"
+   ],
+   "p": [
+    -11.157,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    2.690298,
+    0.0,
+    -0.107598
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 2,
+    "address": 147,
+    "footprint": 8,
+    "branch": "U2 the far half",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-vista-06",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column's face",
+   "part": "far columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire",
+    "still smoking"
+   ],
+   "p": [
+    11.157,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    2.690298,
+    0.0,
+    0.107598
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 2,
+    "address": 155,
+    "footprint": 8,
+    "branch": "U2 the far half",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
    "circuit": "C11"
+  },
+  {
+   "id": "rig-par-columns-01",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    -48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 97,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C16"
+  },
+  {
+   "id": "rig-par-columns-02",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 113,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C16"
+  },
+  {
+   "id": "rig-par-columns-03",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 129,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C16"
+  },
+  {
+   "id": "rig-par-columns-04",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 145,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C16"
+  },
+  {
+   "id": "rig-par-columns-05",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 161,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C17"
+  },
+  {
+   "id": "rig-par-columns-07",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 177,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C17"
+  },
+  {
+   "id": "rig-par-columns-08",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 209,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C18"
+  },
+  {
+   "id": "rig-par-columns-09",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    -34.9,
+    0.31,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 193,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C17"
+  },
+  {
+   "id": "rig-par-columns-10",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    -48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 105,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C19"
+  },
+  {
+   "id": "rig-par-columns-11",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 121,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C19"
+  },
+  {
+   "id": "rig-par-columns-12",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 137,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C19"
+  },
+  {
+   "id": "rig-par-columns-13",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 153,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C19"
+  },
+  {
+   "id": "rig-par-columns-14",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 169,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C18"
+  },
+  {
+   "id": "rig-par-columns-15",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 185,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C18"
+  },
+  {
+   "id": "rig-par-columns-16",
+   "type": "up-pl5403",
+   "position": "floor at the side span's wall column, uplight, on a plate",
+   "part": "span columns",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "columns of fire"
+   ],
+   "p": [
+    34.9,
+    0.31,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122408
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.1309,
+   "dmx": {
+    "universe": 3,
+    "address": 201,
+    "footprint": 8,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C18"
+  },
+  {
+   "id": "rig-beam380-backstage-01",
+   "type": "up-b380f",
+   "position": "floor behind the step, base down (mount face 0.7 m)",
+   "part": "fan",
+   "layer": "beams",
+   "status": "held back",
+   "moments": [
+    "the fire returns"
+   ],
+   "p": [
+    -3.15,
+    0.7,
+    22.1
+   ],
+   "r": [
+    -2.98168,
+    0.0,
+    0.33506
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "dmx": {
+    "universe": 1,
+    "address": 250,
+    "footprint": 16,
+    "branch": "U1-B the stage floor",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-beam380-backstage-07",
+   "type": "up-b380f",
+   "position": "floor behind the step, base down (mount face 0.7 m)",
+   "part": "fan",
+   "layer": "beams",
+   "status": "held back",
+   "moments": [
+    "the fire returns"
+   ],
+   "p": [
+    3.15,
+    0.7,
+    22.1
+   ],
+   "r": [
+    -2.98168,
+    0.0,
+    -0.310236
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "dmx": {
+    "universe": 1,
+    "address": 346,
+    "footprint": 16,
+    "branch": "U1-B the stage floor",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-beam380-columns-07",
+   "type": "up-b380f",
+   "position": "floor at the column rows behind the dance floor, base down, beams crossing high over the floor (never at the crowd)",
+   "part": "arch",
+   "layer": "beams",
+   "status": "held back",
+   "moments": [
+    "the roof"
+   ],
+   "p": [
+    -9.6,
+    0.7,
+    42.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.80799
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "dmx": {
+    "universe": 4,
+    "address": 73,
+    "footprint": 16,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-beam380-columns-08",
+   "type": "up-b380f",
+   "position": "floor at the column rows behind the dance floor, base down, beams crossing high over the floor (never at the crowd)",
+   "part": "arch",
+   "layer": "beams",
+   "status": "held back",
+   "moments": [
+    "the roof"
+   ],
+   "p": [
+    9.6,
+    0.7,
+    42.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.794455
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "dmx": {
+    "universe": 4,
+    "address": 89,
+    "footprint": 16,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-beam380-columns-09",
+   "type": "up-b380f",
+   "position": "floor at the column rows behind the dance floor, base down, beams crossing high over the floor (never at the crowd)",
+   "part": "arch",
+   "layer": "beams",
+   "status": "held back",
+   "moments": [
+    "the roof"
+   ],
+   "p": [
+    -9.6,
+    0.7,
+    48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.80799
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "dmx": {
+    "universe": 4,
+    "address": 129,
+    "footprint": 16,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-beam380-columns-10",
+   "type": "up-b380f",
+   "position": "floor at the column rows behind the dance floor, base down, beams crossing high over the floor (never at the crowd)",
+   "part": "arch",
+   "layer": "beams",
+   "status": "held back",
+   "moments": [
+    "the roof"
+   ],
+   "p": [
+    9.6,
+    0.7,
+    48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.794455
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "dmx": {
+    "universe": 4,
+    "address": 145,
+    "footprint": 16,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C06"
+  },
+  {
+   "id": "new-bsw250-05",
+   "type": "up-250bsw",
+   "position": "floor at the side span's far end, base down",
+   "part": "far wall",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "columns of fire"
+   ],
+   "p": [
+    -30.0,
+    0.5,
+    -49.5
+   ],
+   "r": [
+    2.557149,
+    0.0,
+    0.0
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.2618,
+   "dmx": {
+    "universe": 3,
+    "address": 1,
+    "footprint": 24,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 280,
+   "circuit": "C16"
+  },
+  {
+   "id": "new-bsw250-06",
+   "type": "up-250bsw",
+   "position": "floor at the side span's far end, base down",
+   "part": "far wall",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "columns of fire"
+   ],
+   "p": [
+    -18.0,
+    0.5,
+    -49.5
+   ],
+   "r": [
+    2.557149,
+    0.0,
+    0.0
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.2618,
+   "dmx": {
+    "universe": 3,
+    "address": 25,
+    "footprint": 24,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 280,
+   "circuit": "C16"
+  },
+  {
+   "id": "new-bsw250-07",
+   "type": "up-250bsw",
+   "position": "floor at the side span's far end, base down",
+   "part": "far wall",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "columns of fire"
+   ],
+   "p": [
+    18.0,
+    0.5,
+    -49.5
+   ],
+   "r": [
+    2.557149,
+    0.0,
+    0.0
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.2618,
+   "dmx": {
+    "universe": 3,
+    "address": 49,
+    "footprint": 24,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 280,
+   "circuit": "C19"
+  },
+  {
+   "id": "new-bsw250-08",
+   "type": "up-250bsw",
+   "position": "floor at the side span's far end, base down",
+   "part": "far wall",
+   "layer": "the hall",
+   "status": "used",
+   "moments": [
+    "still smoking",
+    "columns of fire"
+   ],
+   "p": [
+    30.0,
+    0.5,
+    -49.5
+   ],
+   "r": [
+    2.557149,
+    0.0,
+    0.0
+   ],
+   "colour": "#a3200c",
+   "angle_rad": 0.2618,
+   "dmx": {
+    "universe": 3,
+    "address": 73,
+    "footprint": 24,
+    "branch": "U3 the side spans",
+    "node": "NODE-FAR"
+   },
+   "power_w": 280,
+   "circuit": "C19"
+  },
+  {
+   "id": "new-bsw250-09",
+   "type": "up-250bsw",
+   "position": "floor in the side span beside the audience, lens up",
+   "part": "side roof",
+   "layer": "the hall",
+   "status": "held back",
+   "moments": [
+    "the roof",
+    "dawn"
+   ],
+   "p": [
+    -24.0,
+    0.5,
+    33.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.10472
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1745,
+   "dmx": {
+    "universe": 4,
+    "address": 1,
+    "footprint": 24,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 280,
+   "circuit": "C17"
+  },
+  {
+   "id": "new-bsw250-10",
+   "type": "up-250bsw",
+   "position": "floor in the side span beside the audience, lens up",
+   "part": "side roof",
+   "layer": "the hall",
+   "status": "held back",
+   "moments": [
+    "the roof",
+    "dawn"
+   ],
+   "p": [
+    -24.0,
+    0.5,
+    42.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.10472
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1745,
+   "dmx": {
+    "universe": 4,
+    "address": 49,
+    "footprint": 24,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 280,
+   "circuit": "C17"
+  },
+  {
+   "id": "new-bsw250-11",
+   "type": "up-250bsw",
+   "position": "floor in the side span beside the audience, lens up",
+   "part": "side roof",
+   "layer": "the hall",
+   "status": "held back",
+   "moments": [
+    "the roof",
+    "dawn"
+   ],
+   "p": [
+    32.0,
+    0.5,
+    33.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.10472
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1745,
+   "dmx": {
+    "universe": 4,
+    "address": 25,
+    "footprint": 24,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 280,
+   "circuit": "C18"
+  },
+  {
+   "id": "new-bsw250-12",
+   "type": "up-250bsw",
+   "position": "floor in the side span beside the audience, lens up",
+   "part": "side roof",
+   "layer": "the hall",
+   "status": "held back",
+   "moments": [
+    "the roof",
+    "dawn"
+   ],
+   "p": [
+    32.0,
+    0.5,
+    42.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.10472
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1745,
+   "dmx": {
+    "universe": 4,
+    "address": 105,
+    "footprint": 24,
+    "branch": "U4 the audience end",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 280,
+   "circuit": "C18"
   },
   {
    "id": "rig-smoke-01",
@@ -1983,13 +3183,13 @@
    "angle_rad": null,
    "dmx": {
     "universe": 2,
-    "address": 153,
+    "address": 145,
     "footprint": 1,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 1500,
-   "circuit": "C06"
+   "circuit": "C07"
   },
   {
    "id": "rig-smoke-02",
@@ -2013,13 +3213,13 @@
    "angle_rad": null,
    "dmx": {
     "universe": 2,
-    "address": 154,
+    "address": 146,
     "footprint": 1,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 1500,
-   "circuit": "C07"
+   "circuit": "C08"
   },
   {
    "id": "rig-smoke-03",
@@ -2043,13 +3243,13 @@
    "angle_rad": null,
    "dmx": {
     "universe": 2,
-    "address": 243,
+    "address": 275,
     "footprint": 1,
     "branch": "U2 the far half",
     "node": "NODE-FAR"
    },
    "power_w": 1500,
-   "circuit": "C08"
+   "circuit": "C09"
   },
   {
    "id": "rig-smoke-04",
@@ -2073,7 +3273,7 @@
    "angle_rad": null,
    "dmx": {
     "universe": 1,
-    "address": 185,
+    "address": 193,
     "footprint": 1,
     "branch": "U1-B the stage floor",
     "node": "NODE-STAGE"
@@ -2144,7 +3344,7 @@
     ]
    },
    "power_w": 120,
-   "circuit": "C13"
+   "circuit": "C15"
   },
   {
    "id": "rig-lasercube-cut-02",
@@ -2209,7 +3409,7 @@
     ]
    },
    "power_w": 120,
-   "circuit": "C13"
+   "circuit": "C15"
   },
   {
    "id": "rig-lasercube-cut-03",
@@ -2274,7 +3474,7 @@
     ]
    },
    "power_w": 120,
-   "circuit": "C13"
+   "circuit": "C15"
   },
   {
    "id": "rig-lasercube-cut-04",
@@ -2339,7 +3539,7 @@
     ]
    },
    "power_w": 120,
-   "circuit": "C13"
+   "circuit": "C15"
   },
   {
    "id": "rig-lasercube-cut-05",
@@ -2404,7 +3604,7 @@
     ]
    },
    "power_w": 120,
-   "circuit": "C13"
+   "circuit": "C15"
   },
   {
    "id": "rig-lasercube-cut-06",
@@ -2469,7 +3669,7 @@
     ]
    },
    "power_w": 120,
-   "circuit": "C13"
+   "circuit": "C15"
   }
  ],
  "solids": [
@@ -2900,20 +4100,20 @@
   {
    "code": "UP-PL5403",
    "ordered": 50,
-   "hung": 27,
-   "not_hung": 23
+   "hung": 50,
+   "not_hung": 0
   },
   {
    "code": "UP-B380F",
    "ordered": 18,
-   "hung": 12,
-   "not_hung": 6
+   "hung": 18,
+   "not_hung": 0
   },
   {
    "code": "UP-250BSW",
    "ordered": 12,
-   "hung": 4,
-   "not_hung": 8
+   "hung": 12,
+   "not_hung": 0
   },
   {
    "code": "UP-HK1915",
@@ -2926,12 +4126,6 @@
    "ordered": 4,
    "hung": 4,
    "not_hung": 0
-  },
-  {
-   "code": "EXT-HAZER",
-   "ordered": 6,
-   "hung": 0,
-   "not_hung": 6
   },
   {
    "code": "EXT-STROBE",
@@ -3032,6 +4226,10 @@
     "far columns": [
      "#a3200c",
      0.3
+    ],
+    "span columns": [
+     "#a3200c",
+     0.15
     ]
    }
   },
@@ -3056,6 +4254,14 @@
    "act": 2,
    "parts": {
     "roof": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side roof": [
+     "#e8e4dc",
+     0.6
+    ],
+    "arch": [
      "#e8e4dc",
      1.0
     ]
@@ -3116,6 +4322,10 @@
      "#9c978d",
      0.35
     ],
+    "side roof": [
+     "#9c978d",
+     0.25
+    ],
     "cube6a": [
      "#e8e4dc",
      1.0
@@ -3165,9 +4375,13 @@
     "far columns": [
      "#a3200c",
      0.3
+    ],
+    "span columns": [
+     "#a3200c",
+     0.15
     ]
    },
-   "units": "6 UP-B380F standing in the far nave (x +-10; z -14, -30, -46), ember from the colour wheel, fanning +-8 deg over 16 bars; 4 PARs on the far columns at 30 %",
+   "units": "6 UP-B380F standing in the far nave (x +-10; z -14, -30, -46), ember from the colour wheel, fanning +-8 deg over 16 bars; 8 PARs on the far nave columns at 30 %, 15 PARs on the side spans' wall columns at 15 % (deep ember)",
    "when": "act 2 from the first build; act 3 under the peak",
    "why": "50 m of ruin behind the DJ suddenly has height: the audience looks through him into a burning hall"
   },
@@ -3208,7 +4422,7 @@
      1.0
     ]
    },
-   "units": "all 12 laser lines + the fan of 5 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment",
+   "units": "all 12 laser lines + the fan of 7 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment",
    "when": "act 3 only, on the drop, 16 bars, at most 3 times an hour; then the black",
    "why": "everything the night held back, at once, once: the fire burns again for 30 seconds and leaves ash"
   },
@@ -3219,9 +4433,17 @@
     "roof": [
      "#e8e4dc",
      1.0
+    ],
+    "side roof": [
+     "#e8e4dc",
+     0.6
+    ],
+    "arch": [
+     "#e8e4dc",
+     1.0
     ]
    },
-   "units": "8 UP-HK1915 up into the roof structure, full ash white, 8 bars",
+   "units": "8 UP-HK1915 up into the nave roof structure, full ash white, 8 bars; 4 BSW250 up into the side spans' roofs beside the audience (60 %); the arch: 4 B380F at the column rows behind the floor crossing high over it (ash)",
    "when": "once an hour (01:00, 02:00, 03:00, 04:00), out of the black, then gone",
    "why": "the bones of the roof appear for 15 seconds: the cathedral the factory was, then darkness again"
   }
@@ -3413,14 +4635,28 @@
     "branch": "U1-B the stage floor",
     "universe": 1,
     "node": "NODE-STAGE",
-    "devices": 13,
+    "devices": 19,
     "ok": true
    },
    {
     "branch": "U2 the far half",
     "universe": 2,
     "node": "NODE-FAR",
-    "devices": 21,
+    "devices": 25,
+    "ok": true
+   },
+   {
+    "branch": "U3 the side spans",
+    "universe": 3,
+    "node": "NODE-FAR",
+    "devices": 19,
+    "ok": true
+   },
+   {
+    "branch": "U4 the audience end",
+    "universe": 4,
+    "node": "NODE-STAGE",
+    "devices": 8,
     "ok": true
    },
    {
@@ -3432,8 +4668,10 @@
    }
   ],
   "slots": {
-   "1": 297,
-   "2": 411
+   "1": 361,
+   "2": 443,
+   "3": 216,
+   "4": 160
   }
  },
  "network": {
@@ -3607,22 +4845,23 @@
      "rig-par-cut-curtain-01",
      "rig-par-cut-bridge-02",
      "rig-par-cut-curtain-02",
+     "rig-par-neighbour-01",
      "new-blinder-02",
      "rig-par-cut-curtain-03",
      "rig-par-cut-curtain-04",
      "rig-par-neighbour-02"
     ],
-    "n": 12,
-    "load_w": 2572,
-    "amps_230v": 11.2,
+    "n": 13,
+    "load_w": 2772,
+    "amps_230v": 12.1,
     "limit_w": 2944,
-    "cable_m": 26.4,
+    "cable_m": 35.1,
     "cable_mm2": 2.5,
-    "vdrop_v": 5.3,
-    "vdrop_pct": 2.3,
+    "vdrop_v": 7.6,
+    "vdrop_pct": 3.3,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L1"
+    "phase": "L3"
    },
    {
     "circuit": "C03",
@@ -3631,76 +4870,103 @@
     "units": [
      "rig-beam380-backstage-03",
      "rig-beam380-backstage-02",
+     "rig-beam380-backstage-01",
      "rig-beam380-backstage-04",
-     "rig-beam380-lighthouse-01",
-     "new-blinder-03",
-     "rig-par-cut-curtain-05",
-     "rig-par-cut-curtain-06",
-     "rig-par-cut-bridge-03"
+     "rig-par-columns-06",
+     "rig-beam380-lighthouse-01"
     ],
-    "n": 8,
-    "load_w": 2886,
-    "amps_230v": 12.5,
+    "n": 6,
+    "load_w": 2700,
+    "amps_230v": 11.7,
     "limit_w": 2944,
-    "cable_m": 21.7,
+    "cable_m": 14.7,
     "cable_mm2": 2.5,
-    "vdrop_v": 4.9,
-    "vdrop_pct": 2.1,
+    "vdrop_v": 3.1,
+    "vdrop_pct": 1.4,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L2"
+    "phase": "L3"
    },
    {
     "circuit": "C04",
     "distro": "D-STAGE",
     "kind": "lamps",
     "units": [
+     "new-blinder-03",
+     "rig-par-cut-curtain-05",
+     "rig-par-cut-curtain-06",
+     "rig-par-cut-bridge-03",
      "rig-par-cut-curtain-07",
      "rig-par-cut-bridge-04",
      "rig-par-cut-x-04",
      "rig-par-cut-x-05",
      "rig-par-cut-x-06",
-     "new-blinder-04",
-     "rig-par-neighbour-03",
-     "rig-beam380-backstage-06",
-     "rig-beam380-backstage-05",
-     "rig-par-press-sides-01",
-     "rig-par-press-cut-03"
+     "rig-par-neighbour-04",
+     "rig-beam380-backstage-07"
     ],
     "n": 11,
-    "load_w": 2886,
-    "amps_230v": 12.5,
+    "load_w": 2586,
+    "amps_230v": 11.2,
     "limit_w": 2944,
-    "cable_m": 66.9,
-    "cable_mm2": 4.0,
-    "vdrop_v": 9.2,
-    "vdrop_pct": 4.0,
+    "cable_m": 34.1,
+    "cable_mm2": 2.5,
+    "vdrop_v": 6.9,
+    "vdrop_pct": 3.0,
     "ok": true,
-    "cable": "H07RN-F 3G4, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L3"
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L2"
    },
    {
     "circuit": "C05",
     "distro": "D-STAGE",
     "kind": "lamps",
     "units": [
+     "rig-beam380-backstage-06",
+     "new-blinder-04",
+     "rig-par-neighbour-03",
+     "rig-beam380-backstage-05",
+     "rig-par-press-sides-01",
+     "rig-par-press-sides-02",
+     "rig-par-press-cut-02",
      "rig-par-press-cut-01",
-     "rig-par-press-cut-02"
+     "rig-par-press-cut-03"
     ],
-    "n": 2,
-    "load_w": 400,
-    "amps_230v": 1.7,
+    "n": 9,
+    "load_w": 2486,
+    "amps_230v": 10.8,
     "limit_w": 2944,
-    "cable_m": 33.3,
+    "cable_m": 72.2,
+    "cable_mm2": 4.0,
+    "vdrop_v": 8.6,
+    "vdrop_pct": 3.7,
+    "ok": true,
+    "cable": "H07RN-F 3G4, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L2"
+   },
+   {
+    "circuit": "C06",
+    "distro": "D-STAGE",
+    "kind": "lamps",
+    "units": [
+     "rig-beam380-columns-08",
+     "rig-beam380-columns-10",
+     "rig-beam380-columns-09",
+     "rig-beam380-columns-07"
+    ],
+    "n": 4,
+    "load_w": 2000,
+    "amps_230v": 8.7,
+    "limit_w": 2944,
+    "cable_m": 62.2,
     "cable_mm2": 2.5,
-    "vdrop_v": 1.0,
-    "vdrop_pct": 0.5,
+    "vdrop_v": 9.7,
+    "vdrop_pct": 4.2,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
     "phase": "L3"
    },
    {
-    "circuit": "C06",
+    "circuit": "C07",
     "distro": "D-FAR",
     "kind": "heaters",
     "units": [
@@ -3716,10 +4982,10 @@
     "vdrop_pct": 0.8,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L2"
+    "phase": "L1"
    },
    {
-    "circuit": "C07",
+    "circuit": "C08",
     "distro": "D-FAR",
     "kind": "heaters",
     "units": [
@@ -3735,10 +5001,10 @@
     "vdrop_pct": 1.5,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L3"
+    "phase": "L2"
    },
    {
-    "circuit": "C08",
+    "circuit": "C09",
     "distro": "D-FAR",
     "kind": "heaters",
     "units": [
@@ -3754,78 +5020,56 @@
     "vdrop_pct": 2.2,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L2"
-   },
-   {
-    "circuit": "C09",
-    "distro": "D-FAR",
-    "kind": "lamps",
-    "units": [
-     "new-strobe-01",
-     "new-hk1915-03",
-     "rig-beam380-columns-01",
-     "rig-par-vista-01",
-     "new-hk1915-01",
-     "new-hk1915-02",
-     "rig-par-vista-02"
-    ],
-    "n": 7,
-    "load_w": 2690,
-    "amps_230v": 11.7,
-    "limit_w": 2944,
-    "cable_m": 47.2,
-    "cable_mm2": 2.5,
-    "vdrop_v": 9.9,
-    "vdrop_pct": 4.3,
-    "ok": true,
-    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L2"
+    "phase": "L3"
    },
    {
     "circuit": "C10",
     "distro": "D-FAR",
     "kind": "lamps",
     "units": [
-     "rig-beam380-columns-02",
-     "new-hk1915-04",
-     "new-strobe-02",
-     "new-hk1915-06",
-     "rig-beam380-columns-04"
+     "rig-par-vista-03",
+     "rig-beam380-columns-03",
+     "new-hk1915-05",
+     "new-strobe-03",
+     "rig-par-vista-05",
+     "rig-beam380-columns-05",
+     "new-hk1915-07"
     ],
-    "n": 5,
-    "load_w": 2440,
-    "amps_230v": 10.6,
+    "n": 7,
+    "load_w": 2840,
+    "amps_230v": 12.3,
     "limit_w": 2944,
-    "cable_m": 50.9,
+    "cable_m": 40.4,
     "cable_mm2": 2.5,
-    "vdrop_v": 9.7,
-    "vdrop_pct": 4.2,
+    "vdrop_v": 9.0,
+    "vdrop_pct": 3.9,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L1"
+    "phase": "L2"
    },
    {
     "circuit": "C11",
     "distro": "D-FAR",
     "kind": "lamps",
     "units": [
-     "new-strobe-04",
+     "new-bsw250-01",
+     "rig-par-vista-07",
+     "new-bsw250-02",
+     "new-bsw250-03",
+     "new-bsw250-04",
      "new-hk1915-08",
      "rig-beam380-columns-06",
      "rig-par-vista-08",
-     "new-bsw250-04",
-     "new-bsw250-03",
-     "new-bsw250-02",
-     "new-bsw250-01"
+     "rig-par-vista-06"
     ],
-    "n": 8,
-    "load_w": 2910,
-    "amps_230v": 12.7,
+    "n": 9,
+    "load_w": 2570,
+    "amps_230v": 11.2,
     "limit_w": 2944,
-    "cable_m": 73.9,
+    "cable_m": 81.1,
     "cable_mm2": 4.0,
-    "vdrop_v": 10.3,
-    "vdrop_pct": 4.5,
+    "vdrop_v": 10.0,
+    "vdrop_pct": 4.3,
     "ok": true,
     "cable": "H07RN-F 3G4, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
     "phase": "L1"
@@ -3835,27 +5079,71 @@
     "distro": "D-FAR",
     "kind": "lamps",
     "units": [
-     "new-hk1915-07",
-     "rig-beam380-columns-05",
-     "rig-par-vista-07",
-     "new-strobe-03",
-     "new-hk1915-05",
-     "rig-beam380-columns-03"
+     "rig-beam380-columns-04",
+     "new-hk1915-06",
+     "new-strobe-04",
+     "rig-par-vista-04",
+     "new-strobe-02",
+     "new-hk1915-04"
     ],
     "n": 6,
-    "load_w": 2640,
-    "amps_230v": 11.5,
+    "load_w": 2880,
+    "amps_230v": 12.5,
     "limit_w": 2944,
-    "cable_m": 38.6,
-    "cable_mm2": 2.5,
-    "vdrop_v": 8.0,
-    "vdrop_pct": 3.5,
+    "cable_m": 53.0,
+    "cable_mm2": 4.0,
+    "vdrop_v": 7.3,
+    "vdrop_pct": 3.2,
     "ok": true,
-    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
-    "phase": "L3"
+    "cable": "H07RN-F 3G4, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L1"
    },
    {
     "circuit": "C13",
+    "distro": "D-FAR",
+    "kind": "lamps",
+    "units": [
+     "rig-beam380-columns-02",
+     "rig-par-vista-02",
+     "new-hk1915-02",
+     "new-hk1915-01",
+     "rig-par-vista-01",
+     "rig-beam380-columns-01",
+     "new-hk1915-03"
+    ],
+    "n": 7,
+    "load_w": 2450,
+    "amps_230v": 10.7,
+    "limit_w": 2944,
+    "cable_m": 51.1,
+    "cable_mm2": 2.5,
+    "vdrop_v": 9.8,
+    "vdrop_pct": 4.3,
+    "ok": true,
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L1"
+   },
+   {
+    "circuit": "C14",
+    "distro": "D-FAR",
+    "kind": "lamps",
+    "units": [
+     "new-strobe-01"
+    ],
+    "n": 1,
+    "load_w": 740,
+    "amps_230v": 3.2,
+    "limit_w": 2944,
+    "cable_m": 6.9,
+    "cable_mm2": 2.5,
+    "vdrop_v": 0.4,
+    "vdrop_pct": 0.2,
+    "ok": true,
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L2"
+   },
+   {
+    "circuit": "C15",
     "distro": "D-FAR",
     "kind": "lasers + network",
     "units": [
@@ -3876,19 +5164,114 @@
     "vdrop_pct": 2.9,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L2"
+   },
+   {
+    "circuit": "C16",
+    "distro": "D-LEFT",
+    "kind": "lamps",
+    "units": [
+     "rig-par-columns-04",
+     "rig-par-columns-03",
+     "rig-par-columns-02",
+     "rig-par-columns-01",
+     "new-bsw250-05",
+     "new-bsw250-06"
+    ],
+    "n": 6,
+    "load_w": 1360,
+    "amps_230v": 5.9,
+    "limit_w": 2944,
+    "cable_m": 79.5,
+    "cable_mm2": 2.5,
+    "vdrop_v": 8.5,
+    "vdrop_pct": 3.7,
+    "ok": true,
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
     "phase": "L1"
+   },
+   {
+    "circuit": "C17",
+    "distro": "D-LEFT",
+    "kind": "lamps",
+    "units": [
+     "rig-par-columns-05",
+     "rig-par-columns-07",
+     "rig-par-columns-09",
+     "new-bsw250-09",
+     "new-bsw250-10"
+    ],
+    "n": 5,
+    "load_w": 1160,
+    "amps_230v": 5.0,
+    "limit_w": 2944,
+    "cable_m": 64.7,
+    "cable_mm2": 2.5,
+    "vdrop_v": 5.9,
+    "vdrop_pct": 2.6,
+    "ok": true,
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L1"
+   },
+   {
+    "circuit": "C18",
+    "distro": "D-RIGHT",
+    "kind": "lamps",
+    "units": [
+     "rig-par-columns-14",
+     "rig-par-columns-15",
+     "rig-par-columns-16",
+     "new-bsw250-11",
+     "rig-par-columns-08",
+     "new-bsw250-12"
+    ],
+    "n": 6,
+    "load_w": 1360,
+    "amps_230v": 5.9,
+    "limit_w": 2944,
+    "cable_m": 62.7,
+    "cable_mm2": 2.5,
+    "vdrop_v": 6.7,
+    "vdrop_pct": 2.9,
+    "ok": true,
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L2"
+   },
+   {
+    "circuit": "C19",
+    "distro": "D-RIGHT",
+    "kind": "lamps",
+    "units": [
+     "rig-par-columns-13",
+     "rig-par-columns-12",
+     "rig-par-columns-11",
+     "rig-par-columns-10",
+     "new-bsw250-08",
+     "new-bsw250-07"
+    ],
+    "n": 6,
+    "load_w": 1360,
+    "amps_230v": 5.9,
+    "limit_w": 2944,
+    "cable_m": 79.5,
+    "cable_mm2": 2.5,
+    "vdrop_v": 8.5,
+    "vdrop_pct": 3.7,
+    "ok": true,
+    "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
+    "phase": "L3"
    }
   ],
   "summary": {
-   "connected_w": 26144,
-   "base_w": 9510,
-   "worst_look_w": 12310,
+   "connected_w": 35984,
+   "base_w": 12820,
+   "worst_look_w": 16292,
    "pa_w": 4000,
    "foh_dj_w": 1500,
-   "running_total_w": 17810,
+   "running_total_w": 21792,
    "cap_w": 30000,
    "ok": true,
-   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 17.8 kW with the PA and FOH = about 26 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 26.1 kW lighting + 4.0 kW PA; photograph the board today (breakers, phases, earth)",
+   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 21.8 kW with the PA and FOH = about 32 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.0 kW lighting + 4.0 kW PA; photograph the board today (breakers, phases, earth)",
    "watts_basis": "fixtures.json (supply W where the maker gives it, else rated W); LaserCube 120 W from its manual; running = per-look levels x the duties above (ESTIMATE)"
   }
  }

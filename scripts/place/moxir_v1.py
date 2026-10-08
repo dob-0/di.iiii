@@ -323,10 +323,32 @@ def build_units(roof_where):
         f = aimed({'id': 'new-blinder-%02d' % (k + 1), 'type': 'ext-blinder', 'kind': 'spot', 'flash': 'blinder', 'groupName': 'flash: blinder', 'spare': False,
                    'beam_deg': ph['blinder_beam_deg'], 'reach': 40.0, 'I_cd': ph['blinder_cd']['value'], 'level_cap': 0.4, 'p': p}, T=T)
         add(f, 'blinders', 'flash', 'held back', ['the fire returns'], ASH, 'on the cut\'s front face (z 21.35), half-coupler + safety; level capped at 40 % in the desk')
-    for k, (x, z) in enumerate(((-8.0, -18.0), (8.0, -18.0), (-8.0, -38.0), (8.0, -38.0))):
+    for k, (x, z) in enumerate(((-8.0, -18.0), (8.0, -18.0), (-8.0, -32.0), (8.0, -32.0))):   # z -32, not -38: the far crane parks at z -41 (Plan A1) and its bridge cut the far pair's flash
         f = aimed({'id': 'new-strobe-%02d' % (k + 1), 'type': 'ext-strobe', 'kind': 'spot', 'flash': 'strobe', 'groupName': 'flash: strobe', 'spare': False,
-                   'beam_deg': ph['strobe_beam_deg'], 'reach': 30.0, 'I_cd': ph['strobe_cd']['value'], 'p': [x, 0.3, z]}, d=[0.0, 1.0, 0.0])
+                   'beam_deg': ph['strobe_beam_deg'], 'reach': 30.0, 'I_cd': ph['strobe_cd']['value'], 'p': [x, 0.3, z]}, d=[-0.3 * float(np.sign(x)), 1.0, 0.0])   # leaned 17 deg in, off the column heads at x +-12
         add(f, 'lightning', 'flash', 'held back', ['the fire returns'], ASH, 'floor in the far nave, on a plate, straight up into the roof; rate capped at 4 Hz in the desk')
+    # ALL WASH, ALL BEAM (owner 10-08, after v1.0's first build: "hang all the wash and all the beam fixtures of the order;
+    # minimal is how they are USED per look, not what is hung"). Every remaining PL5403 / B380F / 250BSW of the order hangs
+    # at its beta position with its beta aim (design_paint.FX, each checked below against the hall + rig, plan by plan), in a
+    # part that a look names sparingly. Each part keeps the ash / ember palette and the <= 2 layer rule (3 in the fire).
+    for fid in ('rig-par-columns-06', 'rig-par-neighbour-01', 'rig-par-neighbour-04'):
+        add(unit_from(fid), 'halo', 'stage', 'used', ['still smoking', 'silhouette'], EMBER, 'floor behind the step, on its bracket')
+    add(unit_from('rig-par-press-sides-02'), 'still smoking', 'machines', 'used', ['still smoking', 'ash falling'], EMBER, 'floor at the press crown, on its own bracket (out of reach)')
+    for fid in ('rig-par-vista-03', 'rig-par-vista-04', 'rig-par-vista-05', 'rig-par-vista-06'):
+        f = unit_from(fid)
+        if f['p'][2] < -30:     # the bay z -36..-30 is X-braced: graze the column away from the bracing (the beta's aim hit it)
+            aimed(f, T=[float(np.sign(f['p'][0])) * 11.9, 6.5, -39.0])   # and under the crane runway girder (8 m)
+        add(f, 'far columns', 'hall', 'used', ['columns of fire', 'still smoking'], EMBER_DEEP, 'floor bracket at the nave column\'s face')
+    for fid in ['rig-par-columns-%02d' % i for i in (1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)]:
+        add(unit_from(fid), 'span columns', 'hall', 'used', ['columns of fire'], EMBER_DEEP, 'floor at the side span\'s wall column, uplight, on a plate')
+    for fid in ('rig-beam380-backstage-01', 'rig-beam380-backstage-07'):
+        add(unit_from(fid), 'fan', 'beams', 'held back', ['the fire returns'], ASH, 'floor behind the step, base down (mount face 0.7 m)')
+    for fid in ('rig-beam380-columns-07', 'rig-beam380-columns-08', 'rig-beam380-columns-09', 'rig-beam380-columns-10'):
+        add(unit_from(fid), 'arch', 'beams', 'held back', ['the roof'], ASH, 'floor at the column rows behind the dance floor, base down, beams crossing high over the floor (never at the crowd)')
+    for fid in ('new-bsw250-05', 'new-bsw250-06', 'new-bsw250-07', 'new-bsw250-08'):
+        add(unit_from(fid), 'far wall', 'hall', 'used', ['still smoking', 'columns of fire'], EMBER_DEEP, 'floor at the side span\'s far end, base down')
+    for fid in ('new-bsw250-09', 'new-bsw250-10', 'new-bsw250-11', 'new-bsw250-12'):
+        add(unit_from(fid), 'side roof', 'hall', 'held back', ['the roof', 'dawn'], ASH, 'floor in the side span beside the audience, lens up')
     for fid, p in (('rig-smoke-01', [-6.0, 0.1, -37.0]), ('rig-smoke-02', [6.0, 0.1, -37.0]), ('rig-smoke-03', [10.6, 0.1, -4.0]), ('rig-smoke-04', [-4.5, 0.1, 19.8])):
         add(unit_from(fid, p=p), 'haze', 'air', 'used', [], None, 'floor; bursts of 3 s every 60 s, offset (the haze plan)')
 
@@ -335,7 +357,7 @@ def build_units(roof_where):
 
 def not_hung(U):
     used = {u['id'] for u in U}
-    order = {'UP-PL5403': 50, 'UP-B380F': 18, 'UP-250BSW': 12, 'UP-HK1915': 8, 'UP-YZ31P': 4, 'EXT-HAZER': 6, 'EXT-STROBE': 6, 'EXT-BLINDER': 8, 'EXT-LC-ULTRA-MK2': 6}
+    order = {'UP-PL5403': 50, 'UP-B380F': 18, 'UP-250BSW': 12, 'UP-HK1915': 8, 'UP-YZ31P': 4, 'EXT-STROBE': 6, 'EXT-BLINDER': 8, 'EXT-LC-ULTRA-MK2': 6}
     code = lambda t: EPL.CODE.get(t, t.upper())
     cnt = collections.Counter(code(u['type']) for u in U if u['type'] not in ('ext-fan',))
     cnt['EXT-LC-ULTRA-MK2'] = 6
@@ -538,26 +560,26 @@ MOMENTS = [
      'when': 'act 1, the first 20 minutes after the doors; returns once, at the very end', 'why': 'a single white line from the dark behind the press to the wall behind the DJ in an empty black hall: the first thing anyone sees, and it is almost nothing'},
     {'id': 'still_smoking', 'title': 'Still smoking', 'parts': {'still smoking': (EMBER, 0.10), 'far wall': (EMBER_DEEP, 0.15)}, 'units': '4 PL5403 inside the press and the machine line (ember 5-12 %, breathing 10 s), the mid smoke machine\'s slow low bursts drifting through them, the far wall ember 15 %',
      'when': 'act 1 under the one line; act 4 under ash falling', 'why': 'the machines glow from inside as if the fire never went out: the hall is alive before anything is lit'},
-    {'id': 'columns_of_fire', 'title': 'Columns of fire', 'parts': {'columns of fire': (EMBER, 1.0), 'far columns': (EMBER_DEEP, 0.3)}, 'units': '6 UP-B380F standing in the far nave (x +-10; z -14, -30, -46), ember from the colour wheel, fanning +-8 deg over 16 bars; 4 PARs on the far columns at 30 %',
+    {'id': 'columns_of_fire', 'title': 'Columns of fire', 'parts': {'columns of fire': (EMBER, 1.0), 'far columns': (EMBER_DEEP, 0.3), 'span columns': (EMBER_DEEP, 0.15)}, 'units': '6 UP-B380F standing in the far nave (x +-10; z -14, -30, -46), ember from the colour wheel, fanning +-8 deg over 16 bars; 8 PARs on the far nave columns at 30 %, 15 PARs on the side spans\' wall columns at 15 % (deep ember)',
      'when': 'act 2 from the first build; act 3 under the peak', 'why': '50 m of ruin behind the DJ suddenly has height: the audience looks through him into a burning hall'},
     {'id': 'the_black', 'title': 'The black', 'parts': {}, 'units': 'nothing (haze stays on); 3-5 s', 'when': 'before every drop where the fire returns, and before the roof',
      'why': 'the lasers are 100s of cd/m2 against a dark club\'s 0.01: the contrast is the epic. Darkness is a cue, written, not an accident'},
     {'id': 'fire_returns', 'title': 'The fire returns', 'parts': {'laser': (None, 1.0), 'fan': (ASH, 1.0), 'spine': (ASH, 1.0), 'columns of fire': (EMBER, 1.0), 'blinders': (ASH, 0.4), 'lightning': (ASH, 1.0)},
-     'units': 'all 12 laser lines + the fan of 5 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment',
+     'units': 'all 12 laser lines + the fan of 7 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment',
      'when': 'act 3 only, on the drop, 16 bars, at most 3 times an hour; then the black', 'why': 'everything the night held back, at once, once: the fire burns again for 30 seconds and leaves ash'},
-    {'id': 'the_roof', 'title': 'The roof, once an hour', 'parts': {'roof': (ASH, 1.0)}, 'units': '8 UP-HK1915 up into the roof structure, full ash white, 8 bars',
+    {'id': 'the_roof', 'title': 'The roof, once an hour', 'parts': {'roof': (ASH, 1.0), 'side roof': (ASH, 0.6), 'arch': (ASH, 1.0)}, 'units': '8 UP-HK1915 up into the nave roof structure, full ash white, 8 bars; 4 BSW250 up into the side spans\' roofs beside the audience (60 %); the arch: 4 B380F at the column rows behind the floor crossing high over it (ash)',
      'when': 'once an hour (01:00, 02:00, 03:00, 04:00), out of the black, then gone', 'why': 'the bones of the roof appear for 15 seconds: the cathedral the factory was, then darkness again'},
 ]
 LOOKS = [
     {'id': 'still_smoking', 'title': 'Still smoking', 'act': 1, 'parts': {'still smoking': (EMBER, 0.12), 'far wall': (EMBER_DEEP, 0.15)}},
     {'id': 'one_line', 'title': 'One line', 'act': 1, 'parts': {'cube6a': (ASH, 1.0)}},
     {'id': 'silhouette', 'title': 'The silhouette', 'act': 1, 'parts': {'curtain': (ASH, 1.0), 'x': (EMBER, 0.8), 'ash wall': (EMBER, 0.12), 'halo': (EMBER, 0.4)}},
-    {'id': 'columns_of_fire', 'title': 'Columns of fire', 'act': 2, 'parts': {'columns of fire': (EMBER, 1.0), 'far columns': (EMBER_DEEP, 0.3)}},
+    {'id': 'columns_of_fire', 'title': 'Columns of fire', 'act': 2, 'parts': {'columns of fire': (EMBER, 1.0), 'far columns': (EMBER_DEEP, 0.3), 'span columns': (EMBER_DEEP, 0.15)}},
     {'id': 'sparks', 'title': 'Sparks from the depth (the chase)', 'act': 2, 'parts': {'laser': (None, 1.0), 'curtain': (ASH_GREY, 0.3)}},
-    {'id': 'the_roof', 'title': 'The roof, once an hour', 'act': 2, 'parts': {'roof': (ASH, 1.0)}},
+    {'id': 'the_roof', 'title': 'The roof, once an hour', 'act': 2, 'parts': {'roof': (ASH, 1.0), 'side roof': (ASH, 0.6), 'arch': (ASH, 1.0)}},
     {'id': 'fire_returns', 'title': 'The fire returns (the peak)', 'act': 3, 'parts': MOMENTS[4]['parts']},
     {'id': 'ash_falling', 'title': 'Ash falling (the breakdown)', 'act': 3, 'parts': {'spine': (ASH, 1.0), 'still smoking': (EMBER, 0.08)}},
-    {'id': 'dawn', 'title': 'Dawn: one line returns', 'act': 4, 'parts': {'roof': (ASH_GREY, 0.35), 'cube6a': (ASH, 1.0)}},
+    {'id': 'dawn', 'title': 'Dawn: one line returns', 'act': 4, 'parts': {'roof': (ASH_GREY, 0.35), 'side roof': (ASH_GREY, 0.25), 'cube6a': (ASH, 1.0)}},
 ]
 ARC = [
     {'act': 1, 'name': 'Embers', 'set': 'doors and the warm-up (23:00-01:00, ASSUMED times)', 'use': ['still smoking', 'one line (20 min alone)', 'the silhouette at the first DJ change'],
@@ -627,7 +649,9 @@ def power(U):
 def patch(U):
     order = [('U1-A the cut', 1, 'NODE-STAGE', lambda u: u['part'] in ('curtain', 'x', 'ash wall', 'blinders')),
              ('U1-B the stage floor', 1, 'NODE-STAGE', lambda u: u['part'] in ('halo', 'fan', 'spine', 'still smoking') or (u['part'] in ('haze', 'low fog') and u['p'][2] > 0)),
-             ('U2 the far half', 2, 'NODE-FAR', lambda u: u['part'] in ('columns of fire', 'far columns', 'far wall', 'lightning') or (u['part'] == 'haze' and u['p'][2] <= 0)),
+             ('U2 the far half', 2, 'NODE-FAR', lambda u: u['part'] in ('columns of fire', 'far columns', 'lightning') or (u['part'] == 'far wall' and abs(u['p'][0]) < 12) or (u['part'] == 'haze' and u['p'][2] <= 0)),
+             ('U3 the side spans', 3, 'NODE-FAR', lambda u: u['part'] == 'span columns' or (u['part'] == 'far wall' and abs(u['p'][0]) >= 12)),
+             ('U4 the audience end', 4, 'NODE-STAGE', lambda u: u['part'] in ('arch', 'side roof')),
              (('U3 the roof (side spans)', 3) if any(u['part'] == 'roof' and abs(u['p'][0]) > 12 for u in U) else ('U2-B the roof (far nave)', 2)) + ('NODE-FAR', lambda u: u['part'] == 'roof')]
     nxt = collections.Counter()
     rows = []
@@ -793,7 +817,8 @@ def render_set(U, LZ, pid, od):
 
 def LAYER_OF(part):
     return {'cube6a': 'lines', 'laser': 'lines', 'curtain': 'the cut', 'x': 'the cut', 'ash wall': 'the cut', 'halo': 'the cut', 'still smoking': 'machines',
-            'far wall': 'the hall', 'far columns': 'the hall', 'roof': 'the hall', 'columns of fire': 'beams', 'fan': 'beams', 'spine': 'beams',
+            'far wall': 'the hall', 'far columns': 'the hall', 'roof': 'the hall', 'span columns': 'the hall', 'side roof': 'the hall',
+            'columns of fire': 'beams', 'fan': 'beams', 'spine': 'beams', 'arch': 'beams',
             'blinders': 'flash', 'lightning': 'flash'}[part]
 
 
@@ -991,7 +1016,7 @@ def fig_plan_v1(U, cubes, out, path):
         ax.text(c['p'][0] + 0.8, c['p'][2] + 0.5, str(c['n']), color='#fff', fontsize=11, fontweight='bold', zorder=11)
     mk = {'par': 'o', 'beam': 'D', 'wash': 's', 'spot': '*', 'haze': 'h', 'smoke': 'h', 'fan': 'P'}
     for u in U:
-        lay = 'air' if u['layer'] == 'air' else LAYER_OF(u['part']) if u['part'] in ('curtain', 'x', 'ash wall', 'halo', 'still smoking', 'far wall', 'far columns', 'roof', 'columns of fire', 'fan', 'spine', 'blinders', 'lightning') else 'air'
+        lay = 'air' if u['layer'] == 'air' else LAYER_OF(u['part']) if u['part'] in ('curtain', 'x', 'ash wall', 'halo', 'still smoking', 'far wall', 'far columns', 'roof', 'span columns', 'side roof', 'arch', 'columns of fire', 'fan', 'spine', 'blinders', 'lightning') else 'air'
         c = LAYER_COL[lay]
         ax.plot(u['p'][0], u['p'][2], marker=mk.get(u['kind'], 'o'), ms=6, mfc=c if u['status'] == 'used' else 'none', mec=c if u['status'] != 'used' else '#000', mew=1.0, zorder=8)
     for bid, x, y, z in PA['v1']['boxes']:
