@@ -702,7 +702,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     >
                         {viewLook.look === 'form' ? 'Form' : 'Current'}
                     </button>
-                    <ViewSettingsButton style={{ ...overlayButtonStyle, minHeight: 44, minWidth: 104 }} />
+                    <ViewSettingsButton level="view" style={{ ...overlayButtonStyle, minHeight: 44, minWidth: 104 }} />
                     {viewLook.look === 'form' ? (
                         <label style={{ ...overlayButtonStyle, display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                             Light {viewLook.light.toFixed(2)}
