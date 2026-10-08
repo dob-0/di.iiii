@@ -78,6 +78,9 @@ function createCueRunner(desk) {
     const cue = c.list[i];
     c.index = i;
     c.running = true;
+    // When this cue went up, on this machine's clock: the show page (routes/showRoutes.js)
+    // tells "chosen by a person" from "the list moved on by itself" by it.
+    c.firedAt = now();
     const ok = desk.fire(cue);
     const missing = new Set(c.missing);
     if (ok) missing.delete(cue.lookId); else missing.add(cue.lookId);
@@ -186,6 +189,7 @@ function createCueRunner(desk) {
       loop: c.loop,
       running: c.running,
       nextInMs: c.running && c.nextAt != null ? Math.max(0, c.nextAt - now()) : null,
+      firedAt: Number.isFinite(c.firedAt) ? c.firedAt : null,
       missing: c.missing,
     };
   }

@@ -2393,6 +2393,11 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // The cue runner itself, for a caller in this process that drives the list on a
+    // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
+    // /api/cues routes call, so there is still ONE clock.
+    cueRunner,
+    hasLook: (id) => state.looks.some((l) => l.id === id),
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },
