@@ -24,6 +24,7 @@ const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
 const { planSettings, readSettings } = require('./followSettings')
+const { planSlugs } = require('./followSlugs')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -463,6 +464,43 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         settingsNotes = [...notes, `the host's ${Object.keys(patch).join(', ')} could not be set here`]
     }
 
+    // Project short names (followSlugs.js), both ways: a name chosen on one side and not on
+    // the other is carried; if both chose, the host's wins. Never fails the follow: a refusal
+    // is said once, in the log and in `di follows`.
+    let slugsAt = 0
+    let slugNotes = []
+    let slugsCarried = 0
+    const slugAttempted = new Set()
+    const syncSlugs = async () => {
+        if (Date.now() - slugsAt < SETTINGS_EVERY_MS) return
+        slugsAt = Date.now()
+        const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
+        const [there, here] = await Promise.all([
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(local.url(path), { token: local.token, servername: local.servername, address: local.address })
+        ])
+        if (!there.ok || !here.ok) return
+        const rowsOf = (answer) => (Array.isArray(answer.payload?.projects) ? answer.payload.projects : [])
+        const { toLocal, toHost, notes } = planSlugs({ local: rowsOf(here), host: rowsOf(there) })
+        slugNotes = notes
+        for (const [side, list, where] of [[local, toLocal, 'here'], [remote, toHost, 'on the other di.iiii']]) {
+            for (const { id, slug } of list) {
+                const answer = await request(side.url(`/api/projects/${encodeURIComponent(id)}`), { method: 'PATCH', token: side.token, servername: side.servername, address: side.address, body: { slug } })
+                const attempt = `${where}|${id}|${slug}`
+                if (answer.ok && answer.status === 200) {
+                    slugAttempted.delete(attempt)
+                    slugsCarried += 1
+                    log.info?.(`[follow] ${local.spaceId}: ${id} is "${slug}" ${where}`)
+                } else if (!slugAttempted.has(attempt)) {
+                    slugAttempted.add(attempt)
+                    const why = answer.status === 202 ? 'it waits for approval there' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
+                    log.warn?.(`[follow] ${local.spaceId}: could not set the short name "${slug}" on ${id} ${where} — ${why}`)
+                    slugNotes = [...slugNotes, `${id}: "${slug}" could not be set ${where}`]
+                }
+            }
+        }
+    }
+
     // Both copies of one stream, read and compared (followConverge.js).
     const compare = async (stream, direction = null, { seedHost = false } = {}) => {
         const [here, there] = await Promise.all([
@@ -680,6 +718,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         woken = false
         await refreshStreams()
         await syncSettings().catch(() => {})
+        await syncSlugs().catch(() => {})
 
         // The files the documents list are looked at NOW, before this tick reads
         // the room's log and parks on the other machine for up to 20 s. They used to
@@ -719,7 +758,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 converged: started.converged + converged,
                 lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
                 resumed: started.resumed,
-                settings: { carried: settingsCarried, notes: settingsNotes }
+                settings: { carried: settingsCarried, notes: settingsNotes },
+                slugs: { carried: slugsCarried, notes: slugNotes }
             }
         }
 
