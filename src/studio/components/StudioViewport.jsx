@@ -41,6 +41,7 @@ import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { useFlyNavigation } from '../navigation/useFlyNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
@@ -531,6 +532,15 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         autoDepth: viewSettings.autoDepth,
         dollyThrough: viewSettings.unlimitedZoom,
         invertWheel: viewSettings.invertWheel,
+    })
+    // Hold the right button + W A S D to fly (Blender / Unreal / Unity); see useFlyNavigation.js
+    useFlyNavigation({
+        controlsRef,
+        active: enabled && !isXrPresenting,
+        enabled: viewSettings.flyEnabled,
+        getScene,
+        speedScale: viewSettings.flySpeed,
+        factor: viewSettings.flyFactor,
     })
 
     // The lens the camera eases toward. Shared with the smart view when there is one

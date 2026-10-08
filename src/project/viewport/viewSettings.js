@@ -21,6 +21,10 @@ export const VIEW_SETTINGS = Object.freeze([
     { key: 'invertWheel', group: 'Zoom', label: 'Invert Zoom Direction (Wheel)', type: 'toggle', def: false },
     { key: 'unlimitedZoom', group: 'Zoom', label: 'Dolly through (never stops)', type: 'toggle', def: true, hint: 'Blender\'s Dolly View: scrolling in at the closest distance keeps moving you through the scene. Inside mode keeps the camera in the building' },
     { key: 'minDistance', group: 'Zoom', label: 'Closest distance', type: 'range', min: 0.01, max: 5, step: 0.01, def: 0.35, unit: 'm' },
+    // Fly (Blender Preferences > Navigation > Fly & Walk: Walk Speed, Speed Factor). Hold the right button + W A S D (Q/E down/up); Shift = faster, Alt = slower; the wheel changes the speed while the button is held.
+    { key: 'flyEnabled', group: 'Fly', label: 'Fly with right button + W A S D', type: 'toggle', def: true, hint: 'Hold the right button, then W A S D move, Q / E go down / up, Shift faster, Alt slower, the wheel sets the speed' },
+    { key: 'flySpeed', group: 'Fly', label: 'Fly Speed', type: 'range', min: 0.1, max: 5, step: 0.05, def: 1, hint: 'Times the speed that crosses the scene in about 8 s' },
+    { key: 'flyFactor', group: 'Fly', label: 'Speed Factor (Shift)', type: 'range', min: 1, max: 10, step: 0.5, def: 3, hint: 'How much faster Shift makes it' },
     { key: 'clipStart', group: 'Clip', label: 'Clip Start', type: 'range', min: 0.01, max: 5, step: 0.01, def: 0.05, unit: 'm', hint: 'Nothing nearer than this is drawn' },
     { key: 'clipEnd', group: 'Clip', label: 'Clip End', type: 'range', min: 100, max: 1000000, step: 100, def: 20000, unit: 'm', hint: 'Nothing farther is drawn. The farthest you can zoom out is a quarter of it' },
     { key: 'autoClip', group: 'Clip', label: 'Clip follows the distance', type: 'toggle', def: true, hint: 'Near and far move with the zoom so depth keeps its precision (the manual warns a huge fixed range causes artifacts)' }
