@@ -1,0 +1,1873 @@
+{
+  "tool": "scripts/place/hall.py",
+  "version": 2,
+  "createdAt": "2026-10-08T01:24:44.202273+00:00",
+  "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
+  "dims": {
+    "span_m": 24.0,
+    "pitch_m": 6.0,
+    "bays": 18,
+    "length_m": 108.0,
+    "crane_rail_h_m": 8.1,
+    "truss_bottom_h_m": 10.8,
+    "truss_top_h_m": 13.3,
+    "ridge_h_m": 16.5,
+    "lantern_w_m": 12.0,
+    "lantern_h_m": 3.2,
+    "column_w_m": 0.5,
+    "column_d_m": 0.8,
+    "upper_column_d_m": 0.45,
+    "column_head": "two_sided_console",
+    "column_head_width_m": 1.9,
+    "crane_girders_each_row": 2,
+    "crane_girder_depth_m": 0.9,
+    "crane_bridge_bottom_h_m": 7.95,
+    "crane_bridge_depth_m": 0.8,
+    "crane_cab_h_m": 2.1,
+    "crane_bridge_bottom_basis": [
+      "ASSUMED-same-type: the NEAR (entry-end) crane, parked over the DJ, was never measured; it takes the FAR crane's 7.95 m (photo 007, 2026-09-29) as the same type of bridge (same runway, same yellow double-girder bridge, photos 004/010/012/032). Range 7.7-8.25 m. MEASURE on 2026-10-08 (moxir-hall-measured-2026-10-08.json).",
+      "measured by photo (not taped): 7.95 m (5-95 % 7.69-8.24), photo 007, fronto-parallel two-depth metrology (Criminisi et al. 2000), 2026-09-29"
+    ],
+    "crane_girder_inner_gap_m": 1.5,
+    "crane_girder_w_m": 0.7,
+    "crane_cab_inset_m": 1.0,
+    "crane_cab_w_m": 2.0,
+    "crane_cab_side": "right",
+    "runway_handrail_rows": [
+      "left"
+    ],
+    "roof_type": "space_frame_flat",
+    "space_frame_module_m": 6.0,
+    "space_frame_depth_m": 2.5,
+    "space_frame_member_m": {
+      "bottom": 0.24,
+      "top": 0.2,
+      "diagonal": 0.16,
+      "lantern": 0.12
+    },
+    "space_frame_node_m": 0.9,
+    "lantern_module_m": 3.0,
+    "lantern_segments_m": [
+      [
+        -46.9,
+        -6.0
+      ],
+      [
+        6.0,
+        46.9
+      ]
+    ],
+    "lantern_spans": [
+      0,
+      1
+    ],
+    "neighbour_spans": {
+      "left": 1,
+      "right": 2
+    },
+    "expansion_joint_m": 0.0,
+    "paired_columns_at_joint": true,
+    "end_wall_in_from_grid_m": -0.2,
+    "door_w_m": 6.0,
+    "door_h_m": 6.0,
+    "entry_platform": true,
+    "far_gate_w_m": 4.8,
+    "far_gate_h_m": 5.4,
+    "aisle_w_m": 0.0,
+    "track_x_m": [
+      0
+    ],
+    "track_gauge_m": 1.52,
+    "track_z_range_m": [
+      20,
+      54.5
+    ],
+    "track_cross_z_m": [
+      38,
+      46
+    ],
+    "cranes_from_door_m": [
+      33.0,
+      95.0
+    ],
+    "neighbour_cranes_from_door_m": {
+      "left": 60.0,
+      "right": 30.0
+    },
+    "low_walls": [
+      {
+        "row": "left",
+        "from_door_m": [
+          24,
+          36
+        ],
+        "h_m": 3,
+        "seen": "photos 004, 009 (from the entry-end crane): the block wall runs from the first big Y column in view to the third, 2 bays, then the row is open; also 003, 005, 006, 013, 008, 033/034. Photo 032 has a white shed hiding the bay before the first column. The bays are decided by a render from the 004/009 viewpoint (camera 0, 7.8, 53, looking down the hall, vfov 47): [24, 36] (grid z 30.5 to 18.5) puts the wall's start at the first big column and its end at the third, as in the photo; [12, 24] and [18, 30] do not."
+      }
+    ],
+    "bracing_bays_from_door_m": [
+      [
+        18.0,
+        24.0
+      ],
+      [
+        84.0,
+        90.0
+      ]
+    ],
+    "massing": [
+      {
+        "id": "press",
+        "label": "forging press (frame, bed, ram)",
+        "x_m": [
+          0.25,
+          3.05
+        ],
+        "z_m": [
+          0.2,
+          3.2
+        ],
+        "y_m": [
+          0.0,
+          4.2
+        ],
+        "material": "press",
+        "how": "photo 032: u 647-680 px, base v 343, top v 290 at D 47 m (f 555 px, camera 6.88 m); depth 3 m GUESS. 2026-09-28 hall fix: MODELLED (hall.py crank_press) from 1c3956d1/018/29b70cf5: two side housings 0.8 m, bed to 1.25 m, ram 2.3-3.5 m, head to 4.2 m, crown 4.2-4.9 m, motor on the crown, flywheel \u00f81.56 m at the top right (top 5.6 m), belt guard, control panel. Heights: photo 032 fit (top 4.9-5.3 m at D 47 m, f 555 px, camera 6.88 m) and 1c3956d1 (APPROXIMATE camera: flywheel top ~4.5-4.9 m); widths from the 032 fit (2.8 m \u00b120 %); depth 3 m GUESS. Family: Soviet hot-die forging crank press (KGShP type) \u2014 NOT identified.",
+        "model": "crank_press",
+        "crown": "press-crown"
+      },
+      {
+        "id": "press-crown",
+        "label": "press crown, motor and flywheel",
+        "x_m": [
+          0.1,
+          3.7
+        ],
+        "z_m": [
+          0.8,
+          2.6
+        ],
+        "y_m": [
+          4.2,
+          5.6
+        ],
+        "material": "machine",
+        "how": "envelope of the crown (4.2-4.9 m), the motor on it and the flywheel (\u00f81.56 m, top 5.6 m) that crank_press draws; photo 032 top v 285-290 -> 4.9-5.1 m +-20 %, flywheel above it GUESS from 1c3956d1",
+        "model": "none",
+        "drawn_by": "press"
+      },
+      {
+        "id": "machine-line",
+        "label": "machine line beside the press (brick plinth, steel body, drilled beam)",
+        "x_m": [
+          3.05,
+          12.0
+        ],
+        "z_m": [
+          -0.5,
+          2.5
+        ],
+        "y_m": [
+          0.0,
+          2.4
+        ],
+        "material": "machine",
+        "how": "photo 032 u 680-737, v 318-338 at D ~50 m; runs to the right of the press as in photos 018, 024, 1c3956d1; depth GUESS. 2026-09-28 hall fix: MODELLED (hall.py machine_line) from 018 and 29b70cf5 (brick plinth ~0.9 m, ribbed steel body, rail along its top ~2.4 m, a drilled beam on the floor along its front, 1c3956d1); run to x 12 by 018, length GUESS",
+        "model": "machine_line"
+      },
+      {
+        "id": "machine-pipe",
+        "label": "pipe over the machine line, rising at the press end",
+        "x_m": [
+          3.05,
+          13.0
+        ],
+        "z_m": [
+          1.0,
+          1.6
+        ],
+        "y_m": [
+          2.8,
+          3.3
+        ],
+        "material": "rust",
+        "how": "photo 032 horizontal pipe at v 305-310 from u 680 to 800 at D ~50 m; 2026-09-28: drawn as a 0.5 m pipe on posts with an elbow up at the press end (1c3956d1)",
+        "model": "pipe_run"
+      },
+      {
+        "id": "transformer",
+        "label": "oil power transformer (ribbed radiators, conservator tank)",
+        "x_m": [
+          -11,
+          -9.5
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          2.5
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 014",
+        "confidence": "medium for x and y, LOW for z (+-3 m)",
+        "how": "Stands beside a left-row column, likely near the paired columns at the expansion joint; x +-1.5 m, z +-3 m from the photos. HOLD the exact z for the USB originals / a site check. Drawn as one envelope box."
+      },
+      {
+        "id": "cabinets-column-feet",
+        "label": "grey electrical cabinets on the left-row column feet",
+        "x_m": [
+          -12,
+          -11
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          1.9
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 036, 038",
+        "confidence": "medium-low",
+        "how": "One envelope box for the cabinets standing on the column feet in this stretch (x +-1.5 m, z +-3 m). HOLD: whether they are bolted."
+      },
+      {
+        "id": "press-pedestal",
+        "label": "press control pedestal (grey desk on a box) and the drilled beam beside it",
+        "x_m": [
+          -1,
+          0.5
+        ],
+        "z_m": [
+          3,
+          4.5
+        ],
+        "y_m": [
+          0,
+          1.2
+        ],
+        "material": "machine",
+        "photos": "024 (lower centre)",
+        "confidence": "medium-low",
+        "how": "CHECK ON SITE: bolted or loose? It touches the front of the DJ riser footprint (riser z 4.2 to 6.2, x -1.5 to 1.5): the pedestal overlaps it by 0.3 m in z. Photo estimate x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "press-side-cabinets",
+        "label": "two grey control cabinets near the press side",
+        "x_m": [
+          2,
+          5
+        ],
+        "z_m": [
+          3,
+          8
+        ],
+        "y_m": [
+          0,
+          1.6
+        ],
+        "material": "machine",
+        "photos": "035",
+        "confidence": "LOW",
+        "how": "Photo 035 only; x +-1.5 m, z +-3 m. Kept low and out of the riser footprint (x 2 to 5)."
+      },
+      {
+        "id": "blower",
+        "label": "centrifugal blower: spiral housing on a sheet-metal pedestal (the housing is about 1.6 m high, not 3 m)",
+        "x_m": [
+          5.8,
+          8.0
+        ],
+        "z_m": [
+          17.5,
+          21.5
+        ],
+        "y_m": [
+          0.0,
+          1.7
+        ],
+        "material": "machine",
+        "photos": "954 t3.6, 023 (two opposite directions); 004/005/009 earlier",
+        "confidence": "medium-low: x +-0.8, z +-1.5, top +-0.3",
+        "how": "2026-10-07 bags check. Placed from two directions: housing top DLT (954+023) (7.15, 1.25, 19.9), rays miss 0.2 m; depth points 954 (7.1, 19.1) and 023 (6.2, 18.5); pedestal front foot on the floor from 954 (7.1, 21.1), housing left foot (6.3, 19.7). Spread in z 18.5-21.1. Was x 5-7, z 20-25, y 0-3: 3 m too far toward the entry and 1.3 m too tall. 954-FXT51128 t3.6 (entry side, z 36.7, looking -z; rotation fitted on the hall-axis vanishing point, position VGGT) and 023-file_101 (press end, z 7.2, looking +z; VGGT-initial camera). Picks: scripts/place/picks/bags-objects.json; numbers: scripts/place/bags_multiview.py tri (run vggt-2026-10-07c)."
+      },
+      {
+        "id": "lean-to-canopy",
+        "label": "corrugated lean-to canopy on posts",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          14,
+          22
+        ],
+        "y_m": [
+          2.5,
+          3.2
+        ],
+        "material": "deck",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "Roof of the lean-to only (the posts are not drawn). x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "drum-tank",
+        "label": "horizontal drum tank on saddles with a ladder (about 3 m dia x 5 m)",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          22,
+          28
+        ],
+        "y_m": [
+          0,
+          3
+        ],
+        "material": "rust",
+        "photos": "004, 009, 027-031",
+        "confidence": "medium-low",
+        "how": "Drawn as its envelope box (a cylinder in the photos). x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "pipe-rack-1",
+        "label": "right-row pipe rack, pipe 1 (dia 0.3-0.5 m at y 3 to 4.5)",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3,
+          3.4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "Three of the 3-4 pipes drawn as thin boxes along the row; the run length is a guess (z 10 to 48)."
+      },
+      {
+        "id": "pipe-rack-2",
+        "label": "right-row pipe rack, pipe 2",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3.6,
+          4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1."
+      },
+      {
+        "id": "pipe-rack-3",
+        "label": "right-row pipe rack, pipe 3",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          4.1,
+          4.5
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1."
+      },
+      {
+        "id": "blower-cyclone",
+        "label": "cyclone cone on the blower, rising to the upper duct",
+        "x_m": [
+          6.2,
+          7.2
+        ],
+        "z_m": [
+          18.5,
+          20.5
+        ],
+        "y_m": [
+          1.7,
+          2.8
+        ],
+        "material": "machine",
+        "photos": "954 t3.6 only",
+        "confidence": "SUSPECTED (one direction): x +-0.8, z +-2",
+        "how": "954 u 1285-1380, v 505-640; z taken from the blower under it. Owed: a photo from the side on 10-08."
+      },
+      {
+        "id": "duct-upper",
+        "label": "upper horizontal duct over the blower (dia about 0.4 m), running to the vertical pipe at the right row",
+        "x_m": [
+          4.8,
+          11.8
+        ],
+        "z_m": [
+          18.8,
+          19.6
+        ],
+        "y_m": [
+          2.7,
+          3.1
+        ],
+        "material": "rust",
+        "photos": "954 t3.6 only",
+        "confidence": "SUSPECTED (one direction): x +-0.8, z +-2, y +-0.3, dia 0.35-0.45",
+        "how": "954 axis v 486 from u 1140 to 1830; height from the fitted horizon (v 645) at 17-20 m: 2.8-3.0 m; z from the cyclone that joins it. The ~1 m diameter in the brief is not borne out: 40 px at 17-20 m is 0.35-0.4 m."
+      },
+      {
+        "id": "duct-lower",
+        "label": "lower horizontal duct behind the bags (dia about 0.4 m), its -x end an elbow down into a conical hopper",
+        "x_m": [
+          4.4,
+          12.0
+        ],
+        "z_m": [
+          16.0,
+          18.5
+        ],
+        "y_m": [
+          1.85,
+          2.25
+        ],
+        "material": "rust",
+        "photos": "954 t3.6, 023",
+        "confidence": "low-medium: z +-2.5 (DLT 21.7 against depth points 16.3/17.2), y +-0.3",
+        "how": "954 axis v 578 from u 1160 to 1820, behind the cyclone (the cone covers it); 023 sees the same duct and elbow from the press end (u 0-980, v 2330-2480). Elbow DLT (4.6, 1.5, 21.7), rays miss 0.4 m; per-view depth (4.6, 16.3) and (2.7, 17.2). The line-plane triangulation of the axis is ill-conditioned (both views near the horizon) and not used. 954-FXT51128 t3.6 (entry side, z 36.7, looking -z; rotation fitted on the hall-axis vanishing point, position VGGT) and 023-file_101 (press end, z 7.2, looking +z; VGGT-initial camera). Picks: scripts/place/picks/bags-objects.json; numbers: scripts/place/bags_multiview.py tri (run vggt-2026-10-07c)."
+      },
+      {
+        "id": "duct-elbow-hopper",
+        "label": "duct elbow and conical hopper at the -x end of the lower duct (right behind the bags from the entry)",
+        "x_m": [
+          4.0,
+          5.3
+        ],
+        "z_m": [
+          16.0,
+          18.5
+        ],
+        "y_m": [
+          0.5,
+          2.3
+        ],
+        "material": "machine",
+        "photos": "954 t3.6, 023",
+        "confidence": "low-medium: x +-0.8, z +-2.5",
+        "how": "954 u 1075-1150, v 560-655; 023 u 800-980, v 2340-2620. Cone bottom DLT (4.6, 0.5, 21.2), depth (4.5, 18.4) and (2.6, 16.9)."
+      },
+      {
+        "id": "roller-conveyor",
+        "label": "roller conveyor (a line of steel rollers on a frame, about 0.85 m high) from the duct elbow/hopper toward the entry, ending just past the front white bag",
+        "x_m": [
+          3.6,
+          4.6
+        ],
+        "z_m": [
+          16.5,
+          24.0
+        ],
+        "y_m": [
+          0.0,
+          0.85
+        ],
+        "material": "machine",
+        "photos": "954 t3.6 (owner's mark 2026-10-07: 'metal thing .png', the end rollers seen end-on beside bag 7), 004, 009 (the whole line from above, from z 45), 005 (its end beside bag 7 from the floor at z 48)",
+        "confidence": "low: x +-1, z +-2.5 (ends), top +-0.2. The two-view DLT of its near end did not close (954 vs 004 rays miss by 184/75 px: the VGGT cameras are not good enough at this range), so it is placed RELATIVE to objects already fixed from two sides: it starts at the duct elbow/hopper (x 4.0-5.3, z 16-18.5) and ends beside bag 7 (front foot (4.1, 24.3) from the fitted 954 camera); 004 alone, on a 0.8 m plane, gives x 3.2-3.3, z 16.4-26.3.",
+        "how": "Owner marked it 2026-10-07 on frame 954 @3.6 s ('METAL', box beside bag 7). Seen in 004/009 as a continuous roller line beside the bags (the bags stand in a row there, clustered in 954/005: the bags moved, the conveyor did not -> fixed). Tape on 10-08: both ends from the column line z 24 and from the nave axis."
+      }
+    ],
+    "zones": {
+      "dance": {
+        "colour": "blue",
+        "label": "dance floor",
+        "marked": {
+          "x_m": [
+            -8.7,
+            2.0
+          ],
+          "z_m": [
+            27.7,
+            39.7
+          ],
+          "note": "the part visible in 0387927a; the photo's bottom edge (the crane girder) cuts it at D 10.5 m"
+        },
+        "used": {
+          "x_m": [
+            -5.35,
+            5.35
+          ],
+          "z_m": [
+            25.8,
+            48.0
+          ]
+        },
+        "range": {
+          "front_edge_z_m": [
+            6.5,
+            9.0
+          ],
+          "near_edge_z_m": [
+            44.0,
+            50.0
+          ]
+        },
+        "why_used_differs": "2026-09-28 (hall fix): the owner's blue mark is 10.7 m wide (x -8.7..2.0 by the photo-032 fit; about 10-11 m by eye in his 0387927a), and he asked for THAT width, centred on the nave axis like the DJ booth: x -5.35..5.35. Its depth is kept: from the crowd barrier (z 7.5) to under the crane (z 48). Was 20 m wide (x -10..10) from 04:13 to the hall fix.",
+        "clear": "the white bulk bags (x -0.8..2.2, z 22..26.5) are cleared for the stage line (assumed movable, owner 2026-10-07); the drum tank (x 8..11, z 22..28) and the pipe racks (x 10..12) stay \u2014 both outside x 5.35.",
+        "width_m": {
+          "value": 10.7,
+          "range": [
+            10.0,
+            11.5
+          ],
+          "how": "the blue mark's width on the floor by the photo-032 fit (x -8.7..2.0); \u00b18 % of the distance plus the marker's hand"
+        },
+        "used_before_2026_10_07": {
+          "x_m": [
+            -5.35,
+            5.35
+          ],
+          "z_m": [
+            7.5,
+            48.0
+          ]
+        },
+        "why_used_differs_2026_10_07": "The owner's stage line (frame 954 @ 3.6 s, 2026-10-07): the audience is everything in front of the line z 24.5 toward the entry. The floor starts at the crowd barrier, z 25.8 = the stage line + the base rig's 1.3 m pit (moxir-2026-10-17.json stage.barrier.pit_m), not at 25.0: the pit is not dance floor. It ends at z 48 as before (the column pair 1.2-1.5 m before the entry end wall). Width kept x -5.35..5.35 (his 10.7 m blue mark, centred by his 09-28 call); the PA's centre is now x +2.1 (L -1.8, R +6.05) \u2014 a PA-centred floor (x -3.25..7.45) is an owner/sound-designer choice, not taken here."
+      },
+      "stage": {
+        "colour": "green",
+        "label": "DJ place",
+        "marked": {
+          "x_m": [
+            -12.0,
+            2.7
+          ],
+          "z_m": [
+            6.2,
+            23.5
+          ],
+          "note": "near edge at the white bulk bags (D 26.7 m; the bags stand at z 22-26.5, x -0.8..2.2); the far edge runs along the press (photo 1c3956d1)"
+        },
+        "used": {
+          "x_m": [
+            -6.07,
+            6.07
+          ],
+          "z_m": [
+            22.5,
+            24.5
+          ]
+        },
+        "range": {
+          "riser_centre_x_m": [
+            0.5,
+            3.5
+          ],
+          "press_face_z_m": [
+            2.0,
+            4.5
+          ]
+        },
+        "faces": "the entry (+z, NW): the crowd stands between the barrier and the crane end",
+        "why_used_differs": "the owner, 2026-09-28: the stage is a DJ place, small, a bit raised; then (04:13) 'in center'. Used = the booth area on the nave axis: the 3 x 2 m riser at x -1.5..1.5, 1 m in front of the press face, the goalpost towers at x -3.5 and 3.5, the pit to the crowd barrier (z 7.5).",
+        "used_before_2026_10_07": {
+          "x_m": [
+            -3.8,
+            3.8
+          ],
+          "z_m": [
+            3.6,
+            7.5
+          ]
+        },
+        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (one 0.2 m step, 3 x 2 m, centred on the nave axis \u2014 'keep max dj center') and the two main PA stacks (placeholders, centres x \u00b15.4, clear of the roller conveyor), all with their front on the line z 24.5 \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+      },
+      "backstage": {
+        "colour": "red",
+        "label": "backstage",
+        "marked": {
+          "x_m": [
+            -12.5,
+            1.2
+          ],
+          "z_m": [
+            -1.4,
+            -0.1
+          ],
+          "note": "only the near edge is on the floor in 0387927a (D 50-52 m); the rest of the red line is drawn over machines. Photo 1c3956d1: behind the press, to the left"
+        },
+        "used": {
+          "x_m": [
+            -6.0,
+            6.0
+          ],
+          "z_m": [
+            -10.0,
+            -1.0
+          ]
+        },
+        "range": {
+          "near_edge_z_m": [
+            1.0,
+            4.0
+          ],
+          "far_edge_z_m": [
+            -15.0,
+            -4.0
+          ]
+        },
+        "why_used_differs": "the owner's red (photo 024 = 1c3956d1) runs behind the press and to its left. Re-centred on the axis behind the press, clear of the machine line's back (z -0.5): x -6..6, z -10..-1; the DJ walks to the treads (x -2) past the press's left side (x < 0.25). Depth still a GUESS; the part of his red further left (x < -6) is not used."
+      },
+      "_label": "owner marked 2026-09-28 on photos; metres estimated. Revised the same day after his note on the DJ place ('not big ... near the metal thing ... a bit top and centre of the metal things')"
+    },
+    "cameras": {
+      "photo-032": {
+        "position_m": [
+          -1.7,
+          6.88,
+          50.2
+        ],
+        "yaw_deg": 1.65,
+        "pitch_deg": -10.0,
+        "vfov_deg": 66.0,
+        "image_px": [
+          1280,
+          720
+        ],
+        "photo": "032-file_76.jpg (the owner's 0387927a)",
+        "note": "hall frame. Fitted on the photo (level camera, horizon v 262, vanishing point u 624, f 555 px): yaw = atan((640-624)/555) to the right, and the off-centre horizon rendered as a 10 deg pitch down \u2014 the photo itself is level with its principal point off-centre, so a render's verticals converge slightly where the photo's do not."
+      },
+      "photo-024": {
+        "position_m": [
+          -3.13,
+          1.0,
+          7.98
+        ],
+        "yaw_deg": 20.1,
+        "pitch_deg": 23.6,
+        "vfov_deg": 90.0,
+        "image_px": [
+          1000,
+          1000
+        ],
+        "photo": "024-file_69.jpg (the owner's 1c3956d1), Galaxy S24 ultra-wide, EXIF 13 mm-eq -> f 1498 px on 2992 px",
+        "note": "REFIT 2026-09-28 (hall fix): OpenCV solvePnP (SQPnP then iterative LM) on 6 picked points \u2014 the nave lantern's near and far deck-opening corners (x \u00b16, y 13.7, z -7.25 / -45.75) and the far gate's top corners (x \u00b12.4, y 5.4, z -54.5) \u2014 with the EXIF intrinsics (f 1498 px, centred principal point, no distortion term). rms 37 px on 2992 (was ~90 px from the 5-point fixed-height fit). Height came out 1.0 m (VGGT 1.54): a low hand or the ultra-wide's uncorrected distortion; roll ~ -6 deg is not modelled by the renderer's camera. Script: session scratchpad hallfix/fit024.py. Still APPROXIMATE: good to ~1 m and ~2 deg."
+      }
+    },
+    "crane_trolley_x_m": [
+      7.6,
+      null
+    ]
+  },
+  "dimsOrigin": {
+    "span_m": "estimate (dims-far41.json)",
+    "pitch_m": "estimate (dims-far41.json)",
+    "bays": "estimate (dims-far41.json)",
+    "length_m": "estimate (dims-far41.json)",
+    "crane_rail_h_m": "estimate (dims-far41.json)",
+    "truss_bottom_h_m": "estimate (dims-far41.json)",
+    "truss_top_h_m": "estimate (dims-far41.json)",
+    "ridge_h_m": "estimate (dims-far41.json)",
+    "lantern_w_m": "estimate (dims-far41.json)",
+    "lantern_h_m": "estimate (dims-far41.json)",
+    "column_w_m": "estimate (dims-far41.json)",
+    "column_d_m": "estimate (dims-far41.json)",
+    "upper_column_d_m": "estimate (dims-far41.json)",
+    "column_head": "estimate (dims-far41.json)",
+    "column_head_width_m": "estimate (dims-far41.json)",
+    "crane_girders_each_row": "estimate (dims-far41.json)",
+    "crane_girder_depth_m": "estimate (dims-far41.json)",
+    "crane_bridge_bottom_h_m": "estimate (dims-far41.json)",
+    "crane_bridge_depth_m": "estimate (dims-far41.json)",
+    "crane_cab_h_m": "estimate (dims-far41.json)",
+    "crane_bridge_bottom_basis": "estimate (dims-far41.json)",
+    "crane_girder_inner_gap_m": "estimate (dims-far41.json)",
+    "crane_girder_w_m": "estimate (dims-far41.json)",
+    "crane_cab_inset_m": "estimate (dims-far41.json)",
+    "crane_cab_w_m": "estimate (dims-far41.json)",
+    "crane_cab_side": "estimate (dims-far41.json)",
+    "runway_handrail_rows": "estimate (dims-far41.json)",
+    "roof_type": "estimate (dims-far41.json)",
+    "space_frame_module_m": "estimate (dims-far41.json)",
+    "space_frame_depth_m": "estimate (dims-far41.json)",
+    "space_frame_member_m": "estimate (dims-far41.json)",
+    "space_frame_node_m": "estimate (dims-far41.json)",
+    "lantern_module_m": "estimate (dims-far41.json)",
+    "lantern_segments_m": "estimate (dims-far41.json)",
+    "lantern_spans": "estimate (dims-far41.json)",
+    "neighbour_spans": "estimate (dims-far41.json)",
+    "expansion_joint_m": "estimate (dims-far41.json)",
+    "paired_columns_at_joint": "estimate (dims-far41.json)",
+    "end_wall_in_from_grid_m": "estimate (dims-far41.json)",
+    "door_w_m": "estimate (dims-far41.json)",
+    "door_h_m": "estimate (dims-far41.json)",
+    "entry_platform": "estimate (dims-far41.json)",
+    "far_gate_w_m": "estimate (dims-far41.json)",
+    "far_gate_h_m": "estimate (dims-far41.json)",
+    "aisle_w_m": "estimate (dims-far41.json)",
+    "track_x_m": "estimate (dims-far41.json)",
+    "track_gauge_m": "placeholder",
+    "track_z_range_m": "estimate (dims-far41.json)",
+    "track_cross_z_m": "estimate (dims-far41.json)",
+    "cranes_from_door_m": "estimate (dims-far41.json)",
+    "neighbour_cranes_from_door_m": "estimate (dims-far41.json)",
+    "low_walls": "estimate (dims-far41.json)",
+    "bracing_bays_from_door_m": "estimate (dims-far41.json)",
+    "massing": "estimate (dims-far41.json)",
+    "zones": "estimate (dims-far41.json)",
+    "cameras": "estimate (dims-far41.json)",
+    "crane_trolley_x_m": "estimate (dims-far41.json)"
+  },
+  "dimsFiles": [
+    "../../../../tmp/claude-1000/-home-dob/f28555fe-b198-4163-85d9-cbd2b3df47ba/scratchpad/hall41/dims-far41.json"
+  ],
+  "dimsSource": "unstated",
+  "dimsNotes": [
+    {
+      "file": "dims-far41.json",
+      "notes": null
+    }
+  ],
+  "warning": "ESTIMATED from photographs, not taped: see dimsOrigin for each value, its range and confidence.",
+  "geometry": {
+    "roof": "space_frame_flat",
+    "roof_flat": true,
+    "wall_inner_x_m": 36.4,
+    "walls_x_m": [
+      -36.4,
+      60.4
+    ],
+    "rows_x_m": [
+      -36.0,
+      -12.0,
+      12.0,
+      36.0,
+      60.0
+    ],
+    "spans": {
+      "left": 1,
+      "right": 2,
+      "span_m": 24.0
+    },
+    "end_wall_inner_y_m": 53.8,
+    "end_wall_outer_y_m": 54.1,
+    "outer_length_m": 108.2,
+    "runway_top_m": 7.96,
+    "runway_bottom_m": 7.06,
+    "crane_rail_x_m": 11.35,
+    "cranes": [
+      {
+        "z_m": 21.0,
+        "from_entry_m": 33.0,
+        "girder_bottom_m": 7.95,
+        "girder_top_m": 8.75,
+        "girder_bottom_basis": "ASSUMED-same-type: the NEAR (entry-end) crane, parked over the DJ, was never measured; it takes the FAR crane's 7.95 m (photo 007, 2026-09-29) as the same type of bridge (same runway, same yellow double-girder bridge, photos 004/010/012/032). Range 7.7-8.25 m. MEASURE on 2026-10-08 (moxir-hall-measured-2026-10-08.json).",
+        "girders_dz_m": [
+          -1.1,
+          1.1
+        ],
+        "girder_w_m": 0.7,
+        "trolley": {
+          "x_m": [
+            7.6,
+            10.2
+          ],
+          "dz_m": [
+            -1.6,
+            1.6
+          ],
+          "y_m": [
+            8.75,
+            9.75
+          ]
+        },
+        "cab": {
+          "x_m": [
+            8.35,
+            10.35
+          ],
+          "dz_m": [
+            -1.0,
+            1.0
+          ],
+          "y_m": [
+            5.85,
+            7.95
+          ]
+        }
+      },
+      {
+        "z_m": -41.0,
+        "from_entry_m": 95.0,
+        "girder_bottom_m": 7.95,
+        "girder_top_m": 8.75,
+        "girder_bottom_basis": "measured by photo (not taped): 7.95 m (5-95 % 7.69-8.24), photo 007, fronto-parallel two-depth metrology (Criminisi et al. 2000), 2026-09-29",
+        "girders_dz_m": [
+          -1.1,
+          1.1
+        ],
+        "girder_w_m": 0.7,
+        "trolley": {
+          "x_m": [
+            2.0,
+            4.6
+          ],
+          "dz_m": [
+            -1.6,
+            1.6
+          ],
+          "y_m": [
+            8.75,
+            9.75
+          ]
+        },
+        "cab": {
+          "x_m": [
+            8.35,
+            10.35
+          ],
+          "dz_m": [
+            -1.0,
+            1.0
+          ],
+          "y_m": [
+            5.85,
+            7.95
+          ]
+        }
+      }
+    ],
+    "albedo": {
+      "column": 0.2867,
+      "press": 0.0407,
+      "machine": 0.1583
+    },
+    "column_head": {
+      "flare_start_m": 6.21,
+      "head_top_m": 7.06,
+      "head_w_m": 1.9,
+      "girder_offset_m": 0.65,
+      "upper_d_m": 0.45
+    },
+    "truss_bottom_m": 10.8,
+    "truss_top_centre_m": 13.3,
+    "eave_top_m": 13.3,
+    "deck_m": 13.35,
+    "space_frame": {
+      "module_m": [
+        6.0,
+        6.0
+      ],
+      "members": 3656,
+      "nodes": 323,
+      "member_m": {
+        "bottom": 0.24,
+        "top": 0.2,
+        "diagonal": 0.16,
+        "lantern": 0.12
+      },
+      "node_m": 0.9,
+      "lantern_module_m": 3.0,
+      "detail_spans": [
+        -1,
+        0,
+        1,
+        2
+      ]
+    },
+    "lantern_h_m": 3.35,
+    "lantern_w_m": 12.0,
+    "lantern_top_m": 16.7,
+    "lanterns": [
+      {
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ]
+      },
+      {
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ]
+      },
+      {
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ]
+      },
+      {
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ]
+      }
+    ],
+    "expansion_joint_z_m": -0.0,
+    "column_grid_z_m": [
+      54.0,
+      48.0,
+      42.0,
+      36.0,
+      30.0,
+      24.0,
+      18.0,
+      12.0,
+      6.0,
+      0.5,
+      -0.5,
+      -6.0,
+      -12.0,
+      -18.0,
+      -24.0,
+      -30.0,
+      -36.0,
+      -42.0,
+      -48.0,
+      -54.0
+    ],
+    "column_row_x_m": [
+      -12.0,
+      12.0
+    ],
+    "column_inner_face_x_m": 11.6,
+    "window_bands_m": [
+      [
+        1.8,
+        3.6
+      ],
+      [
+        4.8,
+        6.6
+      ],
+      [
+        8.4,
+        10.6
+      ]
+    ],
+    "door": {
+      "z_m": 53.8,
+      "w_m": 6.0,
+      "h_m": 6.0
+    },
+    "far_gate": {
+      "z_m": -53.8,
+      "w_m": 4.8,
+      "h_m": 5.4
+    },
+    "far_wall_z_m": -53.8,
+    "massing": [
+      {
+        "id": "press",
+        "label": "forging press (frame, bed, ram)",
+        "x_m": [
+          0.25,
+          3.05
+        ],
+        "z_m": [
+          0.2,
+          3.2
+        ],
+        "y_m": [
+          0.0,
+          4.2
+        ],
+        "material": "press",
+        "how": "photo 032: u 647-680 px, base v 343, top v 290 at D 47 m (f 555 px, camera 6.88 m); depth 3 m GUESS. 2026-09-28 hall fix: MODELLED (hall.py crank_press) from 1c3956d1/018/29b70cf5: two side housings 0.8 m, bed to 1.25 m, ram 2.3-3.5 m, head to 4.2 m, crown 4.2-4.9 m, motor on the crown, flywheel \u00f81.56 m at the top right (top 5.6 m), belt guard, control panel. Heights: photo 032 fit (top 4.9-5.3 m at D 47 m, f 555 px, camera 6.88 m) and 1c3956d1 (APPROXIMATE camera: flywheel top ~4.5-4.9 m); widths from the 032 fit (2.8 m \u00b120 %); depth 3 m GUESS. Family: Soviet hot-die forging crank press (KGShP type) \u2014 NOT identified.",
+        "model": "crank_press",
+        "crown": "press-crown",
+        "faces": [
+          {
+            "x_m": [
+              0.25,
+              1.05
+            ],
+            "y_m": [
+              0.0,
+              4.2
+            ],
+            "z_m": 3.2,
+            "albedo": 0.0407
+          },
+          {
+            "x_m": [
+              2.25,
+              3.05
+            ],
+            "y_m": [
+              0.0,
+              4.2
+            ],
+            "z_m": 3.2,
+            "albedo": 0.0407
+          },
+          {
+            "x_m": [
+              1.05,
+              2.25
+            ],
+            "y_m": [
+              0.0,
+              1.25
+            ],
+            "z_m": 3.0500000000000003,
+            "albedo": 0.0407
+          },
+          {
+            "x_m": [
+              1.1,
+              2.2
+            ],
+            "y_m": [
+              2.3,
+              3.5
+            ],
+            "z_m": 2.95,
+            "albedo": 0.0407
+          },
+          {
+            "x_m": [
+              0.13,
+              3.17
+            ],
+            "y_m": [
+              4.2,
+              4.9
+            ],
+            "z_m": 3.2800000000000002,
+            "albedo": 0.0407
+          }
+        ]
+      },
+      {
+        "id": "press-crown",
+        "label": "press crown, motor and flywheel",
+        "x_m": [
+          0.1,
+          3.7
+        ],
+        "z_m": [
+          0.8,
+          2.6
+        ],
+        "y_m": [
+          4.2,
+          5.6
+        ],
+        "material": "machine",
+        "how": "envelope of the crown (4.2-4.9 m), the motor on it and the flywheel (\u00f81.56 m, top 5.6 m) that crank_press draws; photo 032 top v 285-290 -> 4.9-5.1 m +-20 %, flywheel above it GUESS from 1c3956d1",
+        "model": "none",
+        "drawn_by": "press",
+        "faces": [
+          {
+            "x_m": [
+              0.13,
+              3.17
+            ],
+            "y_m": [
+              4.2,
+              4.9
+            ],
+            "z_m": 3.2800000000000002,
+            "albedo": 0.0407
+          }
+        ]
+      },
+      {
+        "id": "machine-line",
+        "label": "machine line beside the press (brick plinth, steel body, drilled beam)",
+        "x_m": [
+          3.05,
+          12.0
+        ],
+        "z_m": [
+          -0.5,
+          2.5
+        ],
+        "y_m": [
+          0.0,
+          2.4
+        ],
+        "material": "machine",
+        "how": "photo 032 u 680-737, v 318-338 at D ~50 m; runs to the right of the press as in photos 018, 024, 1c3956d1; depth GUESS. 2026-09-28 hall fix: MODELLED (hall.py machine_line) from 018 and 29b70cf5 (brick plinth ~0.9 m, ribbed steel body, rail along its top ~2.4 m, a drilled beam on the floor along its front, 1c3956d1); run to x 12 by 018, length GUESS",
+        "model": "machine_line",
+        "faces": [
+          {
+            "x_m": [
+              3.15,
+              11.9
+            ],
+            "y_m": [
+              0.9,
+              2.1
+            ],
+            "z_m": 2.3,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "machine-pipe",
+        "label": "pipe over the machine line, rising at the press end",
+        "x_m": [
+          3.05,
+          13.0
+        ],
+        "z_m": [
+          1.0,
+          1.6
+        ],
+        "y_m": [
+          2.8,
+          3.3
+        ],
+        "material": "rust",
+        "how": "photo 032 horizontal pipe at v 305-310 from u 680 to 800 at D ~50 m; 2026-09-28: drawn as a 0.5 m pipe on posts with an elbow up at the press end (1c3956d1)",
+        "model": "pipe_run",
+        "faces": []
+      },
+      {
+        "id": "transformer",
+        "label": "oil power transformer (ribbed radiators, conservator tank)",
+        "x_m": [
+          -11,
+          -9.5
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          2.5
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 014",
+        "confidence": "medium for x and y, LOW for z (+-3 m)",
+        "how": "Stands beside a left-row column, likely near the paired columns at the expansion joint; x +-1.5 m, z +-3 m from the photos. HOLD the exact z for the USB originals / a site check. Drawn as one envelope box.",
+        "faces": [
+          {
+            "x_m": [
+              -11,
+              -9.5
+            ],
+            "y_m": [
+              0,
+              2.5
+            ],
+            "z_m": 4,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "cabinets-column-feet",
+        "label": "grey electrical cabinets on the left-row column feet",
+        "x_m": [
+          -12,
+          -11
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          1.9
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 036, 038",
+        "confidence": "medium-low",
+        "how": "One envelope box for the cabinets standing on the column feet in this stretch (x +-1.5 m, z +-3 m). HOLD: whether they are bolted.",
+        "faces": [
+          {
+            "x_m": [
+              -12,
+              -11
+            ],
+            "y_m": [
+              0,
+              1.9
+            ],
+            "z_m": 4,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "press-pedestal",
+        "label": "press control pedestal (grey desk on a box) and the drilled beam beside it",
+        "x_m": [
+          -1,
+          0.5
+        ],
+        "z_m": [
+          3,
+          4.5
+        ],
+        "y_m": [
+          0,
+          1.2
+        ],
+        "material": "machine",
+        "photos": "024 (lower centre)",
+        "confidence": "medium-low",
+        "how": "CHECK ON SITE: bolted or loose? It touches the front of the DJ riser footprint (riser z 4.2 to 6.2, x -1.5 to 1.5): the pedestal overlaps it by 0.3 m in z. Photo estimate x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              -1,
+              0.5
+            ],
+            "y_m": [
+              0,
+              1.2
+            ],
+            "z_m": 4.5,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "press-side-cabinets",
+        "label": "two grey control cabinets near the press side",
+        "x_m": [
+          2,
+          5
+        ],
+        "z_m": [
+          3,
+          8
+        ],
+        "y_m": [
+          0,
+          1.6
+        ],
+        "material": "machine",
+        "photos": "035",
+        "confidence": "LOW",
+        "how": "Photo 035 only; x +-1.5 m, z +-3 m. Kept low and out of the riser footprint (x 2 to 5).",
+        "faces": [
+          {
+            "x_m": [
+              2,
+              5
+            ],
+            "y_m": [
+              0,
+              1.6
+            ],
+            "z_m": 8,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "blower",
+        "label": "centrifugal blower: spiral housing on a sheet-metal pedestal (the housing is about 1.6 m high, not 3 m)",
+        "x_m": [
+          5.8,
+          8.0
+        ],
+        "z_m": [
+          17.5,
+          21.5
+        ],
+        "y_m": [
+          0.0,
+          1.7
+        ],
+        "material": "machine",
+        "photos": "954 t3.6, 023 (two opposite directions); 004/005/009 earlier",
+        "confidence": "medium-low: x +-0.8, z +-1.5, top +-0.3",
+        "how": "2026-10-07 bags check. Placed from two directions: housing top DLT (954+023) (7.15, 1.25, 19.9), rays miss 0.2 m; depth points 954 (7.1, 19.1) and 023 (6.2, 18.5); pedestal front foot on the floor from 954 (7.1, 21.1), housing left foot (6.3, 19.7). Spread in z 18.5-21.1. Was x 5-7, z 20-25, y 0-3: 3 m too far toward the entry and 1.3 m too tall. 954-FXT51128 t3.6 (entry side, z 36.7, looking -z; rotation fitted on the hall-axis vanishing point, position VGGT) and 023-file_101 (press end, z 7.2, looking +z; VGGT-initial camera). Picks: scripts/place/picks/bags-objects.json; numbers: scripts/place/bags_multiview.py tri (run vggt-2026-10-07c).",
+        "faces": [
+          {
+            "x_m": [
+              5.8,
+              8.0
+            ],
+            "y_m": [
+              0.0,
+              1.7
+            ],
+            "z_m": 21.5,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "lean-to-canopy",
+        "label": "corrugated lean-to canopy on posts",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          14,
+          22
+        ],
+        "y_m": [
+          2.5,
+          3.2
+        ],
+        "material": "deck",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "Roof of the lean-to only (the posts are not drawn). x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              8,
+              11
+            ],
+            "y_m": [
+              2.5,
+              3.2
+            ],
+            "z_m": 22,
+            "albedo": 0.0823
+          }
+        ]
+      },
+      {
+        "id": "drum-tank",
+        "label": "horizontal drum tank on saddles with a ladder (about 3 m dia x 5 m)",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          22,
+          28
+        ],
+        "y_m": [
+          0,
+          3
+        ],
+        "material": "rust",
+        "photos": "004, 009, 027-031",
+        "confidence": "medium-low",
+        "how": "Drawn as its envelope box (a cylinder in the photos). x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              8,
+              11
+            ],
+            "y_m": [
+              0,
+              3
+            ],
+            "z_m": 28,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "pipe-rack-1",
+        "label": "right-row pipe rack, pipe 1 (dia 0.3-0.5 m at y 3 to 4.5)",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3,
+          3.4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "Three of the 3-4 pipes drawn as thin boxes along the row; the run length is a guess (z 10 to 48).",
+        "faces": [
+          {
+            "x_m": [
+              10,
+              12
+            ],
+            "y_m": [
+              3,
+              3.4
+            ],
+            "z_m": 48,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "pipe-rack-2",
+        "label": "right-row pipe rack, pipe 2",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3.6,
+          4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1.",
+        "faces": [
+          {
+            "x_m": [
+              10,
+              12
+            ],
+            "y_m": [
+              3.6,
+              4
+            ],
+            "z_m": 48,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "pipe-rack-3",
+        "label": "right-row pipe rack, pipe 3",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          4.1,
+          4.5
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1.",
+        "faces": [
+          {
+            "x_m": [
+              10,
+              12
+            ],
+            "y_m": [
+              4.1,
+              4.5
+            ],
+            "z_m": 48,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "blower-cyclone",
+        "label": "cyclone cone on the blower, rising to the upper duct",
+        "x_m": [
+          6.2,
+          7.2
+        ],
+        "z_m": [
+          18.5,
+          20.5
+        ],
+        "y_m": [
+          1.7,
+          2.8
+        ],
+        "material": "machine",
+        "photos": "954 t3.6 only",
+        "confidence": "SUSPECTED (one direction): x +-0.8, z +-2",
+        "how": "954 u 1285-1380, v 505-640; z taken from the blower under it. Owed: a photo from the side on 10-08.",
+        "faces": [
+          {
+            "x_m": [
+              6.2,
+              7.2
+            ],
+            "y_m": [
+              1.7,
+              2.8
+            ],
+            "z_m": 20.5,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "duct-upper",
+        "label": "upper horizontal duct over the blower (dia about 0.4 m), running to the vertical pipe at the right row",
+        "x_m": [
+          4.8,
+          11.8
+        ],
+        "z_m": [
+          18.8,
+          19.6
+        ],
+        "y_m": [
+          2.7,
+          3.1
+        ],
+        "material": "rust",
+        "photos": "954 t3.6 only",
+        "confidence": "SUSPECTED (one direction): x +-0.8, z +-2, y +-0.3, dia 0.35-0.45",
+        "how": "954 axis v 486 from u 1140 to 1830; height from the fitted horizon (v 645) at 17-20 m: 2.8-3.0 m; z from the cyclone that joins it. The ~1 m diameter in the brief is not borne out: 40 px at 17-20 m is 0.35-0.4 m.",
+        "faces": [
+          {
+            "x_m": [
+              4.8,
+              11.8
+            ],
+            "y_m": [
+              2.7,
+              3.1
+            ],
+            "z_m": 19.6,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "duct-lower",
+        "label": "lower horizontal duct behind the bags (dia about 0.4 m), its -x end an elbow down into a conical hopper",
+        "x_m": [
+          4.4,
+          12.0
+        ],
+        "z_m": [
+          16.0,
+          18.5
+        ],
+        "y_m": [
+          1.85,
+          2.25
+        ],
+        "material": "rust",
+        "photos": "954 t3.6, 023",
+        "confidence": "low-medium: z +-2.5 (DLT 21.7 against depth points 16.3/17.2), y +-0.3",
+        "how": "954 axis v 578 from u 1160 to 1820, behind the cyclone (the cone covers it); 023 sees the same duct and elbow from the press end (u 0-980, v 2330-2480). Elbow DLT (4.6, 1.5, 21.7), rays miss 0.4 m; per-view depth (4.6, 16.3) and (2.7, 17.2). The line-plane triangulation of the axis is ill-conditioned (both views near the horizon) and not used. 954-FXT51128 t3.6 (entry side, z 36.7, looking -z; rotation fitted on the hall-axis vanishing point, position VGGT) and 023-file_101 (press end, z 7.2, looking +z; VGGT-initial camera). Picks: scripts/place/picks/bags-objects.json; numbers: scripts/place/bags_multiview.py tri (run vggt-2026-10-07c).",
+        "faces": [
+          {
+            "x_m": [
+              4.4,
+              12.0
+            ],
+            "y_m": [
+              1.85,
+              2.25
+            ],
+            "z_m": 18.5,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "duct-elbow-hopper",
+        "label": "duct elbow and conical hopper at the -x end of the lower duct (right behind the bags from the entry)",
+        "x_m": [
+          4.0,
+          5.3
+        ],
+        "z_m": [
+          16.0,
+          18.5
+        ],
+        "y_m": [
+          0.5,
+          2.3
+        ],
+        "material": "machine",
+        "photos": "954 t3.6, 023",
+        "confidence": "low-medium: x +-0.8, z +-2.5",
+        "how": "954 u 1075-1150, v 560-655; 023 u 800-980, v 2340-2620. Cone bottom DLT (4.6, 0.5, 21.2), depth (4.5, 18.4) and (2.6, 16.9).",
+        "faces": [
+          {
+            "x_m": [
+              4.0,
+              5.3
+            ],
+            "y_m": [
+              0.5,
+              2.3
+            ],
+            "z_m": 18.5,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "roller-conveyor",
+        "label": "roller conveyor (a line of steel rollers on a frame, about 0.85 m high) from the duct elbow/hopper toward the entry, ending just past the front white bag",
+        "x_m": [
+          3.6,
+          4.6
+        ],
+        "z_m": [
+          16.5,
+          24.0
+        ],
+        "y_m": [
+          0.0,
+          0.85
+        ],
+        "material": "machine",
+        "photos": "954 t3.6 (owner's mark 2026-10-07: 'metal thing .png', the end rollers seen end-on beside bag 7), 004, 009 (the whole line from above, from z 45), 005 (its end beside bag 7 from the floor at z 48)",
+        "confidence": "low: x +-1, z +-2.5 (ends), top +-0.2. The two-view DLT of its near end did not close (954 vs 004 rays miss by 184/75 px: the VGGT cameras are not good enough at this range), so it is placed RELATIVE to objects already fixed from two sides: it starts at the duct elbow/hopper (x 4.0-5.3, z 16-18.5) and ends beside bag 7 (front foot (4.1, 24.3) from the fitted 954 camera); 004 alone, on a 0.8 m plane, gives x 3.2-3.3, z 16.4-26.3.",
+        "how": "Owner marked it 2026-10-07 on frame 954 @3.6 s ('METAL', box beside bag 7). Seen in 004/009 as a continuous roller line beside the bags (the bags stand in a row there, clustered in 954/005: the bags moved, the conveyor did not -> fixed). Tape on 10-08: both ends from the column line z 24 and from the nave axis.",
+        "faces": [
+          {
+            "x_m": [
+              3.6,
+              4.6
+            ],
+            "y_m": [
+              0.0,
+              0.85
+            ],
+            "z_m": 24.0,
+            "albedo": 0.1583
+          }
+        ]
+      }
+    ],
+    "zones": {
+      "dance": {
+        "colour": "blue",
+        "label": "dance floor",
+        "marked": {
+          "x_m": [
+            -8.7,
+            2.0
+          ],
+          "z_m": [
+            27.7,
+            39.7
+          ],
+          "note": "the part visible in 0387927a; the photo's bottom edge (the crane girder) cuts it at D 10.5 m"
+        },
+        "used": {
+          "x_m": [
+            -5.35,
+            5.35
+          ],
+          "z_m": [
+            25.8,
+            48.0
+          ]
+        },
+        "range": {
+          "front_edge_z_m": [
+            6.5,
+            9.0
+          ],
+          "near_edge_z_m": [
+            44.0,
+            50.0
+          ]
+        },
+        "why_used_differs": "2026-09-28 (hall fix): the owner's blue mark is 10.7 m wide (x -8.7..2.0 by the photo-032 fit; about 10-11 m by eye in his 0387927a), and he asked for THAT width, centred on the nave axis like the DJ booth: x -5.35..5.35. Its depth is kept: from the crowd barrier (z 7.5) to under the crane (z 48). Was 20 m wide (x -10..10) from 04:13 to the hall fix.",
+        "clear": "the white bulk bags (x -0.8..2.2, z 22..26.5) are cleared for the stage line (assumed movable, owner 2026-10-07); the drum tank (x 8..11, z 22..28) and the pipe racks (x 10..12) stay \u2014 both outside x 5.35.",
+        "width_m": {
+          "value": 10.7,
+          "range": [
+            10.0,
+            11.5
+          ],
+          "how": "the blue mark's width on the floor by the photo-032 fit (x -8.7..2.0); \u00b18 % of the distance plus the marker's hand"
+        },
+        "used_before_2026_10_07": {
+          "x_m": [
+            -5.35,
+            5.35
+          ],
+          "z_m": [
+            7.5,
+            48.0
+          ]
+        },
+        "why_used_differs_2026_10_07": "The owner's stage line (frame 954 @ 3.6 s, 2026-10-07): the audience is everything in front of the line z 24.5 toward the entry. The floor starts at the crowd barrier, z 25.8 = the stage line + the base rig's 1.3 m pit (moxir-2026-10-17.json stage.barrier.pit_m), not at 25.0: the pit is not dance floor. It ends at z 48 as before (the column pair 1.2-1.5 m before the entry end wall). Width kept x -5.35..5.35 (his 10.7 m blue mark, centred by his 09-28 call); the PA's centre is now x +2.1 (L -1.8, R +6.05) \u2014 a PA-centred floor (x -3.25..7.45) is an owner/sound-designer choice, not taken here."
+      },
+      "stage": {
+        "colour": "green",
+        "label": "DJ place",
+        "marked": {
+          "x_m": [
+            -12.0,
+            2.7
+          ],
+          "z_m": [
+            6.2,
+            23.5
+          ],
+          "note": "near edge at the white bulk bags (D 26.7 m; the bags stand at z 22-26.5, x -0.8..2.2); the far edge runs along the press (photo 1c3956d1)"
+        },
+        "used": {
+          "x_m": [
+            -6.07,
+            6.07
+          ],
+          "z_m": [
+            22.5,
+            24.5
+          ]
+        },
+        "range": {
+          "riser_centre_x_m": [
+            0.5,
+            3.5
+          ],
+          "press_face_z_m": [
+            2.0,
+            4.5
+          ]
+        },
+        "faces": "the entry (+z, NW): the crowd stands between the barrier and the crane end",
+        "why_used_differs": "the owner, 2026-09-28: the stage is a DJ place, small, a bit raised; then (04:13) 'in center'. Used = the booth area on the nave axis: the 3 x 2 m riser at x -1.5..1.5, 1 m in front of the press face, the goalpost towers at x -3.5 and 3.5, the pit to the crowd barrier (z 7.5).",
+        "used_before_2026_10_07": {
+          "x_m": [
+            -3.8,
+            3.8
+          ],
+          "z_m": [
+            3.6,
+            7.5
+          ]
+        },
+        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (one 0.2 m step, 3 x 2 m, centred on the nave axis \u2014 'keep max dj center') and the two main PA stacks (placeholders, centres x \u00b15.4, clear of the roller conveyor), all with their front on the line z 24.5 \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+      },
+      "backstage": {
+        "colour": "red",
+        "label": "backstage",
+        "marked": {
+          "x_m": [
+            -12.5,
+            1.2
+          ],
+          "z_m": [
+            -1.4,
+            -0.1
+          ],
+          "note": "only the near edge is on the floor in 0387927a (D 50-52 m); the rest of the red line is drawn over machines. Photo 1c3956d1: behind the press, to the left"
+        },
+        "used": {
+          "x_m": [
+            -6.0,
+            6.0
+          ],
+          "z_m": [
+            -10.0,
+            -1.0
+          ]
+        },
+        "range": {
+          "near_edge_z_m": [
+            1.0,
+            4.0
+          ],
+          "far_edge_z_m": [
+            -15.0,
+            -4.0
+          ]
+        },
+        "why_used_differs": "the owner's red (photo 024 = 1c3956d1) runs behind the press and to its left. Re-centred on the axis behind the press, clear of the machine line's back (z -0.5): x -6..6, z -10..-1; the DJ walks to the treads (x -2) past the press's left side (x < 0.25). Depth still a GUESS; the part of his red further left (x < -6) is not used."
+      },
+      "_label": "owner marked 2026-09-28 on photos; metres estimated. Revised the same day after his note on the DJ place ('not big ... near the metal thing ... a bit top and centre of the metal things')"
+    },
+    "cameras": {
+      "photo-032": {
+        "position_m": [
+          -1.7,
+          6.88,
+          50.2
+        ],
+        "yaw_deg": 1.65,
+        "pitch_deg": -10.0,
+        "vfov_deg": 66.0,
+        "image_px": [
+          1280,
+          720
+        ],
+        "photo": "032-file_76.jpg (the owner's 0387927a)",
+        "note": "hall frame. Fitted on the photo (level camera, horizon v 262, vanishing point u 624, f 555 px): yaw = atan((640-624)/555) to the right, and the off-centre horizon rendered as a 10 deg pitch down \u2014 the photo itself is level with its principal point off-centre, so a render's verticals converge slightly where the photo's do not."
+      },
+      "photo-024": {
+        "position_m": [
+          -3.13,
+          1.0,
+          7.98
+        ],
+        "yaw_deg": 20.1,
+        "pitch_deg": 23.6,
+        "vfov_deg": 90.0,
+        "image_px": [
+          1000,
+          1000
+        ],
+        "photo": "024-file_69.jpg (the owner's 1c3956d1), Galaxy S24 ultra-wide, EXIF 13 mm-eq -> f 1498 px on 2992 px",
+        "note": "REFIT 2026-09-28 (hall fix): OpenCV solvePnP (SQPnP then iterative LM) on 6 picked points \u2014 the nave lantern's near and far deck-opening corners (x \u00b16, y 13.7, z -7.25 / -45.75) and the far gate's top corners (x \u00b12.4, y 5.4, z -54.5) \u2014 with the EXIF intrinsics (f 1498 px, centred principal point, no distortion term). rms 37 px on 2992 (was ~90 px from the 5-point fixed-height fit). Height came out 1.0 m (VGGT 1.54): a low hand or the ultra-wide's uncorrected distortion; roll ~ -6 deg is not modelled by the renderer's camera. Script: session scratchpad hallfix/fit024.py. Still APPROXIMATE: good to ~1 m and ~2 deg."
+      }
+    }
+  },
+  "triangles": 55536,
+  "meshes": {
+    "hall-concrete": 4248,
+    "hall-floor": 12,
+    "hall-block": 180,
+    "hall-glass": 120,
+    "hall-frame": 41716,
+    "hall-steel": 4464,
+    "hall-girder": 2040,
+    "hall-rust": 1124,
+    "hall-crane": 288,
+    "hall-deck": 360,
+    "hall-machine": 168,
+    "hall-press": 468,
+    "hall-brick": 12,
+    "hall-skylight": 192,
+    "hall-zone-dance": 48,
+    "hall-zone-stage": 48,
+    "hall-zone-backstage": 48
+  }
+}

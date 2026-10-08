@@ -78,7 +78,7 @@ export const trussSlopeOf = (rig) => (isCraneHung(rig) ? (Number(rig.truss.slope
 export const linePoint = (stage, u, face = 'axis') => {
     const th = stage.trussSlope || 0
     const t = stage.trussSection
-    const cx = stage.axis + u * Math.cos(th)
+    const cx = (stage.trussAxis ?? stage.axis) + u * Math.cos(th)
     const cy = stage.trussH - t / 2 + t / 2 / Math.cos(th) + u * Math.sin(th)
     const k = face === 'top' ? 1 : face === 'bottom' ? -1 : 0
     return [cx - k * (t / 2) * Math.sin(th), cy + k * (t / 2) * Math.cos(th), stage.trussZ]
@@ -152,6 +152,13 @@ export const stageFrame = (rig, hall) => {
             : backdrop?.face ?? 0
         back = wall + into * (s.gap_m ?? 1)
         front = back + into * s.depth_m
+        // `front_z_m`: the riser's front edge stated, not derived from the backdrop — the owner's stage line
+        // (2026-10-07, scripts/place/rigs/moxir-stage-line-2026-10-07.json). The backdrop stays as named.
+        if (s.front_z_m !== undefined) {
+            front = Number(s.front_z_m)
+            back = front - into * s.depth_m
+            wall = back - into * (s.gap_m ?? 1)
+        }
         trussZ = back + into * (truss.from_stage_back_m ?? 0)
     } else if (s.zone) {
         const zone = g.zones?.[s.zone]
@@ -185,9 +192,17 @@ export const stageFrame = (rig, hall) => {
     // the bridge's centre line; a crane more than 1 m from the performer is refused (move it).
     let crane = null
     if (isCraneHung(rig)) {
-        crane = craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        // `truss_behind_m`: the line is a BACKDROP (owner 2026-10-07: "the truss at the back of the DJ — where the DJ
+        // stage line finishes, the crane line there"): the bridge nearest a point that far behind the riser's back edge,
+        // and refused unless the line's plane stands at least that far behind it — nothing hung over the performer
+        const behind = s.truss_behind_m
+        crane = behind !== undefined
+            ? craneNearestStage(hall, { front: back - into * behind })
+            : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
         const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
-        if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
+        if (behind !== undefined) {
+            if (!crane || into * (back - crane.z_m) < behind - 1e-6) throw new Error(`truss "crane-hung" behind the DJ: the nearest bridge (z ${crane?.z_m}) is not ${behind} m behind the riser's back edge (z ${back.toFixed(2)}) — park it further back`)
+        } else if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m
     }
     const halo = isHalo(rig)
@@ -196,6 +211,10 @@ export const stageFrame = (rig, hall) => {
     return {
         crane,
         halo,
+        // `truss_axis_x_m`: the x the hung line's u = 0 sits over, when it is not the booth's own axis (the stage
+        // line, 2026-10-07: the booth moved to x 2.445 as drawn, the cut stays on the nave axis — the crane cab
+        // at the bridge's right end leaves no room to slide it; scripts/rigbuild/stage-line.mjs)
+        trussAxis: s.truss_axis_x_m ?? axis,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
         trussSlope: trussSlopeOf(rig),
         // crane-x: the length of each arm and the junction's size across (null for a line)

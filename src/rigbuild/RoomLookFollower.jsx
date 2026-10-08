@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRigLookEntities } from './useRigLook.js'
 import { useLightPool } from './useLightPool.js'
 import { showWords } from './showClock.js'
+import { deskCues, cueClockWords } from './cueRun.js'
 
 // THE SPACE VIEW FOLLOWS THE SHOW (RIG_BUILD.md §15.6, §16). /{space} — the room as it
 // opens, the one the owner watches a show in — draws the lamps posed by the look that is
@@ -22,8 +23,47 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
         onEntities(entities === document?.entities ? null : entities)
     }, [entities, document, onEntities])
     useEffect(() => () => onEntities(null), [onEntities])
-    if (!showChip || look.driver !== 'clock' || !look.clock) return null
+    if (!showChip) return null
+    if (look.driver === 'desk') return <DeskShowChip projectId={document?.projectMeta?.id} top={top} />
+    if (look.driver !== 'clock' || !look.clock) return null
     return <ShowChip show={look.show} state={look.clock} offset={look.clockOffset} top={top} />
+}
+
+/**
+ * The words of the desk's own cue runner for this room: "3 / 13 · Act 1 · the silhouette · next in 9 s · loop", or ''
+ * when the desk runs no list for this project (another room's list, or none). Pure.
+ */
+export const deskShowWords = (cues, projectId) => {
+    if (!cues || !projectId || cues.project !== projectId || !(cues.n > 0) || cues.index == null || cues.index < 0) return ''
+    return [`${cues.index + 1} / ${cues.n}`, cues.name || '', cueClockWords(cues)].filter(Boolean).join(' · ')
+}
+
+// WHERE A DESK DRIVES THE ROOM (a local install: the desk outranks the show's clock, showClock.js), the chip says so: the
+// desk's own runner, read once a second while the tab is visible (the cards page reads it the same way). Before
+// 2026-10-08 the room said nothing here, and a room played by the desk looked like a room playing nothing (MOXIR v1.0).
+export function DeskShowChip({ projectId, top }) {
+    const [cues, setCues] = useState(null)
+    useEffect(() => {
+        let gone = false
+        const tick = async () => {
+            if (typeof window !== 'undefined' && window.document?.visibilityState === 'hidden') return
+            try { const c = await deskCues.read(); if (!gone) setCues(c) } catch { if (!gone) setCues(null) }
+        }
+        tick()
+        const timer = setInterval(tick, 1000)
+        return () => { gone = true; clearInterval(timer) }
+    }, [])
+    const line = deskShowWords(cues, projectId)
+    if (!line) return null
+    return (
+        <div style={{ ...chipStyle, top }} data-testid="rig-show-chip" data-driver="desk" data-cue={cues.index}>
+            <div style={{ ...buttonStyle, cursor: 'default' }} title="The light desk on this machine plays the cue list; the room follows it">
+                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
+                <span style={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.72rem', flex: '0 0 auto' }}>SHOW · DESK</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
+            </div>
+        </div>
+    )
 }
 
 const chipStyle = {
