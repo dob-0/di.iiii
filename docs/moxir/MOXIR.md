@@ -39,7 +39,7 @@ Basis legend: **MEASURED** = taped on site (none yet — the first tape is today
 | The far crane | at **z −22.2** (76.2 m from the door), same type | FROM PHOTOS |
 | Can the near crane move? | the venue told the owner it can (2026-10-08, N332: *"they said it can move, idk"*) — nobody of ours has seen it move; no rating plate, inspection date or operator known | **HEARSAY → see it move today** |
 | Doors | entry door 6 × 6 m at the NW end (z +54); far gate 4.8 × 5.4 m at the SE end (z −54) | FROM PHOTOS + aerial |
-| Which door the public uses | **OPEN** — the model has the crowd entering at the NW door; the event's public pin lies beyond the SE end. If people come in behind the stage, the orientation flips | ask today |
+| Which door the public uses | **DECIDED (owner 10-08): the audience comes in at the audience end** — the NW entry door (z +54), as modelled; the door behind the stage (SE far gate) is **for artists only** (backstage). The Instagram pin is not the public door | owner |
 | The press | forging press x 0.25–3.05, z 0.2–3.2, 4.2 m high, crown + flywheel to 5.6 m; the DJ's backdrop in the old plan, now 20 m behind him | FROM PHOTOS (±20 %) |
 | Machinery, right side (+x) | machine line to x 12 (z −0.5…2.5); pipe racks x 10–12 at 3.0–4.5 m high along z 10–48; blower + cyclone + two ducts x 4.4–12, z 16–21.5; drum tank; lean-to canopy | FROM PHOTOS; pipe-rack heights ASSUMED → tape |
 | Roller conveyor | x 3.6–4.6, z 16.5–24.0, top 0.85 m — right beside the DJ step and the right PA stack | owner's mark on video 954 (±1 m in x) → **tape its edge today** |
@@ -71,6 +71,7 @@ Every row is a decision that stands. Anything older that contradicts it is super
 | 10-07 | *"first fix the space, then stage and crane place and truss, then lights"* | the order of work |
 | 10-07 | his marks on video 954: a green **stage line** at the front of the white bags, the DJ behind it, speakers L and R on the line, the audience everything in front | **stage line z 24.5**, facing the entry |
 | 10-07 | *"keep the DJ as central as possible, and we don't need a 2nd-floor stage for the DJ, just one step"* | the booth on the nave axis (x 0), one step, no stair |
+| 10-08 | *"the entrance is from where the audience is — the backstage one is just for artists"* | the public enters at the NW entry door (z +54), facing the stage as modelled; the SE far gate behind the stage is the artists' entrance only. Orientation unchanged |
 | 10-07 | step height: *"two decks low"* (after the sightline table: 0.2 m → nobody past row 1 sees the DJ; 0.4 m → 2 rows) | **DJ step 0.4 m**: 3 × 2 m StageDex level on 40 cm legs |
 | 10-07 | PA: ±5.4 m symmetric (chosen over his own hand placement −5.18 / +5.49) | **PA stacks at x ±5.4 on the stage line** (model still a placeholder, see §5.4) |
 | 10-07 | *"the cabin will go — it's a small thing, from the left"* | prefab cabin removed from the show hall (v8-show) |
@@ -187,7 +188,7 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 | # | What | Who answers | By when | Blocks |
 |---|---|---|---|---|
 | 1 | **The near crane:** see it move; photograph the rating plate, inspection plate, controls, rail stops; can it be parked at z 21, de-energised and locked? Who operates it? | venue + owner (visit) | **today 10-08** | the truss, the laser stop, the stage; else plan B (§4.2) decided 10-09 |
-| 2 | **Which door the public enters** (NW door or the SE end) | venue / promoter | today | the whole orientation |
+| 2 | ~~Which door the public enters~~ — **CLOSED 10-08 (owner):** the NW entry door; the SE gate is artists only. Still to photograph: the artists' route from the SE gate to the DJ (it passes the lasers' side of the hall) | owner | today | backstage route, laser zone |
 | 3 | **The 3 tapes that move everything:** the near crane's bridge underside; the gap between its girders; the press's front face from the joint. Then: cab side + bottom, pipe-rack-3 top at z 18–24, the conveyor's x edge, runway handrail heights, the lowest pendant lamp/cable/hook along the nave | owner + Emilya (DISTO + tape) | today | v1.1 |
 | 4 | **Power:** a live 380 V board we may use (where, which breaker, earth) or a generator and where it parks; the electrician's name | venue | today | distro plan, ≤ 30 kW |
 | 5 | **The cubes:** label photo (6 W or 10 W), all 6 present, the permit's issuer + copy, the named LSO/operator | owner | 10-09 | laser go/no-go |
@@ -201,7 +202,7 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 | 13 | Count the columns per row from the joint to the door; photos: the DJ end at floor level, the entry end, the joint, the right row at z ~32, the far half, the 14 "L" beam paths in the survey copy, every item already in the hall | owner (visit) | today | the model, v1.1 |
 | 14 | Hall temperature on the night; the cubes' 10 °C floor | LSO | 10-16 | laser go/no-go |
 
-Today's list in full: `~/Downloads/moxir/stage/occlusion/moxir-survey.html` (28 shots, the entrance question first; the v0.9 copy is on dev at `https://dev.diiii.xyz/atlas/p/moxir-survey-2026-10-08`, sign-in needed). Bring: a laser distance meter with tilt (DISTO/GLM class), 30 m + 5 m tapes, a 1 m rule in every photo, three readings per height, the slow walk video as files, one 20 m taped edge photographed, a lux reading at the DJ spot.
+Today's list in full: `~/Downloads/moxir/stage/occlusion/moxir-survey.html` (28 shots; the entrance question is now answered — the NW door, SE = artists; the v0.9 copy is on dev at `https://dev.diiii.xyz/atlas/p/moxir-survey-2026-10-08`, sign-in needed). Bring: a laser distance meter with tilt (DISTO/GLM class), 30 m + 5 m tapes, a 1 m rule in every photo, three readings per height, the slow walk video as files, one 20 m taped edge photographed, a lux reading at the DJ spot.
 
 ---
 
@@ -269,7 +270,7 @@ gh pr view 823 -R dob-0/di.iiii --web                         # the PR with the 
 | Power | 17.1 kW (LIGHT_AUDIT: PARs + B380F only) · ~52 (review) · 48.1 connected (v1.0 draft) · 30 OK (owner) | **≤ 30 kW running is the cap** | the owner set it; connected ≠ running; v1.0 must fit it |
 | Lanterns | ±7.25…±45.75 (10-02) vs ±6.0…±46.9 (aerial) | **aerial** | two satellite captures agree to 0.1 m |
 | Hall length | 109.6 (10-02) vs 108.2 ± 0.6 (aerial) | **108.2** | same |
-| Which door | the model's NW door vs the Instagram pin beyond the SE end | **OPEN** | the pin "hits no building" (09-28); the metres are not evidence; ask today |
+| Which door | the model's NW door vs the Instagram pin beyond the SE end | **RESOLVED 10-08: the NW door (owner)** | the SE gate is the artists' entrance; the pin is not the public door |
 | Cube count / power | 3 seen in his photo vs 6; 10 W vs 6 W | **6 (owner)**; power unknown | label photo owed |
 | Blinders | "behind, aimed up" (placement check: 0 eyes) vs the reviewer (on the cut facing the crowd, capped) | **v1.0 decides** | the 0-eyes rule is a laser rule leaking into lighting; the owner accepted the placement before the review existed |
 | v1.0's definition | VERSIONS.md ("v0.9 + the tape + lights") vs N328 ("v1.0 = beta + the epic lights, tape ASSUMED; v1.1 after the tape") | **N328** | newer, the owner's "yes v1.1" |
@@ -315,3 +316,5 @@ gh pr view 823 -R dob-0/di.iiii --web                         # the PR with the 
 | v1.2 | 10-18 | as built | owed |
 
 **2026-10-08 05:xx — v1.0 (doc):** this file written by Fable from the ledger N205–N334, the memory, REPORT.md, REVIEW-fable.md, STATE.md, VERSIONS.md, the rig files, hall v8-show, PRs #816/#822/#823 and the v1.0 agent's 04:45 draft (`epic.json`, `crew-setup.html`). The one page `~/Downloads/moxir/MOXIR-v1.html` made from it.
+
+**2026-10-08 — entrance (owner):** "the entrance is from where the audience is — the backstage one is just for artists" → the public uses the NW entry door (z +54), orientation unchanged; the SE far gate behind the stage is the artists' entrance. Open item 2 closed; the artists' route past the laser side still to photograph.
