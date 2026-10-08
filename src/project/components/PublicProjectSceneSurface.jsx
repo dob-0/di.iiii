@@ -7,6 +7,8 @@ import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
 import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
+import { resolveViewKey } from '../../utils/viewAxisPose.js'
+import { runViewCommand } from '../../studio/utils/viewCommands.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
 // renderers -- reaches three.js. It is loaded only from PublicProjectViewer's
@@ -146,6 +148,26 @@ export default function PublicProjectSceneSurface({
     const previousEntryViewRef = useRef(document.presentationState?.entryView || 'scene')
     const controlsRef = useRef(null)
     const caged = isCameraCaged(entryView, document.presentationState?.fixedCamera)
+
+    // Blender's view keys in the PUBLIC viewer (they lived only in Studio's editor: Numpad 1/3/7 front/right/top, Ctrl = back/left/bottom,
+    // Numpad 2/4/6/8 orbit 15 deg, Home = frame all; no numpad: Shift+1/3/7, Shift+Arrows). Same pure resolver and runner as Studio
+    // (viewAxisPose.js resolveViewKey, viewCommands.js runViewCommand). Measured 2026-10-08: none of these moved the public camera.
+    // Not while a caged (fixed) camera is on, nor while typing or on a widget that owns the key.
+    const entitiesRef = useRef(document.entities || [])
+    entitiesRef.current = document.entities || []
+    useEffect(() => {
+        if (caged || typeof window === 'undefined') return undefined
+        const onKey = (event) => {
+            const t = event.target
+            if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable || t.closest?.('[role="slider"],[role="listbox"],[role="menu"],[role="dialog"]'))) return
+            const command = resolveViewKey(event)
+            if (!command || !controlsRef.current) return
+            event.preventDefault()
+            runViewCommand(controlsRef.current, command, { entities: entitiesRef.current, selectedEntities: [] })
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [caged])
 
     useEffect(() => {
         const nextEntryView = document.presentationState?.entryView || 'scene'
