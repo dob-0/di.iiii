@@ -597,8 +597,9 @@ def rig_file(units, checks, P, net):
             {'id': 'floor', 'position': [-5.2, 1.6, 20.0], 'target': [-5.2, 4.5, -4.0], 'fov': 62, 'label': 'Floor z 20'},
             {'id': 'foh', 'position': [-5.2, 2.2, 29.0], 'target': [-5.2, 5.0, -8.0], 'fov': 55, 'label': 'FOH z 29'},
             {'id': 'dj', 'position': [-5.2, 2.05, 4.6], 'target': [-4.0, 1.6, 18.0], 'fov': 75, 'label': 'DJ'},
-            {'id': 'side', 'position': [12.5, 6.0, 14.0], 'target': [-5.2, 4.0, 2.0], 'fov': 60, 'label': 'Side'},
-            {'id': 'top', 'position': [-2.0, 70.0, -4.0], 'target': [-2.0, 0.0, -5.0], 'fov': 70, 'label': 'Top'}]}
+            {'id': 'side', 'position': [8.0, 4.5, 12.0], 'target': [-5.2, 3.5, 2.0], 'fov': 60, 'label': 'Side'},
+            {'id': 'top', 'position': [-2.0, 70.0, -4.0], 'target': [-2.0, 0.0, -5.0], 'fov': 70, 'label': 'Top'},
+            {'id': 'crane', 'position': [-1.0, 8.5, 16.0], 'target': [-5.2, 2.8, 2.0], 'fov': 55, 'label': 'Crane'}]}
     rig['power'] = P
     rig['network'] = dict(V10['network'], links=net['links'])
     rig['checks_v1_1'] = checks
