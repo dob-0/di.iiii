@@ -378,7 +378,7 @@ ASH, EMBER = '#e8e4dc', '#ff3a12'
 COL = {'the cut': '#ffb08a', 'beams': '#ffd9c8', 'the hall': '#c4553a', 'machines': '#ff6a3a', 'flash': '#e0ff4f', 'air': '#7f9cff', 'lines': '#f5f2ea'}
 
 
-def _base(ax, xr, zr):
+def _base(ax, xr, zr, keep_labels=None):
     g = G_NEW
     ax.set_facecolor('#141518')
     for x in g['rows_x_m']:
@@ -389,14 +389,14 @@ def _base(ax, xr, zr):
         (x0, x1), (z0, z1) = m['x_m'], m['z_m']
         lamp = m['id'].startswith('pendant-lamp')
         ax.add_patch(__import__('matplotlib').patches.Rectangle((x0, z0), x1 - x0, z1 - z0, fill=not lamp, fc='#3b342c', ec='#7a6a58' if not lamp else '#5f6670', lw=0.6, zorder=3, alpha=0.9))
-        if not lamp and (x1 - x0) * (z1 - z0) > 1.5 and xr[0] <= (x0 + x1) / 2 <= xr[1] and zr[0] <= (z0 + z1) / 2 <= zr[1]:
+        if not lamp and (keep_labels is None or m['id'] in keep_labels) and (x1 - x0) * (z1 - z0) > (0.5 if keep_labels else 1.5) and xr[0] <= (x0 + x1) / 2 <= xr[1] and zr[0] <= (z0 + z1) / 2 <= zr[1]:
             ax.text((x0 + x1) / 2, (z0 + z1) / 2, '%s\n%g-%g m' % (m['id'], m['y_m'][0], m['y_m'][1]), color='#c9b8a2', fontsize=5.5, ha='center', va='center', zorder=4)
     for name, z in g['zones'].items():
         if name.startswith('_'):
             continue
         (x0, x1), (z0, z1) = z['used']['x_m'], z['used']['z_m']
         ax.add_patch(__import__('matplotlib').patches.Rectangle((x0, z0), x1 - x0, z1 - z0, fill=False, ec={'dance': '#3b6cff', 'stage': '#2fbf5a', 'backstage': '#ff4a3a'}[name], lw=1.2, ls='--', zorder=3))
-        ax.text(x0 + 0.2, z1 - 0.6, z['label'], color={'dance': '#7f9cff', 'stage': '#6fe08f', 'backstage': '#ff8a7a'}[name], fontsize=7, zorder=5)
+        ax.text(x0 + 0.2, (z0 + 0.25) if name == 'backstage' else (z1 - 0.6), z['label'], color={'dance': '#7f9cff', 'stage': '#6fe08f', 'backstage': '#ff8a7a'}[name], fontsize=7, zorder=5)
     for c in g['cranes']:
         ax.add_patch(__import__('matplotlib').patches.Rectangle((-11.35, c['z_m'] - 1.45), 22.7, 2.9, fc='#d8b400', alpha=0.35, ec='#d8b400', zorder=4))
         ax.text(-11.2, c['z_m'] + 1.6, 'crane bridge z %.2f (girders %.2f-%.2f m)' % (c['z_m'], c['girder_bottom_m'], c['girder_top_m']), color='#ffe066', fontsize=7, zorder=6)
@@ -408,28 +408,28 @@ def _base(ax, xr, zr):
     ax.set_ylabel('z (m), -> toward the entry (the audience)', color='#9aa0a8', fontsize=8)
 
 
-def fig_plan(units, solids, path):
+def fig_plan(units, solids, path, xr=(-16, 16), zr=(-44, 32), keep_labels=None, size=(13, 15)):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
-    fig, ax = plt.subplots(figsize=(13, 15), dpi=130)
+    fig, ax = plt.subplots(figsize=size, dpi=130)
     fig.patch.set_facecolor('#0d0e10')
-    _base(ax, (-16, 16), (-44, 32))
+    _base(ax, xr, zr, keep_labels)
     for s in solids:
         x, _, z = s['p']
         sx, _, sz = (0.29, 0, 0.29) if s['kind'] == 'tower' else s['s']
         c = {'rig-ash-wall': '#ffffff', 'rig-crowd-barrier': '#ff4a3a', 'rig-foh-riser': '#7f9cff'}.get(s['id'], '#6fa8ff' if s['id'].startswith('rig-pa-') else '#cccccc')
         ax.add_patch(Rectangle((x - sx / 2, z - sz / 2), sx, max(sz, 0.15), fc=c, ec=c, zorder=7))
-        lx, lz = (x - sx / 2, z - sz / 2 - 0.9) if s['id'].startswith('rig-pa-') else (x + sx / 2 + 0.2, z - (0.6 if s['id'] == 'rig-ash-wall' else 0))
-        ax.text(lx, lz, {'rig-ash-wall': 'ash wall (beam stop)', 'rig-crowd-barrier': 'barrier', 'rig-foh-riser': 'FOH', 'rig-pa-l': 'spk L (organiser)', 'rig-pa-r': 'spk R (organiser)', 'rig-tower-cube6': 'tower, cube 6'}.get(s['id'], s['id']),
-                color=c, fontsize=7, zorder=8, va='center') if True else None
+        lx, lz = (x - sx / 2 + 0.1, z) if s['id'].startswith('rig-pa-') else (x + sx / 2 + 0.2, z - (0.6 if s['id'] == 'rig-ash-wall' else 0))
+        ax.text(lx, lz, {'rig-ash-wall': 'ash wall (beam stop)', 'rig-crowd-barrier': 'barrier', 'rig-foh-riser': 'FOH', 'rig-pa-l': 'spk L\n(organiser)', 'rig-pa-r': 'spk R\n(organiser)', 'rig-tower-cube6': 'tower, cube 6'}.get(s['id'], s['id']),
+                color='#0d0e10' if s['id'].startswith('rig-pa-') else c, fontsize=7, zorder=8, va='center')
     cx, mz = NEW_BOOTH
     ax.add_patch(Rectangle((cx - 1.5, mz - 1.0), 3.0, 2.0, fc='#1fa35a', ec='#6fe08f', zorder=7))
     ax.text(cx, mz, 'DJ step 0.4 m', color='#0d0e10', fontsize=7, ha='center', va='center', zorder=8)
     tx = [TRUSS_NEW.p[0] - TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE), TRUSS_NEW.p[0] + TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE)]
     ax.plot(tx, [TRUSS_NEW.p[2]] * 2, color='#ffb08a', lw=4, zorder=9)
-    ax.text(tx[0] - 4.5, TRUSS_NEW.p[2] + 0.4, 'the cut: LOW %.2f m house left -> HIGH %.2f m' % (CUT_ENDS[0], CUT_ENDS[1]), color='#ffb08a', fontsize=7, zorder=9)
+    ax.text(tx[0] + 0.2, TRUSS_NEW.p[2] + 0.45, 'the cut: LOW %.2f m house left -> HIGH %.2f m' % (CUT_ENDS[0], CUT_ENDS[1]), color='#ffb08a', fontsize=7, zorder=9)
     for u in units:
         x, y, z = u['p']
         if u['type'] == 'ext-lc-ultra-mk2':
@@ -446,6 +446,8 @@ def fig_plan(units, solids, path):
              'barrier z 8.2 · floor z 8.2..28 · FOH z 29 · squares = units used, x = held back · lines = the 12 laser beams onto the ash wall']
     for i, t in enumerate(lines):
         fig.text(0.07, 0.035 - i * 0.012, t, color='#c9ccd1', fontsize=7.5)
+    for t in ax.texts:
+        t.set_clip_on(True)
     fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches='tight')
     plt.close(fig)
 
@@ -502,6 +504,8 @@ def fig_power(units, P, path):
          'per phase %s W · 230 V circuits <= 2944 W, cable H07RN-F, volt drop <= 5 %% (BS 7671 4D2B)' % (sum(c['load_w'] for c in P['circuits']) / 1000, s['running_total_w'] / 1000,
                                                                                                      ' / '.join('%s %d' % kv for kv in P['phases'].items())))
     fig.text(0.07, 0.03, t, color='#c9ccd1', fontsize=7.5, wrap=True)
+    for tx in ax.texts:
+        tx.set_clip_on(True)
     fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches='tight')
     plt.close(fig)
 
@@ -638,6 +642,8 @@ if __name__ == '__main__':
         od = os.path.expanduser(A.out)
         os.makedirs(od, exist_ok=True)
         fig_plan(units, SOLIDS, os.path.join(od, 'v1-1-plan.png'))
+        fig_plan(units, SOLIDS, os.path.join(od, 'v1-1-plan-stage.png'), xr=(-14, 8), zr=(-6, 31),
+                 keep_labels={'press', 'press-crown', 'press-pedestal', 'transformer', 'press-side-cabinets', 'roller-conveyor', 'machine-line'}, size=(11, 15))
         fig_power(units, P, os.path.join(od, 'v1-1-power-needs.png'))
         fig_park(os.path.join(od, 'v1-1-crane-vs-press.png'))
         json.dump(checks, open(os.path.join(od, 'v1-1-checks.json'), 'w'), indent=1, default=float)
