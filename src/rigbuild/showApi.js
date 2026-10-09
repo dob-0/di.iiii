@@ -59,6 +59,29 @@ export const durationWords = (ms) => {
  * its own clock — the clock every viewer computes the same way (showClock.js).
  * `now` is this browser's clock already corrected to the server's.
  */
+/**
+ * The buttons: one per LOOK, not one per cue. A press holds (no auto-advance), so four cues that
+ * all play "the black" are one button, not four (owner 10-09: "so simple buttons"). The first cue
+ * of each look stands for it, in list order; `isLiveScene` marks it live whichever of its cues
+ * the desk is on. A cue with no lookId stays its own button.
+ */
+export const sceneButtons = (cues) => {
+    const seen = new Set()
+    return (cues || []).filter((cue) => {
+        if (!cue?.lookId) return true
+        if (seen.has(cue.lookId)) return false
+        seen.add(cue.lookId)
+        return true
+    })
+}
+
+export const isLiveScene = (cue, live, cues) => {
+    if (!live || live.index == null || !cue) return false
+    if (live.index === cue.index) return true
+    const liveCue = (cues || []).find((c) => c.index === live.index)
+    return Boolean(liveCue && cue.lookId && liveCue.lookId === cue.lookId)
+}
+
 export const liveOf = (data, now) => {
     if (!data) return null
     if (data.live) {

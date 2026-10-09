@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { durationWords, groupByAct, liveOf, swatchWords, youWords } from './showApi.js'
+import { durationWords, groupByAct, isLiveScene, liveOf, sceneButtons, swatchWords, youWords } from './showApi.js'
 import { getShowLocationState, SHOW_SEGMENT } from './showRouting.js'
 
 const cues = [
@@ -54,5 +54,25 @@ describe('what is on now', () => {
         const data = { light: { state: 'none' }, clock, live: null }
         expect(liveOf(data, 1_000_000 + 12_000)).toMatchObject({ source: 'clock', index: 1, nextIndex: 0, nextInMs: 18_000 })
         expect(liveOf({ ...data, light: { state: 'open' } }, 1_012_000)).toBe(null)
+    })
+})
+
+describe('sceneButtons / isLiveScene: one button per look (owner 10-09: "so simple buttons")', () => {
+    const cues = [
+        { index: 0, id: 'a', lookId: 'smoke' },
+        { index: 1, id: 'b', lookId: 'black' },
+        { index: 2, id: 'c', lookId: 'fire' },
+        { index: 3, id: 'd', lookId: 'black' },
+        { index: 4, id: 'e' }
+    ]
+    it('keeps the first cue of each look, in order, and a cue with no look', () => {
+        expect(sceneButtons(cues).map((c) => c.id)).toEqual(['a', 'b', 'c', 'e'])
+    })
+    it('marks the look live whichever of its cues the desk is on', () => {
+        const black = cues[1]
+        expect(isLiveScene(black, { index: 3 }, cues)).toBe(true)
+        expect(isLiveScene(black, { index: 2 }, cues)).toBe(false)
+        expect(isLiveScene(cues[4], { index: 4 }, cues)).toBe(true)
+        expect(isLiveScene(black, null, cues)).toBe(false)
     })
 })

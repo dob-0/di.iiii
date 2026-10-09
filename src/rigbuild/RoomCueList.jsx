@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { buildVanityProjectPath } from '../utils/spaceRouting.js'
-import { ShowError, blockOf, chooseCue, cleanName, liveOf, youWords } from './showApi.js'
+import { ShowError, blockOf, chooseCue, cleanName, isLiveScene, liveOf, sceneButtons, youWords } from './showApi.js'
 import { useShowFeed } from './useShowFeed.js'
 
 // THE SCENE BUTTONS INSIDE THE ROOM (simple buttons, 2026-10-09: a press changes the scene and it HOLDS)
@@ -90,8 +90,8 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
             {!data && !error ? <p style={{ margin: 0, padding: '0.5rem 0.95rem', fontSize: '0.8rem', opacity: 0.8 }}>Loading the scenes…</p> : null}
             {notice || why ? <p role="status" data-block={block || ''} style={{ margin: 0, padding: '0.4rem 0.95rem', borderLeft: `2px solid ${notice ? EMBER : 'rgba(255,255,255,0.4)'}`, fontSize: '0.8rem', opacity: notice ? 1 : 0.75 }}>{notice || why}</p> : null}
             <ol aria-label="the scenes of the show" style={{ listStyle: 'none', margin: 0, padding: '0.5rem 0.6rem', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, maxHeight: 'min(52dvh, 24rem)', overflowY: 'auto' }}>
-                {cues.map((cue) => {
-                    const isLive = live?.index === cue.index
+                {sceneButtons(cues).map((cue) => {
+                    const isLive = isLiveScene(cue, live, cues)
                     const disabled = Boolean(cue.laser) || Boolean(block) || sending != null
                     return (
                         <li key={cue.id}>
@@ -100,9 +100,13 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
                                 onClick={() => choose(cue)}
                                 style={{ ...brickBase, cursor: disabled ? 'default' : 'pointer', borderStyle: cue.laser ? 'dashed' : 'solid', opacity: cue.laser ? 0.6 : 1, background: isLive ? 'rgba(255,59,59,0.16)' : brickBase.background, borderColor: isLive ? EMBER : "rgba(255,255,255,0.14)", boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none', touchAction: 'manipulation' }}>
                                 <Squares swatch={cue.swatch} />
-                                <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: '0.8rem', fontWeight: isLive ? 700 : 500, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{cue.title || cue.name}</span>
+                                {/* The name keeps whole words (a narrow phone broke "RETURNS" mid-word); the
+                                    operator tag sits under the name, not beside it, so it never squeezes the name. */}
+                                <span style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: isLive ? 700 : 500, lineHeight: 1.2, overflowWrap: 'break-word', hyphens: 'auto' }}>{cue.title || cue.name}</span>
+                                    {cue.laser && !isLive ? <span style={{ fontSize: '0.55rem', letterSpacing: '0.08em', opacity: 0.7 }}>OPERATOR ONLY</span> : null}
+                                </span>
                                 {isLive ? <span style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: EMBER, flex: '0 0 auto' }}>LIVE</span> : null}
-                                {cue.laser && !isLive ? <span style={{ fontSize: '0.55rem', letterSpacing: '0.08em', opacity: 0.7, flex: '0 0 auto' }}>OPERATOR</span> : null}
                             </button>
                         </li>
                     )

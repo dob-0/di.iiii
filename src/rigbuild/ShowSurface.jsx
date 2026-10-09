@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useShowFeed } from './useShowFeed.js'
 import { SIGN_IN_SEGMENT, buildAppSpacePath, buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { buildCardsPath } from './cardsRouting.js'
-import { CHOOSERS, ShowError, chooseCue, choosersLabel, cleanName, durationWords, liveOf, setAutoplay, setChoosers, swatchWords, youWords } from './showApi.js'
+import { CHOOSERS, ShowError, chooseCue, choosersLabel, cleanName, durationWords, isLiveScene, liveOf, sceneButtons, setAutoplay, setChoosers, swatchWords, youWords } from './showApi.js'
 import './show.css'
 
 // THE SHOW PAGE (simple buttons, 2026-10-09)
@@ -196,8 +196,8 @@ export default function ShowSurface({ spaceId, projectId }) {
 
             {cues.length ? (
                 <ol className="show-bricks" aria-label="Scenes">
-                    {cues.map((cue) => (
-                        <Brick key={cue.id} cue={cue} live={live?.index === cue.index} block={cardBlock} sending={sending} onChoose={choose} />
+                    {sceneButtons(cues).map((cue) => (
+                        <Brick key={cue.id} cue={cue} live={isLiveScene(cue, live, cues)} block={cardBlock} sending={sending} onChoose={choose} />
                     ))}
                 </ol>
             ) : <p className="show-empty">This project has no scenes yet. They are made on <a href={buildCardsPath(spaceId, data.project.id)}>the cards</a>.</p>}
