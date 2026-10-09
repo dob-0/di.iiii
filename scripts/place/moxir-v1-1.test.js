@@ -54,11 +54,24 @@ describe('MOXIR v1.1: the stage and the crane park', () => {
     })
     it("keeps the speaker placeholders (the organiser's) on his marks, moved only off the fixed massing", () => {
         for (const b of design.pa.boxes) {
-            expect(b.x_m).toEqual(b.drawn_x_m)
+            // on his marks, except a documented trim of the +x edge off the DJ step (bug fix 2026-10-09)
+            const trim = b.moved?.trimmed_x_m || 0
+            expect(b.x_m).toEqual([b.drawn_x_m[0], +(b.drawn_x_m[1] - trim).toFixed(3)])
             for (const m of hall.geometry.massing.filter((m) => m.y_m[0] < b.h_m)) {
                 const overlap = b.x_m[0] < m.x_m[1] && b.x_m[1] > m.x_m[0] && b.z_m[0] < m.z_m[1] && b.z_m[1] > m.z_m[0]
                 expect(overlap, `${b.id} vs ${m.id}`).toBe(false)
             }
+        }
+        // and clear of the DJ step (the step and a speaker placeholder were one solid, 0.2 m deep)
+        const step = { x_m: [design.booth.centre_x_m - design.booth.width_m / 2, design.booth.centre_x_m + design.booth.width_m / 2], z_m: [design.booth.front_z_m - design.booth.depth_m, design.booth.front_z_m] }
+        for (const b of design.pa.boxes) {
+            const overlap = b.x_m[0] < step.x_m[1] && b.x_m[1] > step.x_m[0] && b.z_m[0] < step.z_m[1] && b.z_m[1] > step.z_m[0]
+            expect(overlap, `${b.id} vs the DJ step`).toBe(false)
+        }
+        for (const id of ['rig-pa-l', 'rig-pa-r']) {
+            const s = rig.solids.find((x) => x.id === id)
+            const x0 = s.p[0] - s.s[0] / 2, x1 = s.p[0] + s.s[0] / 2, z0 = s.p[2] - s.s[2] / 2, z1 = s.p[2] + s.s[2] / 2
+            expect(x0 < step.x_m[1] && x1 > step.x_m[0] && z0 < step.z_m[1] && z1 > step.z_m[0], `${id} (rig file) vs the DJ step`).toBe(false)
         }
         expect(design.pa.placeholder).toBe(true)
         expect(rig.solids.filter((s) => s.id.startsWith('rig-pa-')).every((s) => /PLACEHOLDER/.test(s.name))).toBe(true)
@@ -95,6 +108,18 @@ describe('MOXIR v1.1: the lights and lasers moved', () => {
             expect(c.load_w).toBeLessThanOrEqual(2944)
             expect(c.vdrop_pct).toBeLessThanOrEqual(5)
         }
+    })
+    it('states one connected total and no stale v1.0 figures in the supply note', () => {
+        const p = rig.power
+        const sum = p.circuits.reduce((a, c) => a + c.load_w, 0)
+        expect(p.summary.connected_w).toBe(sum)                                   // the picture and MOXIR.md print this sum
+        expect(Object.values(p.phases).reduce((a, b) => a + b, 0)).toBeCloseTo(sum, -1)
+        expect(p.summary.supply).not.toMatch(/21\.8 kW|4\.0 kW PA|\+ 4\.0/)           // v1.0's running figure and its PA
+        expect(p.summary.supply).toContain((p.summary.running_total_w / 1000).toFixed(1) + ' kW')
+    })
+    it('authors only view presets the viewer has a button for', async () => {
+        const { VIEW_PRESET_IDS } = await import('../../src/project/viewport/smartView/smartViewGeometry.js')
+        for (const v of rig.views.viewPresets) expect(VIEW_PRESET_IDS, v.id).toContain(v.id)
     })
     it('puts the second E-stop where, with FOH, at least 90 % of every line is seen', () => {
         expect(rig.checks_v1_1.spotter.chosen.with_foh_min).toBeGreaterThanOrEqual(0.9)

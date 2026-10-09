@@ -3763,7 +3763,7 @@
    "name": "speaker L - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
    "kind": "box",
    "p": [
-    -8.25,
+    -8.4,
     0.0,
     5.4
    ],
@@ -3773,7 +3773,7 @@
     0
    ],
    "s": [
-    3.5,
+    3.2,
     2.0,
     2.6
    ]
@@ -4536,7 +4536,7 @@
  },
  "power": {
   "summary": {
-   "connected_w": 35984,
+   "connected_w": 36104,
    "base_w": 12820,
    "worst_look_w": 16292,
    "pa_w": 0,
@@ -4544,7 +4544,7 @@
    "running_total_w": 17792,
    "cap_w": 30000,
    "ok": true,
-   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 21.8 kW with the PA and FOH = about 32 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.0 kW lighting + 4.0 kW PA; photograph the board today (breakers, phases, earth)",
+   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 17.8 kW with FOH = about 26 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.1 kW (lighting, smoke, lasers, network); the sound is the organiser's own supply; photograph the board today (breakers, phases, earth)",
    "watts_basis": "fixtures.json (supply W where the maker gives it, else rated W); LaserCube 120 W from its manual; running = per-look levels x the duties above (ESTIMATE)",
    "pa_note": "the sound is the organiser's (owner 10-08 night): v1.0 counted 4.0 kW for the PA; it is on the organiser's own supply plan, not in di's lighting total",
    "laser_note": "the cubes at 120 W each from their adapters (ULTRA MK2 manual), 6 W optical (owner 10-08 night)"
@@ -5178,7 +5178,7 @@
     "label": "Floor z 20"
    },
    {
-    "id": "foh",
+    "id": "rig",
     "position": [
      -5.2,
      2.2,
@@ -5190,7 +5190,7 @@
      -8.0
     ],
     "fov": 55,
-    "label": "FOH z 29"
+    "label": "Rig - FOH z 29"
    },
    {
     "id": "dj",

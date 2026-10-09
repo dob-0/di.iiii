@@ -4,7 +4,7 @@
 |---|---|
 | **Version** | **v1.1** (10-08 night, scratch `moxir-v1-1`, slug `v1-1`): v1.0's lights on the owner's new stage at the press end, the place from the 10-08 photos (hall v9; nothing taped yet). v1.0 stays as `moxir-v1-0` |
 | **Date** | 2026-10-08, 05:xx (written from everything that existed at that hour) |
-| **Status** | Design on paper and in the test scene; nothing built into dev yet; the show is in 9 days |
+| **Status** | Design on paper and in the test scene; v1.1 is merged to dev (PR #840, c7dada65) as the copy `moxir-v1-1` on the scratch stack only — not on dev's data, not on the installed di; the show is 17 October 2026 |
 | **Show** | MOXIR · Friday 17 October 2026 · a Soviet factory hall in Charentsavan, Armenia · techno night |
 | **Rule** | **This file is the source.** When something changes, change it HERE and add a line to the change log at the end. Every other file about MOXIR is a source, a picture or a superseded draft (listed in "Superseded"). |
 | **Owner's word** | 2026-10-08: *"we will update over time — let's summarize and have ONE version"* (ledger N334) |
@@ -16,7 +16,7 @@ Words: a **place** is the real hall; the **space** `moxir` is its twin inside di
 ## 1 · The show in 5 lines
 
 1. **MOXIR = մոխիր = ash**, what is left after a fire (owner, 2026-10-08: *"the name is moxir մոխիր, it's in Armenian — keep it in mind, and for the vibe"*). The hall is a burnt-out factory; the light rises out of it.
-2. **One DJ on one low step**, in the middle of the nave, with the whole 100 m hall behind him. The crowd stands in front, toward the entry.
+2. **One DJ on one low step**, at the press end (v1.1: x −5.2, z 3.65–5.65; v1.0 had him in the middle of the nave), with the whole hall in front of the lasers behind him. The crowd stands in front, toward the entry.
 3. **Three colours only:** ash white, ember red, black. No rainbow, nothing moving fast overhead (owner 09-28: *"the underground rave thing, not the commercial shit"*).
 4. **Elite and minimal** (owner 2026-10-08, N330/N331): touring-grade design, but every unit must serve a signature moment or it is not hung; at most 2 layers lit most of the night.
 5. **Six lasers from the depth of the hall**, all beams ending on steel behind the DJ; a sloped truss ("the cut") hung from the overhead crane behind him; darkness as the main colour.
@@ -95,7 +95,7 @@ Every row is a decision that stands. Anything older that contradicts it is super
 
 ---
 
-## 4 · The design now (v1.0, 10-08: scripts/place/moxir_v1.py, the page ~/Downloads/moxir/stage/epic/epic.html)
+## 4 · The design now (v1.0, 10-08: scripts/place/moxir_v1.py, the page ~/Downloads/moxir/stage/epic/epic.html) — **where §4.0 (v1.1) differs, §4.0 wins: the stage, the crane park, the barrier, the lasers' stop and the E-stops are v1.1's; §4.1–4.2 and the numbers in §4.4 and §5 below are v1.0's and kept as the record**
 
 Standing in the hall at the entry door and looking down the nave: the dance floor is in front of you (z 48 → 26), then a barrier, then the DJ on his low step (z 24.5) with two speaker stacks beside him, the white bags behind him, and 2.5 m behind the bags the yellow overhead crane with a sloped truss hanging under it. Behind that, 75 m of dark hall: the press, the machinery, the columns, the far crane, and the far wall — where the lasers stand and fire back toward the DJ.
 
@@ -178,7 +178,7 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 
 - **12 beams** (2 per cube, static points of the scan, held ±0.3°). Every stage-ward beam ends on the **near crane's back girder (z 19.5–19.9, 7.95–8.75 m) right behind the DJ** — the face that points away from the crowd. 4a/5a cross the side spans and end on each span's far runway girder. 12/12 pass the model: first hit = the stop, no point past z 21, ≥ 5.0 m over any floor, 0.3 m from other steel, mirror worst case ≥ 7.4 m up.
 - **Brightness (v1.0, one number set):** the 6 W unit, each cube's power split between its 2 beams (duty 0.45), seen from z 38: in Plan A1 at σ 0.02/m the far trio reads 440–1 220 cd/m² per beam, cube 6 1 570–1 970, cubes 4/5 300–360; at the haze the 4 smoke machines give on average (designed for σ 0.005/m) 50–80 % of that, in patches; a dark club is ~0.01. **All 12 lines now end on one matte ash wall behind the DJ** (4a/5a no longer go to the side spans). The 907 / 227 figures of 10-08 morning are superseded (STATE.md says so).
-- **Hard precondition:** no stage-ward emission until the near crane is seen parked at z 21 — with the crane at z 4.8 (where every photo shows it) beams 4b, 6a and 6b would reach the entry end over the crowd.
+- **Hard precondition:** no stage-ward emission until the near crane is seen parked at its place (v1.1: z 0.15; v1.0: z 21) — with the crane at z 4.8 (where every photo shows it) beams 4b, 6a and 6b would reach the entry end over the crowd.
 - **Contradiction resolved — 907 vs 227 cd/m²:** STATE.md / lasers-v2.html show 907 (10 W unit, one beam at full power); the epic REPORT shows 227 (6 W, 2 beams, 0.45 duty). **227 wins for what the eye sees** because the owner said "calculate it as 6 W" (N323) and a cube drawing two beams splits its time between them (Talbot–Plateau). **10 W, one beam, stays for every safety figure** (NOHD 724 m — the scan-failure case IEC TR 60825-3 asks for). lasers-v2.html is superseded for brightness.
 - **NOHD — 703 vs 724 vs 544 m:** 703 was the 10 W nominal; the 10 W unit's diodes sum to 10.6 W → **724 m**; the 6 W unit 544 m; red alone 370/296 m. All far beyond the hall's 108 m: **in this hall every beam is hazardous at every distance — separation (height, steel stops, no beam over people), not NOHD, is the control.**
 
@@ -194,7 +194,7 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 ### 5.1 Lasers (Class 4 — the maker itself says entertainment lasers should be Class 1/2/3R)
 - **Permission:** held, per the owner (2026-10-08). Owed for the production file: who issued it, a copy, and the **named laser operator / safety officer (LSO)** at a kill switch with sight of every beam — not the owner, not the DJ.
 - **Rules in the design:** every beam ends on steel; ≥ 3.0 m above any floor people can reach (HS(G)95) and the design holds ≥ 5.0 m; 2.5 m laterally from accessible structure; no beam past z 21; static beams only; software zones (LaserOS "Safety Zone") are the second barrier, never the first.
-- **Reviewer's blockers (Fable, 10-08) — v1.0 status:** (B2) **done in the design:** one 4.0 × 2.4 m matte-black aluminium ash wall at z 20.2 is the stop for all 12 lines, each beam's ±0.8° field (0.3° zone + 0.5° mount tolerance) lands on it, ≥ 0.59° to spare; Beam Block + tilt screws in the laser test. (B3) every line now 5.0–7.45 m, under the pendant layer: **measure the lamps today**; ladders to the runways locked (crew sheet). (B4) the cold plan: mains adapters, warm cases, a heated enclosure per cube, ≥ 10 °C before power-on, the LSO's no-go below 0 °C. (B5) **Dima** is the laser operator with E-stop 1 at FOH; a **spotter with E-stop 2** at x −9, z 12 (the engine: FOH alone sees 47 % of beam 6a, FOH + spotter 100 % of every beam); the permit's issuer/number and an LSO name (if not Dima) are blanks.
+- **Reviewer's blockers (Fable, 10-08) — v1.0 status:** (B2) **done in the design:** one 4.0 × 2.4 m matte-black aluminium ash wall (v1.0: z 20.2; **v1.1: x −5.2, z −0.65, 5.15–7.55 m**) is the stop for all 12 lines, each beam's ±0.8° field (0.3° zone + 0.5° mount tolerance) lands on it, ≥ 0.59° to spare; Beam Block + tilt screws in the laser test. (B3) every line now 5.0–7.45 m, under the pendant layer: **measure the lamps today**; ladders to the runways locked (crew sheet). (B4) the cold plan: mains adapters, warm cases, a heated enclosure per cube, ≥ 10 °C before power-on, the LSO's no-go below 0 °C. (B5) **Dima** is the laser operator with E-stop 1 at FOH; a **spotter with E-stop 2** (v1.0: x −9, z 12; **v1.1: x −7.0, z −4.5 behind the ash wall, with FOH ≥ 93 % of every line — §4.0**) (the v1.0 engine: FOH alone sees 47 % of beam 6a, FOH + spotter 100 % of every beam); the permit's issuer/number and an LSO name (if not Dima) are blanks.
 - **Standards named:** IEC 60825-1:2014, IEC TR 60825-3, HSE HS(G)95, ANSI Z136.10, ILDA guidelines, the ULTRA MK2 Guide v1.0.
 
 ### 5.2 Rigging

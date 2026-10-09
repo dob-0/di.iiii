@@ -361,9 +361,16 @@ def power_and_circuits(units):
     net['links'] = [l for l in net['links'] if 'NODE-LEFT' not in str(l['to']) and 'NODE-RIGHT' not in str(l['to'])]
     pw = copy.deepcopy(V10['power']['summary'])
     pw['pa_w'] = 0
+    # v1.1's own numbers: connected = the circuits' sum (lighting + smoke + cubes + the network node, as the power map prints it);
+    # v1.0's copy said 35 984 W and a supply note with its 21.8 kW running + 4 kW PA (bug fix 2026-10-09)
+    pw['connected_w'] = int(sum(c['load_w'] for c in circ))
     pw['pa_note'] = "the sound is the organiser's (owner 10-08 night): v1.0 counted 4.0 kW for the PA; it is on the organiser's own supply plan, not in di's lighting total"
     pw['running_total_w'] = pw['running_total_w'] - V10['power']['summary']['pa_w']
     pw['ok'] = pw['running_total_w'] <= pw['cap_w']
+    run_a = pw['running_total_w'] / (3 * 230.0)
+    pw['supply'] = ("the factory's own 380 V 3-phase board (owner 10-08: no generator): running %.1f kW with FOH = about %.0f A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase "
+                    "(63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected %.1f kW (lighting, smoke, lasers, network); the sound is the organiser's own supply; "
+                    "photograph the board today (breakers, phases, earth)" % (pw['running_total_w'] / 1000, run_a, pw['connected_w'] / 1000))
     pw['laser_note'] = 'the cubes at 120 W each from their adapters (ULTRA MK2 manual), 6 W optical (owner 10-08 night)'
     by_site = {}
     for c in circ:
@@ -378,6 +385,38 @@ ASH, EMBER = '#e8e4dc', '#ff3a12'
 COL = {'the cut': '#ffb08a', 'beams': '#ffd9c8', 'the hall': '#c4553a', 'machines': '#ff6a3a', 'flash': '#e0ff4f', 'air': '#7f9cff', 'lines': '#f5f2ea'}
 
 
+MASSING_TEXTS = []
+CIRCUIT_TEXTS = []                                  # the power map's circuit tags: one that lands on another tag is hidden (the table lists every circuit)
+
+
+def _declutter(fig, ax):
+    """Hide a massing label that sits on another label or runs off the plot (the pictures had labels printed over each
+    other and cut at the edge, 2026-10-09). The other labels (crane, cut, zones, solids, circuits, distros) are never hidden."""
+    fig.canvas.draw()
+    rend = fig.canvas.get_renderer()
+    box = lambda t: t.get_window_extent(rend)
+    area = ax.get_window_extent(rend)
+    mass = set(id(t) for t in MASSING_TEXTS)
+    ctx = set(id(t) for t in CIRCUIT_TEXTS)
+    keptc = []
+    for t in CIRCUIT_TEXTS:                                  # in table order; the first tag of a pile stays
+        if any(box(t).overlaps(box(o)) for o in keptc):
+            t.set_visible(False)
+        else:
+            keptc.append(t)
+    CIRCUIT_TEXTS.clear()
+    fixed = [t for t in ax.texts if id(t) not in mass and t.get_text() and t.get_visible()]
+    kept = []
+    for t in sorted(MASSING_TEXTS, key=lambda t: -box(t).width * box(t).height):
+        b = box(t)
+        inside = b.x0 >= area.x0 and b.x1 <= area.x1 and b.y0 >= area.y0 and b.y1 <= area.y1
+        if (not inside) or any(b.overlaps(box(o)) for o in fixed + kept):
+            t.set_visible(False)
+        else:
+            kept.append(t)
+    MASSING_TEXTS.clear()
+
+
 def _base(ax, xr, zr, keep_labels=None):
     g = G_NEW
     ax.set_facecolor('#141518')
@@ -390,16 +429,16 @@ def _base(ax, xr, zr, keep_labels=None):
         lamp = m['id'].startswith('pendant-lamp')
         ax.add_patch(__import__('matplotlib').patches.Rectangle((x0, z0), x1 - x0, z1 - z0, fill=not lamp, fc='#3b342c', ec='#7a6a58' if not lamp else '#5f6670', lw=0.6, zorder=3, alpha=0.9))
         if not lamp and (keep_labels is None or m['id'] in keep_labels) and (x1 - x0) * (z1 - z0) > (0.5 if keep_labels else 1.5) and xr[0] <= (x0 + x1) / 2 <= xr[1] and zr[0] <= (z0 + z1) / 2 <= zr[1]:
-            ax.text((x0 + x1) / 2, (z0 + z1) / 2, '%s\n%g-%g m' % (m['id'], m['y_m'][0], m['y_m'][1]), color='#c9b8a2', fontsize=5.5, ha='center', va='center', zorder=4)
+            MASSING_TEXTS.append(ax.text((x0 + x1) / 2, (z0 + z1) / 2, '%s\n%g-%g m' % (m['id'], m['y_m'][0], m['y_m'][1]), color='#c9b8a2', fontsize=5.5, ha='center', va='center', zorder=4))
     for name, z in g['zones'].items():
         if name.startswith('_'):
             continue
         (x0, x1), (z0, z1) = z['used']['x_m'], z['used']['z_m']
         ax.add_patch(__import__('matplotlib').patches.Rectangle((x0, z0), x1 - x0, z1 - z0, fill=False, ec={'dance': '#3b6cff', 'stage': '#2fbf5a', 'backstage': '#ff4a3a'}[name], lw=1.2, ls='--', zorder=3))
-        ax.text(x0 + 0.2, (z0 + 0.25) if name == 'backstage' else (z1 - 0.6), z['label'], color={'dance': '#7f9cff', 'stage': '#6fe08f', 'backstage': '#ff8a7a'}[name], fontsize=7, zorder=5)
+        ax.text(x0 + 0.2, (z0 + 0.25) if name == 'backstage' else (z1 - 0.6), z['label'], color={'dance': '#7f9cff', 'stage': '#6fe08f', 'backstage': '#ff8a7a'}[name], fontsize=7, zorder=(5 if name == 'backstage' else 9), bbox=(None if name == 'backstage' else dict(fc='#141518', ec='none', alpha=0.8, pad=1)))
     for c in g['cranes']:
         ax.add_patch(__import__('matplotlib').patches.Rectangle((-11.35, c['z_m'] - 1.45), 22.7, 2.9, fc='#d8b400', alpha=0.35, ec='#d8b400', zorder=4))
-        ax.text(-11.2, c['z_m'] + 1.6, 'crane bridge z %.2f (girders %.2f-%.2f m)' % (c['z_m'], c['girder_bottom_m'], c['girder_top_m']), color='#ffe066', fontsize=7, zorder=6)
+        ax.text(-11.2, c['z_m'] + (1.6 if c['z_m'] > -20 else -2.3), 'crane bridge z %.2f (girders %.2f-%.2f m)' % (c['z_m'], c['girder_bottom_m'], c['girder_top_m']), color='#ffe066', fontsize=7, zorder=6, bbox=dict(fc='#141518', ec='none', alpha=0.8, pad=1))
     ax.set_xlim(*xr)
     ax.set_ylim(*zr)
     ax.set_aspect('equal')
@@ -422,32 +461,33 @@ def fig_plan(units, solids, path, xr=(-16, 16), zr=(-44, 32), keep_labels=None, 
         c = {'rig-ash-wall': '#ffffff', 'rig-crowd-barrier': '#ff4a3a', 'rig-foh-riser': '#7f9cff'}.get(s['id'], '#6fa8ff' if s['id'].startswith('rig-pa-') else '#cccccc')
         ax.add_patch(Rectangle((x - sx / 2, z - sz / 2), sx, max(sz, 0.15), fc=c, ec=c, zorder=7))
         lx, lz = (x - sx / 2 + 0.1, z) if s['id'].startswith('rig-pa-') else (x + sx / 2 + 0.2, z - (0.6 if s['id'] == 'rig-ash-wall' else 0))
-        ax.text(lx, lz, {'rig-ash-wall': 'ash wall (beam stop)', 'rig-crowd-barrier': 'barrier', 'rig-foh-riser': 'FOH', 'rig-pa-l': 'spk L\n(organiser)', 'rig-pa-r': 'spk R\n(organiser)', 'rig-tower-cube6': 'tower, cube 6'}.get(s['id'], s['id']),
-                color='#0d0e10' if s['id'].startswith('rig-pa-') else c, fontsize=7, zorder=8, va='center')
+        ax.text(lx, lz, {'rig-ash-wall': 'ash wall (beam stop)', 'rig-crowd-barrier': 'barrier', 'rig-foh-riser': 'FOH', 'rig-pa-l': 'spk L\n(organiser)', 'rig-pa-r': 'spk R\n(organiser)', 'rig-tower-cube6': ''}.get(s['id'], s['id']),
+                color='#0d0e10' if s['id'].startswith('rig-pa-') else c, fontsize=(7 if xr[1] - xr[0] < 24 else 5), zorder=8, va='center')
     cx, mz = NEW_BOOTH
     ax.add_patch(Rectangle((cx - 1.5, mz - 1.0), 3.0, 2.0, fc='#1fa35a', ec='#6fe08f', zorder=7))
     ax.text(cx, mz, 'DJ step 0.4 m', color='#0d0e10', fontsize=7, ha='center', va='center', zorder=8)
     tx = [TRUSS_NEW.p[0] - TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE), TRUSS_NEW.p[0] + TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE)]
     ax.plot(tx, [TRUSS_NEW.p[2]] * 2, color='#ffb08a', lw=4, zorder=9)
-    ax.text(tx[0] + 0.2, TRUSS_NEW.p[2] + 0.45, 'the cut: LOW %.2f m house left -> HIGH %.2f m' % (CUT_ENDS[0], CUT_ENDS[1]), color='#ffb08a', fontsize=7, zorder=9)
+    ax.text(tx[0] + 0.2, TRUSS_NEW.p[2] + 0.45, 'the cut: LOW %.2f m house left -> HIGH %.2f m' % (CUT_ENDS[0], CUT_ENDS[1]), color='#ffb08a', fontsize=7, zorder=11, bbox=dict(fc='#141518', ec='none', alpha=0.85, pad=1))
     for u in units:
         x, y, z = u['p']
         if u['type'] == 'ext-lc-ultra-mk2':
             for b in u['laser']['beams']:
                 ax.plot([x, b['to'][0]], [z, b['to'][2]], color=EMBER if u['colour'].lower() == EMBER else ASH, lw=0.8, alpha=0.9, zorder=6)
             ax.plot(x, z, 'o', color='#f5f2ea', ms=6, zorder=10)
-            ax.text(x + 0.4, z, 'cube %s' % u['id'][-1], color='#f5f2ea', fontsize=7, zorder=10)
+            ax.text(x + 0.4, z, 'cube %s%s' % (u['id'][-1], ' + tower' if u['id'][-1] == '6' else ''), color='#f5f2ea', fontsize=7, zorder=10)
             continue
         c = COL.get(u.get('layer'), '#cccccc')
         ax.plot(x, z, 's' if u['status'] == 'used' else 'x', color=c, ms=3.2, zorder=10)
     ax.set_title("MOXIR v1.1 - the stage on the owner's new marks (2026-10-08 night): plan, the press end", color='#f5f2ea', fontsize=11, loc='left')
-    lines = ['DJ step x -6.7..-3.7, z 3.65..5.65 (his box x -6.3..-4.1, z 3.7..5.6) · speakers = his boxes (moved +0.4 / +0.9 m off the transformer and the press pedestal)',
+    lines = ['DJ step x -6.7..-3.7, z 3.65..5.65 (his box x -6.3..-4.1, z 3.7..5.6) · speakers = his boxes (L moved +0.4 m off the transformer and trimmed 0.3 m off the step; R moved +0.9 m off the press pedestal)',
              'near crane parked z 0.15 (as found 42.5) · the cut axis x -5.0 · ash wall z %.2f, x %.2f +-2 · far crane z -41 (cubes 1-3)' % (WALL['p'][2], WALL['p'][0]),
              'barrier z 8.2 · floor z 8.2..28 · FOH z 29 · squares = units used, x = held back · lines = the 12 laser beams onto the ash wall']
     for i, t in enumerate(lines):
         fig.text(0.07, 0.035 - i * 0.012, t, color='#c9ccd1', fontsize=7.5)
     for t in ax.texts:
         t.set_clip_on(True)
+    _declutter(fig, ax)
     fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches='tight')
     plt.close(fig)
 
@@ -472,13 +512,18 @@ def fig_power(units, P, path):
             ax.plot(q[0], q[2], 'o', color=col, ms=3, zorder=6)
         if pts:
             m = np.mean(np.array(pts), axis=0)
-            ax.text(m[0], m[2], '%s %d W\n%s' % (c['circuit'], c['load_w'], c['kind']), color=col, fontsize=6, ha='center', zorder=8,
-                    bbox=dict(fc='#0d0e10', ec=col, lw=0.4, alpha=0.8, pad=1.2))
+            CIRCUIT_TEXTS.append(ax.text(m[0], m[2], '%s %d W\n%s' % (c['circuit'], c['load_w'], c['kind']), color=col, fontsize=6, ha='center', zorder=8,
+                                         bbox=dict(fc='#0d0e10', ec=col, lw=0.4, alpha=0.8, pad=1.2)))
     for d in P['distros']:
         x, _, z = d['at']
         ax.plot(x, z, 'D', color='#ffffff', ms=9, zorder=9)
-        ax.text(x + 0.8, z - 0.8, '%s\n%d circuits, %.1f kW connected' % (d['distro'], d['circuits'], d['load_w'] / 1000), color='#ffffff', fontsize=8, zorder=9,
-                bbox=dict(fc='#202226', ec='#ffffff', lw=0.6, pad=2))
+        right = x > 20                                                     # D-RIGHT: its label ran off the plot's right edge
+        lab = '%s\n%d circuits, %.1f kW connected' % (d['distro'], d['circuits'], d['load_w'] / 1000)
+        kw = dict(color='#ffffff', fontsize=8, zorder=12, bbox=dict(fc='#202226', ec='#ffffff', lw=0.6, pad=2))
+        if d['distro'] == 'D-STAGE':                                       # its label sat on the circuits C01-C04 labels: move it out, with a leader
+            ax.annotate(lab, xy=(x, z), xytext=(-31, 14), ha='left', arrowprops=dict(arrowstyle='-', color='#ffffff', lw=0.6), **kw)
+        else:
+            ax.text(x - 0.8 if right else x + 0.8, z - 0.8, lab, ha='right' if right else 'left', **kw)
     f = DES['foh']['p']
     ax.plot(f[0], f[2], 's', color='#7f9cff', ms=9, zorder=9)
     ax.text(f[0] + 0.8, f[2], 'FOH (desk, switch, E-stop 1)\n~1.5 kW (v1.0 figure, ASSUMED)', color='#7f9cff', fontsize=8, zorder=9)
@@ -506,6 +551,7 @@ def fig_power(units, P, path):
     fig.text(0.07, 0.03, t, color='#c9ccd1', fontsize=7.5, wrap=True)
     for tx in ax.texts:
         tx.set_clip_on(True)
+    _declutter(fig, ax)
     fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches='tight')
     plt.close(fig)
 
@@ -599,7 +645,9 @@ def rig_file(units, checks, P, net):
         'fixedCamera': {'projection': 'perspective', 'position': [-5.2, 1.6, 20.0], 'target': [-5.2, 4.5, -4.0], 'fov': 62, 'zoom': 1, 'near': 0.05, 'far': 400, 'locked': False},
         'viewPresets': [
             {'id': 'floor', 'position': [-5.2, 1.6, 20.0], 'target': [-5.2, 4.5, -4.0], 'fov': 62, 'label': 'Floor z 20'},
-            {'id': 'foh', 'position': [-5.2, 2.2, 29.0], 'target': [-5.2, 5.0, -8.0], 'fov': 55, 'label': 'FOH z 29'},
+            # the viewer's buttons are floor, dj, top, side, rig, crane (smartViewGeometry VIEW_PRESET_IDS); an id outside that list is dropped
+            # silently, so the FOH vantage is authored as the Rig button (bug fix 2026-10-09: 'foh' never showed)
+            {'id': 'rig', 'position': [-5.2, 2.2, 29.0], 'target': [-5.2, 5.0, -8.0], 'fov': 55, 'label': 'Rig - FOH z 29'},
             {'id': 'dj', 'position': [-5.2, 2.05, 4.6], 'target': [-4.0, 1.6, 18.0], 'fov': 75, 'label': 'DJ'},
             {'id': 'side', 'position': [8.0, 4.5, 12.0], 'target': [-5.2, 3.5, 2.0], 'fov': 60, 'label': 'Side'},
             {'id': 'top', 'position': [-2.0, 70.0, -4.0], 'target': [-2.0, 0.0, -5.0], 'fov': 70, 'label': 'Top'},
