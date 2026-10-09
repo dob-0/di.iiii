@@ -78,6 +78,7 @@ const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const { registerEstateRoutes } = require('./routes/estateRoutes')
 const { registerTrackRoutes } = require('./routes/trackRoutes')
 const { registerShootRoutes } = require('./routes/shootRoutes')
+const { registerShowRoutes } = require('./routes/showRoutes')
 const { registerAppVisitorRoutes } = require('./routes/appVisitorRoutes')
 const { createVisitorRecorder, createVisitorBouncer } = require('./appVisitors')
 const { createGuestBook } = require('./appVisitorStore')
@@ -1983,6 +1984,32 @@ registerShootRoutes(router, {
   readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'shoot sheet reads' }),
   writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 600, name: 'shoot sheet edits' }),
   fileLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 120, name: 'shoot sheet photos' })
+})
+
+// The show page (/{space}/show/{project}): everyone in a space sees the live cue and,
+// as the operator allows, chooses one. Ahead of the /api role gates below on purpose —
+// a guest may choose once the operator opens it to guests, which the blanket write gate
+// would refuse — so its handlers make the read decision requireReadRole makes, then their
+// own (routes/showRoutes.js, show/showRemote.js). Every phone in the room polls it once
+// a second, hence the read cap: 1 Hz for ten minutes is 600.
+registerShowRoutes(router, {
+  dataDir: config.directories.dataDir,
+  readJson,
+  writeJson,
+  requireAuth: () => config.requireAuth,
+  normalizeSpaceId,
+  loadSpaceMeta,
+  findProjectById: (id) => findProjectById(SPACES_DIR, id),
+  findProjectBySlug,
+  canSeeProject,
+  canAccessSpace,
+  hasRequiredAuthRole,
+  isOwnerOrAdmin: (state, meta) => isSpaceOwnerOrAdminState(state, meta),
+  hasLocalRuntime,
+  lighting,
+  readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'show page reads' }),
+  writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 240, name: 'show page choices' }),
+  log: (line) => logger.info(line)
 })
 
 // Shared with registerSpaceRoutes below (same instance, not just the same
