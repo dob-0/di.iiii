@@ -34,7 +34,9 @@ describe('the fixtures manifest', () => {
         }
         // A source is a page, or (TESTED) the rental unit itself, which has no page: it says so.
         for (const [id, s] of Object.entries(manifest.sources)) {
-            if (s.url === null) expect(s.what, id).toMatch(/rental units? themselves/)
+            // or a file the owner's own unit came with (the cube's SD card), named by path and hash
+            if (s.file) { expect(s.sha256_16, id).toMatch(/^[0-9a-f]{16}$/); expect(s.what, id).toMatch(/owner's own/) }
+            else if (s.url === null) expect(s.what, id).toMatch(/rental units? themselves/)
             else expect(s.url, id).toMatch(/^https:\/\//)
         }
     })
@@ -54,7 +56,7 @@ describe('the fixtures manifest', () => {
         expect(smoke.specs.output_m3_min.basis).toBe('UNKNOWN')
         expect(smoke.specs.fluid_ml_per_min.value).toBe(150)
         // the owner's cubes: the 6.0 W variant, per diode, from the maker's Guide v1.2
-        expect(lasercube.specs.variant_in_use.value).toMatchObject({ '455nm': 2700, '525nm': 1500, '638nm': 1800 })
+        expect(lasercube.specs.variant_in_use.value).toMatchObject({ name: '7.5 W', '455nm': 4000, '525nm': 2000, '638nm': 1500 })
     })
 
     it('says what licence the models are under and that they are not the makers\' CAD', () => {

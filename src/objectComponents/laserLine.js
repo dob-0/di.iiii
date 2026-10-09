@@ -11,7 +11,8 @@
 //        Φv = Km · V(λ) · P,     Km = 683 lm/W
 //    (SI definition of the candela, BIPM SI Brochure 9th ed.; V(λ) the CIE 1924 photopic luminous
 //    efficiency = ȳ(λ) of the CIE 1931 2° observer). 6 W cube (2.7 / 1.5 / 1.8 W at 455 / 525 / 638 nm):
-//    88 + 813 + 235 = 1136 lm.
+//    88 + 813 + 235 = 1136 lm. The owner's cubes are the 7.5 W variant (4.0 / 2.0 / 1.5 W, Manual v1.0 p. 11; owner
+//    2026-10-09): 131 + 1084 + 196 = 1410 lm. The rig reads the variant from fixtures.json (variant_in_use).
 //
 // 2. BRIGHTNESS IN HAZE. A beam element dl scatters intensity dI = σs · p(θ) · Φ · dl toward an eye at
 //    scattering angle θ (between the beam's direction and the direction to the eye). Seen from the side
