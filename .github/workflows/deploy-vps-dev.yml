@@ -56,6 +56,7 @@ jobs:
   # note unfolded); bounded to three tries.
   land:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     continue-on-error: true
     permissions:
       contents: write
@@ -136,6 +137,7 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     env:
@@ -149,7 +151,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -212,6 +214,7 @@ jobs:
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         include:
@@ -263,6 +266,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment: dev
     env:
       # Where this tier runs: `vps` (the Docker Compose host over SSH, the default, so this

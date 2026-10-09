@@ -30,10 +30,15 @@ on:
       - 'scripts/pack-runtime.mjs'
   workflow_dispatch:
 
+concurrency:
+  group: install-matrix-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   pack:
     name: pack the runtime
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@v7
@@ -58,6 +63,7 @@ jobs:
     name: ${{ matrix.name }}
     needs: pack
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container: ${{ matrix.image }}
     strategy:
       fail-fast: false
@@ -271,6 +277,7 @@ jobs:
     name: works with the network unplugged
     needs: pack
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
@@ -367,6 +374,7 @@ jobs:
     name: docker mode
     needs: pack
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: are the images public yet?

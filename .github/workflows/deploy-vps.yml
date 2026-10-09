@@ -39,6 +39,7 @@ jobs:
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         include:
@@ -90,6 +91,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     environment: production
     env:
       # Where this tier runs: `vps` (the Docker Compose host over SSH, the default, so this
