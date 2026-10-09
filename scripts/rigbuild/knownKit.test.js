@@ -43,10 +43,10 @@ describe('Known · kit: the Sevan kit and nothing else', () => {
         expect(atmosphere.anisotropyWhy).toBeUndefined()
     })
 
-    it('draws each LaserCube as a laser line from its 6 W diodes, never as a lamp', () => {
+    it('draws each LaserCube as a laser line from its 7.5 W diodes (owner N449), never as a lamp', () => {
         for (const e of byCode('EXT-LC-ULTRA-MK2')) {
             expect(e.components.beam.only).toBe(true)
-            expect(e.components.beam.laser).toMatchObject({ mW: [2700, 1500, 1800], nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1, sceneScale: rig.photometry.sceneScale })
+            expect(e.components.beam.laser).toMatchObject({ mW: [4000, 2000, 1500], nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1, sceneScale: rig.photometry.sceneScale })
         }
     })
 
