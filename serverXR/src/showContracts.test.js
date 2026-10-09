@@ -257,3 +257,36 @@ describe('the show page — choosing', () => {
         expect((await read(MEMBER)).control.choosers).toBe('everyone')
     })
 })
+
+describe('the show page - the favourite scenes (the five buttons in the room)', () => {
+    const fav = (token, favourites) => send('POST', `${SHOW}/favourites`, token, { favourites })
+
+    it('before anyone stars: the first non-laser looks, the same for every viewer', async () => {
+        const body = await read(MEMBER)
+        expect(body.control.favourites).toEqual(['rig-still-smoking', 'rig-black', 'rig-ash'])
+        expect(body.control.favouritesSet).toBe(false)
+    })
+
+    it('only the operator sets them; a member is refused', async () => {
+        const out = await fav(MEMBER, ['rig-black'])
+        expect(out.status).toBe(403)
+        expect((await out.json()).code).toBe('operator-setting')
+        expect((await read(MEMBER)).control.favouritesSet).toBe(false)
+    })
+
+    it('unknown ids, laser scenes, repeats and more than five are refused', async () => {
+        for (const list of [['rig-nope'], ['rig-one-line'], ['rig-black', 'rig-black'], ['a', 'b', 'c', 'd', 'e', 'f'], 'rig-black']) {
+            const out = await fav(ADMIN, list)
+            expect(out.status).toBe(400)
+            expect((await out.json()).code).toBe('bad-favourites')
+        }
+        expect((await read(ADMIN)).control.favouritesSet).toBe(false)
+    })
+
+    it('the operator\'s list is what every viewer reads, in his order, and it outlives the request', async () => {
+        const body = await (await ok(await fav(ADMIN, ['rig-ash', 'rig-black']))).json()
+        expect(body.control.favourites).toEqual(['rig-ash', 'rig-black'])
+        expect((await read(MEMBER)).control).toMatchObject({ favourites: ['rig-ash', 'rig-black'], favouritesSet: true })
+        expect((await (await ok(await fav(ADMIN, []))).json()).control.favourites).toEqual([])
+    })
+})

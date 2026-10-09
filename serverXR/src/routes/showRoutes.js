@@ -11,6 +11,8 @@ const {
   sanitizeControl,
   cooldownLeftMs,
   chooseBlock,
+  favouritesOf,
+  checkFavourites,
   decideChoose,
   liveOf
 } = require('../show/showRemote')
@@ -23,6 +25,7 @@ const {
 //   GET  /api/spaces/:spaceId/show/:projectId          the cues, the live cue, the rules, you
 //   POST /api/spaces/:spaceId/show/:projectId/choose   { index, cueId, name? } → Light goes there
 //   POST /api/spaces/:spaceId/show/:projectId/control  { choosers: team|everyone|operator } — operator only
+//   POST /api/spaces/:spaceId/show/:projectId/favourites { favourites: [lookId, ≤5] } — operator only; the five buttons in the room
 //   POST /api/spaces/:spaceId/show/:projectId/autoplay { autoplay: bool } — operator only; OFF by default, a press turns it off
 //
 // Registered AHEAD of the blanket /api role gates (index.js) on purpose: a visitor must
@@ -171,6 +174,8 @@ function registerShowRoutes(router, {
         choosers: control.choosers,
         cooldownMs: COOLDOWN_MS,
         cooldownLeftMs: cooldownLeftMs(control, t),
+        favourites: favouritesOf(cues, control.favourites),
+        favouritesSet: Array.isArray(control.favourites),
         last: control.last ? { index: control.last.index, name: lastCue?.name || null, by: control.last.by, at: control.last.at } : null
       },
       you: {
@@ -252,6 +257,25 @@ function registerShowRoutes(router, {
     log(`show page: ${ctx.key} — who may choose: ${control.choosers}`)
     res.json({ ok: true, ...(await answer(ctx)) })
   }
+
+  // The five favourite scenes: the operator stars them, everyone's room shows the same five.
+  router.post(`${base}/favourites`, writeLimiter, express.json({ limit: '2kb' }), async (req, res, next) => {
+    try {
+      const ctx = await resolve(req)
+      if (ctx.status) return res.status(ctx.status).json(ctx.body)
+      if (ctx.who !== 'operator') return res.status(403).json({ error: 'Only the operator picks the favourite scenes.', code: 'operator-setting' })
+      await withLock(ctx.key, async () => {
+        const { cues } = await cuesOf(ctx.project)
+        const checked = checkFavourites(req.body?.favourites, cues)
+        if (!checked.ok) return res.status(400).json({ error: checked.error, code: 'bad-favourites' })
+        const control = await controlOf(ctx.key)
+        control.favourites = checked.favourites
+        await saveControl(ctx.key, control)
+        log(`show page: ${ctx.key} - favourites: ${checked.favourites.join(', ') || 'none'}`)
+        res.json({ ok: true, ...(await answer(ctx)) })
+      })
+    } catch (error) { next(error) }
+  })
 
   // "Play in order": the operator's one plain switch. OFF unless he turns it on; a press of
   // any scene turns it off again (lighting/cuerun.js go(index)).

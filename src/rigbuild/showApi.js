@@ -38,6 +38,26 @@ export const setChoosers = async (spaceId, projectId, choosers) => readAnswer(aw
     body: JSON.stringify({ choosers })
 }))
 
+export const setFavourites = async (spaceId, projectId, favourites) => readAnswer(await fetch(`${showUrl(spaceId, projectId)}/favourites`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favourites })
+}))
+
+/** The favourite buttons: the scene button of each favourite look id, in the server's order; ids no longer in the show drop out. */
+export const favouriteButtons = (cues, ids) => {
+    const byLook = new Map(sceneButtons(cues).filter((c) => c.lookId).map((c) => [c.lookId, c]))
+    return (ids || []).map((id) => byLook.get(id)).filter(Boolean)
+}
+
+/** The list after a star is toggled: off if starred, else appended (when full the oldest star leaves). The server checks it again. */
+export const toggledFavourites = (ids, lookId, max = 5) => {
+    const list = Array.isArray(ids) ? ids : []
+    if (list.includes(lookId)) return list.filter((id) => id !== lookId)
+    return [...list, lookId].slice(-max)
+}
+
 export const setAutoplay = async (spaceId, projectId, autoplay) => readAnswer(await fetch(`${showUrl(spaceId, projectId)}/autoplay`, {
     method: 'POST',
     credentials: 'same-origin',

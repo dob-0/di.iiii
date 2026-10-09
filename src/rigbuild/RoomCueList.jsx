@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { buildVanityProjectPath } from '../utils/spaceRouting.js'
-import { ShowError, blockOf, chooseCue, cleanName, isLiveScene, liveOf, sceneButtons, youWords } from './showApi.js'
+import { ShowError, blockOf, chooseCue, cleanName, isLiveScene, liveOf, sceneButtons, setFavourites, toggledFavourites, youWords } from './showApi.js'
+import { FAVOURITES_EVENT } from './RoomFavourites.jsx'
 import { useShowFeed } from './useShowFeed.js'
 
 // THE SCENE BUTTONS INSIDE THE ROOM (simple buttons, 2026-10-09: a press changes the scene and it HOLDS)
@@ -29,6 +30,11 @@ const brickBase = {
     font: 'inherit',
     textAlign: 'left'
 }
+
+const starStyle = (on) => ({
+    position: 'absolute', top: 0, right: 0, width: 44, height: '100%', minHeight: 44, border: 0, borderRadius: 0,
+    background: 'transparent', color: on ? EMBER : 'rgba(255,255,255,0.7)', font: 'inherit', fontSize: '1.15rem', cursor: 'pointer', touchAction: 'manipulation'
+})
 
 function Squares({ swatch = [] }) {
     return (
@@ -82,6 +88,20 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
         }
     }, [spaceId, projectId, sending, take, onChosen])
 
+    // The operator's stars: the five favourite buttons in the room (RoomFavourites.jsx). The server keeps and checks the list.
+    const isOperator = data?.you?.who === 'operator'
+    const favourites = useMemo(() => data?.control?.favourites || [], [data?.control?.favourites])
+    const star = useCallback(async (cue) => {
+        const t0 = Date.now()
+        try {
+            const body = await setFavourites(spaceId, projectId, toggledFavourites(favourites, cue.lookId))
+            take(body, t0, Date.now())
+            window.dispatchEvent(new CustomEvent(FAVOURITES_EVENT, { detail: { body, spaceId, projectId, t0, t1: Date.now() } }))
+        } catch (e) {
+            setNotice(e.message || 'The favourites did not save.')
+        }
+    }, [spaceId, projectId, favourites, take])
+
     const showHref = buildVanityProjectPath(spaceId, projectId).replace(/\/([^/]+)$/, '/show/$1')
     const why = block ? youWords(data, cooldownLeftMs, mine) : ''
     return (
@@ -94,11 +114,11 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
                     const isLive = isLiveScene(cue, live, cues)
                     const disabled = Boolean(cue.laser) || Boolean(block) || sending != null
                     return (
-                        <li key={cue.id}>
+                        <li key={cue.id} style={{ position: 'relative' }}>
                             <button type="button" disabled={disabled} data-cue={cue.index} aria-current={isLive ? 'true' : undefined}
                                 title={cue.laser ? 'laser scene — operator only' : undefined}
                                 onClick={() => choose(cue)}
-                                style={{ ...brickBase, cursor: disabled ? 'default' : 'pointer', borderStyle: cue.laser ? 'dashed' : 'solid', opacity: cue.laser ? 0.6 : 1, background: isLive ? 'rgba(255,59,59,0.16)' : brickBase.background, borderColor: isLive ? EMBER : "rgba(255,255,255,0.14)", boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none', touchAction: 'manipulation' }}>
+                                style={{ ...brickBase, paddingRight: isOperator && !cue.laser ? '2.9rem' : brickBase.padding.split(' ')[1], cursor: disabled ? 'default' : 'pointer', borderStyle: cue.laser ? 'dashed' : 'solid', opacity: cue.laser ? 0.6 : 1, background: isLive ? 'rgba(255,59,59,0.16)' : brickBase.background, borderColor: isLive ? EMBER : "rgba(255,255,255,0.14)", boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none', touchAction: 'manipulation' }}>
                                 <Squares swatch={cue.swatch} />
                                 {/* The name keeps whole words (a narrow phone broke "RETURNS" mid-word); the
                                     operator tag sits under the name, not beside it, so it never squeezes the name. */}
@@ -108,6 +128,12 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
                                 </span>
                                 {isLive ? <span style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: EMBER, flex: '0 0 auto' }}>LIVE</span> : null}
                             </button>
+                            {isOperator && !cue.laser ? (
+                                <button type="button" data-star={cue.lookId} aria-pressed={favourites.includes(cue.lookId)} aria-label={`${favourites.includes(cue.lookId) ? 'Remove' : 'Add'} ${cue.title || cue.name} ${favourites.includes(cue.lookId) ? 'from' : 'to'} the favourites`}
+                                    onClick={() => star(cue)} style={starStyle(favourites.includes(cue.lookId))}>
+                                    {favourites.includes(cue.lookId) ? '★' : '☆'}
+                                </button>
+                            ) : null}
                         </li>
                     )
                 })}

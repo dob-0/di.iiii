@@ -32,6 +32,7 @@ const CHOOSERS = Object.freeze(['team', 'everyone', 'operator'])
 const DEFAULT_CHOOSERS = 'team'
 const DESK_LOOK_PREFIX = 'rig-'
 const NAME_MAX = 24
+const FAVOURITES_MAX = 5
 
 // "Act 1 · still smoking" → act 1, "still smoking". The act is only what the cue's own
 // name says; a cue that names none ("the black") has none.
@@ -177,18 +178,45 @@ const chooserLabel = ({ who, state, typedName }) => {
   return who === 'member' ? 'a member' : 'someone here'
 }
 
-const emptyControl = () => ({ choosers: DEFAULT_CHOOSERS, setAt: null, last: null })
+const emptyControl = () => ({ choosers: DEFAULT_CHOOSERS, setAt: null, last: null, favourites: null })
 
 const sanitizeControl = (raw) => {
   const c = emptyControl()
   if (!raw || typeof raw !== 'object') return c
   c.choosers = CHOOSERS.includes(raw.choosers) ? raw.choosers : DEFAULT_CHOOSERS
   c.setAt = Number.isFinite(raw.setAt) ? raw.setAt : null
+  // null = the operator never starred any; an array (≤5 look ids) = his five.
+  if (Array.isArray(raw.favourites)) c.favourites = [...new Set(raw.favourites.filter((id) => typeof id === 'string' && id).map((id) => id.slice(0, 40)))].slice(0, FAVOURITES_MAX)
   const last = raw.last
   if (last && typeof last === 'object' && Number.isInteger(last.index) && Number.isFinite(last.at)) {
     c.last = { index: last.index, cueId: String(last.cueId || '').slice(0, 60), by: String(last.by || '').slice(0, NAME_MAX + 4), at: last.at }
   }
   return c
+}
+
+/**
+ * The favourite scenes everyone sees: the operator's starred look ids (those still in the show, none a laser
+ * scene), in his order; before he stars any (stored === null) the first five non-laser looks in list order.
+ * A look is one scene however many cues play it, so ids are look ids.
+ */
+const favouritesOf = (cues, stored) => {
+  const firstOfLook = new Map()
+  for (const cue of cues || []) if (cue.lookId && !firstOfLook.has(cue.lookId)) firstOfLook.set(cue.lookId, cue)
+  if (Array.isArray(stored)) return stored.filter((id) => firstOfLook.has(id) && !firstOfLook.get(id).laser).slice(0, FAVOURITES_MAX)
+  return [...firstOfLook.values()].filter((cue) => !cue.laser).slice(0, FAVOURITES_MAX).map((cue) => cue.lookId)
+}
+
+/** The operator's list, checked: { ok, favourites } or { ok: false, error }. Refuses > 5, repeats, unknown looks and laser scenes. */
+const checkFavourites = (ids, cues) => {
+  if (!Array.isArray(ids)) return { ok: false, error: 'favourites is a list of scene ids.' }
+  if (ids.length > FAVOURITES_MAX) return { ok: false, error: `At most ${FAVOURITES_MAX} favourites.` }
+  if (new Set(ids).size !== ids.length) return { ok: false, error: 'A scene is a favourite once.' }
+  const byLook = new Map((cues || []).filter((c) => c.lookId).map((c) => [c.lookId, c]))
+  for (const id of ids) {
+    if (typeof id !== 'string' || !byLook.has(id)) return { ok: false, error: 'That scene is not in this show.' }
+    if (byLook.get(id).laser) return { ok: false, error: 'A laser scene is never a favourite - the lasers are not pressed from here.' }
+  }
+  return { ok: true, favourites: ids }
 }
 
 const cooldownLeftMs = (control, now) => {
@@ -280,6 +308,9 @@ module.exports = {
   chooserLabel,
   emptyControl,
   sanitizeControl,
+  FAVOURITES_MAX,
+  favouritesOf,
+  checkFavourites,
   cooldownLeftMs,
   chooseBlock,
   decideChoose,

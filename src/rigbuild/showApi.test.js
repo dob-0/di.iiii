@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { durationWords, groupByAct, isLiveScene, liveOf, sceneButtons, swatchWords, youWords } from './showApi.js'
+import { favouriteButtons, toggledFavourites, durationWords, groupByAct, isLiveScene, liveOf, sceneButtons, swatchWords, youWords } from './showApi.js'
 import { getShowLocationState, SHOW_SEGMENT } from './showRouting.js'
 
 const cues = [
@@ -74,5 +74,20 @@ describe('sceneButtons / isLiveScene: one button per look (owner 10-09: "so simp
         expect(isLiveScene(black, { index: 2 }, cues)).toBe(false)
         expect(isLiveScene(cues[4], { index: 4 }, cues)).toBe(true)
         expect(isLiveScene(black, null, cues)).toBe(false)
+    })
+})
+
+describe('the favourite buttons', () => {
+    const cs = [
+        { index: 0, id: 'a', lookId: 'rig-a' }, { index: 1, id: 'b', lookId: 'rig-a' }, { index: 2, id: 'c', lookId: 'rig-c' }
+    ]
+    it('one button per favourite look, in the server\'s order; a look gone from the show drops out', () => {
+        expect(favouriteButtons(cs, ['rig-c', 'rig-gone', 'rig-a']).map((c) => c.id)).toEqual(['c', 'a'])
+        expect(favouriteButtons(cs, undefined)).toEqual([])
+    })
+    it('a star toggles: off if on, else appended; at five the oldest leaves', () => {
+        expect(toggledFavourites(['x', 'y'], 'x')).toEqual(['y'])
+        expect(toggledFavourites(['x'], 'y')).toEqual(['x', 'y'])
+        expect(toggledFavourites(['1', '2', '3', '4', '5'], '6')).toEqual(['2', '3', '4', '5', '6'])
     })
 })

@@ -16,6 +16,7 @@ import { deskCues, cueClockWords } from './cueRun.js'
 // While the clock drives, a small SHOW chip says which look is on and, opened, lists
 // the looks of the loop — the one piece of chrome, small, the room stays the picture.
 // The cue list is only fetched when a chip is opened (RoomCueList.jsx).
+const RoomFavourites = lazyWithReload(() => import('./RoomFavourites.jsx'), 'room-favourites')
 const RoomCueList = lazyWithReload(() => import('./RoomCueList.jsx'), 'room-cue-list')
 
 export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true, spaceId = '', projectId = '' }) {
@@ -28,9 +29,12 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
     }, [entities, document, onEntities])
     useEffect(() => () => onEntities(null), [onEntities])
     if (!showChip) return null
-    if (look.driver === 'desk') return <DeskShowChip projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />
+    // The five favourite scenes, always on screen (RoomFavourites.jsx) - wherever a desk or the clock drives the room.
+    const row = spaceId && projectId && (look.driver === 'desk' || (look.driver === 'clock' && look.clock))
+        ? <Suspense fallback={null}><RoomFavourites spaceId={spaceId} projectId={projectId} /></Suspense> : null
+    if (look.driver === 'desk') return <><DeskShowChip projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />{row}</>
     if (look.driver !== 'clock' || !look.clock) return null
-    return <ShowChip show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} />
+    return <><ShowChip show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} />{row}</>
 }
 
 /**
