@@ -421,7 +421,7 @@ def contact_sheet(out):
     for r, (lay, st) in enumerate(rows):
         y = 40 + r * (H + lab + pad)
         d.text((10, y + lab + H // 2 - 14), LAYOUTS[lay][0], fill=(255, 176, 138))
-        d.text((10, y + lab + H // 2 + 2), STATES[st][0], fill=(232, 228, 220))
+        d.text((10, y + lab + H // 2 + 2), STATES[st][0].replace('\u2014', '-'), fill=(232, 228, 220))
         for c, (look, view) in enumerate(ORDER):
             f = os.path.join(out, 'frames', '%s-%s-%s-%s.png' % (lay, st, look, view))
             if os.path.exists(f):
