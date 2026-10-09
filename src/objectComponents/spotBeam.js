@@ -116,34 +116,59 @@ export const beamIsVisible = (beam) => beam?.visible === true
 export const beamCastsLight = (beam) => !(beamIsVisible(beam) && beam?.only === true)
 
 /**
- * The real light of a RIG lamp, fitted to its datasheet beam (MOXIR render audit A,
- * 2026-10-01). A rig lamp's `angle` is half its BEAM angle — the 50 % point — but three.js
- * reads a SpotLight's `angle` as the 0 % cutoff, so the pool on the floor was narrower than
- * the beam that lands on it and a wash put ~2.4× too little light on the surfaces. Here the
- * cutoff and penumbra are solved so three's falloff crosses 50 % exactly at the beam
- * half-angle; the on-axis candela (the light's intensity) is unchanged.
- *
- * three's falloff is smoothstep(cos cutoff, cos(cutoff·(1 − penumbra)), cos θ). The shape is
- * ASSUMED from the lamp's own penumbra (the rig writes 0.5 for a PAR, 0.1 for a beam):
- *   a wash (penumbra ≥ 0.3): the softest three has, penumbra 1 — its 10 % edge sits ≈1.27×
- *     the 50 % point (a real wash is nearer 1.8; three cannot go softer);
- *   a beam: penumbra 0.3 — a hard edge, the 10 % point ≈1.1× the 50 %.
- * No datasheet in the rig gives a field angle; when one does, fit to it instead.
- * Only for lamps that carry `components.fixture`: an authored spot's angle IS its cutoff.
+ * THE FIELD ANGLE OF A RIG LAMP. A photometric beam angle is the 50 % point, the field angle the 10 %
+ * point (ANSI E1.9, CIE). Neither UPlight unit publishes a field angle (fixtures.json field_deg: UNKNOWN),
+ * so the field/beam RATIO is the class equivalent's, read from its maker's goniophotometer report:
+ *   a wash (penumbra ≥ WASH_PENUMBRA_FROM): Chauvet COLORdash Par H18X, white: 23.7° / 38.4° → 1.62
+ *     (es.chauvetprofessional.com …/COLORdash-Par-H18X_Photometrics-Report.pdf, read 2026-10-09)
+ *   a beam: Elation Proteus Excalibur: 0.8° / 1.6° (cutoff 2° at 2.5 %) → 2.0
+ *     (goknight.com …/PROTEUS EXCALIBUR Photometrics Report.pdf, read 2026-10-09)
+ * EQUIVALENT, not the units' own; replace with the measured ratio when there is one.
  */
 export const WASH_PENUMBRA_FROM = 0.3
-export const spotLightCone = ({ angle, penumbra } = {}) => {
-    const half = Math.min(Math.PI / 2 - 1e-3, Math.max(1e-4, Number(angle) || 0.52))
-    const p = (Number(penumbra) || 0) >= WASH_PENUMBRA_FROM ? 1 : 0.3
-    const target = Math.cos(half)
-    // the falloff's 50 % point, in cos space, is the midpoint of its two edges
-    const mid = (a) => (Math.cos(a) + Math.cos(a * (1 - p))) / 2
-    let lo = half
-    let hi = Math.PI / 2
-    for (let i = 0; i < 60; i += 1) {
-        const a = (lo + hi) / 2
-        if (mid(a) > target) lo = a
-        else hi = a
+export const WASH_FIELD_RATIO = 38.4 / 23.7
+export const BEAM_FIELD_RATIO = 1.6 / 0.8
+export const fieldRatioOf = (penumbra) => ((Number(penumbra) || 0) >= WASH_PENUMBRA_FROM ? WASH_FIELD_RATIO : BEAM_FIELD_RATIO)
+
+/**
+ * The beam profile I(θ)/I(0) = exp(−ln2·(θ/β)^p) (beamAir.js) through the 50 % point at β and the 10 %
+ * point at ratio·β: p = ln(ln10 / ln2) / ln(ratio). (Checked against the Excalibur report: p = 1.73
+ * puts its 2.5 % point at 2.6 β; the report says 2.5 β.)
+ */
+export const profileExponentForRatio = (ratio) => Math.log(Math.log(10) / Math.LN2) / Math.log(Math.max(Number(ratio) || 1.62, 1.01))
+
+/** The `edge` the beam-in-air shader takes for an exponent p (beamAir.js beamProfileExponent: p = 2 + 6·(1 − edge)). */
+export const edgeForExponent = (p) => 1 - (p - 2) / 6
+
+/**
+ * The real light of a RIG lamp (MOXIR simulation audit §2.2, 2026-10-09). A rig lamp's `angle` is half
+ * its BEAM angle — the 50 % point. three.js's falloff is smoothstep(cos cutoff, cos(cutoff·(1 − penumbra)),
+ * cos θ): even at its softest (penumbra 1) its 10 % point sits 1.27× the 50 % point, short of the 1.62
+ * (wash) and 2.0 (beam) the equivalents measure. A WebGL light cannot take a candela curve without a
+ * shader of its own per lamp (a ceiling of three r186's WebGL lights; WebGPU has IESSpotLight), so the
+ * fit is the one that keeps the light's FLUX: penumbra 1, and the cutoff C for which three's cone
+ * carries the same lumens as the profile above at the same peak candela. For a smoothstep in cos θ
+ * the flux is π·I·(1 − cos C) (its integral over [cos C, 1] is (1 − cos C)/2), so
+ *     1 − cos C = 2 · ∫₀^{π/2} exp(−ln2·(θ/β)^p) · sin θ dθ.
+ * What this keeps: the peak (cd) and the lumens in the beam, so the light ON the surfaces in total.
+ * What it does not: the exact 50 % and 10 % points of the pool (fieldFitError says by how much).
+ * Only for lamps that carry `components.fixture`: an authored spot's angle IS its cutoff.
+ */
+const profileFlux = (beta, p) => {
+    // ∫ exp(−ln2·(θ/β)^p) sin θ dθ, θ to where the profile is 1e-6, midpoint rule
+    const top = Math.min(Math.PI / 2, beta * (Math.log(1e6) / Math.LN2) ** (1 / p))
+    const n = 2000
+    let sum = 0
+    for (let i = 0; i < n; i += 1) {
+        const t = ((i + 0.5) / n) * top
+        sum += Math.exp(-Math.LN2 * (t / beta) ** p) * Math.sin(t)
     }
-    return { angle: (lo + hi) / 2, penumbra: p }
+    return (sum * top) / n
+}
+export const spotLightCone = ({ angle, penumbra, fieldRatio } = {}) => {
+    const half = Math.min(Math.PI / 2 - 1e-3, Math.max(1e-4, Number(angle) || 0.52))
+    const ratio = Number(fieldRatio) > 1 ? Number(fieldRatio) : fieldRatioOf(penumbra)
+    const p = profileExponentForRatio(ratio)
+    const oneMinusCos = Math.min(1, 2 * profileFlux(half, p))
+    return { angle: Math.acos(1 - oneMinusCos), penumbra: 1 }
 }
