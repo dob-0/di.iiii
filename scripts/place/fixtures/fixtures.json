@@ -167,6 +167,11 @@
         "LASEROS-MK2-GUIDE": {
             "url": "https://www.laseros.com/manual-mk2.pdf",
             "what": "LaserCube Ultra MK2 Guide v1.2 (103 pp), pp. 11-12: the 10 W and 6.0 W variants per diode, 4 mm beam, 1 mrad (definition — 1/e or 1/e2, full or half angle — not stated). The local v1.0 manual (89 pp) has neither. Read 2026-10-09"
+        },
+        "LASEROS-MK2-MANUAL-V1": {
+            "file": "/mnt/data/backups/lasercube-mk2-sd-2026-09-10/ULTRA_MK2 Full Manual v1-0.pdf",
+            "sha256_16": "055b6761e13250f1",
+            "what": "LaserCube Ultra MK2 Full Manual v1.0 (89 pp), from the SD card of the owner's own cubes (backup 2026-09-10), pp. 11-12: the '7.5 Ultra Mk2' (7500 mW: blue 455 nm 4000, green 525 nm 2000, red 638 nm 1500 mW) and the 2.5 W variant. No beam diameter or divergence line. Read with pdftotext 2026-10-09"
         }
     },
     "kinds": {
@@ -1255,16 +1260,32 @@
                             "525nm": 2800,
                             "638nm": 2800
                         },
+                        "7.5W": {
+                            "455nm": 4000,
+                            "525nm": 2000,
+                            "638nm": 1500
+                        },
                         "6W": {
                             "455nm": 2700,
                             "525nm": 1500,
                             "638nm": 1800
+                        },
+                        "2.5W": {
+                            "455nm": 1300,
+                            "525nm": 800,
+                            "638nm": 400
                         }
                     },
-                    "note": "both are sold as 'Ultra MK2'; the owner's cubes are taken as 10 W — CONFIRM on the cube's label (the 6 W unit has ~half the green)",
+                    "note": "four variants are sold as 'Ultra MK2': 10 W and 6.0 W (Guide v1.2 p. 11-12), 7.5 W and 2.5 W (Manual v1.0 pp. 11-12, the owner's own SD card). The owner's cubes are 7.5 W (owner 2026-10-09 18:2x, N449)",
                     "src": "LASEROS-MK2",
                     "basis": "EXACT",
-                    "read": "ULTRA MK2 Guide spec tables, read 2026-10-08 with pdftotext"
+                    "read": "ULTRA MK2 Guide spec tables, read 2026-10-08 with pdftotext",
+                    "src_by_variant": {
+                        "10W": "LASEROS-MK2-GUIDE",
+                        "6W": "LASEROS-MK2-GUIDE",
+                        "7.5W": "LASEROS-MK2-MANUAL-V1",
+                        "2.5W": "LASEROS-MK2-MANUAL-V1"
+                    }
                 },
                 "control": {
                     "value": "Ethernet RJ45 100 Mbps (network stream, LaserOS protocol), WiFi 2.4 GHz, DMX512 in/out, Art-Net, ILDA, SD card playlists, Cube-Link sync",
@@ -1281,15 +1302,16 @@
                 },
                 "variant_in_use": {
                     "value": {
-                        "name": "6.0 W",
-                        "455nm": 2700,
-                        "525nm": 1500,
-                        "638nm": 1800
+                        "name": "7.5 W",
+                        "455nm": 4000,
+                        "525nm": 2000,
+                        "638nm": 1500
                     },
-                    "src": "LASEROS-MK2-GUIDE",
+                    "src": "LASEROS-MK2-MANUAL-V1",
                     "basis": "EXACT",
                     "accessed": "2026-10-09",
-                    "note": "the maker's 6.0 W variant per diode (Guide v1.2 p. 12; the web page's 2800 mW blue is overruled by the guide). The owner's cubes are taken as 6 W (owner 2026-10-08 night, 'for brightness AND safety', moxir_v1_1.py) — CONFIRM on each cube's label"
+                    "owner": "2026-10-09 18:2x, his words: \"laser cube m2 7.5w\" / \"laercube mk2 7.5w\" (ledger N449). Replaces the 6.0 W taken on 10-08 night",
+                    "note": "the maker's 7.5 W variant per diode (Manual v1.0 p. 11, '7.5 Ultra Mk2', on the SD card of the owner's cubes). 1410 lm at full white (B 131 + G 1084 + R 196, Km·V(λ)·P; the 6 W was 1136). The 4 mm / 1 mrad optics are printed only for the 6 W and 10 W (Guide v1.2): taken as the same for the 7.5 W (ASSUMED, same housing and optics). Read each cube's label on site"
                 },
                 "beam_definition": {
                     "value": null,
