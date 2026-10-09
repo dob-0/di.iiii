@@ -44,6 +44,7 @@ const { getProjectPaths } = require('./projectStore')
 const { countOp, emptyCounts, describeCounts } = require('./spaceHistory')
 const { actorFromAuthState, publicActor } = require('./opActor')
 const { loadSharedModule } = require('./sharedRuntime')
+const { findNonRegularMember, findNonRegularEntry, isInsideRoot, isRegularFileInside } = require('./bundleMembers')
 
 // What a replace removes (shared/documentLoss.cjs — the same count the CLI
 // tools print). 2026-09-18: a whole-document carry removed 76 slides from
@@ -66,8 +67,6 @@ const sha256File = (file) => new Promise((resolve, reject) => {
   fs.createReadStream(file).on('error', reject).on('data', (c) => hash.update(c)).on('end', () => resolve(hash.digest('hex')))
 })
 
-// Regular files only. A tar can carry a symlink named like a document or a
-// blob; following it would read (or later serve) something outside the bundle.
 // A content address is a promise about the bytes behind it. Every other way a
 // file enters a store named by sha256 checks that promise (the upload route,
 // the follow carry and its hash-pinned PUT). A proposal is applied with
@@ -82,20 +81,28 @@ const assertNamedByItsBytes = async (file, id) => {
   }
 }
 
-const isRegularFile = async (file) => {
-  try { return (await fsp.lstat(file)).isFile() } catch { return false }
-}
-const readJsonSafe = async (file) => {
-  if (!(await isRegularFile(file))) return null
+// Every read takes the directory the file was unpacked into (`root`) and opens
+// only regular files whose real path lies inside it (./bundleMembers.js).
+const readJsonSafe = async (root, file) => {
+  if (!(await isRegularFileInside(root, file))) return null
   try { return JSON.parse(await fsp.readFile(file, 'utf8')) } catch { return null }
 }
-const listDir = async (dir) => {
+const listDir = async (root, dir) => {
+  if (!(await isInsideRoot(root, dir))) return []
   try { return await fsp.readdir(dir) } catch { return [] }
 }
 
+// The space's own files on this server (not the unpacked file): read as before.
+const readOwnJson = async (file) => {
+  try {
+    if (!(await fsp.lstat(file)).isFile()) return null
+    return JSON.parse(await fsp.readFile(file, 'utf8'))
+  } catch { return null }
+}
+
 // ops.jsonl rows are { version, data, created_at } with `data` the op as JSON.
-const readJsonl = async (file) => {
-  if (!(await isRegularFile(file))) return []
+const readJsonl = async (root, file) => {
+  if (!(await isRegularFileInside(root, file))) return []
   return (await fsp.readFile(file, 'utf8')).split('\n').filter(Boolean)
     .map((line) => { try { return JSON.parse(line) } catch { return null } }).filter(Boolean)
 }
@@ -127,8 +134,10 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
   const cleanup = () => fsp.rm(dir, { recursive: true, force: true }).catch(() => {})
   try {
     let listing
+    let verbose
     try {
       listing = (await execFileAsync('tar', ['-tzf', file], { maxBuffer: 64 * 1024 * 1024 })).stdout
+      verbose = (await execFileAsync('tar', ['-tvzf', file], { maxBuffer: 64 * 1024 * 1024 })).stdout
     } catch {
       throw proposalError(400, 'That is not a di.iiii file (it could not be opened as one).')
     }
@@ -136,9 +145,15 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
     // is how a tar writes outside the directory it is unpacked into.
     const unsafe = listing.split('\n').filter(Boolean).find((name) => name.startsWith('/') || name.split(/[\\/]/).includes('..'))
     if (unsafe) throw proposalError(400, 'That file names paths outside itself and was refused.')
+    // Regular files and directories only, by the archive's own listing first
+    // and by lstat over what landed second (same rule as space-bundle import).
+    const oddMember = findNonRegularMember(verbose)
+    if (oddMember) throw proposalError(400, `That file holds a ${oddMember.kind}, not only files and folders, and was refused.`)
     await execFileAsync('tar', ['-xzf', file, '-C', dir])
+    const oddEntry = await findNonRegularEntry(dir)
+    if (oddEntry) throw proposalError(400, `That file holds a ${oddEntry.kind} (${oddEntry.path}), not only files and folders, and was refused.`)
 
-    const manifest = await readJsonSafe(path.join(dir, 'bundle.json'))
+    const manifest = await readJsonSafe(dir, path.join(dir, 'bundle.json'))
     if (!manifest) throw proposalError(400, 'That is not a di.iiii file (bundle.json is missing).')
     if (manifest.format !== BUNDLE_FORMAT) throw proposalError(400, `Unknown file format "${manifest.format}".`)
     if (Number(manifest.version) > BUNDLE_VERSION) throw proposalError(400, `This file is format ${manifest.version}; this di.iiii reads ${BUNDLE_VERSION}. Update first.`)
@@ -146,30 +161,30 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
       throw proposalError(400, `This file was written by a newer di.iiii${manifest.writtenBy ? ` (${manifest.writtenBy})` : ''}. Update first.`)
     }
 
-    const space = (await readJsonSafe(path.join(dir, 'space', 'meta.json'))) || {}
-    const scene = await readJsonSafe(path.join(dir, 'space', 'scene.json'))
-    const sceneOpIds = opIdsOf(await readJsonl(path.join(dir, 'space', 'ops.jsonl')))
+    const space = (await readJsonSafe(dir, path.join(dir, 'space', 'meta.json'))) || {}
+    const scene = await readJsonSafe(dir, path.join(dir, 'space', 'scene.json'))
+    const sceneOpIds = opIdsOf(await readJsonl(dir, path.join(dir, 'space', 'ops.jsonl')))
     const projects = []
-    for (const pid of (await listDir(path.join(dir, 'projects'))).sort()) {
+    for (const pid of (await listDir(dir, path.join(dir, 'projects'))).sort()) {
       if (!PROJECT_ID_RE.test(pid)) continue
       const pdir = path.join(dir, 'projects', pid)
-      const meta = (await readJsonSafe(path.join(pdir, 'meta.json'))) || {}
-      const document = await readJsonSafe(path.join(pdir, 'document.json'))
+      const meta = (await readJsonSafe(dir, path.join(pdir, 'meta.json'))) || {}
+      const document = await readJsonSafe(dir, path.join(pdir, 'document.json'))
       if (!document || typeof document !== 'object') continue
       const assets = {}
       const assetFiles = []
-      for (const name of await listDir(path.join(pdir, 'assets'))) {
+      for (const name of await listDir(dir, path.join(pdir, 'assets'))) {
         const full = path.join(pdir, 'assets', name)
-        if (!(await isRegularFile(full))) continue
+        if (!(await isRegularFileInside(dir, full))) continue
         if (name.endsWith('.json') && isValidAssetId(name.slice(0, -5))) {
-          const m = await readJsonSafe(full)
+          const m = await readJsonSafe(dir, full)
           if (m && typeof m === 'object') assets[name.slice(0, -5)] = m
         } else if (isValidAssetId(name)) {
           await assertNamedByItsBytes(full, name)
           assetFiles.push(name)
         }
       }
-      const ops = await readJsonl(path.join(pdir, 'ops.jsonl'))
+      const ops = await readJsonl(dir, path.join(pdir, 'ops.jsonl'))
       projects.push({
         id: pid,
         meta: { title: typeof meta.title === 'string' ? meta.title : null, source: meta.source || null, slug: meta.slug || null },
@@ -183,17 +198,17 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
     }
 
     const blobs = []
-    for (const name of await listDir(path.join(dir, 'blobs'))) {
+    for (const name of await listDir(dir, path.join(dir, 'blobs'))) {
       const full = path.join(dir, 'blobs', name)
-      if (!isValidAssetId(name) || !(await isRegularFile(full))) continue
+      if (!isValidAssetId(name) || !(await isRegularFileInside(dir, full))) continue
       await assertNamedByItsBytes(full, name)
       blobs.push(name)
     }
     const spaceAssets = []
-    for (const name of await listDir(path.join(dir, 'space', 'assets'))) {
+    for (const name of await listDir(dir, path.join(dir, 'space', 'assets'))) {
       const id = name.endsWith('.json') ? name.slice(0, -5) : name
       const full = path.join(dir, 'space', 'assets', name)
-      if (!isValidAssetId(id) || !(await isRegularFile(full))) continue
+      if (!isValidAssetId(id) || !(await isRegularFileInside(dir, full))) continue
       if (!name.endsWith('.json')) await assertNamedByItsBytes(full, id)
       spaceAssets.push(name)
     }
@@ -272,7 +287,7 @@ function createContentProposals({
       let currentVersion = 0
       if (found) {
         const { documentPath } = getProjectPaths(spacesDir, spaceId, entry.id)
-        current = await readJsonSafe(documentPath)
+        current = await readOwnJson(documentPath)
         currentVersion = Number(found.meta?.documentVersion) || 0
       }
       const status = !found ? 'added' : (JSON.stringify(current) === JSON.stringify(document) ? 'unchanged' : 'changed')
@@ -309,7 +324,7 @@ function createContentProposals({
       .map((p) => ({ id: p.id, title: p.title || p.id }))
 
     const { scenePath } = getSpacePaths(spaceId)
-    const currentScene = await readJsonSafe(scenePath)
+    const currentScene = await readOwnJson(scenePath)
     const nextScene = bundle.scene ? remapSpaceUrls(bundle.scene, sourceId, spaceId) : null
     const latestSceneOp = nextScene ? latestOpId('space', spaceId) : null
     const sceneChanged = Boolean(nextScene) && JSON.stringify(currentScene) !== JSON.stringify(nextScene)
@@ -403,8 +418,8 @@ function createContentProposals({
 
   // ── applying ──────────────────────────────────────────────────────────────
 
-  const copyIfMissing = async (from, to) => {
-    if (fs.existsSync(to) || !(await isRegularFile(from))) return false
+  const copyIfMissing = async (root, from, to) => {
+    if (fs.existsSync(to) || !(await isRegularFileInside(root, from))) return false
     await fsp.mkdir(path.dirname(to), { recursive: true })
     await fsp.copyFile(from, to)
     return true
@@ -429,14 +444,14 @@ function createContentProposals({
     // same bytes, so nothing existing is ever overwritten — and nothing is
     // removed, which is what keeps the restore point's images alive.
     for (const id of bundle.blobs) {
-      await copyIfMissing(path.join(bundle.dir, 'blobs', id), path.join(spacesDir, spaceId, 'blobs', id))
+      await copyIfMissing(bundle.dir, path.join(bundle.dir, 'blobs', id), path.join(spacesDir, spaceId, 'blobs', id))
     }
     for (const name of bundle.spaceAssets) {
-      await copyIfMissing(path.join(bundle.dir, 'space', 'assets', name), path.join(getSpacePaths(spaceId).assetsDir, name))
+      await copyIfMissing(bundle.dir, path.join(bundle.dir, 'space', 'assets', name), path.join(getSpacePaths(spaceId).assetsDir, name))
     }
     for (const entry of bundle.projects) {
       for (const id of entry.assetFiles) {
-        await copyIfMissing(path.join(bundle.dir, 'projects', entry.id, 'assets', id), path.join(getProjectPaths(spacesDir, spaceId, entry.id).assetsDir, id))
+        await copyIfMissing(bundle.dir, path.join(bundle.dir, 'projects', entry.id, 'assets', id), path.join(getProjectPaths(spacesDir, spaceId, entry.id).assetsDir, id))
       }
     }
 
@@ -485,7 +500,7 @@ function createContentProposals({
   // their expiry. Best effort; a stray file costs disk, not correctness.
   const sweepStored = async () => {
     const cutoff = now() - 2 * ttlMs()
-    for (const name of await listDir(proposalsDir)) {
+    for (const name of await fsp.readdir(proposalsDir).catch(() => [])) {
       const full = path.join(proposalsDir, name)
       try { if ((await fsp.stat(full)).mtimeMs < cutoff) await fsp.rm(full, { force: true }) } catch { /* gone */ }
     }

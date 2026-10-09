@@ -119,6 +119,7 @@ describe('space-bundle runs from the server image\'s layout', () => {
         fs.mkdirSync(path.join(app, 'src'), { recursive: true })
         fs.mkdirSync(path.join(app, 'scripts'), { recursive: true })
         fs.copyFileSync(path.join(ROOT_DIR, 'serverXR', 'src', 'db.js'), path.join(app, 'src', 'db.js'))
+        fs.copyFileSync(path.join(ROOT_DIR, 'serverXR', 'src', 'bundleMembers.js'), path.join(app, 'src', 'bundleMembers.js'))
         fs.copyFileSync(SCRIPT, path.join(app, 'scripts', 'space-bundle.mjs'))
         // What the Dockerfile writes: deploy facts, no schemaVersion -- the tool
         // has to read that out of ./src/db.js.

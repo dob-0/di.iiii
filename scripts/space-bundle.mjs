@@ -259,27 +259,19 @@ const describeLightShow = (show) => {
 // listing before anything is written (a link, hardlink, device or fifo member
 // is named in the mode column, GNU tar and bsdtar alike), and by lstat over
 // everything extracted, which does not depend on how a tar prints.
+// The rule and its two checks live in serverXR/src/bundleMembers.js, shared with
+// the server's proposal reader, and are loaded from the server's source the way
+// db.js is (SERVER_SRC covers a checkout, an install and the server image).
+const bundleMembers = () => require(path.join(SERVER_SRC, 'bundleMembers.js'))
+
 const refuseLinkMembers = (listing) => {
-    for (const line of String(listing).split('\n')) {
-        if (!line.trim()) continue
-        const kind = line[0]
-        if (kind !== '-' && kind !== 'd') die(`refusing bundle: it holds a ${kind === 'l' ? 'symbolic link' : kind === 'h' ? 'hard link' : 'special file'} (${line.trim().split(/\s+/).slice(-3).join(' ')})`)
-        if (/ link to /.test(line)) die(`refusing bundle: it holds a hard link (${line.trim()})`)
-    }
+    const odd = bundleMembers().findNonRegularMember(listing)
+    if (odd) die(`refusing bundle: it holds a ${odd.kind} (${odd.line.split(/\s+/).slice(-3).join(' ')})`)
 }
 
 const refuseNonRegularEntries = async (root) => {
-    const pending = [root]
-    while (pending.length) {
-        const dir = pending.pop()
-        for (const entry of await fsp.readdir(dir)) {
-            const full = path.join(dir, entry)
-            const st = await fsp.lstat(full)
-            if (st.isDirectory()) { pending.push(full); continue }
-            if (!st.isFile()) die(`refusing bundle: ${path.relative(root, full)} is not a regular file`)
-            if (st.nlink > 1) die(`refusing bundle: ${path.relative(root, full)} is a hard link`)
-        }
-    }
+    const odd = await bundleMembers().findNonRegularEntry(root)
+    if (odd) die(`refusing bundle: ${odd.path} is ${odd.kind === 'hard link' ? 'a hard link' : 'not a regular file'}`)
 }
 
 const tarArchiveArgs = (archivePath) => ({
