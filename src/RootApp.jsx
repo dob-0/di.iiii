@@ -16,6 +16,7 @@ import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import ModeMark from './components/ModeMark.jsx'
 import TreeChip from './components/TreeChip.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
+import AppErrorBoundary, { RouteErrorBoundary } from './components/AppErrorBoundary.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useDocumentTitle from './hooks/useDocumentTitle.js'
@@ -926,11 +927,15 @@ function AppRouter() {
 
 export default function RootApp() {
     return (
-        <BrowserRouter>
-            <AuthReturnNotice />
-            <ModeMark />
-            <TreeChip />
-            <AppRouter />
-        </BrowserRouter>
+        <AppErrorBoundary name="AppErrorBoundary">
+            <BrowserRouter>
+                <AuthReturnNotice />
+                <ModeMark />
+                <TreeChip />
+                <RouteErrorBoundary>
+                    <AppRouter />
+                </RouteErrorBoundary>
+            </BrowserRouter>
+        </AppErrorBoundary>
     )
 }
