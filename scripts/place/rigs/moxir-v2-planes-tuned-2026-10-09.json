@@ -44,7 +44,7 @@
   {
    "id": "rig-beam-planes-01",
    "type": "up-b380f",
-   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 330/50 deg (az/el), pen 1.6 m",
    "part": "plane 1 (behind the DJ)",
    "layer": "beams",
    "status": "used",
@@ -55,14 +55,14 @@
     -5.0
    ],
    "r": [
-    -2.958681,
+    -2.521601,
     0.0,
-    -0.750599
+    -0.32366
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "sky_clear_pct": 20.2,
-   "throw_m": 17.864,
+   "throw_m": 16.653,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -77,7 +77,7 @@
   {
    "id": "rig-beam-planes-02",
    "type": "up-b380f",
-   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 333/62 deg (az/el), pen 1.0 m",
    "part": "plane 1 (behind the DJ)",
    "layer": "beams",
    "status": "used",
@@ -88,14 +88,14 @@
     -5.0
    ],
    "r": [
-    -2.954106,
+    -2.707299,
     0.0,
-    -0.47321
+    -0.211196
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "sky_clear_pct": 22.8,
-   "throw_m": 14.692,
+   "throw_m": 14.487,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -110,7 +110,7 @@
   {
    "id": "rig-beam-planes-03",
    "type": "up-b380f",
-   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 330/72 deg (az/el), pen 0.7 m",
    "part": "plane 1 (behind the DJ)",
    "layer": "beams",
    "status": "used",
@@ -121,9 +121,9 @@
     -5.0
    ],
    "r": [
-    -3.020215,
+    -2.867297,
     0.0,
-    -0.29106
+    -0.15513
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
@@ -143,7 +143,7 @@
   {
    "id": "rig-beam-planes-04",
    "type": "up-b380f",
-   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 20/72 deg (az/el), pen 0.7 m",
    "part": "plane 1 (behind the DJ)",
    "layer": "beams",
    "status": "used",
@@ -154,14 +154,14 @@
     -5.0
    ],
    "r": [
-    3.009868,
+    -2.845258,
     0.0,
-    0.285907
+    0.105888
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "sky_clear_pct": 23.7,
-   "throw_m": 16.718,
+   "throw_m": 13.511,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -176,7 +176,7 @@
   {
    "id": "rig-beam-planes-05",
    "type": "up-b380f",
-   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 25/58 deg (az/el), pen 1.2 m",
    "part": "plane 1 (behind the DJ)",
    "layer": "beams",
    "status": "used",
@@ -187,15 +187,15 @@
     -5.0
    ],
    "r": [
-    2.99938,
+    -2.626303,
     0.0,
-    0.460049
+    0.225869
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "sky_clear_pct": 24.1,
-   "throw_m": 17.925,
-   "ends_on": "roof deck",
+   "throw_m": 8.372,
+   "ends_on": "crane z 0.15 girder",
    "dmx": {
     "universe": 1,
     "address": 65,
@@ -209,7 +209,7 @@
   {
    "id": "rig-beam-planes-06",
    "type": "up-b380f",
-   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 32/49 deg (az/el), pen 1.7 m",
    "part": "plane 1 (behind the DJ)",
    "layer": "beams",
    "status": "used",
@@ -220,14 +220,14 @@
     -5.0
    ],
    "r": [
-    2.927936,
+    -2.506336,
     0.0,
-    0.743851
+    0.355072
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "sky_clear_pct": 24.1,
-   "throw_m": 17.864,
+   "throw_m": 17.026,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -2951,7 +2951,38 @@
    "1": 505,
    "2": 184
   },
-  "plane1_glow": null
+  "plane1_glow": {
+   "t10": {
+    "floor": {
+     "G": 0.03213,
+     "G_near_field": 0.03
+    },
+    "entry": {
+     "G": 0.02175,
+     "G_near_field": 0.019
+    }
+   },
+   "t40": {
+    "floor": {
+     "G": 0.03316,
+     "G_near_field": 0.02666
+    },
+    "entry": {
+     "G": 0.02075,
+     "G_near_field": 0.01392
+    }
+   },
+   "dry": {
+    "floor": {
+     "G": 0.02717,
+     "G_near_field": 0.0269
+    },
+    "entry": {
+     "G": 0.0188,
+     "G_near_field": 0.01842
+    }
+   }
+  }
  },
  "atmosphere": {
   "anisotropy": 0.74,
@@ -2994,6 +3025,147 @@
    "change": "smoke machine (-8.0, 1.0, -3.0) -> (-4.75, 1.0, -6.2), blowing +z; plane-1 heads 1.5 m -> 1.0 m pitch, centred on it (x -7.25 ... -2.25, z -5 kept)",
    "why": "one machine thickens the air only near itself (near field ~0.26 /m vs the hall 0.0024-0.0086 /m). Before, 2 of the 6 plane-1 heads stood inside it; now all 6 bases are [2.8, 1.96, 1.36, 1.36, 1.96, 2.8] m from the nozzle (the field fades from 2.4 to 3.6 m).",
    "kind": "placement (data)"
+  },
+  {
+   "id": "T3",
+   "title": "Plane 1 aimed through the plume, leaning toward the floor",
+   "change": "the six plane-1 aims re-searched inside the fan's sectors (left heads lean -x, right +x, now also toward +z), scored by the metric G",
+   "why": "haze scatters forward (g 0.74): a beam seen at 90 deg sends ~1/14 of what it sends at 30 deg. Leaning the fan toward the audience lowers the angle the floor sees it at; the search keeps every v2 safety rule (no ray into the crowd or glass, >= 3 m over every standing level, the whole beam checked).",
+   "aims": [
+    {
+     "id": "rig-beam-planes-01",
+     "from_dir": [
+      -0.682,
+      0.719,
+      0.133
+     ],
+     "to_dir": [
+      -0.318,
+      0.772,
+      0.551
+     ],
+     "az_el": [
+      330.0,
+      50.5
+     ],
+     "throw_m": 16.653,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": 6.156,
+     "rays_into_audience": 0,
+     "pen_m": 1.617
+    },
+    {
+     "id": "rig-beam-planes-02",
+     "from_dir": [
+      -0.456,
+      0.875,
+      0.166
+     ],
+     "to_dir": [
+      -0.21,
+      0.887,
+      0.411
+     ],
+     "az_el": [
+      333.0,
+      62.5
+     ],
+     "throw_m": 14.487,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": 8.979,
+     "rays_into_audience": 0,
+     "pen_m": 1.027
+    },
+    {
+     "id": "rig-beam-planes-03",
+     "from_dir": [
+      -0.287,
+      0.951,
+      0.116
+     ],
+     "to_dir": [
+      -0.155,
+      0.951,
+      0.268
+     ],
+     "az_el": [
+      330.0,
+      72.0
+     ],
+     "throw_m": 13.511,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": null,
+     "rays_into_audience": 0,
+     "pen_m": 0.651
+    },
+    {
+     "id": "rig-beam-planes-04",
+     "from_dir": [
+      0.282,
+      0.951,
+      -0.126
+     ],
+     "to_dir": [
+      0.106,
+      0.951,
+      0.29
+     ],
+     "az_el": [
+      20.0,
+      72.0
+     ],
+     "throw_m": 13.511,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": null,
+     "rays_into_audience": 0,
+     "pen_m": 0.651
+    },
+    {
+     "id": "rig-beam-planes-05",
+     "from_dir": [
+      0.444,
+      0.887,
+      -0.127
+     ],
+     "to_dir": [
+      0.224,
+      0.848,
+      0.48
+     ],
+     "az_el": [
+      25.0,
+      58.0
+     ],
+     "throw_m": 8.372,
+     "ends_on": "crane z 0.15 girder",
+     "lowest_over_standing_m": 7.395,
+     "rays_into_audience": 0,
+     "pen_m": 1.229
+    },
+    {
+     "id": "rig-beam-planes-06",
+     "from_dir": [
+      0.677,
+      0.719,
+      -0.156
+     ],
+     "to_dir": [
+      0.348,
+      0.755,
+      0.556
+     ],
+     "az_el": [
+      32.0,
+      49.0
+     ],
+     "throw_m": 17.026,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": 5.986,
+     "rays_into_audience": 0,
+     "pen_m": 1.705
+    }
+   ],
+   "kind": "aim (data)"
   }
  ],
  "design_metric": {
@@ -3031,8 +3203,70 @@
      }
     }
    },
-   "after_T2": null,
-   "after_T3": null
+   "after_T2": {
+    "t10": {
+     "floor": {
+      "G": 0.01504,
+      "G_near_field": 0.01431
+     },
+     "entry": {
+      "G": 0.01157,
+      "G_near_field": 0.01072
+     }
+    },
+    "t40": {
+     "floor": {
+      "G": 0.01484,
+      "G_near_field": 0.01264
+     },
+     "entry": {
+      "G": 0.00977,
+      "G_near_field": 0.00772
+     }
+    },
+    "dry": {
+     "floor": {
+      "G": 0.0131,
+      "G_near_field": 0.01301
+     },
+     "entry": {
+      "G": 0.01074,
+      "G_near_field": 0.01062
+     }
+    }
+   },
+   "after_T3": {
+    "t10": {
+     "floor": {
+      "G": 0.03213,
+      "G_near_field": 0.03
+     },
+     "entry": {
+      "G": 0.02175,
+      "G_near_field": 0.019
+     }
+    },
+    "t40": {
+     "floor": {
+      "G": 0.03316,
+      "G_near_field": 0.02666
+     },
+     "entry": {
+      "G": 0.02075,
+      "G_near_field": 0.01392
+     }
+    },
+    "dry": {
+     "floor": {
+      "G": 0.02717,
+      "G_near_field": 0.0269
+     },
+     "entry": {
+      "G": 0.0188,
+      "G_near_field": 0.01842
+     }
+    }
+   }
   }
  }
 }
