@@ -41,6 +41,25 @@ export const resolveMapSourceRef = (ref = '') => mountRelativeApiUrl(ref) || ref
 const projectPreviewUrl = (spaceId, projectId) =>
     `${buildPublicProjectPath(spaceId, projectId)}?preview=1`
 
+// What a url surface may frame: an absolute http or https address, parsed the
+// way the browser will (WHATWG URL), and nothing else — no other scheme, no
+// relative path. A page from another origin keeps its own origin in the
+// sandbox (a three.js page needs it to read its own files); a page from THIS
+// origin gets scripts only, because allow-scripts with allow-same-origin on a
+// same-origin document lifts the sandbox entirely (WHATWG HTML, iframe
+// sandbox). Returns { src, sandbox } or null.
+export const webPageFrameFor = (ref, pageOrigin = window.location.origin) => {
+    let url
+    try {
+        url = new URL(String(ref ?? '').trim())
+    } catch {
+        return null
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    const sandbox = url.origin === pageOrigin ? 'allow-scripts' : 'allow-scripts allow-same-origin'
+    return { src: url.href, sandbox }
+}
+
 // Page surfaces boot through a queue. Five project surfaces asked to start at
 // the same moment ALL stalled on "Loading live experience" and the output
 // stayed black indefinitely; one at a time they are up in seconds. Measured on
@@ -133,10 +152,15 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
             return <MapSourcePlaceholder label={label} detail={ref} width={width} height={height} />
         }
         const isProject = kind === 'project'
-        const src = isProject ? projectPreviewUrl(spaceId, ref) : ref
+        const page = isProject ? null : webPageFrameFor(ref)
+        if (!isProject && !page) {
+            return <MapSourcePlaceholder label={label} detail="a web address starts with http or https" width={width} height={height} />
+        }
+        const src = isProject ? projectPreviewUrl(spaceId, ref) : page.src
         return (
             <MapPageSource
                 src={src}
+                sandbox={isProject ? undefined : page.sandbox}
                 isProject={isProject}
                 label={label}
                 width={width}
@@ -483,7 +507,7 @@ function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, labe
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.
-function MapPageSource({ src, isProject, label, width, height }) {
+function MapPageSource({ src, sandbox, isProject, label, width, height }) {
     const [booting, setBooting] = useState(true)
     const releaseRef = useRef(null)
     const frameRef = useRef(null)
@@ -536,11 +560,12 @@ function MapPageSource({ src, isProject, label, width, height }) {
                 // "Loading live experience" forever while the wall stayed
                 // black. Seen, not reasoned about.
                 //
-                // A URL surface is somebody else's page and keeps the sandbox.
-                // allow-same-origin there hands THAT page its own origin back,
-                // never ours, and without it a three.js page cannot read its
-                // own assets and projects black.
-            sandbox={isProject ? undefined : 'allow-scripts allow-same-origin'}
+                // A URL surface is somebody else's page and keeps the sandbox
+                // webPageFrameFor chose: allow-same-origin hands THAT page its
+                // own origin back, never ours, and without it a three.js page
+                // cannot read its own assets and projects black. An address on
+                // this origin gets scripts only.
+            sandbox={sandbox}
             referrerPolicy={isProject ? 'same-origin' : 'no-referrer'}
             allow="autoplay; fullscreen; xr-spatial-tracking"
             scrolling="no"

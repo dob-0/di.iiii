@@ -526,7 +526,7 @@ export const WIKI_ARTICLES = [
             'A projector never sees a wall straight on, so a rectangle of picture lands on it as a slanted quadrilateral. That is what the corner handles are for. Pick a surface, drag its four corners onto the four corners of the thing you are projecting at — a sheet of paper, a panel, a doorway — and the picture is squeezed to fit it exactly. Arrow keys nudge by one projector pixel, hold shift for ten.',
             'Before any of the work is ready, set a surface to a test pattern. A grid, rings, diagonal bars or corner brackets, in white on black, with the surface\'s name across the middle. You align in a dark room against a pattern, not against a finished piece: a picture gives your eye no edge to judge, and the name tells you which shape is whose.',
             'Shapes are rarely rectangles. Press M for the mask and click round the outline you actually want — a cut corner, a triangle, a doorway — and everything outside it goes black. Drag a point to move it, alt-click to remove it.',
-            'A surface can show a project from this space, any web page by its address, a video, an image, or a flat colour. The address is the important one: work that was never a di.iiii project — a page somebody made somewhere else — still goes on the wall, live, next to work that was.',
+            'A surface can show a project from this space, any web page by its address (one that starts with http:// or https://), a video, an image, or a flat colour. The address is the important one: work that was never a di.iiii project — a page somebody made somewhere else — still goes on the wall, live, next to work that was.',
             'Each surface has its own opacity, brightness, contrast, saturation and hue, and a blend mode for where two of them overlap. Projected light is not paint: on coloured paper, some of the colour is simply absorbed, and these are how you claw back what the paper takes.',
             'Corners snap — to the other surfaces\' corners, and to the frame\'s edges and middle — and the line they agreed with is drawn while you drag, so you can see what just happened. There is a grid too if you want one. Hold alt while dragging and nothing snaps at all, for the surface that genuinely sits a hair off its neighbour.',
             'Every change to the mapping can be taken back. Ctrl+Z (Cmd+Z on a Mac) undoes the last one and Shift+Ctrl+Z or Ctrl+Y does it again; the Undo and Redo buttons in the toolbar do the same for a finger on a tablet. A whole drag of a corner is one step, not one per pixel, and the output window follows an undo at once. Firing a cue is not undone — it is part of the show, not an edit — so Ctrl+Z after a cue takes back the last change you made, not the cue.',
@@ -543,7 +543,7 @@ export const WIKI_ARTICLES = [
             'One caution. A surface showing a project or a page is a whole page running, and over a plain http:// address a browser only allows a handful at once — past about four, the rest never load. On diiii.xyz this does not apply. If you are running from a laptop and the bar warns you about it, use video or image surfaces for some of them.'
         ],
         tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera', 'lighting', 'light', 'ndi', 'touchdesigner', 'obs', 'resolume', 'network video', 'studio'],
-        updated: '2026-09-28'
+        updated: '2026-10-09'
     },
     {
         id: 'joining-a-space',
