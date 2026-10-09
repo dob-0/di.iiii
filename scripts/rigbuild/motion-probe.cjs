@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // motion-probe.cjs - run by `di-test-browser run scripts/rigbuild/motion-probe.cjs` (the agent screen, real GPU).
 // Env: PROBE=scenes|frametime|phone  URL=<room url>  OUT=<dir>  SECONDS=<n, frametime>
+//  all        phone, scenes, frametime in one run (one turn of the browser lock)
 //  scenes     press each of the 10 favourite buttons (a real tap), wait out the fade, take 4 frames 250 ms apart (PNG), save them
 //             and frames.json (the real gaps between them). Contact sheet + luminance maths: scripts/rigbuild/motion-sheet.py.
 //  frametime  rAF counted for SECONDS in a moving scene and in a still scene (and the moving one again), median + p95 frame time.
@@ -33,7 +34,9 @@ const renderer = (page) => page.evaluate(() => { const c = document.createElemen
 
 ;(async () => {
     const browser = await chromium.connectOverCDP(process.env.DI_TEST_CDP)
-    const mode = process.env.PROBE || 'scenes'
+    // PROBE=all runs the three in one go (one turn of the machine-wide browser lock)
+    const modes = (process.env.PROBE || 'scenes') === 'all' ? ['phone', 'scenes', 'frametime'] : [process.env.PROBE || 'scenes']
+    for (const mode of modes) {
     if (mode === 'scenes') {
         const { page } = await open(browser, { width: 1280, height: 720 })
         const ids = await favs(page)
@@ -108,6 +111,7 @@ const renderer = (page) => page.evaluate(() => { const c = document.createElemen
             console.log(name, JSON.stringify({ ...res, boxes: undefined }))
             await clear(page)
         }
+    }
     }
     process.exit(0)
 })().catch((e) => { console.error(e); process.exit(1) })
