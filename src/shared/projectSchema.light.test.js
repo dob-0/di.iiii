@@ -20,7 +20,7 @@ const lamp = {
         }
     }
 }
-const atmosphere = { scattering: 0.03, anisotropy: 0.74, haze: { model: 'nf-ff', volume_m3: 186890, calibrate: false, nearField: { radius_m: 3, airSpeed_m_s: 0.1 }, source: 'UNVALIDATED estimate' } }
+const atmosphere = { scattering: 0.03, anisotropy: 0.74, haze: { model: 'nf-ff', volume_m3: 186890, calibrate: false, dries: false, nearField: { radius_m: 3, airSpeed_m_s: 0.1 }, source: 'UNVALIDATED estimate' } }
 
 describe('the kit\'s light fields survive the schema, in the browser and on the server', () => {
     for (const [name, normalize] of [['browser', normalizeProjectDocument], ['server', serverSchema.normalizeProjectDocument]]) {
@@ -31,7 +31,7 @@ describe('the kit\'s light fields survive the schema, in the browser and on the 
             expect(beam.laser).toMatchObject({ mW: [2700, 1500, 1800], nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1, sceneScale: 0.02, source: 'Guide v1.2' })
             // a bad frame point is dropped, never guessed
             expect(beam.laser.frame).toEqual([[0, 0.5, 0, 1, 0]])
-            expect(doc.renderSettings.atmosphere.haze).toMatchObject({ model: 'nf-ff', volume_m3: 186890, calibrate: false, nearField: { radius_m: 3, airSpeed_m_s: 0.1 }, source: 'UNVALIDATED estimate' })
+            expect(doc.renderSettings.atmosphere.haze).toMatchObject({ model: 'nf-ff', volume_m3: 186890, calibrate: false, dries: false, nearField: { radius_m: 3, airSpeed_m_s: 0.1 }, source: 'UNVALIDATED estimate' })
             // a laser at a wavelength the cube does not have is not a laser
             const odd = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, laser: { mW: [1], nm: [532] } } } }] })
             expect(odd.entities[0].components.beam.laser).toBeUndefined()

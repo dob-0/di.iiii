@@ -40,6 +40,7 @@ import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
 import { runnerList } from './show-loop.mjs'
+import { atmosphereOfRig } from '../place/rig-lib.mjs'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -136,8 +137,11 @@ export const v1Entities = (rig) => {
             continue
         }
         if (f.type === 'up-yz31p') {
-            out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`, parentId: null,
-                components: { transform: { position: f.p, rotation: [0, 0, 0], scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
+            // the machine blows along its model's front (+Z) turned by its rotation (hazeField.js hazeMachinesOf): the rig
+            // file's own `r` (MOXIR v2 true look, 2026-10-09: the fan's direction is part of the design), else +Z as before
+            const r = Array.isArray(f.r) && f.r.length === 3 ? f.r.map(Number) : [0, 0, 0]
+            out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`.slice(0, 200), parentId: null,
+                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
             continue
         }
         if (f.angle_rad == null) continue
@@ -147,8 +151,10 @@ export const v1Entities = (rig) => {
             components: {
                 transform: { position: f.p, rotation: f.r, scale: [1, 1, 1] },
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: reachOf(f), angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
-                beam: { visible: true, haze: HAZE[f.type] ?? 0.35 },
+                // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
+                // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
+                beam: { visible: true, haze: HAZE[f.type] ?? 0.35, length: reachOf(f) },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
             } })
@@ -234,10 +240,12 @@ export const V1_HAZE_SIGMA = 0.0169
 // chosen by eye on the real GPU in Lite (0.04 read as black, 0.3 shows columns, roof steel and the truss at a low level
 // while every look keeps its contrast). A measured lux reading on the night replaces it.
 export const V1_AMBIENT = 0.3
-export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT } = {}) => [
+export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null } = {}) => [
     // exposure.auto false: Full's camera adaptation (autoExposure.js, gain up to 3x) opened "the black" into a lit brown
     // hall (seen 10-08, Full, Floor z 38) — the old "flat brown" again. Full now draws at the room's one exposure, as Lite does.
-    { type: 'setRenderSettings', payload: { patch: { atmosphere: { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
+    // A rig file that states its own `atmosphere` (MOXIR v2 B tuned, 2026-10-09: the ONE machine's two-zone haze) is drawn
+    // with it; else v1.0's one uniform sigma.
+    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
     { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
 ]
 
@@ -334,9 +342,9 @@ const main = async () => {
     if (!got.ok) die(`reading ${project}: ${got.status}`)
     const doc = got.body.document
     if (args['render-only']) {
-        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`render ops: ${out.status} ${out.text.slice(0, 300)}`)
-        say(`render: haze sigma ${V1_HAZE_SIGMA}/m uniform, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
+        say(`render: haze ${rig.atmosphere ? `the rig's own (${rig.atmosphere.haze?.model || 'uniform'})` : `sigma ${V1_HAZE_SIGMA}/m uniform`}, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
         return
     }
     if (args['lasers-only']) {
@@ -402,7 +410,7 @@ const main = async () => {
     // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
     ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
     ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
-    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }))
+    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
     say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })
