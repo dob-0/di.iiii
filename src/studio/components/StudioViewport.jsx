@@ -42,6 +42,7 @@ import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../nav
 import { useNavigationPreference } from '../navigation/preference.js'
 import { entityRoots, useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { pickPivot } from '../navigation/autoDepth.js'
+import { damp, clampDt } from '../../project/viewport/navMath.js'
 import { useFlyNavigation } from '../navigation/useFlyNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -176,7 +177,16 @@ function AutoLookAround({ controlsRef, config }) {
         if (!cc) return undefined
         const yield_ = () => { surrendered.current = true }
         cc.addEventListener('controlstart', yield_)
-        return () => cc.removeEventListener('controlstart', yield_)
+        // view keys (Numpad), fly and the view cube move the camera with setLookAt, which emits no controlstart: any input surrenders too
+        window.addEventListener('keydown', yield_, true)
+        window.addEventListener('wheel', yield_, { capture: true, passive: true })
+        window.addEventListener('pointerdown', yield_, true)
+        return () => {
+            cc.removeEventListener('controlstart', yield_)
+            window.removeEventListener('keydown', yield_, true)
+            window.removeEventListener('wheel', yield_, { capture: true })
+            window.removeEventListener('pointerdown', yield_, true)
+        }
     }, [controlsRef])
 
     useFrame((state) => {
@@ -626,14 +636,15 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     })
 
     // Smooth FOV lerp — runs every frame inside the R3F canvas
-    useFrame(() => {
+    // Frame-rate independent: 1 - exp(-dt/0.12) (the old 0.08 per frame settled 2.4x faster at 144 Hz than at 60 Hz); dt clamped to 0.05 s
+    useFrame((_, delta) => {
         const cc = controlsRef.current
         if (!cc) return
         const cam = cc._camera
         if (!cam?.isPerspectiveCamera) return
         const target = targetFovRef.current
-        if (Math.abs(cam.fov - target) < 0.05) return
-        cam.fov += (target - cam.fov) * 0.08
+        if (cam.fov === target) return
+        cam.fov = Math.abs(cam.fov - target) < 0.01 ? target : damp(cam.fov, target, 0.12, clampDt(delta, 0.05))
         cam.updateProjectionMatrix()
     })
 
