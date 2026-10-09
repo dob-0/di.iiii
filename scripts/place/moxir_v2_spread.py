@@ -68,6 +68,12 @@ JD = lambda o: o.item() if hasattr(o, 'item') else (o.tolist() if hasattr(o, 'to
 
 PAR_CD_ROOM = 609.56 / 0.02          # epic-build candelaOf('up-pl5403'): the room's own PAR
 PAR_CD_SPEC = 11000.0                # fixtures-exact.md EQUIVALENT, 15 deg, an upper estimate
+# THE ROOM SQUARES A LOOK'S LEVEL (measured 2026-10-09 in this room, measurement mode): the renderer's own lamp list
+# (__diMeasure.lamps) holds intensity = nominal x level^2 (PAR key 609.56 x 0.44^2 = 118.01; x 0.14^2 = 11.95; PA R lamp
+# x 0.54^2 = 177.75; a B380F at 0.8: 1 004 000 x 0.64), and the lux probe agrees to 0.1 lx with E computed here x level^2
+# at four targets and four levels. looks.js atLevel multiplies once; the second factor is not found yet (OWED, viewport).
+# The faders below are set so the ROOM shows the stage at 30-80 lx; a linear dimmer gives E x level instead (both stated).
+ROOM_LEVEL_EXP = 2
 B380_CD_ROOM = 1004000 / 0.02
 DJ_EYE = (-5.2, 2.03, 4.3)
 DJ_RULE_DEG = 20.0
@@ -198,7 +204,7 @@ def lum_factor(colour):
     return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
 
 
-def stage_light(W, rig, look_id, cd_par=PAR_CD_ROOM):
+def stage_light(W, rig, look_id, cd_par=PAR_CD_ROOM, exp=ROOM_LEVEL_EXP):
     lk = next(l for l in rig['looks'] if l['id'] == look_id)
     out = {}
     for tn, (tp, n) in TARGETS.items():
@@ -208,7 +214,7 @@ def stage_light(W, rig, look_id, cd_par=PAR_CD_ROOM):
                 continue
             col, lev = lk['parts'][f['part']]
             cd = cd_par if f['type'] == 'up-pl5403' else B380_CD_ROOM
-            e = e_on(W, f, tp, n, cd) * lev * lum_factor(col or f.get('colour') or ASH)
+            e = e_on(W, f, tp, n, cd) * lev ** exp * lum_factor(col or f.get('colour') or ASH)
             if e > 0.05:
                 by[f['part']] = by.get(f['part'], 0.0) + e
                 tot += e
@@ -385,16 +391,16 @@ def build(repo, out, table_path, placement_file=None):
         if lk['id'] == 'dark':
             p['plane 2 (the wings)'] = [EMBER, 0.8]
             p['plane 3 (behind the stage)'] = [EMBER, 0.35]
-            p['stage key'] = [EMBER, 0.44]
-            p['speaker face L'] = [EMBER, 0.38]
+            p['stage key'] = [EMBER, 0.63]
+            p['speaker face L'] = [EMBER, 0.59]
             p['speaker face R'] = [EMBER, 1.0]
         if lk['id'] == 'peak':
             p['plane 2 (the wings)'] = [ASH, 1.0]
             p['plane 3 (behind the stage)'] = [EMBER, 0.7]
             p['roof'] = [ASH, 0.6]
-            p['stage key'] = [ASH, 0.14]
-            p['speaker face L'] = [ASH, 0.12]
-            p['speaker face R'] = [ASH, 0.54]
+            p['stage key'] = [ASH, 0.35]
+            p['speaker face L'] = [ASH, 0.33]
+            p['speaker face R'] = [ASH, 0.76]
     for c in T['cues']:
         c['name'] = c['name'].replace('B tuned · one machine', 'B tuned + stage + lasers')
 
@@ -471,7 +477,9 @@ def build(repo, out, table_path, placement_file=None):
                 'smoke machine': {'p': smoke['p'], 'laser_margin_m': next(c['margin_m'] for c in clear if c['id'] == smoke['id']),
                                   'to_the_laser_hang_m': R3(math.hypot(max(0.0, abs(smoke['p'][2] - FAR_CRANE_Z) - 0.4), 4.75 - smoke['p'][1] - 0.5)),
                                   'note': 'the plume rises from 1.1 m at z -6.2 and blows +z toward the stage, away from the crane at z -12; haze is what makes the lasers seen'}}
-    sl = {lk: {'room_30478cd': stage_light(W, T, lk), 'spec_11000cd': stage_light(W, T, lk, PAR_CD_SPEC)} for lk in ('dark', 'peak')}
+    sl = {lk: {'room_30478cd': stage_light(W, T, lk), 'spec_11000cd': stage_light(W, T, lk, PAR_CD_SPEC),
+               'room_cd_linear_dimmer': stage_light(W, T, lk, exp=1), 'spec_cd_linear_dimmer': stage_light(W, T, lk, PAR_CD_SPEC, exp=1),
+               'law': 'room_*: the room as measured (intensity x level^2); *_linear_dimmer: a desk fader linear in light out'} for lk in ('dark', 'peak')}
     sl_before = {lk: {'room_30478cd': stage_light(W, BT, lk), 'spec_11000cd': stage_light(W, BT, lk, PAR_CD_SPEC)} for lk in ('dark', 'peak')}
     glare = {lk: dj_glare(T, lk) for lk in ('dark', 'peak')}
     glare_full = dj_glare(dict(T, looks=[{'id': 'full', 'parts': {p: [ASH, 1.0] for p in set(f['part'] for f in T['fixtures'])}}]), 'full')

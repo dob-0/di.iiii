@@ -3857,11 +3857,11 @@
     ],
     "stage key": [
      "#ff3a12",
-     0.44
+     0.63
     ],
     "speaker face L": [
      "#ff3a12",
-     0.38
+     0.59
     ],
     "speaker face R": [
      "#ff3a12",
@@ -3920,15 +3920,15 @@
     ],
     "stage key": [
      "#e8e4dc",
-     0.14
+     0.35
     ],
     "speaker face L": [
      "#e8e4dc",
-     0.12
+     0.33
     ],
     "speaker face R": [
      "#e8e4dc",
-     0.54
+     0.76
     ]
    }
   }
@@ -7069,21 +7069,21 @@
    "dark": {
     "room_30478cd": {
      "DJ face": {
-      "lx": 49.816,
+      "lx": 44.937,
       "by_part": {
-       "stage key": 49.816
+       "stage key": 44.937
       }
      },
      "booth front": {
-      "lx": 34.644,
+      "lx": 31.25,
       "by_part": {
-       "stage key": 34.644
+       "stage key": 31.25
       }
      },
      "PA L face": {
-      "lx": 38.721,
+      "lx": 35.47,
       "by_part": {
-       "speaker face L": 38.721
+       "speaker face L": 35.47
       }
      },
      "PA R face": {
@@ -7095,21 +7095,21 @@
     },
     "spec_11000cd": {
      "DJ face": {
-      "lx": 17.98,
+      "lx": 16.218,
       "by_part": {
-       "stage key": 17.98
+       "stage key": 16.218
       }
      },
      "booth front": {
-      "lx": 12.504,
+      "lx": 11.279,
       "by_part": {
-       "stage key": 12.504
+       "stage key": 11.279
       }
      },
      "PA L face": {
-      "lx": 13.975,
+      "lx": 12.802,
       "by_part": {
-       "speaker face L": 13.975
+       "speaker face L": 12.802
       }
      },
      "PA R face": {
@@ -7118,61 +7118,167 @@
        "speaker face R": 6.923
       }
      }
-    }
+    },
+    "room_cd_linear_dimmer": {
+     "DJ face": {
+      "lx": 71.328,
+      "by_part": {
+       "stage key": 71.328
+      }
+     },
+     "booth front": {
+      "lx": 49.604,
+      "by_part": {
+       "stage key": 49.604
+      }
+     },
+     "PA L face": {
+      "lx": 60.119,
+      "by_part": {
+       "speaker face L": 60.119
+      }
+     },
+     "PA R face": {
+      "lx": 19.181,
+      "by_part": {
+       "speaker face R": 19.181
+      }
+     }
+    },
+    "spec_cd_linear_dimmer": {
+     "DJ face": {
+      "lx": 25.743,
+      "by_part": {
+       "stage key": 25.743
+      }
+     },
+     "booth front": {
+      "lx": 17.903,
+      "by_part": {
+       "stage key": 17.903
+      }
+     },
+     "PA L face": {
+      "lx": 21.698,
+      "by_part": {
+       "speaker face L": 21.698
+      }
+     },
+     "PA R face": {
+      "lx": 6.923,
+      "by_part": {
+       "speaker face R": 6.923
+      }
+     }
+    },
+    "law": "room_*: the room as measured (intensity x level^2); *_linear_dimmer: a desk fader linear in light out"
    },
    "peak": {
     "room_30478cd": {
      "DJ face": {
-      "lx": 50.692,
+      "lx": 44.356,
       "by_part": {
-       "stage key": 50.692
+       "stage key": 44.356
       }
      },
      "booth front": {
-      "lx": 35.253,
+      "lx": 30.847,
       "by_part": {
-       "stage key": 35.253
+       "stage key": 30.847
       }
      },
      "PA L face": {
-      "lx": 39.106,
+      "lx": 35.488,
       "by_part": {
-       "speaker face L": 39.106
+       "speaker face L": 35.488
       }
      },
      "PA R face": {
-      "lx": 33.125,
+      "lx": 35.432,
       "by_part": {
-       "speaker face R": 33.125
+       "speaker face R": 35.432
       }
      }
     },
     "spec_11000cd": {
      "DJ face": {
-      "lx": 18.296,
+      "lx": 16.009,
       "by_part": {
-       "stage key": 18.296
+       "stage key": 16.009
       }
      },
      "booth front": {
-      "lx": 12.724,
+      "lx": 11.133,
       "by_part": {
-       "stage key": 12.724
+       "stage key": 11.133
       }
      },
      "PA L face": {
-      "lx": 14.114,
+      "lx": 12.808,
       "by_part": {
-       "speaker face L": 14.114
+       "speaker face L": 12.808
       }
      },
      "PA R face": {
-      "lx": 11.955,
+      "lx": 12.788,
       "by_part": {
-       "speaker face R": 11.955
+       "speaker face R": 12.788
       }
      }
-    }
+    },
+    "room_cd_linear_dimmer": {
+     "DJ face": {
+      "lx": 126.731,
+      "by_part": {
+       "stage key": 126.731
+      }
+     },
+     "booth front": {
+      "lx": 88.133,
+      "by_part": {
+       "stage key": 88.133
+      }
+     },
+     "PA L face": {
+      "lx": 107.54,
+      "by_part": {
+       "speaker face L": 107.54
+      }
+     },
+     "PA R face": {
+      "lx": 46.62,
+      "by_part": {
+       "speaker face R": 46.62
+      }
+     }
+    },
+    "spec_cd_linear_dimmer": {
+     "DJ face": {
+      "lx": 45.739,
+      "by_part": {
+       "stage key": 45.739
+      }
+     },
+     "booth front": {
+      "lx": 31.809,
+      "by_part": {
+       "stage key": 31.809
+      }
+     },
+     "PA L face": {
+      "lx": 38.813,
+      "by_part": {
+       "speaker face L": 38.813
+      }
+     },
+     "PA R face": {
+      "lx": 16.826,
+      "by_part": {
+       "speaker face R": 16.826
+      }
+     }
+    },
+    "law": "room_*: the room as measured (intensity x level^2); *_linear_dimmer: a desk fader linear in light out"
    }
   },
   "dj_glare": {
@@ -7182,7 +7288,7 @@
       "id": "rig-par-planes-23",
       "part": "stage key",
       "deg_from_eye_line": 45.079,
-      "lx_at_eye_room": 30.529,
+      "lx_at_eye_room": 43.711,
       "veil_cd_m2": null,
       "inside_20deg_at_full": false
      },
@@ -7190,7 +7296,7 @@
       "id": "rig-par-planes-25",
       "part": "stage key",
       "deg_from_eye_line": 63.888,
-      "lx_at_eye_room": 70.225,
+      "lx_at_eye_room": 100.549,
       "veil_cd_m2": null,
       "inside_20deg_at_full": false
      }
@@ -7203,7 +7309,7 @@
       "id": "rig-par-planes-23",
       "part": "stage key",
       "deg_from_eye_line": 45.079,
-      "lx_at_eye_room": 31.066,
+      "lx_at_eye_room": 77.664,
       "veil_cd_m2": null,
       "inside_20deg_at_full": false
      },
@@ -7211,7 +7317,7 @@
       "id": "rig-par-planes-25",
       "part": "stage key",
       "deg_from_eye_line": 63.888,
-      "lx_at_eye_room": 71.46,
+      "lx_at_eye_room": 178.65,
       "veil_cd_m2": null,
       "inside_20deg_at_full": false
      }
