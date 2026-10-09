@@ -23,9 +23,9 @@ It is not on the visitor's UI.
 | `&scene=<id>` | the scene id written into each result (default: the page path) |
 | Alt+Shift+M | toggles the mode on any page that shows a scene |
 
-Example: `http://diiii.localhost/moxir/<slug>?measure&scale=0.02`. The frame then carries a
-label in its top-left corner: `MEASUREMENT · EV100 2.84 fixed …`, and the canvas carries
-`data-measure-ev100`.
+Example: `http://diiii.localhost/moxir/v1-0?measure&scale=0.02`. The frame then carries a
+label at its top centre, above the scene's own panels: `MEASUREMENT · EV100 2.84 fixed …`, and
+the canvas carries `data-measure-ev100`.
 
 ## What changes while it is on
 
@@ -120,6 +120,12 @@ background (the median of the outer 10 % of samples on both sides) and gives the
 width at 50 % (beam) and 10 % (field) of the peak, and ∫(L − background) dx. A width is `null`
 when the profile does not fall that far inside the span read.
 
+Use it so the camera sees only the beam asked for: in a row of beams a neighbour can sit in
+the read span (choose `across`, `viewFrom` and `halfSpan`), and the camera must stand inside the
+hall with no wall between it and the beam (a reading of 0 everywhere usually means a wall).
+Seen on MOXIR v1.0 (2026-10-09): the 18 B380F beams stand 1.05 m apart, and at 10 m up the
+default camera stood outside the hall.
+
 ### Lamps
 
 `window.__diMeasure.lamps()`: every SpotLight with its world position and direction,
@@ -175,6 +181,10 @@ a check against physics; T3 against a reference renderer is owed (method §3.4 s
   over a meter's real 1–2 cm cosine-corrected head (the difference is negligible beyond a few
   metres from a lamp). A probe inside a solid object reads that object's shadow state, not the
   light around it.
+- **Beam length with `distance: 0`:** a lamp whose `distance` is 0 (three.js's "no limit", the
+  physical choice for the light) draws its beam in air only `UNLIMITED_THROW` = 20 m long
+  (`spotBeam.js`). Found by this mode's beam probe (T1 harness, 2026-10-09): the 20 m profile
+  read zero. Reported to the physics branch; the T1 beam case gives its lamp a 40 m throw.
 - **Scene id:** the page path unless `&scene=` is given; documents do not carry a scene id the
   viewer can read here.
 - **Owed:** the rig build should write `renderSettings.photometry.sceneScale` into each rig

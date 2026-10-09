@@ -46,24 +46,37 @@ export default function MeasurementMode({ renderSettings, request, toneMapping }
         held.current = holdViewingAids(scene, saved.current, { keepBounce: measurement.bounce })
     })
 
-    // the frame says what it is
+    // the frame says what it is: a label on top of the canvas, above the scene's own panels
+    // (fixed on the page, placed over the canvas's top centre; seen hidden under the version
+    // chip when it lived inside the canvas's box, 2026-10-09)
     useEffect(() => {
-        const host = gl.domElement?.parentElement
-        if (!host || typeof document === 'undefined') return undefined
+        const canvas = gl.domElement
+        if (!canvas || typeof document === 'undefined') return undefined
         const label = document.createElement('div')
         label.setAttribute('data-measure-label', '')
-        label.style.cssText = 'position:absolute;left:8px;top:8px;z-index:5;pointer-events:none;padding:4px 6px;'
-            + 'font:11px/1.35 ui-monospace,monospace;color:#fff;background:rgba(0,0,0,0.72);white-space:pre;border-radius:0'
+        label.style.cssText = 'position:fixed;z-index:2147483000;pointer-events:none;padding:4px 6px;transform:translateX(-50%);'
+            + 'font:11px/1.35 ui-monospace,monospace;color:#fff;background:rgba(0,0,0,0.78);border:1px solid #fff;border-radius:0;'
+            + 'white-space:pre-wrap;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:left'
         const scale = measurement.sceneScale ? `sceneScale ${measurement.sceneScale}` : 'sceneScale UNKNOWN (scene units)'
         label.textContent = `MEASUREMENT · EV100 ${measurement.ev100.toFixed(2)} fixed\n`
-            + `auto exposure, bloom, glare veil, work light: off${measurement.bounce ? '' : ' · bounce off (direct only)'}\n`
-            + `${scale} · probes read linear half-float, before tone mapping`
-        if (getComputedStyle(host).position === 'static') host.style.position = 'relative'
-        host.appendChild(label)
-        gl.domElement.dataset.measureEv100 = String(measurement.ev100)
+            + `off: auto exposure, bloom, glare veil, work light${measurement.bounce ? '' : ', bounce (direct only)'}\n`
+            + `${scale} · probes: linear half-float, before tone mapping`
+        const place = () => {
+            const r = canvas.getBoundingClientRect()
+            label.style.left = `${Math.round(r.left + r.width / 2)}px`
+            label.style.top = `${Math.round(Math.max(r.top, 0) + 8)}px`
+        }
+        place()
+        document.body.appendChild(label)
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place)
+        observer?.observe(canvas)
+        window.addEventListener('resize', place)
+        canvas.dataset.measureEv100 = String(measurement.ev100)
         return () => {
+            observer?.disconnect()
+            window.removeEventListener('resize', place)
             label.remove()
-            delete gl.domElement.dataset.measureEv100
+            delete canvas.dataset.measureEv100
         }
     }, [gl, measurement])
 
