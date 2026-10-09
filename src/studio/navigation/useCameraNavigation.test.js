@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Group, Scene } from 'three'
-import { applyPivot, entityRoots, settleForGesture } from './useCameraNavigation.js'
+import { Box3, Vector3 } from 'three'
+import { applyPivot, entityRoots, limitPivot, settleForGesture } from './useCameraNavigation.js'
 
 describe('adapter helpers', () => {
     it('applyPivot never moves the orbit point while camera-controls is animating', () => {
@@ -43,5 +44,26 @@ describe('settleForGesture', () => {
         settleForGesture({ active: false, stop: () => { stopped += 1 } })
         settleForGesture(null)
         expect(stopped).toBe(1)
+    })
+})
+
+describe('limitPivot (Inside: a pivot the controls would clamp must not yank the camera)', () => {
+    const cc = (extra = {}) => ({ camera: { position: new Vector3(0, 1.7, 0) }, maxDistance: 25, ...extra })
+    it('leaves a near pivot alone and pulls a far one in to 90 % of maxDistance along the ray', () => {
+        const near = limitPivot(cc(), new Vector3(0, 1.7, -10))
+        expect(near.z).toBeCloseTo(-10)
+        const far = limitPivot(cc(), new Vector3(0, 1.7, -50))
+        expect(far.z).toBeCloseTo(-22.5)
+        expect(far.y).toBeCloseTo(1.7)
+    })
+    it('clamps into the target boundary when there is one, and never changes the argument', () => {
+        const point = new Vector3(40, 1.7, -3)
+        const out = limitPivot(cc({ maxDistance: Infinity, _boundary: new Box3(new Vector3(-10, 0, -10), new Vector3(10, 5, 10)) }), point)
+        expect(out.x).toBe(10)
+        expect(point.x).toBe(40)
+    })
+    it('no pivot or no controls: unchanged', () => {
+        expect(limitPivot(cc(), null)).toBeNull()
+        expect(limitPivot(null, new Vector3(1, 2, 3)).x).toBe(1)
     })
 })

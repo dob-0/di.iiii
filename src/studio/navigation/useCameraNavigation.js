@@ -42,6 +42,24 @@ export function settleForGesture(cc) {
     if (cc?.active) cc.stop()
 }
 
+// Auto Depth picks the surface under the pointer, which in the Inside mode can be a wall 50 m away: camera-controls then clamps that
+// pivot into the interior target box and drags the camera with it. Measured on the RTX 3080 (2026-10-08, Inside): a 160 px pan moved the
+// grabbed surface point 432 px off the pointer and the first zoom notch multiplied the distance by 4.7. So the pivot is kept inside what
+// the controls allow: never farther than 90 % of maxDistance along the ray, and inside the target boundary when there is one.
+export function limitPivot(cc, point) {
+    if (!cc || !point) return point
+    const cam = (cc.camera || cc._camera)?.position
+    const out = point.clone ? point.clone() : { ...point }
+    const max = Number.isFinite(cc.maxDistance) ? cc.maxDistance * 0.9 : Infinity
+    if (cam && Number.isFinite(max) && out.sub && out.distanceTo) {
+        const d = out.distanceTo(cam)
+        if (d > max && d > 0) out.sub(cam).multiplyScalar(max / d).add(cam)
+    }
+    const box = cc._boundary
+    if (box && box.clampPoint && !(box.isEmpty && box.isEmpty())) box.clampPoint(out, out)
+    return out
+}
+
 export function useCameraNavigation({
     controlsRef,
     presetId,
@@ -86,7 +104,7 @@ export function useCameraNavigation({
             if (!wantsAutoDepth || action === CC_ACTION.ROTATE) return
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
             if (!ndc) return
-            applyPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) }), { force: gestureStart })
+            applyPivot(cc, limitPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) })), { force: gestureStart })
         }
 
         const onPointerDown = (event) => {

@@ -40,7 +40,8 @@ import {
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
 import { useNavigationPreference } from '../navigation/preference.js'
-import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { entityRoots, useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { pickPivot } from '../navigation/autoDepth.js'
 import { useFlyNavigation } from '../navigation/useFlyNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -533,6 +534,27 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         dollyThrough: viewSettings.unlimitedZoom,
         invertWheel: viewSettings.invertWheel,
     })
+    // DEV ONLY: a probe so a test can measure the camera's mechanics from outside (pixel-lock of pan and zoom, orbit distance, horizon):
+    // window.__diNavProbe.controls() / .pick(ndcX, ndcY) -> a surface point under that pointer / .project([x,y,z]) -> ndc [x,y].
+    useEffect(() => {
+        if (!import.meta.env.DEV || typeof window === 'undefined') return undefined
+        window.__diNavProbe = {
+            controls: () => controlsRef.current,
+            pick: (nx, ny) => {
+                const cc = controlsRef.current
+                const hit = cc && pickPivot({ camera: cc.camera, ndc: [nx, ny], objects: entityRoots(getScene()) })
+                return hit ? hit.toArray() : null
+            },
+            project: (point) => {
+                const cc = controlsRef.current
+                if (!cc) return null
+                cc.camera.updateMatrixWorld()
+                const v = cc.camera.position.clone().set(point[0], point[1], point[2]).project(cc.camera)
+                return [v.x, v.y]
+            }
+        }
+        return () => { delete window.__diNavProbe }
+    }, [controlsRef, getScene])
     // Hold the right button + W A S D to fly (Blender / Unreal / Unity); see useFlyNavigation.js
     useFlyNavigation({
         controlsRef,
