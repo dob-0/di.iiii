@@ -19,6 +19,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { chromium } = require('playwright')
+const { closeOnSignal } = require('./close-on-signal.cjs')
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -51,6 +52,7 @@ const main = async () => {
     const browser = await chromium.connectOverCDP(cdp)
     const context = browser.contexts()[0] || (await browser.newContext())
     const page = await context.newPage()
+    closeOnSignal(() => page) // a `timeout` kill must not leave the tab drawing the room (2026-10-09)
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e.message || e).slice(0, 300)))
     let current = null

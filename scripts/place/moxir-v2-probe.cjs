@@ -13,6 +13,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { chromium } = require('playwright')
+const { closeOnSignal } = require('./close-on-signal.cjs')
 const { docForJob } = require('./moxir-v2-true-frames.cjs')
 
 const arg = (name, fallback = null) => {
@@ -31,6 +32,7 @@ const main = async () => {
     const browser = await chromium.connectOverCDP(cdp)
     const context = browser.contexts()[0] || (await browser.newContext())
     const page = await context.newPage()
+    closeOnSignal(() => page) // a `timeout` kill must not leave the tab drawing the room (2026-10-09)
     let current = null
     await page.route('**/api/projects/*/document*', async (route) => {
         const res = await route.fetch()
