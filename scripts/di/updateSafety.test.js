@@ -120,6 +120,34 @@ describe('the snapshot', () => {
         expect(listSnapshots(home).map((s) => s.name)).toContain(path.basename(dir))
     })
 
+    it('writes a database from a live WAL as one whole file, with no -wal or -shm beside it', async () => {
+        const home = makeHome({ schema: 1 })
+        const live = path.join(paths(home).data, 'di.db')
+        // A writer that is still open, whose rows sit in the write-ahead log.
+        const db = new DatabaseSync(live)
+        db.exec('PRAGMA journal_mode = WAL; PRAGMA wal_autocheckpoint = 0; CREATE TABLE t (n INTEGER)')
+        for (let i = 0; i < 50; i++) db.prepare('INSERT INTO t VALUES (?)').run(i)
+        expect(fs.statSync(`${live}-wal`).size).toBeGreaterThan(0)
+        const dir = await snapshotData({ home, label: 'before-0.5.0' })
+        db.close()
+        expect(fs.existsSync(path.join(dir, 'di.db-wal'))).toBe(false)
+        expect(fs.existsSync(path.join(dir, 'di.db-shm'))).toBe(false)
+        const copy = new DatabaseSync(path.join(dir, 'di.db'))
+        expect(copy.prepare('PRAGMA integrity_check').get().integrity_check).toBe('ok')
+        expect(copy.prepare('SELECT count(*) AS c FROM t').get().c).toBe(50)
+        expect(copy.prepare('PRAGMA user_version').get().user_version).toBe(1)
+        copy.close()
+    })
+
+    it('update stops the server before it takes the snapshot', () => {
+        const src = fs.readFileSync(new URL('./cli.mjs', import.meta.url), 'utf8')
+        const update = src.slice(src.indexOf('const cmdUpdate = async'))
+        const stop = update.indexOf('await runner.stop({ home })')
+        const snap = update.indexOf('await snapshotData(')
+        expect(stop).toBeGreaterThan(-1)
+        expect(snap).toBeGreaterThan(stop)
+    })
+
     it('moves the current work aside before restoring, so the wrong choice is survivable', async () => {
         const home = makeHome({ schema: 1, files: { 'keep.txt': 'old' } })
         const snapshot = await snapshotData({ home, label: 'before-0.5.0' })
