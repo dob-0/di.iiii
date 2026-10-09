@@ -456,11 +456,18 @@ def build(repo, out, table_path, placement_file=None):
             else:
                 clear[-1] = row
     cut12 = cut_alternatives(repo, M, tubes, W)
-    plane2_crane = [b for b in beams if b['id'] in ('rig-beam-planes-07', 'rig-beam-planes-08')]
     smoke = by['rig-smoke-planes']
-    crane_vs = {'plane-2 heads z -11 vs the bridge at z -12': [{'id': fid, 'head': by[fid]['p'], 'beam_ends': next(b['ends'] for b in beams if b['id'] == fid),
-                                                                 'into_crane_or_laser_hang': next(b['into_crane_or_laser_hang'] for b in beams if b['id'] == fid),
-                                                                 'body_to_the_bridge_m': R3(math.hypot(abs(by[fid]['p'][0]) - 11.35, FAR_CRANE_UNDERSIDE - by[fid]['p'][1]))} for fid in ('rig-beam-planes-07', 'rig-beam-planes-08')],
+    def to_bridge(q):
+        """the gap from a point to the crane envelope at z -12 (girders x +-11.35, underside 7.69 m, +-1.45 m in z, the laser hang)"""
+        dz = max(0.0, abs(q[2] - FAR_CRANE_Z) - 1.45)
+        dx = max(0.0, abs(q[0]) - 11.35)
+        dy = max(0.0, 4.75 - q[1]) if abs(q[0]) <= 6.0 else max(0.0, FAR_CRANE_UNDERSIDE - q[1])
+        return R3(math.sqrt(dx * dx + dy * dy + dz * dz))
+    crane_vs = {'B380F heads within 6 m of the bridge at z -12 (and every beam\'s first hits)': [
+                    {'id': f['id'], 'head': f['p'], 'body_to_the_crane_envelope_m': to_bridge(f['p']), 'beam_ends': next(b['ends'] for b in beams if b['id'] == f['id']),
+                     'into_crane_or_laser_hang': next(b['into_crane_or_laser_hang'] for b in beams if b['id'] == f['id'])}
+                    for f in T['fixtures'] if f['type'] == 'up-b380f' and abs(f['p'][2] - FAR_CRANE_Z) <= 6.0],
+                'beams_into_the_crane_or_laser_hang': [b['id'] for b in beams if b['into_crane_or_laser_hang']],
                 'smoke machine': {'p': smoke['p'], 'laser_margin_m': next(c['margin_m'] for c in clear if c['id'] == smoke['id']),
                                   'to_the_laser_hang_m': R3(math.hypot(max(0.0, abs(smoke['p'][2] - FAR_CRANE_Z) - 0.4), 4.75 - smoke['p'][1] - 0.5)),
                                   'note': 'the plume rises from 1.1 m at z -6.2 and blows +z toward the stage, away from the crane at z -12; haze is what makes the lasers seen'}}

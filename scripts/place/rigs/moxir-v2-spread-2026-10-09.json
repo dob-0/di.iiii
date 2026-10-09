@@ -7803,37 +7803,65 @@
    }
   ],
   "crane_and_smoke": {
-   "plane-2 heads z -11 vs the bridge at z -12": [
+   "B380F heads within 6 m of the bridge at z -12 (and every beam's first hits)": [
     {
-     "id": "rig-beam-planes-07",
+     "id": "rig-beam-planes-10",
      "head": [
-      -10.857,
+      -13.143,
       3.7,
-      -30.0
+      -18.0
      ],
+     "body_to_the_crane_envelope_m": 6.312,
+     "beam_ends": [
+      "roof deck"
+     ],
+     "into_crane_or_laser_hang": []
+    },
+    {
+     "id": "rig-beam-planes-11",
+     "head": [
+      10.857,
+      3.7,
+      -18.0
+     ],
+     "body_to_the_crane_envelope_m": 6.052,
      "beam_ends": [
       "roof deck",
       "space frame bottom chord",
       "space frame diagonals / top chord"
      ],
-     "into_crane_or_laser_hang": [],
-     "body_to_the_bridge_m": 4.02
+     "into_crane_or_laser_hang": []
     },
     {
-     "id": "rig-beam-planes-08",
+     "id": "rig-beam-planes-12",
      "head": [
       -13.143,
       3.7,
-      -24.0
+      -12.0
      ],
+     "body_to_the_crane_envelope_m": 4.374,
+     "beam_ends": [
+      "roof deck",
+      "steel (bracing, mullions)"
+     ],
+     "into_crane_or_laser_hang": []
+    },
+    {
+     "id": "rig-beam-planes-13",
+     "head": [
+      10.857,
+      3.7,
+      -12.0
+     ],
+     "body_to_the_crane_envelope_m": 3.99,
      "beam_ends": [
       "roof deck",
       "space frame diagonals / top chord"
      ],
-     "into_crane_or_laser_hang": [],
-     "body_to_the_bridge_m": 4.374
+     "into_crane_or_laser_hang": []
     }
    ],
+   "beams_into_the_crane_or_laser_hang": [],
    "smoke machine": {
     "p": [
      -4.75,
