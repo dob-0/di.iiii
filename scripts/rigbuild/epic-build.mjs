@@ -210,7 +210,10 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
             aims[key] = shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e)
             let on = null
             if (lk.parts) {
-                if (meta.part === 'laser') on = lk.parts.laser ? [null, 1] : (lk.parts.cube6a && meta.beam === '6a' ? [null, 1] : null)
+                // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09: the
+                // lasers' glare share capped per look). Every rig before it holds 1.0, so their rooms do not change.
+                const lv = (pair) => (Number.isFinite(Number(pair?.[1])) ? Math.min(1, Math.max(0, Number(pair[1]))) : 1)
+                if (meta.part === 'laser') on = lk.parts.laser ? [null, lv(lk.parts.laser)] : (lk.parts.cube6a && meta.beam === '6a' ? [null, lv(lk.parts.cube6a)] : null)
                 else on = lk.parts[meta.part] || null
             }
             colours[key] = ((on && on[0]) || meta.colour || '#e8e4dc').toLowerCase()

@@ -36,12 +36,17 @@ const docForJob = (doc, job, now = Date.now()) => {
     doc.renderSettings = { ...(doc.renderSettings || {}), atmosphere: job.atmosphere }
     const cue = { id: `true-${job.look}`, name: `held: ${job.look}`, key: '', fade: 0, hold: 3600, lightLook: `rig-${job.look}`, surfaces: {} }
     doc.mappingState = { ...(doc.mappingState || {}), cues: [cue], loop: true, showEpoch: now - 500, showSource: 'clock' }
-    // job.zeroKeys: hold the look's groups whose key holds one of these words at 0 (a measurement split, e.g. the laser lines
-    // off to see what the lamps alone white out); the browser's copy only
-    if (Array.isArray(job.zeroKeys) && job.zeroKeys.length) {
+    // job.zeroKeys / job.setKeys: hold the look's groups whose key holds one of these words at 0, or at a given level (a
+    // measurement split, e.g. the laser lines off, or at 40 %); the browser's copy only
+    const set = { ...Object.fromEntries((job.zeroKeys || []).map((w) => [w, 0])), ...(job.setKeys || {}) }
+    if (Object.keys(set).length) {
         const show = (doc.entities || []).find((e) => Array.isArray(e?.components?.rigLooks?.looks))
         for (const lk of show ? show.components.rigLooks.looks : []) {
-            for (const key of Object.keys(lk.levels || {})) if (job.zeroKeys.some((w) => key.includes(w))) lk.levels[key] = 0
+            if (job.look && lk.id !== job.look) continue
+            for (const key of Object.keys(lk.levels || {})) {
+                const w = Object.keys(set).find((word) => key.includes(word))
+                if (w !== undefined) lk.levels[key] = set[w]
+            }
         }
     }
     return doc
@@ -88,9 +93,14 @@ const main = async () => {
             if (SOFTWARE.test(gpu)) throw new Error(`refused: a software renderer (${gpu})`)
             const file = path.join(out, `${job.name}.png`)
             await page.screenshot({ path: file })
+            // job.recordLamps: the renderer's own lamps narrower than this many degrees (the laser lines: 0.11 deg), as drawn
+            const lamps = job.recordLamps ? await page.evaluate((deg) => {
+                const r = window.__diMeasure.lamps()
+                return (r.data || r).filter((l) => l.angleDeg < deg).map((l) => ({ position: l.position, intensity_scene: l.intensity_scene, candela: l.candela }))
+            }, job.recordLamps) : undefined
             index[job.name] = { job: { ...job, atmosphere: job.atmosphere }, url, at: new Date().toISOString(), ev100: state?.camera?.ev100, ev100Source: state?.camera?.ev100Source,
                 toneMappingExposure: state?.camera?.toneMappingExposure, sceneScale: state?.sceneScale, switchedOff: (state?.switchedOff || []).map((s) => s.kind + ':' + (s.name || '')),
-                gpu, commit: state?.renderer?.commit, pageErrors: [...errors] }
+                gpu, commit: state?.renderer?.commit, pageErrors: [...errors], ...(lamps ? { lamps } : {}) }
             fs.writeFileSync(indexFile, JSON.stringify(index, null, 1))
             console.log(`${job.name}: EV100 ${state?.camera?.ev100} · ${gpu.slice(0, 60)} · errors ${errors.length}`)
         }
