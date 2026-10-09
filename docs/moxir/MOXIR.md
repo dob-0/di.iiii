@@ -19,7 +19,7 @@ Words: a **place** is the real hall; the **space** `moxir` is its twin inside di
 2. **One DJ on one low step**, at the press end (v1.1: x −5.2, z 3.65–5.65; v1.0 had him in the middle of the nave), with the whole hall in front of the lasers behind him. The crowd stands in front, toward the entry.
 3. **Three colours only:** ash white, ember red, black. No rainbow, nothing moving fast overhead (owner 09-28: *"the underground rave thing, not the commercial shit"*).
 4. **Elite and minimal** (owner 2026-10-08, N330/N331): touring-grade design, but every unit must serve a signature moment or it is not hung; at most 2 layers lit most of the night.
-5. **Six lasers on the free crane**, one beam each (six beams, the owner 10-09), running over the audience's heads to the far entrance wall (v1.0: onto a wall behind the DJ; v1.1 aerial: no panel, 3 m clear); a sloped truss ("the cut") hung from the overhead crane behind him; darkness as the main colour.
+5. **Six lasers on the free crane**, one beam each (six beams, the owner 10-09), running over the audience's heads to the far entrance wall (v1.0: onto a wall behind the DJ; v1.1 aerial: no panel, 3 m clear); **two Poligraf 40 W lasers up at the entry, house left, firing back over the audience to the far wall behind the stage (§4.0b: "2 from one side 6 from other")**; a sloped truss ("the cut") hung from the overhead crane behind him; darkness as the main colour.
 
 ---
 
@@ -131,7 +131,8 @@ The owner painted a new stage (`~/Downloads/moxir/stage/update dj and speaker pl
 | Far (free) crane | **z −12** (rig json had −41), carries ALL SIX LaserCubes on a laser bar 2.49 m under its bridge — §4.0a | owner 10-09: "the other crane is free, arrange all 6 lasers on it" |
 | Lights | every v1.0 unit, look, colour, level and DMX kept. The cut's lamps moved with the cut (−4.0, −0.35, −20.85); the floor units behind the step with the step (−5.33, 0, −18.85); the 4 ash-wall grazers re-aimed at the wall (16–45°); smoke 4 nudged 0.43 m off the transformer; **press-sides-02 moved off the new floor** (z 9.0 → 6.0) and re-aimed at the same point of the press | moxir_v1_1.py (casts in both worlds) |
 | Lasers | **six beams, ONE per LaserCube (7.5 W Ultra Mk2, duty 1; N449), all six on the free crane, AERIAL: over the heads to the far NW end wall, >= 3.0 m over a standing person (person = surface + 2.0 m), 2.5 m from places people can rise to, under the near crane's bridge (safe 7.2 m), ending on matte block >= 9.0 m (door top + 3 m); margin after the 0.8 deg fan 0.21 deg; NOHD 544 m unchanged: height is the control — §4.0a (supersedes the press ends and the ash wall)** | IEC TR 60825-3, ILDA, HSE HS(G)95; lasers-exact.json; occlusion_lib over hall v9-show-park |
-| E-stops | E-stop 1 at FOH (Dima); **E-stop 2 (spotter) at x -7.0, z -4.5** behind the stage, house left — with FOH it sees ≥ 96 % of every beam | sight lines cast on hall v9-show-park |
+| Entry lasers (owner 10-09, N460.2 / N462) | **2 × UP-LA40WF (Poligraf, 41 W) on a truss tower + T-bar at z 48, house left, apertures x −8.09 / −7.39, y 5.94**, one static beam each, back over the audience to the far (SE) wall's block; worst margin +0.165 m over the §4.0a rule; the hard stop (an aperture mask) owed — §4.0b | `moxir_entry_lasers.py`, cast on hall v9-show-park |
+| E-stops | E-stop 1 at FOH (Dima); **E-stop 2 (spotter) at x -7.0, z -4.5** behind the stage, house left — with FOH it sees ≥ 96 % of every beam (the two entry beams: 100 %, §4.0b) | sight lines cast on hall v9-show-park |
 | Power | connected **36.1 kW** (lighting, lasers, smoke), running **17.8 kW** worst look + FOH ≤ 30 kW (the PA is the organiser's own supply); 19 circuits ≤ 2944 W, worst volt drop 4.3 %; per phase L1 12.1 kW / L2 12.3 kW / L3 11.8 kW. D-STAGE at x −8.8, z 2.0 behind the stage; D-FAR, D-LEFT, D-RIGHT unchanged. The map: `v1-1-power-needs.png` | BS 7671 4D2B, v1.0 method |
 
 
@@ -198,6 +199,71 @@ Per ray: the axis + 60 rays over the 0.8 deg fan (0.3 deg controller zone + 0.5 
 
 **Cleared before the show (owner):** the white bags, the cabin, the loose gas cylinders; the five pressure vessels and the other loose items must go too — the step and the speaker boxes stand where the vessels lie today.
 
+#### 4.0b - The two Poligraf lasers UP at the entry (2 x UP-LA40WF, 2026-10-09; owner N460.2 / N462, the cubes on the crane N464)
+
+**The owner (2026-10-09 ~20:30):** *"2 lasers from poli goes to the up to the entrance, where audience will enter, so 2 from one side 6 from other"*. So the two Poligraf 40 W lasers go up at the entry end (the audience door, z +54), aimed back over the audience toward the stage; the six LaserCubes are the other side, on the free crane at z −12. **21:1x (N464):** *"we dont need to hange laser put on the crane"*: the cubes sit ON the free crane's bridge (aperture about 8.9 m, 8.5–9.0), no bar and no drop frame under it; their new aims are designed elsewhere. Here the cubes are a keep-out box on the bridge top and the old hung cube beams are not used.
+
+**Result: PASSES THESE CHECKS, not "safe".** Both beams pass the cubes' rule set (§4.0a) with a worst margin of **+0.165 m** (the near crane's bridge at its safe underside 7.2 m) and **+0.099°** left after the 0.8° fan. Every one of the 2 × 61 rays first-hits the far (SE) end wall's matte block (`hall-block`), at y 5.247–8.091 m. **Only house left has a line at all.** The cubes' v1.1 hang passed with +0.22 m: these two are thinner. What adds margin is in the mount table below, and in the owed list.
+
+**The unit** (`fixtures.json` kinds.laser): R 10 W 638 nm + G 15 W 520 nm + B 16 W 445 nm = **41 W** (the maker's page LA-CN, EXACT); divergence "< 1.3 mrad", 35 kg, 0.42 × 0.235 × 0.555 m, 1200 W (Blue Sea BLLO-RGB40, EQUIVALENT). **The aperture is not published:** taken as 10 mm for the clearance tube and 6 mm for the NOHD, the safe end for each. It takes 32 ch DMX (TESTED at Sevan) and has auto (25), sound (75) and manual (250) modes. It scans graphics and has **no software safety zone**, so the controller zone (±0.3°) has to be a physical **hard stop**: an aperture mask on the output.
+
+**NOHD** (IEC 60825-1:2014 Table A.1, MPE 25.5 W/m² at 0.25 s, NOHD = (√(4P/πMPE) − a)/φ): **1 097 m** at 41 W; 1 742 m at 10 s; 1 553 m if 6 mm / 1.3 mrad are 1/e² values. Per colour: blue 684, green 662, red 539 m. Dimming does not change the picture: 10 % 344 m, 1 % 106 m, 0.1 % 30 m. Only about **3 mW** is under the MPE 5 m from the aperture. Diffuse off the block: 0.51–0.68 m (albedo 0.5–0.9), 0.96 m if both beams land on one spot. The hall is 108 m long, so every beam is hazardous wherever it is. **Separation (3.0 m / 2.5 m) and the hard stop are the control.**
+
+**Method** (`scripts/place/moxir_entry_lasers.py`; the numbers: `rigs/moxir-v2-entry-lasers-2026-10-09.json`). The §4.0a rule is unchanged: the same 13 standing places (the test checks they are the cubes' 13), person = surface + 2.0 m, the beam ≥ 3.0 m over or ≥ 2.5 m beside each place, the tube = the 0.8° fan + the unit's own optics, and the safe ends (near crane underside 7.2, free crane 7.69, lamps 9.0). The full cast is the axis + 60 rays on the hall's 55 728 triangles (Möller–Trumbore), in the v2 night world: the free crane moved from the GLB's z −41 to z −12, the near crane drawn at its safe 7.2 underside, people over the whole floor, and the v2 spread lamps (#864, cbfc0c1d). Added for these two, each on the safe side:
+- the end is the far SE wall, 102 m away. The artists' gate (x −2.4..2.4, 5.4 m high) is treated like a place: the whole fan ends ≥ 2.5 m beside its opening, or ≥ 3.0 m over its top;
+- the free crane's cab at z −12 is a standing place, as the near crane's is;
+- lamp bodies are spheres of max(0.25 m, the v2 radius) with a margin ≥ 0.25 m;
+- these bodies also keep ≥ 0.25 m: the cubes on the crane (x −11.35..11.35, y 8.3–9.4), the cut's two tie-offs (a ratchet strap would burn), and the other unit.
+
+The search is a compass search (Hooke & Jeeves 1961; Kolda, Lewis & Torczon 2003) from 4 starts: it looks for the two units' height and both aims with the largest worst margin, per mount. It finds a good layout, not a proven optimum, and the written layout is checked in full either way. The setup sheet is the v1.1 window method.
+
+**Where the two units can go** (side by side, 0.7 m apart, one height; the best aims for each):
+
+| Mount | Worst margin | Binds | Verdict |
+|---|---|---|---|
+| **truss tower with a T-bar, house left, at the column line z 48 (chosen)** | **+0.165 m** | near crane bridge 7.2 | passes |
+| the same tower at z 50 / z 46 / z 44 | +0.134 / +0.191 / +0.215 m | near crane, cut pick 2 | passes (further in = more margin: the fan is shorter) |
+| a bracket on the entry end wall, house left, aperture z 53.1 | +0.089 m | near crane bridge | passes, thinnest; the block wall's anchors are unknown |
+| a bracket on the nave column x −12, z 48 or z 54 | −0.888 / −0.933 m | the left runway walkway: the aperture is within 2.5 m of it, and a beam can never be 3 m below it and 3 m over the floor at once | **fails**; an arm long enough to pass would put the units where the tower puts them (x −8.1 / −7.4: 3.5–4.2 m from the column face) |
+| a stand on the entry platform (house right, people on it) | −0.389 m | cut pick 2 | **fails** |
+| any tower house right (by the bar) | −0.370 m | the cut's hr tie-off (6.15 m, x 0.55→11.6) | **fails** |
+| a tower on the nave axis (in the door's flow) | −0.204 m | cut pick 2 | **fails** |
+| the entry door's steel frame | −0.108 m | near crane bridge | **fails** |
+
+Forcing the two ends ≥ 0.5 m apart would cost 0.11 m of margin (+0.165 → +0.056 m). So they are not forced: the two lines meet within 0.18 m on the far wall. Safety margin comes first; that look choice is the owner's to make.
+
+**Setup sheet** (pan from the hall axis toward the STAGE, + toward +x / house right; tilt above level; roll 0):
+
+| Beam | Aperture (x, y, z) | Aim | Ends on the far wall (block) | Window (rule holds, beam alone) | Hard stop: aperture mask keep-in | Beam block |
+|---|---|---|---|---|---|---|
+| P1a | −8.094, 5.944, 48.0 | pan +0.73 / tilt +0.41 | −6.794, 6.669, −53.8 (cast 5.247–8.091) | pan −0.19..+1.75, tilt −0.47..+1.41 | pan +0.43..+1.03, tilt +0.11..+0.71 (fits after the 0.5° mount tolerance) | below −0.47° |
+| P2a | −7.394, 5.944, 48.0 | pan +0.44 / tilt +0.41 | −6.619, 6.669, −53.8 (cast 5.247–8.090) | pan −0.56..+1.36, tilt −0.47..+1.41 | pan +0.14..+0.74, tilt +0.11..+0.71 (fits) | below −0.47° |
+
+**Clearances to everything in the way** (m over each rule; P1a / P2a): near crane bridge (safe 7.2) **+0.165 / +0.165** · FOH riser (5.6) +0.169 / +0.167 · the floor, whole hall, people to z −31 behind the stage (5.0) +0.176 / +0.176 · the DJ step (5.4) +0.182 / +0.181 · left runway walkway (2.5 m beside) +0.213 / +0.389 · the far gate rule +0.401 / +0.226 · the other unit's body (0.25 m margin) +0.235 / +0.235 · free crane bridge (safe 7.69) +0.387 / +0.387 · the cubes on the free crane (0.25 m margin) +0.765 / +0.765 · cut pick 2 (bridle + hoist) +0.986 / +0.537 · the cut's truss +1.307 / +1.190 · its tie-offs +3.81 / +4.15 · lamp bodies, 0.25 m margin: v2 spread +0.776 / +0.701 (cut PAR 04), v2 B tuned the same, v1.1 +0.596 / +0.546. At the cut's plane the beams pass at x ≈ −7.1, where the cut's top is 4.2 m. The cut's high end (x 0.55, 6.3 m) is 7 m to the right.
+
+**The cubes (N464) and the keep-out envelope.** The two units stand nowhere near the upper entry wall (y ≥ 9, x −6..4), which stays free for the cubes' new ends. The new cube beams start at 8.5–9.0 m on the free crane and pass over the near crane (girder top 8.4 in the model). The entry beams pass under it, so the crane itself separates the two sets at z 0.15. The entry tubes reach at most 6.13 m at z 40–48, 7.26 m from z 0 to −12, and 8.17 m anywhere (rounded up). **The cube beams' new ends and tubes keep ≥ 0.25 m clear of:**
+
+| Box | x (m) | y (m) | z (m) |
+|---|---|---|---|
+| KO-1 the two units + U-brackets + T-bar | −8.66..−6.83 | 5.77..6.48 | 47.95..48.61 |
+| KO-2 the tower and its pen (outriggers ESTIMATE 3 × 3 m + 1 m) | −10.25..−5.24 | 0..6.48 | 45.77..50.78 |
+| KO-3 the two beams' tubes, by z | −8.29..−5.12 | 5.17..8.17 | −53.8..48 (six boxes in the rig json) |
+
+**E-stops:** E-stop 1 at FOH (Dima) sees 73 / 75 % of each beam. The spotter's E-stop 2 (x −7.0, z −4.5) sees 98 / 97 %. Together they see 100 % of both (sight lines cast, people not counted). E-stop 1 must cut the units' interlock or their supply: the bench test shows which stops the beam in < 0.5 s.
+
+**The mount, rated or owed:** the tower + T-bar carries 2 × 35 kg + about 20 kg (ESTIMATE: bar, U-brackets, clamps, two safety steels, cable). **Owed:** the rental house's tower model and its load table at 6 m with this offset; base, outriggers and ballast with a stability check (ANSI E1.21-2013); the rigger's sign-off (EN 17206 / DGUV V17); the pen (a barrier 1 m round the outriggers, at the chill zone's edge: the organiser's crowd plan places it); sway held under 0.5° (ballast, guys, or a tie-off to the column x −12 z 48: the rigger's call). The wall bracket (+0.089 m) needs the end wall's construction and an engineer's anchor rating first. The columns and the entry platform fail on the beam, whatever they could carry.
+
+**Owed before any emission** (the desk holds both units at 0, `deskLookValues.js`, no `laserSignedOff`):
+1. **The hard stop:** an aperture mask on each output that lets out only the aim ±0.3°. It must be non-combustible and rated for 41 W continuous. Nothing here works without it.
+2. **The unit on the bench:** what it does when DMX is lost (hold, blackout, auto 25 or sound 75; the mask contains it either way), and its interlock / key switch with E-stop 1.
+3. **Poligraf's data:** the aperture (mm), the divergence's definition, and the scan angle.
+4. **The tapes that bind:** the near crane's underside (7.2–8.1; 7.2 used). A taped 7.6 m raises the worst margin only to +0.207 m, re-aimed, because the free crane then binds. The FOH riser's height and place (0.6 m ASSUMED) also bind.
+5. **The free crane** seen at z −12 with the cubes on its top. **The far half's pendant lamps** (z −42..−5, not seen on 10-08, not in the model): nothing may hang lower than 8.42 m over the beams' strip (their tube top 8.17 m + 0.25 m).
+6. **The crowd plan:** nothing to stand on under the beams' strip higher than `under_the_beams` in the rig json (tables, benches, crates, cases). The limit is 0.80 m at the entry end, 0.64 m on the dance floor, 0.34 m behind the stage and 0.17 m at the far end.
+7. **The sign-off:** the LSO's walk at alignment power; the permit's issuer and number.
+
+Pictures (matplotlib, `~/Downloads/moxir/v2-entry-lasers/`): `entry-lasers-plan.png` (the hall from above with the painted zones and the keep-out boxes), `entry-lasers-section.png` (the long section with the margins at the binding points), `entry-lasers-cross-sections.png` (x–y cuts at z −12, −1.3, 29 and −53.8), and `setup-sheet.md`.
+
 ### 4.3 The lights, by group (the "epic" placement, all 7 advices accepted by the owner 10-08)
 
 Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 8 UP-HK1915, 4 UP-YZ31P smoke) + **6** LaserCube Ultra MK2 (ours; v1.0: 2 beams each = 12 lines; **v1.1: one beam each = 6 beams**) + from another supplier: 6 strobes, 8 blinders. **No hazer** (owner 10-08: the haze is the 4 smoke machines).
@@ -251,7 +317,8 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 - **Permission:** held, per the owner (2026-10-08). Owed for the production file: who issued it, a copy, and the **named laser operator / safety officer (LSO)** at a kill switch with sight of every beam — not the owner, not the DJ.
 - **Rules in the design (v1.1 aerial, §4.0a, which wins; v1.0's "ends on steel, no beam past z 21" is the record):** beams over the heads to the far matte wall; ≥ 3.0 m above a standing person's top (person = surface + 2.0 m, so 5.0 m over the floor) and 2.5 m laterally from anywhere people can rise; static beams only; software zones (LaserOS "Safety Zone") are the second barrier, never the first.
 - **Reviewer's blockers (Fable, 10-08) — v1.0 status:** (B2) **done in the design:** one 4.0 × 2.4 m matte-black aluminium ash wall (v1.0: z 20.2; **v1.1: x −5.2, z −0.65, 5.15–7.55 m**) is the stop for all 12 lines (v1.0; **v1.1: no panel, six beams on the press — §4.0a**), each beam's ±0.8° field (0.3° zone + 0.5° mount tolerance) lands on it, ≥ 0.59° to spare; Beam Block + tilt screws in the laser test. (B3) every line now 5.0–7.45 m, under the pendant layer: **measure the lamps today**; ladders to the runways locked (crew sheet). (B4) the cold plan: mains adapters, warm cases, a heated enclosure per cube, ≥ 10 °C before power-on, the LSO's no-go below 0 °C. (B5) **Dima** is the laser operator with E-stop 1 at FOH; a **spotter with E-stop 2** (v1.0: x −9, z 12; **v1.1: x −7.0, z −4.5 behind the ash wall, with FOH ≥ 93 % of every line — §4.0**) (the v1.0 engine: FOH alone sees 47 % of beam 6a, FOH + spotter 100 % of every beam); the permit's issuer/number and an LSO name (if not Dima) are blanks.
-- **Standards named:** IEC 60825-1:2014, IEC TR 60825-3, HSE HS(G)95, ANSI Z136.10, ILDA guidelines, the ULTRA MK2 Guide v1.0.
+- **The two entry lasers (2 × UP-LA40WF, 41 W each, §4.0b):** NOHD 1 097 m (6 mm / 1.3 mrad ASSUMED / EQUIVALENT), the same rule as the cubes, worst margin +0.165 m. The unit takes DMX and has no software zone, so a **physical aperture mask** (aim ±0.3°, rated for 41 W continuous) is the hard stop and is owed before any emission. Its behaviour on DMX loss, and how E-stop 1 cuts it, come from a bench test.
+- **Standards named:** IEC 60825-1:2014, IEC TR 60825-3, HSE HS(G)95, ANSI Z136.10, ILDA guidelines, the ULTRA MK2 Guide v1.0; for the entry tower ANSI E1.21-2013 and EN 17206.
 
 ### 5.2 Rigging
 - The cut on the crane: 3 picks ≤ 146 kg each, bridles ≤ 120°, safety steels on separate points, picks shackled to the chords (a sloped truss slides in basket slings), tie-offs with ≥ 0.5 m clearance to fixed things and 1.0 m to anything that moves (the cab). **Owed:** the crane's rating plate (SWL), inspection record, the venue's written consent, lock-out of the crane and trolley before anyone rigs (ISO 12480-1; the post-Soviet crane rules PB 10-382-00 ask a partial inspection every 12 months, a full one every 3 years — Armenian text not found, verify with the venue), a rigger's sign-off (DGUV V17/18, EN 17206, ANSI E1.2/E1.4-1).
@@ -285,6 +352,7 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 | 12 | **Haze:** smoke only; the plan's σ 0.017/m (nave) rests on an ASSUMED yield; the room's own fog physics (hazeField.js, fog dries fast) gives 0.0004/m — 40× apart: measure σ on the night (lux at 20 m through smoke) | LD | visit / 10-16 | the lasers' visibility |
 | 13 | Count the columns per row from the joint to the door; photos: the DJ end at floor level, the entry end, the joint, the right row at z ~32, the far half, the 14 "L" beam paths in the survey copy, every item already in the hall | owner (visit) | today | the model, v1.1 |
 | 14 | Hall temperature on the night; the cubes' 10 °C floor | LSO | 10-16 | laser go/no-go |
+| 15 | **The two entry lasers (§4.0b):** each output's aperture mask (the hard stop); the units on the bench (DMX loss, the interlock with E-stop 1); Poligraf's aperture, divergence and scan angle; the tower + T-bar's load table, ballast and stability check (ANSI E1.21), the rigger's sign-off; the pen in the crowd plan; the near crane's underside and the FOH riser taped (they bind) | Poligraf + LSO + rigger + organiser | 10-12 (bench), 10-15 (rigging) | the entry lasers' go/no-go |
 
 Today's list in full: `~/Downloads/moxir/stage/occlusion/moxir-survey.html` (28 shots; the entrance question is now answered — the NW door, SE = artists; the v0.9 copy is on dev at `https://dev.diiii.xyz/atlas/p/moxir-survey-2026-10-08`, sign-in needed). Bring: a laser distance meter with tilt (DISTO/GLM class), 30 m + 5 m tapes, a 1 m rule in every photo, three readings per height, the slow walk video as files, one 20 m taped edge photographed, a lux reading at the DJ spot.
 
@@ -408,5 +476,7 @@ gh pr view 823 -R dob-0/di.iiii --web                         # the PR with the 
 **2026-10-08 night — v1.1 part 1, the place:** the site photos applied as one dims layer (`moxir-hall-site-2026-10-08.json`, basis FROM PHOTOS, each item with its photo and range); hall v9 + v9-show built (hall.py: per-crane underside `crane_bridge_bottom_each_m`; a `massing_remove` id an earlier layer already removed is noted, not an error — v8-show rebuilds identical). Check pictures: each new box projected on 170604 with its fitted camera. The stage is NOT moved in this step.
 
 **2026-10-08 night — v1.1 part 2, the stage:** the owner's new marks applied; the crane park chosen against the press crown (least change: 2.0 m further back), the cut's tie-offs re-found, every unit moved/re-aimed by rule (`scripts/place/moxir_v1_1.py`, cast against both worlds), lasers checked at 6 W, the power map drawn; no sound design (the organiser's). Built on scratch as `moxir-v1-1`; seen in Lite and Full on the real GPU (`~/Downloads/moxir/stage/v1-1/check/`).
+
+**2026-10-09 night — the two Poligraf lasers at the entry (owner N460.2 / N462; N464 for the cubes):** 2 × UP-LA40WF (41 W) go up at the entry end, **house left, on a truss tower with a T-bar at z 48** (apertures x −8.09 / −7.39, y 5.94). Each fires one static beam back over the audience to the far (SE) wall's matte block, 102 m away. Both pass the §4.0a rule set at +0.165 m (the near crane's safe underside binds); 2 × 61 rays all end on the block. No line exists house right, on the axis, from the columns, from the entry platform or from the door frame (all measured, §4.0b). With the cubes now on the crane's top (N464), the two sets are separated by the near crane itself. The keep-out envelope for the cubes' new ends is in §4.0b. Owed first: the aperture masks (the hard stop), the bench test, and the tower's rating. `scripts/place/moxir_entry_lasers.py`, `rigs/moxir-v2-entry-lasers-2026-10-09.json`, branch `feat/moxir-entry-lasers-2026-10-09`.
 
 **2026-10-09 — v1.1 bug fixes + the lasers (owner N382, N385):** the ash wall is gone (no panel goes back without the owner's word); **6 laser beams, one per cube, the cube's whole 6 W** (the 12 were our own choice); each ends on the hall's press, margins 0.10–2.2° (§4.0a, cubes 1, 2, 3, 5 under v1.0's 0.5° rule: named with the smallest fixes); the 4 ash-wall grazers re-aimed along the press face; E-stop 2 and the crew sheet read the cast spotter place (x -7, z -4.5; v1.0's x -9, z 12 is on the v1.1 dance floor). Also: speaker L trimmed off the DJ step, one connected total (36.1 kW), the FOH view authored as the Rig button, the show chip clear of Lite on a phone, the plan and power pictures readable. Branch `fix/moxir-v1-1-bugs-2026-10-09`.
