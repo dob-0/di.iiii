@@ -229,6 +229,10 @@ export default function PublicProjectSceneSurface({
                 <StudioViewport
                     key={outputMode ? 'lite' : 'full'}
                     document={document}
+                    // the document's entities are then the room as RoomLookFollower drew it in the
+                    // look that plays: drawn as handed, never posed again (a second pose drew
+                    // every look level squared, MOXIR 2026-10-09)
+                    lookDrawn={Boolean(posedEntities)}
                     selectedEntityId={null}
                     onSelectEntity={null}
                     cursors={{}}
