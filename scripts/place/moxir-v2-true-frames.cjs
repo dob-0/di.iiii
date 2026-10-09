@@ -19,6 +19,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { chromium } = require('playwright')
+const { closeOnSignal } = require('./close-on-signal.cjs')
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -35,6 +36,14 @@ const docForJob = (doc, job, now = Date.now()) => {
     doc.renderSettings = { ...(doc.renderSettings || {}), atmosphere: job.atmosphere }
     const cue = { id: `true-${job.look}`, name: `held: ${job.look}`, key: '', fade: 0, hold: 3600, lightLook: `rig-${job.look}`, surfaces: {} }
     doc.mappingState = { ...(doc.mappingState || {}), cues: [cue], loop: true, showEpoch: now - 500, showSource: 'clock' }
+    // job.zeroKeys: hold the look's groups whose key holds one of these words at 0 (a measurement split, e.g. the laser lines
+    // off to see what the lamps alone white out); the browser's copy only
+    if (Array.isArray(job.zeroKeys) && job.zeroKeys.length) {
+        const show = (doc.entities || []).find((e) => Array.isArray(e?.components?.rigLooks?.looks))
+        for (const lk of show ? show.components.rigLooks.looks : []) {
+            for (const key of Object.keys(lk.levels || {})) if (job.zeroKeys.some((w) => key.includes(w))) lk.levels[key] = 0
+        }
+    }
     return doc
 }
 
@@ -51,6 +60,7 @@ const main = async () => {
     const browser = await chromium.connectOverCDP(cdp)
     const context = browser.contexts()[0] || (await browser.newContext())
     const page = await context.newPage()
+    closeOnSignal(() => page) // a `timeout` kill must not leave the tab drawing the room (2026-10-09)
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e.message || e).slice(0, 300)))
     let current = null
