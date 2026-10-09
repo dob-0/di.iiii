@@ -2376,6 +2376,87 @@ describe('server write contracts', () => {
         expect(projRes.headers.get('content-disposition')).toBe('attachment')
     })
 
+    // The response type of an asset comes from the server's own list of types
+    // a browser shows as passive media; a declared type that is not on it
+    // (whatever family it claims) answers as a download.
+    it('serves an asset inline only when its type is on the server list, as a sandboxed download otherwise', async () => {
+        const server = await startServer()
+        const spaceId = 'asset-types-space'
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'Asset Types', permanent: true })
+        })
+        expect(created.status).toBe(201)
+
+        const xhtmlBody = '<html xmlns="http://www.w3.org/1999/xhtml"><script>document.title="ran"</script></html>'
+        const uploadAsset = async (blob, filename) => {
+            const form = new FormData()
+            form.append('asset', blob, filename)
+            const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+                method: 'POST',
+                headers: withAuth(server.apiToken),
+                body: form
+            })
+            expect(res.status).toBe(200)
+            return (await res.json()).assetId
+        }
+        const get = (assetId) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}`)
+
+        // Media families with an XML subtype: browsers render any +xml type
+        // as an XML document.
+        for (const [type, name] of [['image/x-note+xml', 'note.xml'], ['model/x3d+xml', 'scene.x3d'], ['video/x-cue+xml', 'cue.xml']]) {
+            const id = await uploadAsset(new Blob([xhtmlBody], { type }), name)
+            const res = await get(id)
+            expect(res.status).toBe(200)
+            expect(res.headers.get('content-type'), type).toBe('application/octet-stream')
+            expect(res.headers.get('content-disposition'), type).toBe('attachment')
+            expect(res.headers.get('content-security-policy'), type).toBe('sandbox')
+            expect(res.headers.get('x-content-type-options'), type).toBe('nosniff')
+        }
+
+        // Passive media keeps its type and stays inline (textures, video,
+        // audio and models load as before), still sandboxed if opened alone.
+        for (const [type, name] of [['image/png', 'flat.png'], ['video/mp4', 'clip.mp4'], ['audio/mpeg', 'tone.mp3'], ['model/gltf-binary', 'thing.glb']]) {
+            const id = await uploadAsset(new Blob(['bytes-' + type], { type }), name)
+            const res = await get(id)
+            expect(res.headers.get('content-type'), type).toContain(type)
+            expect(res.headers.get('content-disposition'), type).toBe(null)
+            expect(res.headers.get('content-security-policy'), type).toBe('sandbox')
+            expect(res.headers.get('x-content-type-options'), type).toBe('nosniff')
+        }
+
+        // A generic upload with a known model extension gets the model type
+        // from the name, not from the client.
+        const glbId = await uploadAsset(new Blob(['glTF-bytes'], { type: 'application/octet-stream' }), 'chair.glb')
+        const glbRes = await get(glbId)
+        expect(glbRes.headers.get('content-type')).toContain('model/gltf-binary')
+        expect(glbRes.headers.get('content-disposition')).toBe(null)
+
+        // SVG keeps its type (an <img> needs it to draw) but never opens as a page.
+        const svgId = await uploadAsset(new Blob(['<svg xmlns="http://www.w3.org/2000/svg"/>'], { type: 'image/svg+xml' }), 'mark.svg')
+        const svgRes = await get(svgId)
+        expect(svgRes.headers.get('content-type')).toContain('image/svg+xml')
+        expect(svgRes.headers.get('content-disposition')).toBe('attachment')
+        expect(svgRes.headers.get('content-security-policy')).toBe('sandbox')
+
+        // The project asset route answers with the same rules.
+        const project = await createServerProject(server, spaceId, { title: 'Types Project', slug: 'types-project' })
+        const projForm = new FormData()
+        projForm.append('asset', new Blob([xhtmlBody], { type: 'image/x-note+xml' }), 'note.xml')
+        const projUpload = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: projForm
+        })
+        expect(projUpload.status).toBe(200)
+        const projAssetId = (await projUpload.json()).asset.id
+        const projRes = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets/${projAssetId}`)
+        expect(projRes.headers.get('content-type')).toBe('application/octet-stream')
+        expect(projRes.headers.get('content-disposition')).toBe('attachment')
+        expect(projRes.headers.get('content-security-policy')).toBe('sandbox')
+    })
+
     // Sandboxes are created with no ownerUserId (they must not count toward the
     // owned-space quota), and owner gating keyed on ownerUserId alone — so an
     // account was 403'd from managing its own sandbox.
