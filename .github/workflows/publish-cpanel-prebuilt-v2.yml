@@ -32,7 +32,7 @@ jobs:
 
   publish:
     needs: checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
     env:
       SOURCE_REF:    ${{ inputs.source_ref != '' && inputs.source_ref || github.ref_name }}
@@ -131,7 +131,7 @@ jobs:
   smoke:
     needs: publish
     if: needs.publish.outputs.published == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       BASE_URL: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'https://di-studio.xyz' || 'https://dev.diiii.xyz' }}
       EXPECTED_SHA: ${{ needs.publish.outputs.source_sha }}
