@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShowError, blockOf, chooseCue, cleanName, favouriteButtons, isLiveScene, liveOf } from './showApi.js'
 import { useShowFeed } from './useShowFeed.js'
 
@@ -17,6 +17,22 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
     const [sending, setSending] = useState(null)
     const [notice, setNotice] = useState('')
     const [now, setNow] = useState(() => Date.now())
+    const rowRef = useRef(null)
+    const [lift, setLift] = useState(null)
+    // Sit just above the view bar (Floor / DJ / Top ...), wherever it stands on this screen: measured, never covering it.
+    useEffect(() => {
+        const place = () => {
+            const bar = document.querySelector('[data-smart-view-bar]')
+            const parent = rowRef.current?.offsetParent
+            if (!bar || !parent) return setLift(null)
+            const gap = parent.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 8
+            setLift((old) => (old != null && Math.abs(old - gap) < 1 ? old : Math.max(8, Math.round(gap))))
+        }
+        place()
+        const timer = setInterval(place, 1000)
+        window.addEventListener('resize', place)
+        return () => { clearInterval(timer); window.removeEventListener('resize', place) }
+    }, [data])
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 500)
         return () => clearInterval(timer)
@@ -62,7 +78,7 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
 
     if (!data || !buttons.length) return null
     return (
-        <div data-testid="room-favourites" style={{ ...rowStyle, bottom }}>
+        <div ref={rowRef} data-testid="room-favourites" style={{ ...rowStyle, bottom: lift != null ? lift : bottom }}>
             {notice ? <p role="status" style={noticeStyle}>{notice}</p> : null}
             <ul aria-label="favourite scenes" style={listStyle}>
                 {buttons.map((cue) => {

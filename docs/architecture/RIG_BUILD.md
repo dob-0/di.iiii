@@ -2500,3 +2500,13 @@ edits", which on a `di up --guests` install hands a guest the sign-in card on th
 - **The page** is a grid of bricks (scene name + colour squares; the live one in ember red; a laser scene shown dashed, disabled, "operator only"). Who may press, "play in order" and the name field are behind one `settings` button, operator only. The room's chip list is the same bricks, two columns, compact.
 - **Kept:** laser scenes refused by the server (403) and written 0 by the desk; the permission setting; the cooldown; the operator lock. Lasers are never fired from these pages.
 - **Words:** "scene" on screen (Light's word, docs/ai/vocabulary.md). The server's own refusal sentences still say "cue" in places (owed).
+
+### 24.y Five favourite scenes, always in the room (owner, 2026-10-09)
+
+*"it's just to see the light shows, and in virtual - like the favourite 5 scene buttons there."*
+
+- **The row.** `src/rigbuild/RoomFavourites.jsx`, mounted by `RoomLookFollower` beside the SHOW chip: up to five bricks (colour swatch + short name; live one ember red), measured to sit just above the view bar (`[data-smart-view-bar]`), so it never covers Floor/DJ/Top or the chip. A tap is the same `POST .../choose`: cooldown, lock and permission are the server's; laser scenes are never in the row.
+- **Which five.** `POST .../favourites {favourites: [lookId, ...]}`, operator only, at most 5, each once, each a look of this show, never a laser scene (400 `bad-favourites`). Kept in the show's control state (`control.json`, `favourites`: null = never set). The answer carries `control.favourites` (effective: the operator's list, else the first five non-laser looks) and `favouritesSet`. Everyone reads the same five.
+- **Stars.** The operator sees a star on each non-laser brick of the SHOW list; a toggle posts the new list (at five, the oldest star leaves) and the row updates at once (window event `di:show-answer`).
+- **Tests.** `serverXR/src/showContracts.test.js` (operator only, <= 5, unknown/laser refused, shared, persisted), `showRemote.test.js`, `src/rigbuild/RoomFavourites.test.jsx`, `showApi.test.js`.
+

@@ -121,4 +121,19 @@ module.exports = [
     },
     note: "operator only; needs Light on this machine playing this project's list (409 otherwise). Lasers are still never fired from here."
   },
+  {
+    route: "POST /api/spaces/:spaceId/show/:projectId/favourites",
+    summary: "the operator's five favourite scenes: the buttons always on screen in the room. Everyone reads the same list from the show answer (control.favourites)",
+    reach: "public",
+    role: "editor",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        properties: { favourites: { type: "array", items: { type: "string" }, maxItems: 5 } },
+        required: ["favourites"]
+      }
+    },
+    note: "operator only. Look ids (rig-...), at most 5, each once, each in this show, never a laser scene (400 otherwise). Stored with the show's control state in <DATA_ROOT>/show/control.json; before any is set the first five non-laser looks."
+  },
 ]
