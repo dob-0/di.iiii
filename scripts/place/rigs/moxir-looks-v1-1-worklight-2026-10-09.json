@@ -1,0 +1,1064 @@
+{
+ "source": "scripts/place/moxir_worklight.py",
+ "written": "2026-10-09",
+ "ambient": 0.6,
+ "colours": [
+  "#e8e4dc",
+  "#ff3a12",
+  "#a3200c"
+ ],
+ "looks": [
+  {
+   "id": "work_light",
+   "title": "WORK LIGHT",
+   "intent": "Everything lit evenly so the hall, truss, DJ and floor can be seen and worked in: walk, place, judge positions. No lasers, no strobes.",
+   "parts": {
+    "curtain": [
+     "#e8e4dc",
+     1
+    ],
+    "x": [
+     "#e8e4dc",
+     1
+    ],
+    "halo": [
+     "#e8e4dc",
+     1
+    ],
+    "press graze": [
+     "#e8e4dc",
+     0.6
+    ],
+    "arch": [
+     "#e8e4dc",
+     1
+    ],
+    "roof": [
+     "#e8e4dc",
+     1
+    ],
+    "side roof": [
+     "#e8e4dc",
+     1
+    ],
+    "far wall": [
+     "#e8e4dc",
+     1
+    ],
+    "far columns": [
+     "#e8e4dc",
+     1
+    ],
+    "span columns": [
+     "#e8e4dc",
+     1
+    ],
+    "blinders": [
+     "#e8e4dc",
+     0.4
+    ],
+    "still smoking": [
+     "#e8e4dc",
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "house_low",
+   "title": "House light, low",
+   "intent": "Half the work light: the hall readable between sets or while the crowd comes in.",
+   "parts": {
+    "curtain": [
+     "#e8e4dc",
+     0.5
+    ],
+    "x": [
+     "#e8e4dc",
+     0.5
+    ],
+    "halo": [
+     "#e8e4dc",
+     0.5
+    ],
+    "press graze": [
+     "#e8e4dc",
+     0.3
+    ],
+    "arch": [
+     "#e8e4dc",
+     0.5
+    ],
+    "roof": [
+     "#e8e4dc",
+     0.5
+    ],
+    "side roof": [
+     "#e8e4dc",
+     0.5
+    ],
+    "far wall": [
+     "#e8e4dc",
+     0.5
+    ],
+    "far columns": [
+     "#e8e4dc",
+     0.5
+    ],
+    "span columns": [
+     "#e8e4dc",
+     0.5
+    ],
+    "blinders": [
+     "#e8e4dc",
+     0.2
+    ],
+    "still smoking": [
+     "#e8e4dc",
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "black",
+   "title": "The black (ember)",
+   "intent": "Dark but not black: deep ember on the columns and far wall, the machines glowing. 3-5 s before a drop.",
+   "parts": {
+    "still smoking": [
+     "#ff3a12",
+     0.2
+    ],
+    "span columns": [
+     "#a3200c",
+     0.35
+    ],
+    "far wall": [
+     "#a3200c",
+     0.4
+    ],
+    "far columns": [
+     "#a3200c",
+     0.35
+    ]
+   }
+  },
+  {
+   "id": "still_smoking",
+   "title": "Still smoking",
+   "intent": "Warm-up: the machines glow from inside, the hall alive before anything is lit.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.45
+    ],
+    "far columns": [
+     "#a3200c",
+     0.35
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.35
+    ]
+   }
+  },
+  {
+   "id": "embers_wide",
+   "title": "Embers, wide",
+   "intent": "Warm-up: the whole ruin in deep ember, low.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.55
+    ],
+    "far wall": [
+     "#a3200c",
+     0.5
+    ],
+    "far columns": [
+     "#a3200c",
+     0.55
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.25
+    ]
+   }
+  },
+  {
+   "id": "halo_glow",
+   "title": "Halo glow",
+   "intent": "Warm-up: a soft ember halo behind the DJ.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "halo": [
+     "#ff3a12",
+     0.6
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.3
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "one_line",
+   "title": "One line",
+   "intent": "Warm-up: a single white line in the ember hall; the first thing anyone sees.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "cube6a": [
+     "#e8e4dc",
+     1
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.25
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.15
+    ]
+   }
+  },
+  {
+   "id": "silhouette",
+   "title": "The silhouette",
+   "intent": "Warm-up to build: the DJ as a black shape against an ash curtain and an ember X.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     1
+    ],
+    "x": [
+     "#ff3a12",
+     0.8
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.25
+    ],
+    "halo": [
+     "#ff3a12",
+     0.4
+    ]
+   }
+  },
+  {
+   "id": "build_ash",
+   "title": "Build, ash",
+   "intent": "Build: the DJ and the truss lit in soft ash.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.45
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.6
+    ],
+    "x": [
+     "#e8e4dc",
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "columns_of_fire",
+   "title": "Columns of fire",
+   "intent": "Build: ember columns give the far hall height.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.4
+    ],
+    "columns of fire": [
+     "#ff3a12",
+     1
+    ]
+   }
+  },
+  {
+   "id": "fan_rise",
+   "title": "Fan rises",
+   "intent": "Build: the fan of beams opens behind the DJ.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "fan": [
+     "#e8e4dc",
+     1
+    ]
+   }
+  },
+  {
+   "id": "sparks",
+   "title": "Sparks from the depth",
+   "intent": "Build: the laser chase over a pale curtain.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "laser": [
+     null,
+     1
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.4
+    ]
+   }
+  },
+  {
+   "id": "arch_over",
+   "title": "Arch over the floor",
+   "intent": "Build: ash beams arch high over the dance floor.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "arch": [
+     "#e8e4dc",
+     1
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "fire_returns",
+   "title": "The fire returns",
+   "intent": "Peak: everything at once, once: lasers, fan, spine, columns, blinders, strobes.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "laser": [
+     null,
+     1
+    ],
+    "fan": [
+     "#e8e4dc",
+     1
+    ],
+    "spine": [
+     "#e8e4dc",
+     1
+    ],
+    "columns of fire": [
+     "#ff3a12",
+     1
+    ],
+    "blinders": [
+     "#e8e4dc",
+     0.4
+    ],
+    "lightning": [
+     "#e8e4dc",
+     1
+    ]
+   }
+  },
+  {
+   "id": "wall_of_ember",
+   "title": "Wall of ember",
+   "intent": "Peak: all the ember columns at full, the ash wall burning.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.5
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#ff3a12",
+     0.6
+    ],
+    "columns of fire": [
+     "#ff3a12",
+     1
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "the_roof",
+   "title": "The roof, once an hour",
+   "intent": "Peak: the roof steel appears for 15 s.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "roof": [
+     "#e8e4dc",
+     1
+    ],
+    "side roof": [
+     "#e8e4dc",
+     0.6
+    ],
+    "arch": [
+     "#e8e4dc",
+     1
+    ]
+   }
+  },
+  {
+   "id": "ash_falling",
+   "title": "Ash falling",
+   "intent": "Breakdown: the spine drops ash on the dark.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "spine": [
+     "#e8e4dc",
+     0.9
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.2
+    ]
+   }
+  },
+  {
+   "id": "ash_low",
+   "title": "Ash, low",
+   "intent": "Breakdown: the curtain and halo barely there.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.4
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.25
+    ],
+    "halo": [
+     "#ff3a12",
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "laser_chase",
+   "title": "Laser chase",
+   "intent": "Laser moment: all lines over a dim curtain.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "laser": [
+     null,
+     1
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.25
+    ]
+   }
+  },
+  {
+   "id": "laser_fan",
+   "title": "Laser and fan",
+   "intent": "Laser moment: lines under the fan of beams.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "laser": [
+     null,
+     1
+    ],
+    "fan": [
+     "#e8e4dc",
+     1
+    ]
+   }
+  },
+  {
+   "id": "laser_ember",
+   "title": "Laser in embers",
+   "intent": "Laser moment: lines through the ember columns.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.4
+    ],
+    "laser": [
+     null,
+     1
+    ],
+    "columns of fire": [
+     "#ff3a12",
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "hit_blinders",
+   "title": "Hit, blinders",
+   "intent": "Hit: 1-2 s blinders at the crowd.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "blinders": [
+     "#e8e4dc",
+     0.4
+    ]
+   }
+  },
+  {
+   "id": "hit_strobe",
+   "title": "Hit, strobe",
+   "intent": "Hit: strobes up into the far roof, 4 Hz at most, 1-2 s.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "lightning": [
+     "#e8e4dc",
+     1
+    ]
+   }
+  },
+  {
+   "id": "dawn",
+   "title": "Dawn: one line returns",
+   "intent": "Closing: the roof fades to grey, one line returns.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "roof": [
+     "#e8e4dc",
+     0.4
+    ],
+    "side roof": [
+     "#e8e4dc",
+     0.3
+    ],
+    "cube6a": [
+     "#e8e4dc",
+     1
+    ]
+   }
+  },
+  {
+   "id": "close_ember",
+   "title": "Closing ember",
+   "intent": "Closing: the machines and the ember halo, a quiet end.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.45
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.35
+    ],
+    "halo": [
+     "#ff3a12",
+     0.25
+    ]
+   }
+  },
+  {
+   "id": "house_up",
+   "title": "House up",
+   "intent": "Closing: the house lights, the hall readable to leave.",
+   "parts": {
+    "curtain": [
+     "#e8e4dc",
+     0.8
+    ],
+    "x": [
+     "#e8e4dc",
+     0.8
+    ],
+    "halo": [
+     "#e8e4dc",
+     0.8
+    ],
+    "press graze": [
+     "#e8e4dc",
+     0.48
+    ],
+    "arch": [
+     "#e8e4dc",
+     0.8
+    ],
+    "roof": [
+     "#e8e4dc",
+     0.8
+    ],
+    "side roof": [
+     "#e8e4dc",
+     0.8
+    ],
+    "far wall": [
+     "#e8e4dc",
+     0.8
+    ],
+    "far columns": [
+     "#e8e4dc",
+     0.8
+    ],
+    "span columns": [
+     "#e8e4dc",
+     0.8
+    ],
+    "blinders": [
+     "#e8e4dc",
+     0.32000000000000006
+    ],
+    "still smoking": [
+     "#e8e4dc",
+     0.48
+    ]
+   }
+  }
+ ],
+ "cues": [
+  {
+   "id": "wl-01-work-light",
+   "name": "WORK \u00b7 work light",
+   "key": "",
+   "fade": 2,
+   "hold": 30,
+   "lightLook": "rig-work-light",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-02-house-low",
+   "name": "WORK \u00b7 house light low",
+   "key": "",
+   "fade": 2,
+   "hold": 20,
+   "lightLook": "rig-house-low",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-03-black",
+   "name": "Warm-up \u00b7 the black (ember)",
+   "key": "",
+   "fade": 3,
+   "hold": 6,
+   "lightLook": "rig-black",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-04-still-smoking",
+   "name": "Warm-up \u00b7 still smoking",
+   "key": "",
+   "fade": 6,
+   "hold": 20,
+   "lightLook": "rig-still-smoking",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-05-embers-wide",
+   "name": "Warm-up \u00b7 embers wide",
+   "key": "",
+   "fade": 6,
+   "hold": 16,
+   "lightLook": "rig-embers-wide",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-06-halo-glow",
+   "name": "Warm-up \u00b7 halo glow",
+   "key": "",
+   "fade": 5,
+   "hold": 14,
+   "lightLook": "rig-halo-glow",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-07-one-line",
+   "name": "Warm-up \u00b7 one line",
+   "key": "",
+   "fade": 4,
+   "hold": 20,
+   "lightLook": "rig-one-line",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-08-silhouette",
+   "name": "Warm-up \u00b7 the silhouette",
+   "key": "",
+   "fade": 3,
+   "hold": 16,
+   "lightLook": "rig-silhouette",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-09-build-ash",
+   "name": "Build \u00b7 ash",
+   "key": "",
+   "fade": 4,
+   "hold": 14,
+   "lightLook": "rig-build-ash",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-10-columns-of-fire",
+   "name": "Build \u00b7 columns of fire",
+   "key": "",
+   "fade": 4,
+   "hold": 16,
+   "lightLook": "rig-columns-of-fire",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-11-fan-rise",
+   "name": "Build \u00b7 the fan rises",
+   "key": "",
+   "fade": 3,
+   "hold": 14,
+   "lightLook": "rig-fan-rise",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-12-sparks",
+   "name": "Build \u00b7 sparks from the depth",
+   "key": "",
+   "fade": 0,
+   "hold": 18,
+   "lightLook": "rig-sparks",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-13-arch-over",
+   "name": "Build \u00b7 arch over the floor",
+   "key": "",
+   "fade": 3,
+   "hold": 14,
+   "lightLook": "rig-arch-over",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-14-black",
+   "name": "the black",
+   "key": "",
+   "fade": 0,
+   "hold": 4,
+   "lightLook": "rig-black",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-15-fire-returns",
+   "name": "Peak \u00b7 THE FIRE RETURNS",
+   "key": "",
+   "fade": 0,
+   "hold": 14,
+   "lightLook": "rig-fire-returns",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-16-wall-of-ember",
+   "name": "Peak \u00b7 wall of ember",
+   "key": "",
+   "fade": 2,
+   "hold": 14,
+   "lightLook": "rig-wall-of-ember",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-17-black",
+   "name": "the black",
+   "key": "",
+   "fade": 0,
+   "hold": 4,
+   "lightLook": "rig-black",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-18-the-roof",
+   "name": "Peak \u00b7 the roof, once an hour",
+   "key": "",
+   "fade": 2,
+   "hold": 12,
+   "lightLook": "rig-the-roof",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-19-ash-falling",
+   "name": "Breakdown \u00b7 ash falling",
+   "key": "",
+   "fade": 1,
+   "hold": 16,
+   "lightLook": "rig-ash-falling",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-20-ash-low",
+   "name": "Breakdown \u00b7 ash, low",
+   "key": "",
+   "fade": 3,
+   "hold": 12,
+   "lightLook": "rig-ash-low",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-21-laser-chase",
+   "name": "Laser \u00b7 chase",
+   "key": "",
+   "fade": 0,
+   "hold": 14,
+   "lightLook": "rig-laser-chase",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-22-laser-fan",
+   "name": "Laser \u00b7 and fan",
+   "key": "",
+   "fade": 2,
+   "hold": 14,
+   "lightLook": "rig-laser-fan",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-23-laser-ember",
+   "name": "Laser \u00b7 in embers",
+   "key": "",
+   "fade": 2,
+   "hold": 14,
+   "lightLook": "rig-laser-ember",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-24-hit-blinders",
+   "name": "Hit \u00b7 blinders",
+   "key": "",
+   "fade": 0,
+   "hold": 3,
+   "lightLook": "rig-hit-blinders",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-25-hit-strobe",
+   "name": "Hit \u00b7 strobe",
+   "key": "",
+   "fade": 0,
+   "hold": 3,
+   "lightLook": "rig-hit-strobe",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-26-dawn",
+   "name": "Closing \u00b7 dawn: one line returns",
+   "key": "",
+   "fade": 10,
+   "hold": 20,
+   "lightLook": "rig-dawn",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-27-close-ember",
+   "name": "Closing \u00b7 ember",
+   "key": "",
+   "fade": 6,
+   "hold": 16,
+   "lightLook": "rig-close-ember",
+   "surfaces": {}
+  },
+  {
+   "id": "wl-28-house-up",
+   "name": "Closing \u00b7 house up",
+   "key": "",
+   "fade": 4,
+   "hold": 20,
+   "lightLook": "rig-house-up",
+   "surfaces": {}
+  }
+ ]
+}
