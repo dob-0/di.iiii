@@ -6,7 +6,16 @@ const POLL_MS = 3000
 // 25 frames a second at most: a cube cannot show more, and the server should
 // not be asked for more.
 const SEND_MS = 40
+// The server blanks a cube whose lit frame has not been refreshed for 200 ms
+// (serverXR/src/laser/laserEngine.js, the signal-loss stop). A frame sent on
+// change only would be cut the moment the shape held still, so the panel says
+// "still wanted" every 50 ms while it holds one: three missed in a row are
+// tolerated. A hidden tab's timers slow to once a second, so a hidden editor
+// lets its frames go dark — by design: nobody is watching it.
+const ALIVE_MS = 50
 const PREVIEW_PX = 240
+// The maker's operating range starts at 10 °C (Guide v1.2 p. 14, item 9).
+const COLD_FLOOR_C = 10
 
 // Module-level for the DMX panel's reason: a fresh arrow per render would
 // restart the poll on every render.
@@ -89,6 +98,36 @@ const drawPreview = (canvas, points) => {
     }
 }
 
+const thousands = (n) => (Number.isFinite(n) ? n.toLocaleString('en-US').replace(/,/g, '\u2009') : '?')
+
+// One cube in a line: what it is doing, then what it said about itself
+// (GET_FULL_INFO). The temperature's unit is not in the protocol spec; °C is
+// assumed until a cube is read beside a thermometer.
+const cubeLine = (cube) => {
+    const name = cube?.name && cube.name !== cube.id ? `${cube.name} (${cube.id})` : String(cube?.id ?? '?')
+    let doing
+    if (cube?.stop?.text) doing = cube.stop.text
+    else if (!cube?.ip) doing = 'simulated'
+    else if (!cube?.info) doing = 'no answer from the cube yet'
+    else doing = cube.armed ? 'armed' : 'ready, disarmed'
+    const info = cube?.info
+    if (!info) return { name, doing, about: cube?.ip ? `at ${cube.ip}` : '', cold: false }
+    const model = [info.modelName || 'LaserCube', info.modelNumber != null ? `model ${info.modelNumber}` : ''].filter(Boolean).join(' ')
+    const cold = Number.isFinite(info.temperature) && info.temperature < COLD_FLOOR_C
+    const about = [
+        model,
+        `firmware ${info.firmware}`,
+        `${thousands(info.dacRate)} of ${thousands(info.maxDacRate)} points/s`,
+        `buffer ${thousands(info.rxBufferFree)} free of ${thousands(info.rxBufferSize)}`,
+        `${info.temperature} °C${cold ? ' — under the maker\'s 10 °C floor' : ''}`,
+        info.connectionType,
+        info.ip,
+        `serial ${info.serial}`,
+        `output ${info.outputEnabled ? 'on' : 'off'}`,
+    ].join(' · ')
+    return { name, doing, about, cold }
+}
+
 const cubesText = (state) => {
     const cubes = Array.isArray(state?.cubes) ? state.cubes : []
     const connected = cubes.filter((cube) => cube?.connected).length
@@ -167,6 +206,15 @@ export default function LaserOutPanelWindow({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pointsKey, cube, blackout, base])
 
+    // The keep-alive: while a frame is held (not blacked out), say so every
+    // ALIVE_MS. It carries no points; the frame itself went out on change.
+    useEffect(() => {
+        if (blackout || points.length === 0) return undefined
+        const timer = setInterval(() => postJson(base, '/alive', { cube }, fetchRef.current), ALIVE_MS)
+        return () => clearInterval(timer)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pointsKey, cube, blackout, base])
+
     // Rising edge: blackout at once, ahead of any queued frame.
     const lastBlackout = useRef(false)
     useEffect(() => {
@@ -218,6 +266,24 @@ export default function LaserOutPanelWindow({
             <div className="raw-dmx-panel-status">{statusText}</div>
             {server.status === SERVER.ANSWERING && server.state.sim && (
                 <div className="raw-dmx-panel-setup">Simulated: no real cubes are being driven.</div>
+            )}
+            {server.status === SERVER.ANSWERING && Array.isArray(server.state.cubes) && server.state.cubes.length > 0 && (
+                <ul className="raw-laser-panel-cubes" aria-label="The cubes">
+                    {server.state.cubes.map((cube) => {
+                        const line = cubeLine(cube)
+                        return (
+                            <li key={cube.id} className={cube.stop || line.cold ? 'raw-laser-panel-cube-warn' : undefined}>
+                                <strong>{line.name}</strong>: {line.doing}
+                                {line.about && <div className="raw-laser-panel-cube-about">{line.about}</div>}
+                            </li>
+                        )
+                    })}
+                </ul>
+            )}
+            {server.status === SERVER.ANSWERING && server.state.guard && server.state.guard.validated === false && (
+                <div className="raw-dmx-panel-setup">
+                    The stops (no frame for {server.state.guard.frameTimeoutMs} ms, a still beam held {server.state.guard.stillHoldMs} ms) are not yet tested on a real cube.
+                </div>
             )}
         </div>
     )

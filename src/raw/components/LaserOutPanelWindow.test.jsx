@@ -25,6 +25,7 @@ const fakeServer = ({ state = { armed: true, sim: false, cubes: [{ id: 'a', conn
 }
 const frames = (posts) => posts.filter((p) => p.url.endsWith('/laser/api/frame'))
 const blackouts = (posts) => posts.filter((p) => p.url.endsWith('/laser/api/blackout'))
+const alives = (posts) => posts.filter((p) => p.url.endsWith('/laser/api/alive'))
 
 const panel = (props) => <LaserOutPanelWindow node={node} pageOrigin={ORIGIN} {...props} />
 
@@ -79,6 +80,53 @@ describe('LaserOutPanelWindow', () => {
         await act(async () => { await vi.advanceTimersByTimeAsync(200) })
         expect(blackouts(posts)).toHaveLength(1)
         expect(frames(posts)).toHaveLength(before)
+    })
+
+    it('keeps a held frame alive every 50 ms — for its cube, without the points — and stops on blackout', async () => {
+        const { fetchImpl, posts } = fakeServer()
+        const view = render(panel({ fetchImpl, values: { frame: frameOf(0.5), cube: 'cube-3' } }))
+        await act(async () => { await vi.advanceTimersByTimeAsync(200) })
+        expect(alives(posts)).toHaveLength(4)
+        expect(alives(posts)[0].body).toEqual({ cube: 'cube-3' })
+        expect(frames(posts)).toHaveLength(1)
+        view.rerender(panel({ fetchImpl, values: { frame: frameOf(0.5), cube: 'cube-3', blackout: 1 } }))
+        const held = alives(posts).length
+        await act(async () => { await vi.advanceTimersByTimeAsync(500) })
+        expect(alives(posts)).toHaveLength(held)
+        view.unmount()
+    })
+
+    it('keeps nothing alive with no frame', async () => {
+        const { fetchImpl, posts } = fakeServer()
+        render(panel({ fetchImpl, values: {} }))
+        await act(async () => { await vi.advanceTimersByTimeAsync(500) })
+        expect(alives(posts)).toHaveLength(0)
+    })
+
+    it('shows each cube: what it is doing, its info, a stop and a cold cube in plain words', async () => {
+        const info = { modelName: 'LaserCube 2W', modelNumber: 3, firmware: '1.7', dacRate: 30000, maxDacRate: 35000, rxBufferFree: 5800, rxBufferSize: 6000, temperature: 31, connectionType: 'Ethernet', ip: '10.0.0.51', serial: 'deadbeef0042', outputEnabled: true }
+        const state = {
+            armed: true,
+            sim: false,
+            guard: { frameTimeoutMs: 200, stillHoldMs: 200, validated: false },
+            cubes: [
+                { id: 'cube-1', name: 'Cube 1', ip: '10.0.0.51', connected: true, armed: true, info, stop: null },
+                { id: 'cube-2', name: 'Cube 2', ip: '10.0.0.52', connected: true, armed: true, info: { ...info, ip: '10.0.0.52', temperature: 4 }, stop: { reason: 'no-frame', text: 'stopped: no frame for 200 ms' } },
+                { id: 'cube-3', name: 'Cube 3', ip: '10.0.0.53', connected: false, armed: false, info: null, stop: { reason: 'no-info', text: 'not armed: the cube never answered the info question' } },
+            ],
+        }
+        const { fetchImpl } = fakeServer({ state })
+        const view = render(panel({ fetchImpl, values: {} }))
+        await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+        const items = [...view.container.querySelectorAll('.raw-laser-panel-cubes li')].map((li) => li.textContent)
+        expect(items[0]).toContain('Cube 1 (cube-1): armed')
+        expect(items[0]).toContain('LaserCube 2W model 3 · firmware 1.7 · 30\u2009000 of 35\u2009000 points/s · buffer 5\u2009800 free of 6\u2009000 · 31 °C · Ethernet · 10.0.0.51 · serial deadbeef0042 · output on')
+        expect(items[1]).toContain('stopped: no frame for 200 ms')
+        expect(items[1]).toContain("4 °C — under the maker's 10 °C floor")
+        expect(items[2]).toContain('not armed: the cube never answered the info question')
+        expect(items[2]).toContain('at 10.0.0.53')
+        expect(view.container.querySelectorAll('.raw-laser-panel-cube-warn')).toHaveLength(2)
+        expect(view.getByText(/not yet tested on a real cube/)).toBeTruthy()
     })
 
     it('shows DISARMED, the cube count and the status string from the server state', async () => {
