@@ -3,7 +3,7 @@
 10 animated scenes in favorite"; ledger N442; brief agent-reports-2026-10-09/briefs/moxir-motion-scenes.md).
 
 A LOOKS LAYER on top of the work-light layer (scripts/place/moxir_worklight.py): every scene keeps that layer's readable
-floor (FLOOR: deep ember on the wall columns, the far wall and the far columns - `motion.still` holds those lamps still, so
+floor (FLOOR: deep ember on the span columns and the far columns - `motion.still` holds those lamps still, so
 the floor never flickers). Writes scripts/place/rigs/moxir-looks-v1-1-motion-2026-10-09.json; scripts/rigbuild/motion-looks.mjs
 puts it on a SCRATCH project.
 
@@ -22,10 +22,14 @@ from moxir_worklight import A, E, D, FLOOR, look, looks as WL_LOOKS, CUES as WL_
 PL, B38 = 'up-pl5403', 'up-b380f'
 # thin haze of ONE smoke machine at Sevan (brief B-2026-10-09-moxir-motion-scenes, R8): sigma ~2.7e-4 /m, the brief's figure, EQUIVALENT not measured
 HAZE_SIGMA = 0.00027
+# MOXIR lead decision 2026-10-09: the far wall is 8 x UP-250BSW, not in the Sevan kit - it is out of the floor of every scene
+# (the work-light layer keeps it; only this layer drops it). Only parts of Sevan-kit fixtures stay.
+FLOOR = {k: v for k, v in FLOOR.items() if k != 'far wall'}
 STILL = 0.35   # a lamp at or under this level in a look holds still: the work-light floor (FLOOR levels are .3 / .35 / .3)
 
 def scene(id, title, why, parts, mode, bpm, spatial, kinds, depth=255):
-    l = look(id, title, why, parts)
+    l = look(id, title, why, parts, floor=False)
+    l['parts'] = {**FLOOR, **parts}
     l['motion'] = {'mode': mode, 'bpm': bpm, 'depth': depth, 'spatial': spatial, 'kinds': kinds, 'still': STILL}
     return l
 
