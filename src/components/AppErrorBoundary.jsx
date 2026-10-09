@@ -51,7 +51,7 @@ export function ViewFailed({ error }) {
             <strong>This view stopped working.</strong>
             <span style={{ color: 'var(--ui-text-muted, #aaa)' }}>
                 Something in it failed while drawing. Your work is saved as before; nothing was changed
-                by this. Reload this view to try again, or open another address from the top.
+                by this. Reload this view to try again, or go to the spaces list or the di home page.
             </span>
             {message && (
                 <code style={{ color: 'var(--ui-text-muted, #aaa)', fontSize: 12, wordBreak: 'break-word' }}>{message}</code>
@@ -66,6 +66,10 @@ export function ViewFailed({ error }) {
             >
                 Reload this view
             </button>
+            <nav aria-label="Leave this view" style={{ display: 'flex', gap: 16 }}>
+                <a href="/spaces" style={{ color: 'inherit' }}>Spaces</a>
+                <a href="/" style={{ color: 'inherit' }}>di home</a>
+            </nav>
         </div>
     )
 }

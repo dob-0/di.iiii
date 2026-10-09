@@ -33,6 +33,8 @@ describe('RouteErrorBoundary (audit H12)', () => {
         expect(screen.getByTestId('view-failed')).toHaveTextContent('panel exploded')
         expect(screen.getByTestId('shell')).toBeInTheDocument()
         expect(err.mock.calls.some((c) => String(c[0]).includes('[RouteErrorBoundary]'))).toBe(true)
+        expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('href', '/spaces')
+        expect(screen.getByRole('link', { name: 'di home' })).toHaveAttribute('href', '/')
         fireEvent.click(screen.getByRole('button', { name: 'Reload this view' }))
         expect(reload).toHaveBeenCalled()
         err.mockRestore()
