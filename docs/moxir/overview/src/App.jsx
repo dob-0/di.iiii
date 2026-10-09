@@ -11,12 +11,15 @@ const VERSIONS = [
     { v: 'v1.0', t: 'The design', d: 'Elite and minimal: three colours (ash white, ember red, black), one DJ on one low step, six lasers from the depth of the hall, the truss hung from the crane behind the DJ. Every unit must serve a moment or it is not hung. This is the model above; the site measurements are still assumed.', s: 'current', c: 'now', now: true },
     { v: 'v1.1', t: 'After the tape', d: 'The same design with the measurements taken on site: crane, girders, pipe racks, power.', s: 'to do', c: 'warn' },
 ]
-const VENUE = ['002', '004', '005', '006', '010', '011', '013', '014'].map((n) => ({ src: `media/venue-${n}.jpg`, cap: `Venue photograph ${n}` }))
+// Photographs and photo-derived analysis images are left out of the single-file build (no licence/consent check yet): VITE_MEDIA=0.
+const MEDIA = import.meta.env.VITE_MEDIA !== '0'
+const VENUE = !MEDIA ? [] : ['002', '004', '005', '006', '010', '011', '013', '014'].map((n) => ({ src: `media/venue-${n}.jpg`, cap: `Venue photograph ${n}` }))
 class Guard extends React.Component {
     state = { err: null }
     static getDerivedStateFromError(err) { return { err } }
     render() { return this.state.err ? <div className="load"><span>3D view unavailable on this device — {String(this.state.err.message || this.state.err).slice(0, 140)}</span></div> : this.props.children }
 }
+const N = MEDIA ? { m: '01', place: '02', real: '03', made: '04', how: '05', light: '06', open: '07', next: '08' } : { m: '01', made: '02', how: '03', light: '04', open: '05', next: '06' }
 const tally = (kind, held) => scene.lights.filter((l) => l.kind === kind && !!l.held === held).length
 const USED = scene.lights.filter((l) => !l.held).length
 const HELD = scene.lights.filter((l) => l.held).length
@@ -76,7 +79,7 @@ export default function App() {
                 </div>
 
                 <section>
-                    <div className="eyebrow">01 · the model</div>
+                    <div className="eyebrow">{N.m} · the model</div>
                     <h2>Six states, one number each</h2>
                     <p className="note">Each number is a state of the model someone looked at. Nothing is renumbered. The newest states are working copies and are not yet in the shared space. The 3D model above is v1.0, the design.</p>
                     <div className="ladder">
@@ -86,17 +89,20 @@ export default function App() {
                     </div>
                 </section>
 
+                {MEDIA && (
                 <section>
-                    <div className="eyebrow">02 · the place</div>
+                    <div className="eyebrow">{N.place} · the place</div>
                     <h2>The hall as photographed</h2>
                     <p className="note">Venue photographs from the site visit. Select one to enlarge. The model above is built to these.</p>
                     <div className="strip">
                         {VENUE.map((m) => <button key={m.src} onClick={() => setLb(m)} aria-label={'Enlarge: ' + m.cap}><img src={m.src} alt={m.cap} loading="lazy" /><span className="tagline">{m.cap.replace('Venue photograph ', 'photo ')}</span></button>)}
                     </div>
                 </section>
+                )}
 
+                {MEDIA && (
                 <section>
-                    <div className="eyebrow">03 · model against reality</div>
+                    <div className="eyebrow">{N.real} · model against reality</div>
                     <h2>The model drawn onto a photograph</h2>
                     <p className="note">The column grid of the model, projected into a photograph taken in the hall. Green lines are column positions the model predicts; labels give their coordinates in metres. Where a line misses the real column, the model is wrong there. This is how the column count and the right-hand row were checked.</p>
                     <figure>
@@ -112,9 +118,10 @@ export default function App() {
                         <figcaption><b>Selection.</b> 40 photographs and video frames considered; the sharp, distinct ones are kept.</figcaption>
                     </figure>
                 </section>
+                )}
 
                 <section>
-                    <div className="eyebrow">04 · what it is made of</div>
+                    <div className="eyebrow">{N.made} · what it is made of</div>
                     <h2>Every material, counted</h2>
                     <p className="note">Counted from the files on the studio machine on 8 October. Each has a source and a date on record; the space keeps a provenance file.</p>
                     <div className="cells">
@@ -123,7 +130,7 @@ export default function App() {
                 </section>
 
                 <section>
-                    <div className="eyebrow">05 · how it was measured</div>
+                    <div className="eyebrow">{N.how} · how it was measured</div>
                     <h2>Where each number came from</h2>
                     <p className="note">Every number carries its basis. <b>Measured</b> means taped on site; nothing has been taped yet, the first tape is 8 October. <b>From photos</b> means fitted on photographs, video or satellite images, with a range. <b>Assumed</b> means taken from a similar thing or a standard, not seen.</p>
                     <table>
@@ -140,7 +147,7 @@ export default function App() {
                 </section>
 
                 <section>
-                    <div className="eyebrow">06 · the light</div>
+                    <div className="eyebrow">{N.light} · the light</div>
                     <h2>What the design hangs, and what it holds back</h2>
                     <p className="note">Counted from the v1.0 design. "In use" is hung for the show; "held back" is in the model and not hung unless it earns a moment. The beams in the viewer are drawn from the same positions and aims, as soft cones in haze; lasers are thin lines to where the design ends them.</p>
                     <table>
@@ -160,7 +167,7 @@ export default function App() {
                 </section>
 
                 <section>
-                    <div className="eyebrow">07 · to confirm</div>
+                    <div className="eyebrow">{N.open} · to confirm</div>
                     <h2>Open, ranked by what blocks the show</h2>
                     <div className="cols">
                         <div className="col"><div className="eyebrow">on site, 8 October</div><ul>
@@ -184,7 +191,7 @@ export default function App() {
                 </section>
 
                 <section>
-                    <div className="eyebrow">08 · next</div>
+                    <div className="eyebrow">{N.next} · next</div>
                     <h2>Order of work</h2>
                     <table>
                         <thead><tr><th>#</th><th>Step</th><th></th></tr></thead>
