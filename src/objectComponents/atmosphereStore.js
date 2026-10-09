@@ -99,13 +99,31 @@ export const registerGlareMesh = (gl, mesh) => {
     return () => set.delete(mesh)
 }
 
-export const setBloomActive = (gl, active) => {
+const bloomActive = new WeakMap()
+const glareHeld = new WeakMap()
+const applyGlare = (gl) => {
     const u = hazeUniformsFor(gl).uGlareOn
-    const value = active ? 0 : 1
+    const value = gl && (bloomActive.get(gl) || glareHeld.get(gl)) ? 0 : 1
     if (u.value === value) return
     u.value = value
     // not drawn at all while bloom runs: 64 wide hulls rasterised only to discard cost fill
     for (const mesh of glareMeshes.get(gl) || []) mesh.visible = value > 0.5
+}
+
+export const setBloomActive = (gl, active) => {
+    if (!gl) return
+    bloomActive.set(gl, Boolean(active))
+    applyGlare(gl)
+}
+
+/**
+ * Hold the glare veil off whatever bloom does: the measurement mode
+ * (src/project/viewport/measure/) reads the room with no eye model drawn into it.
+ */
+export const holdGlareVeil = (gl, held) => {
+    if (!gl) return
+    glareHeld.set(gl, Boolean(held))
+    applyGlare(gl)
 }
 
 /** The field the beams draw now (null: one uniform haze). */
