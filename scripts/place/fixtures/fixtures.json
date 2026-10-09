@@ -297,7 +297,7 @@
                     "basis": "TESTED",
                     "accessed": "2026-10-09",
                     "open": "OPEN (2026-10-09): the two TESTED maps disagree from ch11 — src/rigbuild/fixtureTypes.js (above) vs the desk's show.json 'Beam 16ch' (…colour, gobo, FOCUS ch11, PRISM ch12, aux3 ch13 = 145 REQUIRED or no light, aux4-6), and artnet-desk CLAUDE.md says 'prism 2' is WRONG for these heads. ch11-16 are NOT tested until one unit is stepped 0..255 per channel on the desk. The manual the map came from was not found on disk.",
-                    "equivalent": "PROST380 16 ch: PAN, PAN FINE, TILT, TILT FINE, SPEED, FROST, DIMMER, STROBE, COLOR, GOBO, PRISM, PRISM1 R, PRISM2 R, FOCUS, RAINBOW, RESET/LAMP (100-105 off, 200-205 on, 240-255 reset) — suggests ch13 \"must be 145\" may be lamp-strike"
+                    "equivalent": "PROST380 16 ch: PAN, PAN FINE, TILT, TILT FINE, SPEED, FROST, DIMMER, STROBE, COLOR, GOBO, PRISM, PRISM1 R, PRISM2 R, FOCUS, RAINBOW, RESET/LAMP (100-105 off, 200-205 on, 240-255 reset). Re-read 2026-10-09 from the PDF itself (sha256 7fd7b59a22ff23d5, 16CH Mode, pp. 19-22): the lamp commands are on ch16 and 145 on ch13 is prism-2 rotation there, so this chart does NOT explain the console profile's \"ch13 must be 145\" (the earlier lamp-strike guess is withdrawn); the ten disagreements with the TESTED map are in docs/moxir/b380f-16ch-map-check-2026-10-09.md"
                 }
             },
             "look": "Low black base box with tubular grab bars at the ends and four round connectors on the front; tall flat-sided yoke arms with chevron vents; head = a round rear drum across the tilt axis (lamp, vent-hole ring) and a long cylindrical nose to the lens.",
