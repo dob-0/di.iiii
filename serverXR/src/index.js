@@ -277,6 +277,8 @@ const {
   defaultTtlMs: DEFAULT_TTL_MS,
   sandboxTtlMs: config.sandboxTtlMs,
   accountSandboxTtlMs: config.accountSandboxTtlMs,
+  // Read each sweep, so `di follow` / `di unfollow` count without a restart.
+  keptSpaceIds: () => Object.keys(require('./follow/followStore').readFollows(config.directories.dataDir)),
   blankScene: BLANK_SCENE
 })
 
@@ -2936,7 +2938,11 @@ initStorage()
     // Buffered guest-book counts land every 30s; the timer is unref'd, so it
     // never holds the process open.
     guestBook.start()
-    pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
+    // The sweep deletes for good: say which spaces it took.
+    const pruneAndSay = () => pruneSpaces()
+      .then((removed) => { if (removed.length) logger.info(`[spaces] removed ${removed.length} space(s) idle past their time: ${removed.join(', ')}`) })
+      .catch((error) => logger.warn('Failed to prune spaces', error))
+    pruneAndSay()
     // Spent and expired Telegram sign-in tokens. They are already worthless —
     // consumed_at is what makes them so — this only stops the table growing
     // one row per sign-in forever. Rides the space sweep rather than running
@@ -2944,7 +2950,7 @@ initStorage()
     const { pruneLoginTokens } = require('./telegramLoginStore')
     const { pruneActTokens } = require('./telegramActTokenStore')
     const sweep = () => {
-      pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
+      pruneAndSay()
       try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
       // di.bo's act tokens, expired or revoked: same reasoning, same sweep.
       try { pruneActTokens() } catch (error) { logger.warn('Failed to prune act tokens', error) }
