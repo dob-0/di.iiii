@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # moxir_v2_spread.py — MOXIR v2 after the owner's look at B tuned (2026-10-09): light on the stage from the audience side, the
-# cut's count decided, the six LaserCubes on the free crane at z -12 (the laser session's aims) — and, ON HOLD until the owner
-# paints the hall's areas (17:4x), the spread into the audience half: for it only the candidate places are measured here.
+# cut's count decided, the six LaserCubes on the free crane at z -12 (the laser session's aims), and every light spread over
+# the owner's painted HOT ZONE, placed from the audience's view positions (moxir_v2_eyes.py; rigs/moxir-v2-zones-2026-10-09.json).
 #
-#   python3 -I scripts/place/moxir_v2_spread.py build --repo . [--out <dir>]     # the rig file + every check (JSON in <dir>)
+#   python3 -I scripts/place/moxir_v2_spread.py build --repo . [--out <dir>] [--placement <dir>/placement.json]  # rig + checks (~25 min; reuse = minutes)
 #   python3 -I scripts/place/moxir_v2_spread.py plan  --repo . --out <dir>       # the frame plan (moxir-v2-true-frames.cjs)
 #   python3 -I scripts/place/moxir_v2_spread.py page  --repo . --out <dir>       # contact sheet + index.html
 #   python3 -I scripts/place/moxir_v2_spread.py candidates --repo . --out <dir>  # task 2 input: audience-half places, sky clear %
@@ -55,8 +55,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.dont_write_bytecode = True
 
 DATE = '2026-10-09'
+ZONES_SRC = 'scripts/place/rigs/moxir-v2-zones-2026-10-09.json (the owner\'s paint, 17:42; read_paint.py, commit 465b57e7)'
 RIG_BT = 'scripts/place/rigs/moxir-v2-planes-tuned-%s.json' % DATE
-RIG_SP = 'scripts/place/rigs/moxir-v2-stage-lasers-%s.json' % DATE
+RIG_SP = 'scripts/place/rigs/moxir-v2-spread-%s.json' % DATE
 LASER_COMMIT = 'cf954908'
 LASER_RIG = 'scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json'
 LASER_TABLE = '/tmp/claude-1000/-home-dob/f28555fe-b198-4163-85d9-cbd2b3df47ba/scratchpad/aerial-far-crane.json'
@@ -240,33 +241,43 @@ def dj_glare(rig, look_id):
 
 
 # ====================================================================== zones
-def zone_of(f):
-    z = f['p'][2]
+def zone_of(f, Z=None):
+    """The owner's painted zones (rigs/moxir-v2-zones-2026-10-09.json): the stage pen, the two wings, the rest of the hot zone
+    (in front of / beside / behind the stage), outside it."""
+    import moxir_v2_eyes as EY
+    x, z = f['p'][0], f['p'][2]
     if f['type'] == 'ext-lc-ultra-mk2':
         return 'free crane z -12 (lasers)'
     if f['part'].startswith('cut'):
         return 'the cut (truss)'
-    if z >= 8.2:
-        return 'audience half (z >= 8.2)'
-    if z >= -8.0:
-        return 'stage (-8 <= z < 8.2)'
-    return 'far half (z < -8)'
+    (px0, px1), (pz0, pz1) = EY.STAGE_PEN['x_m'], EY.STAGE_PEN['z_m']
+    if px0 <= x <= px1 and pz0 <= z <= pz1:
+        return 'stage pen (DJ, pit, backstage)'
+    if Z.inside('use', x, z, 1.0):
+        return 'wing house left (use)' if x < 0 else 'wing house right (use)'
+    if Z.inside('hot', x, z, 2.0):
+        return 'hot zone, in front of the stage' if z > pz1 else ('hot zone, behind the stage' if z < pz0 else 'hot zone, beside the stage')
+    return 'OUTSIDE the hot zone'
 
 
-def zone_counts(rig):
-    out = {}
+ZONE_ORDER = ['the cut (truss)', 'stage pen (DJ, pit, backstage)', 'hot zone, beside the stage', 'hot zone, in front of the stage', 'hot zone, behind the stage',
+              'wing house left (use)', 'wing house right (use)', 'free crane z -12 (lasers)', 'OUTSIDE the hot zone']
+
+
+def zone_counts(rig, Z):
+    out = {k: {} for k in ZONE_ORDER}
     for f in rig['fixtures']:
-        k = zone_of(f)
+        k = zone_of(f, Z)
         t = {'up-pl5403': 'PAR', 'up-b380f': 'B380F', 'up-yz31p': 'smoke', 'ext-lc-ultra-mk2': 'LaserCube'}[f['type']]
-        out.setdefault(k, {}).setdefault(t, 0)
-        out[k][t] += 1
+        out[k][t] = out[k].get(t, 0) + 1
+    out = {k: v for k, v in out.items() if v}
     out['at z <= 6 (the coordinator\'s count)'] = sum(1 for f in rig['fixtures'] if f['p'][2] <= 6.0)
     out['units'] = len(rig['fixtures'])
     return out
 
 
 # ====================================================================== build
-def build(repo, out, table_path):
+def build(repo, out, table_path, placement_file=None):
     import numpy as np
     import occlusion_sky as S
     import moxir_v2 as M
@@ -303,9 +314,43 @@ def build(repo, out, table_path):
         move(fid, p=[R3(v) for v in p], r=M.rot_for_dir(d), part=part, position=why, colour=ASH, aim_at=[R3(v) for v in tgt],
              lit_column_m=None, lux_on_steel_median=None)
 
-    # ---- 2. (task 2, spreading into the audience half, is ON HOLD: the owner paints the hall's areas himself, 17:4x; the
-    #         places are then chosen from the audience's view positions. Only the candidates are measured: `candidates`.)
-    brows = []
+    # ---- 2. the whole hall, placed from the audience's view positions inside the owner's painted hot zone (moxir_v2_eyes.py):
+    #         every unit B tuned had OUTSIDE the hot zone, and every column PAR (now all among people: out of reach on brackets),
+    #         is re-placed: 26 PARs (the column grazers, the far wall's inner two, the 8 side-span PARs) and 12 B380F (planes 2, 3)
+    import moxir_v2_eyes as EY
+    import moxir_v2_true as V
+    Z = EY.Zones(repo)
+    W.boxes += Z.boxes(S)
+    sm = by['rig-smoke-planes']
+    F = V.field_numbers(repo, [sm['p'][0], sm['p'][1] + 0.1, sm['p'][2]], [0, 0, 1], states=('t40',))['t40']
+    free_par = ['rig-par-planes-%02d' % i for i in list(range(7, 23)) + [26, 27] + list(range(29, 37))]
+    free_beam = ['rig-beam-planes-%02d' % i for i in range(7, 19)]
+    taken = {'col -12 z 12 nave', 'col -12 z 6 nave', 'col +12 z 6 nave', 'col +12 z 0.5 nave'}
+    if placement_file and os.path.exists(placement_file):
+        E = json.load(open(placement_file))          # a previous build's placement (deterministic; it takes ~25 min on one core)
+        print('placement reused from %s' % placement_file, file=sys.stderr)
+    else:
+        E = EY.place(repo, W, F, Z, taken, len(free_par), len(free_beam), log=lambda m: print(m, file=sys.stderr))
+    if len(E['pars']) != len(free_par) or len(E['beams']) != len(free_beam):
+        raise SystemExit('placement found %d PARs / %d B380F, needs %d / %d' % (len(E['pars']), len(E['beams']), len(free_par), len(free_beam)))
+    for fid, c in zip(free_par, sorted(E['pars'], key=lambda c: (c['p'][2], c['p'][0]))):
+        graze = c['kind'] == 'graze'
+        move(fid, p=c['p'], r=M.rot_for_dir(unit(c['dir'])), part='columns' if graze else 'roof', colour=EMBER if graze else ASH,
+             position='%s: column bracket, body at %.1f m (out of reach), %s; seen from the eyes: %s' % (
+                 c['place'], c['p'][1], 'leaned 4 deg onto its own face' if graze else 'leaned 25 deg out into the roof steel',
+                 ', '.join('%s %.2f' % (k, v) for k, v in sorted(c['eyes'].items(), key=lambda kv: -kv[1])[:3])),
+             lit_column_m=None, lux_on_steel_median=None, eye_lux=c['eyes'], steel_pct=c['steel_pct'])
+    for fid, b in zip(free_beam, sorted(E['beams'], key=lambda b: (b['p'][2], b['p'][0]))):
+        back = b['p'][2] <= -15.0
+        move(fid, p=[b['p'][0], R3(b['p'][1] - S.HEAD_Y + 0.7), b['p'][2]], r=M.rot_for_dir(unit(b['dir'])),
+             part='plane 3 (behind the stage)' if back else 'plane 2 (the wings)', colour=EMBER if back else ASH,
+             position='%s: column bracket, base at 3.0 m (out of reach, no pen); aim %.0f/%.0f deg (az/el), throw %s m to %s; no eye within %.0f deg of looking down it' % (
+                 b['place'], b['az_el'][0], b['az_el'][1], b['throw_m'], b['ends_on'], b['glare_min_deg']),
+             throw_m=b['throw_m'], ends_on=b['ends_on'], sky_clear_pct=None, eye_G=b['eyes'])
+    placement = {k: v for k, v in E.items() if k not in ('par_candidates', 'beam_candidates')}
+    if out and not placement_file:
+        os.makedirs(out, exist_ok=True)
+        json.dump(E, open(os.path.join(out, 'placement.json'), 'w'), indent=1, default=JD)
 
     # ---- 4. the six cubes and the far crane, as given
     cubes, bar, tubes, lcheck = lasers(repo, table_path)
@@ -335,11 +380,18 @@ def build(repo, out, table_path):
     # ---- 5. the looks: the new parts
     for lk in T['looks']:
         p = lk['parts']
+        for gone in ('plane 2 (mid-hall, side spans)', 'plane 3 (the far end)', 'side spans', 'far wall'):
+            p.pop(gone, None)
         if lk['id'] == 'dark':
+            p['plane 2 (the wings)'] = [EMBER, 0.8]
+            p['plane 3 (behind the stage)'] = [EMBER, 0.35]
             p['stage key'] = [EMBER, 0.44]
             p['speaker face L'] = [EMBER, 0.38]
             p['speaker face R'] = [EMBER, 1.0]
         if lk['id'] == 'peak':
+            p['plane 2 (the wings)'] = [ASH, 1.0]
+            p['plane 3 (behind the stage)'] = [EMBER, 0.7]
+            p['roof'] = [ASH, 0.6]
             p['stage key'] = [ASH, 0.14]
             p['speaker face L'] = [ASH, 0.12]
             p['speaker face R'] = [ASH, 0.54]
@@ -370,10 +422,24 @@ def build(repo, out, table_path):
         d = L.aim_dir(f['r'])
         chk = S.beam_check(W, head, d, half_deg=0.9)
         t = chk['axis_m'] or 120.0
-        low = M.low_over_standing(head, d, t)
+        pen = EY.pen_of(head, d)
+        low = EY.low_over_floor(head, d, t, pen)
+        end = head + d * t
+        in_pen = (EY.STAGE_PEN['x_m'][0] <= head[0] - pen and head[0] + pen <= EY.STAGE_PEN['x_m'][1] and EY.STAGE_PEN['z_m'][0] <= head[2] - pen and head[2] + pen <= EY.STAGE_PEN['z_m'][1]) if pen > 0 else True
+        g, worst = EY.beam_glow(W, F, head, d, t, ('audience',), step=1.0)
+        xs = np.array([head + d * k for k in np.arange(0.5, min(t, 60.0), 1.0)])
+        v = np.asarray(DJ_EYE) - xs
+        dj_deg = math.degrees(math.acos(max(-1.0, min(1.0, float(((v / np.linalg.norm(v, axis=1)[:, None]) @ d).max())))))
         crane_hit = [e for e in chk['ends'] if 'z -12' in e]
+        bad_end = Z.inside('bar', end[0], end[2], 0.5) or Z.inside('chill', end[0], end[2], 0.5)
+        ok = chk['rays_into_audience'] == 0 and low >= -1e-6 and not crane_hit and not bad_end and in_pen and not any('glass' in e for e in chk['ends'])
         beams.append({'id': f['id'], 'part': f['part'], 'rays_into_people': chk['rays_into_audience'], 'ends': chk['ends'], 'into_crane_or_laser_hang': crane_hit,
-                      'lowest_over_standing_m': R3(low + M.CLEAR_OVER) if low < 1e6 else None, 'ok': chk['rays_into_audience'] == 0 and low >= -1e-6 and not crane_hit and not any('glass' in e for e in chk['ends'])})
+                      'pen_m': pen, 'pen_inside_the_stage_pen': in_pen, 'lowest_over_floor_m': R3(low + 3.0) if low < 1e6 else None,
+                      'ends_in_bar_or_chill': bad_end, 'glare_min_deg_to_an_eye': R3(worst), 'glare_min_deg_to_the_dj': R3(dj_deg), 'eye_G': {k: round(v, 5) for k, v in g.items()}, 'ok': ok})
+    outside = [f['id'] for f in T['fixtures'] if not Z.inside('hot', f['p'][0], f['p'][2], 2.0)]
+    within_reach = [f['id'] for f in T['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f', 'up-yz31p') and not f['part'].startswith('cut')
+                    and f['p'][1] - (0.7 if f['type'] == 'up-b380f' else 0.0) < REACH_M
+                    and not (EY.STAGE_PEN['x_m'][0] <= f['p'][0] <= EY.STAGE_PEN['x_m'][1] and EY.STAGE_PEN['z_m'][0] <= f['p'][2] <= EY.STAGE_PEN['z_m'][1])]
     clear = []
     for f in T['fixtures']:
         if f['type'] == 'ext-lc-ultra-mk2':
@@ -408,9 +474,8 @@ def build(repo, out, table_path):
         'pars': sum(f['type'] == 'up-pl5403' for f in T['fixtures']), 'pars_cut': sum(f['part'].startswith('cut') for f in T['fixtures']),
         'circuits': len(circ) + 1, 'circuits_ok': all(c['ok'] for c in circ), 'phases_w': ph, 'branches': branches, 'slots': slots,
         'connected_w': sum(c['load_w'] for c in circ) + 720,
-        'units_in_or_near_crowd': ['rig-par-planes-40 (as before: the press-side ember at the roller conveyor, guard owed)', 'rig-par-planes-01 + rig-par-planes-04 (as before: floor PARs at the stage columns z 6, guard cages owed)'],
-        'public_half_units_out_of_reach': all(f['p'][1] - (0.7 if f['type'] == 'up-b380f' else 0.0) >= REACH_M for f in T['fixtures']
-                                             if f['p'][2] >= 8.2 and f['id'] != 'rig-par-planes-40' and f['type'] in ('up-pl5403', 'up-b380f')),
+        'units_outside_the_hot_zone': outside, 'units_within_reach_outside_the_stage_pen': within_reach,
+        'stage_pen': EY.STAGE_PEN, 'placement': placement,
         'counts': {}, 'laser_tubes_entered': [c['id'] for c in clear if c['enters']],
     })
     for f in T['fixtures']:
@@ -421,16 +486,16 @@ def build(repo, out, table_path):
         raise SystemExit('the kit is 18 B380F + 50 PL5403')
     T['checks'] = checks
     T['not_hung'] = [dict(r, hung=6, not_hung=0) if r['code'] == 'EXT-LC-ULTRA-MK2' else r for r in T['not_hung']]
-    zb, za = zone_counts(BT), zone_counts(T)
+    zb, za = zone_counts(BT, Z), zone_counts(T, Z)
     T['review'] = {
         'from': RIG_BT, 'owner': 'look what stage is totally dark ... you closed in one area ... check the lasers place on the other crane ... how much light goes to truss? (on PR #853, 2026-10-09)',
-        'moves': moves, 'task_2': 'ON HOLD: the owner paints the hall\'s areas himself (17:4x); see candidates.json for the measured places', 'zones_before': zb, 'zones_after': za,
+        'moves': moves, 'zones': ZONES_SRC, 'zones_before': zb, 'zones_after': za,
         'stage_light_before': sl_before, 'stage_light_after': sl, 'dj_glare': glare, 'dj_glare_all_at_full': glare_full,
         'laser_clearance': sorted(clear, key=lambda c: c['margin_m']), 'crane_and_smoke': crane_vs, 'beam_checks': beams,
         'cut': cut12, 'stand': PIT_STAND,
     }
-    T.update({'snapshot': 'moxir-v2-stage-lasers-%s' % DATE, 'version': 'MOXIR v2 B tuned + stage + lasers', 'title': 'MOXIR v2 B tuned + the stage lit + the lasers, one machine',
-              'what': BT['what'] + ' Then (owner 10-09 on PR #853): the DJ, the booth and the speaker faces lit from the audience side (4 PARs from the far end), the cut kept at 10 PARs, the six cubes on the free crane at z -12. The spread into the audience half waits for the owner\'s painted plan.',
+    T.update({'snapshot': 'moxir-v2-spread-%s' % DATE, 'version': 'MOXIR v2 B spread · the hot zone', 'title': 'MOXIR v2 B spread · the owner\'s hot zone, one machine',
+              'what': 'B tuned, after the owner\'s look (10-09, PR #853) and his painted plan (17:42): the DJ, the booth and the speaker faces lit from the audience side; every light inside his hot zone, placed from the audience\'s eyes (both wings and behind the stage, column brackets out of reach); the cut kept at 10 PARs; the six cubes on the free crane at z -12. Three planes kept: the ember fan behind the DJ, the wings, behind the stage.',
               'written_by': 'scripts/place/moxir_v2_spread.py build (from %s)' % RIG_BT, 'date': DATE, 'from_rig': RIG_BT})
     T['kit'] = BT['kit']
     for k in ('tunes', 'design_metric', 'tuned_from'):
@@ -447,7 +512,7 @@ def build(repo, out, table_path):
                       'beams_ok': '%d/%d' % (checks['beams_ok'], checks['beams']), 'beam_rows': beams,
                       'laser_tightest': sorted(clear, key=lambda c: c['margin_m'])[:5], 'tubes_entered': checks['laser_tubes_entered'],
                       'crane_and_smoke': crane_vs, 'cut': {k: {kk: vv for kk, vv in v.items() if kk != 'places'} for k, v in cut12.items()},
-                      'circuits_ok': checks['circuits_ok'], 'out_of_reach': checks['public_half_units_out_of_reach']}, indent=1, default=JD))
+                      'circuits_ok': checks['circuits_ok'], 'outside_hot': outside, 'within_reach': within_reach, 'per_eye_par_lux': placement['per_eye_par_lux'], 'per_eye_beam_G': placement['per_eye_beam_G']}, indent=1, default=JD))
 
 
 def cut_alternatives(repo, M, tubes, W):
@@ -512,23 +577,26 @@ def candidates(repo, out):
     os.makedirs(out, exist_ok=True)
     doc = {'what': 'task 2 input (the owner paints the areas; 17:4x): candidate places in the audience half, measured, no layout chosen', 'date': DATE,
            'method': 'occlusion_sky.sky (1200 rays, clear >= 30 m) + par_on_steel (15 deg, 11 000 cd EQUIVALENT), in the night\'s world (far crane at z -12 + the laser hang, the z -41 crane gone); people not counted as obstacles',
-           'zones_before': zone_counts(json.load(open(os.path.join(repo, RIG_BT)))), 'rows': rows}
+           'zones_before': zone_counts(json.load(open(os.path.join(repo, RIG_BT))), __import__('moxir_v2_eyes').Zones(repo)), 'rows': rows}
     json.dump(doc, open(os.path.join(out, 'candidates.json'), 'w'), indent=1, default=JD)
     print('%d places -> %s' % (len(rows), os.path.join(out, 'candidates.json')))
 
 
 # ====================================================================== frames (moxir-v2-true-frames.cjs) and the page
 VIEWS = {
-    'floor': {'position': [-3.75, 1.7, 18.1], 'target': [-3.75, 5.0, -20.0], 'fov': 70, 'label': 'Floor 1.7 m (z 18)'},
+    'floor': {'position': [-3.75, 1.7, 18.1], 'target': [-3.75, 5.0, -20.0], 'fov': 70, 'label': 'Dance floor 1.7 m (z 18)'},
+    'wingL': {'position': [-20.0, 1.7, 8.0], 'target': [-4.0, 4.0, -2.0], 'fov': 70, 'label': 'Wing house left 1.7 m (x -20 z 8)'},
+    'wingR': {'position': [18.0, 1.7, 8.0], 'target': [-5.0, 4.0, -2.0], 'fov': 70, 'label': 'Wing house right 1.7 m (x 18 z 8)'},
+    'behind': {'position': [-4.0, 1.7, -22.0], 'target': [-4.0, 4.5, 10.0], 'fov': 70, 'label': 'Behind the stage 1.7 m (z -22)'},
     'mid': {'position': [-2.0, 1.7, 35.0], 'target': [-4.5, 4.0, -10.0], 'fov': 65, 'label': 'Mid-audience 1.7 m (z 35)'},
-    'entry': {'position': [0.0, 1.7, 51.5], 'target': [-3.0, 5.0, -10.0], 'fov': 60, 'label': 'Entry 1.7 m'},
     'dj': {'position': list(DJ_EYE), 'target': [-4.0, 3.0, 40.0], 'fov': 75, 'label': 'The DJ\'s eye toward the crowd'},
 }
+VORDER = ('floor', 'wingL', 'wingR', 'behind', 'mid', 'dj')
+VIEWS_BY_STATE = {'t40': VORDER, 't10': ('floor', 'wingL', 'behind')}
 LAYOUTS = {'bt': ('B tuned (old, PR #853)', 'moxir-v2-planes-tuned', '/moxir/p/moxir-v2-planes-tuned', RIG_BT),
-           'sl': ('B + stage + lasers (new)', 'moxir-v2-stage-lasers', '/moxir/p/moxir-v2-stage-lasers', RIG_SP)}
+           'sl': ('B spread (new)', 'moxir-v2-stage-lasers', '/moxir/p/moxir-v2-stage-lasers', RIG_SP)}
 STATES = ('t40', 't10')
 LOOKS = ('dark', 'peak')
-VORDER = ('floor', 'mid', 'entry', 'dj')
 
 
 def plan(repo, out):
@@ -537,7 +605,7 @@ def plan(repo, out):
     for key, (title, project, path, _) in LAYOUTS.items():
         for st in STATES:
             for look in LOOKS:
-                for view in VORDER:
+                for view in VIEWS_BY_STATE[st]:
                     v = VIEWS[view]
                     jobs.append({'name': '%s-%s-%s-%s' % (key, st, look, view), 'layout': key, 'state': st, 'look': look, 'view': view, 'project': project, 'path': path,
                                  'atmosphere': V.STATES[st][2], 'camera': {'position': v['position'], 'target': v['target'], 'fov': v['fov']}})
@@ -549,9 +617,9 @@ def plan(repo, out):
 
 def contact_sheet(out):
     from PIL import Image, ImageDraw
-    W_, H_, pad, lab = 440, 275, 6, 20
+    W_, H_, pad, lab = 384, 240, 6, 20
     rows = [(k, st, lk) for st in STATES for lk in LOOKS for k in ('bt', 'sl')]
-    sheet = Image.new('RGB', (4 * (W_ + pad) + 230, len(rows) * (H_ + lab + pad) + 40), (12, 12, 13))
+    sheet = Image.new('RGB', (len(VORDER) * (W_ + pad) + 230, len(rows) * (H_ + lab + pad) + 40), (12, 12, 13))
     d = ImageDraw.Draw(sheet)
     d.text((10, 12), 'MOXIR v2 - B tuned (old) vs B + stage + lasers (new) - measurement mode EV100 2.84 fixed - Full quality - RTX 3080 - 2026-10-09', fill=(232, 228, 220))
     for c, v in enumerate(VORDER):
@@ -585,7 +653,7 @@ def page(repo, out):
                 '<span>%s</span><small>mean luminance %s · white-out %s %%</small></figcaption></figure>') % (
             name, name, E(cap.get(name, name)), E(LAYOUTS[k][0]), lk, st[1:], E(VIEWS[v]['label']), E(cap.get(name, '')), L.get('mean_Y', '–'), L.get('white_pct', '–'))
     pairs = ''.join('<h3>%s · %s look · haze %s min</h3>%s' % (E(VIEWS[v]['label']), lk, st[1:], '<div class="pair">%s%s</div>' % (fig('bt-%s-%s-%s' % (st, lk, v)), fig('sl-%s-%s-%s' % (st, lk, v))))
-                    for st in STATES for v in VORDER for lk in LOOKS)
+                    for st in STATES for v in VIEWS_BY_STATE[st] for lk in LOOKS)
     zb, za = sp['zones_before'], sp['zones_after']
     zk = [k for k in za if isinstance(za[k], dict)] + [k for k in zb if isinstance(zb[k], dict) and k not in za]
     fmt = lambda d: ', '.join('%d %s' % (v, t) for t, v in d.items()) if d else '0'
@@ -673,11 +741,12 @@ def main():
     ap.add_argument('--repo', default='.')
     ap.add_argument('--out', default=os.path.expanduser('~/Downloads/moxir/v2-spread'))
     ap.add_argument('--lasers', default=LASER_TABLE)
+    ap.add_argument('--placement', default=None, help='reuse a previous build\'s placement.json (same inputs)')
     A, _ = ap.parse_known_args()
     repo = os.path.abspath(os.path.expanduser(A.repo))
     out = os.path.abspath(os.path.expanduser(A.out))
     if A.cmd == 'build':
-        build(repo, out, A.lasers)
+        build(repo, out, A.lasers, A.placement)
     elif A.cmd == 'plan':
         plan(repo, out)
     elif A.cmd == 'candidates':

@@ -6,12 +6,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { v1Entities, v1Looks } from '../rigbuild/epic-build.mjs'
+import { v1Entities, v1Looks, laserBeamLumens, cubeVariant } from '../rigbuild/epic-build.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const read = (f) => JSON.parse(fs.readFileSync(path.join(here, 'rigs', f), 'utf8'))
 const T = read('moxir-v2-planes-tuned-2026-10-09.json')
-const N = read('moxir-v2-stage-lasers-2026-10-09.json')
+const N = read('moxir-v2-spread-2026-10-09.json')
 const count = (rig, type) => rig.fixtures.filter((f) => f.type === type).length
 const DJ_EYE = [-5.2, 2.03, 4.3]
 const sub = (a, b) => a.map((v, i) => v - b[i])
@@ -56,13 +56,30 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
             expect(N.review.stage_light_before[lk].room_30478cd['DJ face'].lx).toBe(0)
         }
     })
-    it('takes the four front PARs from the far end and leaves every other unit where B tuned had it', () => {
+    it('keeps the stage (the cut, plane 1, the machine, the stage columns, the halo, the embers) where B tuned had it', () => {
         const moved = new Set(N.review.moves.map((m) => m.id))
-        expect([...moved].sort()).toEqual(['rig-par-planes-23', 'rig-par-planes-24', 'rig-par-planes-25', 'rig-par-planes-28'])
+        expect(moved.size).toBe(4 + 26 + 12)
         for (const f of T.fixtures) {
             if (moved.has(f.id)) continue
             expect(N.fixtures.find((g) => g.id === f.id).p).toEqual(f.p)
         }
+        for (const id of ['rig-smoke-planes', 'rig-beam-planes-01', 'rig-beam-planes-06', 'rig-par-cut-01', 'rig-par-planes-01', 'rig-par-planes-37']) expect(moved.has(id)).toBe(false)
+    })
+    it('spreads over the owner\'s painted hot zone: nothing outside it, both wings filled, every beam passes the whole-floor rules', () => {
+        expect(N.checks.units_outside_the_hot_zone).toEqual([])
+        const za = N.review.zones_after
+        const n = (z) => Object.values(za[z] || {}).reduce((a, b) => a + b, 0)
+        expect(n('wing house left (use)')).toBeGreaterThanOrEqual(15)
+        expect(n('wing house right (use)')).toBeGreaterThanOrEqual(15)
+        expect(za['OUTSIDE the hot zone']).toBeUndefined()
+        for (const b of N.review.beam_checks) {
+            expect(b.ok).toBe(true)
+            expect(b.rays_into_people).toBe(0)
+            expect(b.ends_in_bar_or_chill).toBe(false)
+            expect(b.glare_min_deg_to_an_eye).toBeGreaterThanOrEqual(29.9)
+        }
+        // every unit among people is out of reach, except the ones named with their guard owed
+        expect([...N.checks.units_within_reach_outside_the_stage_pen].sort()).toEqual(['rig-par-planes-01', 'rig-par-planes-04', 'rig-par-planes-38', 'rig-par-planes-39', 'rig-par-planes-40'])
     })
     it('hangs the cubes exactly as the laser session committed them (git cf954908), the crane travel the owner\'s decision', () => {
         let given
@@ -93,5 +110,17 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
         for (const lk of N.looks) for (const p of Object.keys(lk.parts)) expect(parts.has(p) || p === 'laser').toBe(true)
         const looks = v1Looks(N, ents, { axis: 0.13, stage: { front: 5.65, into: 1 } }, 'x.json')
         expect(looks.looks.map((l) => l.id)).toEqual(['black', 'dark', 'peak'])
+    })
+    it('draws each laser line with the flux of the cube in use (fixtures.json variant_in_use: 7.5 W), not a fixed figure', () => {
+        expect(cubeVariant().name).toBe('7.5 W')
+        const white = { colour: '#ffffff', laser: { beams: [{ id: 'x' }], duty: 1, room_flux_share: 1 } }
+        expect(laserBeamLumens(white, white.laser.beams[0])).toBeGreaterThan(1405) // 131 + 1084 + 196 = 1410 lm (laserLine.js)
+        expect(laserBeamLumens(white, white.laser.beams[0])).toBeLessThan(1415)
+        const two = { colour: '#ffffff', laser: { beams: [{}, {}], duty: 0.45 } }
+        expect(laserBeamLumens(two, null)).toBeCloseTo((laserBeamLumens(white, white.laser.beams[0]) * 0.45) / 2, 6)
+        const ents = v1Entities(N).filter((e) => e.id.startsWith('rig-laser-'))
+        const cube = N.fixtures.find((f) => f.type === 'ext-lc-ultra-mk2' && f.colour === '#e8e4dc')
+        const e = ents.find((x) => x.id === `rig-laser-${cube.laser.beams[0].id}`)
+        expect(e.components.light.intensity).toBeGreaterThan(1.9e6) // ~1260 lm into the 2 mrad cone, x 0.02
     })
 })
