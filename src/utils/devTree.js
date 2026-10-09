@@ -5,14 +5,21 @@
 //   VITE_DI_TREE = <tree>                  the git checkout this copy runs from
 //   VITE_DI_MODE = frontend | scratch      whose data it reads
 // A production build has neither, so the chip is absent from it (Vite inlines
-// import.meta.env at build time; a build made without them carries no label).
+// each named import.meta.env key at build time; a build made without them
+// carries no label). Named keys only: a bare import.meta.env would put every
+// VITE_* value of the build into the shipped JS (scripts/di/buildEnvNoSecrets.test.js).
 //
 // Decision: ~/work/di-atlas-hosting/decisions/2026-10-02-local-hosting.md
 
 export const TREE_MODE_FRONTEND = 'frontend'
 export const TREE_MODE_SCRATCH = 'scratch'
 
-export function resolveDevTree(env = import.meta.env) {
+const buildTreeEnv = () => ({
+    VITE_DI_TREE: import.meta.env.VITE_DI_TREE,
+    VITE_DI_MODE: import.meta.env.VITE_DI_MODE
+})
+
+export function resolveDevTree(env = buildTreeEnv()) {
     const tree = String(env?.VITE_DI_TREE ?? '').trim()
     if (!tree) return null
     // Anything that is not "scratch" is read as frontend: the safe, non-alarming

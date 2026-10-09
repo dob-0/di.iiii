@@ -132,7 +132,6 @@ CLOUDLINUX_SELECTOR_BIN="$(find_cloudlinux_selector || true)"
 
 required_vars=(
   API_TOKEN
-  VITE_API_TOKEN
 )
 
 for key in "${required_vars[@]}"; do
