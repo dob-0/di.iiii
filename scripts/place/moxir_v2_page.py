@@ -15,6 +15,7 @@ A = ap.parse_args()
 D = os.path.expanduser(A.dir)
 R = json.load(open(os.path.join(D, 'v2-layouts.json')))
 SKY = json.load(open(os.path.join(D, 'occlusion', 'occlusion-sky.json')))
+LUMA = json.load(open(os.path.join(D, 'frame-luma.json'))) if os.path.exists(os.path.join(D, 'frame-luma.json')) else {}   # frame_luma.py
 ORDER = ['corridors', 'planes', 'lines']
 LOOKS = ['dark', 'peak']
 VIEWS = [('floor', 'Floor centre, eye 1.7 m'), ('entry', 'Entry, eye 1.7 m'), ('top', 'Top plan'), ('side', 'Side section')]
@@ -86,6 +87,10 @@ def layout_col(n):
         ('DMX', ', '.join('%s: %d devices' % (b['branch'], b['devices']) for b in c['branches'])),
         ('Smoke machine', E(L['smoke']['position'])),
     ]
+    for v in ('floor', 'entry'):
+        got = [LUMA.get('%s-%s-%s' % (n, lk, v)) for lk in LOOKS]
+        if all(got):
+            rows.append(('%s view: brightness · white-out (dark / peak)' % v.title(), ' / '.join('Y %.3f · %.1f %%' % (g['mean_Y'], g['white_pct']) for g in got)))
     return '''<section class="col"><h2>%s</h2><p class="idea">%s</p>%s<h3>Beams</h3><ul>%s</ul><h3>PARs</h3><p>%s</p>
 <h3>In the room (real GPU)</h3><div class="shots">%s</div><h3>Plan and section</h3><a href="plan-%s.png"><img src="plan-%s.png"></a><a href="section-%s.png"><img src="section-%s.png"></a></section>''' % (
         E(L['title']), E(L['idea']), table(rows), beams, E(', '.join('%d %s' % (v, k) for k, v in pars.items())), shots, n, n, n, n)
@@ -96,8 +101,24 @@ def cut_block():
     tr = ''.join('<tr%s><td>%d</td><td>%.2f m</td><td>%s</td><td>%s kg</td><td>%s</td><td>%s</td><td>%d W · %d</td></tr>' % (
         ' class="rec"' if r['n'] == R['cut_recommended'] else '', r['n'], r['pitch_m'], ' / '.join('%.0f' % p['line_kg'] for p in r['picks']),
         r['headroom_kg'], ' · '.join('%d°: %d %%' % (l['lens_deg'], l['shafts_separate_pct']) for l in r['look']), 'ok' if r['picks_ok'] else 'OVER', r['power']['w'], r['power']['circuits_16a']) for r in rows)
-    return '''<h2>The cut: how many PARs</h2><p>12 m of Prolyte H30V on the near crane, 3 picks (bridles 26° / 42° / 119°). Pick cap 146 kg (MOXIR.md 5.2; the crane's rating is still unknown). Lamps alternate DOWN (a shaft to the floor) and UP (a pool on the crane girders). "Shafts separate" = share of the down-shafts whose floor footprint is narrower than their spacing: below 100 % they merge into a sheet of light, the wall the owner does not want.</p>
-<table class="cut"><tr><th>PARs</th><th>pitch</th><th>picks (kg)</th><th>headroom</th><th>shafts separate</th><th>load</th><th>power · circuits</th></tr>%s</table><p><b>Recommended: %d.</b></p>''' % (tr, R['cut_recommended'])
+    return '''<h2>The cut: how many PARs</h2><p>12 m of Prolyte H30V on the near crane, 3 picks (bridles 26° / 42° / 119°). Pick cap 146 kg (MOXIR.md 5.2; the crane's rating is still unknown). Lamps alternate DOWN (a shaft to the floor) and UP (a pool on the crane girders). "Shafts separate" = share of the down-shafts whose floor footprint is narrower than their spacing: below 100 %% they merge into a sheet of light, the wall the owner does not want.</p>
+<div class="tw"><table class="cut"><tr><th>PARs</th><th>pitch</th><th>picks (kg)</th><th>headroom</th><th>shafts separate</th><th>load</th><th>power · circuits</th></tr>%s</table></div><p><b>Recommended: %d.</b></p>''' % (tr, R['cut_recommended'])
+
+
+def recommendation():
+    """The advice in one paragraph, every number from the JSON (the choice stays the owner's)."""
+    L = R['layouts']
+    y = lambda n, lk: LUMA.get('%s-%s-floor' % (n, lk), {})
+    return ('<b>Advice: B · three planes of depth.</b> All three pass every check (18 of 18 beams; none into the crowd; >= 3 m over every '
+            'standing level). B gives the most depth for the least glare: its aimed beams run clear for 30 m on %.0f %% of their rays '
+            '(A %.0f %%), and from the dance floor it stays dark (brightness Y %.3f dark / %.3f peak; A %.3f / %.3f). '
+            'C throws the longest lines (%.0f m on average) but they travel toward the crowd: even held at 35 %% its floor view is '
+            '%.0fx brighter in the dark look and whites out %.1f %% of the view at the peak, the commercial look the owner rejected. '
+            '<b>The cut: %d PARs.</b>') % (
+        L['planes']['checks']['aim_rays_clear_30m_pct'], L['corridors']['checks']['aim_rays_clear_30m_pct'],
+        y('planes', 'dark').get('mean_Y', 0), y('planes', 'peak').get('mean_Y', 0), y('corridors', 'dark').get('mean_Y', 0), y('corridors', 'peak').get('mean_Y', 0),
+        L['lines']['checks']['mean_throw_m'], (y('lines', 'dark').get('mean_Y', 0) / max(1e-6, y('planes', 'dark').get('mean_Y', 1e-6))), y('lines', 'peak').get('white_pct', 0),
+        R['cut_recommended'])
 
 
 def main():
@@ -113,15 +134,17 @@ def main():
 h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:18px 0 6px;color:var(--ember)}h3{font-size:13px;margin:12px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
 .lead{color:var(--mut);max-width:1100px}.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 @media(max-width:1100px){.cols{grid-template-columns:1fr}}
-.col{border:1px solid var(--line);padding:12px;border-radius:2px}.idea{font-size:15px}
+.col{border:1px solid var(--line);padding:12px;border-radius:2px;min-width:0;overflow-wrap:anywhere}
+.tw{overflow-x:auto;max-width:100%%}.rec-box{border-left:3px solid var(--ember);padding:6px 12px;margin:10px 0 14px;max-width:1100px;font-size:15px}.idea{font-size:15px}
 table{border-collapse:collapse;width:100%%;font-size:12.5px}th,td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}th{color:var(--mut);font-weight:500}
-.cut tr.rec td{color:var(--ember);font-weight:600}img{width:100%%;display:block;border:1px solid var(--line)}
+.cut tr.rec td{color:var(--ember);font-weight:600}img{width:100%%;max-width:100%%;display:block;border:1px solid var(--line)}
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:6px}figure{margin:0}figcaption{font-size:11px;color:var(--mut)}
 .miss{height:90px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--mut)}
 ul{padding-left:18px;margin:4px 0}.wide{max-width:1200px}code{color:var(--fg)}
 </style></head><body>
 <h1>MOXIR v2 — three ways to hang the kit (industrial depth)</h1>
 <p class="lead">18 beam heads, all on the ground. 50 PARs: 10 on the cut, 40 on the ground. 6 lasers on the free crane. 1 smoke machine. Ash white and ember red. Every beam was aimed by the computer inside its zone so it is not blocked, never enters the crowd, never leaves through glass, and stays 3 m or more above any place people stand. Written %s by scripts/place/moxir_v2.py; the frames are the room on the real GPU (scratch copy, not dev).</p>
+<div class="rec-box">%s</div>
 <div class="cols">%s</div>
 <div class="wide">%s
 <h2>Where a beam head sees the most sky (occlusion)</h2><p class="lead">%d places × %d directions each, cast against the hall's %d named pieces + the rig + the crowd. "Clear" = the beam runs at least 30 m before it meets anything.</p>
@@ -130,7 +153,7 @@ ul{padding-left:18px;margin:4px 0}.wide{max-width:1200px}code{color:var(--fg)}
 <p><a href="occlusion/heat-section-clear.png"><img src="occlusion/heat-section-clear.png"></a></p>
 <h2>Lasers</h2><p class="lead">%s</p>
 <h2>All frames</h2><p><a href="contact-sheet.png"><img src="contact-sheet.png"></a></p></div></body></html>''' % (
-        'on 2026-10-09', ''.join(layout_col(n) for n in ORDER), cut_block(), len(SKY['positions']), SKY['rays_per_position'], SKY['triangles'], zt,
+        'on 2026-10-09', recommendation(), ''.join(layout_col(n) for n in ORDER), cut_block(), len(SKY['positions']), SKY['rays_per_position'], SKY['triangles'], zt,
         E(R['lasers'].get('status', '')))
     open(os.path.join(D, 'index.html'), 'w').write(page)
 

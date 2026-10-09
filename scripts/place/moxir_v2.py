@@ -445,6 +445,7 @@ def rig_file(name, lay, beams, pars, smoke_unit, cc, circ, ph, branches, slots, 
         ds = [b['dir'] for b in beams if b['part'] == p and b.get('dir') is not None]
         if ds and np.mean([d[2] for d in ds]) > 0.5:
             peak[p] = [peak[p][0], GLARE_CAP]
+            dark[p] = [dark[p][0], min(dark[p][1], GLARE_CAP)]          # the rule holds in every look (seen 10-09: C's dark too)
     peak.update({'cut down': [ASH, 1.0], 'cut up': [ASH, 0.9], 'columns': [EMBER, 0.8], 'roof': [ASH, 0.6], 'embers': [EMBER, 0.6],
                  'halo': [EMBER, 0.5], 'far wall': [DEEP, 0.7], 'side spans': [EMBER, 0.5], 'laser': [ASH, 1.0]})
     looks = [{'id': 'dark', 'title': 'Dark (one colour: ember)', 'act': 1, 'parts': {k: v for k, v in dark.items() if k in parts}},
