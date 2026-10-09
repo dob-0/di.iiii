@@ -74,6 +74,7 @@ PAR_CD_SPEC = 11000.0                # fixtures-exact.md EQUIVALENT, 15 deg, an 
 # at four targets and four levels. looks.js atLevel multiplies once; the second factor is not found yet (OWED, viewport).
 # The faders below are set so the ROOM shows the stage at 30-80 lx; a linear dimmer gives E x level instead (both stated).
 ROOM_LEVEL_EXP = 2
+PLANE2_PEAK = 0.45                   # the wings' peak fader under the white-out budget (see the looks)
 B380_CD_ROOM = 1004000 / 0.02
 DJ_EYE = (-5.2, 2.03, 4.3)
 DJ_RULE_DEG = 20.0
@@ -395,7 +396,9 @@ def build(repo, out, table_path, placement_file=None):
             p['speaker face L'] = [EMBER, 0.59]
             p['speaker face R'] = [EMBER, 1.0]
         if lk['id'] == 'peak':
-            p['plane 2 (the wings)'] = [ASH, 1.0]
+            # GLARE BUDGET (measured on the frames, frame_luma.py, the 0.65 % white-out accepted for B): at 1.0 the wing beams,
+            # now near every eye, whited out 1.9 % of the floor view and 2.7 % of mid (tuned B 0.27 %). Fader, not aim:
+            p['plane 2 (the wings)'] = [ASH, PLANE2_PEAK]
             p['plane 3 (behind the stage)'] = [EMBER, 0.7]
             p['roof'] = [ASH, 0.6]
             p['stage key'] = [ASH, 0.35]
@@ -730,6 +733,12 @@ The two spare PARs light his face from the front instead.</div>
 plane-2 heads stand on the floor among them. Nine of its beams point at someone standing in the hot zone (within 30°). In the
 spread every beam passes: no ray into people, at least 3 m over the floor everywhere, no beam ending in the bar or the chill
 area, and nobody within 30° of looking down a beam.</div>
+
+<div class="reco"><b>Two costs, measured.</b> (1) Glare from the floor at the peak: the lamps alone white out 0.52 % of the view
+(budget 0.65 %; the wings' beams turned down to 45 % for it). The six 7.5 W laser lines add 0.36 points, to 0.88 % — that is the
+lasers' own brightness, left as the laser session set it. (2) The DJ: no lamp shines into his eyes from within 20° of where he
+looks, but the keys aimed at him light the haze around him, a veil (his view is ~30× brighter than in B tuned). Lowering the keys
+or a higher key position trades it against how well he reads from the floor.</div>
 
 <h2>What each place in the hot zone sees — before and after</h2>
 <p class="note">Every unit at full. The light the lit steel sends to that eye (lx, an upper bound), and the beams' glow in the

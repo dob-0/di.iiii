@@ -36,6 +36,14 @@ const docForJob = (doc, job, now = Date.now()) => {
     doc.renderSettings = { ...(doc.renderSettings || {}), atmosphere: job.atmosphere }
     const cue = { id: `true-${job.look}`, name: `held: ${job.look}`, key: '', fade: 0, hold: 3600, lightLook: `rig-${job.look}`, surfaces: {} }
     doc.mappingState = { ...(doc.mappingState || {}), cues: [cue], loop: true, showEpoch: now - 500, showSource: 'clock' }
+    // job.zeroKeys: hold the look's groups whose key holds one of these words at 0 (a measurement split, e.g. the laser lines
+    // off to see what the lamps alone white out); the browser's copy only
+    if (Array.isArray(job.zeroKeys) && job.zeroKeys.length) {
+        const show = (doc.entities || []).find((e) => Array.isArray(e?.components?.rigLooks?.looks))
+        for (const lk of show ? show.components.rigLooks.looks : []) {
+            for (const key of Object.keys(lk.levels || {})) if (job.zeroKeys.some((w) => key.includes(w))) lk.levels[key] = 0
+        }
+    }
     return doc
 }
 
