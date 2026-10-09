@@ -123,17 +123,17 @@ module.exports = [
   },
   {
     route: "POST /api/spaces/:spaceId/show/:projectId/favourites",
-    summary: "the operator's five favourite scenes: the buttons always on screen in the room. Everyone reads the same list from the show answer (control.favourites)",
+    summary: "the operator's ten favourite scenes: the buttons always on screen in the room. Everyone reads the same list from the show answer (control.favourites)",
     reach: "public",
     role: "editor",
     agent: false,
     input: {
       body: {
         type: "object",
-        properties: { favourites: { type: "array", items: { type: "string" }, maxItems: 5 } },
+        properties: { favourites: { type: "array", items: { type: "string" }, maxItems: 10 } },
         required: ["favourites"]
       }
     },
-    note: "operator only. Look ids (rig-...), at most 5, each once, each in this show, never a laser scene (400 otherwise). Stored with the show's control state in <DATA_ROOT>/show/control.json; before any is set the first five non-laser looks."
+    note: "operator only. Look ids (rig-...), at most 10, each once, each in this show, never a laser scene (400 otherwise). Stored with the show's control state in <DATA_ROOT>/show/control.json; before any is set the first ten non-laser looks."
   },
 ]

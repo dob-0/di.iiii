@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { favouriteButtons, toggledFavourites, durationWords, groupByAct, isLiveScene, liveOf, sceneButtons, swatchWords, youWords } from './showApi.js'
+import { FAVOURITES_MAX, favouriteButtons, toggledFavourites, durationWords, groupByAct, isLiveScene, liveOf, sceneButtons, swatchWords, youWords } from './showApi.js'
 import { getShowLocationState, SHOW_SEGMENT } from './showRouting.js'
 
 const cues = [
@@ -85,9 +85,17 @@ describe('the favourite buttons', () => {
         expect(favouriteButtons(cs, ['rig-c', 'rig-gone', 'rig-a']).map((c) => c.id)).toEqual(['c', 'a'])
         expect(favouriteButtons(cs, undefined)).toEqual([])
     })
-    it('a star toggles: off if on, else appended; at five the oldest leaves', () => {
+    it('a star toggles: off if on, else appended; at ten the oldest leaves', () => {
         expect(toggledFavourites(['x', 'y'], 'x')).toEqual(['y'])
         expect(toggledFavourites(['x'], 'y')).toEqual(['x', 'y'])
-        expect(toggledFavourites(['1', '2', '3', '4', '5'], '6')).toEqual(['2', '3', '4', '5', '6'])
+        expect(toggledFavourites(['1', '2', '3', '4', '5'], '6')).toEqual(['1', '2', '3', '4', '5', '6'])
+        const ten = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+        expect(toggledFavourites(ten, '11')).toEqual(ten.slice(1).concat('11'))
+    })
+    it('the client cap is the server cap (ten)', async () => {
+        const { createRequire } = await import('node:module')
+        const server = createRequire(import.meta.url)('../../serverXR/src/show/showRemote.js')
+        expect(FAVOURITES_MAX).toBe(10)
+        expect(server.FAVOURITES_MAX).toBe(FAVOURITES_MAX)
     })
 })

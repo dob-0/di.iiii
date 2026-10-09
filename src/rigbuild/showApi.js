@@ -52,7 +52,9 @@ export const favouriteButtons = (cues, ids) => {
 }
 
 /** The list after a star is toggled: off if starred, else appended (when full the oldest star leaves). The server checks it again. */
-export const toggledFavourites = (ids, lookId, max = 5) => {
+// Ten, like the server's FAVOURITES_MAX (serverXR/src/show/showRemote.js); showApi.test.js pins the two together.
+export const FAVOURITES_MAX = 10
+export const toggledFavourites = (ids, lookId, max = FAVOURITES_MAX) => {
     const list = Array.isArray(ids) ? ids : []
     if (list.includes(lookId)) return list.filter((id) => id !== lookId)
     return [...list, lookId].slice(-max)

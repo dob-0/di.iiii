@@ -37,7 +37,8 @@ const CHOOSERS = Object.freeze(['team', 'everyone', 'operator'])
 const DEFAULT_CHOOSERS = 'team'
 const DESK_LOOK_PREFIX = 'rig-'
 const NAME_MAX = 24
-const FAVOURITES_MAX = 5
+// Ten (owner, 2026-10-09: "10 animated scenes in favorite"); was five. src/rigbuild/showApi.js FAVOURITES_MAX mirrors it, a test pins both.
+const FAVOURITES_MAX = 10
 
 // "Act 1 · still smoking" → act 1, "still smoking". The act is only what the cue's own
 // name says; a cue that names none ("the black") has none.
@@ -191,7 +192,7 @@ const sanitizeControl = (raw) => {
   c.choosers = CHOOSERS.includes(raw.choosers) ? raw.choosers : DEFAULT_CHOOSERS
   c.setAt = Number.isFinite(raw.setAt) ? raw.setAt : null
   if (Number.isFinite(raw.cooldownMs)) c.cooldownMs = Math.min(COOLDOWN_MAX_MS, Math.max(0, Math.round(raw.cooldownMs)))
-  // null = the operator never starred any; an array (≤5 look ids) = his five.
+  // null = the operator never starred any; an array (≤10 look ids) = his ten.
   if (Array.isArray(raw.favourites)) c.favourites = [...new Set(raw.favourites.filter((id) => typeof id === 'string' && id).map((id) => id.slice(0, 40)))].slice(0, FAVOURITES_MAX)
   const last = raw.last
   if (last && typeof last === 'object' && Number.isInteger(last.index) && Number.isFinite(last.at)) {
@@ -202,7 +203,7 @@ const sanitizeControl = (raw) => {
 
 /**
  * The favourite scenes everyone sees: the operator's starred look ids (those still in the show, none a laser
- * scene), in his order; before he stars any (stored === null) the first five non-laser looks in list order.
+ * scene), in his order; before he stars any (stored === null) the first ten non-laser looks in list order.
  * A look is one scene however many cues play it, so ids are look ids.
  */
 const favouritesOf = (cues, stored) => {
@@ -212,7 +213,7 @@ const favouritesOf = (cues, stored) => {
   return [...firstOfLook.values()].filter((cue) => !cue.laser).slice(0, FAVOURITES_MAX).map((cue) => cue.lookId)
 }
 
-/** The operator's list, checked: { ok, favourites } or { ok: false, error }. Refuses > 5, repeats, unknown looks and laser scenes. */
+/** The operator's list, checked: { ok, favourites } or { ok: false, error }. Refuses > FAVOURITES_MAX (10), repeats, unknown looks and laser scenes. */
 const checkFavourites = (ids, cues) => {
   if (!Array.isArray(ids)) return { ok: false, error: 'favourites is a list of scene ids.' }
   if (ids.length > FAVOURITES_MAX) return { ok: false, error: `At most ${FAVOURITES_MAX} favourites.` }

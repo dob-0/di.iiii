@@ -2,15 +2,31 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShowError, blockOf, chooseCue, cleanName, favouriteButtons, isLiveScene, liveOf } from './showApi.js'
 import { useShowFeed } from './useShowFeed.js'
 
-// THE FIVE FAVOURITE SCENE BUTTONS, ALWAYS ON SCREEN IN THE ROOM (owner, 2026-10-09: "it's just to see the
+// THE TEN FAVOURITE SCENE BUTTONS (were five; owner, 2026-10-09: "10 animated scenes in favorite"), ALWAYS ON SCREEN IN THE ROOM (owner, 2026-10-09: "it's just to see the
 // light shows, and in virtual - like the favourite 5 scene buttons there"). A tap sends that scene to Light
 // through the SAME POST .../choose as the list and the show page, so the server alone decides who may, the
 // cooldown, the operator's lock; a laser scene is never in the row (the server refuses it, and never stars it).
-// WHICH five is the operator's, kept on the server with the show's control state (`control.favourites`): every
-// viewer reads the same five. Before he stars any: the first five non-laser looks. Nothing here computes a
+// WHICH ten is the operator's, kept on the server with the show's control state (`control.favourites`): every
+// viewer reads the same ten. Before he stars any: the first ten non-laser looks. On a phone the row wraps to two rows of five,
+// on a desktop it is one row of ten. Nothing here computes a
 // permission - `you.block` is read. Rectangles, 0-2 px, ember red for the live one, targets >= 44 px.
 export const FAVOURITES_EVENT = 'di:show-answer'
 const EMBER = '#ff3b3b'
+// A phone-wide screen wraps ten buttons to 2 x 5; wider screens keep one row. Measured by moxirMotion tests and a real browser.
+const WIDE_QUERY = '(min-width: 720px)'
+const useWide = () => {
+    const read = () => (typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(WIDE_QUERY).matches : true)
+    const [wide, setWide] = useState(read)
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
+        const mq = window.matchMedia(WIDE_QUERY)
+        const on = () => setWide(mq.matches)
+        on()
+        mq.addEventListener?.('change', on)
+        return () => mq.removeEventListener?.('change', on)
+    }, [])
+    return wide
+}
 
 export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }) {
     const { data, take } = useShowFeed(spaceId, projectId)
@@ -18,6 +34,7 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
     const [notice, setNotice] = useState('')
     const [now, setNow] = useState(() => Date.now())
     const rowRef = useRef(null)
+    const wide = useWide()
     const [lift, setLift] = useState(null)
     // Sit just above the view bar (Floor / DJ / Top ...), wherever it stands on this screen: measured, never covering it.
     useEffect(() => {
@@ -80,13 +97,13 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
     return (
         <div ref={rowRef} data-testid="room-favourites" style={{ ...rowStyle, bottom: lift != null ? lift : bottom }}>
             {notice ? <p role="status" style={noticeStyle}>{notice}</p> : null}
-            <ul aria-label="favourite scenes" style={listStyle}>
+            <ul aria-label="favourite scenes" data-cols={wide ? 10 : 5} style={{ ...listStyle, gridTemplateColumns: `repeat(${wide ? 10 : 5}, minmax(0, 1fr))` }}>
                 {buttons.map((cue) => {
                     const isLive = isLiveScene(cue, live, cues)
                     const disabled = Boolean(cue.laser) || Boolean(block) || sending != null
                     const name = cue.title || cue.name
                     return (
-                        <li key={cue.lookId} style={{ flex: '1 1 0', minWidth: 0 }}>
+                        <li key={cue.lookId} style={{ minWidth: 0 }}>
                             <button type="button" disabled={disabled} data-fav={cue.lookId} data-cue={cue.index} aria-current={isLive ? 'true' : undefined} title={name}
                                 onClick={() => choose(cue)}
                                 style={{ ...brickStyle, cursor: disabled ? 'default' : 'pointer', opacity: disabled && !isLive ? 0.55 : 1, borderColor: isLive ? EMBER : 'rgba(255,255,255,0.22)', background: isLive ? 'rgba(255,59,59,0.22)' : 'rgba(10,10,10,0.86)', boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none' }}>
@@ -115,10 +132,10 @@ const rowStyle = {
     left: '50%',
     transform: 'translateX(-50%)',
     zIndex: 19,
-    width: 'min(34rem, calc(100vw - 2rem))',
+    width: 'min(56rem, calc(100vw - 2rem))',
     color: '#f5f7fa'
 }
-const listStyle = { listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: 4 }
+const listStyle = { listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }
 const brickStyle = {
     width: '100%',
     minHeight: 48,
