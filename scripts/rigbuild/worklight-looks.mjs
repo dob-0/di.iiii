@@ -14,6 +14,8 @@ import { lookFrame } from '../../src/rigbuild/looks.js'
 import { v1Looks, v1RenderOps, deskStep } from './epic-build.mjs'
 
 export const LAYER_FILE = 'scripts/place/rigs/moxir-looks-v1-1-worklight-2026-10-09.json'
+/** A look's parts with the layer's one readable floor under them (the look's own part wins). Motion layers use this too. */
+export const withFloor = (layer, look) => ({ ...look, parts: look.floor ? { ...layer.floor, ...look.parts } : look.parts })
 export const RIG_V11 = 'scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json'
 
 const main = async () => {
@@ -30,7 +32,7 @@ const main = async () => {
     const doc = got.body.document
     const ctx = lookFrame(doc.entities)
     if (!ctx) die('no stage frame')
-    const looks = v1Looks({ ...rig, looks: layer.looks }, doc.entities.filter((e) => e.type === 'spotLight'), ctx, LAYER_FILE)
+    const looks = v1Looks({ ...rig, looks: layer.looks.map((l) => withFloor(layer, l)) }, doc.entities.filter((e) => e.type === 'spotLight'), ctx, LAYER_FILE)
     const ops = [{ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigLooks', patch: looks } }]
     for (const c of doc.mappingState?.cues || []) ops.push({ type: 'deleteMappingCue', payload: { cueId: c.id } })
     for (const c of layer.cues) ops.push({ type: 'createMappingCue', payload: { cue: c } })

@@ -4,13 +4,18 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { LAYER_FILE, RIG_V11 } from './worklight-looks.mjs'
+import { LAYER_FILE, RIG_V11, withFloor } from './worklight-looks.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (f) => JSON.parse(fs.readFileSync(path.join(repo, f), 'utf8'))
-const layer = read(LAYER_FILE)
+const layer0 = read(LAYER_FILE)
+const layer = { ...layer0, looks: layer0.looks.map((l) => withFloor(layer0, l)) }
 const parts = new Set([...read(RIG_V11).fixtures.map((f) => f.part), 'cube6a'])
 describe('MOXIR work-light looks layer', () => {
+    it('keeps the floor as one key, not copied into looks', () => {
+        expect(Object.keys(layer0.floor).length).toBeGreaterThan(1)
+        expect(layer0.looks.find((l) => l.id === 'still_smoking').parts['span columns']).toBeUndefined()
+    })
     it('has 25+ looks, work light first, ids unique', () => {
         expect(layer.looks.length).toBeGreaterThanOrEqual(25)
         expect(layer.cues[0].lightLook).toBe('rig-work-light')

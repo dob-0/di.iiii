@@ -17,12 +17,11 @@ L = None        # the laser part takes [None, 1.0]
 # (id, title, purpose, parts)
 G = {}
 def g(name, *rows): G[name] = rows
+# THE ONE READABLE FLOOR (json key `floor`): a look with floor=true gets it UNDER its own parts (its own part wins). Motion layers reuse it.
 # floor of every dark look: deep ember on the wall columns + far wall keeps the building readable
 FLOOR = {'span columns': [D, .3], 'far wall': [D, .35], 'far columns': [D, .3]}
 def look(id, title, why, parts, floor=True):
-    p = dict(FLOOR) if floor else {}
-    p.update(parts)
-    return {'id': id, 'title': title, 'intent': why, 'parts': p}
+    return {'id': id, 'title': title, 'intent': why, 'floor': floor, 'parts': parts}
 WORK = {'curtain': [A, 1], 'x': [A, 1], 'halo': [A, 1], 'press graze': [A, .6], 'arch': [A, 1], 'roof': [A, 1], 'side roof': [A, 1],
         'far wall': [A, 1], 'far columns': [A, 1], 'span columns': [A, 1], 'blinders': [A, .4], 'still smoking': [A, .6]}
 looks = [
@@ -71,7 +70,7 @@ def main():
     for i, (lk, name, fade, hold) in enumerate(CUES):
         assert lk in ids, lk
         cues.append({'id': f'wl-{i + 1:02d}-{lk.replace("_", "-")}', 'name': name, 'key': '', 'fade': fade, 'hold': hold, 'lightLook': 'rig-' + lk.replace('_', '-'), 'surfaces': {}})
-    out = {'source': 'scripts/place/moxir_worklight.py', 'written': '2026-10-09', 'ambient': AMBIENT, 'colours': [A, E, D], 'looks': looks, 'cues': cues}
+    out = {'source': 'scripts/place/moxir_worklight.py', 'written': '2026-10-09', 'ambient': AMBIENT, 'colours': [A, E, D], 'floor': FLOOR, 'looks': looks, 'cues': cues}
     p = os.path.join(os.path.dirname(__file__), 'rigs', 'moxir-looks-v1-1-worklight-2026-10-09.json')
     json.dump(out, open(p, 'w'), indent=1); print(p, len(looks), 'looks', len(cues), 'cues')
 if __name__ == '__main__': main()
