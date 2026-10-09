@@ -9,8 +9,15 @@
 //   - on axis: E = I / d² = 305 lx;
 //   - the cosine law at the same point, the patch tilted 30° and 60°: E = I·cos(i) / d²;
 //   - off axis on the plane at 30° and 60°: r = d / cos θ, i = θ → E = I·cos³θ / d²;
-//   - the rig's fitted cone (spotBeam.js spotLightCone) puts 50 % of the axial intensity at the
-//     beam half-angle: E = 0.5·I·cos³θ½ / d².
+//   - the rig's fitted cone (spotBeam.js spotLightCone) at the beam half-angle: E = f·I·cos³θ½ / d²,
+//     f = three's spot falloff of that cone there. Since 00d601b4 the cone keeps the beam profile's
+//     LUMENS at the same peak (field/beam ratio of the class equivalent), so f is 0.646 for the rig's
+//     PAR, not the 0.5 of the beam-angle definition (50 % of peak at the half-angle; ANSI E1.9 /
+//     IES LM-79 practice). three's falloff is a smoothstep in cos θ and cannot hold the peak, the
+//     50 % point AND the flux at once: the rig keeps peak + flux (the light on the surfaces), and the
+//     pool's 50 % edge is drawn at 13.96° for a 12.5° half-angle (11.7 % wide; computed from spotLightCone).
+//     A known limit, stated; the fix (the exact profile in the
+//     light's shader) is owed. T1 checks the measurement chain against the model the room draws.
 // Tolerance 1 % (§3.3: "analytical"). The beam-profile self-check (case 'beam') is the drawn
 // beam's OWN model, not physics: for a Gaussian profile (edge 1 → exponent 2, beamAir.js) the
 // side-on luminance's full width at half maximum is the beam's diameter 2·(a + d·tan θ½);
@@ -18,12 +25,19 @@
 // The CONTROL reads the 60° off-axis point with the mode off: the work light (#a39c92 at 0.1,
 // luminance 0.034 scene units = 1.7 lx) is then in the reading, +4.5 % on 38.1 lx, and it must fail.
 // (On axis it is only +0.54 % of 305 lx — inside 1 %, so the axis point cannot be the control.)
+import { spotLightCone } from '../../../../objectComponents/spotBeam.js'
+
 export const T1_DISTANCE_M = 10
 export const T1_CANDELA = 30500
 export const T1_SCENE_SCALE = 0.02
 export const T1_TOLERANCE = 0.01
 export const BEAM_TOLERANCE = 0.05
 const DEG = Math.PI / 180
+
+const smoothstep = (e0, e1, x) => {
+    const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)))
+    return t * t * (3 - 2 * t)
+}
 
 const tilt = (deg) => [0, Math.cos(deg * DEG), Math.sin(deg * DEG)] // up, tilted toward +z
 const E0 = T1_CANDELA / T1_DISTANCE_M ** 2
@@ -32,6 +46,11 @@ const E0 = T1_CANDELA / T1_DISTANCE_M ** 2
 export const WIDE_LAMP = { angle: 85 * DEG, penumbra: 0.05, fitted: false }
 /** The rig's PAR as the rig hangs it: half its 25° beam, penumbra 0.5, fitted (spotBeam.js). */
 export const FITTED_LAMP = { angle: 12.5 * DEG, penumbra: 0.5, fitted: true }
+/** three's falloff of the fitted cone at the published beam half-angle (0.646 for this lamp). */
+export const FITTED_FALLOFF_AT_HALF = (() => {
+    const c = spotLightCone(FITTED_LAMP)
+    return smoothstep(Math.cos(c.angle), Math.cos(c.angle * (1 - c.penumbra)), Math.cos(FITTED_LAMP.angle))
+})()
 /** A narrow beam in haze for the profile self-check: 4° beam, soft (Gaussian) edge. */
 // `distance` 40: a lamp with distance 0 (three's "no limit", the physical choice) draws its beam
 // in air only UNLIMITED_THROW = 20 m long (spotBeam.js) — found by this check on 2026-10-09,
@@ -64,8 +83,8 @@ export const T1_CASES = [
                 name: 'fitted-half-angle',
                 position: [T1_DISTANCE_M * Math.tan(12.5 * DEG), 0, 0],
                 normal: [0, 1, 0],
-                expected: 0.5 * E0 * Math.cos(12.5 * DEG) ** 3,
-                law: 'E = 0.5·I·cos³(12.5°)/d² (50 % at the beam half-angle)'
+                expected: FITTED_FALLOFF_AT_HALF * E0 * Math.cos(12.5 * DEG) ** 3,
+                law: 'E = f·I·cos³(12.5°)/d², f = the fitted cone\'s falloff at the beam half-angle (0.646; see the header)'
             }
         ]
     }
