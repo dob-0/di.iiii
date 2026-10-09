@@ -545,7 +545,18 @@ const ndi = registerNdiRoutes(app, {
 // on one: it exits by itself when its IPC channel closes — a kill -9 of the server
 // included. This hook only makes an orderly process.exit() prompt about it.
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
-// Going down: every cube's output switched off, the socket closed (laserEngine.js close).
+// Going down: every cube blanked and its output switched off twice, then the socket closed
+// (laserEngine.js shutdown). SIGTERM / SIGINT wait for those messages to leave (≤ 250 ms), then the
+// signal is raised again with this handler gone, so the process ends exactly as it did before. The
+// 'exit' hook is a last try only: nothing asynchronous — a UDP send — is sure to leave from it.
+// A kill -9 or a pulled cable cannot be caught here; the cube's own firmware is then the last word.
+const stopLasersThenExit = (signal) => () => {
+  const reraise = () => process.kill(process.pid, signal)
+  if (!lasers.hasEngine()) { reraise(); return }
+  Promise.resolve().then(() => lasers.close()).catch(() => {}).then(reraise)
+}
+process.once('SIGTERM', stopLasersThenExit('SIGTERM'))
+process.once('SIGINT', stopLasersThenExit('SIGINT'))
 process.once('exit', () => { try { lasers.close() } catch { /* going down anyway */ } })
 // The NDI autoscan: which sources are on the network right now, known before anyone
 // asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
