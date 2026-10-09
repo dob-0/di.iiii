@@ -57,6 +57,7 @@ ASH, EMBER, DEEP = '#e8e4dc', '#ff3a12', '#a3200c'
 V11 = J(S.RIG11)
 DATE = '2026-10-09'
 HALF_B = math.radians(0.9)          # half of the 1.8 deg beam (maker, EXACT; definition unstated)
+AIM_TOL = math.radians(0.5)         # a floor head on an unlevelled base / its focus: +-0.5 deg (ASSUMED), counted on the lower edge
 STAND = [  # standing levels (x range, z range, floor height): where a beam must stay >= 3 m above
     ((-36.4, 60.4), (-1.0, 53.8), 0.0, 'the floor from the stage line to the entry (public + stage)'),
     ((-6.7, -3.7), (3.65, 5.65), 0.4, 'the DJ step'),
@@ -88,7 +89,7 @@ def low_over_standing(p, d, t):
     for k in range(n + 1):
         s = t * k / n
         q = p + d * s
-        low = q[1] - s * math.tan(HALF_B)
+        low = q[1] - s * math.tan(HALF_B + AIM_TOL)
         for (x0, x1), (z0, z1), h, _ in STAND:
             if x0 <= q[0] <= x1 and z0 <= q[2] <= z1:
                 worst = min(worst, low - h - CLEAR_OVER)

@@ -275,7 +275,7 @@
   {
    "id": "rig-beam-lines-08",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 8.5 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 6.2 m: the beam is below a raised hand that far)",
    "part": "long lines",
    "layer": "beams",
    "status": "used",
@@ -286,14 +286,14 @@
     -11.0
    ],
    "r": [
-    -1.827399,
+    -1.887762,
     0.0,
-    -0.406314
+    -0.132368
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
    "sky_clear_pct": 24.8,
-   "throw_m": 55.045,
+   "throw_m": 51.453,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -407,7 +407,7 @@
   {
    "id": "rig-beam-lines-12",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 16.4 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 13.3 m: the beam is below a raised hand that far)",
    "part": "long lines",
    "layer": "beams",
    "status": "used",
@@ -418,14 +418,14 @@
     -23.0
    ],
    "r": [
-    -1.706138,
+    -1.730905,
     0.0,
-    -0.242341
+    -0.206514
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
    "sky_clear_pct": 25.3,
-   "throw_m": 79.834,
+   "throw_m": 79.494,
    "ends_on": "end wall z +54",
    "dmx": {
     "universe": 1,
@@ -2837,7 +2837,7 @@
   "beams_into_audience": 0,
   "mean_sky_clear_pct": 21.7,
   "min_sky_clear_pct": 17.1,
-  "mean_throw_m": 62.4,
+  "mean_throw_m": 62.2,
   "aim_rays_clear_30m_pct": 66.7,
   "pars": 50,
   "pars_cut": 10,
@@ -2853,6 +2853,7 @@
    1.0,
    1.1,
    1.9,
+   6.2,
    8.5,
    11.2,
    13.3,
