@@ -19,3 +19,4 @@
 - Fix `limitPivot` (useCameraNavigation.js): the pivot never farther than 90 % of maxDistance along the ray and inside the target boundary. After (Inside): pan error 127 px (the grabbed wall is beyond the allowed pivot, so it cannot lock; no yank), zoom drift 37 px, zoom ratio constant 0.814-0.815.
 - Not fixed on purpose: Inside collision still shortens the orbit distance (9.9 -> 6.14 m): it is the product's "keep the camera in the building" behaviour, not Blender's. Orbit sensitivity: camera-controls turns 360 deg per window HEIGHT dragged at speed 1; Blender's own per-pixel value is not in the manual (slider exists).
 - No new controller was built: the measurements show the existing mechanics hold the invariants outside Inside; a rewrite would add risk for no measured gain.
+- 2026-10-09 nav batch A: walk diagonal/dt/blur, fly latch/wheel/rescale/controlend/modifiers/stopImmediate, Studio FOV damping, AutoLookAround surrender; helpers in navMath.js; spec updated.

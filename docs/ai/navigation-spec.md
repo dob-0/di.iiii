@@ -2,7 +2,7 @@
 
 ## Fly motion
 
-Code: `src/project/viewport/flyMotion.js` (pure, tested in `flyMotion.test.js`). Not wired into any viewer yet.
+Code: `src/project/viewport/flyMotion.js` (pure, tested in `flyMotion.test.js`). Wired into the Studio viewport by `src/studio/navigation/useFlyNavigation.js` (input and camera; tested in `useFlyNavigation.test.js`).
 
 Method, sources actually fetched 2026-10-08. None gives a numeric default, so every number is ours and unvalidated until flown on a real scene.
 - Blender 5.2 manual, Fly/Walk Navigation: https://docs.blender.org/manual/en/latest/editors/3dview/navigate/walk_fly.html (W/A/S/D, E/Q global up/down, wheel = speed, Shift faster, Alt slower).
@@ -25,4 +25,21 @@ Method, sources actually fetched 2026-10-08. None gives a numeric default, so ev
 
 Behaviour: you fly where you look (full pitch), A/D strafe flat, Q/E along world up; combined keys are normalised so a diagonal is not faster; dt <= 0 or not a number leaves the camera still.
 Measured (vitest): 1 s of flight at 30 fps vs 144 fps agrees within 1 %; speed only falls on release and never reverses.
-Owed: wiring, Alt slow modifier (Blender), collision, flying a real scene to tune the numbers.
+Owed: collision (fly passes through walls until the Inside box clamp), a right-button look-around (Unreal), flying a real scene to tune the numbers, a check of `frameloop='demand'` (lowPower) on a real run.
+
+### Wiring rules (as coded, 2026-10-08 batch A)
+- **Right button required.** Keys count only while the right button is held on the viewport; otherwise W/A/S/D/E/Q are Studio's own shortcuts. The latch is cleared by pointerup/cancel, window blur, hidden tab, a pointermove whose `buttons` has no bit 2, and a contextmenu that nobody prevented (camera-controls prevents it when the right button is mapped, which is the Studio case, and on Linux/macOS contextmenu fires on mousedown, so clearing on a prevented one would end every flight).
+- **Chords are not fly keys.** A key with Ctrl or Cmd held is ignored (Ctrl+W, Cmd+Q stay the browser's).
+- **Modifiers** come from `event.shiftKey` / `altKey` on every key, pointer and wheel event, so Shift or Alt pressed before the right button counts. Shift = speed factor (3), Alt = slow factor 0.25 (Blender); Shift wins.
+- **Wheel = speed, per notch.** Wheel deltaY is normalised (deltaMode: lines x16, pages x100 px) and 100 px = one notch; speed x 1.25^notches, fractional notches allowed, so a trackpad swipe is a few notches, not dozens. The listener is on window (capture) with `stopImmediatePropagation`, so `useCameraNavigation`'s wheel handler does not also run.
+- **speedKept rule.** The cruise speed outlives a flight (Blender, Unreal, Unity keep the wheel-set speed). When the Fly Speed slider (`speedScale`) changes, the kept speed is dropped and the next flight starts from the new base.
+- **Camera end.** When a flight comes to rest (or the button is let go) the hook dispatches `controlend` on the controls, so `onControlEnd` saves the view as it does after a drag.
+- **dt** is clamped to 0.1 s (flyMotion `maxDt`).
+
+### Other surfaces changed in the same batch
+- **Walk** (`LiveProjectScene.jsx`): forward and strafe ramps are clamped as a vector to the walk max speed (W+D was 1.41x; `navMath.stepWalkVelocity`); frame dt clamped to 0.1 s; held keys cleared on window blur and when the tab is hidden. E/Q meaning in walk is unchanged (owner decision owed).
+- **Studio FOV easing** (`StudioViewport.jsx`): `1 - exp(-dt/0.12)` with dt clamped to 0.05 s, snap below 0.01 deg (was 0.08 per frame, frame-rate dependent).
+- **Published showreel `AutoLookAround`**: surrenders permanently on any window keydown, wheel or pointerdown as well as camera-controls `controlstart`, because view keys, fly and the view cube use `setLookAt`, which emits no `controlstart`.
+- Pure helpers: `src/project/viewport/navMath.js` (`clampDt`, `damp`, `dampLambda`, `normalizeWheel`, `wheelNotches`, `stepWalkVelocity`), tested in `navMath.test.js`.
+
+Further sources: Blender `view3d_navigate*.cc` (view3d_walk / fly operators, speed wheel handling), camera-controls (`camera-controls.module.js`, contextmenu handling at the onContextMenu handler), and the audit `agent-reports-2026-10-08/nav-audit-our-code.md`.
