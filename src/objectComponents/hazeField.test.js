@@ -209,6 +209,16 @@ describe('one machine in a big hall — the two-zone estimate (model nf-ff)', ()
         expect(beside).toBeGreaterThan(0.15)
         expect(far).toBeCloseTo(field.fill, 9)
     })
+    it('dries: false is the closed-hall best case — 0.5 air changes, no drying: ~0.0024 /m at 10 min, ~0.0086 /m at 40 min (the tank)', () => {
+        const at = (minutes) => buildHazeField(hazeSettingsOf({ haze: { model: 'nf-ff', volume_m3: 186890, airChangesPerHour: 0.5, dries: false, minutes, kindLevels: { 'smoke-machine': 1 }, nearField: { radius_m: 3, airSpeed_m_s: 0.1 } } }), [smoke])
+        expect(at(10).fill).toBeGreaterThan(2.2e-3)
+        expect(at(10).fill).toBeLessThan(2.5e-3)
+        expect(at(40).fill).toBeGreaterThan(8.3e-3)
+        expect(at(40).fill).toBeLessThan(8.8e-3)
+        // the kind keeps drying when the document does not say otherwise: the same hall, steady in minutes, ~30x thinner
+        const drying = buildHazeField(hazeSettingsOf({ haze: { model: 'nf-ff', volume_m3: 186890, airChangesPerHour: 0.5, minutes: 40, kindLevels: { 'smoke-machine': 1 } } }), [smoke])
+        expect(drying.fill).toBeLessThan(at(40).fill / 10)
+    })
     it('a machine at 0 leaves the hall clear', () => {
         const off = buildHazeField(hazeSettingsOf({ haze: { model: 'nf-ff', volume_m3: 186890, kindLevels: { 'smoke-machine': 0 } } }), [smoke])
         expect(off.fill).toBe(0)

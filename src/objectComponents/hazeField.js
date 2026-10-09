@@ -308,7 +308,8 @@ export const hazeScatteringAt = (field, p, time = 0) => {
  *     kindLevels: { hazer, 'smoke-machine' },  the default level per kind
  *     minutes,                                 minutes since switched on (absent: steady)
  *     patchiness 0..1, drift [x,y,z] m/s,
- *     model 'nf-ff' | 'well-mixed', nearField { radius_m, airSpeed_m_s }, source (what the numbers rest on) }
+ *     model 'nf-ff' | 'well-mixed', nearField { radius_m, airSpeed_m_s }, source (what the numbers rest on),
+ *     dries false: a fog's droplets do not dry out (its kind's dryTau_min is dropped; the closed-hall best case) }
  */
 export const hazeSettingsOf = (atmosphere) => {
     const h = atmosphere?.haze
@@ -320,6 +321,7 @@ export const hazeSettingsOf = (atmosphere) => {
         levels: h.levels && typeof h.levels === 'object' ? h.levels : {},
         kindLevels: h.kindLevels && typeof h.kindLevels === 'object' ? h.kindLevels : {},
         minutes: h.minutes == null ? null : Math.max(num(h.minutes, 0), 0),
+        dries: h.dries !== false,
         // CALIBRATION: the room's hand-set scattering (atmosphere.scattering, chosen against
         // the §20 photographs) is the hall's haze with every machine at its usual level; the
         // machines decide only how it is spread and how it changes when they are turned up or
@@ -390,7 +392,8 @@ export const buildHazeField = (settings, machines) => {
         if (settings.kindLevels[m.category] != null) return clamp(num(settings.kindLevels[m.category], 0), 0, 1)
         return m.kind.defaultLevel
     }
-    const running = machines.map((m) => ({ ...m, level: levelOf(m) }))
+    // `dries: false` (the closed-hall best case): a fog keeps its droplets; only the air change takes them out
+    const running = machines.map((m) => ({ ...m, level: levelOf(m), ...(settings.dries === false ? { kind: { ...m.kind, dryTau_min: Infinity } } : {}) }))
     const hall = { volume_m3: settings.volume_m3, airChangesPerHour: settings.airChangesPerHour }
     if (settings.model === 'nf-ff') return buildZoneField(settings, running, { ...hall, nearField: settings.nearField })
     // calibrated: scaled so the machines at their usual levels give the photographed haze

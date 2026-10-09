@@ -1316,6 +1316,9 @@ const normalizeHaze = (haze) => {
     const minutes = Number(haze.minutes)
     if (haze.minutes != null && Number.isFinite(minutes) && minutes >= 0) out.minutes = minutes
     if (haze.calibrate === false) out.calibrate = false
+    // 2026-10-09: `dries: false` — the fog's droplets do not dry out (hazeField.js dryTau_min dropped): the closed-hall,
+    // best case of one machine (the "tank" state, MOXIR v2 true look); absent = the kind's own drying
+    if (haze.dries === false) out.dries = false
     // 2026-10-09: the two-zone estimate for one machine in a big hall (hazeZones.js), its near field, and
     // what the numbers rest on (a sentence, so a reader of the document sees the basis)
     if (haze.model === 'nf-ff') out.model = 'nf-ff'
