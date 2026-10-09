@@ -948,6 +948,8 @@ export const classPhotometry = (rig, manifest) => {
             nm: [455, 525, 638],
             diameter_mm: Number(specs.beam_diameter_mm?.value) || 4,
             divergence_mrad: Number(specs.divergence_mrad?.value) || 1,
+            // the rig's one exposure number: lumens × this, as every lamp's candela × this
+            sceneScale: rig.photometry?.sceneScale ?? 1,
             source: `${specs.variant_in_use.src} (${specs.variant_in_use.basis}): ${mw.name || ''} variant`
         }
     }
