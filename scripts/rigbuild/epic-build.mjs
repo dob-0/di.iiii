@@ -118,6 +118,7 @@ export const v1Entities = (rig) => {
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
             for (const b of f.laser.beams) {
+                if (b.off) continue                                      // a cube that cannot pass the aerial rule (moxir_v1_1.py) draws no beam
                 out.push({ id: `rig-laser-${b.id}`, type: 'spotLight', name: `LaserCube ${f.id.slice(-1)} beam ${b.id} (${f.laser.colour}) — previs, never emitted from here`, parentId: null,
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
@@ -166,7 +167,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const byPart = new Map()
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
-            for (const b of f.laser.beams) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
+            for (const b of f.laser.beams) if (!b.off) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
         } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f) })
     }
     const aimOf = (e) => {

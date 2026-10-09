@@ -123,14 +123,35 @@ TRUSS_NEW = moved_box(L.TRUSS, D_CUT)
 OLD_W = world(GLB_OLD, G_OLD, V10['solids'], L.TRUSS, L.crane_boxes(), OLD_BOOTH)
 
 
+# ALL SIX cubes on the FREE (far) crane (owner 2026-10-09: "we have 2 cranes, one with the truss already and the other free, so arrange all 6 lasers on it").
+# The rig json parks the far crane at z -41 (hall.json cranes[1]): from there NO aim passes (see `far_crane_at_rig_z` in the checks: the beam must be >= 5.0 m over
+# the floor (person 2.0 + 3.0), under the near crane's bridge at 7.2 m, and end >= 9.0 m on the far wall within ~64 m... the numbers decide). The free crane travels
+# (owner: the cranes move): its show position is LASER_BRIDGE['z'] below, found by the search in `bridge_search` (z -12: 0.52 deg of fan left; z -24: 0.05 deg).
+# Order along the bridge (x): mirrored pairs about the nave axis x 0, the two ember cubes in the middle, ash outside; the beams converge (ends at half the cube spacing).
+LASER_BRIDGE = {'z': -12.0, 'y': 5.0, 'xs': {'rig-lasercube-cut-01': -5.0, 'rig-lasercube-cut-02': -3.0, 'rig-lasercube-cut-04': -1.0,
+                                            'rig-lasercube-cut-05': 1.0, 'rig-lasercube-cut-03': 3.0, 'rig-lasercube-cut-06': 5.0},
+                'end_gain': -0.5, 'end_y': 10.6, 'as_found_rig_z': G_NEW['cranes'][1]['z_m'], 'underside_range_m': [7.69, 8.24], 'underside_used_m': 7.69,
+                'underside_basis': 'hall.json cranes[1].girder_bottom_basis: 7.95 m, 5-95 % 7.69-8.24 (photo 007); the LOW end used'}
+BAR_SOLID_ID = 'rig-laser-bar'
+
+
+def laser_bar_solid():
+    xs = list(LASER_BRIDGE['xs'].values())
+    x0, x1 = min(xs) - 0.6, max(xs) + 0.6
+    return {'id': BAR_SOLID_ID, 'name': 'laser bar: a rigid truss bar hung %.1f m under the free crane\'s bridge (z %g), carries the six cubes at x %s; its top is the cubes\' mount; the drop frame is the rigger\'s (owed)' % (
+        LASER_BRIDGE['underside_used_m'] - LASER_BRIDGE['y'], LASER_BRIDGE['z'], sorted(xs)), 'kind': 'box',
+        'p': [R3((x0 + x1) / 2), R3(LASER_BRIDGE['y'] - 0.45), LASER_BRIDGE['z']], 'r': [0, 0, 0], 's': [R3(x1 - x0), 0.3, 0.35]}
+
+
+
+
 # ------------------------------------------------------------------ the new solids
 def new_solids():
     out = []
     for s in V10['solids']:
         if s['id'] == 'rig-ash-wall':
             continue                                       # v1.1: no beam-stop panel (owner 2026-10-09); the lasers end on the press
-        if s['id'] == 'rig-tower-cube6':
-            out.append(dict(s))
+        # v1.1 aerial: no tower for cube 6 (all six cubes hang on the free crane's laser bar, below)
         # the barrier and v1.0's PA by class are replaced below
     bx0, bx1 = DES['barrier']['x_m']
     out.append({'id': 'rig-crowd-barrier', 'name': 'crowd barrier %.1f m at z %.2f (v1.1: %s m pit to the step)' % (bx1 - bx0, DES['barrier']['z_m'], DES['barrier']['pit_m']),
@@ -139,6 +160,7 @@ def new_solids():
         (x0, x1), (z0, z1) = b['x_m'], b['z_m']
         out.append({'id': 'rig-pa-%s' % b['id'].lower(), 'name': "speaker %s - the ORGANISER'S PLACEHOLDER at his mark (%s m high ASSUMED, blocking and sightlines only; no sound design by di)" % (b['id'], b['h_m']),
                     'kind': 'box', 'p': [R3((x0 + x1) / 2), 0.0, R3((z0 + z1) / 2)], 'r': [0, 0, 0], 's': [R3(x1 - x0), b['h_m'], R3(z1 - z0)]})
+    out.append(laser_bar_solid())
     f = DES['foh']
     out.append({'id': 'rig-foh-riser', 'name': 'FOH riser %g x %g m, %g m high (ASSUMED): the lighting + laser desk, the laser E-stop' % (f['size_m'][0], f['size_m'][1], f['riser_m']),
                 'kind': 'box', 'p': [f['p'][0], 0.0, f['p'][2]], 'r': [0, 0, 0], 's': [f['size_m'][0], f['riser_m'], f['size_m'][1]]})
@@ -251,119 +273,371 @@ def nudge(units, bad):
     return done
 
 
-# ------------------------------------------------------------------ the lasers
-LASER_ALLOWED = {'press', 'press-crown'}      # what a beam may end on: the hall's own matte press (albedo 0.04, hall.json); never steel, glass, a column of the crowd's side
-LASER_MIN_END_M = 3.0                          # HS(G)95: >= 3.0 m over anywhere people can stand
-LASER_MAX_Z = 3.3                              # the press ends at z 3.2; nothing may end past it (the barrier is z 8.2)
-# Candidate end points on the press per cube: x 0.5 ... 2.9 every 0.3 m across the face, at y 3.6 / 3.9 / 4.2 on the face (z 0.2) and y 4.5 / 4.9 on the
-# crown's front (z 0.8). Each is cast with the full fan; the cube keeps the best margin, the second best (>= 0.5 m from every other chosen end) is `alt`.
-LASER_GRID = ([(x, y, 0.2) for x in (0.5, 0.8, 1.1, 1.4, 1.7, 2.0, 2.3, 2.6, 2.9) for y in (3.6, 3.9, 4.2)]
-              + [(x, y, 0.8) for x in (0.7, 1.4, 2.1, 2.8) for y in (4.5, 4.9)]
-              # and the press body's two side faces (x 0.25 facing house left, x 3.05 facing house right; each z 0.2-3.2 deep, so 3 m of target)
-              + [(xf, y, z) for xf in (0.25, 3.05) for y in (3.5, 3.9) for z in (1.0, 1.8, 2.6)])
+# ------------------------------------------------------------------ the lasers (v1.1, owner 2026-10-09 N411: over the heads, to the far end, 3 m clear)
+# THE RULE (replaces "every beam ends on the press near the stage"). Standard aerial-beam practice:
+#   IEC TR 60825-3 (laser shows: the beam is kept >= 3.0 m above any place the audience can stand and >= 2.5 m from any place they can rise to);
+#   ILDA audience-safety guidance (the same separations; dimming is not a control); HSE HS(G)95 (>= 3.0 m, the beam ends on a matte stop).
+#   The owner (N411): "lasers over the heads of the audience to the far end, keeping 3 m clearance." Heights are SAFE ENDS of the model's ranges
+#   (owner N412: "take info from each device spec, no measuring"): see AERIAL_RANGES. A standing person = the standing surface + 2.0 m.
+# Each place a person can stand is a VOLUME (x, z footprint; surface height; the person's top = surface + PERSON_M). A beam point passes it if it is
+# >= 3.0 m clear VERTICALLY (above the person's top, or below the surface) or >= 2.5 m clear HORIZONTALLY of the footprint. The beam is a TUBE: its radius at
+# distance d is d*tan(0.8 deg) (the 0.3 deg controller zone + 0.5 deg mount tolerance, review B2) + the maker's aperture/divergence (4 mm, 1 mrad: lasers-exact.json specs.beam_diameter_mm / divergence_mrad).
+PERSON_M = 2.0
+VERT_M, LAT_M = 3.0, 2.5
+APERTURE_M, DIVERGENCE = L.LASER_A_M, L.LASER_PHI                       # 4 mm, 1 mrad (lasers-exact.json specs)
+END_Z = G_NEW['end_wall_inner_y_m']                                       # 53.8, the public entrance's end wall (NW)
+DOOR_TOP_M = G_NEW['door']['h_m']                                         # 6.0
+END_MIN_Y = DOOR_TOP_M + VERT_M                                           # the end >= 3 m above the door top = 9.0
+END_MAX_Y = G_NEW['eave_top_m']                                           # 13.3: the end wall is plain block up to the parapet; the full cast decides where the roof's chords begin to cross the fan
+CRANE_UNDER_SAFE = 7.2                                                    # bridge underside range 7.2-8.1 (hall.json girder_bottom_basis): the LOW end
+LAMP_LOW_SAFE = 9.0                                                       # pendant lamps 9.0-10.0 (hall-site 10-08): the LOW end
+AERIAL_RANGES = {
+    'crane bridge underside (near crane, parked z %g)' % G_NEW['cranes'][0]['z_m']: 'range 7.2-8.1 m (basis: photo 170604); used 7.2 (low end; the model draws 7.6)',
+    'pendant lamps': 'lowest 9.0-10.0 m; used 9.0 (low end; the model draws 9.5)',
+    'standing person': 'surface + 2.0 m (owner N412)',
+    'galleries 1-4': 'the model box tops 7.4 / 6.9 / 6.3 / 5.8 m (site layer: 5.1-7.4 SE end falling to 3.2-5.8 at z 40): the top of the box used',
+    'crane runway walkway': 'runway_top 7.96 m (hall.json), both rows, whole length (ladders on the right row, handrail on the left)',
+    'crane cab floor': 'underside 7.2 - cab height 2.1 = 5.1 m (cab x 8.35-10.35, z = crane +-1.0)',
+    'entry platform + stairs': 'hall.py: 2.4 m high, 7.0 x 3.0 m beside the gate (size a GUESS in the model), 12 steps; the top of it used',
+    'end wall': 'block (hall-block, matte, roughness 0.95) from the floor to the parapet; the door 6.0 x 6.0 m, x -3..3',
+}
 
 
-def ends_on_press(p, d, half):
-    """The axis + the controller-zone/mount fan (occlusion_lib AREA_RINGS: 61 rays): every ray's FIRST hit must be the press
-    (or its crown) at >= 3.0 m and z <= 3.3. Returns (ok, the set of names hit, the lowest end height)."""
-    dirs, _ = O.cone_rays(d, half, O.AREA_RINGS)
-    names, low = set(), 99.0
-    for q in dirs:
-        t, n, c = first_hit(NEW_W, p, q, reach=120.0)
-        if t is None:
-            return False, {'open air'}, low
-        h = p + t * q
-        names.add(n)
-        low = min(low, float(h[1]))
-        if n not in LASER_ALLOWED or h[1] < LASER_MIN_END_M or h[2] > LASER_MAX_Z:
-            return False, names, low
-    return True, names, low
+def standing_places():
+    """Every place a person can stand or rise to, in the hall model: (name, x0, x1, z0, z1, surface_y, source). The model's own numbers (high end of
+    each range): massing tops, the stage json (step, FOH riser), hall.py (entry platform), hall.json (runway walkway, crane cab)."""
+    W = G_NEW['wall_inner_x_m']
+    bx, bz, bd = NEW_BOOTH[0], NEW_BOOTH[1], DES['booth']['depth_m']
+    f = DES['foh']
+    rail = G_NEW['crane_rail_x_m']
+    c0 = G_NEW['cranes'][0]
+    mass = {m['id']: m for m in G_NEW['massing']}
+    out = [('hall floor (dance floor, backstage, everywhere)', G_NEW['walls_x_m'][0], G_NEW['walls_x_m'][1], -END_Z, END_Z, 0.0, 'hall.json walls_x_m / end walls'),
+           ('DJ step', bx - DES['booth']['width_m'] / 2, bx + DES['booth']['width_m'] / 2, bz - bd / 2, bz + bd / 2, DES['booth']['deck_h_m'], 'stage json booth'),
+           ('FOH riser', f['p'][0] - f['size_m'][0] / 2, f['p'][0] + f['size_m'][0] / 2, f['p'][2] - f['size_m'][1] / 2, f['p'][2] + f['size_m'][1] / 2, f['riser_m'], 'stage json foh (riser 0.6 m, ASSUMED there)'),
+           ('entry platform', DOOR_W / 2 + 0.6, DOOR_W / 2 + 7.6, END_Z - 3.0, END_Z, 2.4, 'hall.py entry_platform (size a GUESS)'),
+           ('entry stairs', DOOR_W / 2 + 7.6, DOOR_W / 2 + 7.6 + 3.6, END_Z - 1.2, END_Z, 2.4, 'hall.py entry_platform (12 steps of 0.3 m)')]
+    for k in (1, 2, 3, 4):
+        m = mass['pipe-rack-gallery-%d' % k]
+        out.append(('gallery %d' % k, m['x_m'][0], m['x_m'][1], m['z_m'][0], m['z_m'][1], m['y_m'][1], 'hall.json massing pipe-rack-gallery-%d (top)' % k))
+    m = mass['roller-conveyor']
+    out.append(('conveyor gallery (roller conveyor)', m['x_m'][0], m['x_m'][1], m['z_m'][0], m['z_m'][1], m['y_m'][1], 'hall.json massing roller-conveyor (top)'))
+    for sgn, row in ((-1, 'left'), (1, 'right')):
+        xa, xb = sorted((sgn * (rail - 0.35), sgn * (rail + 1.3)))
+        out.append(('runway walkway %s row (ladders: right)' % row, xa, xb, -END_Z, END_Z, G_NEW['runway_top_m'], 'hall.json runway_top_m 7.96, crane_rail_x_m'))
+    cab = c0['cab']
+    out.append(('crane cab (parked z %g)' % c0['z_m'], cab['x_m'][0], cab['x_m'][1], c0['z_m'] + cab['dz_m'][0], c0['z_m'] + cab['dz_m'][1], CRANE_UNDER_SAFE - 2.1, 'hall.json cranes[0].cab, floor = safe underside - 2.1'))
+    return out
 
 
-def fan_margin(p, d):
-    lo, hi = 0.0, 3.0                              # the largest fan (half angle) that still all ends on the press
-    if not ends_on_press(p, d, 0.0)[0]:
+DOOR_W = G_NEW['door']['w_m']
+PLACES = standing_places()
+PLACE_ARR = np.array([[p[1], p[2], p[3], p[4], p[5]] for p in PLACES], float)       # x0, x1, z0, z1, surface
+LAMPS = [m for m in G_NEW['massing'] if m['id'].startswith('pendant-lamp')]
+LAMP_ARR = np.array([[m['x_m'][0], m['x_m'][1], m['z_m'][0], m['z_m'][1]] for m in LAMPS], float)
+CRANE_Z = G_NEW['cranes'][0]['z_m']
+GIRDER_W = G_NEW['cranes'][0]['girder_w_m']
+CRANE_ZR = (CRANE_Z - (G_NEW['cranes'][0]['girders_dz_m'][1] + G_NEW['cranes'][0]['girder_w_m'] / 2), CRANE_Z + (G_NEW['cranes'][0]['girders_dz_m'][1] + G_NEW['cranes'][0]['girder_w_m'] / 2))
+
+
+def tube_r(s, half_deg=FAN_DEG):
+    return s * math.tan(math.radians(half_deg)) + (APERTURE_M + DIVERGENCE * s) / 2
+
+
+def beam_path_checks(p, T, half_deg=FAN_DEG, step=0.5):
+    """Analytic checks of the tube p -> T (the whole fan = the tube): places, the crane bridge at its safe underside, the lamps at their safe low end,
+    the end (matte block, >= 9.0 over the fan, below the bottom chord). Returns (margins dict in m, worst margin, where, the failing names)."""
+    p, T = np.asarray(p, float), np.asarray(T, float)
+    L_ = float(np.linalg.norm(T - p))
+    d = (T - p) / L_
+    s = np.arange(0.4, L_, step)
+    Q = p + s[:, None] * d
+    Rr = np.array([tube_r(v, half_deg) for v in s])
+    marg = {}
+    for k in range(len(PLACES)):
+        c = _col(Q, Rr, k)
+        j = int(c.argmin())
+        marg[PLACES[k][0]] = (float(c[j]), [round(float(v), 2) for v in Q[j]])
+    # the crane bridge (girders z CRANE_ZR, |x| <= rail, y >= safe underside): the tube must stay under it
+    zc = np.zeros(len(Q), bool)
+    for dz in G_NEW['cranes'][0]['girders_dz_m']:                       # the two bridge girders (z = crane + dz +- half width); between them is open
+        zc |= (Q[:, 2] >= CRANE_Z + dz - GIRDER_W / 2 - Rr) & (Q[:, 2] <= CRANE_Z + dz + GIRDER_W / 2 + Rr)
+    zc &= (np.abs(Q[:, 0]) <= G_NEW['crane_rail_x_m'] + Rr)
+    crane = float(np.min(CRANE_UNDER_SAFE - (Q[zc, 1] + Rr[zc]))) if zc.any() else 99.0
+    # the lamps: each a box whose bottom is the safe low end; a point is clear by the larger of its plan gap and its gap under the bottom
+    gap = np.hypot(np.maximum(np.maximum(LAMP_ARR[:, 0][None, :] - Q[:, 0:1], Q[:, 0:1] - LAMP_ARR[:, 1][None, :]), 0),
+                   np.maximum(np.maximum(LAMP_ARR[:, 2][None, :] - Q[:, 2:3], Q[:, 2:3] - LAMP_ARR[:, 3][None, :]), 0))
+    vg = LAMP_LOW_SAFE - Q[:, 1:2]
+    lamp = float(np.min(np.where(gap > 0, np.maximum(gap, vg), vg) - Rr[:, None]))
+    # the end: height over the fan at the wall
+    end_low, end_high = float(T[1] - tube_r(L_, half_deg)), float(T[1] + tube_r(L_, half_deg))
+    marg_all = {'places': marg, 'crane_under_m': crane, 'lamp_m': lamp, 'end_low_m': end_low, 'end_high_m': end_high, 'length_m': L_}
+    worst_place = min(v[0] for v in marg.values())
+    ok = worst_place >= 0 and crane >= 0 and lamp >= 0 and end_low >= END_MIN_Y and end_high <= END_MAX_Y
+    return ok, marg_all
+
+
+def _col(Q, Rr, k):
+    x0, x1, z0, z1, h = PLACE_ARR[k]
+    hgap = np.hypot(np.maximum(np.maximum(x0 - Q[:, 0], Q[:, 0] - x1), 0), np.maximum(np.maximum(z0 - Q[:, 2], Q[:, 2] - z1), 0)) - Rr
+    top = h + PERSON_M
+    vgap = np.where(Q[:, 1] > top, Q[:, 1] - top, np.where(Q[:, 1] < h, h - Q[:, 1], 0.0)) - Rr
+    return np.maximum(hgap - LAT_M, vgap - VERT_M)
+
+
+def half_fan_for(p, T, hi=2.0):
+    """The largest fan half angle (deg) for which the analytic checks hold (bisection); None if they fail even with no fan."""
+    if not beam_path_checks(p, T, 0.0)[0]:
         return None
-    for _ in range(10):
+    lo = 0.0
+    for _ in range(9):
         mid = (lo + hi) / 2
-        if ends_on_press(p, d, mid)[0]:
+        if beam_path_checks(p, T, mid)[0]:
             lo = mid
         else:
             hi = mid
     return lo
 
 
-LASER_SPOT_APART_M = 0.5                        # two beams never end within 0.5 m of each other (6 W + 6 W + 2 W on one spot of paint is a burn, not a mark)
+def aim_candidates(p, xs=None, ys=None):
+    """End points on the entry end wall (x across the nave, y 9.0-10.8), best analytic fan first."""
+    out = []
+    xs = xs if xs is not None else np.arange(-8.0, 8.01, 0.5)
+    ys = ys if ys is not None else np.arange(9.2, 10.81, 0.2)
+    for x in xs:
+        for y in ys:
+            T = np.array([x, y, END_Z])
+            h = half_fan_for(p, T)
+            if h is not None and h >= FAN_DEG:
+                out.append((h, T))
+    out.sort(key=lambda t: -t[0])
+    return out
 
 
-def laser_candidates(f):
+def full_cast(f, T, half_deg=FAN_DEG):
+    """The v1.0 method on the real triangles: the axis + 60 rays over the fan, each cast against hall v9-show-park + the rig boxes. Every ray's FIRST hit must be the
+    entry end wall's BLOCK (matte) at 9.0 <= y <= 10.8, never glass / skylight / steel / the crane / a lamp / the rig. Returns (ok, names, low end, high end, meshes)."""
     p = np.array(f['p'], float)
-    cands = []
-    for (x, y, zf) in LASER_GRID:
-        T = np.array([x, y, zf])
-        d = (T - p) / np.linalg.norm(T - p)
-        if not ends_on_press(p, d, FAN_DEG)[0]:            # the 0.8 deg fan must all end on the press; else not a candidate
+    d = (np.asarray(T, float) - p)
+    d /= np.linalg.norm(d)
+    dirs, _ = O.cone_rays(d, half_deg, O.AREA_RINGS)
+    skip = ('laser-bar',)
+    names, lo, hi, meshes = set(), 99.0, -99.0, set()
+    ok = True
+    for q in dirs:
+        t, n, c = first_hit(NEW_W, p, q, skip_box=skip, reach=140.0)
+        if t is None:
+            return False, {'open air'}, lo, hi, meshes
+        h = p + t * q
+        names.add(n)
+        lo, hi = min(lo, float(h[1])), max(hi, float(h[1]))
+        mesh = mesh_at(h)
+        meshes.add(mesh)
+        if not (n.startswith('end wall z +') and 'gate' not in n and mesh == 'hall-block' and END_MIN_Y <= h[1] <= END_MAX_Y):
+            ok = False
+    return ok, names, lo, hi, meshes
+
+
+_MESH_CACHE = {}
+
+
+def mesh_at(h):
+    """The hall mesh (material group) whose triangle holds the point h on the end wall: hall-block = the matte wall; hall-rust = the gate frame."""
+    if not _MESH_CACHE:
+        for name, tris in O.read_glb(GLB_NEW).items():
+            if name in ('hall-block', 'hall-rust', 'hall-steel', 'hall-glass', 'hall-concrete', 'hall-skylight'):
+                sel = tris[np.abs(tris[:, :, 2] - END_Z).max(1) < 0.7]
+                if len(sel):
+                    _MESH_CACHE[name] = sel
+    best, bd = 'none', 1e9
+    for name, tris in _MESH_CACHE.items():
+        lo, hi = tris.min(1), tris.max(1)
+        inside = (lo[:, 0] - 0.01 <= h[0]) & (h[0] <= hi[:, 0] + 0.01) & (lo[:, 1] - 0.01 <= h[1]) & (h[1] <= hi[:, 1] + 0.01)
+        if inside.any():
+            dz = np.abs(tris[inside][:, :, 2].mean(1) - h[2]).min()
+            if dz < bd:
+                best, bd = name, dz
+    return best
+
+
+def aerial_report(f, T, half_fan):
+    """The per-cube numbers the owner asked for, from the analytic tube (fan 0.8 deg) + the full cast."""
+    p = np.array(f['p'], float)
+    ok, m = beam_path_checks(p, T, FAN_DEG)
+    pl = m['places']
+    worst = min(pl, key=lambda k: pl[k][0])
+    cast_ok, names, lo, hi, meshes = full_cast(f, T)
+    return {'pass_places': min(v[0] for v in pl.values()) >= 0, 'worst_place': worst, 'worst_margin_m': R3(pl[worst][0]), 'worst_at': pl[worst][1],
+            'crane_under_margin_m': R3(m['crane_under_m']), 'lamp_margin_m': R3(m['lamp_m']), 'end_low_m': R3(m['end_low_m']), 'end_high_m': R3(m['end_high_m']),
+            'cast_all_rays_on_matte_block': bool(cast_ok), 'cast_hits': sorted(names), 'cast_end_y_range_m': [R3(lo), R3(hi)], 'cast_meshes': sorted(meshes),
+            'half_fan_deg': R3(half_fan), 'margin_after_zone_deg': R3(half_fan - FAN_DEG), 'length_m': R3(m['length_m']), 'ok': bool(ok and cast_ok)}
+
+
+def lowest_standing_clearance(p, T):
+    """Per place, the smallest 3D distance from the beam axis to the person volume (person top = surface + 2.0): the 'shortest distance to a reachable place'."""
+    p, T = np.asarray(p, float), np.asarray(T, float)
+    L_ = float(np.linalg.norm(T - p))
+    d = (T - p) / L_
+    Q = p + np.arange(0.4, L_, 0.5)[:, None] * d
+    best = (1e9, None, None)
+    for (name, x0, x1, z0, z1, h, _) in PLACES:
+        dx = np.maximum(np.maximum(x0 - Q[:, 0], Q[:, 0] - x1), 0)
+        dz = np.maximum(np.maximum(z0 - Q[:, 2], Q[:, 2] - z1), 0)
+        dy = np.where(Q[:, 1] > h + PERSON_M, Q[:, 1] - (h + PERSON_M), np.where(Q[:, 1] < h, h - Q[:, 1], 0.0))
+        dist = np.sqrt(dx ** 2 + dz ** 2 + dy ** 2)
+        k = int(dist.argmin())
+        if dist[k] < best[0]:
+            best = (float(dist[k]), name, [R3(v) for v in Q[k]])
+    return best
+
+
+MOVE_X = np.arange(-11.0, 11.01, 0.5)
+MOVE_Y = np.arange(5.0, 7.46, 0.25)                           # >= 5.0 = the floor's person top 2.0 + 3.0; <= 7.45 = where v1.0 hangs the highest cube
+MOVE_Z = np.arange(-44.0, -3.9, 1.0)
+MOVE_COARSE_X = np.arange(-8.0, 8.01, 2.0)
+MOVE_COARSE_Y = np.array([9.4, 9.9, 10.4, 10.9, 11.4])
+
+
+def best_aim(f, p=None):
+    """The aim that passes from the cube's place (or p): the analytic tube first (best fan first), then the full cast on the hall's triangles. Returns (fan_deg, T, report) or None."""
+    g = f if p is None else dict(f, p=[float(v) for v in p])
+    pp = np.array(g['p'], float)
+    cands = aim_candidates(pp)
+    for h, T in cands[:12]:
+        rep = aerial_report(g, T, h)
+        if rep['ok']:
+            return h, np.array(T, float), rep, len(cands)
+    return None
+
+
+def smallest_move(f):
+    """The smallest move of the cube (3D distance, grid 0.5 m x 0.25 m x 1 m) to a place from which SOME aim passes everything (analytic tube at the 0.8 deg fan, then the
+    full cast). Returns {move_to, move_m, aim_end, ...} or None."""
+    p0 = np.array(f['p'], float)
+    pos = sorted(((float(np.linalg.norm(np.array([x, y, z]) - p0)), x, y, z) for x in MOVE_X for y in MOVE_Y for z in MOVE_Z))
+    for dist, x, y, z in pos:
+        q = np.array([x, y, z])
+        if not any(beam_path_checks(q, [tx, ty, END_Z], FAN_DEG)[0] for tx in MOVE_COARSE_X for ty in MOVE_COARSE_Y):
             continue
-        m = fan_margin(p, d)
-        t, nm, cl = first_hit(NEW_W, p, d, reach=120.0)           # where the axis REALLY lands (a side-face aim point can lie behind the near face)
-        hit = [R3(q) for q in p + t * d]
-        if any(c['to'] == hit for c in cands):
-            continue
-        cands.append({'to': hit, 'aimed_at': [R3(q) for q in T], 'half_fan_deg': round(m, 2), 'margin_after_zone_deg': round(m - FAN_DEG, 2)})
-    cands.sort(key=lambda c: (-c['half_fan_deg'], c['to'][1], c['to'][0]))
-    return cands
+        got = best_aim(f, q)
+        if got:
+            h, T, rep, n = got
+            return {'move_to': [R3(v) for v in q], 'move_by': [R3(v) for v in q - p0], 'move_m': R3(dist), 'aim_end': [R3(v) for v in T], 'half_fan_deg': R3(h),
+                    'margin_after_zone_deg': R3(h - FAN_DEG), 'worst_place': rep['worst_place'], 'worst_margin_m': rep['worst_margin_m'], 'crane_under_margin_m': rep['crane_under_margin_m'],
+                    'lamp_margin_m': rep['lamp_margin_m'], 'end_low_m': rep['end_low_m'], 'cast_all_rays_on_matte_block': rep['cast_all_rays_on_matte_block']}
+    return None
+
+
+def beam_row(f, h, T, rep, n_cands):
+    p = np.array(f['p'], float)
+    d = (T - p) / np.linalg.norm(T - p)
+    dist, wname, wat = lowest_standing_clearance(p, T)
+    beam = {'id': '%da' % int(f['id'][-2:]), 'to': [R3(v) for v in T], 'length_m': round(rep['length_m'], 1), 'r': L.rot_for_dir(d), 'off': False, 'duty': 1.0, 'pass': True,
+            'ends_on': 'end wall (block)', 'end_height_m': R3(T[1]), 'max_z_m': R3(T[2]), 'candidates_that_pass': n_cands,
+            'lowest_axis_distance_to_a_place_m': R3(dist), 'nearest_place': wname, 'nearest_place_at': wat}
+    for k in ('worst_place', 'worst_margin_m', 'worst_at', 'crane_under_margin_m', 'lamp_margin_m', 'end_low_m', 'end_high_m', 'cast_all_rays_on_matte_block', 'cast_hits',
+              'cast_end_y_range_m', 'cast_meshes', 'half_fan_deg', 'margin_after_zone_deg'):
+        beam[k] = rep[k]
+    return beam
+
+
+def aerial_rule():
+    return {'text': "over the heads of the audience to the far (NW, public-entrance) end wall, >= 3.0 m clear of every place a person can stand (person = surface + 2.0 m), >= 2.5 m from every place they can rise to; "
+                    "the end on matte block >= 3.0 m above the entrance door top; under the near crane bridge at its safe underside; no glass / skylight / steel in the path (owner N411, N412)",
+            'standards': ['IEC TR 60825-3 (laser shows; 3.0 m above and 2.5 m from audience-accessible places)', 'ILDA audience-safety guidance (the same separations; dimming is not a control)', 'HSE HS(G)95 (>= 3 m and a matte beam stop)'],
+            'person_m': PERSON_M, 'vertical_m': VERT_M, 'lateral_m': LAT_M, 'end_min_y_m': END_MIN_Y, 'end_max_y_m': END_MAX_Y, 'end_z_m': END_Z, 'fan_deg': FAN_DEG,
+            'crane_underside_used_m': CRANE_UNDER_SAFE, 'crane_z_m': CRANE_Z, 'lamp_low_used_m': LAMP_LOW_SAFE, 'ranges_used': AERIAL_RANGES,
+            'places': [{'name': n, 'x_m': [R3(a), R3(b)], 'z_m': [R3(c), R3(d)], 'surface_m': R3(h), 'source': src} for (n, a, b, c, d, h, src) in PLACES]}
 
 
 def lasers(units):
     out = []
     cubes = [f for f in units if f['type'] == 'ext-lc-ultra-mk2']
-    cand = {f['id']: laser_candidates(f) for f in cubes}
-    order = sorted(cubes, key=lambda f: (len(cand[f['id']]), f['id']))              # the most constrained cube first
-    best = {'score': None, 'pick': None}
-
-    def apart(c, taken):
-        return all(np.linalg.norm(np.array(c['to']) - np.array(t['to'])) >= LASER_SPOT_APART_M for t in taken.values())
-
-    def dfs(i, taken):                                   # every cube gets a candidate, no two ends within 0.5 m: maximise the smallest margin, then the sum
-        if i == len(order):
-            sc = (min(c['half_fan_deg'] for c in taken.values()), sum(c['half_fan_deg'] for c in taken.values()))
-            if best['score'] is None or sc > best['score']:
-                best['score'], best['pick'] = sc, dict(taken)
-            return
-        for c in cand[order[i]['id']]:
-            if apart(c, taken):
-                taken[order[i]['id']] = c
-                dfs(i + 1, taken)
-                del taken[order[i]['id']]
-    dfs(0, {})
-    pick = best['pick'] or {f['id']: ({'to': [1.4, 3.9, 0.2], 'half_fan_deg': 0.0, 'margin_after_zone_deg': -FAN_DEG}) for f in cubes}
+    xc = [LASER_BRIDGE['xs'][f['id']] for f in cubes]
+    c0 = (min(xc) + max(xc)) / 2
     for f in cubes:
         n = int(f['id'][-2:])
-        p = np.array(f['p'], float)
-        cs = cand[f['id']]
-        keep = pick[f['id']]
-        # the swap-in alternative: the best other candidate that is still 0.5 m from every OTHER cube's chosen end
-        others = [np.array(pick[k]['to']) for k in pick if k != f['id']]
-        alt = next((c for c in cs if c['to'] != keep['to'] and all(np.linalg.norm(np.array(c['to']) - t) >= LASER_SPOT_APART_M for t in others)), None)
-        T = np.array(keep['to'], float)
-        v = T - p
-        length = float(np.linalg.norm(v))
-        d = v / length
-        ok, names, low = ends_on_press(p, d, FAN_DEG)
         old = [b['id'] for b in f['laser']['beams']]
-        beam = {'id': '%da' % n, 'to': [R3(x) for x in T], 'length_m': round(length, 1), 'pass': ok, 'margin_after_zone_deg': keep['margin_after_zone_deg'],
-                'r': L.rot_for_dir(d), 'ends_on': sorted(names)[0] if len(names) == 1 else sorted(names), 'max_z_m': R3(T[2]), 'end_height_m': R3(T[1]),
-                'lowest_end_m_over_fan': R3(low), 'alt': alt, 'was_v1_0_beams': old, 'duty': 1.0, 'candidates_that_pass': len(cs)}
-        f['laser']['beams'] = [beam]
-        f['laser']['duty'] = 1.0
-        f['laser']['room_flux_share'] = 1.0
-        f['laser']['note_v1_1'] = ("ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at %s "
-                                   "(margin %s deg); next best %s. Beam id kept as %da so the looks (cube6a) still match; v1.0 had %s." % (
-                                       beam['to'], beam['margin_after_zone_deg'], None if alt is None else '%s (%s deg)' % (alt['to'], alt['margin_after_zone_deg']), n, old))
-        out.append({'beam': beam['id'], 'cube': f['id'], 'from': f['p'], 'to': beam['to'], 'length_m': beam['length_m'], 'pass': ok, 'ends_on': beam['ends_on'],
-                    'margin_after_zone_deg': beam['margin_after_zone_deg'], 'max_z_m': beam['max_z_m'], 'end_height_m': beam['end_height_m'], 'alt': alt,
-                    'was_v1_0_beams': old})
+        was_p = list(f['p'])
+        x = LASER_BRIDGE['xs'][f['id']]
+        f['p'] = [x, LASER_BRIDGE['y'], LASER_BRIDGE['z']]
+        f['position'] = ("the free (far) crane parked at z %g (rig json: z %g): a rigid laser bar hung %.2f m under its bridge, this cube at x %g, beam height %g m (v1.1 aerial layout, owner N411+N412; "
+                         "needs the crane seen moving, its inspection, its lock-out)" % (LASER_BRIDGE['z'], LASER_BRIDGE['as_found_rig_z'], LASER_BRIDGE['underside_used_m'] - LASER_BRIDGE['y'], x, LASER_BRIDGE['y']))
+        p = np.array(f['p'], float)
+        T0 = np.array([c0 + (x - c0) * (1 + LASER_BRIDGE['end_gain']), LASER_BRIDGE['end_y'], END_Z])
+        got = None
+        nudges = sorted(((abs(dx) + abs(dy), dx, dy) for dx in np.arange(-0.5, 0.51, 0.1) for dy in np.arange(-0.6, 0.61, 0.1)))
+        for _, dx, dy in nudges:                              # the composition's own end first; the smallest nudge that passes the full cast otherwise
+            T = T0 + np.array([dx, dy, 0.0])
+            h = half_fan_for(p, T)
+            if h is None or h < FAN_DEG:
+                continue
+            rep = aerial_report(f, T, h)
+            if rep['ok']:
+                got = (h, T, rep, len(nudges))
+                break
+        base = {'id': '%da' % n, 'was_v1_0_beams': old}
+        if got:
+            h, T, rep, nc = got
+            beam = dict(beam_row(f, h, T, rep, nc), was_v1_0_beams=old, composition_end=[R3(v) for v in T0], nudge_m=[R3(v) for v in (T - T0)[:2]])
+            f['laser']['beams'] = [beam]
+            f['laser']['duty'], f['laser']['room_flux_share'], f['laser']['off'] = 1.0, 1.0, False
+            f['laser']['moved_from'] = was_p
+            f['laser']['note_v1_1'] = ("ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x %g, y %g, z %g; over the heads to the far (NW, public-entrance) end wall at %s "
+                                       "(matte block, %s m up = door top + %.1f m); lowest %s m over the nearest standing person's top-plus-3 m (%s), margin after the 0.8 deg fan %s deg (owner N411)." % (
+                                           x, LASER_BRIDGE['y'], LASER_BRIDGE['z'], beam['to'], beam['end_height_m'], T[1] - DOOR_TOP_M, R3(beam['worst_margin_m']), beam['worst_place'], beam['margin_after_zone_deg']))
+            row = {k: beam[k] for k in beam if k not in ('r',)}
+            row.update(beam=beam['id'], cube=f['id'], **{'from': f['p'], 'moved_from': was_p})
+            out.append(row)
+        else:
+            why = off_reason(f)
+            beam = dict(base, off=True, reason=why, to=None, length_m=None, r=list(f['r']), duty=0.0, **{'pass': False})
+            f['laser']['beams'] = [beam]
+            f['laser']['duty'], f['laser']['room_flux_share'], f['laser']['off'] = 0.0, 0.0, True
+            f['laser']['moved_from'] = was_p
+            f['laser']['note_v1_1'] = "OFF (owner N411 rule): %s" % why
+            out.append({'beam': beam['id'], 'cube': f['id'], 'from': f['p'], 'to': None, 'pass': False, 'off': True, 'reason': why, 'was_v1_0_beams': old})
     return out
+
+
+def far_crane_at_rig_z(units):
+    """The same six cubes at the rig json's far-crane z (-41): the best aim's failures in metres (why the free crane must travel)."""
+    out = {}
+    for z in (LASER_BRIDGE['as_found_rig_z'], -30.0, -24.0, -18.0, LASER_BRIDGE['z']):
+        worst = []
+        for x in sorted(LASER_BRIDGE['xs'].values()):
+            p = np.array([x, LASER_BRIDGE['y'], z])
+            best = None
+            for xe in np.arange(-6.0, 6.01, 1.0):
+                for ye in np.arange(9.0, 12.01, 0.2):
+                    ok, m = beam_path_checks(p, [xe, ye, END_Z], FAN_DEG)
+                    marg = min(min(v[0] for v in m['places'].values()), m['crane_under_m'], m['lamp_m'], m['end_low_m'] - END_MIN_Y, END_MAX_Y - m['end_high_m'])
+                    if best is None or marg > best:
+                        best = marg
+            worst.append(best)
+        out['%g' % z] = {'best_worst_margin_m_over_the_six_x': R3(min(worst)), 'any_aim_passes_all_six': bool(min(worst) >= 0), 'half_fan_deg_composition': None}
+    return out
+
+
+def off_reason(f):
+    """Why a cube cannot pass from where it hangs: the best aim on the far wall (the one whose worst margin is largest, 0.8 deg fan) and every condition it still fails, in metres."""
+    p = np.array(f['p'], float)
+    best = None
+    for x in np.arange(-8.0, 8.01, 1.0):
+        for y in np.arange(9.0, 11.01, 0.2):
+            ok, m = beam_path_checks(p, [x, y, END_Z], FAN_DEG)
+            marg = {k: v[0] for k, v in m['places'].items()}
+            marg['crane bridge underside %.1f m' % CRANE_UNDER_SAFE] = m['crane_under_m']
+            marg['pendant lamps (low end %.1f m)' % LAMP_LOW_SAFE] = m['lamp_m']
+            marg['end over the fan >= %.1f m' % END_MIN_Y] = m['end_low_m'] - END_MIN_Y
+            marg['end under the roof line'] = END_MAX_Y - m['end_high_m']
+            worst = min(marg.values())
+            if best is None or worst > best[0]:
+                best = (worst, marg, (x, y))
+    worst, marg, aim = best
+    fails = sorted(((v, k) for k, v in marg.items() if v < 0))
+    return ("from %s no aim on the far wall passes with the 0.8 deg fan; the best (end x %.0f, y %.1f) still fails: %s." % (
+        [R3(v) for v in p], aim[0], aim[1], '; '.join('%s by %.2f m' % (k, -v) for v, k in fails)))
 
 
 def seen_whole(eye, units, step=1.0):
@@ -376,6 +650,8 @@ def seen_whole(eye, units, step=1.0):
             continue
         p = np.array(f['p'], float)
         for b in f['laser']['beams']:
+            if b.get('off'):
+                continue
             to = np.array(b['to'], float)
             n = max(2, int(np.linalg.norm(to - p) / step))
             ok = 0
@@ -431,6 +707,9 @@ def brightness(units, sigmas=(0.005, 0.02)):
         if f['type'] != 'ext-lc-ultra-mk2':
             continue
         b = f['laser']['beams'][0]
+        if b.get('off'):
+            out[b['id']] = {'off': True}
+            continue
         w = LV.VARIANTS['6W']
         mix = {455: 1.0, 525: 1.0, 638: 1.0} if f['laser']['colour'] == 'ash white' else {638: 1.0, 525: 0.1}
         Pc = sum(w[l] * k for l, k in mix.items())
@@ -602,10 +881,12 @@ def fig_plan(units, solids, path, xr=(-16, 16), zr=(-44, 32), keep_labels=None, 
         x, y, z = u['p']
         if u['type'] == 'ext-lc-ultra-mk2':
             for b in u['laser']['beams']:
+                if b.get('off'):
+                    continue
                 ax.plot([x, b['to'][0]], [z, b['to'][2]], color=EMBER if u['colour'].lower() == EMBER else ASH, lw=1.0, alpha=0.95, zorder=6)
                 ax.plot(b['to'][0], b['to'][2], '*', color=EMBER if u['colour'].lower() == EMBER else '#ffffff', ms=7, zorder=12)
             ax.plot(x, z, 'o', color='#f5f2ea', ms=6, zorder=10)
-            ax.text(x + 0.4, z, 'cube %s%s' % (u['id'][-1], ' + tower' if u['id'][-1] == '6' else ''), color='#f5f2ea', fontsize=7, zorder=10)
+            ax.text(x + 0.4, z, 'cube %s%s' % (u['id'][-1], ''), color='#f5f2ea', fontsize=7, zorder=10)
             continue
         c = COL.get(u.get('layer'), '#cccccc')
         ax.plot(x, z, 's' if u['status'] == 'used' else 'x', color=c, ms=3.2, zorder=10)
@@ -738,9 +1019,10 @@ def run():
     checks = {
         'deltas': {'D_DJ': [R3(v) for v in D_DJ], 'D_CUT': [R3(v) for v in D_CUT]},
         'units': rows, 'nudged': nudged,
-        'lasers': laser_rows, 'lasers_pass': all(r['pass'] for r in laser_rows),
-        'lasers_min_margin_deg': min(r['margin_after_zone_deg'] for r in laser_rows),
-        'lasers_never_over_audience': all(r['max_z_m'] < DES['barrier']['z_m'] for r in laser_rows),
+        'lasers': laser_rows, 'lasers_pass': all(r['pass'] for r in laser_rows if not r.get('off')),
+        'lasers_on': [r['beam'] for r in laser_rows if not r.get('off')], 'lasers_off': [r['beam'] for r in laser_rows if r.get('off')],
+        'lasers_min_margin_deg': min([r['margin_after_zone_deg'] for r in laser_rows if not r.get('off')] or [None]),
+        'laser_rule': aerial_rule(),
         'laser_count': len(laser_rows), 'laser_beams_per_cube': 1, 'laser_rule_margin_deg_v1_0': 0.5,
         'laser_brightness_6w_one_beam': brightness(units),
         'laser_safety_6w': {'nohd_m': n_m, 'diffuse_nhz_m_off_the_press': r_nhz, 'nohd_unchanged_by_one_beam': True, 'basis': 'IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho = the press albedo 0.0407 (hall.json, matte dark; NOT measured). ONE beam carries the whole cube power of 6 W, as the scan-failure case always did, so the NOHD does not change with 1 or 2 beams drawn'},
