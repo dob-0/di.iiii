@@ -40,6 +40,19 @@ describe('the lasers at /laser', () => {
     const state = await (await fetch(`${base}/laser/api/state`)).json()
     expect(state).toMatchObject({ armed: false, sim: true, zone: { yMin: 0 } })
     expect(state.cubes).toHaveLength(6)
+    // The guards' limits are said, and said to be unvalidated; a sim cube has no info.
+    expect(state.guard).toMatchObject({ frameTimeoutMs: 200, stillWindowDeg: 0.6, stillHoldMs: 200, validated: false })
+    expect(state.cubes[0]).toMatchObject({ id: 'cube-1', info: null, rate: null, stop: null })
+  })
+
+  it('keeps a frame alive on /alive, and says when there is none to keep', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    expect(await (await post(`${base}/laser/api/alive`, { cube: 'all' })).json()).toMatchObject({ ok: true, kept: false })
+    await post(`${base}/laser/api/frame`, { cube: 'cube-2', points: [[0, 0.5, 0, 1, 0]] })
+    expect(await (await post(`${base}/laser/api/alive`, { cube: 'cube-2' })).json()).toMatchObject({ ok: true, kept: true })
+    expect((await post(`${base}/laser/api/alive`, { cube: 'cube-9' })).status).toBe(400)
+    expect((await (await fetch(`${base}/laser/api/frames`)).json()).stopped).toEqual({})
   })
 
   it('keeps a frame (the zone applied) and gives it back for the room, and blackout drops it', async () => {
