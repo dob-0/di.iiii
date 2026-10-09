@@ -47,7 +47,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--repo', default='.')
 ap.add_argument('--out', default=None)
 ap.add_argument('--check', action='store_true')
-ap.add_argument('--lasers', default=None, help='the laser session\'s far-crane table (aerial-far-crane.json)')
+ap.add_argument('--lasers', default='/tmp/claude-1000/-home-dob/f28555fe-b198-4163-85d9-cbd2b3df47ba/scratchpad/aerial-far-crane.json', help='the laser session\'s far-crane table (aerial-far-crane.json)')
 A = ap.parse_known_args()[0]
 REPO = os.path.abspath(os.path.expanduser(A.repo))
 J = lambda p: json.load(open(os.path.join(REPO, p)))
@@ -411,6 +411,52 @@ def lasers_from_table(path):
     return T, {'status': 'from the laser session\'s table', 'file': path}
 
 
+def laser_corridor(W):
+    """FEASIBILITY, not an aim (the aims are the laser session's, owner 10-09 N416): from the free (far) crane's bridge at z -41
+    (cube aperture 7.37 m: the 7.6 m EQUIVALENT underside - 0.15 m clamp - half the 155 mm body) straight lines to the NW end wall
+    (z 53.8) at end heights 3.5..7.5 m, the end x = the cube x (down the hall). A line passes when its first hit is the end wall
+    (not glass, not the door), nothing is met on the way (the cut, its picks, the near crane at z 0.15 with 0.3 m steel margin,
+    the cab, columns, the gallery), and it stays >= 3 m over every standing level along the WHOLE path (the floor everywhere,
+    the DJ step 0.4 m, the FOH riser 0.6 m, + 2.5 m lateral of the riser). Line only: the scan envelope and the beam-block setting
+    are the laser session's."""
+    G = W.G
+    rows = []
+    door_half = G['door']['w_m'] / 2
+    for x in np.arange(-9.0, 7.6, 1.5):
+        for yend in np.arange(3.5, 7.51, 0.5):
+            o = np.array([x, 7.37, -41.0 + 1.2])                     # the cube under the bridge's audience-side girder
+            e = np.array([x, yend, G['end_wall_inner_y_m'] - 0.05])
+            v = e - o
+            L = float(np.linalg.norm(v))
+            d = v / L
+            t, names, cls = W.cast(o, d[None, :], reach=L + 1.0, tmin=0.4, skip=('far crane + the 6 cubes (laser hang)',))
+            # the 0.3 m steel margin: four rays offset 0.3 m around the line (as occlusion.py's tube test)
+            u = np.cross(d, [0, 1.0, 0]); u /= np.linalg.norm(u)
+            w = np.cross(d, u)
+            tube = []
+            for off in (0.3 * u, -0.3 * u, 0.3 * w, -0.3 * w):
+                tt, nn, cc = W.cast(o + off, d[None, :], reach=L - 1.0, tmin=0.4, skip=('far crane + the 6 cubes (laser hang)',))
+                if np.isfinite(tt[0]):
+                    tube.append(nn[0])
+            low = 1e9
+            for k in range(0, 201):
+                q = o + v * k / 200
+                h = 0.0
+                if -6.7 - 2.5 <= q[0] <= -3.7 + 2.5 and 27.0 - 2.5 <= q[2] <= 31.0 + 2.5:
+                    h = 0.6
+                elif -6.7 <= q[0] <= -3.7 and 3.65 <= q[2] <= 5.65:
+                    h = 0.4
+                low = min(low, q[1] - h)
+            in_door = abs(x) <= door_half and yend <= G['door']['h_m']
+            end_ok = np.isfinite(t[0]) and cls[0] == 'end wall' and not in_door
+            rows.append({'cube_x': R3(x), 'end_y': R3(yend), 'first_hit': names[0], 'tube_hits': sorted(set(tube)),
+                         'lowest_over_standing_m': R3(low), 'pass': bool(end_ok and not tube and low >= 3.0)})
+    ok = [r for r in rows if r['pass']]
+    return {'rows': rows, 'pass': len(ok), 'of': len(rows), 'underside_m': 7.6, 'aperture_m': 7.37,
+            'xs_with_a_pass': sorted(set(r['cube_x'] for r in ok)), 'end_y_range_passing': [min(r['end_y'] for r in ok), max(r['end_y'] for r in ok)] if ok else None,
+            'blockers': sorted({n for r in rows if not r['pass'] for n in ([r['first_hit']] if r['first_hit'] and 'end wall' not in r['first_hit'] else []) + r['tube_hits']})}
+
+
 # ------------------------------------------------------------------ the rig file
 def rig_file(name, lay, beams, pars, smoke_unit, cc, circ, ph, branches, slots, laser_units, checks):
     fixtures = []
@@ -583,7 +629,7 @@ def main():
     table = cut_table()
     cc = cut_places(CUT_N)
     T, laser_note = lasers_from_table(A.lasers)
-    out = {'cut_table': table, 'cut_recommended': CUT_N, 'lasers': laser_note, 'layouts': {}}
+    out = {'cut_table': table, 'cut_recommended': CUT_N, 'lasers': laser_note, 'laser_corridor': laser_corridor(W), 'layouts': {}}
     for name, lay in layouts().items():
         beams, pars = evaluate(W, name, lay, cc)
         sm = smoke(name, lay)

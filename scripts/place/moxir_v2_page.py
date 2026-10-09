@@ -105,6 +105,19 @@ def cut_block():
 <div class="tw"><table class="cut"><tr><th>PARs</th><th>pitch</th><th>picks (kg)</th><th>headroom</th><th>shafts separate</th><th>load</th><th>power · circuits</th></tr>%s</table></div><p><b>Recommended: %d.</b></p>''' % (tr, R['cut_recommended'])
 
 
+def laser_block():
+    c = R.get('laser_corridor')
+    if not c:
+        return ''
+    return (' The aims, the scan envelope, the beam-block setting and the hazard zone are the laser session\'s table (not built here). '
+            'What this page checks is FEASIBILITY: straight lines from the free crane (z -41, cube aperture %.2f m on the %.1f m EQUIVALENT '
+            'underside) down the hall to the NW end wall: <b>%d of %d</b> keep >= 3 m over every standing level along the whole path, '
+            'end on the wall (not glass, not the door) and pass 0.3 m clear of all steel. Bridge stations with a passing line: x %s m; '
+            'ends %s-%s m high. What stops the others: %s.') % (
+        c['aperture_m'], c['underside_m'], c['pass'], c['of'], ', '.join('%g' % x for x in c['xs_with_a_pass']),
+        c['end_y_range_passing'][0], c['end_y_range_passing'][1], E(', '.join(c['blockers'])))
+
+
 def recommendation():
     """The advice in one paragraph, every number from the JSON (the choice stays the owner's)."""
     L = R['layouts']
@@ -151,10 +164,10 @@ ul{padding-left:18px;margin:4px 0}.wide{max-width:1200px}code{color:var(--fg)}
 <table><tr><th>zone</th><th>places</th><th>best clear</th><th>mean clear</th></tr>%s</table>
 <p><a href="occlusion/heat-plan-clear.png"><img src="occlusion/heat-plan-clear.png" style="max-width:520px"></a></p>
 <p><a href="occlusion/heat-section-clear.png"><img src="occlusion/heat-section-clear.png"></a></p>
-<h2>Lasers</h2><p class="lead">%s</p>
+<h2>Lasers (6 cubes on the free crane)</h2><p class="lead">%s</p>
 <h2>All frames</h2><p><a href="contact-sheet.png"><img src="contact-sheet.png"></a></p></div></body></html>''' % (
         'on 2026-10-09', recommendation(), ''.join(layout_col(n) for n in ORDER), cut_block(), len(SKY['positions']), SKY['rays_per_position'], SKY['triangles'], zt,
-        E(R['lasers'].get('status', '')))
+        E(R['lasers'].get('status', '')) + laser_block())
     open(os.path.join(D, 'index.html'), 'w').write(page)
 
 
