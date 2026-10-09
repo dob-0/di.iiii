@@ -39,7 +39,19 @@ const main = async () => {
     const logs = []
     page.on('console', (m) => { if (m.type() === 'error') logs.push(m.text()) })
     try {
+        // preflight: can this browser give a WebGL2 context at all (a crashed GPU process blocks it)?
+        const pre = await page.evaluate(() => {
+            const gl = document.createElement('canvas').getContext('webgl2')
+            if (!gl) return { webgl2: false }
+            const ext = gl.getExtension('WEBGL_debug_renderer_info')
+            return { webgl2: true, gpu: gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER), floatTargets: Boolean(gl.getExtension('EXT_color_buffer_float')) }
+        })
+        console.log(`preflight: ${JSON.stringify(pre)}; tabs open in the test browser: ${context.pages().length}`)
+        if (!pre.webgl2) throw new Error('this browser cannot create a WebGL2 context (GPU process crashed or blocked?): restart the test browser (di-test-browser down; di-test-browser up)')
         await page.goto(url, { waitUntil: 'load', timeout: 60000 })
+        // the same question on the harness's own origin: Chrome blocks WebGL per site after a GPU reset it blames on it
+        const onOrigin = await page.evaluate(() => Boolean(document.createElement('canvas').getContext('webgl2')))
+        console.log(`WebGL2 on ${new URL(url).origin}: ${onOrigin}`)
         // a background tab gets no animation frames: the scene would never draw
         await page.bringToFront()
         const visibility = await page.evaluate(() => document.visibilityState)
@@ -64,7 +76,7 @@ const main = async () => {
             console.log(`${k.pass ? 'PASS' : 'FAIL'}  beam    FWHM at ${String(b.distance_m).padStart(2)} m      expected ${k.expected.toFixed(4)} m   measured ${Number(k.measured).toFixed(4)} m   error ${pct(k.error)}`)
         }
         for (const k of r.switches) console.log(`${k.pass ? 'PASS' : 'FAIL'}  mode    ${k.name.padEnd(36)} ${k.law}`)
-        console.log(`${r.control.pass ? 'WRONG' : 'OK  '}  control (mode off, work light on): expected ${r.control.expected.toFixed(3)} lx measured ${Number(r.control.measured).toFixed(3)} lx error ${pct(r.control.error)} — must FAIL`)
+        console.log(`${r.control.pass ? 'WRONG' : 'OK  '}  control (${r.control.what}): expected ${r.control.expected.toFixed(3)} lx measured ${Number(r.control.measured).toFixed(3)} lx error ${pct(r.control.error)} — must FAIL`)
         console.log(`T1: ${r.passed} passed of ${r.total}; control failed as it should: ${r.controlFailedAsItShould}`)
         console.log(`written: ${out}`)
         if (SOFTWARE.test(gpu) && !allowSoftware) throw new Error(`refused: a software renderer (${gpu}) is not the real GPU`)

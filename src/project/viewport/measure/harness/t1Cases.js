@@ -15,6 +15,9 @@
 // beam's OWN model, not physics: for a Gaussian profile (edge 1 → exponent 2, beamAir.js) the
 // side-on luminance's full width at half maximum is the beam's diameter 2·(a + d·tan θ½);
 // tolerance 5 % (chosen: the pixel pitch and the haze transmittance across the beam).
+// The CONTROL reads the 60° off-axis point with the mode off: the work light (#a39c92 at 0.1,
+// luminance 0.034 scene units = 1.7 lx) is then in the reading, +4.5 % on 38.1 lx, and it must fail.
+// (On axis it is only +0.54 % of 305 lx — inside 1 %, so the axis point cannot be the control.)
 export const T1_DISTANCE_M = 10
 export const T1_CANDELA = 30500
 export const T1_SCENE_SCALE = 0.02
@@ -30,7 +33,11 @@ export const WIDE_LAMP = { angle: 85 * DEG, penumbra: 0.05, fitted: false }
 /** The rig's PAR as the rig hangs it: half its 25° beam, penumbra 0.5, fitted (spotBeam.js). */
 export const FITTED_LAMP = { angle: 12.5 * DEG, penumbra: 0.5, fitted: true }
 /** A narrow beam in haze for the profile self-check: 4° beam, soft (Gaussian) edge. */
-export const BEAM_LAMP = { angle: 2 * DEG, penumbra: 1, fitted: false, height: 30, aperture: 0.05 }
+// `distance` 40: a lamp with distance 0 (three's "no limit", the physical choice) draws its beam
+// in air only UNLIMITED_THROW = 20 m long (spotBeam.js) — found by this check on 2026-10-09,
+// when the 20 m profile read zero. The beam case sets a 40 m throw so 20 m is mid-beam; it
+// reads no illuminance, so three's cutoff window on the light does not enter it.
+export const BEAM_LAMP = { angle: 2 * DEG, penumbra: 1, fitted: false, height: 45, aperture: 0.05, distance: 40 }
 export const BEAM_ATMOSPHERE = { scattering: 0.02, anisotropy: 0.7 }
 export const BEAM_DISTANCES = [3, 10, 20]
 
@@ -63,6 +70,9 @@ export const T1_CASES = [
         ]
     }
 ]
+
+/** The probe the control reads (see the header). */
+export const CONTROL_PROBE = 'off-axis-60'
 
 /** Check one reading against its case. */
 export const checkReading = (expected, measured, tolerance = T1_TOLERANCE) => {

@@ -8,12 +8,13 @@ import { createRoot } from 'react-dom/client'
 import { Canvas, useThree } from '@react-three/fiber'
 import SpotLightObject from '../../../../objectComponents/SpotLightObject.jsx'
 import RenderSettingsEffect from '../../RenderSettingsEffect.jsx'
+import { rendererWithFallback } from '../../rendererFallback.js'
 import { setMeasureRequest } from '../measureState.js'
 import { measureLux } from '../measureProbes.js'
 import { hazeUniformsFor } from '../../../../objectComponents/hazeUniforms.js'
 import {
     BEAM_ATMOSPHERE, BEAM_DISTANCES, BEAM_LAMP, BEAM_TOLERANCE, T1_CANDELA, T1_CASES, T1_DISTANCE_M, T1_SCENE_SCALE,
-    T1_TOLERANCE, beamRadiusAt, checkReading
+    CONTROL_PROBE, T1_TOLERANCE, beamRadiusAt, checkReading
 } from './t1Cases.js'
 
 const baseSettings = {
@@ -54,7 +55,7 @@ function TestScene({ caseId }) {
                 <SpotLightObject
                     color="#ffffff"
                     intensity={T1_CANDELA * T1_SCENE_SCALE}
-                    distance={0}
+                    distance={beam ? BEAM_LAMP.distance : 0}
                     decay={2}
                     angle={lamp.angle}
                     penumbra={lamp.penumbra}
@@ -116,9 +117,9 @@ async function runT1(setCase) {
     setMeasureRequest(null)
     await frames(30)
     out.pipelineOff = pipeline()
-    const axis = T1_CASES[0].probes[0]
-    const raw = measureLux(window.__t1.gl, window.__t1.scene, [axis], { sceneScale: T1_SCENE_SCALE })[0]
-    out.control = { what: 'mode off, work light 0.1 on: axis probe', ...checkReading(axis.expected, raw.E_lx) }
+    const probe = T1_CASES[0].probes.find((p) => p.name === CONTROL_PROBE)
+    const raw = measureLux(window.__t1.gl, window.__t1.scene, [probe], { sceneScale: T1_SCENE_SCALE })[0]
+    out.control = { what: `mode off, work light 0.1 on: ${probe.name} probe`, ...checkReading(probe.expected, raw.E_lx) }
     // the beam-profile probe on a beam in haze (its own model's FWHM = the beam diameter)
     setMeasureRequest(REQUEST)
     setCase('beam')
@@ -161,10 +162,12 @@ function App() {
         return () => { alive = false }
     }, [])
     return (
-        <Canvas frameloop="always" dpr={1} gl={{ antialias: false }} camera={{ position: [0, 6, 28], fov: 50, near: 0.05, far: 400 }}>
+        <Canvas frameloop="always" dpr={1} gl={rendererWithFallback({ antialias: false })} camera={{ position: [0, 6, 28], fov: 50, near: 0.05, far: 400 }}>
             <TestScene caseId={caseId} />
         </Canvas>
     )
 }
 
+// a scene that cannot start (no WebGL context, a render error) ends the run with the reason, not a hang
+window.addEventListener('error', (e) => { if (!window.__T1) window.__T1 = { done: true, error: String(e?.error?.stack || e?.message || e) } })
 createRoot(document.getElementById('root')).render(<App />)

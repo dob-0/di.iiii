@@ -39,3 +39,15 @@ describe('T1 reference values (inverse square and cosine law)', () => {
         expect(checkReading(305, NaN).pass).toBe(false)
     })
 })
+
+describe('the control', () => {
+    it('the work light at its MOXIR level fails the 60° point and would not fail the axis', () => {
+        // #a39c92 in linear Rec.709, luminance × 0.1 / sceneScale 0.02
+        const lin = (c) => ((c / 255 + 0.055) / 1.055) ** 2.4
+        const Y = 0.2126 * lin(0xa3) + 0.7152 * lin(0x9c) + 0.0722 * lin(0x92)
+        const extra = (0.1 * Y) / 0.02
+        expect(extra).toBeCloseTo(1.7, 1)
+        expect(checkReading(byName['off-axis-60'].expected, byName['off-axis-60'].expected + extra).pass).toBe(false)
+        expect(checkReading(byName.axis.expected, byName.axis.expected + extra).pass).toBe(true)
+    })
+})
