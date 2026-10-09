@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip, readSignatures, listProjectMetas, listProjects, retryPolicy } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -214,7 +214,7 @@ describe('planAudit', () => {
     it('is quiet when the two tiers hold the same work', () => {
         const both = { main: { 'main-dii-project': sig(85) }, wcc: { arthur: sig(1) } }
         expect(planAudit({ source: both, destination: both }))
-            .toEqual({ missing: [], extra: [], differs: [], readdressed: [] })
+            .toEqual({ missing: [], extra: [], differs: [], readdressed: [], unreadable: [] })
     })
 })
 
@@ -570,5 +570,81 @@ describe('readBackShape', () => {
     it('falls back to the shape sent when the read-back fails', async () => {
         const shape = await readBackShape({ call: reply(false, 502, null), tier: {}, projectId: 'p', sent })
         expect(shape).toBe(documentSignature(sent).shape)
+    })
+})
+
+// A throttled tier answered 429 for 47 of 74 br-id-ge documents (measured
+// 2026-10-08 against dev.diiii.xyz) and readSignatures skipped every one of
+// them, so the audit reported 47 projects "only on local" that dev holds. A
+// read that fails must wait and retry, and one that never succeeds must be
+// reported as unreadable — never as missing.
+describe('reading a tier that throttles', () => {
+    const tier = { base: 'https://tier.test/serverXR', token: null }
+    const response = (status, body = {}, headers = {}) => new Response(status === 200 ? JSON.stringify(body) : 'x', {
+        status,
+        headers: { 'content-type': 'application/json', ...headers }
+    })
+    const doc = (title) => ({ document: { projectMeta: { title }, entities: [] }, version: 1 })
+    afterEach(() => {
+        vi.unstubAllGlobals()
+        retryPolicy.sleep = retryPolicy.defaultSleep
+    })
+
+    it('waits and retries a document the tier throttled, honouring Retry-After', async () => {
+        let documentCalls = 0
+        vi.stubGlobal('fetch', vi.fn(async (url) => {
+            if (url.endsWith('/api/spaces')) return response(200, { spaces: [{ id: 's' }] })
+            if (url.endsWith('/api/spaces/s/projects')) return response(200, { projects: [{ id: 'p', documentVersion: 1, updatedAt: 1 }] })
+            documentCalls += 1
+            return documentCalls < 3 ? response(429, {}, { 'retry-after': '2' }) : response(200, doc('p'))
+        }))
+        const waits = []
+        retryPolicy.sleep = async (ms) => { waits.push(ms) }
+        const inventory = await readSignatures(tier, 's')
+        expect(inventory.s.p.unreadable).toBeUndefined()
+        expect(inventory.s.p.shape).toBeTruthy()
+        expect(waits).toEqual([2000, 2000])
+    })
+
+    it('records a document it never managed to read as unreadable, not absent', async () => {
+        vi.stubGlobal('fetch', vi.fn(async (url) => {
+            if (url.endsWith('/api/spaces')) return response(200, { spaces: [{ id: 's' }] })
+            if (url.endsWith('/api/spaces/s/projects')) return response(200, { projects: [{ id: 'p', documentVersion: 1, updatedAt: 1 }] })
+            return response(429)
+        }))
+        retryPolicy.sleep = async () => {}
+        const inventory = await readSignatures(tier, 's')
+        expect(inventory.s.p).toEqual({ unreadable: 429 })
+    })
+
+    it('does not call an unreadable project missing, extra or different', () => {
+        const signature = documentSignature({ entities: [{ id: 'a' }] })
+        const plan = planAudit({
+            source: { s: { p: signature, q: signature } },
+            destination: { s: { p: { unreadable: 429 }, q: signature } }
+        })
+        expect(plan.missing).toEqual([])
+        expect(plan.differs).toEqual([])
+        expect(plan.unreadable).toEqual([{ spaceId: 's', projectId: 'p', side: 'destination', status: 429 }])
+    })
+
+    it('retries a throttled project list, and fails loudly rather than reading it as empty', async () => {
+        let calls = 0
+        vi.stubGlobal('fetch', vi.fn(async () => {
+            calls += 1
+            return calls === 1 ? response(429) : response(200, { projects: [{ id: 'p', documentVersion: 2, updatedAt: 3 }] })
+        }))
+        retryPolicy.sleep = async () => {}
+        expect(await listProjectMetas(tier, 's')).toEqual([{ id: 'p', documentVersion: 2, updatedAt: 3 }])
+
+        vi.stubGlobal('fetch', vi.fn(async () => response(503)))
+        await expect(listProjectMetas(tier, 's')).rejects.toThrow(/HTTP 503/)
+    })
+
+    it('still reads a space the tier has never heard of as empty', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => response(404)))
+        retryPolicy.sleep = async () => {}
+        expect(await listProjectMetas(tier, 'nowhere')).toEqual([])
+        expect(await listProjects(tier, 'nowhere')).toEqual([])
     })
 })
