@@ -173,11 +173,46 @@ describe('the beam through a field', () => {
 })
 
 describe('the fog the haze lays on the surfaces', () => {
-    it('reaches 1.6/σ, as realism.mjs writes it for a uniform haze', async () => {
-        const { hazeFogFar } = await import('./hazeField.js')
-        const { hazeFog } = await import('../../scripts/rigbuild/realism.mjs')
-        expect(hazeFogFar(0.05)).toBeCloseTo(hazeFog(0.05).far, 0)
-        expect(hazeFogFar(0)).toBe(Infinity)
+    it('is Beer–Lambert at the fill\'s σ — the beams\' own law — not the linear 0 … 1.6/σ stand-in', async () => {
+        const { hazeFogBase, setAtmosphere, setHazeMachines } = await import('./atmosphereStore.js')
+        const { fogFactorAt } = await import('./beerLambertFog.js')
+        const gl = {} // a renderer key
+        setAtmosphere(gl, { scattering: 0.02, anisotropy: 0.7, haze: null })
+        setHazeMachines(gl, [])
+        const base = hazeFogBase(gl)
+        // a surface 60 m away keeps exp(−0.02·60) ≈ 30 % of its light (the old 60 … 250 m fog kept 100 %)
+        expect(1 - fogFactorAt(60, base.near, base.far)).toBeCloseTo(Math.exp(-1.2), 9)
+        setAtmosphere(gl, null)
+        expect(hazeFogBase(gl, { near: 60, far: 250 })).toEqual({ near: 60, far: 250 })
+    })
+})
+
+describe('one machine in a big hall — the two-zone estimate (model nf-ff)', () => {
+    const smoke = { id: 'rig-smoke-01', category: 'smoke-machine', kind: fog, fluid_ml_per_min: 150, nozzle_d_mm: 50, position: [10, 0.3, 30], direction: [0, 0, 1] }
+    const settings = hazeSettingsOf({ scattering: 0.02, haze: { model: 'nf-ff', volume_m3: 186890, airChangesPerHour: 6, kindLevels: { 'smoke-machine': 1 }, nearField: { radius_m: 3, airSpeed_m_s: 0.1 }, source: 'UNVALIDATED estimate' } })
+    it('is never calibrated to the hand-set scattering, and gives the hall its far field', () => {
+        expect(settings.model).toBe('nf-ff')
+        expect(settings.calibrateTo).toBe(null)
+        const field = buildHazeField(settings, [smoke])
+        expect(field.scale).toBe(1)
+        // ≈ 2.7 × 10⁻⁴ /m everywhere, not the 0.02 /m the document asks for
+        expect(field.fill).toBeGreaterThan(2.5e-4)
+        expect(field.fill).toBeLessThan(2.9e-4)
+        expect(field.zones[0].near).toBeGreaterThan(0.2)
+        expect(field.source).toMatch(/UNVALIDATED/)
+    })
+    it('draws the near field around the machine: denser within 3 m, the fill beyond', () => {
+        const field = buildHazeField({ ...settings, patchiness: 0 }, [smoke])
+        expect(field.blobs).toHaveLength(1)
+        const beside = hazeScatteringAt(field, [10, 1.5, 29], 0) // 1.7 m from the nozzle, behind it
+        const far = hazeScatteringAt(field, [40, 5, 60], 0)
+        expect(beside).toBeGreaterThan(0.15)
+        expect(far).toBeCloseTo(field.fill, 9)
+    })
+    it('a machine at 0 leaves the hall clear', () => {
+        const off = buildHazeField(hazeSettingsOf({ haze: { model: 'nf-ff', volume_m3: 186890, kindLevels: { 'smoke-machine': 0 } } }), [smoke])
+        expect(off.fill).toBe(0)
+        expect(off.jets).toHaveLength(0)
     })
 })
 
