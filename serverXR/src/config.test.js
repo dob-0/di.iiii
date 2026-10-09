@@ -29,8 +29,20 @@ describe('isCorsOriginAllowed', () => {
         ).toBe(false)
     })
 
-    it('allows any origin in non-production when no allowlist is configured', () => {
+    it('allows only this machine\'s origins in non-production when no allowlist is configured', () => {
         expect(isCorsOriginAllowed('http://localhost:5173', [], 'development')).toBe(true)
+        expect(isCorsOriginAllowed('http://127.0.0.1:4173', [], 'development')).toBe(true)
+        expect(isCorsOriginAllowed('http://[::1]:5173', [], 'development')).toBe(true)
+        expect(isCorsOriginAllowed('http://diiii.localhost', [], 'development')).toBe(true)
+        expect(isCorsOriginAllowed('http://land.diiii.localhost:8080', [], 'development')).toBe(true)
+        expect(isCorsOriginAllowed('https://localhost', [], '')).toBe(true)
+
+        expect(isCorsOriginAllowed('https://other-site.example', [], 'development')).toBe(false)
+        expect(isCorsOriginAllowed('http://localhost.other-site.example', [], 'development')).toBe(false)
+        expect(isCorsOriginAllowed('http://other-site.example/localhost', [], 'development')).toBe(false)
+        expect(isCorsOriginAllowed('http://192.168.88.140:5173', [], 'development')).toBe(false)
+        expect(isCorsOriginAllowed('null', [], 'development')).toBe(false)
+        expect(isCorsOriginAllowed('file://', [], '')).toBe(false)
     })
 
     it('blocks foreign origins in production when no allowlist is configured', () => {

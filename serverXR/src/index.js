@@ -15,6 +15,7 @@ const morgan = require('morgan')
 const multer = require('multer')
 const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
+const { createLocalRequestGuard, createHostPolicy } = require('./localRequest')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb, getDb, SCHEMA_VERSION } = require('./db')
@@ -472,6 +473,23 @@ const PUBLIC_CORS_ROUTES = [
   // inside the sandboxed preview (opaque origin); private spaces still 401
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }
 ]
+const isPublicCrossOriginRoute = (req) => {
+  const route = PUBLIC_CORS_ROUTES.find((r) => r.pattern.test(req.path))
+  return Boolean(route && route.methods.includes(req.method))
+}
+// A local server (DI_LOCAL=1, or not production) answers only the names this
+// machine goes by, and takes state-changing requests only from its own pages
+// or this machine's; a hosted server passes through. See localRequest.js.
+app.use(createLocalRequestGuard({
+  hostPolicy: createHostPolicy({
+    allowedHosts: config.allowedHosts,
+    corsOrigins: config.corsOrigins,
+    certPath: process.env.TLS_CERT
+  }),
+  corsOrigins: config.corsOrigins,
+  isPublicCrossOriginRoute,
+  warn: (line) => logger.warn(line)
+}))
 app.use((req, res, next) => {
   const route = PUBLIC_CORS_ROUTES.find((r) => r.pattern.test(req.path))
   if (!route || !route.methods.includes(req.method)) return next()

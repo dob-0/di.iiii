@@ -2,6 +2,7 @@ const path = require('node:path')
 const { URL } = require('node:url')
 const { normalizeAuthRole, normalizeAuthScopeSpaces } = require('./authAccess')
 const logger = require('./logger')
+const { isLocalhostOrigin } = require('./localRequest')
 
 const normalizeBasePath = (value) => {
   if (!value) return ''
@@ -45,11 +46,14 @@ const parseBool = (value, fallback = false) => {
   return String(value).toLowerCase() === 'true'
 }
 
+// With no CORS_ORIGINS, production answers no other origin, and any other
+// server answers only origins on this machine (localhost, *.localhost,
+// 127.0.0.0/8, ::1 — the default of Vite's own dev server, server.cors).
 const isCorsOriginAllowed = (origin, corsOrigins = [], nodeEnv = process.env.NODE_ENV || '') => {
   if (!origin) return true
   if (corsOrigins.includes('*')) return true
   if (!corsOrigins.length) {
-    return String(nodeEnv).toLowerCase() !== 'production'
+    return String(nodeEnv).toLowerCase() !== 'production' && isLocalhostOrigin(origin)
   }
   return corsOrigins.includes(origin)
 }
@@ -134,6 +138,10 @@ const basePath = normalizeBasePath(process.env.APP_BASE_PATH || process.env.BASE
 const apiToken = (process.env.API_TOKEN || process.env.SERVERXR_API_TOKEN || '').trim()
 const requireAuth = parseBool(process.env.REQUIRE_AUTH, isProduction)
 const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
+// Names a local server answers besides localhost, *.localhost, IP addresses
+// and its certificate's names (localRequest.js). Comma-separated; a leading
+// dot covers the name and every name under it; '*' answers any name.
+const allowedHosts = parseList(process.env.DI_ALLOWED_HOSTS)
 const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
 const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
 // Floor of free disk below which state-changing requests get a 507 instead of
@@ -296,6 +304,7 @@ const config = {
   internalApiToken,
   requireAuth,
   corsOrigins,
+  allowedHosts,
   maxUploadBytes,
   minFreeDiskBytes,
   authSession: {

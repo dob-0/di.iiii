@@ -3,14 +3,13 @@
 // never be reachable on a deployed server, so the check is NODE_ENV AND
 // loopback — either alone is not enough (a misconfigured NODE_ENV, or a
 // dev box with its port forwarded, must still refuse).
-const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
+// "Loopback" is a program on this machine: the peer is loopback and every
+// proxy on the way says the client is too (localRequest.js).
+const { requestFromThisMachine, isOwnPageOrNotABrowser } = require('./localRequest')
 
 const isProductionEnv = () => (process.env.NODE_ENV || '').toLowerCase() === 'production'
 
-const isLoopbackRequest = (req) => {
-  const address = req.ip || req.socket?.remoteAddress || ''
-  return LOOPBACK_ADDRESSES.has(address)
-}
+const isLoopbackRequest = (req) => requestFromThisMachine(req)
 
 const requireDevLocal = (req, res, next) => {
   if (isProductionEnv() || !isLoopbackRequest(req)) {
@@ -20,4 +19,17 @@ const requireDevLocal = (req, res, next) => {
   next()
 }
 
-module.exports = { requireDevLocal, isProductionEnv, isLoopbackRequest }
+// For routes that start programs: on top of requireDevLocal, a browser must be
+// on this server's own page (Sec-Fetch-Site: same-origin, or an Origin on this
+// machine when the browser sends no Fetch Metadata).
+const requireDevLocalOwnPage = (req, res, next) => {
+  requireDevLocal(req, res, () => {
+    if (!isOwnPageOrNotABrowser(req)) {
+      res.status(404).end()
+      return
+    }
+    next()
+  })
+}
+
+module.exports = { requireDevLocal, requireDevLocalOwnPage, isProductionEnv, isLoopbackRequest }

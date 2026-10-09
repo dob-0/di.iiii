@@ -208,7 +208,8 @@ Behavior rules:
 | `AUTH_SESSION_TTL_MS` | Lifetime for browser edit sessions created through `/api/auth/session`. | `43200000` |
 | `AUTH_SESSION_COOKIE_SECURE` | Mark edit-session cookies `Secure`. | `true` in production |
 | `AUTH_SESSION_COOKIE_NAME` | Cookie name for edit sessions. | `dii_serverxr_session` |
-| `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
+| `CORS_ORIGINS` | Comma-separated allowlist of origins. With none set, production answers no other origin and any other server answers only this machine's (`localhost`, `*.localhost`, `127.0.0.1`, `::1`). | _none_ |
+| `DI_ALLOWED_HOSTS` | Local servers (`DI_LOCAL=1`, or `NODE_ENV` not production): host names answered besides IP addresses, `localhost`, `*.localhost`, this machine's host name, the names on `TLS_CERT` and the hosts in `CORS_ORIGINS`. Comma-separated; `.example.com` covers the name and every name under it; `*` answers any name. Other names get `403 host_not_allowed`. State-changing requests from a browser are taken only from the server's own page, a page on this machine, or one of these names (`Sec-Fetch-Site`, else `Origin`); requests with neither header (the di CLI, `di follow`) are unchanged. See `src/localRequest.js`. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `MIN_FREE_DISK_MB` | Free-disk floor below which POST/PUT/PATCH get a `507` instead of writing toward ENOSPC (`0` disables). | `512` |
 | `SHARED_ROOT` | Override for shared schema loading. Use this when the dev tier and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
