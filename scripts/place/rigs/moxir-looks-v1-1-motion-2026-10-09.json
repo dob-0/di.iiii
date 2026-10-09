@@ -16,10 +16,6 @@
    "#a3200c",
    0.3
   ],
-  "far wall": [
-   "#a3200c",
-   0.35
-  ],
   "far columns": [
    "#a3200c",
    0.3
@@ -47,10 +43,6 @@
     "span columns": [
      "#a3200c",
      0.3
-    ],
-    "far wall": [
-     "#a3200c",
-     0.35
     ],
     "far columns": [
      "#a3200c",
@@ -93,10 +85,6 @@
      "#e8e4dc",
      1
     ],
-    "far wall": [
-     "#a3200c",
-     0.35
-    ],
     "far columns": [
      "#e8e4dc",
      1
@@ -126,10 +114,6 @@
     "span columns": [
      "#a3200c",
      0.3
-    ],
-    "far wall": [
-     "#a3200c",
-     0.35
     ],
     "far columns": [
      "#a3200c",
@@ -171,10 +155,6 @@
     "span columns": [
      "#a3200c",
      0.3
-    ],
-    "far wall": [
-     "#a3200c",
-     0.35
     ],
     "far columns": [
      "#a3200c",
@@ -218,10 +198,6 @@
      "#e8e4dc",
      0.8
     ],
-    "far wall": [
-     "#a3200c",
-     0.35
-    ],
     "far columns": [
      "#e8e4dc",
      0.8
@@ -258,10 +234,6 @@
     "span columns": [
      "#a3200c",
      0.3
-    ],
-    "far wall": [
-     "#a3200c",
-     0.35
     ],
     "far columns": [
      "#a3200c",
@@ -304,10 +276,6 @@
      "#ff3a12",
      1
     ],
-    "far wall": [
-     "#a3200c",
-     0.35
-    ],
     "far columns": [
      "#ff3a12",
      1
@@ -340,10 +308,6 @@
     "span columns": [
      "#a3200c",
      0.3
-    ],
-    "far wall": [
-     "#a3200c",
-     0.35
     ],
     "far columns": [
      "#a3200c",
@@ -386,10 +350,6 @@
      "#a3200c",
      0.3
     ],
-    "far wall": [
-     "#a3200c",
-     0.35
-    ],
     "far columns": [
      "#a3200c",
      0.3
@@ -426,10 +386,6 @@
     "span columns": [
      "#a3200c",
      0.3
-    ],
-    "far wall": [
-     "#a3200c",
-     0.35
     ],
     "far columns": [
      "#a3200c",
