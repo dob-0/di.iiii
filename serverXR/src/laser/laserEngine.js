@@ -32,7 +32,7 @@
 //      still beam; held STILL_HOLD_MS it blanks the cube. The only still beams allowed are the ones
 //      the laser safety officer lists for that cube in laser.json (stillBeams: MOXIR's design is two
 //      static beams a cube, each ending on the stop). Thresholds and reasons at GUARD below —
-//      UNVALIDATED until a real cube has been tested (docs/ai/sessions/feat-laser-drive-finish-2026-10-09.md).
+//      UNVALIDATED until a real cube has been tested (checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //   8. Server going down (SIGTERM, SIGINT, close): every addressed cube is blanked and sent
 //      output-off twice before the socket closes (shutdown()).
 // What software cannot do, said plainly: a galvo that stalls while a figure is being sent is a
@@ -66,7 +66,7 @@ const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 
 // THE GUARDS' NUMBERS — chosen 2026-10-09 against ~/work/agent-reports-2026-10-09/devices/lasers-exact.md.
-// All UNVALIDATED until tested on a real cube (the checklist in the session note).
+// All UNVALIDATED until tested on a real cube (the checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //
 // FRAME_TIMEOUT_MS 200: the stop must be complete inside the 0.25 s exposure time the visible MPE is
 //   written for (IEC 60825-1 Table A.1, H = 18 t^0.75 J/m², the aversion time base; report §2.1).

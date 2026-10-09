@@ -6,7 +6,7 @@
 // (github.com/nannou-org/lasercube, MIT, read 2026-10-09) for the GET_FULL_INFO answer and the
 // safety timeouts. Both are REVERSE-ENGINEERED from Wicked Lasers' own Python sample, not the
 // maker's document: Wicked Lasers publishes no protocol. Every field below is as that spec reads it,
-// unconfirmed on a real Ultra MK2 until the owed cube test (docs/ai/sessions/feat-laser-drive-finish-2026-10-09.md).
+// unconfirmed on a real Ultra MK2 until the owed real cube test (its checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //   UDP ports   45456 alive (pings) · 45457 commands · 45458 point data
 //   commands    0x77 get full info · 0x78 enable the buffer-free answer on data · 0x80 output on/off
 //               0x8a ask the ring buffer's free sample count · 0xa9 sample data
