@@ -74,6 +74,24 @@ PAR_CD_SPEC = 11000.0                # fixtures-exact.md EQUIVALENT, 15 deg, an 
 # at four targets and four levels. looks.js atLevel multiplies once; the second factor is not found yet (OWED, viewport).
 # The faders below are set so the ROOM shows the stage at 30-80 lx; a linear dimmer gives E x level instead (both stated).
 ROOM_LEVEL_EXP = 2
+# THE LASERS' DESK CAPS (measured 2026-10-09: moxir-v2-true-frames.cjs, the floor eye 1.7 m z 18, EV100 2.84, Full, haze 40 min;
+# the look held with every laser group at 100 / 40 / 25 / 15 / 0 %, white-out by frame_luma.py, the drawn intensity read from the
+# renderer's own lamp list (__diMeasure.lamps) each frame). The cap = the highest tested fader whose TOTAL white-out from the floor
+# stays <= 0.65 % (the budget accepted for B). Both numbers are kept: the FADER (what the look holds) and the DRAWN FRACTION (the
+# share of the lines' full intensity the room drew at it, measured: fader^2 today). If the room's level law is fixed to linear, the
+# same light is a fader equal to the drawn fraction. The owner: "I will not use full brightness".
+LASER_CAPS = {
+    'peak': {'fader': 0.40, 'drawn_fraction_measured': 0.16, 'white_pct_floor_total': 0.57,
+             'tested': [{'fader': 1.0, 'drawn': 1.0, 'white_pct': 0.88}, {'fader': 0.4, 'drawn': 0.16, 'white_pct': 0.57}, {'fader': 0.25, 'drawn': 0.0625, 'white_pct': 0.54},
+                        {'fader': 0.15, 'drawn': 0.0225, 'white_pct': 0.53}, {'fader': 0.0, 'drawn': 0.0, 'white_pct': 0.53}]},
+    'dark': {'fader': 1.0, 'drawn_fraction_measured': 1.0, 'white_pct_floor_total': 0.49,
+             'tested': [{'fader': 1.0, 'drawn': 1.0, 'white_pct': 0.49}, {'fader': 0.4, 'drawn': 0.16, 'white_pct': 0.19}, {'fader': 0.25, 'drawn': 0.0625, 'white_pct': 0.16},
+                        {'fader': 0.15, 'drawn': 0.0225, 'white_pct': 0.16}, {'fader': 0.0, 'drawn': 0.0, 'white_pct': 0.16}],
+             'note': 'every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in'},
+}
+LASER_CAP_METHOD = ('the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, '
+                    'measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); '
+                    'drawn fraction = the renderer\'s own laser intensity / its intensity at 100 % (fader^2 in today\'s room)')
 PLANE2_PEAK = 0.45                   # the wings' peak fader under the white-out budget (see the looks)
 B380_CD_ROOM = 1004000 / 0.02
 DJ_EYE = (-5.2, 2.03, 4.3)
@@ -90,7 +108,12 @@ PUBLIC = {'x_m': (-36.4, 60.4), 'z_m': (8.2, 53.8), 'y_m': (0.0, 2.4)}
 FAR_CRANE_Z = -12.0
 FAR_CRANE_UNDERSIDE = 7.69           # aerial-far-crane.json bridge.underside_used_m (photo 007, the LOW end of 7.69-8.24)
 BODY_R = {'up-pl5403': 0.25, 'up-b380f': 0.45, 'up-yz31p': 0.5}
-LASER_TIGHTEST_M = 0.37              # the laser session's own tightest lamp-body margin (4a, aerial-report.md)
+LASER_BODY_MIN_M = 0.25              # the laser session's rule for a hung lamp (moxir 48bf1d, on this file's body model: a 0.25 m
+                                     # sphere against the axis + 1.008 deg half fan + 4 mm): every lamp body >= 0.25 m outside a tube
+# THE CUT AS HUNG: cut-count.mjs's even spread, except PAR 08 one clamp point toward house LEFT (u +2.5 -> +2.0). At u +2.5 it stood
+# 0.11 m from laser 4a's tube (the laser session 48bf1d agrees: fails its 0.25 m rule by 0.14 m). The cut descends toward -x, so
+# the lamp drops away from the beam (never +x: the cut rises into it). 0.3 m (u +2.2) is not a clamp point and computes to 0.24 m.
+CUT_PLACES = [-5.5, -4.5, -3.5, -2.0, -1.0, 0.5, 1.5, 2.0, 4.0, 5.0]
 PIT_STAND = {'p': [0.4, 0.0, 7.3], 'top_m': 4.5, 'what': 'a wind-up lighting stand (one PAR at 4.5 m) in the pit, 0.9 m behind the barrier, right of the PA R box, base weighted and tied off (crew side)'}
 K_COL = [-11.35, 6.0, 11.6]           # the nave column x -12 z 12, stage-facing side: a column bracket (3 PARs, 5.1-6.0 m) under the flared head (6.21 m)
 
@@ -321,6 +344,13 @@ def build(repo, out, table_path, placement_file=None):
         move(fid, p=[R3(v) for v in p], r=M.rot_for_dir(d), part=part, position=why, colour=ASH, aim_at=[R3(v) for v in tgt],
              lit_column_m=None, lux_on_steel_median=None)
 
+    # ---- 1b. the cut as hung (CUT_PLACES): PAR 08 one clamp point toward house left, clear of laser 4a
+    cc_hung = cut_count(repo, 10, CUT_PLACES)
+    for q in M.cut_pars(cc_hung):
+        f = by[q['id']]
+        if [R3(v) for v in q['p']] != [R3(v) for v in f['p']]:
+            move(q['id'], p=q['p'], position=q['position'] + '; moved one clamp point toward house left (was u +2.5): laser 4a\'s tube was 0.11 m away (rule >= 0.25 m, the laser session 48bf1d)')
+
     # ---- 2. the whole hall, placed from the audience's view positions inside the owner's painted hot zone (moxir_v2_eyes.py):
     #         every unit B tuned had OUTSIDE the hot zone, and every column PAR (now all among people: out of reach on brackets),
     #         is re-placed: 26 PARs (the column grazers, the far wall's inner two, the 8 side-span PARs) and 12 B380F (planes 2, 3)
@@ -401,9 +431,13 @@ def build(repo, out, table_path, placement_file=None):
             p['plane 2 (the wings)'] = [ASH, PLANE2_PEAK]
             p['plane 3 (behind the stage)'] = [EMBER, 0.7]
             p['roof'] = [ASH, 0.6]
+            p['laser'] = [ASH, LASER_CAPS['peak']['fader']]       # at its desk cap (was 1.0: 0.88 % white-out from the floor)
             p['stage key'] = [ASH, 0.35]
             p['speaker face L'] = [ASH, 0.33]
             p['speaker face R'] = [ASH, 0.76]
+    for lk in T['looks']:
+        if lk['id'] in LASER_CAPS:
+            lk['desk_caps'] = {'laser': dict(LASER_CAPS[lk['id']], method=LASER_CAP_METHOD)}
     for c in T['cues']:
         c['name'] = c['name'].replace('B tuned · one machine', 'B tuned + stage + lasers')
 
@@ -454,17 +488,23 @@ def build(repo, out, table_path, placement_file=None):
         if f['type'] == 'ext-lc-ultra-mk2':
             continue
         g, beam = tube_clearance(tubes, f['p'], BODY_R[f['type']])
-        clear.append({'id': f['id'], 'part': f['part'], 'margin_m': R3(g), 'nearest_beam': beam, 'enters': g < 0, 'under_the_laser_sessions_tightest': g < LASER_TIGHTEST_M})
+        clear.append({'id': f['id'], 'part': f['part'], 'margin_m': R3(g), 'nearest_beam': beam, 'enters': g < 0, 'below_the_rule': g < LASER_BODY_MIN_M})
     for k in range(0, 46):                                             # the pit stand: its pole and T-bar, every 0.1 m
         q = [PIT_STAND['p'][0], k * 0.1, PIT_STAND['p'][2]]
         g, beam = tube_clearance(tubes, q, 0.1)
         if k == 0 or g < clear[-1]['margin_m']:
-            row = {'id': 'pit stand (pole + T-bar)', 'part': 'stand', 'margin_m': R3(g), 'nearest_beam': beam, 'enters': g < 0, 'under_the_laser_sessions_tightest': g < LASER_TIGHTEST_M}
+            row = {'id': 'pit stand (pole + T-bar)', 'part': 'stand', 'margin_m': R3(g), 'nearest_beam': beam, 'enters': g < 0, 'below_the_rule': g < LASER_BODY_MIN_M}
             if k == 0:
                 clear.append(row)
             else:
                 clear[-1] = row
     cut12 = cut_alternatives(repo, M, tubes, W)
+    below = [c for c in clear if c['below_the_rule']]
+    if below:
+        raise SystemExit('laser rule: these bodies are under %.2f m from a tube: %s' % (LASER_BODY_MIN_M, [(c['id'], c['margin_m'], c['nearest_beam']) for c in below]))
+    T['cut'] = {'pars': 10, 'places_u_m': cc_hung['places_u_m'], 'picks_kg': [p['line_kg'] for p in cc_hung['picks']], 'headroom_kg': cc_hung['headroom_kg'],
+                'source': 'scripts/place/cut-count.mjs --n 10 --places %s' % ','.join('%g' % u for u in CUT_PLACES),
+                'why': 'the even spread, except PAR 08 one clamp point toward house left (u +2.5 -> +2.0): clear of laser 4a (rule >= %.2f m, the laser session 48bf1d)' % LASER_BODY_MIN_M}
     smoke = by['rig-smoke-planes']
     def to_bridge(q):
         """the gap from a point to the crane envelope at z -12 (girders x +-11.35, underside 7.69 m, +-1.45 m in z, the laser hang)"""
@@ -494,7 +534,8 @@ def build(repo, out, table_path, placement_file=None):
         'connected_w': sum(c['load_w'] for c in circ) + 720,
         'units_outside_the_hot_zone': outside, 'units_within_reach_outside_the_stage_pen': within_reach,
         'stage_pen': EY.STAGE_PEN, 'placement': placement,
-        'counts': {}, 'laser_tubes_entered': [c['id'] for c in clear if c['enters']],
+        'counts': {}, 'laser_tubes_entered': [c['id'] for c in clear if c['enters']], 'laser_body_rule_m': LASER_BODY_MIN_M,
+        'laser_body_min_margin_m': min(c['margin_m'] for c in clear),
     })
     for f in T['fixtures']:
         if f['type'] in ('up-pl5403', 'up-b380f'):
@@ -535,11 +576,19 @@ def build(repo, out, table_path, placement_file=None):
                       'circuits_ok': checks['circuits_ok'], 'outside_hot': outside, 'within_reach': within_reach, 'per_eye_par_lux': placement['per_eye_par_lux'], 'per_eye_beam_G': placement['per_eye_beam_G']}, indent=1, default=JD))
 
 
+def cut_count(repo, n, places=None):
+    cmd = ['node', os.path.join(repo, 'scripts/place/cut-count.mjs'), '--n', str(n)] + (['--places', ','.join('%g' % u for u in places)] if places else [])
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=repo)
+    if r.returncode:
+        raise SystemExit(r.stderr)
+    return json.loads(r.stdout)
+
+
 def cut_alternatives(repo, M, tubes, W):
     """10 vs 12 on the cut: cut-count.mjs's own numbers, the lx it gives the DJ's face (it hangs behind him), the laser tubes."""
     out = {}
-    for n in (10, 12):
-        cc = M.cut_places(n)
+    for name, n, places in (('10', 10, None), ('12', 12, None), ('10 as hung', 10, CUT_PLACES)):
+        cc = cut_count(repo, n, places)
         pars = M.cut_pars(cc)
         face = 0.0
         back = 0.0
@@ -552,7 +601,7 @@ def cut_alternatives(repo, M, tubes, W):
             g, beam = tube_clearance(tubes, q['p'], BODY_R['up-pl5403'])
             margins.append({'u_m': q['position'].split('u ')[1].split(' m')[0], 'p': q['p'], 'margin_m': R3(g), 'beam': beam})
         lk = {l['lens_deg']: l for l in cc['look']}
-        out[str(n)] = {'worst_pick_kg': cc['worst_pick_kg'], 'headroom_kg': cc['headroom_kg'], 'shafts_separate_pct_15': lk[15]['shafts_separate_pct'],
+        out[name] = {'places_u_m': cc['places_u_m'], 'picks_kg': [p['line_kg'] for p in cc['picks']], 'worst_pick_kg': cc['worst_pick_kg'], 'headroom_kg': cc['headroom_kg'], 'shafts_separate_pct_15': lk[15]['shafts_separate_pct'],
                        'shafts_separate_pct_25': lk[25]['shafts_separate_pct'], 'reads_as_25': lk[25]['reads_as'], 'power_w': cc['power']['w'],
                        'dj_face_lx_full': R3(face), 'dj_head_top_lx_full': R3(back), 'laser_min_margin_m': min(m['margin_m'] for m in margins),
                        'laser_tightest': sorted(margins, key=lambda m: m['margin_m'])[:2], 'places': margins}
@@ -690,7 +739,17 @@ def page(repo, out):
     eb = sp['eyes_before_after']
     eyes = ''.join('<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.3f</td><td>%.3f</td></tr>' % (E(e), eb['before']['par_steel_lux_at_eye'][e], eb['after']['par_steel_lux_at_eye'][e],
                    eb['before']['beam_G'][e], eb['after']['beam_G'][e]) for e in eb['eyes'])
-    doc = TEMPLATE.format(eyes=eyes, pairs=pairs, zones=zones, stage=stage, cutrows=cutrows, lz=lz, hero='<div class="pair">%s%s</div>' % (fig('bt-t40-peak-floor'), fig('sl-t40-peak-floor')),
+    caps = ''
+    cl = os.path.join(out, 'caps', 'frame-luma.json')
+    if os.path.exists(cl):
+        cf = lambda n, words: ('<figure><a href="caps/%s.png"><img src="caps/%s.png" alt="%s" loading="lazy"></a><figcaption><b>%s</b><small>white-out %s %%</small></figcaption></figure>'
+                               % (n, n, E(words), E(words), json.load(open(cl)).get(n, {}).get('white_pct', '–')))
+        rows = ''.join('<tr><td>%s</td>%s</tr>' % (lk, ''.join('<td>%s %% (drawn %s)</td>' % (t['white_pct'], t['drawn']) for t in LASER_CAPS[lk]['tested'])) for lk in ('peak', 'dark'))
+        caps = ('<h2>The lasers\' desk caps — measured from the dance floor</h2><p class="note">%s. Cap: peak <b>%.0f %%</b> (drawn %.2f of full), dark <b>%.0f %%</b> (drawn %.2f). '
+                'The peak frames further down were drawn with the lasers at 100 %%, before the cap.</p><div class="wrap"><table><tr><th>look</th><th>100 %%</th><th>40 %%</th><th>25 %%</th><th>15 %%</th><th>0 %%</th></tr>%s</table></div>'
+                '<div class="pair">%s%s</div>') % (E(LASER_CAP_METHOD), 100 * LASER_CAPS['peak']['fader'], LASER_CAPS['peak']['drawn_fraction_measured'], 100 * LASER_CAPS['dark']['fader'],
+                                                  LASER_CAPS['dark']['drawn_fraction_measured'], rows, cf('cap-peak-100', 'peak, lasers 100 %'), cf('cap-peak-040', 'peak, lasers at the cap, 40 %'))
+    doc = TEMPLATE.format(caps=caps, eyes=eyes, pairs=pairs, zones=zones, stage=stage, cutrows=cutrows, lz=lz, hero='<div class="pair">%s%s</div>' % (fig('bt-t40-peak-floor'), fig('sl-t40-peak-floor')),
                           hero2='<div class="pair">%s%s</div><div class="pair">%s%s</div>' % (fig('bt-t40-peak-wingL'), fig('sl-t40-peak-wingL'), fig('bt-t40-peak-behind'), fig('sl-t40-peak-behind')))
     open(os.path.join(out, 'index.html'), 'w').write(doc)
     print('page -> %s' % os.path.join(out, 'index.html'))
@@ -739,6 +798,8 @@ area, and nobody within 30° of looking down a beam.</div>
 lasers' own brightness, left as the laser session set it. (2) The DJ: no lamp shines into his eyes from within 20° of where he
 looks, but the keys aimed at him light the haze around him, a veil (his view is ~30× brighter than in B tuned). Lowering the keys
 or a higher key position trades it against how well he reads from the floor.</div>
+
+{caps}
 
 <h2>What each place in the hot zone sees — before and after</h2>
 <p class="note">Every unit at full. The light the lit steel sends to that eye (lx, an upper bound), and the beams' glow in the
