@@ -284,7 +284,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const { rowTop: rigRowTop, chipTop: rigChipTop } = rigChromeTops(topClear, {
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
-        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview)
+        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
+        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, each one 56 px line, all top-right
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (hasBuilding ? 3 : 2) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.

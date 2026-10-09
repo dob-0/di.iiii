@@ -57,7 +57,7 @@
         ],
         "x_m": [
           -10.0,
-          -6.5
+          -6.8
         ],
         "z_m": [
           4.1,
@@ -70,7 +70,9 @@
             0,
             0.4
           ],
-          "why": "his box reaches the transformer (x -11..-9.5, z -4..4, y 0-2.5; its z is LOW, +-3 m) over x -10..-9.5, z 3.7..4.0. Least move that clears it by 0.1 m: +0.4 m toward the audience (+z). Moving it +x instead (0.6 m) would put it on the DJ step (x -6.7). FLAG: tape the transformer's z; inside its +-3 m the overlap may be larger or none."
+          "why": "his box reaches the transformer (x -11..-9.5, z -4..4, y 0-2.5; its z is LOW, +-3 m) over x -10..-9.5, z 3.7..4.0. Least move that clears it by 0.1 m: +0.4 m toward the audience (+z). Moving it +x instead (0.6 m) would put it on the DJ step (x -6.7). FLAG: tape the transformer's z; inside its +-3 m the overlap may be larger or none.",
+          "trimmed_x_m": 0.3,
+          "trimmed_why": "bug fix 2026-10-09: his box's +x edge (x -6.5) stands 0.2 m inside the 3 x 2 m step (x -6.7..-3.7, z 3.65..5.65): the box and the step were one solid. The placeholder's +x edge is trimmed to x -6.8 (0.1 m clear of the step, as the other clearances); its left edge, z and height are unchanged. The organiser's real box size is theirs (no sound design by di)."
         }
       },
       {

@@ -462,8 +462,8 @@
   {
    "id": "rig-par-cut-bridge-01",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -476,9 +476,9 @@
     0.166
    ],
    "r": [
-    2.847714,
+    -0.111241,
     0.0,
-    0.584656
+    1.488805
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -495,8 +495,8 @@
   {
    "id": "rig-par-cut-bridge-02",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -509,9 +509,9 @@
     0.167
    ],
    "r": [
-    2.79788,
+    -0.072998,
     0.0,
-    0.124142
+    1.435516
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -528,8 +528,8 @@
   {
    "id": "rig-par-cut-bridge-03",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -542,9 +542,9 @@
     0.168
    ],
    "r": [
-    2.53524,
+    -0.037997,
     0.0,
-    -0.778048
+    1.156454
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -561,8 +561,8 @@
   {
    "id": "rig-par-cut-bridge-04",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -575,9 +575,9 @@
     0.168
    ],
    "r": [
-    2.324211,
+    -0.032285,
     0.0,
-    -1.096369
+    1.011365
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -3307,41 +3307,50 @@
      {
       "id": "1a",
       "to": [
-       -5.948,
-       6.35,
-       -0.7
+       0.547,
+       3.873,
+       0.5
       ],
-      "length_m": 38.5,
+      "length_m": 40.3,
       "pass": true,
-      "margin_after_zone_deg": 0.98,
+      "margin_after_zone_deg": 0.36,
       "r": [
-       -1.542233,
+       -1.480938,
        0.0,
-       -0.008256
+       0.153741
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "1b",
-      "to": [
-       -5.648,
-       6.35,
-       -0.7
+      "ends_on": [
+       "press",
+       "press-crown"
       ],
-      "length_m": 38.5,
-      "pass": true,
-      "margin_after_zone_deg": 0.98,
-      "r": [
-       -1.542233,
-       0.0,
-       -0.000467
+      "max_z_m": 0.5,
+      "end_height_m": 3.873,
+      "lowest_end_m_over_fan": 3.307,
+      "alt": {
+       "to": [
+        0.547,
+        4.175,
+        0.5
+       ],
+       "aimed_at": [
+        0.5,
+        4.2,
+        0.2
+       ],
+       "half_fan_deg": 0.86,
+       "margin_after_zone_deg": 0.06
+      },
+      "was_v1_0_beams": [
+       "1a",
+       "1b"
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "duty": 1.0,
+      "candidates_that_pass": 6
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "note_v1_1": "ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at [0.547, 3.873, 0.5] (margin 0.36 deg); next best [0.547, 4.175, 0.5] (0.06 deg). Beam id kept as 1a so the looks (cube6a) still match; v1.0 had ['1a', '1b']."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3377,41 +3386,34 @@
      {
       "id": "2a",
       "to": [
-       -5.348,
-       6.35,
-       -0.7
+       1.068,
+       3.855,
+       0.7
       ],
-      "length_m": 39.5,
+      "length_m": 40.1,
       "pass": true,
-      "margin_after_zone_deg": 0.93,
+      "margin_after_zone_deg": 0.31,
       "r": [
-       -1.542233,
+       -1.480939,
        0.0,
-       -0.22901
+       -0.063865
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "2b",
-      "to": [
-       -5.048,
-       6.35,
-       -0.7
+      "ends_on": "press",
+      "max_z_m": 0.7,
+      "end_height_m": 3.855,
+      "lowest_end_m_over_fan": 3.262,
+      "alt": null,
+      "was_v1_0_beams": [
+       "2a",
+       "2b"
       ],
-      "length_m": 39.5,
-      "pass": true,
-      "margin_after_zone_deg": 0.94,
-      "r": [
-       -1.542233,
-       0.0,
-       -0.22161
-      ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "duty": 1.0,
+      "candidates_that_pass": 6
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "note_v1_1": "ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at [1.068, 3.855, 0.7] (margin 0.31 deg); next best None. Beam id kept as 2a so the looks (cube6a) still match; v1.0 had ['2a', '2b']."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3447,41 +3449,34 @@
      {
       "id": "3a",
       "to": [
-       -4.748,
-       6.35,
-       -0.7
+       1.597,
+       3.855,
+       0.7
       ],
-      "length_m": 41.2,
+      "length_m": 40.9,
       "pass": true,
-      "margin_after_zone_deg": 0.87,
+      "margin_after_zone_deg": 0.1,
       "r": [
-       -1.542233,
+       -1.480939,
        0.0,
-       -0.360695
+       -0.201489
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "3b",
-      "to": [
-       -4.448,
-       6.35,
-       -0.7
+      "ends_on": "press",
+      "max_z_m": 0.7,
+      "end_height_m": 3.855,
+      "lowest_end_m_over_fan": 3.26,
+      "alt": null,
+      "was_v1_0_beams": [
+       "3a",
+       "3b"
       ],
-      "length_m": 41.1,
-      "pass": true,
-      "margin_after_zone_deg": 0.87,
-      "r": [
-       -1.542233,
-       0.0,
-       -0.353859
-      ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "duty": 1.0,
+      "candidates_that_pass": 6
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "note_v1_1": "ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at [1.597, 3.855, 0.7] (margin 0.1 deg); next best None. Beam id kept as 3a so the looks (cube6a) still match; v1.0 had ['3a', '3b']."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3517,41 +3512,50 @@
      {
       "id": "4a",
       "to": [
-       -6.398,
-       5.95,
-       -0.7
+       0.25,
+       3.9,
+       1.0
       ],
-      "length_m": 24.4,
+      "length_m": 28.1,
       "pass": true,
-      "margin_after_zone_deg": 1.08,
+      "margin_after_zone_deg": 0.55,
       "r": [
-       -1.610524,
+       -1.527854,
        0.0,
-       0.200137
+       0.421859
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "4b",
-      "to": [
-       -6.098,
-       5.95,
-       -0.7
+      "ends_on": [
+       "press",
+       "press-crown"
       ],
-      "length_m": 24.5,
-      "pass": true,
-      "margin_after_zone_deg": 1.07,
-      "r": [
-       -1.610524,
-       0.0,
-       0.212153
+      "max_z_m": 1.0,
+      "end_height_m": 3.9,
+      "lowest_end_m_over_fan": 3.507,
+      "alt": {
+       "to": [
+        0.25,
+        3.5,
+        1.0
+       ],
+       "aimed_at": [
+        0.25,
+        3.5,
+        1.0
+       ],
+       "half_fan_deg": 1.02,
+       "margin_after_zone_deg": 0.22
+      },
+      "was_v1_0_beams": [
+       "4a",
+       "4b"
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "duty": 1.0,
+      "candidates_that_pass": 25
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "note_v1_1": "ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at [0.25, 3.9, 1.0] (margin 0.55 deg); next best [0.25, 3.5, 1.0] (0.22 deg). Beam id kept as 4a so the looks (cube6a) still match; v1.0 had ['4a', '4b']."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3587,41 +3591,47 @@
      {
       "id": "5a",
       "to": [
-       -4.298,
-       5.95,
-       -0.7
+       2.799,
+       3.583,
+       0.5
       ],
-      "length_m": 28.5,
+      "length_m": 26.5,
       "pass": true,
-      "margin_after_zone_deg": 0.81,
+      "margin_after_zone_deg": 0.45,
       "r": [
-       -1.610524,
+       -1.514402,
        0.0,
-       -0.576397
+       -0.324291
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "5b",
-      "to": [
-       -3.998,
-       5.95,
-       -0.7
+      "ends_on": "press",
+      "max_z_m": 0.5,
+      "end_height_m": 3.583,
+      "lowest_end_m_over_fan": 3.212,
+      "alt": {
+       "to": [
+        3.05,
+        3.5,
+        1.0
+       ],
+       "aimed_at": [
+        3.05,
+        3.5,
+        1.0
+       ],
+       "half_fan_deg": 0.89,
+       "margin_after_zone_deg": 0.09
+      },
+      "was_v1_0_beams": [
+       "5a",
+       "5b"
       ],
-      "length_m": 28.4,
-      "pass": true,
-      "margin_after_zone_deg": 0.69,
-      "r": [
-       -1.610524,
-       0.0,
-       -0.567529
-      ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "duty": 1.0,
+      "candidates_that_pass": 24
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "note_v1_1": "ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at [2.799, 3.583, 0.5] (margin 0.45 deg); next best [3.05, 3.5, 1.0] (0.09 deg). Beam id kept as 5a so the looks (cube6a) still match; v1.0 had ['5a', '5b']."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3657,67 +3667,53 @@
      {
       "id": "6a",
       "to": [
-       -6.698,
-       6.75,
-       -0.7
+       2.092,
+       3.762,
+       0.7
       ],
-      "length_m": 11.0,
-      "pass": true,
-      "margin_after_zone_deg": 1.16,
-      "r": [
-       -1.600096,
-       0.0,
-       -0.684036
-      ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "6b",
-      "to": [
-       -3.698,
-       6.75,
-       -0.7
-      ],
-      "length_m": 9.4,
+      "length_m": 10.5,
       "pass": true,
       "margin_after_zone_deg": 2.2,
       "r": [
-       -1.600096,
+       -1.301751,
        0.0,
-       -0.434279
+       0.176014
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "ends_on": "press",
+      "max_z_m": 0.7,
+      "end_height_m": 3.762,
+      "lowest_end_m_over_fan": 3.61,
+      "alt": {
+       "to": [
+        1.162,
+        3.385,
+        0.9
+       ],
+       "aimed_at": [
+        1.1,
+        3.6,
+        0.2
+       ],
+       "half_fan_deg": 1.96,
+       "margin_after_zone_deg": 1.16
+      },
+      "was_v1_0_beams": [
+       "6a",
+       "6b"
+      ],
+      "duty": 1.0,
+      "candidates_that_pass": 28
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "note_v1_1": "ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at [2.092, 3.762, 0.7] (margin 2.2 deg); next best [1.162, 3.385, 0.9] (1.16 deg). Beam id kept as 6a so the looks (cube6a) still match; v1.0 had ['6a', '6b']."
    },
    "power_w": 120,
    "circuit": "C15"
   }
  ],
  "solids": [
-  {
-   "id": "rig-ash-wall",
-   "name": "the ash wall: beam-stop panel, matte black, 4.0 x 2.4 m, 1.5 mm aluminium sheet on a light steel frame, ",
-   "kind": "box",
-   "p": [
-    -5.198,
-    5.15,
-    -0.65
-   ],
-   "r": [
-    0,
-    0,
-    0
-   ],
-   "s": [
-    4.0,
-    2.4000000000000004,
-    0.1
-   ]
-  },
   {
    "id": "rig-tower-cube6",
    "name": "tower for laser 6 (H30V), base plate + ballast",
@@ -3763,7 +3759,7 @@
    "name": "speaker L - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
    "kind": "box",
    "p": [
-    -8.25,
+    -8.4,
     0.0,
     5.4
    ],
@@ -3773,7 +3769,7 @@
     0
    ],
    "s": [
-    3.5,
+    3.2,
     2.0,
     2.6
    ]
@@ -3927,13 +3923,13 @@
      "#ff3a12",
      0.8
     ],
-    "ash wall": [
-     "#ff3a12",
-     0.12
-    ],
     "halo": [
      "#ff3a12",
      0.4
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.12
     ]
    }
   },
@@ -4066,9 +4062,9 @@
      1.0
     ]
    },
-   "units": "laser 6, one beam (6a), the cube drawing a single point (duty ~0.9)",
+   "units": "laser 6, its one beam (6a), the cube drawing its one point (duty 1)",
    "when": "act 1, the first 20 minutes after the doors; returns once, at the very end",
-   "why": "a single white line from the dark behind the press to the wall behind the DJ in an empty black hall: the first thing anyone sees, and it is almost nothing"
+   "why": "a single white line from the dark behind the press to the press in an empty black hall: the first thing anyone sees, and it is almost nothing"
   },
   {
    "id": "still_smoking",
@@ -4145,7 +4141,7 @@
      1.0
     ]
    },
-   "units": "all 12 laser lines + the fan of 7 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment",
+   "units": "all 6 laser lines + the fan of 7 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment",
    "when": "act 3 only, on the drop, 16 bars, at most 3 times an hour; then the black",
    "why": "everything the night held back, at once, once: the fire burns again for 30 seconds and leaves ash"
   },
@@ -4190,10 +4186,10 @@
    "set": "the build (01:00-02:30)",
    "use": [
     "columns of fire appear at the first build",
-    "sparks: the chase one cube at a time (2, then 1+3 ... never all 12)",
+    "sparks: the chase one cube at a time (2, then 1+3 ... never all 6)",
     "the roof at 01:00 and 02:00"
    ],
-   "hold": "all 12 lines at once, the fan, the blinders, the strobes, the fire",
+   "hold": "all 6 lines at once, the fan, the blinders, the strobes, the fire",
    "layers": "2"
   },
   {
@@ -4249,8 +4245,8 @@
    ],
    [
     "F5",
-    "ash wall",
-    "the 4 grazers, ember 5-15 %"
+    "press graze",
+    "the 4 back grazers on the press face, ember 5-15 %"
    ],
    [
     "F6",
@@ -4536,7 +4532,7 @@
  },
  "power": {
   "summary": {
-   "connected_w": 35984,
+   "connected_w": 36104,
    "base_w": 12820,
    "worst_look_w": 16292,
    "pa_w": 0,
@@ -4544,7 +4540,7 @@
    "running_total_w": 17792,
    "cap_w": 30000,
    "ok": true,
-   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 21.8 kW with the PA and FOH = about 32 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.0 kW lighting + 4.0 kW PA; photograph the board today (breakers, phases, earth)",
+   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 17.8 kW with FOH = about 26 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.1 kW (lighting, smoke, lasers, network); the sound is the organiser's own supply; photograph the board today (breakers, phases, earth)",
    "watts_basis": "fixtures.json (supply W where the maker gives it, else rated W); LaserCube 120 W from its manual; running = per-look levels x the duties above (ESTIMATE)",
    "pa_note": "the sound is the organiser's (owner 10-08 night): v1.0 counted 4.0 kW for the PA; it is on the organiser's own supply plan, not in di's lighting total",
    "laser_note": "the cubes at 120 W each from their adapters (ULTRA MK2 manual), 6 W optical (owner 10-08 night)"
@@ -5125,6 +5121,8 @@
    ]
   }
  },
+ "laser_duty": 1.0,
+ "lasers_what": "v1.1 (owner 2026-10-09): 6 beams, ONE static beam per LaserCube with the cube's whole 6 W (duty 1); no ash wall, no panel; each beam ends on the hall's own press (face z 0.2 or crown z 0.8, >= 3.0 m, z <= 3.3). The 12 beams and the wall of v1.0 are v1.0's record.",
  "stage": {
   "booth_from": [
    0.128,
@@ -5178,7 +5176,7 @@
     "label": "Floor z 20"
    },
    {
-    "id": "foh",
+    "id": "rig",
     "position": [
      -5.2,
      2.2,
@@ -5190,7 +5188,7 @@
      -8.0
     ],
     "fov": 55,
-    "label": "FOH z 29"
+    "label": "Rig - FOH z 29"
    },
    {
     "id": "dj",
@@ -5263,11 +5261,6 @@
    ],
    "D_CUT": [
     -4.0,
-    -0.35,
-    -20.85
-   ],
-   "D_WALL": [
-    -5.328,
     -0.35,
     -20.85
    ]
@@ -5451,14 +5444,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -6.758,
-     6.683,
-     -0.6
+    "re_aimed_at_press": [
+     0.7,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 15.8
+    "re_aimed_at": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "column x 12 z 0.5 (shaft)",
+    "v1_1_end_cls": "column",
+    "aim_deg_change": 45.3
    },
    {
     "id": "rig-par-cut-bridge-02",
@@ -5469,14 +5467,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -6.777,
-     6.678,
-     -0.6
+    "re_aimed_at_press": [
+     1.3,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 28.2
+    "re_aimed_at": [
+     1.3,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 62.2
    },
    {
     "id": "rig-par-cut-bridge-03",
@@ -5487,14 +5490,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -4.336,
-     6.664,
-     -0.6
+    "re_aimed_at_press": [
+     1.9,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 44.6
+    "re_aimed_at": [
+     1.9,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 109.8
    },
    {
     "id": "rig-par-cut-bridge-04",
@@ -5505,14 +5513,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -3.607,
-     6.659,
-     -0.6
+    "re_aimed_at_press": [
+     2.5,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 28.4
+    "re_aimed_at": [
+     2.5,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 142.1
    },
    {
     "id": "rig-par-neighbour-02",
@@ -6285,34 +6298,37 @@
      -39.2
     ],
     "to": [
-     -5.948,
-     6.35,
-     -0.7
+     0.547,
+     3.873,
+     0.5
     ],
-    "length_m": 38.5,
+    "length_m": 40.3,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.98,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "1b",
-    "cube": "rig-lasercube-cut-01",
-    "from": [
-     -5.63,
-     7.45,
-     -39.2
+    "ends_on": [
+     "press",
+     "press-crown"
     ],
-    "to": [
-     -5.648,
-     6.35,
-     -0.7
-    ],
-    "length_m": 38.5,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.98,
-    "max_z_m": -0.7
+    "margin_after_zone_deg": 0.36,
+    "max_z_m": 0.5,
+    "end_height_m": 3.873,
+    "alt": {
+     "to": [
+      0.547,
+      4.175,
+      0.5
+     ],
+     "aimed_at": [
+      0.5,
+      4.2,
+      0.2
+     ],
+     "half_fan_deg": 0.86,
+     "margin_after_zone_deg": 0.06
+    },
+    "was_v1_0_beams": [
+     "1a",
+     "1b"
+    ]
    },
    {
     "beam": "2a",
@@ -6323,34 +6339,21 @@
      -39.2
     ],
     "to": [
-     -5.348,
-     6.35,
-     -0.7
+     1.068,
+     3.855,
+     0.7
     ],
-    "length_m": 39.5,
+    "length_m": 40.1,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.93,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "2b",
-    "cube": "rig-lasercube-cut-02",
-    "from": [
-     3.63,
-     7.45,
-     -39.2
-    ],
-    "to": [
-     -5.048,
-     6.35,
-     -0.7
-    ],
-    "length_m": 39.5,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.94,
-    "max_z_m": -0.7
+    "ends_on": "press",
+    "margin_after_zone_deg": 0.31,
+    "max_z_m": 0.7,
+    "end_height_m": 3.855,
+    "alt": null,
+    "was_v1_0_beams": [
+     "2a",
+     "2b"
+    ]
    },
    {
     "beam": "3a",
@@ -6361,34 +6364,21 @@
      -39.2
     ],
     "to": [
-     -4.748,
-     6.35,
-     -0.7
+     1.597,
+     3.855,
+     0.7
     ],
-    "length_m": 41.2,
+    "length_m": 40.9,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.87,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "3b",
-    "cube": "rig-lasercube-cut-03",
-    "from": [
-     9.78,
-     7.45,
-     -39.2
-    ],
-    "to": [
-     -4.448,
-     6.35,
-     -0.7
-    ],
-    "length_m": 41.1,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.87,
-    "max_z_m": -0.7
+    "ends_on": "press",
+    "margin_after_zone_deg": 0.1,
+    "max_z_m": 0.7,
+    "end_height_m": 3.855,
+    "alt": null,
+    "was_v1_0_beams": [
+     "3a",
+     "3b"
+    ]
    },
    {
     "beam": "4a",
@@ -6399,34 +6389,37 @@
      -24.6
     ],
     "to": [
-     -6.398,
-     5.95,
-     -0.7
+     0.25,
+     3.9,
+     1.0
     ],
-    "length_m": 24.4,
+    "length_m": 28.1,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 1.08,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "4b",
-    "cube": "rig-lasercube-cut-04",
-    "from": [
-     -11.25,
-     5.0,
-     -24.6
+    "ends_on": [
+     "press",
+     "press-crown"
     ],
-    "to": [
-     -6.098,
-     5.95,
-     -0.7
-    ],
-    "length_m": 24.5,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 1.07,
-    "max_z_m": -0.7
+    "margin_after_zone_deg": 0.55,
+    "max_z_m": 1.0,
+    "end_height_m": 3.9,
+    "alt": {
+     "to": [
+      0.25,
+      3.5,
+      1.0
+     ],
+     "aimed_at": [
+      0.25,
+      3.5,
+      1.0
+     ],
+     "half_fan_deg": 1.02,
+     "margin_after_zone_deg": 0.22
+    },
+    "was_v1_0_beams": [
+     "4a",
+     "4b"
+    ]
    },
    {
     "beam": "5a",
@@ -6437,34 +6430,34 @@
      -24.6
     ],
     "to": [
-     -4.298,
-     5.95,
-     -0.7
+     2.799,
+     3.583,
+     0.5
     ],
-    "length_m": 28.5,
+    "length_m": 26.5,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.81,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "5b",
-    "cube": "rig-lasercube-cut-05",
-    "from": [
-     11.25,
-     5.0,
-     -24.6
-    ],
-    "to": [
-     -3.998,
-     5.95,
-     -0.7
-    ],
-    "length_m": 28.4,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.69,
-    "max_z_m": -0.7
+    "ends_on": "press",
+    "margin_after_zone_deg": 0.45,
+    "max_z_m": 0.5,
+    "end_height_m": 3.583,
+    "alt": {
+     "to": [
+      3.05,
+      3.5,
+      1.0
+     ],
+     "aimed_at": [
+      3.05,
+      3.5,
+      1.0
+     ],
+     "half_fan_deg": 0.89,
+     "margin_after_zone_deg": 0.09
+    },
+    "was_v1_0_beams": [
+     "5a",
+     "5b"
+    ]
    },
    {
     "beam": "6a",
@@ -6475,43 +6468,175 @@
      -9.23
     ],
     "to": [
-     -6.698,
-     6.75,
-     -0.7
+     2.092,
+     3.762,
+     0.7
     ],
-    "length_m": 11.0,
+    "length_m": 10.5,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 1.16,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "6b",
-    "cube": "rig-lasercube-cut-06",
-    "from": [
-     0.26,
-     6.5,
-     -9.23
-    ],
-    "to": [
-     -3.698,
-     6.75,
-     -0.7
-    ],
-    "length_m": 9.4,
-    "pass": true,
-    "ends_on": "ash-wall",
+    "ends_on": "press",
     "margin_after_zone_deg": 2.2,
-    "max_z_m": -0.7
+    "max_z_m": 0.7,
+    "end_height_m": 3.762,
+    "alt": {
+     "to": [
+      1.162,
+      3.385,
+      0.9
+     ],
+     "aimed_at": [
+      1.1,
+      3.6,
+      0.2
+     ],
+     "half_fan_deg": 1.96,
+     "margin_after_zone_deg": 1.16
+    },
+    "was_v1_0_beams": [
+     "6a",
+     "6b"
+    ]
    }
   ],
   "lasers_pass": true,
-  "lasers_min_margin_deg": 0.69,
+  "lasers_min_margin_deg": 0.1,
   "lasers_never_over_audience": true,
+  "laser_count": 6,
+  "laser_beams_per_cube": 1,
+  "laser_rule_margin_deg_v1_0": 0.5,
+  "laser_brightness_6w_one_beam": {
+   "1a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.89,
+     "cd_m2": 942.7
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.89,
+     "cd_m2": 1345.3
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 2545.1
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 3174.2
+    }
+   },
+   "2a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.56,
+     "cd_m2": 3433.4
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.56,
+     "cd_m2": 4874.2
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.0,
+     "cd_m2": 0.0
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.0,
+     "cd_m2": 0.0
+    }
+   },
+   "3a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.0,
+     "cd_m2": 0.0
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.0,
+     "cd_m2": 0.0
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.44,
+     "cd_m2": 5192.3
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.44,
+     "cd_m2": 6440.0
+    }
+   },
+   "4a": {
+    "lm_full_power": 317.8,
+    "optical_w": 1.95,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.89,
+     "cd_m2": 85.2
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.89,
+     "cd_m2": 149.8
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.89,
+     "cd_m2": 158.1
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.89,
+     "cd_m2": 241.6
+    }
+   },
+   "5a": {
+    "lm_full_power": 317.8,
+    "optical_w": 1.95,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.0,
+     "cd_m2": 0.0
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.0,
+     "cd_m2": 0.0
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 502.8
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 772.0
+    }
+   },
+   "6a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.44,
+     "cd_m2": 983.2
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.44,
+     "cd_m2": 2187.9
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.11,
+     "cd_m2": 2989.6
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.11,
+     "cd_m2": 5863.3
+    }
+   }
+  },
   "laser_safety_6w": {
    "nohd_m": 544,
-   "diffuse_nhz_m_off_the_wall": 0.061,
-   "basis": "IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho 0.05 (matte black paint, ASSUMED)"
+   "diffuse_nhz_m_off_the_press": 0.055,
+   "nohd_unchanged_by_one_beam": true,
+   "basis": "IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho = the press albedo 0.0407 (hall.json, matte dark; NOT measured). ONE beam carries the whole cube power of 6 W, as the scan-failure case always did, so the NOHD does not change with 1 or 2 beams drawn"
   },
   "ends_changed": [
    {
@@ -6552,6 +6677,98 @@
     "v1_1_end": "press",
     "v1_1_end_cls": "machine",
     "aim_deg_change": 0.0
+   },
+   {
+    "id": "rig-par-cut-bridge-01",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "column x 12 z 0.5 (shaft)",
+    "v1_1_end_cls": "column",
+    "aim_deg_change": 45.3
+   },
+   {
+    "id": "rig-par-cut-bridge-02",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     1.3,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     1.3,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 62.2
+   },
+   {
+    "id": "rig-par-cut-bridge-03",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     1.9,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     1.9,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 109.8
+   },
+   {
+    "id": "rig-par-cut-bridge-04",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     2.5,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     2.5,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 142.1
    },
    {
     "id": "rig-par-neighbour-02",
@@ -6658,7 +6875,31 @@
     "aim_deg_change": 0.0
    }
   ],
-  "new_blocks": [],
+  "new_blocks": [
+   {
+    "id": "rig-par-cut-bridge-01",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "column x 12 z 0.5 (shaft)",
+    "v1_1_end_cls": "column",
+    "aim_deg_change": 45.3
+   }
+  ],
   "on_the_floor": [],
   "off_floor_moves": {
    "rig-par-press-sides-02": [
@@ -6674,20 +6915,14 @@
     29.0
    ],
    "foh_per_beam": {
-    "1a": 0.28,
-    "1b": 0.28,
-    "2a": 0.6,
-    "2b": 0.62,
-    "3a": 0.43,
-    "3b": 0.45,
-    "4a": 0.6,
-    "4b": 0.56,
-    "5a": 0.31,
-    "5b": 0.31,
-    "6a": 0.33,
-    "6b": 0.7
+    "1a": 0.88,
+    "2a": 0.54,
+    "3a": 0.0,
+    "4a": 0.83,
+    "5a": 0.0,
+    "6a": 0.45
    },
-   "foh_min": 0.28,
+   "foh_min": 0.0,
    "chosen": {
     "at": [
      -7.0,
@@ -6696,19 +6931,13 @@
     "eye_m": 1.7,
     "per_beam": {
      "1a": 1.0,
-     "1b": 1.0,
-     "2a": 1.0,
-     "2b": 1.0,
-     "3a": 1.0,
-     "3b": 1.0,
+     "2a": 0.98,
+     "3a": 0.98,
      "4a": 1.0,
-     "4b": 1.0,
-     "5a": 0.97,
-     "5b": 0.93,
-     "6a": 1.0,
-     "6b": 1.0
+     "5a": 0.96,
+     "6a": 1.0
     },
-    "with_foh_min": 0.93
+    "with_foh_min": 0.96
    },
    "method": "each beam sampled every 1 m; a sample is seen if the sight line from the eye reaches it with nothing in between (occlusion_lib.Obstacles over hall v9-show-park + the rig boxes); \"whole\" = the share of samples seen"
   }
@@ -6731,8 +6960,8 @@
   },
   {
    "who": "Kira",
-   "role": "volunteer: the laser SPOTTER with E-STOP 2 at x -9, z 12 (house left, in front of the stage line; sees every beam whole with FOH, v1.0 engine)",
-   "where": "x -9, z 12 (to re-check for v1.1: the stage moved)"
+   "role": "volunteer: the laser SPOTTER with E-STOP 2 at x -7, z -4.5 (behind the barrier; with FOH sees >= 96 % of every beam; chosen by the v1.1 sight-line cast, not v1.0's x -9, z 12 which is on the v1.1 dance floor)",
+   "where": "x -7, z -4.5"
   },
   {
    "who": "Eter",

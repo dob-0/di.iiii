@@ -70,8 +70,13 @@ const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
 // 30 m: the narrowest the room can draw without aliasing). I = flux / solid angle, x the rig's one exposure number.
 export const LASER_ANGLE = 0.002
 export const LASER_APERTURE = 0.002
-export const laserIntensity = (colour) => {
-    const lm = String(colour).toLowerCase() === '#ff3a12' ? 72 : 254
+// share: the part of the cube's FULL-power flux one drawn beam carries. Full power at the 6 W unit: ash 1131 lm, ember 318 lm (moxir_v1.py
+// colour_power: CIE 1924 V(lambda) over the cube's three diodes). v1.0 drew 254 / 72 lm = 0.225 of that: its 2 beams per cube at duty 0.45 and then
+// halved AGAIN (a double count found 2026-10-09, kept for v1.0 so its look does not move). v1.1 draws ONE static beam per cube with the cube's whole
+// power (owner 2026-10-09: "6 laser beams, not 12"): the rig file says `laser.room_flux_share` 1.
+export const laserIntensity = (colour, share = null) => {
+    const ember = String(colour).toLowerCase() === '#ff3a12'
+    const lm = share === null ? (ember ? 72 : 254) : (ember ? 317.8 : 1131) * share        // v1.0's own figures when the rig file gives no share
     const omega = 2 * Math.PI * (1 - Math.cos(LASER_ANGLE))
     return Math.round((lm / omega) * SCALE)
 }
@@ -117,7 +122,7 @@ export const v1Entities = (rig) => {
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
                         appearance: { color: f.colour, opacity: 1 },
-                        light: { color: f.colour, intensity: laserIntensity(f.colour), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
+                        light: { color: f.colour, intensity: laserIntensity(f.colour, f.laser.room_flux_share ?? null), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
                         beam: { visible: true, haze: 1, aperture: LASER_APERTURE },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
                         fixture: { type: 'ext-lc-ultra-mk2', unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
