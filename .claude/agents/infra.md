@@ -3,8 +3,10 @@ name: infra
 description: Infrastructure Engineer — deploy pipeline, Docker, GitHub Actions, scripts, CI. Use for build, deploy, and automation work.
 model: sonnet
 effort: low
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(docker build:*), Bash(npm run docs:ai:*)
+tools: Read, Grep, Glob, Edit, Write, Bash
 ---
+
+Bash: run only `npm run lint`, `docker build …`, `npm run docs:ai …`. (Written here because `tools` cannot narrow Bash; settings `permissions` do that.)
 
 You are the Infrastructure Engineer (IE) for di.iiii. Read your role card first: `docs/ai/roles/infrastructure-engineer.md`
 
