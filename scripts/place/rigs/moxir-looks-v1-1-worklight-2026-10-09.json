@@ -12,13 +12,9 @@
    "#a3200c",
    0.3
   ],
-  "far wall": [
-   "#a3200c",
-   0.35
-  ],
   "far columns": [
    "#a3200c",
-   0.3
+   0.35
   ]
  },
  "looks": [
@@ -48,17 +44,9 @@
      "#e8e4dc",
      1
     ],
-    "roof": [
+    "fan": [
      "#e8e4dc",
-     1
-    ],
-    "side roof": [
-     "#e8e4dc",
-     1
-    ],
-    "far wall": [
-     "#e8e4dc",
-     1
+     0.5
     ],
     "far columns": [
      "#e8e4dc",
@@ -67,10 +55,6 @@
     "span columns": [
      "#e8e4dc",
      1
-    ],
-    "blinders": [
-     "#e8e4dc",
-     0.4
     ],
     "still smoking": [
      "#e8e4dc",
@@ -104,17 +88,9 @@
      "#e8e4dc",
      0.5
     ],
-    "roof": [
+    "fan": [
      "#e8e4dc",
-     0.5
-    ],
-    "side roof": [
-     "#e8e4dc",
-     0.5
-    ],
-    "far wall": [
-     "#e8e4dc",
-     0.5
+     0.25
     ],
     "far columns": [
      "#e8e4dc",
@@ -123,10 +99,6 @@
     "span columns": [
      "#e8e4dc",
      0.5
-    ],
-    "blinders": [
-     "#e8e4dc",
-     0.2
     ],
     "still smoking": [
      "#e8e4dc",
@@ -137,7 +109,7 @@
   {
    "id": "black",
    "title": "The black (ember)",
-   "intent": "Dark but not black: deep ember on the columns and far wall, the machines glowing. 3-5 s before a drop.",
+   "intent": "Dark but not black: deep ember on the columns, near and far, the machines glowing. 3-5 s before a drop.",
    "floor": false,
    "parts": {
     "still smoking": [
@@ -148,13 +120,9 @@
      "#a3200c",
      0.35
     ],
-    "far wall": [
-     "#a3200c",
-     0.4
-    ],
     "far columns": [
      "#a3200c",
-     0.35
+     0.4
     ]
    }
   },
@@ -168,13 +136,9 @@
      "#ff3a12",
      0.35
     ],
-    "far wall": [
-     "#a3200c",
-     0.45
-    ],
     "far columns": [
      "#a3200c",
-     0.35
+     0.45
     ]
    }
   },
@@ -191,10 +155,6 @@
     "far columns": [
      "#a3200c",
      0.55
-    ],
-    "far wall": [
-     "#a3200c",
-     0.5
     ],
     "still smoking": [
      "#ff3a12",
@@ -280,7 +240,7 @@
      "#e8e4dc",
      0.5
     ],
-    "far wall": [
+    "far columns": [
      "#a3200c",
      0.45
     ]
@@ -353,7 +313,7 @@
   {
    "id": "fire_returns",
    "title": "The fire returns",
-   "intent": "Peak: everything at once, once: lasers, fan, spine, columns, blinders, strobes.",
+   "intent": "Peak: everything at once, once: lasers, fan, spine, columns of fire, the press.",
    "floor": true,
    "parts": {
     "laser": [
@@ -372,13 +332,9 @@
      "#ff3a12",
      1
     ],
-    "blinders": [
-     "#e8e4dc",
-     0.4
-    ],
-    "lightning": [
-     "#e8e4dc",
-     1
+    "press graze": [
+     "#ff3a12",
+     0.8
     ]
    }
   },
@@ -407,22 +363,22 @@
    }
   },
   {
-   "id": "the_roof",
-   "title": "The roof, once an hour",
-   "intent": "Peak: the roof steel appears for 15 s.",
+   "id": "press_burns",
+   "title": "The press burns",
+   "intent": "Peak: the press and the halo at full ember, the machine as the altar.",
    "floor": true,
    "parts": {
-    "roof": [
-     "#e8e4dc",
+    "press graze": [
+     "#ff3a12",
      1
     ],
-    "side roof": [
-     "#e8e4dc",
-     0.6
+    "halo": [
+     "#ff3a12",
+     0.7
     ],
-    "arch": [
-     "#e8e4dc",
-     1
+    "columns of fire": [
+     "#a3200c",
+     0.5
     ]
    }
   },
@@ -515,24 +471,36 @@
    }
   },
   {
-   "id": "hit_blinders",
-   "title": "Hit, blinders",
-   "intent": "Hit: 1-2 s blinders at the crowd.",
+   "id": "hit_fan",
+   "title": "Hit, fan",
+   "intent": "Hit: 1-2 s, the B380F fan full ash over the crowd (no blinders in the kit).",
    "floor": true,
    "parts": {
-    "blinders": [
+    "fan": [
      "#e8e4dc",
-     0.4
+     1
+    ],
+    "spine": [
+     "#e8e4dc",
+     1
     ]
    }
   },
   {
-   "id": "hit_strobe",
-   "title": "Hit, strobe",
-   "intent": "Hit: strobes up into the far roof, 4 Hz at most, 1-2 s.",
+   "id": "hit_columns",
+   "title": "Hit, columns",
+   "intent": "Hit: 1-2 s, every column full ash at once (no strobes in the kit).",
    "floor": true,
    "parts": {
-    "lightning": [
+    "columns of fire": [
+     "#e8e4dc",
+     1
+    ],
+    "span columns": [
+     "#e8e4dc",
+     1
+    ],
+    "far columns": [
      "#e8e4dc",
      1
     ]
@@ -541,16 +509,12 @@
   {
    "id": "dawn",
    "title": "Dawn: one line returns",
-   "intent": "Closing: the roof fades to grey, one line returns.",
+   "intent": "Closing: the arch fades to grey, one line returns.",
    "floor": true,
    "parts": {
-    "roof": [
+    "arch": [
      "#e8e4dc",
-     0.4
-    ],
-    "side roof": [
-     "#e8e4dc",
-     0.3
+     0.35
     ],
     "cube6a": [
      "#e8e4dc",
@@ -604,17 +568,9 @@
      "#e8e4dc",
      0.8
     ],
-    "roof": [
+    "fan": [
      "#e8e4dc",
-     0.8
-    ],
-    "side roof": [
-     "#e8e4dc",
-     0.8
-    ],
-    "far wall": [
-     "#e8e4dc",
-     0.8
+     0.4
     ],
     "far columns": [
      "#e8e4dc",
@@ -623,10 +579,6 @@
     "span columns": [
      "#e8e4dc",
      0.8
-    ],
-    "blinders": [
-     "#e8e4dc",
-     0.32000000000000006
     ],
     "still smoking": [
      "#e8e4dc",
@@ -790,12 +742,12 @@
    "surfaces": {}
   },
   {
-   "id": "wl-18-the-roof",
-   "name": "Peak \u00b7 the roof, once an hour",
+   "id": "wl-18-press-burns",
+   "name": "Peak \u00b7 the press burns",
    "key": "",
    "fade": 2,
    "hold": 12,
-   "lightLook": "rig-the-roof",
+   "lightLook": "rig-press-burns",
    "surfaces": {}
   },
   {
@@ -844,21 +796,21 @@
    "surfaces": {}
   },
   {
-   "id": "wl-24-hit-blinders",
-   "name": "Hit \u00b7 blinders",
+   "id": "wl-24-hit-fan",
+   "name": "Hit \u00b7 fan",
    "key": "",
    "fade": 0,
    "hold": 3,
-   "lightLook": "rig-hit-blinders",
+   "lightLook": "rig-hit-fan",
    "surfaces": {}
   },
   {
-   "id": "wl-25-hit-strobe",
-   "name": "Hit \u00b7 strobe",
+   "id": "wl-25-hit-columns",
+   "name": "Hit \u00b7 columns",
    "key": "",
    "fade": 0,
    "hold": 3,
-   "lightLook": "rig-hit-strobe",
+   "lightLook": "rig-hit-columns",
    "surfaces": {}
   },
   {
