@@ -65,6 +65,11 @@ STAGE11 = 'scripts/place/rigs/moxir-stage-v1-1-2026-10-08.json'
 # The cut at v1.1, as stage-line.mjs stageLineRig derives it on STAGE11 (run 2026-10-09; the test re-derives it).
 CUT = {'z_m': 0.15, 'ends': [(-11.04, 2.89), (0.55, 6.00)], 'section_m': 0.29,
        'picks': [(-10.59, 4.16), (-5.52, 5.52), (0.03, 7.01)], 'girder_bottom_m': 7.6}
+# The FREE (far) crane carries all 6 LaserCubes (owner 2026-10-09, N416). Its underside is unmeasured: the near crane's 7.6 m
+# is the EQUIVALENT (coordinator 10-09; the hall file still draws it at 7.95 from photo 007). A beam must not graze the bridge or
+# the cubes hung under it: the envelope runs from 0.3 m under the cubes (bottom ~7.2 m: a 155 mm body + clamp) to the girder top.
+FAR_CRANE_HANG = {'z_m': -41.0, 'x_m': (-11.35, 11.35), 'y_m': (6.9, 8.75), 'dz_m': 1.45, 'underside_m': 7.6,
+                  'why': 'far crane bridge + the 6 cubes under it, underside 7.6 m EQUIVALENT (near crane), 0.3 m margin under the cubes'}
 AUDIENCE = {'x_m': (-11.0, 3.5), 'z_m': (8.2, 28.0), 'y_m': (0.0, 2.4), 'why': 'heads 1.9 m + raised arms 0.5 m over the v1.1 dance floor (the brief)'}
 HEAD_Y = 0.5          # a B380F's tilt axis over its base (ASSUMED: 690 mm body, the yoke's axis about 2/3 up)
 CLEAR_M = 30.0
@@ -166,6 +171,8 @@ def rig_boxes(repo, keep_ash_wall=False):
     out.append(OBox.aabb('the DJ', 'dj', (cx - 0.9, cx + 0.9), (b['deck_h_m'], b['deck_h_m'] + 2.0), (fz - d + 0.1, fz - 0.2)))
     a = AUDIENCE
     out.append(OBox.aabb('the audience (1.9 m + 0.5 m arms)', 'audience', a['x_m'], a['y_m'], a['z_m']))
+    f = FAR_CRANE_HANG
+    out.append(OBox.aabb('far crane + the 6 cubes (laser hang)', 'crane', f['x_m'], f['y_m'], (f['z_m'] - f['dz_m'], f['z_m'] + f['dz_m'])))
     return out
 
 

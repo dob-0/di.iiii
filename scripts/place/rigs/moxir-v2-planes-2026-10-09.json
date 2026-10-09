@@ -325,7 +325,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 20.4,
+   "sky_clear_pct": 20.2,
    "throw_m": 29.324,
    "ends_on": "side wall",
    "dmx": {
@@ -358,7 +358,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 27.9,
+   "sky_clear_pct": 27.8,
    "throw_m": 55.719,
    "ends_on": "side wall",
    "dmx": {
@@ -391,7 +391,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 20.9,
+   "sky_clear_pct": 20.8,
    "throw_m": 29.324,
    "ends_on": "side wall",
    "dmx": {
@@ -424,7 +424,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 29.0,
+   "sky_clear_pct": 28.8,
    "throw_m": 55.719,
    "ends_on": "side wall",
    "dmx": {
@@ -440,25 +440,25 @@
   {
    "id": "rig-beam-planes-13",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 11.9 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
    "part": "plane 3 (the far end)",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    -7.5,
+    -10.0,
     0.7,
     -52.0
    ],
    "r": [
-    -1.753451,
+    -1.847214,
     0.0,
-    0.29205
+    0.319528
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 16.3,
-   "throw_m": 74.0,
+   "sky_clear_pct": 13.8,
+   "throw_m": 50.257,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -473,25 +473,25 @@
   {
    "id": "rig-beam-planes-14",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 11.9 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
    "part": "plane 3 (the far end)",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    -5.0,
+    -7.5,
     0.7,
     -52.0
    ],
    "r": [
-    -1.75176,
+    -1.854288,
     0.0,
-    0.257887
+    0.386651
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.4,
-   "throw_m": 74.0,
+   "sky_clear_pct": 15.9,
+   "throw_m": 49.649,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -506,26 +506,26 @@
   {
    "id": "rig-beam-planes-15",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 11.9 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
    "part": "plane 3 (the far end)",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    -2.5,
+    -5.0,
     0.7,
     -52.0
    ],
    "r": [
-    -1.763234,
+    -1.854288,
     0.0,
-    0.428864
+    0.386651
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.7,
-   "throw_m": 78.02,
-   "ends_on": "steel (bracing, mullions)",
+   "sky_clear_pct": 17.1,
+   "throw_m": 49.649,
+   "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
     "address": 306,
@@ -539,25 +539,25 @@
   {
    "id": "rig-beam-planes-16",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 11.9 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
    "part": "plane 3 (the far end)",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    2.5,
+    5.0,
     0.7,
     -52.0
    ],
    "r": [
-    -1.7501,
+    -1.850413,
     0.0,
-    -0.223733
+    0.35323
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.3,
-   "throw_m": 74.0,
+   "sky_clear_pct": 17.5,
+   "throw_m": 50.9,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -572,25 +572,25 @@
   {
    "id": "rig-beam-planes-17",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 11.9 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
    "part": "plane 3 (the far end)",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    5.0,
+    7.5,
     0.7,
     -52.0
    ],
    "r": [
-    -1.75176,
+    -1.850413,
     0.0,
-    -0.257887
+    0.35323
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.8,
-   "throw_m": 74.0,
+   "sky_clear_pct": 16.8,
+   "throw_m": 50.9,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -605,25 +605,25 @@
   {
    "id": "rig-beam-planes-18",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 11.9 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
    "part": "plane 3 (the far end)",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    7.5,
+    10.0,
     0.7,
     -52.0
    ],
    "r": [
-    -1.755561,
+    -1.847214,
     0.0,
-    0.326772
+    0.319528
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.1,
-   "throw_m": 74.0,
+   "sky_clear_pct": 16.1,
+   "throw_m": 50.257,
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
@@ -1552,7 +1552,7 @@
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
    "lit_column_m": 4.142,
-   "lux_on_steel_median": 239.051,
+   "lux_on_steel_median": 252.375,
    "dmx": {
     "universe": 2,
     "address": 41,
@@ -1584,7 +1584,7 @@
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
    "lit_column_m": 4.142,
-   "lux_on_steel_median": 239.051,
+   "lux_on_steel_median": 252.375,
    "dmx": {
     "universe": 2,
     "address": 49,
@@ -2568,16 +2568,16 @@
     "units": [
      "rig-beam-planes-11",
      "rig-beam-planes-09",
-     "rig-beam-planes-13",
      "rig-beam-planes-14",
+     "rig-beam-planes-13",
      "rig-beam-planes-15"
     ],
     "load_w": 2500,
     "amps_230v": 10.9,
-    "cable_m": 69.2,
+    "cable_m": 66.4,
     "first_run_m": 7.9,
     "cable_mm2": 2.5,
-    "vdrop_pct": 3.7,
+    "vdrop_pct": 3.6,
     "ok": true,
     "phase": "L3"
    },
@@ -2595,10 +2595,10 @@
     ],
     "load_w": 2500,
     "amps_230v": 10.9,
-    "cable_m": 86.8,
+    "cable_m": 84.0,
     "first_run_m": 25.5,
     "cable_mm2": 4.0,
-    "vdrop_pct": 3.2,
+    "vdrop_pct": 3.1,
     "ok": true,
     "phase": "L3"
    },
@@ -2887,10 +2887,10 @@
   "beams": 18,
   "beams_ok": 18,
   "beams_into_audience": 0,
-  "mean_sky_clear_pct": 21.6,
-  "min_sky_clear_pct": 16.3,
-  "mean_throw_m": 44.5,
-  "aim_rays_clear_30m_pct": 50.0,
+  "mean_sky_clear_pct": 21.2,
+  "min_sky_clear_pct": 13.8,
+  "mean_throw_m": 36.4,
+  "aim_rays_clear_30m_pct": 49.4,
   "pars": 50,
   "pars_cut": 10,
   "pars_ground": 40,
@@ -2906,8 +2906,8 @@
    1.1,
    1.9,
    4.5,
-   9.7,
-   11.9
+   7.6,
+   9.7
   ],
   "counts": {
    "PAR \u00b7 cut down": 5,

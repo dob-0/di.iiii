@@ -308,7 +308,7 @@
   {
    "id": "rig-beam-corridors-09",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 8.5 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -319,14 +319,14 @@
     -11.0
    ],
    "r": [
-    1.793379,
+    1.813028,
     0.0,
-    0.341596
+    -0.237368
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 22.0,
-   "throw_m": 46.564,
+   "sky_clear_pct": 21.8,
+   "throw_m": 45.364,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -341,7 +341,7 @@
   {
    "id": "rig-beam-corridors-10",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 8.5 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -352,14 +352,14 @@
     -11.0
    ],
    "r": [
-    1.791982,
+    1.81402,
     0.0,
-    -0.323617
+    0.25481
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 25.0,
-   "throw_m": 46.277,
+   "sky_clear_pct": 24.8,
+   "throw_m": 45.569,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -374,7 +374,7 @@
   {
    "id": "rig-beam-corridors-11",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -385,14 +385,14 @@
     -17.0
    ],
    "r": [
-    1.84866,
+    1.793379,
     0.0,
-    0.336226
+    0.341596
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 21.4,
-   "throw_m": 40.543,
+   "sky_clear_pct": 20.9,
+   "throw_m": 40.037,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -407,7 +407,7 @@
   {
    "id": "rig-beam-corridors-12",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -418,14 +418,14 @@
     -17.0
    ],
    "r": [
-    1.847214,
+    1.791982,
     0.0,
-    -0.319528
+    -0.323617
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 25.6,
-   "throw_m": 40.293,
+   "sky_clear_pct": 25.4,
+   "throw_m": 39.79,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -440,7 +440,7 @@
   {
    "id": "rig-beam-corridors-13",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 5.6 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 6.8 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -451,14 +451,14 @@
     -23.0
    ],
    "r": [
-    1.931298,
+    1.876144,
     0.0,
-    0.327801
+    0.334179
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 21.6,
-   "throw_m": 34.771,
+   "sky_clear_pct": 21.1,
+   "throw_m": 34.184,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -473,7 +473,7 @@
   {
    "id": "rig-beam-corridors-14",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 5.6 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 5.2 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -484,14 +484,14 @@
     -23.0
    ],
    "r": [
-    1.929444,
+    1.948624,
     0.0,
-    -0.31209
+    0.244385
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 25.8,
-   "throw_m": 34.557,
+   "sky_clear_pct": 25.3,
+   "throw_m": 34.155,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -506,7 +506,7 @@
   {
    "id": "rig-beam-corridors-15",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 4.2 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 4.5 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -517,14 +517,14 @@
     -29.0
    ],
    "r": [
-    2.041026,
+    2.013722,
     0.0,
-    0.314085
+    0.317436
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 18.3,
-   "throw_m": 29.24,
+   "sky_clear_pct": 18.1,
+   "throw_m": 28.889,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -539,7 +539,7 @@
   {
    "id": "rig-beam-corridors-16",
    "type": "up-b380f",
-   "position": "column base (nave face), base down on the floor (a pen 4.2 m: the beam is below a raised hand that far)",
+   "position": "column base (nave face), base down on the floor (a pen 4.5 m: the beam is below a raised hand that far)",
    "part": "corridors",
    "layer": "beams",
    "status": "used",
@@ -550,14 +550,14 @@
     -29.0
    ],
    "r": [
-    2.038655,
+    2.011029,
     0.0,
-    -0.298439
+    -0.301494
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 22.8,
-   "throw_m": 29.06,
+   "sky_clear_pct": 22.4,
+   "throw_m": 28.711,
    "ends_on": "end wall z -54",
    "dmx": {
     "universe": 1,
@@ -1360,7 +1360,7 @@
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
    "lit_column_m": 4.142,
-   "lux_on_steel_median": 239.051,
+   "lux_on_steel_median": 252.375,
    "dmx": {
     "universe": 1,
     "address": 505,
@@ -1392,7 +1392,7 @@
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
    "lit_column_m": 4.142,
-   "lux_on_steel_median": 239.051,
+   "lux_on_steel_median": 252.375,
    "dmx": {
     "universe": 2,
     "address": 1,
@@ -2859,10 +2859,10 @@
   "beams": 18,
   "beams_ok": 18,
   "beams_into_audience": 0,
-  "mean_sky_clear_pct": 22.0,
+  "mean_sky_clear_pct": 21.9,
   "min_sky_clear_pct": 14.8,
-  "mean_throw_m": 30.7,
-  "aim_rays_clear_30m_pct": 37.0,
+  "mean_throw_m": 30.5,
+  "aim_rays_clear_30m_pct": 39.5,
   "pars": 50,
   "pars_cut": 10,
   "pars_ground": 40,
@@ -2878,9 +2878,9 @@
    1.1,
    1.9,
    3.0,
-   4.2,
-   5.6,
-   7.6,
+   4.5,
+   5.2,
+   6.8,
    8.5,
    9.7
   ],

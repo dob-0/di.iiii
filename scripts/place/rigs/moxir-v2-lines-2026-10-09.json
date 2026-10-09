@@ -259,7 +259,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 22.0,
+   "sky_clear_pct": 21.8,
    "throw_m": 55.045,
    "ends_on": "roof deck",
    "dmx": {
@@ -292,7 +292,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 25.0,
+   "sky_clear_pct": 24.8,
    "throw_m": 55.045,
    "ends_on": "roof deck",
    "dmx": {
@@ -325,7 +325,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 21.4,
+   "sky_clear_pct": 20.9,
    "throw_m": 70.513,
    "ends_on": "roof deck",
    "dmx": {
@@ -358,7 +358,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 25.6,
+   "sky_clear_pct": 25.4,
    "throw_m": 74.345,
    "ends_on": "side wall",
    "dmx": {
@@ -391,7 +391,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 21.6,
+   "sky_clear_pct": 21.1,
    "throw_m": 82.434,
    "ends_on": "end wall z +54",
    "dmx": {
@@ -424,7 +424,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 25.8,
+   "sky_clear_pct": 25.3,
    "throw_m": 79.834,
    "ends_on": "end wall z +54",
    "dmx": {
@@ -457,7 +457,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 18.3,
+   "sky_clear_pct": 18.1,
    "throw_m": 102.91,
    "ends_on": "end wall z +54",
    "dmx": {
@@ -490,7 +490,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 22.8,
+   "sky_clear_pct": 22.4,
    "throw_m": 94.293,
    "ends_on": "end wall z +54",
    "dmx": {
@@ -572,25 +572,25 @@
   {
    "id": "rig-beam-lines-17",
    "type": "up-b380f",
-   "position": "far end, base down on the floor (a pen 30.2 m: the beam is below a raised hand that far)",
+   "position": "far end, base down on the floor (a pen 21.3 m: the beam is below a raised hand that far)",
    "part": "the spine",
    "layer": "beams",
    "status": "used",
    "moments": [],
    "p": [
-    -2.5,
+    -5.0,
     0.7,
     -52.0
    ],
    "r": [
-    -1.64966,
+    -1.676994,
     0.0,
-    0.139481
+    0.138421
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.7,
-   "throw_m": 107.17,
+   "sky_clear_pct": 17.1,
+   "throw_m": 107.428,
    "ends_on": "end wall z +54",
    "dmx": {
     "universe": 1,
@@ -611,19 +611,19 @@
    "status": "used",
    "moments": [],
    "p": [
-    2.5,
+    5.0,
     0.7,
     -52.0
    ],
    "r": [
-    -1.676568,
+    -1.676994,
     0.0,
-    0.10419
+    -0.138421
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "sky_clear_pct": 17.3,
-   "throw_m": 106.969,
+   "sky_clear_pct": 17.5,
+   "throw_m": 107.428,
    "ends_on": "end wall z +54",
    "dmx": {
     "universe": 1,
@@ -1360,7 +1360,7 @@
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
    "lit_column_m": 4.142,
-   "lux_on_steel_median": 239.051,
+   "lux_on_steel_median": 252.375,
    "dmx": {
     "universe": 1,
     "address": 505,
@@ -1392,7 +1392,7 @@
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
    "lit_column_m": 4.142,
-   "lux_on_steel_median": 239.051,
+   "lux_on_steel_median": 252.375,
    "dmx": {
     "universe": 2,
     "address": 1,
@@ -2570,7 +2570,7 @@
     ],
     "load_w": 2500,
     "amps_230v": 10.9,
-    "cable_m": 90.3,
+    "cable_m": 87.6,
     "first_run_m": 5.3,
     "cable_mm2": 2.5,
     "vdrop_pct": 2.9,
@@ -2591,7 +2591,7 @@
     ],
     "load_w": 2500,
     "amps_230v": 10.9,
-    "cable_m": 107.9,
+    "cable_m": 105.2,
     "first_run_m": 22.9,
     "cable_mm2": 2.5,
     "vdrop_pct": 4.4,
@@ -2835,9 +2835,9 @@
   "beams": 18,
   "beams_ok": 18,
   "beams_into_audience": 0,
-  "mean_sky_clear_pct": 21.9,
-  "min_sky_clear_pct": 17.3,
-  "mean_throw_m": 62.3,
+  "mean_sky_clear_pct": 21.7,
+  "min_sky_clear_pct": 17.1,
+  "mean_throw_m": 62.4,
   "aim_rays_clear_30m_pct": 66.7,
   "pars": 50,
   "pars_cut": 10,
@@ -2857,8 +2857,7 @@
    11.2,
    13.3,
    16.4,
-   21.3,
-   30.2
+   21.3
   ],
   "counts": {
    "PAR \u00b7 cut down": 5,

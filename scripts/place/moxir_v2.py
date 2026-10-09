@@ -242,8 +242,9 @@ def layouts():
     for z in (-11.0, -17.0, -23.0):
         for s in (-1, 1):
             beams.append({'p': [13.2 * s, 0.0, z], 'part': 'plane 2 (mid-hall, side spans)', 'sector': ((282, 300, 12, 40) if s < 0 else (60, 78, 12, 40)), 'zone': 'column base (side-span face)', 'colour': ASH})
-    for x in (-7.5, -5.0, -2.5, 2.5, 5.0, 7.5):
-        beams.append({'p': [x, 0.0, -52.0], 'part': 'plane 3 (the far end)', 'sector': (-25, 25, 10, 40), 'zone': 'far end', 'colour': EMBER})
+    # off the artists' SE gate (4.8 m wide at x 0): heads at |x| >= 5, a 2.5 m walkway either side of the gate kept clear
+    for x in (-10.0, -7.5, -5.0, 5.0, 7.5, 10.0):
+        beams.append({'p': [x, 0.0, -52.0], 'part': 'plane 3 (the far end)', 'sector': (-25, 25, 15, 40), 'zone': 'far end', 'colour': EMBER})
     pars = [v11_unit(f, 'halo') for f in HALO] + [roof_up(-5.2, -2.6, 'halo')]
     pars += far_cols([-6.0, -12.0, -18.0, -24.0, -30.0, -36.0])
     pars += far_cols([-42.0, -48.0, -54.0]) + [far_wall(x, 'far wall') for x in (-6.0, -2.0, 2.0, 6.0)]
@@ -261,7 +262,7 @@ def layouts():
     for z in (-11.0, -17.0, -23.0, -29.0, -35.0):
         for s in (-1, 1):
             beams.append({'p': [10.8 * s, 0.0, z], 'part': 'long lines', 'sector': ((0, 40, 3, 20) if s < 0 else (320, 360, 3, 20)), 'zone': 'column base (nave face)', 'colour': ASH})
-    for x in (-2.5, 2.5):
+    for x in (-5.0, 5.0):          # off the artists' SE gate (|x| >= 5)
         beams.append({'p': [x, 0.0, -52.0], 'part': 'the spine', 'sector': (-10, 10, 3, 20), 'zone': 'far end', 'colour': ASH})
     pars = far_cols([-6.0, -12.0, -18.0, -24.0, -30.0, -36.0, -42.0, -48.0, -54.0]) + [col_up(-1, -0.5, 'columns'), col_up(1, -0.5, 'columns')]
     pars += [roof_up(x, z, 'roof') for x in (-7.0, 7.0) for z in (-9.0, -15.0, -21.0, -27.0, -33.0, -47.0)]
