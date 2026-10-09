@@ -7,7 +7,7 @@ const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore'
 const { receiveBodyToTempFile } = require('../verbatimAsset')
 const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite: commitWrite } = require('../projectWrite')
 const logger = require('../logger')
-const { applyAssetSafetyHeaders } = require('../spaceStore')
+const { applyAssetSafetyHeaders } = require('../assetResponseType')
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
@@ -1224,8 +1224,7 @@ function registerProjectRoutes(router, {
       // (security audit 2026-09-29, C1). ENOENT answers 404 below.
       const served = await fsp.lstat(servePath)
       if (!served.isFile()) throw Object.assign(new Error('not a regular file'), { code: 'ENOENT' })
-      res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
-      applyAssetSafetyHeaders(res, meta?.mimeType)
+      applyAssetSafetyHeaders(res, meta?.mimeType, meta?.name)
       // A private project's bytes are never stored by a shared cache.
       res.setHeader('Cache-Control', assetCacheControl(project.meta))
       // `root` + a name, never sendFile(absolutePath). `send` applies

@@ -92,6 +92,7 @@ services:
       GITHUB_APP_ID: ${GITHUB_APP_ID:-}
       GITHUB_APP_PRIVATE_KEY_B64: ${GITHUB_APP_PRIVATE_KEY_B64:-}
       GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+      GITHUB_SYNC_ALLOWED_REPOS: ${GITHUB_SYNC_ALLOWED_REPOS:-}
 
       # Live co-presence mesh. The relay stays open -- visitors' browsers are
       # clients, so anything embedded in the public page is not a secret. This

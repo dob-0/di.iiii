@@ -71,26 +71,27 @@ jobs:
           npm run di:pack -- --version="$VERSION"
 
       # Legacy: deploy moved to the VPS on 2026-07-15 (docs/deploy/LIVE_DEPLOY.md).
-      # These bundles are a fallback nobody currently uses, and the step never
-      # received VITE_API_TOKEN in the first place, so it could only ever fail.
-      # Kept, but they can no longer take the release down with them.
+      # These bundles are a fallback nobody currently uses: built only when the
+      # repo variable LEGACY_CPANEL_BUNDLE is 'true', and they can no longer take
+      # the release down with them. The build gets no credential: every VITE_*
+      # value it sees can end up in the public bundle
+      # (scripts/di/buildEnvNoSecrets.test.js).
       - name: Can the legacy cPanel bundle be built
         id: cpanel
         env:
-          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
+          LEGACY_CPANEL_BUNDLE: ${{ vars.LEGACY_CPANEL_BUNDLE }}
         run: |
-          if [ -n "${VITE_API_TOKEN:-}" ]; then
+          if [ "${LEGACY_CPANEL_BUNDLE:-}" = 'true' ]; then
             echo 'possible=true' >> "$GITHUB_OUTPUT"
           else
             echo 'possible=false' >> "$GITHUB_OUTPUT"
-            echo '::notice::VITE_API_TOKEN is not set - skipping the legacy cPanel bundles. The di runtime artifact is unaffected.'
+            echo '::notice::LEGACY_CPANEL_BUNDLE is not true - skipping the legacy cPanel bundles. The di runtime artifact is unaffected.'
           fi
 
       - name: Stage cPanel release
         if: steps.cpanel.outputs.possible == 'true'
         env:
           VITE_API_BASE_URL: /serverXR
-          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
         run: npm run deploy:cpanel
 
       - name: Zip dist

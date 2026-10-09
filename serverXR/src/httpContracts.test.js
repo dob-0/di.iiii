@@ -2376,6 +2376,87 @@ describe('server write contracts', () => {
         expect(projRes.headers.get('content-disposition')).toBe('attachment')
     })
 
+    // The response type of an asset comes from the server's own list of types
+    // a browser shows as passive media; a declared type that is not on it
+    // (whatever family it claims) answers as a download.
+    it('serves an asset inline only when its type is on the server list, as a sandboxed download otherwise', async () => {
+        const server = await startServer()
+        const spaceId = 'asset-types-space'
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'Asset Types', permanent: true })
+        })
+        expect(created.status).toBe(201)
+
+        const xhtmlBody = '<html xmlns="http://www.w3.org/1999/xhtml"><script>document.title="ran"</script></html>'
+        const uploadAsset = async (blob, filename) => {
+            const form = new FormData()
+            form.append('asset', blob, filename)
+            const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+                method: 'POST',
+                headers: withAuth(server.apiToken),
+                body: form
+            })
+            expect(res.status).toBe(200)
+            return (await res.json()).assetId
+        }
+        const get = (assetId) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}`)
+
+        // Media families with an XML subtype: browsers render any +xml type
+        // as an XML document.
+        for (const [type, name] of [['image/x-note+xml', 'note.xml'], ['model/x3d+xml', 'scene.x3d'], ['video/x-cue+xml', 'cue.xml']]) {
+            const id = await uploadAsset(new Blob([xhtmlBody], { type }), name)
+            const res = await get(id)
+            expect(res.status).toBe(200)
+            expect(res.headers.get('content-type'), type).toBe('application/octet-stream')
+            expect(res.headers.get('content-disposition'), type).toBe('attachment')
+            expect(res.headers.get('content-security-policy'), type).toBe('sandbox')
+            expect(res.headers.get('x-content-type-options'), type).toBe('nosniff')
+        }
+
+        // Passive media keeps its type and stays inline (textures, video,
+        // audio and models load as before), still sandboxed if opened alone.
+        for (const [type, name] of [['image/png', 'flat.png'], ['video/mp4', 'clip.mp4'], ['audio/mpeg', 'tone.mp3'], ['model/gltf-binary', 'thing.glb']]) {
+            const id = await uploadAsset(new Blob(['bytes-' + type], { type }), name)
+            const res = await get(id)
+            expect(res.headers.get('content-type'), type).toContain(type)
+            expect(res.headers.get('content-disposition'), type).toBe(null)
+            expect(res.headers.get('content-security-policy'), type).toBe('sandbox')
+            expect(res.headers.get('x-content-type-options'), type).toBe('nosniff')
+        }
+
+        // A generic upload with a known model extension gets the model type
+        // from the name, not from the client.
+        const glbId = await uploadAsset(new Blob(['glTF-bytes'], { type: 'application/octet-stream' }), 'chair.glb')
+        const glbRes = await get(glbId)
+        expect(glbRes.headers.get('content-type')).toContain('model/gltf-binary')
+        expect(glbRes.headers.get('content-disposition')).toBe(null)
+
+        // SVG keeps its type (an <img> needs it to draw) but never opens as a page.
+        const svgId = await uploadAsset(new Blob(['<svg xmlns="http://www.w3.org/2000/svg"/>'], { type: 'image/svg+xml' }), 'mark.svg')
+        const svgRes = await get(svgId)
+        expect(svgRes.headers.get('content-type')).toContain('image/svg+xml')
+        expect(svgRes.headers.get('content-disposition')).toBe('attachment')
+        expect(svgRes.headers.get('content-security-policy')).toBe('sandbox')
+
+        // The project asset route answers with the same rules.
+        const project = await createServerProject(server, spaceId, { title: 'Types Project', slug: 'types-project' })
+        const projForm = new FormData()
+        projForm.append('asset', new Blob([xhtmlBody], { type: 'image/x-note+xml' }), 'note.xml')
+        const projUpload = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: projForm
+        })
+        expect(projUpload.status).toBe(200)
+        const projAssetId = (await projUpload.json()).asset.id
+        const projRes = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets/${projAssetId}`)
+        expect(projRes.headers.get('content-type')).toBe('application/octet-stream')
+        expect(projRes.headers.get('content-disposition')).toBe('attachment')
+        expect(projRes.headers.get('content-security-policy')).toBe('sandbox')
+    })
+
     // Sandboxes are created with no ownerUserId (they must not count toward the
     // owned-space quota), and owner gating keyed on ownerUserId alone — so an
     // account was 403'd from managing its own sandbox.
@@ -3205,6 +3286,64 @@ describe('saving and opening a space as a file', () => {
         const strangerCookie = (stranger.headers.get('set-cookie') || '').split(';')[0]
         const refused = await fetch(`${server.baseUrl}/api/spaces/carried-file/scene`, { headers: { Cookie: strangerCookie } })
         expect(refused.status).toBe(403)
+    })
+
+    // A GitHub link pulls repo files into the space with the platform's own
+    // App credentials, so which repo a space may link to is decided by the
+    // server operator: an admin, or a repo on GITHUB_SYNC_ALLOWED_REPOS.
+    it('lets a space owner link only a repo the operator approved; an admin links any', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false', GITHUB_SYNC_ALLOWED_REPOS: 'studio-org/site, Open-Org/*' }
+        })
+        const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'linker', password: 'linker-passphrase-9x' })
+        })
+        expect(register.status).toBeLessThan(300)
+        let cookie = (register.headers.get('set-cookie') || '').split(';')[0]
+        const made = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'linker space' })
+        })
+        expect(made.status).toBe(201)
+        const madeBody = await made.json()
+        const spaceId = madeBody.space?.id || madeBody.spaceId || 'linker-space'
+        cookie = (made.headers.get('set-cookie') || '').split(';')[0] || cookie
+        const projectRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ title: 'Site', slug: 'site', source: 'studio-v3' })
+        })
+        expect(projectRes.status).toBe(201)
+        const projectId = (await projectRes.json()).project.id
+        const link = (headers, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/github-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify({ projectId, ...body })
+        })
+
+        // A repo nobody approved: refused, and nothing is stored.
+        const refused = await link({ Cookie: cookie }, { owner: 'someone-else', repo: 'private-notes', entry: 'config/.env' })
+        expect(refused.status).toBe(403)
+        const stored = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/github-link`, { headers: { Cookie: cookie } })
+        expect((await stored.json()).link ?? null).toBe(null)
+
+        // Entry must be a page at a plain path.
+        const badEntry = await link({ Cookie: cookie }, { owner: 'studio-org', repo: 'site', entry: '../secrets.html' })
+        expect(badEntry.status).toBe(400)
+
+        // An approved repo (exact, and by owner/*, case-insensitive) links.
+        const approved = await link({ Cookie: cookie }, { owner: 'studio-org', repo: 'site', entry: 'index.html' })
+        expect(approved.status).toBe(201)
+        const approvedByOwner = await link({ Cookie: cookie }, { owner: 'open-org', repo: 'anything' })
+        expect(approvedByOwner.status).toBe(201)
+
+        // The operator's admin token may link any repo the App reaches.
+        const admin = await link(withAuth(server.apiToken), { owner: 'someone-else', repo: 'private-notes' })
+        expect(admin.status).toBe(201)
     })
 
     it('keeps node\'s own warnings out of what the browser is shown', async () => {

@@ -100,6 +100,8 @@ const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
+const { createGithubSync } = require('./githubSync')
+const githubLinkPolicy = require('./githubLinkPolicy')
 const { createSpaceHistory } = require('./spaceHistory')
 const { createContentProposals } = require('./contentProposals')
 const { serverActor } = require('./opActor')
@@ -1643,117 +1645,9 @@ approvalGate.registerReauthorizer('spaces.purge', async (args, subject, actorTyp
 })
 
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
-// Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
-// is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
-// point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
-const internalApiBase = () =>
-  process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
-const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.internalApiToken}` })
-
-// Upload one binary into a project through the server's own multipart asset
-// route (the route computes the content-hash id and returns the public URL).
-async function uploadSyncedAsset(base, projectId, rel, buf) {
-  const boundary = 'dii-sync-' + crypto.randomBytes(8).toString('hex')
-  const filename = path.basename(rel).replace(/"/g, '')
-  const head = Buffer.from(
-    `--${boundary}\r\nContent-Disposition: form-data; name="asset"; filename="${filename}"\r\n` +
-    `Content-Type: ${spaceSyncPlan.mimeFor(rel)}\r\n\r\n`
-  )
-  const body = Buffer.concat([head, buf, Buffer.from(`\r\n--${boundary}--\r\n`)])
-  const r = await httpRequest(`${base}/api/projects/${projectId}/assets`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.internalApiToken}`,
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      'Content-Length': body.length
-    },
-    body,
-    timeoutMs: 120000
-  })
-  if (!r.ok) throw new Error(`asset upload failed (${r.status}) for ${rel}`)
-  return r.json().asset
-}
-
-// Assets bigger than this are skipped (and reported) rather than buffered
-// through base64 + multipart under cPanel/LVE memory limits.
-const MAX_SYNC_ASSET_BYTES = 30 * 1024 * 1024
-
-// Pull the linked repo into the space via the GitHub App installation token,
-// writing through the server's OWN tested document/asset APIs (admin). With a
-// di-space.json manifest in the repo this matches the CI push path: include
-// globs become extra code files, asset globs upload referenced binaries and
-// rewrite their URLs in the entry HTML. Without a manifest: entry file only.
-async function syncLinkedSpace(link) {
-  let token = null
-  let installationId = link.installationId
-  if (installationId) { try { token = await githubApp.installationToken(installationId) } catch {} }
-  if (!token) {
-    const got = await githubApp.getInstallationForRepo(link.owner, link.repo)
-    if (got) { token = got.token; installationId = got.installationId }
-  }
-  if (!token) throw new Error(`No GitHub App installation can access ${link.owner}/${link.repo}`)
-  const ref = link.ref || await githubApp.repoDefaultBranch(token, link.owner, link.repo)
-  let entryHtml = await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, link.entry)
-  const base = internalApiBase()
-  const codeFiles = [{ name: 'index.html', content: entryHtml }]
-  let assetsUploaded = 0
-  const skipped = []
-
-  let manifest = null
-  try {
-    manifest = JSON.parse(await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, 'di-space.json'))
-  } catch { /* no manifest — entry-only sync */ }
-
-  if (manifest && (manifest.include?.length || manifest.assets?.length)) {
-    const repoPaths = await githubApp.repoTree(token, link.owner, link.repo, ref)
-    const entryPath = String(link.entry).replace(/^\.?\//, '')
-    const { codePaths, assetPaths } = spaceSyncPlan.planSync({ manifest, repoPaths, entryPath, entryHtml })
-    for (const rel of assetPaths) {
-      const buf = await githubApp.fetchRepoFileBuffer(token, link.owner, link.repo, ref, rel)
-      if (buf.length > MAX_SYNC_ASSET_BYTES) { skipped.push(rel); continue }
-      const asset = await uploadSyncedAsset(base, link.projectId, rel, buf)
-      entryHtml = spaceSyncPlan.rewriteAssetUrl(entryHtml, rel, asset.url)
-      assetsUploaded++
-    }
-    codeFiles[0].content = entryHtml
-    for (const rel of codePaths) {
-      codeFiles.push({
-        name: path.basename(rel),
-        content: await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, rel)
-      })
-    }
-  }
-
-  const docUrl = `${base}/api/projects/${link.projectId}/document`
-  // The PUT below is a full no-baseVersion replace, so `doc` MUST be the real
-  // current document. Swallowing a failed GET into {} used to publish an empty
-  // base -- assets, projectMeta and owner opt-ins (deviceAccess) wiped, sync
-  // still reporting success. Fail the sync run instead.
-  const curRes = await httpRequest(docUrl, { headers: internalHeaders() })
-    .catch((error) => { throw new Error(`internal document GET failed (${error.message})`) })
-  if (!curRes.ok) throw new Error(`internal document GET failed (${curRes.status})`)
-  const put = await httpRequest(docUrl, {
-    method: 'PUT', headers: internalHeaders(),
-    body: JSON.stringify(spaceSyncPlan.buildSyncedDocumentBody({ current: await curRes.json(), codeFiles }))
-  })
-  if (!put.ok) throw new Error(`internal document PUT failed (${put.status})`)
-  // Non-fatal (the document is already published) but never silent: a dropped
-  // publishedProjectId leaves the space pointing at the wrong project.
-  const patch = await httpRequest(`${base}/api/spaces/${link.spaceId}`, {
-    method: 'PATCH', headers: internalHeaders(),
-    body: JSON.stringify({ publishedProjectId: link.projectId })
-  }).catch((error) => ({ ok: false, status: error.message }))
-  if (!patch.ok) {
-    console.warn(`[github-sync] publishedProjectId PATCH failed for ${link.spaceId} (${patch.status})`)
-  }
-  return {
-    ref,
-    bytes: entryHtml.length,
-    codeFiles: codeFiles.length,
-    assets: assetsUploaded,
-    ...(skipped.length ? { skippedOversize: skipped } : {})
-  }
-}
+// The sync itself (GitHub fetch + writes through this server's own routes)
+// lives in githubSync.js.
+const { syncLinkedSpace } = createGithubSync({ githubApp, httpRequest, spaceSyncPlan, config, env: process.env })
 
 router.post('/api/github/webhook', async (req, res) => {
   try {
@@ -1769,7 +1663,12 @@ router.post('/api/github/webhook', async (req, res) => {
     const links = owner && repo ? spaceLinkStore.getLinksByRepo(owner, repo) : []
     if (!links.length) return res.json({ ok: true, linked: false, repo: full })
     const synced = []
+    const allowedRepos = githubLinkPolicy.parseAllowedRepos(process.env.GITHUB_SYNC_ALLOWED_REPOS)
     for (const link of links) {
+      if (link.approvedBy !== 'admin' && !githubLinkPolicy.isRepoOnList(link.owner, link.repo, allowedRepos)) {
+        synced.push({ space: link.spaceId, ok: false, error: 'Link not approved: an admin re-saves it, or the repo is added to GITHUB_SYNC_ALLOWED_REPOS.' })
+        continue
+      }
       try {
         const r = await syncLinkedSpace(link)
         if (after) spaceLinkStore.setLastSyncSha(link.spaceId, after)
@@ -2505,13 +2404,18 @@ router.get('/api/github/repos', async (req, res, next) => {
   if (!requireSignedInUser(req, res)) return
   if (!githubApp.isConfigured()) return res.json({ configured: false, repos: [] })
   try {
+    // An admin sees every repo the App reaches; anyone else only the repos
+    // the operator approved for linking (githubLinkPolicy.js).
+    const isAdmin = (req.authState || {}).role === 'admin'
+    const allowedRepos = githubLinkPolicy.parseAllowedRepos(process.env.GITHUB_SYNC_ALLOWED_REPOS)
+    const visible = (repos) => isAdmin ? repos : repos.filter((r) => githubLinkPolicy.isRepoOnList(r.owner, r.repo, allowedRepos))
     const fresh = req.query?.refresh === '1'
     if (!fresh && _repoCache.repos && Date.now() - _repoCache.at < 60_000) {
-      return res.json({ configured: true, repos: _repoCache.repos, cached: true })
+      return res.json({ configured: true, repos: visible(_repoCache.repos), cached: true })
     }
     const repos = await githubApp.listAccessibleRepos()
     _repoCache = { at: Date.now(), repos }
-    res.json({ configured: true, repos })
+    res.json({ configured: true, repos: visible(repos) })
   } catch (error) { next(error) }
 })
 
@@ -2523,6 +2427,14 @@ router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {
     if (!ctx) return
     const { owner, repo, ref = null, projectId, entry = 'index.html' } = req.body || {}
     if (!owner || !repo || !projectId) return res.status(400).json({ error: 'owner, repo, projectId are required.' })
+    // Managing the space is not enough: the repo must be one this caller may
+    // read through the platform's GitHub App (githubLinkPolicy.js).
+    const isAdmin = ctx.state.role === 'admin'
+    const allowed = githubLinkPolicy.checkLinkRequest({ owner, repo, ref, entry }, {
+      isAdmin,
+      allowedRepos: githubLinkPolicy.parseAllowedRepos(process.env.GITHUB_SYNC_ALLOWED_REPOS)
+    })
+    if (!allowed.ok) return res.status(allowed.status).json({ error: allowed.error })
     // requireSpaceOwnerOrAdmin above proves the caller owns the space in the
     // URL — it says nothing about the projectId in the BODY. Without this
     // check any signed-in account could point their own space's link at a
@@ -2534,7 +2446,7 @@ router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {
     if (!linkedProject) return res.status(404).json({ error: 'Project not found in this space.' })
     let installationId = null
     try { installationId = (await githubApp.getInstallationForRepo(owner, repo))?.installationId || null } catch {}
-    const link = spaceLinkStore.upsertLink({ spaceId: ctx.spaceId, owner, repo, ref, projectId, entry, installationId })
+    const link = spaceLinkStore.upsertLink({ spaceId: ctx.spaceId, owner, repo, ref: ref || null, projectId, entry, installationId, approvedBy: isAdmin ? 'admin' : 'list' })
     let initialSync = null
     try { initialSync = await syncLinkedSpace(link) } catch (e) { initialSync = { error: e.message } }
     res.status(201).json({ ok: true, link, initialSync })

@@ -109,7 +109,7 @@ const repoDefaultBranch = async (token, owner, repo) =>
 // (contents caps at 1 MB; blobs go to 100 MB).
 const fetchRepoFileBuffer = async (token, owner, repo, ref, filePath) => {
   const enc = encodeURIComponent(filePath).replace(/%2F/g, '/')
-  const meta = await ghFetch(`${GH}/repos/${owner}/${repo}/contents/${enc}?ref=${ref}`, { token })
+  const meta = await ghFetch(`${GH}/repos/${owner}/${repo}/contents/${enc}?ref=${encodeURIComponent(ref)}`, { token })
   if (meta.content && meta.encoding === 'base64') return Buffer.from(meta.content, 'base64')
   const blob = await ghFetch(`${GH}/repos/${owner}/${repo}/git/blobs/${meta.sha}`, { token })
   return Buffer.from(blob.content, 'base64')

@@ -12,20 +12,22 @@ const toPublic = (row) => row && ({
   entry: row.entry || 'index.html',
   installationId: row.installation_id || null,
   lastSyncSha: row.last_sync_sha || null,
+  approvedBy: row.approved_by || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at
 })
 
-const upsertLink = ({ spaceId, owner, repo, ref = null, projectId, entry = 'index.html', installationId = null }) => {
+const upsertLink = ({ spaceId, owner, repo, ref = null, projectId, entry = 'index.html', installationId = null, approvedBy = null }) => {
   const now = Date.now()
   getDb().prepare(
-    `INSERT INTO space_links (space_id, owner, repo, ref, project_id, entry, installation_id, last_sync_sha, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+    `INSERT INTO space_links (space_id, owner, repo, ref, project_id, entry, installation_id, last_sync_sha, created_at, updated_at, approved_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
      ON CONFLICT(space_id) DO UPDATE SET
        owner=excluded.owner, repo=excluded.repo, ref=excluded.ref,
        project_id=excluded.project_id, entry=excluded.entry,
-       installation_id=excluded.installation_id, updated_at=excluded.updated_at`
-  ).run(spaceId, owner, repo, ref, projectId, entry, installationId, now, now)
+       installation_id=excluded.installation_id, updated_at=excluded.updated_at,
+       approved_by=excluded.approved_by`
+  ).run(spaceId, owner, repo, ref, projectId, entry, installationId, now, now, approvedBy)
   return getLinkBySpace(spaceId)
 }
 
