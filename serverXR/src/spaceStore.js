@@ -244,7 +244,15 @@ function createSpaceStore({
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
       selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
       countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      // UPSERT, not INSERT OR REPLACE: REPLACE deletes the old row first, and
+      // with foreign_keys ON the cascade takes the space's projects, op logs,
+      // shelves, links and domains along (sqlite.org/lang_conflict.html). A
+      // slug held by another space also counted as a conflict and deleted THAT
+      // space. ON CONFLICT(id) updates in place and lets any other uniqueness
+      // clash fail (sqlite.org/lang_upsert.html). created_at, archived_at and
+      // position are not in the list, so an existing row keeps them.
+      upsert:        db.prepare(`INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET slug=excluded.slug, label=excluded.label, permanent=excluded.permanent, allow_edits=excluded.allow_edits, is_public=excluded.is_public, kind=excluded.kind, published_project_id=excluded.published_project_id, preview_image_asset_id=excluded.preview_image_asset_id, scene_version=excluded.scene_version, updated_at=excluded.updated_at, last_touched_at=excluded.last_touched_at, owner_user_id=excluded.owner_user_id, open_inscriptions=excluded.open_inscriptions, trusted_user_ids=excluded.trusted_user_ids`),
       insert:        db.prepare('INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
       update:        db.prepare('UPDATE spaces SET slug=?, label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=?, trusted_user_ids=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
@@ -261,8 +269,8 @@ function createSpaceStore({
 
   const loadSpaceMeta = async (spaceId) => rowToMeta(s().selectById.get(spaceId))
 
-  // A trashed space still owns its id: creating over it would INSERT OR
-  // REPLACE the row and the cascade would take its trashed projects with it.
+  // A trashed space still owns its id: the name is not free again until the
+  // space is restored or purged, so writing meta over it is refused.
   const refuseIfTrashed = (spaceId) => {
     if (s().selectAnyById.get(spaceId)?.deleted_at) {
       throw Object.assign(new Error(`"${spaceId}" is in the trash. Restore it, or purge it, before using the name again.`), { status: 409, code: 'space_in_trash' })
