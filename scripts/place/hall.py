@@ -63,7 +63,8 @@ along the hall from its centre, + toward the far end), "lantern_spans" (0 =
 the nave, +1 the next span to the right looking from the entry, -1 to the
 left), "neighbour_spans" {"left": n, "right": n}, "column_head"
 ("two_sided_console"), "column_head_width_m", "crane_girders_each_row",
-"crane_girder_depth_m", "expansion_joint_m" (along the hall from its centre),
+"crane_girder_depth_m", "crane_bridge_bottom_each_m" (per nave crane, null = the shared
+"crane_bridge_bottom_h_m"), "expansion_joint_m" (along the hall from its centre),
 "paired_columns_at_joint", "end_wall_in_from_grid_m" (the end walls' inner face out
 from the end grid line; default 0.5). Features: "door_w_m"/"door_h_m", "entry_platform",
 "far_gate_w_m"/"far_gate_h_m", "cranes_from_door_m", "neighbour_cranes_from_door_m",
@@ -117,6 +118,10 @@ PLACEHOLDER = {
     # Per nave crane (the order of cranes_from_door_m): what each crane's girder underside rests on, as text —
     # "measured", or "ASSUMED same type as ..." with its range. None = not stated (hall.json says so).
     'crane_bridge_bottom_basis': None,
+    # Per nave crane (the order of cranes_from_door_m): its own girder underside where a photo or tape read that crane
+    # (2026-10-08: the near crane 7.6 m from photo 170604, the far crane 7.95 m from photo 007). None in a slot = the
+    # shared crane_bridge_bottom_h_m. The cab keeps crane_cab_h_m under each crane's own girders.
+    'crane_bridge_bottom_each_m': None,
     'crane_girder_inner_gap_m': 1.5,  # clear gap between the two bridge girders (inner edge to inner edge)
     'crane_girder_w_m': 0.7,          # each bridge girder's width (its bottom flange)
     'crane_cab_inset_m': 1.0,         # the cab's outer face, in from the bridge girders' end (x)
@@ -171,7 +176,7 @@ KEYS_FROM_DIMS = [
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint', 'end_wall_in_from_grid_m',
     'door_w_m', 'door_h_m', 'entry_platform', 'far_gate_w_m', 'far_gate_h_m', 'aisle_w_m',
-    'track_x_m', 'track_z_range_m', 'track_cross_z_m', 'cranes_from_door_m', 'crane_trolley_x_m', 'neighbour_cranes_from_door_m', 'low_walls',
+    'track_x_m', 'track_z_range_m', 'track_cross_z_m', 'cranes_from_door_m', 'crane_trolley_x_m', 'crane_bridge_bottom_each_m', 'neighbour_cranes_from_door_m', 'low_walls',
     'bracing_bays_from_door_m', 'massing', 'zones', 'cameras',
 ]
 # The grid and heights: a placeholder among these makes the whole room a GUESS.
@@ -257,6 +262,7 @@ def resolve_dims(opts):
     origin = {key: 'placeholder' for key in dims}
     dims_source = None
     dims_notes = []
+    removed = {}   # massing id -> the layer that removed it
     for dims_path in opts['dims']:
         with open(dims_path) as handle:
             given = json.load(handle)
@@ -281,13 +287,19 @@ def resolve_dims(opts):
             origin['massing'] = f"{origin.get('massing', 'placeholder')}; {len(moves)} moved by {os.path.basename(dims_path)}"
         # `massing_remove`: items cleared out of the hall for a show (owner's word, kept on the entry). The as-found
         # layers still describe them; only a build that names this layer leaves them out.
+        # An id an EARLIER layer already removed (2026-10-08: the cabin, gone as found AND cleared for the show) is
+        # not an error: it is named in hall.json's dimsOrigin as already gone. Any other unknown id still stops the build.
         if given.get('massing_remove'):
             drop = {m['id']: m for m in given['massing_remove']}
             missing = [k for k in drop if k not in {it.get('id') for it in dims['massing']}]
-            if missing:
-                raise SystemExit(f'hall.py: massing_remove names unknown ids {missing} ({os.path.basename(dims_path)})')
+            gone = [k for k in missing if k in removed]
+            if len(gone) < len(missing):
+                raise SystemExit(f'hall.py: massing_remove names unknown ids {[k for k in missing if k not in removed]} '
+                                 f'({os.path.basename(dims_path)})')
             dims['massing'] = [it for it in dims['massing'] if it.get('id') not in drop]
-            origin['massing'] = f"{origin.get('massing', 'placeholder')}; {len(drop)} cleared by {os.path.basename(dims_path)}"
+            removed.update({k: os.path.basename(dims_path) for k in drop if k not in removed})
+            origin['massing'] = f"{origin.get('massing', 'placeholder')}; {len(drop) - len(gone)} cleared by {os.path.basename(dims_path)}" + \
+                (f" ({', '.join(f'{k} already gone: {removed[k]}' for k in gone)})" if gone else '')
         for key in KEYS_FROM_DIMS:
             if key not in given or given[key] is None:
                 continue
@@ -341,7 +353,8 @@ def resolve_dims(opts):
         dims['crane_bridge_bottom_h_m'] = dims['crane_rail_h_m'] + 0.55
         origin['crane_bridge_bottom_h_m'] = 'derived: crane rail + 0.55 m (the v2 assumption, unmeasured)'
     dims['crane_bridge_bottom_h_m'] = float(dims['crane_bridge_bottom_h_m'])
-    crane_top = dims['crane_bridge_bottom_h_m'] + dims['crane_bridge_depth_m'] + 1.0     # + the trolley
+    each = [float(v) for v in (dims.get('crane_bridge_bottom_each_m') or []) if v is not None]
+    crane_top = max([dims['crane_bridge_bottom_h_m']] + each) + dims['crane_bridge_depth_m'] + 1.0     # + the trolley
     if crane_top > dims['truss_bottom_h_m'] - 0.1:
         # GOST 534-78 / PB 10-382-00: at least 100 mm from the crane's top to the roof structure
         print(f"[hall] WARNING: the crane's top {crane_top:.2f} m is within 0.1 m of the bottom chord "
@@ -686,7 +699,7 @@ def build(dims):
     # Cranes: in the nave from cranes_from_door_m, in neighbour spans from
     # neighbour_cranes_from_door_m. Two box girders rail to rail, end trucks,
     # a trolley and a cab.
-    girder_bottom = dims['crane_bridge_bottom_h_m']
+    shared_bottom = dims['crane_bridge_bottom_h_m']
     crane_depth = dims['crane_bridge_depth_m']
     cab_h = dims['crane_cab_h_m']
     girder_w = dims['crane_girder_w_m']
@@ -695,13 +708,14 @@ def build(dims):
     cab_inset = dims['crane_cab_inset_m']
     cranes = []
 
-    def crane(span_index, from_door, record, trolley_x=2.0, girder_basis=None):
+    def crane(span_index, from_door, record, trolley_x=2.0, girder_basis=None, bottom=None):
         # `trolley_x`: where the trolley is parked along the bridge (its near edge, x from
         # the span's centre; "crane_trolley_x_m", one per nave crane). A real trolley
         # travels the bridge: parked at an end it is out of the beams of a rig hung below.
         cx = S * span_index
         xa, xb = cx - S / 2 + girder_off, cx + S / 2 - girder_off
         cy = -L / 2 + from_door
+        girder_bottom = shared_bottom if bottom is None else float(bottom)   # this crane's own underside, if read
         for offset in (-girder_dz, girder_dz):
             b.box('crane', (xa, cy + offset - girder_w / 2, girder_bottom), (xb, cy + offset + girder_w / 2, girder_bottom + crane_depth))
         for x in (xa, xb):
@@ -730,9 +744,11 @@ def build(dims):
 
     trolleys = list(dims.get('crane_trolley_x_m') or [])
     bases = list(dims.get('crane_bridge_bottom_basis') or [])
+    bottoms = list(dims.get('crane_bridge_bottom_each_m') or [])
     for i, from_door in enumerate(dims['cranes_from_door_m']):
         crane(0, from_door, True, float(trolleys[i]) if i < len(trolleys) and trolleys[i] is not None else 2.0,
-              bases[i] if i < len(bases) and bases[i] else 'not stated per crane (see dimsOrigin.crane_bridge_bottom_h_m)')
+              bases[i] if i < len(bases) and bases[i] else 'not stated per crane (see dimsOrigin.crane_bridge_bottom_h_m)',
+              bottoms[i] if i < len(bottoms) else None)
     for side, from_door in (dims['neighbour_cranes_from_door_m'] or {}).items():
         k = -1 if side == 'left' else 1
         if (k < 0 and left) or (k > 0 and right):
