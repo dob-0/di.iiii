@@ -25,7 +25,7 @@ const {
 //   GET  /api/spaces/:spaceId/show/:projectId          the cues, the live cue, the rules, you
 //   POST /api/spaces/:spaceId/show/:projectId/choose   { index, cueId, name? } → Light goes there
 //   POST /api/spaces/:spaceId/show/:projectId/control  { choosers?: team|everyone|operator, cooldownMs?: 0..60000 } — operator only
-//   POST /api/spaces/:spaceId/show/:projectId/favourites { favourites: [lookId, ≤5] } — operator only; the five buttons in the room
+//   POST /api/spaces/:spaceId/show/:projectId/favourites { favourites: [lookId, ≤10] } — operator only; the ten buttons in the room
 //   POST /api/spaces/:spaceId/show/:projectId/autoplay { autoplay: bool } — operator only; OFF by default, a press turns it off
 //
 // Registered AHEAD of the blanket /api role gates (index.js) on purpose: a visitor must
@@ -264,7 +264,7 @@ function registerShowRoutes(router, {
     res.json({ ok: true, ...(await answer(ctx)) })
   }
 
-  // The five favourite scenes: the operator stars them, everyone's room shows the same five.
+  // The ten favourite scenes: the operator stars them, everyone's room shows the same ten.
   router.post(`${base}/favourites`, writeLimiter, express.json({ limit: '2kb' }), async (req, res, next) => {
     try {
       const ctx = await resolve(req)

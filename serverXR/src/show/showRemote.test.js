@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const {
-  COOLDOWN_MS, CROWD_COOLDOWN_MS, showCuesOf, whoIs, chooserLabel, cleanName, chooseBlock, decideChoose, liveOf, sanitizeControl, colourWord, favouritesOf, checkFavourites
+  COOLDOWN_MS, CROWD_COOLDOWN_MS, showCuesOf, whoIs, chooserLabel, cleanName, chooseBlock, decideChoose, liveOf, sanitizeControl, colourWord, favouritesOf, checkFavourites, FAVOURITES_MAX
 } = require('./showRemote')
 const { hasRequiredAuthRole, canAccessSpace } = require('../authAccess')
 
@@ -218,24 +218,34 @@ describe('the live cue', () => {
 describe('the favourite scenes', () => {
   const fc = (n, laser = null) => ({ lookId: `rig-l${n}`, laser })
   const list = [fc(1), fc(2, 'lit'), fc(3), fc(4), fc(5), fc(6), fc(7), { ...fc(3), index: 9 }]
-  it('before anyone stars: the first five non-laser looks in list order, a look once', () => {
-    expect(favouritesOf(list, null)).toEqual(['rig-l1', 'rig-l3', 'rig-l4', 'rig-l5', 'rig-l6'])
+  it('before anyone stars: the first ten non-laser looks in list order, a look once', () => {
+    expect(favouritesOf(list, null)).toEqual(['rig-l1', 'rig-l3', 'rig-l4', 'rig-l5', 'rig-l6', 'rig-l7'])
+  })
+  it('ten is the cap: twelve looks give ten buttons, the eleventh star is refused', () => {
+    const many = Array.from({ length: 12 }, (_, i) => fc(i + 1))
+    expect(FAVOURITES_MAX).toBe(10)
+    expect(favouritesOf(many, null)).toEqual(many.slice(0, 10).map((c) => c.lookId))
+    expect(checkFavourites(many.slice(0, 10).map((c) => c.lookId), many)).toMatchObject({ ok: true })
+    const eleven = checkFavourites(many.slice(0, 11).map((c) => c.lookId), many)
+    expect(eleven.ok).toBe(false)
+    expect(eleven.error).toBe('At most 10 favourites.')
+    expect(favouritesOf(many, many.map((c) => c.lookId))).toHaveLength(10)
   })
   it('the operator\'s list wins, in his order; looks gone from the show or turned laser drop out', () => {
     expect(favouritesOf(list, ['rig-l7', 'rig-l1'])).toEqual(['rig-l7', 'rig-l1'])
     expect(favouritesOf(list, ['rig-gone', 'rig-l2', 'rig-l4'])).toEqual(['rig-l4'])
     expect(favouritesOf(list, [])).toEqual([])
   })
-  it('checkFavourites refuses more than five, repeats, unknown ids and laser scenes', () => {
+  it('checkFavourites refuses more than ten, repeats, unknown ids and laser scenes', () => {
     expect(checkFavourites(['rig-l1', 'rig-l3'], list)).toEqual({ ok: true, favourites: ['rig-l1', 'rig-l3'] })
-    expect(checkFavourites(['rig-l1', 'rig-l3', 'rig-l4', 'rig-l5', 'rig-l6', 'rig-l7'], list).ok).toBe(false)
+    expect(checkFavourites(['rig-l1', 'rig-l3', 'rig-l4', 'rig-l5', 'rig-l6', 'rig-l7'], list).ok).toBe(true)
     expect(checkFavourites(['rig-l1', 'rig-l1'], list).ok).toBe(false)
     expect(checkFavourites(['nope'], list).ok).toBe(false)
     expect(checkFavourites(['rig-l2'], list).ok).toBe(false)
     expect(checkFavourites('rig-l1', list).ok).toBe(false)
   })
-  it('sanitizeControl keeps a stored list (<= 5, unique strings) and null as "never starred"', () => {
+  it('sanitizeControl keeps a stored list (<= 10, unique strings) and null as "never starred"', () => {
     expect(sanitizeControl(null).favourites).toBe(null)
-    expect(sanitizeControl({ favourites: ['a', 'a', 3, 'b', 'c', 'd', 'e', 'f'] }).favourites).toEqual(['a', 'b', 'c', 'd', 'e'])
+    expect(sanitizeControl({ favourites: ['a', 'a', 3, 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'] }).favourites).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'])
   })
 })

@@ -1,4 +1,4 @@
-// The five favourite scene buttons in the room (RoomFavourites.jsx) and the stars in the list (RoomCueList.jsx).
+// The ten favourite scene buttons (five before 2026-10-09) in the room (RoomFavourites.jsx) and the stars in the list (RoomCueList.jsx).
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RoomFavourites from './RoomFavourites.jsx'
@@ -33,6 +33,26 @@ describe('the favourite row', () => {
         const post = calls.find(([, init]) => init?.method === 'POST')
         expect(post[0]).toMatch(/\/api\/spaces\/moxir\/show\/v1-1\/choose$/)
         expect(JSON.parse(post[1].body)).toMatchObject({ index: 3, cueId: 'c3' })
+    })
+
+    it('ten favourites are ten buttons: one row on a wide screen, two rows of five on a phone', async () => {
+        const cues = Array.from({ length: 10 }, (_, i) => cue(i, `scene ${i + 1}`))
+        const a = answer({ cues, live: { index: 0, n: 10, running: true, loop: false, autoplay: false, nextIndex: -1, nextInMs: null, by: null, missing: 0 } })
+        a.control.favourites = cues.map((c) => c.lookId)
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(a))
+        const mm = (matches) => { window.matchMedia = () => ({ matches, addEventListener() {}, removeEventListener() {} }) }
+        mm(true)
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        await screen.findByText('scene 1')
+        expect(document.querySelectorAll('[data-fav]').length).toBe(10)
+        expect(document.querySelector('[aria-label="favourite scenes"]').getAttribute('data-cols')).toBe('10')
+        cleanup()
+        mm(false)
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        await screen.findByText('scene 1')
+        expect(document.querySelectorAll('[data-fav]').length).toBe(10)
+        expect(document.querySelector('[aria-label="favourite scenes"]').getAttribute('data-cols')).toBe('5')
+        delete window.matchMedia
     })
 
     it('where the server says you watch (or the cooldown runs) every button is disabled', async () => {
@@ -87,7 +107,7 @@ describe('the stars in the list', () => {
         await act(async () => { fireEvent.click(document.querySelector('[data-star="rig-l6"]')) })
         const post = calls.find(([, init]) => init?.method === 'POST')
         expect(post[0]).toMatch(/\/show\/v1-1\/favourites$/)
-        expect(JSON.parse(post[1].body).favourites).toEqual(['rig-l2', 'rig-l3', 'rig-l4', 'rig-l5', 'rig-l6'].filter((id) => id !== 'rig-l0'))
+        expect(JSON.parse(post[1].body).favourites).toEqual(['rig-l0', 'rig-l2', 'rig-l3', 'rig-l4', 'rig-l5', 'rig-l6'])
         expect(heard).toHaveBeenCalled()
         window.removeEventListener('di:show-answer', heard)
     })
