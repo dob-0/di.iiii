@@ -217,7 +217,12 @@ describe('the show page — choosing', () => {
         expect((await off.json()).live.autoplay).toBe(false)
     })
 
-    it('then one choice per cooldown for the team; the operator never waits (owner 10-09)', async () => {
+    it('no wait by default; with a wait set, one choice per wait for the team, the operator never waits', async () => {
+        expect((await read(MEMBER)).control.cooldownMs).toBe(0)
+        expect((await send('POST', `${SHOW}/control`, MEMBER, { cooldownMs: 10_000 })).status).toBe(403)
+        expect((await send('POST', `${SHOW}/control`, ADMIN, { cooldownMs: -1 })).status).toBe(400)
+        await ok(await send('POST', `${SHOW}/control`, ADMIN, { cooldownMs: 10_000 }))
+        await ok(await choose(ADMIN, 2)) // the operator's press starts the wait for the team
         const out = await choose(MEMBER, 2)
         expect(out.status).toBe(429)
         expect((await out.json()).code).toBe('cooldown')

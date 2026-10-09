@@ -148,7 +148,8 @@ export const youWords = (data, cooldownLeftMs = 0, mine = null) => {
     if (cooldownLeftMs > 0) return `Someone just pressed. Next press in ${durationWords(cooldownLeftMs)}.`
     if (who === 'operator' && data.you?.authOff) return `Sign-in is off here, so everyone who opens this page is the operator. Press a scene.`
     if (who === 'operator') return `Press a scene. Who may choose: ${choosers}.`
-    return `Press a scene. ${choosers === 'everyone' ? 'Everyone here' : 'The team'} presses; one press per ${durationWords(data.control?.cooldownMs || 10000)}.`
+    const wait = data.control?.cooldownMs || 0
+    return `Press a scene. ${choosers === 'everyone' ? 'Everyone here' : 'The team'} presses${wait > 0 ? `; one press per ${durationWords(wait)}` : ''}.`
 }
 
 /** Cards under act headings: a cue that names no act stays under the act before it. */

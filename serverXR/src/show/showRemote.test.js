@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const {
-  COOLDOWN_MS, showCuesOf, whoIs, chooserLabel, cleanName, chooseBlock, decideChoose, liveOf, sanitizeControl, colourWord, favouritesOf, checkFavourites
+  COOLDOWN_MS, CROWD_COOLDOWN_MS, showCuesOf, whoIs, chooserLabel, cleanName, chooseBlock, decideChoose, liveOf, sanitizeControl, colourWord, favouritesOf, checkFavourites
 } = require('./showRemote')
 const { hasRequiredAuthRole, canAccessSpace } = require('../authAccess')
 
@@ -150,13 +150,20 @@ describe('choosing a cue', () => {
     expect(ask({ who: 'operator', control }).ok).toBe(true)
   })
 
-  it('one choice per cooldown for the team; the operator never waits (owner 10-09)', () => {
-    const control = sanitizeControl({ last: { index: 0, cueId: 'x', by: 'a', at: now - COOLDOWN_MS + 3000 } })
+  it('no wait by default: every tap is instant (owner 10-09, "to show and test with the team")', () => {
+    expect(COOLDOWN_MS).toBe(0)
+    const control = sanitizeControl({ last: { index: 0, cueId: 'x', by: 'a', at: now } })
+    expect(control.cooldownMs).toBe(0)
+    expect(ask({ who: 'member', control }).ok).toBe(true)
+  })
+
+  it('with a wait set (future crowd mode): one choice per wait for the team; the operator never waits', () => {
+    const control = sanitizeControl({ cooldownMs: CROWD_COOLDOWN_MS, last: { index: 0, cueId: 'x', by: 'a', at: now - CROWD_COOLDOWN_MS + 3000 } })
     const out = ask({ who: 'member', control })
     expect(out).toMatchObject({ ok: false, status: 429, code: 'cooldown' })
     expect(out.error).toMatch(/Next choice in 3 s/)
     expect(ask({ who: 'operator', control }).ok).toBe(true)
-    expect(ask({ control: sanitizeControl({ last: { index: 0, cueId: 'x', by: 'a', at: now - COOLDOWN_MS } }) }).ok).toBe(true)
+    expect(ask({ control: sanitizeControl({ cooldownMs: CROWD_COOLDOWN_MS, last: { index: 0, cueId: 'x', by: 'a', at: now - CROWD_COOLDOWN_MS } }) }).ok).toBe(true)
   })
 
   it('refuses a stale card instead of firing a different cue', () => {

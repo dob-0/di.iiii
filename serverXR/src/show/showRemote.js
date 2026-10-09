@@ -18,9 +18,11 @@
 //            choose. Kept open for a cloud mode where people who are not on the local
 //            system choose from afar: the setting says WHO, decideChoose's `light` says
 //            WHERE Light is, and the two are independent (RIG_BUILD.md §24).
-//   cooldown one choice per COOLDOWN_MS from this page for the team and everyone; NEVER for
-//            the operator (owner 10-09: "why do I need to wait after the scene changes?").
-//            With sign-in off everyone is the operator, so a local install never waits.
+//   cooldown OFF by default (control.cooldownMs = 0): owner 10-09, "we don't give the crowd
+//            control now, that's for the future; this is to show and test with others and the
+//            team, to brainstorm" — every tap is instant. The operator may set a wait
+//            (0..60 s, CROWD_COOLDOWN_MS is the suggested crowd value) for a future crowd mode;
+//            even then the operator himself never waits.
 //   lasers   a cue whose look would light a laser is never fired from here, by anyone
 //            (shared/laserMoments.cjs). A look the server cannot read counts as one.
 //
@@ -28,7 +30,9 @@
 
 const { laserMomentOf } = require('../../../shared/laserMoments.cjs')
 
-const COOLDOWN_MS = 10_000
+const COOLDOWN_MS = 0 // the default: no wait
+const CROWD_COOLDOWN_MS = 10_000 // a suggested wait for the future crowd mode
+const COOLDOWN_MAX_MS = 60_000
 const CHOOSERS = Object.freeze(['team', 'everyone', 'operator'])
 const DEFAULT_CHOOSERS = 'team'
 const DESK_LOOK_PREFIX = 'rig-'
@@ -179,13 +183,14 @@ const chooserLabel = ({ who, state, typedName }) => {
   return who === 'member' ? 'a member' : 'someone here'
 }
 
-const emptyControl = () => ({ choosers: DEFAULT_CHOOSERS, setAt: null, last: null, favourites: null })
+const emptyControl = () => ({ choosers: DEFAULT_CHOOSERS, cooldownMs: COOLDOWN_MS, setAt: null, last: null, favourites: null })
 
 const sanitizeControl = (raw) => {
   const c = emptyControl()
   if (!raw || typeof raw !== 'object') return c
   c.choosers = CHOOSERS.includes(raw.choosers) ? raw.choosers : DEFAULT_CHOOSERS
   c.setAt = Number.isFinite(raw.setAt) ? raw.setAt : null
+  if (Number.isFinite(raw.cooldownMs)) c.cooldownMs = Math.min(COOLDOWN_MAX_MS, Math.max(0, Math.round(raw.cooldownMs)))
   // null = the operator never starred any; an array (≤5 look ids) = his five.
   if (Array.isArray(raw.favourites)) c.favourites = [...new Set(raw.favourites.filter((id) => typeof id === 'string' && id).map((id) => id.slice(0, 40)))].slice(0, FAVOURITES_MAX)
   const last = raw.last
@@ -222,7 +227,8 @@ const checkFavourites = (ids, cues) => {
 
 const cooldownLeftMs = (control, now) => {
   const at = control?.last?.at
-  return Number.isFinite(at) ? Math.max(0, at + COOLDOWN_MS - now) : 0
+  const wait = Number.isFinite(control?.cooldownMs) ? control.cooldownMs : COOLDOWN_MS
+  return Number.isFinite(at) && wait > 0 ? Math.max(0, at + wait - now) : 0
 }
 
 /** Why this person may not choose right now ('' = they may), for the page and the route alike. */
@@ -296,6 +302,8 @@ const liveOf = ({ runner, projectId, control, cues }) => {
 
 module.exports = {
   COOLDOWN_MS,
+  CROWD_COOLDOWN_MS,
+  COOLDOWN_MAX_MS,
   CHOOSERS,
   DEFAULT_CHOOSERS,
   splitActName,

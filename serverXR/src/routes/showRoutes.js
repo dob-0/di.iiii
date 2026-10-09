@@ -3,7 +3,7 @@ const express = require('express')
 const { createKeyedLock } = require('../asyncLock')
 
 const {
-  COOLDOWN_MS,
+  COOLDOWN_MAX_MS,
   CHOOSERS,
   showCuesOf,
   whoIs,
@@ -24,7 +24,7 @@ const {
 //
 //   GET  /api/spaces/:spaceId/show/:projectId          the cues, the live cue, the rules, you
 //   POST /api/spaces/:spaceId/show/:projectId/choose   { index, cueId, name? } → Light goes there
-//   POST /api/spaces/:spaceId/show/:projectId/control  { choosers: team|everyone|operator } — operator only
+//   POST /api/spaces/:spaceId/show/:projectId/control  { choosers?: team|everyone|operator, cooldownMs?: 0..60000 } — operator only
 //   POST /api/spaces/:spaceId/show/:projectId/favourites { favourites: [lookId, ≤5] } — operator only; the five buttons in the room
 //   POST /api/spaces/:spaceId/show/:projectId/autoplay { autoplay: bool } — operator only; OFF by default, a press turns it off
 //
@@ -172,7 +172,7 @@ function registerShowRoutes(router, {
       live: liveOf({ runner, projectId: ctx.project.projectId, control, cues }),
       control: {
         choosers: control.choosers,
-        cooldownMs: COOLDOWN_MS,
+        cooldownMs: control.cooldownMs,
         cooldownLeftMs: ctx.who === 'operator' ? 0 : cooldownLeftMs(control, t), // the operator never waits
         favourites: favouritesOf(cues, control.favourites),
         favouritesSet: Array.isArray(control.favourites),
@@ -247,14 +247,20 @@ function registerShowRoutes(router, {
 
   const setControl = async (ctx, req, res) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {}
-    if (!CHOOSERS.includes(body.choosers)) {
+    const hasChoosers = body.choosers !== undefined
+    const hasWait = body.cooldownMs !== undefined
+    if ((!hasChoosers && !hasWait) || (hasChoosers && !CHOOSERS.includes(body.choosers))) {
       return res.status(400).json({ error: `choosers is one of ${CHOOSERS.join(', ')}.`, code: 'bad-setting' })
     }
+    if (hasWait && !(Number.isInteger(body.cooldownMs) && body.cooldownMs >= 0 && body.cooldownMs <= COOLDOWN_MAX_MS)) {
+      return res.status(400).json({ error: `cooldownMs is a whole number of ms, 0 to ${COOLDOWN_MAX_MS}.`, code: 'bad-setting' })
+    }
     const control = await controlOf(ctx.key)
-    control.choosers = body.choosers
+    if (hasChoosers) control.choosers = body.choosers
+    if (hasWait) control.cooldownMs = body.cooldownMs
     control.setAt = now()
     await saveControl(ctx.key, control)
-    log(`show page: ${ctx.key} — who may choose: ${control.choosers}`)
+    log(`show page: ${ctx.key} — who may choose: ${control.choosers}, wait ${control.cooldownMs} ms`)
     res.json({ ok: true, ...(await answer(ctx)) })
   }
 
