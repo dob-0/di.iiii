@@ -11,7 +11,8 @@
 // type library). Their sum is written into the renderer's shared haze uniforms
 // (hazeUniforms.js); a beam never re-renders for it.
 import { useSyncExternalStore } from 'react'
-import { buildHazeField, hazeFogFar, hazeSettingsOf, sameHazeField } from './hazeField.js'
+import { buildHazeField, hazeSettingsOf, sameHazeField } from './hazeField.js'
+import { beerLambertFog } from './beerLambertFog.js'
 import { hazeUniformsFor, writeHazeUniforms } from './hazeUniforms.js'
 
 const stores = new WeakMap()
@@ -44,6 +45,8 @@ export const setAtmosphere = (gl, atmosphere) => {
     store.value = atmosphere || null
     refreshField(gl, store)
     for (const listener of store.listeners) listener()
+    // the surfaces' fog follows the air even when no field changed (a uniform haze edited)
+    for (const listener of store.fieldListeners) listener(store.field)
 }
 
 /** The room's hazers and fog machines (hazeField.js hazeMachinesOf), for this renderer. */
@@ -117,15 +120,17 @@ export const subscribeHazeField = (gl, listener) => {
 }
 
 /**
- * The fog's resting distances: the haze's (0 … 1.6/σ) when the room works its haze out
- * from its machines, else `fallback` (as authored). Whoever moves the fog at run time —
- * SmartView stands it back by the camera's distance outside the building — adds its
- * offset to THIS, so the two compose instead of overwriting each other.
+ * The fog's resting distances: Beer–Lambert at the σ the beams' transmittance uses — the field's fill
+ * when the room works its haze out from its machines, else the room's one scattering — encoded for the
+ * patched fog chunk (beerLambertFog.js: far < near), or `fallback` (as authored) in a room with no air.
+ * Whoever moves the fog at run time — SmartView stands it back by the camera's distance outside the
+ * building — adds its offset to THIS (to near and far alike), so the haze then starts at the building.
  */
 export const hazeFogBase = (gl, fallback = null) => {
-    const field = getHazeField(gl)
-    if (!field) return fallback
-    return { near: 0, far: Math.min(hazeFogFar(field.fill), 1e5) }
+    const store = storeOf(gl)
+    const sigma = store?.field ? store.field.fill : store?.value?.scattering
+    if (!store?.value || !(sigma > 0)) return store?.value && store?.field ? { near: 0, far: 1e5 } : fallback
+    return beerLambertFog(Math.min(sigma, 1), 0)
 }
 
 export function useAtmosphere(gl) {

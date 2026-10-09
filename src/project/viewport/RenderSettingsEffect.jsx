@@ -4,6 +4,11 @@ import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
 import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
+import { installBeerLambertFog } from '../../objectComponents/beerLambertFog.js'
+
+// The surfaces' fog can be Beer–Lambert (beerLambertFog.js): three's fog chunks are patched before any
+// program of the room is compiled — both renderers import this module before they draw.
+installBeerLambertFog()
 import { bloomOf } from './bloom.js'
 import { useHoldFrames } from '../../studio/utils/renderDemand.jsx'
 import { surfacesOf } from './surfaces.js'
@@ -61,10 +66,10 @@ export default function RenderSettingsEffect({ renderSettings }) {
         const field = getHazeField(gl)
         if (field && field.patchiness > 0) hazeUniformsFor(gl).uHazeTime.value = clock.elapsedTime
     })
-    // And the hall's haze dims the surfaces as it dims the beams: the fog's resting
-    // distances become the haze's (atmosphereStore.js hazeFogBase), set when the haze
-    // changes — not every frame, which would fight SmartView, the one that moves the fog
-    // at run time (it adds its offset to the same base). A room with one hand-set haze
+    // And the hall's haze dims the surfaces as it dims the beams, by the same law: the fog
+    // becomes Beer–Lambert at the beams' σ (atmosphereStore.js hazeFogBase, beerLambertFog.js),
+    // set when the air changes — not every frame, which would fight SmartView, the one that
+    // moves the fog at run time (it adds its offset to the same base). A room with no air
     // keeps the fog it was authored with.
     const { scene } = useThree()
     useEffect(() => {
