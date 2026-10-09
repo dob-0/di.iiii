@@ -45,6 +45,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--repo', default='.')
 ap.add_argument('--out', default=None)
 ap.add_argument('--check', action='store_true')
+ap.add_argument('--aerial-json', default=None)
 ap.add_argument('--rig-out', default='scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json')
 A = ap.parse_known_args()[0]
 REPO = os.path.abspath(os.path.expanduser(A.repo))
@@ -127,12 +128,13 @@ OLD_W = world(GLB_OLD, G_OLD, V10['solids'], L.TRUSS, L.crane_boxes(), OLD_BOOTH
 # The rig json parks the far crane at z -41 (hall.json cranes[1]): from there NO aim passes (see `far_crane_at_rig_z` in the checks: the beam must be >= 5.0 m over
 # the floor (person 2.0 + 3.0), under the near crane's bridge at 7.2 m, and end >= 9.0 m on the far wall within ~64 m... the numbers decide). The free crane travels
 # (owner: the cranes move): its show position is LASER_BRIDGE['z'] below, found by the search in `bridge_search` (z -12: 0.52 deg of fan left; z -24: 0.05 deg).
-# Order along the bridge (x): mirrored pairs about the nave axis x 0, the two ember cubes in the middle, ash outside; the beams converge (ends at half the cube spacing).
-LASER_BRIDGE = {'z': -12.0, 'y': 5.0, 'xs': {'rig-lasercube-cut-01': -5.0, 'rig-lasercube-cut-02': -3.0, 'rig-lasercube-cut-04': -1.0,
-                                            'rig-lasercube-cut-05': 1.0, 'rig-lasercube-cut-03': 3.0, 'rig-lasercube-cut-06': 5.0},
-                'end_gain': -0.5, 'end_y': 10.6, 'as_found_rig_z': G_NEW['cranes'][1]['z_m'], 'underside_range_m': [7.69, 8.24], 'underside_used_m': 7.69,
+# Order along the bridge (x): three lines house left (x -2.6, -4.0, -5.4), three house right (1.1, 2.5, 3.9), MIRRORED about x -0.75 (offsets 1.85 / 3.25 / 4.65), the two ember
+# cubes innermost; the lines run PARALLEL to the far wall. The 3.7 m gap between the pairs is the cut's HIGH end (x 0.55, top 6.0 m + the PARs on it): a line there hits the truss.
+LASER_BRIDGE = {'z': -12.0, 'y': 5.2, 'xs': {'rig-lasercube-cut-01': -5.4, 'rig-lasercube-cut-02': -4.0, 'rig-lasercube-cut-04': -2.6,
+                                            'rig-lasercube-cut-05': 1.1, 'rig-lasercube-cut-03': 2.5, 'rig-lasercube-cut-06': 3.9},
+                'end_gain': 0.0, 'end_y': 10.2, 'as_found_rig_z': G_NEW['cranes'][1]['z_m'], 'underside_range_m': [7.69, 8.24], 'underside_used_m': 7.69,
                 'underside_basis': 'hall.json cranes[1].girder_bottom_basis: 7.95 m, 5-95 % 7.69-8.24 (photo 007); the LOW end used'}
-BAR_SOLID_ID = 'rig-laser-bar'
+BAR_SOLID_ID = 'rig-crane-bar'
 
 
 def laser_bar_solid():
@@ -421,7 +423,7 @@ def full_cast(f, T, half_deg=FAN_DEG):
     d = (np.asarray(T, float) - p)
     d /= np.linalg.norm(d)
     dirs, _ = O.cone_rays(d, half_deg, O.AREA_RINGS)
-    skip = ('laser-bar',)
+    skip = ('crane-bar',)
     names, lo, hi, meshes = set(), 99.0, -99.0, set()
     ok = True
     for q in dirs:
@@ -460,6 +462,27 @@ def mesh_at(h):
     return best
 
 
+UNITS_NOW = []
+
+
+def fixture_clearance(p, T):
+    """Smallest gap (m) between the beam tube and any other lamp body (0.15 m radius ASSUMED): the lamps on the cut and the grazers are not in the triangle cast."""
+    p, T = np.asarray(p, float), np.asarray(T, float)
+    d = T - p
+    L_ = float(np.linalg.norm(d))
+    d /= L_
+    best = 99.0
+    for u in UNITS_NOW:
+        if u['type'] == 'ext-lc-ultra-mk2':
+            continue
+        v = np.array(u['p'], float) - p
+        s_ = float(v @ d)
+        if s_ < 0 or s_ > L_:
+            continue
+        best = min(best, float(np.linalg.norm(v - s_ * d)) - tube_r(s_) - 0.15)
+    return best
+
+
 def aerial_report(f, T, half_fan):
     """The per-cube numbers the owner asked for, from the analytic tube (fan 0.8 deg) + the full cast."""
     p = np.array(f['p'], float)
@@ -467,7 +490,9 @@ def aerial_report(f, T, half_fan):
     pl = m['places']
     worst = min(pl, key=lambda k: pl[k][0])
     cast_ok, names, lo, hi, meshes = full_cast(f, T)
-    return {'pass_places': min(v[0] for v in pl.values()) >= 0, 'worst_place': worst, 'worst_margin_m': R3(pl[worst][0]), 'worst_at': pl[worst][1],
+    fx = fixture_clearance(p, T)
+    cast_ok = cast_ok and fx >= 0
+    return {'nearest_fixture_margin_m': R3(fx), 'pass_places': min(v[0] for v in pl.values()) >= 0, 'worst_place': worst, 'worst_margin_m': R3(pl[worst][0]), 'worst_at': pl[worst][1],
             'crane_under_margin_m': R3(m['crane_under_m']), 'lamp_margin_m': R3(m['lamp_m']), 'end_low_m': R3(m['end_low_m']), 'end_high_m': R3(m['end_high_m']),
             'cast_all_rays_on_matte_block': bool(cast_ok), 'cast_hits': sorted(names), 'cast_end_y_range_m': [R3(lo), R3(hi)], 'cast_meshes': sorted(meshes),
             'half_fan_deg': R3(half_fan), 'margin_after_zone_deg': R3(half_fan - FAN_DEG), 'length_m': R3(m['length_m']), 'ok': bool(ok and cast_ok)}
@@ -535,7 +560,7 @@ def beam_row(f, h, T, rep, n_cands):
     beam = {'id': '%da' % int(f['id'][-2:]), 'to': [R3(v) for v in T], 'length_m': round(rep['length_m'], 1), 'r': L.rot_for_dir(d), 'off': False, 'duty': 1.0, 'pass': True,
             'ends_on': 'end wall (block)', 'end_height_m': R3(T[1]), 'max_z_m': R3(T[2]), 'candidates_that_pass': n_cands,
             'lowest_axis_distance_to_a_place_m': R3(dist), 'nearest_place': wname, 'nearest_place_at': wat}
-    for k in ('worst_place', 'worst_margin_m', 'worst_at', 'crane_under_margin_m', 'lamp_margin_m', 'end_low_m', 'end_high_m', 'cast_all_rays_on_matte_block', 'cast_hits',
+    for k in ('nearest_fixture_margin_m', 'worst_place', 'worst_margin_m', 'worst_at', 'crane_under_margin_m', 'lamp_margin_m', 'end_low_m', 'end_high_m', 'cast_all_rays_on_matte_block', 'cast_hits',
               'cast_end_y_range_m', 'cast_meshes', 'half_fan_deg', 'margin_after_zone_deg'):
         beam[k] = rep[k]
     return beam
@@ -551,6 +576,7 @@ def aerial_rule():
 
 
 def lasers(units):
+    UNITS_NOW[:] = units
     out = []
     cubes = [f for f in units if f['type'] == 'ext-lc-ultra-mk2']
     xc = [LASER_BRIDGE['xs'][f['id']] for f in cubes]
@@ -567,15 +593,22 @@ def lasers(units):
         T0 = np.array([c0 + (x - c0) * (1 + LASER_BRIDGE['end_gain']), LASER_BRIDGE['end_y'], END_Z])
         got = None
         nudges = sorted(((abs(dx) + abs(dy), dx, dy) for dx in np.arange(-0.5, 0.51, 0.1) for dy in np.arange(-0.6, 0.61, 0.1)))
-        for _, dx, dy in nudges:                              # the composition's own end first; the smallest nudge that passes the full cast otherwise
+        ranked = []
+        for sz, dx, dy in nudges:                              # the composition's own end first; else the nudge with the largest fan that also passes the full cast
             T = T0 + np.array([dx, dy, 0.0])
             h = half_fan_for(p, T)
-            if h is None or h < FAN_DEG:
-                continue
+            if h is not None and h >= FAN_DEG:
+                ranked.append((-round(h, 2), sz, dx, dy, h))
+        ranked.sort(key=lambda t: (t[1], t[0]))
+        passing = []
+        for _, sz, dx, dy, h in ranked:                       # nearest-to-the-composition first; of the first 6 ends that pass the full cast keep the one with the largest fan
+            T = T0 + np.array([dx, dy, 0.0])
             rep = aerial_report(f, T, h)
             if rep['ok']:
-                got = (h, T, rep, len(nudges))
-                break
+                passing.append((h, T, rep, len(ranked)))
+                if len(passing) >= 6:
+                    break
+        got = max(passing, key=lambda t: t[0]) if passing else None
         base = {'id': '%da' % n, 'was_v1_0_beams': old}
         if got:
             h, T, rep, nc = got
@@ -615,8 +648,62 @@ def far_crane_at_rig_z(units):
                     if best is None or marg > best:
                         best = marg
             worst.append(best)
-        out['%g' % z] = {'best_worst_margin_m_over_the_six_x': R3(min(worst)), 'any_aim_passes_all_six': bool(min(worst) >= 0), 'half_fan_deg_composition': None}
+        out['%g' % z] = {'best_worst_margin_m_over_the_six_x': R3(min(worst)), 'any_aim_passes_all_six': bool(min(worst) >= 0)}
     return out
+
+
+def _single_ok(p, T):
+    """One ray p -> T: the rule with NO fan (the tube is the beam alone) and its first hit the matte end-wall block."""
+    ok, m = beam_path_checks(p, T, 0.0)
+    if not ok or fixture_clearance(p, T) < 0:
+        return False
+    d = (np.asarray(T, float) - p)
+    d /= np.linalg.norm(d)
+    t, n, c = first_hit(NEW_W, p, d, skip_box=('crane-bar',), reach=140.0)
+    return t is not None and n.startswith('end wall z +') and 'gate' not in n and END_MIN_Y <= (p + t * d)[1] <= END_MAX_Y
+
+
+def setup_sheet(units):
+    """Per cube: the mount, the aim as pan / tilt from LEVEL, and the window in which the rule still holds (no fan: the beam alone): the LaserOS Safety Zone keep-in
+    (the aim +-0.3 deg controller zone, which must sit inside the window shrunk by the 0.5 deg mount tolerance) and the beam-block floor (the lowest ray allowed)."""
+    rows = []
+    for f in units:
+        if f['type'] != 'ext-lc-ultra-mk2' or f['laser'].get('off'):
+            continue
+        b = f['laser']['beams'][0]
+        p = np.array(f['p'], float)
+        T = np.array(b['to'], float)
+        v = T - p
+        ln = float(np.linalg.norm(v))
+        pan = math.degrees(math.atan2(v[0], v[2]))
+        tilt = math.degrees(math.asin(v[1] / ln))
+
+        def at(dpan, dtilt):
+            pa, ti = math.radians(pan + dpan), math.radians(tilt + dtilt)
+            return p + ln * np.array([math.cos(ti) * math.sin(pa), math.sin(ti), math.cos(ti) * math.cos(pa)])
+
+        def edge(axis, sign):
+            last = 0.0
+            for k in range(1, 151):
+                dv = sign * 0.02 * k
+                q = at(dv, 0.0) if axis == 'pan' else at(0.0, dv)
+                if not _single_ok(p, q):
+                    return round(last, 2)
+                last = dv
+            return round(last, 2)
+        lo_p, hi_p, lo_t, hi_t = edge('pan', -1), edge('pan', 1), edge('tilt', -1), edge('tilt', 1)
+        rows.append({'cube': f['id'], 'beam': b['id'], 'colour': f['laser']['colour'],
+                     'mount': {'on': 'the free crane\'s laser bar', 'crane_z_m': LASER_BRIDGE['z'], 'x_m': f['p'][0], 'beam_height_m': f['p'][1],
+                               'drop_under_bridge_m': R3(LASER_BRIDGE['underside_used_m'] - f['p'][1]), 'roll_deg': 0.0, 'cube_clamp': 'the maker\'s tilt-lock screws + safety eye bolt (lasers-exact.json specs)'},
+                     'aim': {'end_m': b['to'], 'pan_deg_from_hall_axis_plus_toward_x': round(pan, 2), 'tilt_deg_above_level': round(tilt, 2), 'range_m': b['length_m']},
+                     'window_rule_holds_deg': {'pan': [round(pan + lo_p, 2), round(pan + hi_p, 2)], 'tilt': [round(tilt + lo_t, 2), round(tilt + hi_t, 2)],
+                                               'half_widths_pan_tilt': [lo_p, hi_p, lo_t, hi_t]},
+                     'laseros_safety_zone_keep_in_deg': {'pan': [round(pan - ZONE_DEG, 2), round(pan + ZONE_DEG, 2)], 'tilt': [round(tilt - ZONE_DEG, 2), round(tilt + ZONE_DEG, 2)],
+                                                         'why': 'the aim +-%.1f deg (the controller zone); the window above minus the %.1f deg mount tolerance must still contain it: %s' % (
+                                                             ZONE_DEG, FAN_DEG - ZONE_DEG, 'yes' if min(-lo_p, hi_p, -lo_t, hi_t) >= FAN_DEG else 'NO')},
+                     'beam_block': {'lowest_ray_allowed_tilt_deg': round(tilt + lo_t, 2), 'lowest_ray_allowed_height_at_cube_plus_m': None,
+                                    'setting': 'block everything below %.2f deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge' % (tilt + lo_t)}})
+    return rows
 
 
 def off_reason(f):
@@ -892,14 +979,119 @@ def fig_plan(units, solids, path, xr=(-16, 16), zr=(-44, 32), keep_labels=None, 
         ax.plot(x, z, 's' if u['status'] == 'used' else 'x', color=c, ms=3.2, zorder=10)
     ax.set_title("MOXIR v1.1 - the stage on the owner's new marks (2026-10-08 night): plan, the press end", color='#f5f2ea', fontsize=11, loc='left')
     lines = ['DJ step x -6.7..-3.7, z 3.65..5.65 (his box x -6.3..-4.1, z 3.7..5.6) · speakers = his boxes (L moved +0.4 m off the transformer and trimmed 0.3 m off the step; R moved +0.9 m off the press pedestal)',
-             'near crane parked z 0.15 (as found 42.5) · the cut axis x -5.0 · no ash wall: the 6 beams end on the press (z 0.2 face / z 0.8 crown) · far crane z -41 (cubes 1-3)',
-             'barrier z 8.2 · floor z 8.2..28 · FOH z 29 · squares = units used, x = held back · lines = the 6 laser beams (one per cube) onto the hall\'s press']
+             'near crane parked z 0.15 (as found 42.5) · the cut axis x -5.0 · no ash wall · ALL 6 cubes on the free crane (z %g, was -41) · beams run over the heads to the far wall (z 53.8)' % LASER_BRIDGE['z'],
+             'barrier z 8.2 · floor z 8.2..28 · FOH z 29 · squares = units used, x = held back · lines = the 6 laser beams (one per cube) to the far wall']
     for i, t in enumerate(lines):
         fig.text(0.07, 0.035 - i * 0.012, t, color='#c9ccd1', fontsize=7.5)
     for t in ax.texts:
         t.set_clip_on(True)
     _declutter(fig, ax)
     fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches='tight')
+    plt.close(fig)
+
+
+def fig_aerial(units, path):
+    """Long section (side) + plan of the six aerial beams with the 3 m-over-a-standing-person line, the crane, the FOH riser, the end points."""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    fig, (a1, a2) = plt.subplots(2, 1, figsize=(16, 13), gridspec_kw={'height_ratios': [1, 1.15]})
+    fig.patch.set_facecolor('#0d0e10')
+    cubes = [u for u in units if u['type'] == 'ext-lc-ultra-mk2']
+    for ax in (a1, a2):
+        ax.set_facecolor('#141518')
+        ax.tick_params(colors='#9aa0a8', labelsize=8)
+    # ---- long section: z across, y up
+    a1.set_xlim(-30, 58)
+    a1.set_ylim(0, 15)
+    a1.add_patch(Rectangle((-30, -0.3), 88, 0.3, fc='#555'))
+    a1.axhline(PERSON_M + VERT_M, color='#ffd166', ls='--', lw=1)
+    a1.text(-29.5, 5.15, '5.0 m = standing person 2.0 m + 3.0 m (HS(G)95 / IEC TR 60825-3) over the floor', color='#ffd166', fontsize=8)
+    a1.add_patch(Rectangle((DES['booth']['front_z_m'] - 2.0, 0), 2.0, DES['booth']['deck_h_m'], fc='#1fa35a'))
+    a1.text(3.0, 0.7, 'DJ step 0.4', color='#6fe08f', fontsize=7)
+    f = DES['foh']
+    a1.add_patch(Rectangle((f['p'][2] - 1.0, 0), 2.0, f['riser_m'], fc='#7f9cff'))
+    a1.text(f['p'][2] - 2.0, 1.0, 'FOH riser 0.6 m\n(person top 2.6, beam >= 5.6)', color='#7f9cff', fontsize=7)
+    a1.add_patch(Rectangle((8.2, 0), 0.1, DES['barrier']['h_m'], fc='#ff4a3a'))
+    for dz in G_NEW['cranes'][0]['girders_dz_m']:
+        a1.add_patch(Rectangle((CRANE_Z + dz - GIRDER_W / 2, CRANE_UNDER_SAFE), GIRDER_W, 8.4 - CRANE_UNDER_SAFE, fc='#d8b400'))
+    a1.text(CRANE_Z - 3, 8.6, 'near crane z %g\n(truss on it) underside 7.2 safe (7.6 drawn)' % CRANE_Z, color='#d8b400', fontsize=7)
+    a1.add_patch(Rectangle((CRANE_Z - 2.0, 2.89), 4.0, 0.4, fc='#ffb08a', alpha=0.0))
+    for dz in G_NEW['cranes'][0]['girders_dz_m']:
+        pass
+    zf = LASER_BRIDGE['z']
+    for dz in (-1.1, 1.1):
+        a1.add_patch(Rectangle((zf + dz - 0.35, LASER_BRIDGE['underside_used_m']), 0.7, 0.8, fc='#8f7a00'))
+    a1.text(zf - 6, 8.9, 'FREE crane z %g (was -41) bridge underside 7.69' % zf, color='#d8b400', fontsize=7)
+    a1.add_patch(Rectangle((zf - 0.3, LASER_BRIDGE['y'] - 0.6), 0.6, 0.3, fc='#cccccc'))
+    for lz in (0, 6, 12, 18, 24):
+        a1.add_patch(Rectangle((lz - 0.3, LAMP_LOW_SAFE), 0.6, 1.6, fc='#888', alpha=0.8))
+    a1.text(24.5, 9.6, 'pendant lamps\n(low end 9.0)', color='#aaa', fontsize=7)
+    a1.add_patch(Rectangle((END_Z, 0), 0.4, 14.3, fc='#6b5a48'))
+    a1.add_patch(Rectangle((END_Z, 0), 0.4, DOOR_TOP_M, fc='#0d0e10'))
+    a1.axhline(END_MIN_Y, xmin=0.86, color='#ffd166', ls=':', lw=1)
+    a1.text(43, END_MIN_Y - 0.55, 'door top 6.0 + 3.0 = 9.0', color='#ffd166', fontsize=7)
+    a1.axhline(G_NEW['truss_bottom_m'], color='#888', lw=0.8)
+    a1.text(-29.5, 10.9, 'roof bottom chord 10.8', color='#888', fontsize=7)
+    a1.add_patch(Rectangle((END_Z - 7.0, 0), 7.0, 2.4, fc='#555', alpha=0.0))
+    for u in cubes:
+        b = u['laser']['beams'][0]
+        if b.get('off'):
+            continue
+        p, T = np.array(u['p']), np.array(b['to'])
+        L_ = np.linalg.norm(T - p)
+        s_ = np.linspace(0, L_, 60)
+        d = (T - p) / L_
+        zz = p[2] + s_ * d[2]
+        yy = p[1] + s_ * d[1]
+        rr = np.array([tube_r(v) for v in s_])
+        col = EMBER if u['colour'].lower() == EMBER else ASH
+        a1.fill_between(zz, yy - rr, yy + rr, color=col, alpha=0.18, lw=0)
+        a1.plot(zz, yy, color=col, lw=1.0)
+        a1.plot(T[2], T[1], '*', color=col, ms=7)
+    a1.set_title('MOXIR v1.1 - aerial lasers: long section, side view (x collapsed; the band = the 0.8 deg fan + the maker\'s 4 mm / 1 mrad)', color='#f5f2ea', fontsize=11, loc='left')
+    a1.set_xlabel('z (m): far gate <- stage ... entrance wall (NW) ->', color='#9aa0a8')
+    a1.set_ylabel('y (m)', color='#9aa0a8')
+    # ---- plan: x across, z along
+    a2.set_xlim(-14, 14)
+    a2.set_ylim(-20, 57)
+    a2.invert_yaxis() if False else None
+    for xr_ in (-12.0, 12.0):
+        a2.plot([xr_, xr_], [-20, 57], color='#555', lw=3)
+    for r_ in PLACES:
+        n, x0, x1, z0, z1 = r_[0], r_[1], r_[2], r_[3], r_[4]
+        if n.startswith('hall floor'):
+            continue
+        a2.add_patch(Rectangle((x0, z0), x1 - x0, z1 - z0, fc='#7f9cff' if 'FOH' in n or 'step' in n else '#c77d2e', alpha=0.45, ec='none'))
+        a2.add_patch(Rectangle((x0 - LAT_M, z0 - LAT_M), x1 - x0 + 2 * LAT_M, z1 - z0 + 2 * LAT_M, fc='none', ec='#c77d2e', ls=':', lw=0.6))
+        if 'step' in n or 'FOH' in n or 'cab' in n or 'entry platform' in n or n.endswith('1'):
+            a2.text(x1 + 0.3, (z0 + z1) / 2, n.split(' (')[0], color='#d9b38a', fontsize=7, va='center')
+    a2.add_patch(Rectangle((-11.0, 8.2), 14.5, 19.8, fc='#2a4d8f', alpha=0.25))
+    a2.text(-10.8, 18, 'dance floor', color='#9db8ff', fontsize=9)
+    tx = [TRUSS_NEW.p[0] - TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE), TRUSS_NEW.p[0] + TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE)]
+    a2.plot(tx, [TRUSS_NEW.p[2]] * 2, color='#ffb08a', lw=4)
+    a2.text(tx[0], TRUSS_NEW.p[2] + 2.0, 'the cut (high end x 0.55)', color='#ffb08a', fontsize=7)
+    a2.plot([-11.35, 11.35], [zf, zf], color='#d8b400', lw=3)
+    a2.text(-11.3, zf - 1.2, 'FREE crane z %g' % zf, color='#d8b400', fontsize=8)
+    a2.plot([-11.35, 11.35], [CRANE_Z, CRANE_Z], color='#d8b400', lw=3)
+    a2.text(5.5, CRANE_Z + 1.2, 'near crane z %g' % CRANE_Z, color='#d8b400', fontsize=8)
+    a2.plot([-3, 3], [END_Z, END_Z], color='#0d0e10', lw=6)
+    a2.text(3.3, END_Z - 0.2, 'entrance door x -3..3', color='#aaa', fontsize=7)
+    for u in cubes:
+        b = u['laser']['beams'][0]
+        col = EMBER if u['colour'].lower() == EMBER else ASH
+        a2.plot(u['p'][0], u['p'][2], 'o', color=col, ms=6)
+        a2.text(u['p'][0], u['p'][2] - 1.3, u['id'][-1], color='#f5f2ea', fontsize=8, ha='center')
+        if b.get('off'):
+            continue
+        a2.plot([u['p'][0], b['to'][0]], [u['p'][2], b['to'][2]], color=col, lw=1.0)
+        a2.plot(b['to'][0], b['to'][2], '*', color=col, ms=7)
+    a2.set_title('plan: cubes 1-6 on the free crane (mirrored about x -0.75), lines to the far wall; dotted = 2.5 m lateral from places a person can rise to', color='#f5f2ea', fontsize=10, loc='left')
+    a2.set_xlabel('x (m)', color='#9aa0a8')
+    a2.set_ylabel('z (m)', color='#9aa0a8')
+    fig.tight_layout()
+    fig.savefig(path, facecolor=fig.get_facecolor())
     plt.close(fig)
 
 
@@ -1031,6 +1223,11 @@ def run():
         'on_the_floor': [u['id'] for u in units if on_floor(u['p']) and u['id'] not in OFF_FLOOR],
         'off_floor_moves': {k: v for k, v in OFF_FLOOR.items()},
         'spotter': spotter(units),
+        'aerial': {'bridge': {k: v for k, v in LASER_BRIDGE.items()}, 'far_crane_show_z_m': LASER_BRIDGE['z'], 'far_crane_at_rig_z': far_crane_at_rig_z(units),
+                   'setup_sheet': setup_sheet(units), 'ranges_used': AERIAL_RANGES,
+                   'nohd_6w_m': {'0.25 s (IEC 60825-1 Table A.1)': 544, '10 s': 865, 'if the maker\'s 4 mm / 1 mrad are 1/e2 values': 771, 'source': 'lasers-exact.json safety.nohd["6W (2.7+1.5+1.8)"] (maker: 2700+1500+1800 mW, beam 4 mm, divergence 1 mrad)'},
+                   'dimming': {'100 %': 543, '10 %': 169, '1 %': 51, 'note': 'only ~0.1 % (6 mW) is under the eye limit everywhere: height, not dimming, is the control'},
+                   'shortest_axis_distance_to_a_place_m': {r['beam']: r['lowest_axis_distance_to_a_place_m'] for r in laser_rows if not r.get('off')}},
     }
     return units, checks
 
@@ -1043,17 +1240,20 @@ def rig_file(units, checks, P, net):
                    "(2026-10-08 night), generated by scripts/place/moxir_v1_1.py from rigs/moxir-epic-2026-10-08.json + rigs/moxir-stage-v1-1-2026-10-08.json; the place is hall v9-show-park.")
     rig['plan'] = 'A1 (crane-hung; the cranes move, owner 10-08 night)'
     rig['fallback'] = 'B1 (ground support): a fallback note only'
-    rig['cranes'] = {'A1': {'near_z_m': G_NEW['cranes'][0]['z_m'], 'far_z_m': G_NEW['cranes'][1]['z_m'], 'near_as_found_z_m': 42.5}}
+    rig['cranes'] = {'A1': {'near_z_m': G_NEW['cranes'][0]['z_m'], 'far_z_m': LASER_BRIDGE['z'], 'far_z_rig_json_m': LASER_BRIDGE['as_found_rig_z'], 'near_as_found_z_m': 42.5,
+                            'far_why': 'v1.1 aerial: the free crane carries all six LaserCubes (owner 2026-10-09) and must travel from -41 to %g to pass the 3 m rule' % LASER_BRIDGE['z']}}
     rig['base'] = {'project': 'moxir-v1-0 (MOXIR v1.0) copied to moxir-v1-1', 'hall': 'moxir-hall-2026-10-08-v9-show-park (hall v9 + show-cleared + the v1.1 crane park)',
                    'stage': 'scripts/place/rigs/moxir-stage-v1-1-2026-10-08.json', 'cut': 'scripts/place/rigs/moxir-crane-cut-v1-1-2026-10-08.json'}
     rig['assumed'] = ["the near crane's girder underside: 7.6 m FROM ONE PHOTO (170604, 7.2-8.1), not taped",
                       "the transformer's z (+-3 m) and the press pedestal / press-side cabinets: LOW, tape them (the speaker placeholders were moved off them)",
-                      'the press crown 4.2-5.6 m (+-20 %): the park keeps 0.57 m from it', 'the LaserCubes: 6 W (owner 10-08 night) for brightness AND safety',
+                      'the press crown 4.2-5.6 m (+-20 %): the park keeps 0.57 m from it', 'the LaserCubes: 6 W (owner 10-08 night) for brightness AND safety (lasers-exact.json: 2700+1500+1800 mW)', 'the free crane travels to z %g and carries a laser bar 2.5 m under its bridge (bridge underside 7.69-8.24 m, photo 007, low end used)' % LASER_BRIDGE['z'], 'the hall model still draws the far crane at z -41 (owed: hall v10 with it at the show z)',
                       'the hall temperature at night: 0-5 C (measure)', 'the haze reach and sigma (designed for 0.005/m)', 'the distro and FOH places (walk them)']
     rig['fixtures'] = units
     rig['laser_duty'] = 1.0
-    rig['lasers_what'] = ("v1.1 (owner 2026-10-09): 6 beams, ONE static beam per LaserCube with the cube's whole 6 W (duty 1); no ash wall, no panel; each beam ends on the hall's "
-                          "own press (face z 0.2 or crown z 0.8, >= 3.0 m, z <= 3.3). The 12 beams and the wall of v1.0 are v1.0's record.")
+    rig['lasers_what'] = ("v1.1 aerial (owner 2026-10-09 N411/N412): 6 beams, ONE static beam per LaserCube (the cube's whole 6 W, duty 1), all six on a rigid bar under the FREE (far) crane, "
+                          "parked at z %g (the rig json had it at z %g; from there no aim passes); the lines run over the heads of the audience to the far (NW, public-entrance) end wall, "
+                          ">= 3.0 m above a standing person's top (surface + 2.0 m) and >= 2.5 m from every place a person can rise to, under the near crane's bridge (safe underside 7.2 m), "
+                          "ending on the matte block wall >= 3.0 m above the door top. Standards: IEC TR 60825-3, ILDA audience-safety guidance, HSE HS(G)95. Numbers: checks_v1_1.aerial; v1.0's 12 beams, the ash wall and the press ends are v1.0's record." % (LASER_BRIDGE['z'], LASER_BRIDGE['as_found_rig_z']))
     rig['solids'] = SOLIDS
     rig.pop('plan_b_solids', None)
     rig['stage'] = {'booth_from': list(OLD_BOOTH), 'booth_to': [R3(v) for v in NEW_BOOTH], 'move_booth_by': [R3(v) for v in D_DJ], 'deck_h_m': DES['booth']['deck_h_m'],
@@ -1096,7 +1296,7 @@ def _retext(rig):
     """v1.0's texts that name the 12 lines, the 2 beams per cube or the ash wall: rewritten for v1.1 (the structure of the data is unchanged)."""
     subs = [('all 12 laser lines', 'all 6 laser lines'), ('all 12 lines', 'all 6 lines'), ('never all 12', 'never all 6'),
             ('the cube drawing a single point (duty ~0.9)', 'the cube drawing its one point (duty 1)'), ('duty ~0.9', 'duty 1'),
-            ('one beam (6a)', 'its one beam (6a)'), ('to the wall behind the DJ', 'to the press'), ('to graze the ash wall', "to graze the hall's press face"),
+            ('one beam (6a)', 'its one beam (6a)'), ('to the wall behind the DJ', 'to the far wall over the heads'), ('to graze the ash wall', "to graze the hall's press face"),
             ('the 4 grazers, ember 5-15 %', 'the 4 back grazers on the press face, ember 5-15 %')]
     def walk(o):
         if isinstance(o, dict):
@@ -1130,6 +1330,8 @@ ORGANISER = ["tickets", "the event safety lead and the crowd-safety plan (the ba
 
 if __name__ == '__main__':
     units, checks = run()
+    if A.aerial_json:
+        json.dump({'what': 'MOXIR v1.1 aerial lasers: the six LaserCubes on the free crane (owner 2026-10-09). Reused by v2.', 'rule': checks['laser_rule'], 'aerial': checks['aerial'], 'lasers': [{k: v for k, v in r.items() if k != 'alt'} for r in checks['lasers']]}, open(A.aerial_json, 'w'), indent=1, default=float)
     if A.check:
         print(json.dumps(checks, indent=1, default=float))
         sys.exit(0)
@@ -1144,6 +1346,7 @@ if __name__ == '__main__':
         fig_plan(units, SOLIDS, os.path.join(od, 'v1-1-plan-stage.png'), xr=(-14, 8), zr=(-6, 31),
                  keep_labels={'press', 'press-crown', 'press-pedestal', 'transformer', 'press-side-cabinets', 'roller-conveyor', 'machine-line'}, size=(11, 15))
         fig_power(units, P, os.path.join(od, 'v1-1-power-needs.png'))
+        fig_aerial(units, os.path.join(od, 'v1-1-aerial-lasers.png'))
         fig_park(os.path.join(od, 'v1-1-crane-vs-press.png'))
         json.dump(checks, open(os.path.join(od, 'v1-1-checks.json'), 'w'), indent=1, default=float)
         print('pictures in', od)
