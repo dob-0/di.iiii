@@ -3640,7 +3640,7 @@
     width: 100%;
     max-width: 240px;
     aspect-ratio: 1 / 1;
-    background: #000;
+    background: var(--di-black);
     border: 1px solid var(--di-cyan-border);
     border-radius: var(--di-radius);
 }
