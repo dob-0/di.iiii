@@ -85,7 +85,7 @@ const SHUTDOWN_WAIT_MS = 250
 //   4 mm + 1 mrad·r, 7 mm pupil, report §2.4), and the static 6 W beam is 71× the 0.25 s MPE at 61 m.
 // SCAN_HALF_ANGLE_DEG 18.5: the maker's ">37°" scan angle read as ±18.5° (report §1, ASSUMPTION).
 //   The smaller angle is the safe side here: the same window in degrees is a wider window in field
-//   units, so more frames count as still. (The room's view assumes ±30° — laserView.js — for the look.)
+//   units, so more frames count as still. (The scene's laser view assumes ±30° — laserView.js — for the look.)
 // STILL_DWELL_SHARE 0.5: a frame that parks the beam in one 0.6° window for half its time puts at
 //   least half the cube's power (3 W of a 6 W cube) there without a break — a still beam inside a
 //   figure. Measured 2026-10-09 on the Laser node's own eight shapes (laserShapes.js, 120 and 500
