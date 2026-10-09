@@ -2979,9 +2979,10 @@
           "url": "https://www.laseros.com/lasercube-models/",
           "what": "Wicked Lasers, LaserCube Ultra MK2: the maker's specs page, and its ULTRA MK2 Guide v1.2 (https://www.laseros.com/manual-mk2.pdf): specifications, connections, and the DMX/Art-Net default fixture channel layout (pp. 57-59). Accessed 2026-10-04"
         },
-        "LASEROS-MK2-GUIDE": {
-          "url": "https://www.laseros.com/manual-mk2.pdf",
-          "what": "LaserCube Ultra MK2 Guide v1.2 (103 pp), pp. 11-12: the 10 W and 6.0 W variants per diode, 4 mm beam, 1 mrad (definition — 1/e or 1/e2, full or half angle — not stated). The local v1.0 manual (89 pp) has neither. Read 2026-10-09"
+        "LASEROS-MK2-MANUAL-V1": {
+          "file": "/mnt/data/backups/lasercube-mk2-sd-2026-09-10/ULTRA_MK2 Full Manual v1-0.pdf",
+          "sha256_16": "055b6761e13250f1",
+          "what": "LaserCube Ultra MK2 Full Manual v1.0 (89 pp), from the SD card of the owner's own cubes (backup 2026-09-10), pp. 11-12: the '7.5 Ultra Mk2' (7500 mW: blue 455 nm 4000, green 525 nm 2000, red 638 nm 1500 mW) and the 2.5 W variant. No beam diameter or divergence line. Read with pdftotext 2026-10-09"
         }
       },
       "manifest": {
