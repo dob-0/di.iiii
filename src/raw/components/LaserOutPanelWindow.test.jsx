@@ -120,7 +120,7 @@ describe('LaserOutPanelWindow', () => {
         await act(async () => { await vi.advanceTimersByTimeAsync(0) })
         const items = [...view.container.querySelectorAll('.raw-laser-panel-cubes li')].map((li) => li.textContent)
         expect(items[0]).toContain('Cube 1 (cube-1): armed')
-        expect(items[0]).toContain('LaserCube 2W model 3 · firmware 1.7 · 30\u2009000 of 35\u2009000 points/s · buffer 5\u2009800 free of 6\u2009000 · 31 °C · Ethernet · 10.0.0.51 · serial deadbeef0042 · output on')
+        expect(items[0]).toContain('LaserCube 2W model 3 · firmware 1.7 · 30\u202f000 of 35\u202f000 points/s · buffer 5\u202f800 free of 6\u202f000 · 31 °C · Ethernet · 10.0.0.51 · serial deadbeef0042 · output on')
         expect(items[1]).toContain('stopped: no frame for 200 ms')
         expect(items[1]).toContain("4 °C — under the maker's 10 °C floor")
         expect(items[2]).toContain('not armed: the cube never answered the info question')

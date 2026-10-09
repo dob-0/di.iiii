@@ -98,7 +98,8 @@ const drawPreview = (canvas, points) => {
     }
 }
 
-const thousands = (n) => (Number.isFinite(n) ? n.toLocaleString('en-US').replace(/,/g, '\u2009') : '?')
+// A narrow NO-BREAK space between thousands: a thin space let '30 000' break over two lines (seen 2026-10-09).
+const thousands = (n) => (Number.isFinite(n) ? n.toLocaleString('en-US').replace(/,/g, '\u202f') : '?')
 
 // One cube in a line: what it is doing, then what it said about itself
 // (GET_FULL_INFO). The temperature's unit is not in the protocol spec; °C is
