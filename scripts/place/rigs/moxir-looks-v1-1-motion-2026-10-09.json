@@ -1,0 +1,564 @@
+{
+ "source": "scripts/place/moxir_motion.py",
+ "written": "2026-10-09",
+ "kit": "what ran at Sevan: UP-PL5403 x50, UP-B380F x18, 6 LaserCube Ultra MK2 (never moved here), ONE smoke machine (thin haze ~2.7e-4 /m)",
+ "method": "serverXR/src/lighting/fx.js effect modes, played by src/rigbuild/lookMotion.js from the server clock; level and colour only, no pan or tilt",
+ "owner": "ledger N442 (owner, 2026-10-09 17:06)",
+ "colours": [
+  "#e8e4dc",
+  "#ff3a12",
+  "#a3200c"
+ ],
+ "ambient": 0.6,
+ "haze_sigma_per_m": 0.00027,
+ "floor": {
+  "span columns": [
+   "#a3200c",
+   0.3
+  ],
+  "far wall": [
+   "#a3200c",
+   0.35
+  ],
+  "far columns": [
+   "#a3200c",
+   0.3
+  ]
+ },
+ "still": 0.35,
+ "favourites": [
+  "ember-chase",
+  "white-comet",
+  "slow-breathe",
+  "pump-beat",
+  "ring-out",
+  "ping-pong",
+  "blocks",
+  "floor-pulse",
+  "sparkle-b380f",
+  "dawn-rise"
+ ],
+ "looks": [
+  {
+   "id": "ember_chase",
+   "title": "Ember chase",
+   "intent": "Warm-up: a line of ember steps across the truss, left to right, then again.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#ff3a12",
+     1
+    ],
+    "x": [
+     "#ff3a12",
+     1
+    ],
+    "halo": [
+     "#ff3a12",
+     0.8
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 110,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "white_comet",
+   "title": "White comet",
+   "intent": "Warm-up: one ash-white comet runs down the hall along the columns, tail behind it.",
+   "parts": {
+    "span columns": [
+     "#e8e4dc",
+     1
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#e8e4dc",
+     1
+    ],
+    "arch": [
+     "#e8e4dc",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 100,
+    "depth": 255,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "slow_breathe",
+   "title": "Slow breathe",
+   "intent": "Warm-up: the stage swells and falls in ember over six seconds, the whole truss in unison.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#ff3a12",
+     0.7
+    ],
+    "x": [
+     "#ff3a12",
+     0.7
+    ],
+    "halo": [
+     "#ff3a12",
+     0.9
+    ],
+    "still smoking": [
+     "#ff3a12",
+     0.5
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 40,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "pump_beat",
+   "title": "Pump on the beat",
+   "intent": "Peak: a full ash hit on every beat that decays to black before the next.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     1
+    ],
+    "x": [
+     "#e8e4dc",
+     1
+    ],
+    "fan": [
+     "#e8e4dc",
+     1
+    ],
+    "spine": [
+     "#e8e4dc",
+     1
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 124,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "ring_out",
+   "title": "Ring out from the DJ",
+   "intent": "Peak: a ring of light travels outward from the DJ across the whole rig.",
+   "parts": {
+    "span columns": [
+     "#e8e4dc",
+     0.8
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#e8e4dc",
+     0.8
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.8
+    ],
+    "x": [
+     "#e8e4dc",
+     0.8
+    ],
+    "halo": [
+     "#ff3a12",
+     1
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 60,
+    "depth": 255,
+    "spatial": "radial",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "ping_pong",
+   "title": "Ping-pong",
+   "intent": "Build: one head of ash bounces from the left end of the truss to the right and back.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     1
+    ],
+    "x": [
+     "#e8e4dc",
+     1
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.7
+    ],
+    "halo": [
+     "#ff3a12",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 90,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "blocks",
+   "title": "Blocks",
+   "intent": "Build: five blocks of the rig flip on and off on the beat, ember on the columns.",
+   "parts": {
+    "span columns": [
+     "#ff3a12",
+     1
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#ff3a12",
+     1
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.7
+    ],
+    "halo": [
+     "#ff3a12",
+     0.7
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 60,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "floor_pulse",
+   "title": "Floor pulse",
+   "intent": "Peak: the DJ, the press and the floor beneath the truss breathe in and out once a second.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     1
+    ],
+    "x": [
+     "#e8e4dc",
+     1
+    ],
+    "press graze": [
+     "#ff3a12",
+     1
+    ],
+    "halo": [
+     "#ff3a12",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 60,
+    "depth": 220,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "sparkle_b380f",
+   "title": "Sparkle",
+   "intent": "Peak: the B380F beams sparkle, each on its own count. Glitch was tried and measured at 4 flashes a second on a lamp (cap 3): sparkle at the slowest tempo is 3.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "columns of fire": [
+     "#ff3a12",
+     1
+    ],
+    "fan": [
+     "#e8e4dc",
+     1
+    ],
+    "arch": [
+     "#e8e4dc",
+     0.9
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 20,
+    "depth": 220,
+    "spatial": "x",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.35
+   }
+  },
+  {
+   "id": "dawn_rise",
+   "title": "Dawn rise",
+   "intent": "Closing: ash and ember swell over twelve seconds and fall back, a slow dawn.",
+   "parts": {
+    "span columns": [
+     "#a3200c",
+     0.3
+    ],
+    "far wall": [
+     "#a3200c",
+     0.35
+    ],
+    "far columns": [
+     "#a3200c",
+     0.3
+    ],
+    "curtain": [
+     "#e8e4dc",
+     0.7
+    ],
+    "x": [
+     "#e8e4dc",
+     0.7
+    ],
+    "halo": [
+     "#ff3a12",
+     0.9
+    ],
+    "fan": [
+     "#e8e4dc",
+     0.6
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.5
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 20,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.35
+   }
+  }
+ ],
+ "cues": [
+  {
+   "id": "mo-01-ember-chase",
+   "name": "01 \u00b7 Ember chase",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-ember-chase",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-02-white-comet",
+   "name": "02 \u00b7 White comet",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-white-comet",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-03-slow-breathe",
+   "name": "03 \u00b7 Slow breathe",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-slow-breathe",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-04-pump-beat",
+   "name": "04 \u00b7 Pump on the beat",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-pump-beat",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-05-ring-out",
+   "name": "05 \u00b7 Ring out from the DJ",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-ring-out",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-06-ping-pong",
+   "name": "06 \u00b7 Ping-pong",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-ping-pong",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-07-blocks",
+   "name": "07 \u00b7 Blocks",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-blocks",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-08-floor-pulse",
+   "name": "08 \u00b7 Floor pulse",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-floor-pulse",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-09-sparkle-b380f",
+   "name": "09 \u00b7 Sparkle",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-sparkle-b380f",
+   "surfaces": {}
+  },
+  {
+   "id": "mo-10-dawn-rise",
+   "name": "10 \u00b7 Dawn rise",
+   "key": "",
+   "fade": 1,
+   "hold": 24,
+   "lightLook": "rig-dawn-rise",
+   "surfaces": {}
+  }
+ ]
+}
