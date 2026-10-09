@@ -2391,7 +2391,7 @@
     ],
     "plane 3 (the far end)": [
      "#ff3a12",
-     1.0
+     0.35
     ],
     "cut down": [
      "#e8e4dc",
@@ -2432,17 +2432,18 @@
   {
    "look": "dark",
    "name": "B \u00b7 Three planes of depth \u00b7 dark (one colour)",
-   "fade": 0,
-   "hold": 30
+   "fade": 3,
+   "hold": 40
   },
   {
    "look": "peak",
    "name": "B \u00b7 Three planes of depth \u00b7 peak",
-   "fade": 0,
-   "hold": 30
+   "fade": 2,
+   "hold": 20
   }
  ],
- "loop": false,
+ "loop": true,
+ "showSource": "clock",
  "views": {
   "fixedCamera": {
    "projection": "perspective",
@@ -2476,7 +2477,7 @@
      -20.0
     ],
     "fov": 70,
-    "label": "Floor centre 1.7 m"
+    "label": "Floor 1.7 m"
    },
    {
     "id": "entry",
@@ -2511,17 +2512,17 @@
    {
     "id": "side",
     "position": [
-     32.0,
-     6.0,
-     -12.0
+     30.0,
+     10.0,
+     20.0
     ],
     "target": [
-     0.0,
-     5.0,
-     -12.0
+     -2.0,
+     4.0,
+     -18.0
     ],
-    "fov": 100,
-    "label": "Side section"
+    "fov": 75,
+    "label": "Side"
    }
   ]
  },

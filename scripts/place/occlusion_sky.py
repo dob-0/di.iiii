@@ -405,7 +405,7 @@ def par_cases(W):
         for name, d in (('up the column face', [0.0707, 0.9975, 0.0]), ('leaned 12 deg along the hall', [0.0707, math.cos(math.radians(12)), -math.sin(math.radians(12))])):
             v = np.array(d) / np.linalg.norm(d)
             cases.append(('nave column x -12 z %g: %s' % (gz, name), [-11.157, 0.31, gz], [-v[0], v[1], v[2]]))
-    cases.append(('side-span wall column x -36 z -24: up the face', [-34.9, 0.31, -24.0], [0.122, 0.9925, 0.0]))
+    cases.append(('side-span wall column x -36 z -24: up the face', [-34.9, 0.31, -24.0], [-0.122, 0.9925, 0.0]))
     cases.append(('floor, straight up to the roof steel (x -6, z -20)', [-6.0, 0.31, -20.0], [0, 1.0, 0]))
     cases.append(('the cut top chord, straight up (x -5, 4.9 m)', [-5.0, 4.9, 0.15], [0, 1.0, 0]))
     out = []

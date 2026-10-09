@@ -64,6 +64,7 @@ STAND = [  # standing levels (x range, z range, floor height): where a beam must
     ((-6.7, -3.7), (27.0, 31.0), 0.6, 'the FOH riser'),
 ]
 CLEAR_OVER = 3.0
+GLARE_CAP = 0.35
 HAND = 2.4
 
 
@@ -437,17 +438,24 @@ def rig_file(name, lay, beams, pars, smoke_unit, cc, circ, ph, branches, slots, 
     for p in beams_parts:
         if 'behind' in p or 'backlight' in p or 'plane 3' in p:
             peak[p] = [EMBER, 1.0]
+    # GLARE (seen 2026-10-09 in the room, real GPU, layout C): a beam that travels TOWARD the crowd, even 3 m over every head,
+    # whites out the view of everyone facing the stage (forward scatter in haze; the room draws anisotropy 0.7). Such parts are
+    # capped at 35 % in the peak (the desk's limit for them); the full-level frames are kept as evidence (lines-peakfull-*).
+    for p in beams_parts:
+        ds = [b['dir'] for b in beams if b['part'] == p and b.get('dir') is not None]
+        if ds and np.mean([d[2] for d in ds]) > 0.5:
+            peak[p] = [peak[p][0], GLARE_CAP]
     peak.update({'cut down': [ASH, 1.0], 'cut up': [ASH, 0.9], 'columns': [EMBER, 0.8], 'roof': [ASH, 0.6], 'embers': [EMBER, 0.6],
                  'halo': [EMBER, 0.5], 'far wall': [DEEP, 0.7], 'side spans': [EMBER, 0.5], 'laser': [ASH, 1.0]})
     looks = [{'id': 'dark', 'title': 'Dark (one colour: ember)', 'act': 1, 'parts': {k: v for k, v in dark.items() if k in parts}},
              {'id': 'peak', 'title': 'Peak (ash + ember, all on)', 'act': 3, 'parts': {k: v for k, v in peak.items() if k in parts or k == 'laser'}}]
-    cues = [{'look': 'dark', 'name': '%s · dark (one colour)' % lay['title'], 'fade': 0, 'hold': 30}, {'look': 'peak', 'name': '%s · peak' % lay['title'], 'fade': 0, 'hold': 30}]
+    cues = [{'look': 'dark', 'name': '%s · dark (one colour)' % lay['title'], 'fade': 3, 'hold': 40}, {'look': 'peak', 'name': '%s · peak' % lay['title'], 'fade': 2, 'hold': 20}]
     views = {'fixedCamera': {'projection': 'perspective', 'position': [-3.75, 1.7, 18.1], 'target': [-3.75, 5.0, -20.0], 'fov': 70, 'zoom': 1, 'near': 0.05, 'far': 400, 'locked': False},
              'viewPresets': [
-                 {'id': 'floor', 'position': [-3.75, 1.7, 18.1], 'target': [-3.75, 5.0, -20.0], 'fov': 70, 'label': 'Floor centre 1.7 m'},
+                 {'id': 'floor', 'position': [-3.75, 1.7, 18.1], 'target': [-3.75, 5.0, -20.0], 'fov': 70, 'label': 'Floor 1.7 m'},
                  {'id': 'entry', 'position': [0.0, 1.7, 51.5], 'target': [-3.0, 5.0, -10.0], 'fov': 60, 'label': 'Entry 1.7 m'},
                  {'id': 'top', 'position': [-2.0, 85.0, -6.0], 'target': [-2.0, 0.0, -7.0], 'fov': 70, 'label': 'Top plan'},
-                 {'id': 'side', 'position': [32.0, 6.0, -12.0], 'target': [0.0, 5.0, -12.0], 'fov': 100, 'label': 'Side section'}]}
+                 {'id': 'side', 'position': [30.0, 10.0, 20.0], 'target': [-2.0, 4.0, -18.0], 'fov': 75, 'label': 'Side'}]}
     return {
         'snapshot': 'moxir-v2-%s-%s' % (name, DATE), 'version': 'MOXIR v2 %s' % lay['title'], 'title': 'MOXIR v2 %s' % lay['title'],
         'what': lay['idea'], 'written_by': 'scripts/place/moxir_v2.py', 'date': DATE,
@@ -455,7 +463,7 @@ def rig_file(name, lay, beams, pars, smoke_unit, cc, circ, ph, branches, slots, 
         'kit': {'UP-B380F': 18, 'UP-PL5403': 50, 'EXT-LC-ULTRA-MK2': 6, 'UP-YZ31P': 1},
         'not_hung': [{'code': 'UP-PL5403', 'ordered': 50, 'hung': 50, 'not_hung': 0}, {'code': 'UP-B380F', 'ordered': 18, 'hung': 18, 'not_hung': 0},
                      {'code': 'UP-YZ31P', 'ordered': 1, 'hung': 1, 'not_hung': 0}, {'code': 'EXT-LC-ULTRA-MK2', 'ordered': 6, 'hung': len(laser_units or []), 'not_hung': 6 - len(laser_units or [])}],
-        'fixtures': fixtures, 'solids': solids, 'looks': looks, 'cues': cues, 'loop': False, 'views': views,
+        'fixtures': fixtures, 'solids': solids, 'looks': looks, 'cues': cues, 'loop': True, 'showSource': 'clock', 'views': views,
         'stage': {'booth_from': V11['stage']['booth_to'], 'booth_to': V11['stage']['booth_to'], 'deck_h_m': 0.4, 'design': V11['stage']['design']},
         'cut': {'pars': cc['n'], 'places_u_m': cc['places_u_m'], 'picks_kg': [p['line_kg'] for p in cc['picks']], 'source': 'scripts/place/cut-count.mjs'},
         'power': {'circuits': circ, 'phases_w': ph}, 'patch': {'branches': branches, 'slots': slots}, 'checks': checks,

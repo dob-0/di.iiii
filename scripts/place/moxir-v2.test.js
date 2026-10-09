@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { theCut, cutCount, placesFor, PICK_CAP_KG, table } from './cut-count.mjs'
-import { cuesOf, v1Cues } from '../rigbuild/epic-build.mjs'
+import { cuesOf, v1Cues, reachOf } from '../rigbuild/epic-build.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repo = path.resolve(here, '..', '..')
@@ -62,6 +62,11 @@ describe('epic-build: a rig file carries its own cues', () => {
         expect(c[1].hold).toBe(20)
         expect(cuesOf({}).length).toBe(v1Cues().length)
     })
+    it("draws a beam to its cast throw when the rig file has one (the room does not stop a beam at the steel)", () => {
+        expect(reachOf({ type: 'up-b380f', throw_m: 17.864 })).toBe(17.864)
+        expect(reachOf({ type: 'up-b380f', throw_m: null })).toBe(120)
+        expect(reachOf({ type: 'up-b380f' })).toBe(40)
+    })
 })
 
 describe('the three v2 layouts (rig files)', () => {
@@ -84,6 +89,7 @@ describe('the three v2 layouts (rig files)', () => {
             expect(r.checks.circuits_ok).toBe(true)
             expect(r.checks.branches.every((b) => b.ok)).toBe(true)
             expect(r.cues.map((c) => c.look)).toEqual(['dark', 'peak'])
+            expect(r.showSource).toBe('clock')
             expect(r.solids.some((s) => s.id === 'rig-ash-wall')).toBe(false)
         })
     }

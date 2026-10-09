@@ -60,6 +60,10 @@ export const candelaOf = (f) => {
     }
 }
 const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30, 'ext-blinder': 25, 'ext-strobe': 20 }
+/** How far the room draws a unit's beam: the rig file's own cast throw to the first thing it meets (MOXIR v2, occlusion_sky.py:
+ * `throw_m`, null = open to the far end) when it has one, else the type's reach. The room draws a beam to its light's distance
+ * and does not stop it at the steel (spotBeam.js): without this a beam the cast stops at the roof is drawn through it. Pure. */
+export const reachOf = (f) => (f.throw_m !== undefined ? r3(Math.min(Math.max(f.throw_m ?? 120, 1), 120)) : DIST[f.type] || 24)
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
 // A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
@@ -137,7 +141,7 @@ export const v1Entities = (rig) => {
             components: {
                 transform: { position: f.p, rotation: f.r, scale: [1, 1, 1] },
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: DIST[f.type] || 24, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: reachOf(f), angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
                 beam: { visible: true, haze: HAZE[f.type] ?? 0.35 },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
@@ -388,7 +392,9 @@ const main = async () => {
         : { title: 'MOXIR v1.0 — the epic lights, all wash + all beam hung, used minimally', summary: 'v0.9 + the epic plot (owner 10-08): every wash and beam of the order hung, 6 cubes (12 lines onto one matte ash wall), haze = the 4 smoke machines; looks dark-first, 2 layers (3 at the peak), ash white + ember red. Plan A1.' } } })
     for (const c of doc.mappingState?.cues || []) ops.push({ type: 'deleteMappingCue', payload: { cueId: c.id } })
     for (const c of cues) ops.push({ type: 'createMappingCue', payload: { cue: c } })
-    ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now() } } })
+    // a rig file may say its show plays by its own clock (mappingState.showSource 'clock'): a desk that answers on the stack
+    // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
+    ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
     ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
     ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }))
     say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
