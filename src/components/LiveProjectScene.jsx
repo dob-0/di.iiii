@@ -55,6 +55,7 @@ import {
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { clampDt, stepWalkVelocity } from '../project/viewport/navMath.js'
 import { hasRigLamps } from '../rigbuild/hasRigLamps.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
@@ -515,11 +516,18 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             keys.add(key)
         }
         const onKeyUp = (e) => keys.delete(e.key.toLowerCase())
+        // a key released while the window is not focused never sends keyup: clear on blur and when the tab is hidden
+        const releaseAll = () => keys.clear()
+        const onVisibility = () => { if (document.visibilityState === 'hidden') keys.clear() }
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
+        window.addEventListener('blur', releaseAll)
+        document.addEventListener('visibilitychange', onVisibility)
         return () => {
             window.removeEventListener('keydown', onKeyDown)
             window.removeEventListener('keyup', onKeyUp)
+            window.removeEventListener('blur', releaseAll)
+            document.removeEventListener('visibilitychange', onVisibility)
             keys.clear()
         }
     }, [])
@@ -810,8 +818,10 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         }
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
-    useFrame((frameState, delta) => {
+    useFrame((frameState, rawDelta) => {
         const player = playerRef.current
+        // a hidden tab or a stall must not become a jump: no frame counts for more than 0.1 s (flyMotion maxDt)
+        const delta = clampDt(rawDelta)
 
         // Above the isPresenting return deliberately: this reads the pose and
         // never writes it, and XrLocomotion keeps playerRef in sync for the
@@ -856,15 +866,15 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             vert += vertTouchRef?.current || 0
         }
 
-        const targetSpeed = forward * WALK_MAX_SPEED
-        const accel = forward !== 0 ? WALK_ACCEL : WALK_FRICTION
-        speedRef.current += THREE.MathUtils.clamp(targetSpeed - speedRef.current, -accel * delta, accel * delta)
-        if (Math.abs(speedRef.current) < 0.001) speedRef.current = 0
-
-        const targetStrafeSpeed = strafe * WALK_MAX_SPEED
-        const strafeAccel = strafe !== 0 ? WALK_ACCEL : WALK_FRICTION
-        strafeSpeedRef.current += THREE.MathUtils.clamp(targetStrafeSpeed - strafeSpeedRef.current, -strafeAccel * delta, strafeAccel * delta)
-        if (Math.abs(strafeSpeedRef.current) < 0.001) strafeSpeedRef.current = 0
+        // both ramps, then the combined magnitude is clamped to WALK_MAX_SPEED (W+D was 1.41x): navMath.stepWalkVelocity
+        const v = stepWalkVelocity(
+            { speed: speedRef.current, strafe: strafeSpeedRef.current },
+            { forward, strafe },
+            delta,
+            { maxSpeed: WALK_MAX_SPEED, accel: WALK_ACCEL, friction: WALK_FRICTION }
+        )
+        speedRef.current = v.speed
+        strafeSpeedRef.current = v.strafe
 
         if (speedRef.current !== 0 || strafeSpeedRef.current !== 0) {
             // Forward/strafe always move on the horizontal plane, even while
