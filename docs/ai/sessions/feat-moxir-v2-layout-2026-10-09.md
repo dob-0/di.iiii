@@ -15,3 +15,9 @@
 - Built only into a scratch stack (tree moxir-v2). Never dev, live or the owner's own di.
 - Owed: the lasers (6 cubes on the free crane) come from the laser session's table; the haze output of the ONE smoke
   machine is unmeasured; every pen and guard is to the Purple Guide, which nobody here has read (login).
+- Seen on the real GPU (24 frames, `~/Downloads/moxir/v2-layouts/`), and fixed because of it: the room drew beams through the
+  roof (epic-build `reachOf` now draws a beam to its cast throw); layout C's beams toward the crowd white out the floor view
+  (capped at 35 % in every look; still 9.8 % white-out at the peak, measured by `frame_luma.py`); an empty scratch desk drove
+  the room (rig files play by their own clock, `showSource: 'clock'`).
+- Advice to the owner: layout B (three planes of depth), 10 PARs on the cut. The free crane's laser corridor is feasible
+  (53 of 108 straight lines keep >= 3 m everywhere); the cube aims stay the laser session's table, not written yet.
