@@ -7,16 +7,18 @@
 // personal install, which is still one person on their own machine). Loopback
 // stays absolute either way: a dev box with its port forwarded must still
 // refuse. Refusals are 404 (the surface does not advertise itself).
+//
+// "Over loopback" means from a program on this machine: a proxy on this
+// machine (Caddy, cloudflared, vite, the dev-router) also connects from
+// loopback, so its forwarding headers decide — see requestFromThisMachine.
 
 const { createAgentBoardStore } = require('../agentBoardStore')
-
-const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
+const { requestFromThisMachine } = require('../localRequest')
 
 function isLocalOperatorRequest(req) {
   const local = process.env.NODE_ENV !== 'production' || process.env.DI_LOCAL === '1'
   if (!local) return false
-  const address = req.socket?.remoteAddress || ''
-  return LOOPBACK_ADDRESSES.has(address)
+  return requestFromThisMachine(req)
 }
 
 function registerAgentBoardRoutes(router, { store = createAgentBoardStore() } = {}) {

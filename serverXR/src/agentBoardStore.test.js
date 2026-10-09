@@ -195,3 +195,54 @@ describe('agent board local-operator guard', () => {
     }
   })
 })
+
+describe('agent board local-operator guard behind a proxy on this machine', () => {
+  const request = (address, headers = {}) => ({ socket: { remoteAddress: address }, headers })
+  const withTestEnv = (fn) => {
+    const previous = process.env.NODE_ENV
+    try {
+      process.env.NODE_ENV = 'test'
+      fn()
+    } finally {
+      process.env.NODE_ENV = previous
+    }
+  }
+
+  it('a visitor a local proxy forwarded is not the operator', () => withTestEnv(() => {
+    // Caddy, cloudflared, nginx and vite all arrive from loopback and name the real client.
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'x-forwarded-for': '203.0.113.9' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'x-forwarded-for': '192.168.88.140, 127.0.0.1' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'x-forwarded-for': '127.0.0.1, 192.168.88.140' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { forwarded: 'for=203.0.113.9' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'cf-connecting-ip': '203.0.113.9' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('::1', { 'x-real-ip': '10.0.0.5' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'true-client-ip': '203.0.113.9' }))).toBe(false)
+  }))
+
+  it('a proxy that hides who the client is does not make it local', () => withTestEnv(() => {
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'x-forwarded-host': 'local.thedi.studio' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'x-forwarded-proto': 'https' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { via: '1.1 caddy' }))).toBe(false)
+    // Cloudflare's own marks, even if a client address header was stripped on the way.
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'cf-ray': '8c0f-AMS' }))).toBe(false)
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'x-forwarded-for': '127.0.0.1', 'cdn-loop': 'cloudflare' }))).toBe(false)
+  }))
+
+  it('a trusted proxy on this machine that says the client is this machine keeps the operator', () => withTestEnv(() => {
+    // di-atlas dev-router -> installed di: X-Forwarded-For is its own peer.
+    expect(isLocalOperatorRequest(request('127.0.0.1', {
+      'x-forwarded-for': '127.0.0.1',
+      'x-forwarded-proto': 'http',
+      'x-forwarded-host': 'diiii.localhost'
+    }))).toBe(true)
+    // vite (xfwd) behind the dev-router: two loopback hops.
+    expect(isLocalOperatorRequest(request('::ffff:127.0.0.1', { 'x-forwarded-for': '::1, 127.0.0.1' }))).toBe(true)
+    // A plain browser on the machine, straight to the server.
+    expect(isLocalOperatorRequest(request('127.0.0.1', { 'user-agent': 'Firefox' }))).toBe(true)
+  }))
+
+  it('a forwarded header from a client that is not on loopback changes nothing', () => withTestEnv(() => {
+    expect(isLocalOperatorRequest(request('192.168.88.10', { 'x-forwarded-for': '127.0.0.1' }))).toBe(false)
+  }))
+})
+

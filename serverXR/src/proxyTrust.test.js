@@ -68,3 +68,16 @@ describe('the guards read it', () => {
     expect((await get('/device', '192.168.88.140')).status).toBe(200)
   })
 })
+
+describe('marks of a proxy that Express does not read', () => {
+  const getWith = (path, headers) => fetch(`${base}${path}`, { headers })
+
+  it('dev-only routes refuse a request a local proxy marked with another client address', async () => {
+    delete process.env.NODE_ENV
+    expect((await getWith('/dev', { forwarded: 'for=203.0.113.9' })).status).toBe(404)
+    expect((await getWith('/dev', { 'cf-connecting-ip': '203.0.113.9' })).status).toBe(404)
+    expect((await getWith('/dev', { 'x-real-ip': '192.168.88.140' })).status).toBe(404)
+    expect((await getWith('/dev', { 'x-forwarded-for': '127.0.0.1', 'cf-connecting-ip': '203.0.113.9' })).status).toBe(404)
+  })
+})
+

@@ -2,7 +2,7 @@ const os = require('node:os')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { spawn } = require('node:child_process')
-const { requireDevLocal } = require('../devLocalGuard')
+const { requireDevLocalOwnPage } = require('../devLocalGuard')
 
 const TAIL_MAX_BYTES = 8 * 1024
 const RUN_TTL_MS = 1000 * 60 * 60 // stale runs fall out of the list after an hour
@@ -44,7 +44,7 @@ function registerAgentRunRoutes(router, {
     }
   }
 
-  router.post('/api/agent-runs', requireDevLocal, (req, res) => {
+  router.post('/api/agent-runs', requireDevLocalOwnPage, (req, res) => {
     const prompt = String(req.body?.prompt || '').trim()
     if (!prompt) {
       res.status(400).json({ error: 'prompt is required' })
@@ -98,12 +98,12 @@ function registerAgentRunRoutes(router, {
     res.json({ runId: id })
   })
 
-  router.get('/api/agent-runs', requireDevLocal, (req, res) => {
+  router.get('/api/agent-runs', requireDevLocalOwnPage, (req, res) => {
     sweepStaleRuns()
     res.json({ runs: Array.from(runs.values()).map(toSummary) })
   })
 
-  router.get('/api/agent-runs/:id', requireDevLocal, (req, res) => {
+  router.get('/api/agent-runs/:id', requireDevLocalOwnPage, (req, res) => {
     const run = runs.get(req.params.id)
     if (!run) {
       res.status(404).json({ error: 'Not found.' })
@@ -112,7 +112,7 @@ function registerAgentRunRoutes(router, {
     res.json(toSummary(run))
   })
 
-  router.post('/api/agent-runs/:id/stop', requireDevLocal, (req, res) => {
+  router.post('/api/agent-runs/:id/stop', requireDevLocalOwnPage, (req, res) => {
     const run = runs.get(req.params.id)
     if (!run) {
       res.status(404).json({ error: 'Not found.' })
