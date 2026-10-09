@@ -11,6 +11,8 @@ import { bounceOf, bounceSpecOf, hazeGlowFactor } from './rigBounce.js'
 import { typeById } from './fixtureTypes.js'
 import { hazeMachinesOf } from '../objectComponents/hazeField.js'
 import { getAtmosphere, getHazeField, setHazeMachines } from '../objectComponents/atmosphereStore.js'
+import { RIG_BOUNCE_NAME } from '../project/viewport/measure/measureLights.js'
+import { measurementOf } from '../project/viewport/measure/measureState.js'
 
 // THE LAMPS' BODIES IN ANY ROOM — the space view (LiveProjectScene), the Studio and the
 // rooms beside the plot and the cards (StudioViewport). RIG_BUILD.md §12.4.
@@ -42,7 +44,8 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
             <DmxProbe entities={entities} />
             {/* the hazers and fog machines, for the room's haze field (hazeField.js) */}
             <HazeMachines entities={entities} library={shownLibrary} />
-            {bounce ? <ambientLight color={bounce.color} intensity={bounce.intensity} /> : null}
+            {/* named so the measurement mode can tell it from the work light (measure/measureLights.js) */}
+            {bounce ? <ambientLight name={RIG_BOUNCE_NAME} color={bounce.color} intensity={bounce.intensity} /> : null}
             {bounce ? <HazeGlow bounce={bounce} spec={bounceSpecOf(entities)} /> : null}
         </>
     )
@@ -71,6 +74,12 @@ const glowColour = new THREE.Color()
 function HazeGlow({ bounce, spec }) {
     useFrame(({ scene, gl }) => {
         if (!scene.fog) return
+        // measuring direct light only (measurement mode without &bounce=1): no return light in the haze either
+        const measuring = measurementOf(gl)
+        if (measuring && !measuring.bounce) {
+            scene.fog.color.setRGB(0, 0, 0)
+            return
+        }
         // the haze's own scatter on top of the walls' return (rigBounce.js hazeGlowFactor),
         // with the haze the beams are drawn in: the field's fill, else the room's scattering
         const sigma = getHazeField(gl)?.fill ?? getAtmosphere(gl)?.scattering ?? 0
