@@ -18,7 +18,8 @@ const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb, getDb, SCHEMA_VERSION } = require('./db')
-const { installShutdown } = require('./gracefulShutdown')
+const { installShutdown, createInflight } = require('./gracefulShutdown')
+const inflight = createInflight()
 const { migrateFromFilesystem } = require('./migrate')
 const logger = require('./logger')
 const {
@@ -349,6 +350,7 @@ async function initStorage() {
 }
 
 const app = express()
+app.use(inflight.middleware)
 // req.ip is the real client behind a proxy on this machine — see proxyTrust.js.
 app.set('trust proxy', TRUST_PROXY)
 const startedAt = Date.now()
@@ -3110,6 +3112,7 @@ initStorage()
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
       installShutdown({
         server: httpServer,
+        inflight,
         timers: shutdownTimers,
         checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),
         closeDb: () => require('./db').closeDb(),

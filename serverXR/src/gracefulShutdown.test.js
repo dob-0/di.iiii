@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { createShutdown } = require('./gracefulShutdown')
+const { createShutdown, createInflight } = require('./gracefulShutdown')
+const http = require('node:http')
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const freePort = () => new Promise((resolve, reject) => {
@@ -113,5 +114,58 @@ describe('createShutdown (unit)', () => {
       })('SIGINT')
     })
     expect(code).toBe(1)
+  })
+})
+
+describe('a request in flight at SIGTERM finishes before the database closes', () => {
+  it('lands its write, then exits 0 with an intact database', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'dii-inflight-'))
+    const dbPath = path.join(dir, 'x.db')
+    const db = new DatabaseSync(dbPath)
+    db.exec('PRAGMA journal_mode = WAL; CREATE TABLE t (n INTEGER)')
+    const inflight = createInflight()
+    const server = http.createServer((req, res) => {
+      inflight.middleware(req, res, async () => {
+        db.prepare('INSERT INTO t VALUES (1)').run()
+        await wait(1500) // async work continues after the signal
+        db.prepare('INSERT INTO t VALUES (2)').run() // throws if the db was closed under it
+        res.end('ok')
+      })
+    })
+    await new Promise((r) => server.listen(0, '127.0.0.1', r))
+    const { port } = server.address()
+    const quiet = { info() {}, warn() {}, error() {} }
+    let exitCode
+    const exited = new Promise((resolve) => {
+      const run = createShutdown({
+        server, inflight, logger: quiet,
+        checkpoint: () => db.exec('PRAGMA wal_checkpoint(TRUNCATE)'),
+        closeDb: () => db.close(),
+        exit: (c) => { exitCode = c; resolve() }
+      })
+      setTimeout(() => run('SIGTERM'), 300)
+    })
+    const response = await fetch(`http://127.0.0.1:${port}/`).then((r) => r.text()).catch((e) => `ERR ${e.message}`)
+    await exited
+    expect(response).toBe('ok')
+    expect(exitCode).toBe(0)
+    const check = new DatabaseSync(dbPath)
+    expect(check.prepare('SELECT count(*) AS c FROM t').get().c).toBe(2)
+    expect(check.prepare('PRAGMA integrity_check').get().integrity_check).toBe('ok')
+    check.close()
+    await rm(dir, { recursive: true, force: true })
+  }, 20000)
+
+  it('exits 1 and logs how many were in flight when the deadline hits', async () => {
+    const errors = []
+    const code = await new Promise((resolve) => {
+      createShutdown({
+        server: { close: () => {} }, inflight: { count: () => 3 },
+        logger: { info() {}, warn() {}, error: (m) => errors.push(m) },
+        hardTimeoutMs: 100, drainMs: 20, exit: resolve
+      })('SIGTERM')
+    })
+    expect(code).toBe(1)
+    expect(errors.join()).toContain('3 request(s) in flight')
   })
 })
