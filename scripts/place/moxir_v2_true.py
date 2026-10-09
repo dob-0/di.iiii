@@ -361,6 +361,197 @@ def tune(repo, out, upto='T6'):
 
     return write_file()
 
+# ====================================================================== PAGE: for a theatre director, pictures first
+CAPTIONS = {
+    'b-old-dark-floor': 'The old picture\'s air: the whole hall glows ember in a red veil. It looks full — but one machine never makes this.',
+    'b-old-peak-floor': 'Old air at the peak: roof, columns and beams swim in pink-white fog. Dramatic, but it is four machines\' haze.',
+    'b-old-dark-entry': 'From the door, old air: a red tunnel of fog with a bright core at the stage.',
+    'b-old-peak-entry': 'From the door at the peak, old air: everything washed in warm haze — atmospheric, and not what we will have.',
+    'b-t40-dark-floor': 'B at 40 min: the fog veil is gone and the hall is black; the fan behind the DJ and the red pools on the roof carry it. Strong, but small.',
+    'b-t40-peak-floor': 'B at 40 min, peak: beams read as shafts, the roof steel catches red pools, ash beams cut in from the sides. Cool, and harder than before.',
+    'b-t40-dark-entry': 'B at 40 min from the door: a glowing stage island at the end of a dark hall; the side spans show as red dashes between columns.',
+    'b-t40-peak-entry': 'B at 40 min from the door, peak: the roof steel lit in pieces over the stage; the depth now comes from the columns, not the air.',
+    'b-t10-dark-floor': 'B 10 min after the machine starts: the fan is thin, the side spans fade, the hall is mostly black. Not yet epic.',
+    'b-t10-peak-floor': 'B at 10 min, peak: roof pools and the side ash beams carry it; the air between them is nearly empty.',
+    'b-t10-dark-entry': 'B at 10 min from the door: a small red knot at the far end of a dark hall. Weak.',
+    'b-t10-peak-entry': 'B at 10 min from the door, peak: the stage and roof read, the beams only faintly. Thin.',
+    'b-dry-dark-floor': 'B at the floor of the range (vents open, the fog dries): only the two beams beside the machine glow. Not enough.',
+    'b-dry-peak-floor': 'Floor of the range, peak: lit steel and two glowing stubs; the beams\' shapes are gone. Flat.',
+    'b-dry-dark-entry': 'Floor of the range from the door: a faint red spot. Nothing epic.',
+    'b-dry-peak-entry': 'Floor of the range from the door, peak: roof steel faintly lit, no beams — what a ventilated hall would give.',
+    'bt-t10-dark-floor': 'Tuned B at 10 min: six ember shafts rise out of the smoke behind the DJ and fan toward you; both stage columns glow. It reads already.',
+    'bt-t10-peak-floor': 'Tuned B at 10 min, peak: the fan, the lit columns, the roof pools, ash lines on the sides — the hall in layers even in thin air.',
+    'bt-t10-dark-entry': 'Tuned B at 10 min from the door: the fan is a bright crown over the stage; the rest stays dark and raw.',
+    'bt-t10-peak-entry': 'Tuned B at 10 min from the door, peak: a crown of beams, lit roof, side-span dashes; the depth comes from the steel.',
+    'bt-t40-dark-floor': 'Tuned B at 40 min (the tank state): the fan is thick and wide and lands in red pools on the roof; dark all around. The strongest dark frame.',
+    'bt-t40-peak-floor': 'Tuned B at 40 min, peak: the full picture — fan, roof, lit columns, ash on the sides, the sheen on the floor. Epic from the floor.',
+    'bt-t40-dark-entry': 'Tuned B at 40 min from the door: a burning stage at the end of a black nave. A good first sight.',
+    'bt-t40-peak-entry': 'Tuned B at 40 min from the door, peak: stage and roof steel lit, ash lines between the far columns; the depth reads.',
+    'bt-dry-dark-floor': 'Tuned B at the floor of the range: five shafts still glow in the plume behind the DJ, and the columns are lit. Still a picture.',
+    'bt-dry-peak-floor': 'Floor of the range, peak: the fan and the lit steel survive; the side beams are gone. This is the tune\'s insurance.',
+    'bt-dry-dark-entry': 'Floor of the range from the door: a small glowing fan in a black hall. Modest, but alive.',
+    'bt-dry-peak-entry': 'Floor of the range from the door, peak: the fan and lit roof steel, no air beyond. The honest minimum.',
+    'a-old-dark-floor': 'A with the old air: red fog everywhere, the corridors glow. Pretty — not real with one machine.',
+    'a-old-peak-floor': 'A, old air, peak: white-pink haze fills the hall; the corridor beams are lost in it.',
+    'a-old-dark-entry': 'A, old air, from the door: a red fog tunnel.',
+    'a-old-peak-entry': 'A, old air, from the door at the peak: the whole nave hazy pink.',
+    'a-t10-dark-floor': 'A at 10 min: the backlight row reads, the corridors far behind the stage barely show. Mostly dark.',
+    'a-t10-peak-floor': 'A at 10 min, peak: white corridor beams through the steel and red roof pools — the steel reads, the air does not.',
+    'a-t10-dark-entry': 'A at 10 min from the door: a faint knot at the end. Weak.',
+    'a-t10-peak-entry': 'A at 10 min from the door, peak: the roof lit over the stage, a few white lines. Thin.',
+    'a-t40-dark-floor': 'A at 40 min: backlight and corridors show behind the stage; its machine stands 20 m back, far from where you look.',
+    'a-t40-peak-floor': 'A at 40 min, peak: steel and roof pools, white corridor lines — flatter than tuned B.',
+    'a-t40-dark-entry': 'A at 40 min from the door: a dim red depth; the corridors hide behind the stage.',
+    'a-t40-peak-entry': 'A at 40 min from the door, peak: roof lit, corridors faint — its depth sits where the floor cannot see it.',
+}
+VIEW_WORDS = {('dark', 'floor'): 'dark look · on the dance floor, eye 1.7 m', ('peak', 'floor'): 'peak look · on the dance floor, eye 1.7 m',
+              ('dark', 'entry'): 'dark look · at the entry, eye 1.7 m', ('peak', 'entry'): 'peak look · at the entry, eye 1.7 m'}
+ORDER = [('dark', 'floor'), ('peak', 'floor'), ('dark', 'entry'), ('peak', 'entry')]
+
+
+def contact_sheet(out):
+    from PIL import Image, ImageDraw
+    rows = [('b', 'old'), ('b', 't40'), ('b', 't10'), ('b', 'dry'), ('bt', 't40'), ('bt', 't10'), ('bt', 'dry'), ('a', 'old'), ('a', 't40'), ('a', 't10')]
+    W, H, pad, lab = 480, 300, 6, 22
+    sheet = Image.new('RGB', (4 * (W + pad) + 260, len(rows) * (H + lab + pad) + 40), (12, 12, 13))
+    d = ImageDraw.Draw(sheet)
+    d.text((10, 12), 'MOXIR v2 · the true look with ONE smoke machine · measurement mode EV100 %.2f fixed · Full quality · RTX 3080 · 2026-10-09' % EV100, fill=(232, 228, 220))
+    for c, (look, view) in enumerate(ORDER):
+        d.text((260 + c * (W + pad) + 4, 26), VIEW_WORDS[(look, view)], fill=(160, 160, 160))
+    for r, (lay, st) in enumerate(rows):
+        y = 40 + r * (H + lab + pad)
+        d.text((10, y + lab + H // 2 - 14), LAYOUTS[lay][0], fill=(255, 176, 138))
+        d.text((10, y + lab + H // 2 + 2), STATES[st][0], fill=(232, 228, 220))
+        for c, (look, view) in enumerate(ORDER):
+            f = os.path.join(out, 'frames', '%s-%s-%s-%s.png' % (lay, st, look, view))
+            if os.path.exists(f):
+                sheet.paste(Image.open(f).convert('RGB').resize((W, H)), (260 + c * (W + pad), y + lab))
+    sheet.save(os.path.join(out, 'contact-sheet.png'))
+
+
+def page(repo, out):
+    import html
+    contact_sheet(out)
+    luma = json.load(open(os.path.join(out, 'frame-luma.json')))
+    T = json.load(open(os.path.join(repo, RIG_BT)))
+    g = T['design_metric']['plane1']
+    E = html.escape
+
+    def fig(name, wide=False):
+        lay, st, look, view = name.split('-')
+        L = luma.get(name, {})
+        return ('<figure%s><a href="frames/%s.png"><img src="frames/%s.png" alt="%s" loading="lazy"></a><figcaption><b>%s · %s · %s</b>'
+                '<span>%s</span><small>mean luminance %s · white-out %s %%</small></figcaption></figure>') % (
+            ' class="wide"' if wide else '', name, name, E(CAPTIONS.get(name, name)), E(LAYOUTS[lay][0]), E(STATES[st][0]), E(VIEW_WORDS[(look, view)]),
+            E(CAPTIONS.get(name, '')), L.get('mean_Y', '–'), L.get('white_pct', '–'))
+
+    def pair(a, b):
+        return '<div class="pair">%s%s</div>' % (fig(a), fig(b))
+
+    tunes = ''.join('<tr><td>%s</td><td><b>%s</b><br>%s</td><td>%s</td></tr>' % (E(t['id']), E(t['title']), E(t['change']), E(t['why'])) for t in T['tunes'])
+    states = ''.join('<tr><td>%s</td><td>%s</td></tr>' % (E(v[0]), E(v[1])) for k, v in STATES.items())
+    glow = ''.join('<tr><td>%s</td><td>%.4f → %.4f (×%.1f)</td><td>%.4f → %.4f (×%.1f)</td></tr>' % (
+        E(STATES[st][0]), g['before'][st]['floor']['G'], g['after_T3'][st]['floor']['G'], g['after_T3'][st]['floor']['G'] / g['before'][st]['floor']['G'],
+        g['before'][st]['entry']['G'], g['after_T3'][st]['entry']['G'], g['after_T3'][st]['entry']['G'] / g['before'][st]['entry']['G']) for st in ('t10', 't40', 'dry'))
+    lumarows = ''.join('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
+        E(STATES[st][0]), E(VIEW_WORDS[(look, view)]), luma.get('b-%s-%s-%s' % (st, look, view), {}).get('mean_Y'), luma.get('bt-%s-%s-%s' % (st, look, view), {}).get('mean_Y'),
+        luma.get('bt-%s-%s-%s' % (st, look, view), {}).get('white_pct')) for st in ('t10', 't40', 'dry') for look, view in ORDER)
+    sec_bt = ''.join('<h3>%s</h3><p class="note">%s</p>%s' % (E(STATES[st][0]), E(STATES[st][1]), ''.join(pair('b-%s-%s-%s' % (st, l, v), 'bt-%s-%s-%s' % (st, l, v)) for l, v in ORDER)) for st in ('t40', 't10', 'dry'))
+    sec_old = ''.join(pair('b-old-%s-%s' % (l, v), 'b-t40-%s-%s' % (l, v)) for l, v in ORDER)
+    sec_a = ''.join('<div class="grid">%s</div>' % ''.join(fig('a-%s-%s-%s' % (st, l, v)) for l, v in ORDER) for st in ('old', 't40', 't10'))
+    doc = TEMPLATE.format(ev=EV100, hero=pair('b-old-peak-floor', 'bt-t40-peak-floor'), sec_old=sec_old, sec_bt=sec_bt, sec_a=sec_a, tunes=tunes, states=states, glow=glow, lumarows=lumarows)
+    open(os.path.join(out, 'index.html'), 'w').write(doc)
+    print('page -> %s' % os.path.join(out, 'index.html'))
+
+
+TEMPLATE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOXIR v2 true look</title>
+<style>
+:root {{ --bg:#0b0c0e; --panel:#141518; --ink:#e8e4dc; --dim:#9aa0a8; --ember:#ff3a12; --ash:#e8e4dc; --line:#2a2c31; }}
+* {{ box-sizing:border-box; border-radius:0; }}
+body {{ margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, sans-serif; }}
+main {{ max-width:1500px; margin:0 auto; padding:24px 16px 64px; }}
+h1 {{ font-size:26px; margin:0 0 6px; }} h2 {{ font-size:20px; margin:42px 0 8px; border-top:1px solid var(--line); padding-top:18px; }}
+h3 {{ font-size:16px; margin:26px 0 4px; color:#ffb08a; }}
+.lead {{ font-size:17px; max-width:980px; }} .lead b {{ color:#ffb08a; }}
+.note {{ color:var(--dim); max-width:980px; margin:4px 0 10px; }}
+.pair {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 16px; }}
+.grid {{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin:10px 0; }}
+figure {{ margin:0; background:var(--panel); border:1px solid var(--line); }}
+figure img {{ width:100%; display:block; }}
+figcaption {{ padding:8px 10px 10px; font-size:13.5px; }} figcaption b {{ display:block; color:var(--dim); font-weight:600; font-size:12px; }}
+figcaption span {{ display:block; margin:3px 0; }} figcaption small {{ color:#6f747b; }}
+table {{ border-collapse:collapse; width:100%; margin:10px 0; font-size:13.5px; }}
+td, th {{ border:1px solid var(--line); padding:6px 8px; vertical-align:top; text-align:left; }} th {{ color:var(--dim); font-weight:600; }}
+.reco {{ background:var(--panel); border-left:3px solid var(--ember); padding:12px 16px; max-width:1100px; }}
+code, pre {{ font:13px ui-monospace, monospace; }} pre {{ background:var(--panel); padding:10px; overflow:auto; border:1px solid var(--line); }}
+@media (max-width: 800px) {{ .pair, .grid {{ grid-template-columns:1fr; }} }}
+</style></head><body><main>
+<h1>MOXIR v2 — what ONE smoke machine really shows</h1>
+<p class="lead">The pictures you saw on 10-09 were drawn with the air of <b>four</b> machines. With the one machine we have,
+the hall does <b>not</b> fill with glowing fog: it stays dark, and what reads is the beams near the smoke, the steel they
+land on, and the columns we light. Layout B, tuned for that, still makes a strong picture from the dance floor —
+left: the old picture, right: B tuned, 40 minutes after the machine starts.</p>
+{hero}
+<div class="reco"><b>Recommendation.</b> Take <b>B tuned</b>. Start the machine <b>40 minutes before doors</b> with the hall
+closed (doors, roof vents, extraction shut while hazing) and refill the tank at doors. Then the fan of six ember shafts
+behind the DJ, the lit columns and the red pools on the roof steel carry the night, even if the air stays thinner than
+planned. Do not expect the soft red fog of the old pictures: one machine cannot make it in this hall. Measure the real
+haze on site before the show (a lux meter through 20 m of haze); if you ever want the full-hall glow back, it
+takes more machine output, not a lighting change.</div>
+
+<h2>Old air vs the true air — layout B</h2>
+<p class="note">Left: the old pictures' air (0.0169 /m everywhere). Right: one machine, 40 min in, the closed hall (~0.0086 /m in
+the hall, much denser right around the machine). Same lamps, same camera, same exposure.</p>
+{sec_old}
+
+<h2>B vs B tuned — three moments of the night</h2>
+<p class="note">Left: B as it was drawn on 10-09. Right: B tuned for one machine. The haze is the same on both sides of each pair.</p>
+{sec_bt}
+
+<h2>A (the nave corridors), for contrast</h2>
+<p class="note">Rows: old air, 40 min, 10 min. Columns: dark on the floor, peak on the floor, dark at the entry, peak at the entry.</p>
+{sec_a}
+
+<h2>What changed in B tuned</h2>
+<p class="note">Each change is a small, labelled change in B's rig file (scripts/place/rigs/moxir-v2-planes-tuned-2026-10-09.json, one
+commit each). None of them makes the room brighter by itself: no gain, no exposure change.</p>
+<table><tr><th></th><th>change</th><th>why</th></tr>{tunes}</table>
+
+<h2>Numbers</h2>
+<p class="note">The air, as the model gives it (UNVALIDATED: the two-zone model of one machine; nothing has been measured in the hall yet).</p>
+<table><tr><th>state</th><th>what it is</th></tr>{states}</table>
+<p class="note">Plane 1's glow in the air as seen from each eye — a design metric (first-order single scattering: the haze, the
+forward-scatter of the droplets, the steel in the way), per unit of beam light. It ranks aims; it is not a brightness.</p>
+<table><tr><th>state</th><th>floor eye: B → tuned</th><th>entry eye: B → tuned</th></tr>{glow}</table>
+<p class="note">Frame brightness (mean relative luminance of the picture, interface strips excluded, frame_luma.py) and white-out
+(share of near-white pixels) — a measure of the render, not of the hall.</p>
+<table><tr><th>state</th><th>view</th><th>B mean</th><th>B tuned mean</th><th>B tuned white-out %</th></tr>{lumarows}</table>
+
+<h2>How these pictures were made, and their limits</h2>
+<ul class="note">
+<li><b>Camera: EV100 {ev:.2f}, fixed</b> for every frame (measurement mode, docs/architecture/MEASUREMENT_MODE.md): the room's own
+camera, set against club photographs (RIG_BUILD §20.1); a club photographer's ISO 3200, f/2, 1/60 s is EV100 2.9. No auto
+exposure, no bloom, no glare veil, no work light; the hall's own bounce kept. No screen can show a dark-adapted eye
+(CIE 191:2010): in the hall, your eyes will open up the dark parts more than these pictures do.</li>
+<li><b>Full quality</b> (every lamp a real light, shadows). The room opens in Lite by default, where only 4 lamps light
+surfaces: in Lite no PAR lights any steel.</li>
+<li><b>The air</b> is the two-zone model of one machine (hazeZones.js), modelled on an equivalent machine at full output.
+Its two big unknowns — how fast the hall's air changes and whether the fog dries — move the hall's haze over a range of
+about 30×; the frames show the closed-hall case at 10 and 40 min and the floor of the range.</li>
+<li>The floor shows mirror-like streaks of the beams under the stage: the room's floor model, more polished than this
+concrete will be.</li>
+<li><b>No lasers</b> in these pictures: the laser session's table of the six cubes on the free crane did not exist when this
+was made, and no aim was invented.</li>
+<li>Rendered on aylmo's RTX 3080 in the agent screen, on a scratch copy; nothing was written to dev, live or your own di.</li>
+</ul>
+<p class="note">Contact sheet of all 40 frames: <a href="contact-sheet.png">contact-sheet.png</a> · every number: <a href="tunes.json">tunes.json</a>,
+<a href="frame-luma.json">frame-luma.json</a>, <a href="frames/frames.json">frames/frames.json</a>.</p>
+</main></body></html>
+"""
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('cmd', choices=['plan', 'tune', 'page'])
@@ -375,6 +566,8 @@ def main():
         plan(repo, A.layouts.split(','), out)
     elif A.cmd == 'tune':
         tune(repo, out, A.upto)
+    elif A.cmd == 'page':
+        page(repo, out)
 
 
 if __name__ == '__main__':
