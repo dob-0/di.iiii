@@ -14,7 +14,7 @@ const answer = (over = {}) => ({
     ],
     clock: { showEpoch: null, loop: true, showSource: null, cues: [] },
     light: { state: 'open', otherShow: false, otherList: false },
-    live: { index: 0, n: 3, running: true, loop: true, nextIndex: 1, nextInMs: 12000, by: null, missing: 0 },
+    live: { index: 0, n: 3, running: true, loop: false, autoplay: false, nextIndex: -1, nextInMs: null, by: null, missing: 0 },
     control: { choosers: 'team', cooldownMs: 10000, cooldownLeftMs: 0, last: null },
     you: { who: 'operator', block: '', authOff: false },
     now: Date.now(),
@@ -51,5 +51,13 @@ describe('the cue list in the room', () => {
         await screen.findByText('the black')
         expect(document.querySelector('[data-cue="2"]').disabled).toBe(true)
         expect(screen.getByText(/You watch/)).toBeTruthy()
+    })
+
+    it('a pressed scene holds: the live one is marked, and there is no countdown or "next" anywhere', async () => {
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer()))
+        render(<RoomCueList spaceId="moxir" projectId="v1-1" />)
+        await screen.findByText('the black')
+        expect(document.querySelector('[data-cue="0"]').getAttribute('aria-current')).toBe('true')
+        expect(document.body.textContent).not.toMatch(/next in|waits for GO|\bnext\b/i)
     })
 })

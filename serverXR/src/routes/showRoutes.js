@@ -23,6 +23,7 @@ const {
 //   GET  /api/spaces/:spaceId/show/:projectId          the cues, the live cue, the rules, you
 //   POST /api/spaces/:spaceId/show/:projectId/choose   { index, cueId, name? } → Light goes there
 //   POST /api/spaces/:spaceId/show/:projectId/control  { choosers: team|everyone|operator } — operator only
+//   POST /api/spaces/:spaceId/show/:projectId/autoplay { autoplay: bool } — operator only; OFF by default, a press turns it off
 //
 // Registered AHEAD of the blanket /api role gates (index.js) on purpose: a visitor must
 // be able to choose once the operator sets choosing to `everyone`, and the blanket write
@@ -219,7 +220,7 @@ function registerShowRoutes(router, {
     })
     if (!decision.ok) return res.status(decision.status).json({ error: decision.error, code: decision.code, ...(await answer(ctx)) })
     if (decision.load) {
-      desk.cueRunner.load({ project: ctx.project.projectId, list: decision.load.list, loop: decision.load.loop, keepIndex: decision.load.keepIndex })
+      desk.cueRunner.load({ project: ctx.project.projectId, list: decision.load.list, loop: false, keepIndex: decision.load.keepIndex })
     }
     const by = chooserLabel({ who: ctx.who, state: ctx.state, typedName: body.name })
     control.last = { index, cueId: cues[index].id, by, at: now() }
@@ -251,6 +252,25 @@ function registerShowRoutes(router, {
     log(`show page: ${ctx.key} — who may choose: ${control.choosers}`)
     res.json({ ok: true, ...(await answer(ctx)) })
   }
+
+  // "Play in order": the operator's one plain switch. OFF unless he turns it on; a press of
+  // any scene turns it off again (lighting/cuerun.js go(index)).
+  router.post(`${base}/autoplay`, writeLimiter, express.json({ limit: '1kb' }), async (req, res, next) => {
+    try {
+      const ctx = await resolve(req)
+      if (ctx.status) return res.status(ctx.status).json(ctx.body)
+      if (ctx.who !== 'operator') return res.status(403).json({ error: 'Only the operator plays the scenes in order.', code: 'operator-setting' })
+      if (!hasLocalRuntime() || !lighting?.hasDesk?.()) return res.status(409).json({ error: 'Light is not open here.', code: 'no-light', ...(await answer(ctx)) })
+      const desk = lighting.getDesk()
+      const runner = desk.cueRunner.full()
+      if (runner.project !== ctx.project.projectId || !(runner.n > 0)) {
+        return res.status(409).json({ error: 'Press a scene first.', code: 'not-playing', ...(await answer(ctx)) })
+      }
+      desk.cueRunner.setAutoplay(req.body?.autoplay === true)
+      log(`show page: ${ctx.key} — play in order: ${req.body?.autoplay === true ? 'on' : 'off'}`)
+      res.json({ ok: true, ...(await answer(ctx)) })
+    } catch (error) { next(error) }
+  })
 
   return { forget: () => { controls = null; cueCache.clear() } }
 }

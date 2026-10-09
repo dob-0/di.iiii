@@ -194,12 +194,27 @@ describe('the show page — choosing', () => {
     it('a member chooses: Light plays this project\'s list from that cue, and everyone reads who chose it', async () => {
         const out = await ok(await choose(MEMBER, 0, { name: 'Անի' }))
         const body = await out.json()
-        expect(body.live).toMatchObject({ index: 0, n: 4, running: true, loop: true, by: 'Անի', nextIndex: 1 })
+        expect(body.live).toMatchObject({ index: 0, n: 4, running: true, loop: false, autoplay: false, by: 'Անի', nextIndex: -1, nextInMs: null })
         const desk = (await (await light('GET', 'api/cues')).json()).cues
         expect(desk).toMatchObject({ project: body.project.id, index: 0, running: true })
         const seen = await read(ADMIN)
         expect(seen.live.by).toBe('Անի')
         expect(seen.control.last).toMatchObject({ index: 0, by: 'Անի' })
+    })
+
+    it('a chosen scene HOLDS: nothing advances by itself, there is no countdown', async () => {
+        await wait(1500)
+        const desk = (await (await light('GET', 'api/cues')).json()).cues
+        expect(desk).toMatchObject({ index: 0, running: true, autoplay: false, nextInMs: null })
+    })
+
+    it('play in order is the operator\'s switch, and only his', async () => {
+        const refused = await send('POST', `${SHOW}/autoplay`, MEMBER, { autoplay: true })
+        expect(refused.status).toBe(403)
+        const on = await ok(await send('POST', `${SHOW}/autoplay`, ADMIN, { autoplay: true }))
+        expect((await on.json()).live.autoplay).toBe(true)
+        const off = await ok(await send('POST', `${SHOW}/autoplay`, ADMIN, { autoplay: false }))
+        expect((await off.json()).live.autoplay).toBe(false)
     })
 
     it('then one choice per cooldown, for the operator too', async () => {

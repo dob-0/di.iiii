@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { buildVanityProjectPath } from '../utils/spaceRouting.js'
-import { ShowError, blockOf, chooseCue, cleanName, cueBlockWords, durationWords, liveOf, youWords } from './showApi.js'
+import { ShowError, blockOf, chooseCue, cleanName, liveOf, youWords } from './showApi.js'
 import { useShowFeed } from './useShowFeed.js'
 
+// THE SCENE BUTTONS INSIDE THE ROOM (simple buttons, 2026-10-09: a press changes the scene and it HOLDS)
+//
 // THE CUE LIST INSIDE THE ROOM (RIG_BUILD.md §24). Owner, 2026-10-09, in the MOXIR v1.1 room:
 // "why can't I select and change the light cue?" — the SHOW · DESK chip only displayed. Opened,
 // the chip now lists the cues of the show; a tap sends that cue to Light through the SAME
@@ -12,16 +14,17 @@ import { useShowFeed } from './useShowFeed.js'
 // permission; `you.block` is read. Rectangles, 0–2 px, targets ≥ 44 px, house look.
 //
 // Only mounted while the chip is open, so a closed chip costs the room no request.
-const rowBase = {
+const EMBER = '#ff3b3b'
+const brickBase = {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.6rem',
+    gap: '0.5rem',
     width: '100%',
-    minHeight: '44px',
-    padding: '0.35rem 0.95rem',
-    border: 0,
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-    background: 'transparent',
+    minHeight: '48px',
+    padding: '0.3rem 0.6rem',
+    border: '1px solid rgba(255,255,255,0.14)',
+    borderRadius: 2,
+    background: '#0a0a0a',
     color: 'inherit',
     font: 'inherit',
     textAlign: 'left'
@@ -30,8 +33,8 @@ const rowBase = {
 function Squares({ swatch = [] }) {
     return (
         <span aria-hidden="true" style={{ display: 'inline-flex', gap: 2, flex: '0 0 auto' }}>
-            {(swatch.length ? swatch : [{ hex: '#000' }]).map((s, i) => (
-                <span key={i} style={{ width: 12, height: 12, borderRadius: 0, background: s.hex, border: '1px solid rgba(255,255,255,0.3)' }} />
+            {(swatch.length ? swatch.slice(0, 2) : [{ hex: '#000' }]).map((s, i) => (
+                <span key={i} style={{ width: 14, height: 14, borderRadius: 0, background: s.hex, border: '1px solid rgba(255,255,255,0.3)' }} />
             ))}
         </span>
     )
@@ -56,7 +59,7 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
     const serverNow = now + (data?.offset || 0)
     const live = useMemo(() => liveOf(data, serverNow), [data, serverNow])
     const cues = data?.cues || []
-    const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - (now - data.receivedAt)) : 0
+    const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - Math.max(0, now - data.receivedAt)) : 0
     const lightBlocked = Boolean(data && (data.light?.state === 'none' || data.clock?.showSource === 'clock'))
     const lightBusy = Boolean(data && (data.light?.otherList || data.light?.otherShow))
     const block = lightBlocked ? 'no-light' : lightBusy ? 'busy' : blockOf(data, cooldownLeftMs)
@@ -64,13 +67,12 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
     const choose = useCallback(async (cue) => {
         if (cue.laser || sending != null) return
         setSending(cue.index)
-        setNotice(`Sending ${cue.index + 1} · ${cue.title || cue.name}…`)
+        setNotice('')
         const t0 = Date.now()
         try {
             const body = await chooseCue(spaceId, projectId, { index: cue.index, cueId: cue.id, name: cleanName(readName()) })
             take(body, t0, Date.now())
             setMine({ title: cue.title || cue.name })
-            setNotice(`${cue.index + 1} · ${cue.title || cue.name} — on Light now.`)
             onChosen?.()
         } catch (e) {
             if (e instanceof ShowError && e.body?.cues) take(e.body, t0, Date.now())
@@ -81,38 +83,33 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
     }, [spaceId, projectId, sending, take, onChosen])
 
     const showHref = buildVanityProjectPath(spaceId, projectId).replace(/\/([^/]+)$/, '/show/$1')
+    const why = block ? youWords(data, cooldownLeftMs, mine) : ''
     return (
         <div data-testid="room-cue-list" style={{ borderTop: '1px solid rgba(255,255,255,0.14)' }}>
-            {error ? <p role="alert" style={{ margin: 0, padding: '0.5rem 0.95rem', background: '#ff3b3b', color: '#000', fontWeight: 700, fontSize: '0.8rem' }}>{error.status ? error.message : 'No link to the server — this list is old. Trying again…'}</p> : null}
-            <p style={{ margin: 0, padding: '0.5rem 0.95rem', fontSize: '0.8rem', opacity: 0.8 }} data-block={block || ''}>
-                {data ? youWords(data, cooldownLeftMs, mine) : (error ? '' : 'Loading the cues…')}
-            </p>
-            {notice ? <p role="status" style={{ margin: 0, padding: '0.4rem 0.95rem', borderLeft: '2px solid #4df9ff', fontSize: '0.8rem' }}>{notice}</p> : null}
-            <ol aria-label="the cues of the show" style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: 'min(52dvh, 24rem)', overflowY: 'auto' }}>
+            {error ? <p role="alert" style={{ margin: 0, padding: '0.5rem 0.95rem', background: EMBER, color: '#000', fontWeight: 700, fontSize: '0.8rem' }}>{error.status ? error.message : 'No link to the server — this list is old. Trying again…'}</p> : null}
+            {!data && !error ? <p style={{ margin: 0, padding: '0.5rem 0.95rem', fontSize: '0.8rem', opacity: 0.8 }}>Loading the scenes…</p> : null}
+            {notice || why ? <p role="status" data-block={block || ''} style={{ margin: 0, padding: '0.4rem 0.95rem', borderLeft: `2px solid ${notice ? EMBER : 'rgba(255,255,255,0.4)'}`, fontSize: '0.8rem', opacity: notice ? 1 : 0.75 }}>{notice || why}</p> : null}
+            <ol aria-label="the scenes of the show" style={{ listStyle: 'none', margin: 0, padding: '0.5rem 0.6rem', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, maxHeight: 'min(52dvh, 24rem)', overflowY: 'auto' }}>
                 {cues.map((cue) => {
                     const isLive = live?.index === cue.index
-                    const words = cueBlockWords(cue, block, lightBusy ? 'busy' : lightBlocked)
                     const disabled = Boolean(cue.laser) || Boolean(block) || sending != null
                     return (
                         <li key={cue.id}>
                             <button type="button" disabled={disabled} data-cue={cue.index} aria-current={isLive ? 'true' : undefined}
+                                title={cue.laser ? 'laser scene — operator only' : undefined}
                                 onClick={() => choose(cue)}
-                                style={{ ...rowBase, cursor: disabled ? 'default' : 'pointer', opacity: cue.laser ? 0.6 : 1, background: isLive ? 'rgba(77,249,255,0.12)' : 'transparent', boxShadow: isLive ? 'inset 2px 0 0 #4df9ff' : 'none', touchAction: 'manipulation' }}>
-                                <span style={{ minWidth: '2ch', opacity: 0.7, fontSize: '0.75rem' }}>{cue.index + 1}</span>
+                                style={{ ...brickBase, cursor: disabled ? 'default' : 'pointer', borderStyle: cue.laser ? 'dashed' : 'solid', opacity: cue.laser ? 0.6 : 1, background: isLive ? 'rgba(255,59,59,0.16)' : brickBase.background, borderColor: isLive ? EMBER : "rgba(255,255,255,0.14)", boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none', touchAction: 'manipulation' }}>
                                 <Squares swatch={cue.swatch} />
-                                <span style={{ flex: '1 1 auto', minWidth: 0, display: 'grid' }}>
-                                    <span style={{ fontWeight: isLive ? 700 : 500, overflowWrap: 'anywhere' }}>{cue.title || cue.name}</span>
-                                    <span style={{ fontSize: '0.72rem', opacity: 0.65 }}>{cue.laser ? 'laser moment — operator only' : (!isLive && words && block !== 'no-light' && block !== 'busy' ? `${cue.line} · ${words}` : cue.line)}</span>
-                                </span>
-                                {isLive ? <span style={{ fontSize: '0.68rem', letterSpacing: '0.12em', color: '#4df9ff', flex: '0 0 auto' }}>LIVE</span> : null}
+                                <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: '0.8rem', fontWeight: isLive ? 700 : 500, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{cue.title || cue.name}</span>
+                                {isLive ? <span style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: EMBER, flex: '0 0 auto' }}>LIVE</span> : null}
+                                {cue.laser && !isLive ? <span style={{ fontSize: '0.55rem', letterSpacing: '0.08em', opacity: 0.7, flex: '0 0 auto' }}>OPERATOR</span> : null}
                             </button>
                         </li>
                     )
                 })}
             </ol>
-            <a href={showHref} style={{ display: 'flex', alignItems: 'center', minHeight: '44px', padding: '0 0.95rem', borderTop: '1px solid rgba(255,255,255,0.08)', color: '#4df9ff', fontSize: '0.8rem' }}>
+            <a href={showHref} style={{ display: 'flex', alignItems: 'center', minHeight: '44px', padding: '0 0.95rem', borderTop: '1px solid rgba(255,255,255,0.08)', color: EMBER, fontSize: '0.8rem' }}>
                 open the show page
-                {live?.nextInMs != null ? <span style={{ marginLeft: 'auto', opacity: 0.6 }}>next in {durationWords(live.nextInMs)}</span> : null}
             </a>
         </div>
     )

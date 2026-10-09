@@ -6,11 +6,11 @@
 .show-page {
     --show-bg: #000;
     --show-card: #0a0a0a;
-    --show-text: #fff;
+    --show-text: #ece9e2; /* ash white */
     --show-muted: rgba(255, 255, 255, 0.55);
     --show-faint: rgba(255, 255, 255, 0.14);
-    --show-accent: var(--di-cyan, #4df9ff);
-    --show-accent-dim: rgba(77, 249, 255, 0.1);
+    --show-accent: #ff3b3b; /* ember red: the one live thing */
+    --show-accent-dim: rgba(255, 59, 59, 0.16);
     --show-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     /* base.css pins html/body/#root (position: fixed; height: 100%) for the 3D room, so this
        page scrolls ITSELF: its own height and overflow, as the scenes page does (scenes.css).
@@ -60,25 +60,6 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
     text-decoration: none;
 }
 
-/* the live cue: sticky, so it stays in sight while the list scrolls under it */
-.show-live {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    margin: 0 -16px;
-    padding: 12px 16px 14px;
-    background: #000;
-    border-bottom: 1px solid var(--show-accent);
-}
-.show-live__meta { display: flex; align-items: center; gap: 12px; font-family: var(--show-mono); font-size: 0.75rem; letter-spacing: 0.1em; color: var(--show-accent); }
-.show-live__name { margin: 4px 0 2px; font-size: clamp(1.6rem, 7vw, 2.4rem); line-height: 1.1; font-weight: 700; overflow-wrap: anywhere; }
-.show-live__name.is-quiet { color: var(--show-muted); font-weight: 500; }
-.show-live__next, .show-live__by, .show-live__source { margin: 2px 0 0; font-size: 0.95rem; color: var(--show-muted); }
-.show-live__next b { color: var(--show-text); font-weight: 600; }
-.show-live__source { font-family: var(--show-mono); font-size: 0.7rem; letter-spacing: 0.08em; }
-
-.show-you { margin: 14px 0 6px; font-size: 0.95rem; color: var(--show-text); }
-.show-you.is-blocked { color: var(--show-muted); }
 
 .show-operator { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--show-faint); border-radius: 2px; background: var(--show-card); }
 .show-operator__label { display: block; font-family: var(--show-mono); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--show-muted); margin-bottom: 8px; }
@@ -107,39 +88,6 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
 .show-notice { margin: 8px 0; padding: 8px 10px; border-left: 2px solid var(--show-accent); font-size: 0.9rem; color: var(--show-text); background: var(--show-card); }
 .show-notice.is-error { border-left-color: #ff3b3b; }
 
-.show-act__title { margin: 22px 0 8px; font: 600 0.75rem/1 var(--show-mono); letter-spacing: 0.16em; text-transform: lowercase; color: var(--show-muted); }
-.show-cues { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-@media (min-width: 720px) { .show-cues { grid-template-columns: 1fr 1fr; } }
-
-.show-cue__button {
-    width: 100%;
-    min-height: 76px;
-    display: grid;
-    gap: 4px;
-    padding: 12px 14px;
-    text-align: left;
-    color: var(--show-text);
-    background: var(--show-card);
-    border: 1px solid var(--show-faint);
-    border-radius: 2px;
-    font: inherit;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-.show-cue__button:not(:disabled):active { background: var(--show-accent-dim); }
-.show-cue__button:focus-visible { outline: 2px solid var(--show-accent); outline-offset: 2px; }
-.show-cue__button:disabled { cursor: default; }
-.show-cue.is-live .show-cue__button { border-color: var(--show-accent); box-shadow: 0 0 0 1px var(--show-accent); }
-.show-cue.is-next .show-cue__button { border-color: rgba(77, 249, 255, 0.35); }
-.show-cue.is-laser .show-cue__button { border-style: dashed; color: var(--show-muted); }
-.show-cue__head { display: flex; align-items: center; gap: 10px; font-family: var(--show-mono); font-size: 0.75rem; color: var(--show-muted); }
-.show-cue__n { min-width: 2ch; }
-.show-cue__tag { margin-left: auto; padding: 2px 6px; border: 1px solid currentColor; border-radius: 2px; letter-spacing: 0.12em; }
-.show-cue__tag.is-live { color: var(--show-accent); }
-.show-cue__name { font-size: 1.15rem; font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
-.show-cue__line { font-size: 0.85rem; color: var(--show-muted); }
-.show-cue.is-laser .show-cue__line { color: #ffb199; font-family: var(--show-mono); font-size: 0.78rem; letter-spacing: 0.04em; }
 
 .show-swatch { display: inline-flex; gap: 2px; }
 .show-swatch span { width: 14px; height: 14px; border-radius: 0; border: 1px solid rgba(255, 255, 255, 0.25); }
@@ -159,7 +107,7 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
 .show-empty { padding: 40px 0; color: var(--show-muted); text-align: center; }
 
 @media (prefers-reduced-motion: no-preference) {
-    .show-cue__button { transition: border-color 160ms ease, background-color 160ms ease; }
+    .show-brick__button { transition: border-color 160ms ease, background-color 160ms ease; }
 }
 
 /* the link dropped: the first thing on the page, and it stays while you scroll */
@@ -176,7 +124,48 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
     color: #000;
     font: 700 0.85rem/1.25 var(--show-mono);
 }
-.show-page.is-offline .show-live { top: 44px; }
 .show-operator__note a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
 .show-operator__note.is-plain { color: var(--show-text); }
 .show-empty .show-link { justify-content: center; }
+
+/* THE BRICKS — one scene, one big button: its name and its colours, nothing else */
+.show-top__title { margin: 0; font: inherit; }
+.show-top__project { font: 600 0.95rem/1.2 system-ui, sans-serif; letter-spacing: 0.02em; color: var(--show-text); }
+button.show-link { background: transparent; color: var(--show-accent); font: 600 0.8rem/1 var(--show-mono); letter-spacing: 0.06em; cursor: pointer; }
+button.show-link[aria-expanded="true"] { background: var(--show-accent-dim); }
+.show-bricks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (min-width: 640px) { .show-bricks { grid-template-columns: repeat(3, 1fr); } }
+.show-brick__button {
+    position: relative;
+    width: 100%;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    text-align: left;
+    color: var(--show-text);
+    background: var(--show-card);
+    border: 1px solid var(--show-faint);
+    border-radius: 2px;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+.show-brick__button:not(:disabled):active { background: var(--show-accent-dim); }
+.show-brick__button:focus-visible { outline: 2px solid var(--show-text); outline-offset: 2px; }
+.show-brick__button:disabled { cursor: default; }
+.show-brick.is-live .show-brick__button { background: var(--show-accent-dim); border-color: var(--show-accent); box-shadow: inset 0 0 0 2px var(--show-accent); opacity: 1; }
+.show-brick.is-laser .show-brick__button { border-style: dashed; color: var(--show-muted); }
+.show-brick__name { font-size: 1.05rem; font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
+.show-brick__tag { position: absolute; top: 8px; right: 8px; padding: 2px 6px; border: 1px solid currentColor; border-radius: 2px; font: 600 0.62rem/1.2 var(--show-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--show-accent); }
+.show-brick__tag.is-laser { color: var(--show-muted); }
+.show-swatch span { width: 22px; height: 22px; }
+.show-notice.is-blocked { border-left-color: var(--show-muted); color: var(--show-muted); }
+.show-switch { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-top: 8px; font: 600 0.85rem/1.2 var(--show-mono); }
+.show-switch input { width: 24px; height: 24px; accent-color: var(--show-accent); }
+.show-operator .show-name { margin-top: 8px; }
+.show-operator .show-link { margin-top: 8px; }

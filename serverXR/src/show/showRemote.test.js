@@ -194,10 +194,13 @@ describe('the live cue', () => {
     expect(liveOf({ runner: { ...runner, firedAt: 25_000 }, projectId: 'moxir-v1-0', control: { last: { index: 3, by: 'Անի', at: 4990 } }, cues }).by).toBe(null)
   })
 
-  it('what is next: the cue after, cue 1 after the last while looping, none when stopped', () => {
+  it('what is next: only while "play in order" is on - a chosen scene holds, nothing is next', () => {
+    expect(liveOf({ runner, projectId: 'moxir-v1-0', control: {}, cues }).nextIndex).toBe(-1)
+    runner.autoplay = true
     expect(liveOf({ runner, projectId: 'moxir-v1-0', control: {}, cues }).nextIndex).toBe(4)
     expect(liveOf({ runner: { ...runner, index: 4 }, projectId: 'moxir-v1-0', control: {}, cues }).nextIndex).toBe(0)
     expect(liveOf({ runner: { ...runner, running: false }, projectId: 'moxir-v1-0', control: {}, cues }).nextIndex).toBe(-1)
+    runner.autoplay = false
   })
 
   it('nothing when Light plays another project, or nothing', () => {

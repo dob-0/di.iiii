@@ -2489,3 +2489,14 @@ scroll at 390 px. ShowSurface chunk 11.0 kB + 5.8 kB CSS + showClock 2.0 kB (unc
 relay; the scene deck's laser list (above); `rigToolAccess` reads `session.local` as "everyone
 edits", which on a `di up --guests` install hands a guest the sign-in card on the cards/plot pages
 (found here; this page does not use that gate).
+
+
+### 24.x Simple buttons - a press holds (owner, 2026-10-09)
+
+*"I need so simple buttons: you press, the scene changes, and auto play stops. So simple." - "a cue is just like lego bricks, one scene after the other."*
+
+- **A press holds.** `POST .../choose` makes that scene live and it STAYS until someone presses another. The desk's cue runner (`serverXR/src/lighting/cuerun.js`) has an `autoplay` flag, OFF by default: a cue's `hold` only counts down while it is on. A named press (`go(index)`) turns it off. Choosing never loops (the show page loads the list with `loop: false`), so `live.nextIndex` is -1 and `live.nextInMs` is null unless autoplay is on.
+- **One switch.** `POST .../autoplay {autoplay: bool}` (operator only) is "play in order"; it sits behind the page's "settings" button. `POST /light/api/cues/autoplay` is the desk's side of it. The cards page and /light still call `go()` with no index for "next"; with autoplay off that step also holds.
+- **The page** is a grid of bricks (scene name + colour squares; the live one in ember red; a laser scene shown dashed, disabled, "operator only"). Who may press, "play in order" and the name field are behind one `settings` button, operator only. The room's chip list is the same bricks, two columns, compact.
+- **Kept:** laser scenes refused by the server (403) and written 0 by the desk; the permission setting; the cooldown; the operator lock. Lasers are never fired from these pages.
+- **Words:** "scene" on screen (Light's word, docs/ai/vocabulary.md). The server's own refusal sentences still say "cue" in places (owed).

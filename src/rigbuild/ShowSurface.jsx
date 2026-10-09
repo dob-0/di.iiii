@@ -2,9 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useShowFeed } from './useShowFeed.js'
 import { SIGN_IN_SEGMENT, buildAppSpacePath, buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { buildCardsPath } from './cardsRouting.js'
-import { CHOOSERS, ShowError, chooseCue, choosersLabel, cleanName, durationWords, groupByAct, liveOf, setChoosers, swatchWords, youWords } from './showApi.js'
+import { CHOOSERS, ShowError, chooseCue, choosersLabel, cleanName, durationWords, liveOf, setAutoplay, setChoosers, swatchWords, youWords } from './showApi.js'
 import './show.css'
 
+// THE SHOW PAGE (simple buttons, 2026-10-09)
+//
+// Owner: "I need so simple buttons: you press, the scene changes, and auto play stops.
+// A cue is just like lego bricks, one scene after the other." So: a grid of big bricks, each
+// a scene's name and its colours; the live one marked; a press changes the scene and it
+// HOLDS until someone presses another (the desk's runner no longer advances by itself unless
+// the operator switches "play in order" on). Who may choose lives behind one small settings
+// button. The older notes below describe the first version.
+//
 // THE SHOW PAGE — /{space}/show/{project} (docs/architecture/RIG_BUILD.md §24).
 //
 // Owner, 2026-10-08: "I need a light-show UI for everyone, so they can see and choose the
@@ -46,22 +55,17 @@ function Swatch({ swatch }) {
     )
 }
 
-function CueCard({ cue, live, next, block, sending, onChoose }) {
+function Brick({ cue, live, block, sending, onChoose }) {
     const laser = Boolean(cue.laser)
     const disabled = laser || Boolean(block) || sending
-    const state = live ? 'is-live' : next ? 'is-next' : ''
     return (
-        <li className={`show-cue ${state}${laser ? ' is-laser' : ''}`}>
-            <button type="button" className="show-cue__button" disabled={disabled} aria-current={live ? 'true' : undefined}
+        <li className={`show-brick${live ? ' is-live' : ''}${laser ? ' is-laser' : ''}`}>
+            <button type="button" className="show-brick__button" disabled={disabled} aria-current={live ? 'true' : undefined}
                 onClick={() => onChoose(cue)} data-cue={cue.index}>
-                <span className="show-cue__head">
-                    <span className="show-cue__n">{cue.index + 1}</span>
-                    <Swatch swatch={cue.swatch} />
-                    {live ? <span className="show-cue__tag is-live">live</span> : null}
-                    {next && !live ? <span className="show-cue__tag">next</span> : null}
-                </span>
-                <span className="show-cue__name">{cue.title || cue.name}</span>
-                <span className="show-cue__line">{laser ? 'laser moment — operator only' : cue.line}</span>
+                <Swatch swatch={cue.swatch} />
+                <span className="show-brick__name">{cue.title || cue.name}</span>
+                {live ? <span className="show-brick__tag">live</span> : null}
+                {laser && !live ? <span className="show-brick__tag is-laser">operator only</span> : null}
             </button>
         </li>
     )
@@ -70,19 +74,18 @@ function CueCard({ cue, live, next, block, sending, onChoose }) {
 export default function ShowSurface({ spaceId, projectId }) {
     const { data, error, take } = useShowFeed(spaceId, projectId)
     const [notice, setNotice] = useState('')
-    // A notice answers one tap; it goes after a few seconds, or a phone left on the page would
-    // keep saying "on Light now" about a cue the list moved past long ago (seen 2026-10-08).
+    // A notice answers one press; it goes after a few seconds.
     useEffect(() => {
         if (!notice) return undefined
         const timer = setTimeout(() => setNotice(''), 6000)
         return () => clearTimeout(timer)
     }, [notice])
     const [sending, setSending] = useState(false)
-    const [mine, setMine] = useState(null) // the cue this person chose last: { title, at }
+    const [mine, setMine] = useState(null) // the scene this person chose last: { title, at }
     const [name, setName] = useState(readName)
+    const [settings, setSettings] = useState(false)
     const now = useNow()
 
-    // The tab says what is open (it said the landing page's title before).
     useEffect(() => {
         const before = document.title
         document.title = data ? `${data.project.title} — show` : error?.status === 404 ? 'No show here' : 'Show'
@@ -92,26 +95,22 @@ export default function ShowSurface({ spaceId, projectId }) {
     const serverNow = now + (data?.offset || 0)
     const live = useMemo(() => liveOf(data, serverNow), [data, serverNow])
     const cues = useMemo(() => data?.cues || [], [data])
-    const liveCue = live ? cues[live.index] : null
-    const nextCue = live && live.nextIndex >= 0 ? cues[live.nextIndex] : null
-    const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - (now - data.receivedAt)) : 0
+    const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - Math.max(0, now - data.receivedAt)) : 0
     const block = data ? (data.you?.block === 'cooldown' && cooldownLeftMs <= 0 ? '' : data.you?.block) : 'loading'
     const lightBlocked = data && (data.light?.state === 'none' || data.clock?.showSource === 'clock')
     const lightBusy = Boolean(data && (data.light?.otherList || data.light?.otherShow))
     const cardBlock = lightBlocked ? 'no-light' : lightBusy ? 'busy' : block
-    const groups = useMemo(() => groupByAct(cues), [cues])
     const roomHref = data ? buildVanityProjectPath(spaceId, data.project?.slug || data.project?.id || projectId) : null
 
     const choose = useCallback(async (cue) => {
-        if (cue.laser) { setNotice('Laser moment — operator only.'); return }
+        if (cue.laser) { setNotice('Laser scene — operator only.'); return }
         setSending(true)
-        setNotice(`Sending ${cue.index + 1} · ${cue.title || cue.name}…`)
         const t0 = Date.now()
         try {
             const body = await chooseCue(spaceId, projectId, { index: cue.index, cueId: cue.id, name: cleanName(name) })
             take(body, t0, Date.now())
             setMine({ title: cue.title || cue.name, at: Date.now() })
-            setNotice(`${cue.index + 1} · ${cue.title || cue.name} — on Light now.`)
+            setNotice('')
         } catch (e) {
             if (e instanceof ShowError && e.body?.cues) take(e.body, t0, Date.now())
             setNotice(e.message || 'Light did not take it.')
@@ -125,6 +124,13 @@ export default function ShowSurface({ spaceId, projectId }) {
         try {
             take(await setChoosers(spaceId, projectId, value), t0, Date.now())
             setNotice(`Who may choose: ${choosersLabel(value)}.`)
+        } catch (e) { setNotice(e.message) }
+    }, [spaceId, projectId, take])
+
+    const changeAutoplay = useCallback(async (on) => {
+        const t0 = Date.now()
+        try {
+            take(await setAutoplay(spaceId, projectId, on), t0, Date.now())
         } catch (e) { setNotice(e.message) }
     }, [spaceId, projectId, take])
 
@@ -143,51 +149,27 @@ export default function ShowSurface({ spaceId, projectId }) {
     }
     if (!data) return <main className="show-page" aria-busy="true"><p className="show-empty">Loading the show…</p></main>
 
-    const lightWords = data.light.state === 'none' ? 'the clock (no Light on this di.iiii)'
-        : data.light.otherShow ? "Light — running another space's show"
-            : data.light.otherList ? "Light — playing another project's list"
-                : data.light.state === 'closed' ? 'Light — not open yet'
-                    : live?.source === 'light' ? (live.running ? 'Light — playing' : 'Light — stopped') : 'Light — not playing this show'
+    const operator = data.you.who === 'operator'
+    // One short line, only when a press would do nothing, and why.
+    const why = block && block !== 'cooldown' ? youWords(data, cooldownLeftMs, mine) : (cardBlock === 'no-light' || cardBlock === 'busy' ? youWords(data, cooldownLeftMs, mine) : '')
+    const wait = cooldownLeftMs > 0 ? youWords(data, cooldownLeftMs, mine) : ''
 
     return (
         <main className={`show-page${error ? ' is-offline' : ''}`} data-testid="show-page">
             {error ? <p className="show-offline" role="alert">{error.status ? error.message : 'No link to the server — what you see is old. Trying again…'}</p> : null}
             <header className="show-top">
-                <div className="show-top__title">
+                <h1 className="show-top__title">
                     <span className="show-top__mark" aria-hidden="true" />
-                    <span>show</span>
                     <span className="show-top__project">{data.project.title}</span>
-                </div>
-                {roomHref ? <a className="show-link" href={roomHref}>see the room</a> : null}
+                </h1>
+                {operator ? (
+                    <button type="button" className="show-link" aria-expanded={settings} onClick={() => setSettings((o) => !o)}>settings</button>
+                ) : null}
             </header>
 
-            <section className="show-live" aria-live="polite" aria-label="On now">
-                {liveCue ? (
-                    <>
-                        <div className="show-live__meta">
-                            <span>{live.index + 1} / {cues.length}</span>
-                            {liveCue.act ? <span>act {liveCue.act}</span> : null}
-                            <Swatch swatch={liveCue.swatch} />
-                        </div>
-                        <h1 className="show-live__name">{liveCue.title || liveCue.name}</h1>
-                        <p className="show-live__next">
-                            {nextCue ? <>next: <b>{nextCue.title || nextCue.name}</b>{live.nextInMs != null ? ` · in ${durationWords(live.nextInMs)}` : ' · waits for GO'}</> : 'the list stops here'}
-                        </p>
-                        <p className="show-live__by">{live.by ? `chosen by ${live.by}` : live.source === 'clock' ? 'played by the clock' : 'the list plays on by itself'}</p>
-                    </>
-                ) : (
-                    <>
-                        <h1 className="show-live__name is-quiet">Nothing on yet</h1>
-                    </>
-                )}
-                <p className="show-live__source">{lightWords}</p>
-            </section>
-
-            <p className={`show-you${block && block !== 'cooldown' ? ' is-blocked' : ''}`} data-block={block || ''}>{youWords(data, cooldownLeftMs, mine)}</p>
-
-            {data.you.who === 'operator' ? (
-                <section className="show-operator" aria-label="Operator">
-                    <span className="show-operator__label">who may choose</span>
+            {settings && operator ? (
+                <section className="show-operator" aria-label="Settings">
+                    <span className="show-operator__label">who may press</span>
                     <div className="show-seg" role="radiogroup" aria-label="Who may choose">
                         {CHOOSERS.map((value) => (
                             <button key={value} type="button" role="radio" aria-checked={data.control.choosers === value}
@@ -196,36 +178,29 @@ export default function ShowSurface({ spaceId, projectId }) {
                             </button>
                         ))}
                     </div>
-                    {data.you.authOff ? <p className="show-operator__note is-plain">Sign-in is off here: everyone is the operator, so this setting stops nobody.</p> : null}
-                    <details className="show-operator__more">
-                        <summary>{data.you.authOff ? 'sign-in is off here — read this' : 'about lasers and choosing'}</summary>
-                        {data.you.authOff ? <p className="show-operator__note">Sign-in is off on this di.iiii, so everyone who opens this page is the operator. For a night with guests, start it with <code>di up --lan --guests</code>.</p> : null}
-                        <p className="show-operator__note">Laser moments are fired from <a href={buildCardsPath(spaceId, data.project.id)}>the cards</a> or Light, after the laser safety sign-off — never from this page. One choice per {durationWords(data.control.cooldownMs)}, for everybody.</p>
-                    </details>
+                    <label className="show-switch">
+                        <input type="checkbox" checked={Boolean(live?.autoplay)} disabled={live?.source !== 'light'} onChange={(e) => changeAutoplay(e.target.checked)} />
+                        <span>play in order</span>
+                    </label>
+                    <label className="show-name">
+                        <span>your name, shown when you press</span>
+                        <input value={name} maxLength={24} autoComplete="nickname" placeholder="optional"
+                            onChange={(e) => { setName(e.target.value); keepName(e.target.value) }} />
+                    </label>
+                    <p className="show-operator__note">One press per {durationWords(data.control.cooldownMs)}, for everybody. Laser scenes are never fired from this page.{data.you.authOff ? ' Sign-in is off here, so everyone is the operator.' : ''}</p>
+                    {roomHref ? <a className="show-link" href={roomHref}>see the room</a> : null}
                 </section>
             ) : null}
 
-            {notice ? <p className="show-notice" role="status">{notice}</p> : null}
+            {notice || why || wait ? <p className={`show-notice${why ? ' is-blocked' : ''}`} role="status" data-block={block || ''}>{notice || why || wait}</p> : null}
 
-            {cues.length ? groups.map((group, g) => (
-                <section key={`${group.act || 'none'}-${g}`} className="show-act" aria-label={group.act ? `Act ${group.act}` : 'Cues'}>
-                    {group.act ? <h2 className="show-act__title">act {group.act}</h2> : null}
-                    <ol className="show-cues">
-                        {group.cues.map((cue) => (
-                            <CueCard key={cue.id} cue={cue} live={live?.index === cue.index} next={live?.nextIndex === cue.index}
-                                block={cardBlock} sending={sending} onChoose={choose} />
-                        ))}
-                    </ol>
-                </section>
-            )) : <p className="show-empty">This project has no cue list yet. The cue list is made on <a href={buildCardsPath(spaceId, data.project.id)}>the cards</a>.</p>}
-
-            <footer className="show-foot">
-                <label className="show-name">
-                    <span>your name, shown when you choose</span>
-                    <input value={name} maxLength={24} autoComplete="nickname" placeholder="optional"
-                        onChange={(e) => { setName(e.target.value); keepName(e.target.value) }} />
-                </label>
-            </footer>
+            {cues.length ? (
+                <ol className="show-bricks" aria-label="Scenes">
+                    {cues.map((cue) => (
+                        <Brick key={cue.id} cue={cue} live={live?.index === cue.index} block={cardBlock} sending={sending} onChoose={choose} />
+                    ))}
+                </ol>
+            ) : <p className="show-empty">This project has no scenes yet. They are made on <a href={buildCardsPath(spaceId, data.project.id)}>the cards</a>.</p>}
         </main>
     )
 }

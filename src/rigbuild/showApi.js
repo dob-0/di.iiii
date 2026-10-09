@@ -38,6 +38,13 @@ export const setChoosers = async (spaceId, projectId, choosers) => readAnswer(aw
     body: JSON.stringify({ choosers })
 }))
 
+export const setAutoplay = async (spaceId, projectId, autoplay) => readAnswer(await fetch(`${showUrl(spaceId, projectId)}/autoplay`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoplay: autoplay === true })
+}))
+
 /** "9 s", "1 min 20 s". */
 export const durationWords = (ms) => {
     const s = Math.max(0, Math.ceil((Number(ms) || 0) / 1000))
@@ -62,6 +69,7 @@ export const liveOf = (data, now) => {
             nextIndex: data.live.nextIndex,
             nextInMs: data.live.nextInMs == null ? null : Math.max(0, data.live.nextInMs - elapsed),
             running: data.live.running,
+            autoplay: data.live.autoplay === true,
             by: data.live.by || null,
             missing: data.live.missing || 0
         }
@@ -72,7 +80,7 @@ export const liveOf = (data, now) => {
     if (!state) return null
     // The clock's list is the document's own cues with a look, the order the page shows.
     const nextIndex = state.ended ? -1 : (state.index + 1 < state.n ? state.index + 1 : (show.loop ? 0 : -1))
-    return { source: 'clock', index: state.index, nextIndex: state.nextInMs == null ? -1 : nextIndex, nextInMs: state.nextInMs, running: !state.ended, by: null, missing: 0 }
+    return { source: 'clock', index: state.index, nextIndex: state.nextInMs == null ? -1 : nextIndex, nextInMs: state.nextInMs, running: !state.ended, autoplay: true, by: null, missing: 0 }
 }
 
 const CHOOSERS_WORDS = {
@@ -87,17 +95,17 @@ export const youWords = (data, cooldownLeftMs = 0, mine = null) => {
     const who = data.you?.who
     const block = data.you?.block || ''
     const choosers = CHOOSERS_WORDS[data.control?.choosers] || 'the team'
-    if (data.light?.state === 'none') return 'Light runs on a local di.iiii. Here the cue list plays by the clock — watch, nothing to choose.'
-    if (data.clock?.showSource === 'clock') return 'This show plays by its own clock — watch, nothing to choose.'
+    if (data.light?.state === 'none') return 'Light runs on a local di.iiii. Here the scenes play by the clock — watch, nothing to press.'
+    if (data.clock?.showSource === 'clock') return 'This show plays by its own clock — watch, nothing to press.'
     if (data.light?.otherList || data.light?.otherShow) return "Light is playing another project's list. Stop it on Light first — then you can choose here."
-    if (block === 'operator-only') return 'Locked by the operator — only the operator chooses now.'
-    if (block === 'team-only') return 'You watch. The team (the members of this space) chooses the cue.'
-    if (block === 'not-allowed') return 'You can see this show, not choose its cue.'
-    if (cooldownLeftMs > 0 && mine?.title) return `You chose ${mine.title} — next choice in ${durationWords(cooldownLeftMs)}.`
-    if (cooldownLeftMs > 0) return `Someone just chose. Next choice in ${durationWords(cooldownLeftMs)}.`
-    if (who === 'operator' && data.you?.authOff) return `Sign-in is off here, so everyone who opens this page is the operator. Tap a cue to send it to Light.`
-    if (who === 'operator') return `Tap a cue to send it to Light. Who may choose: ${choosers}.`
-    return `Tap a cue to send it to Light. ${choosers === 'everyone' ? 'Everyone here' : 'The team'} chooses; one choice per ${durationWords(data.control?.cooldownMs || 10000)}.`
+    if (block === 'operator-only') return 'Locked by the operator — only the operator presses now.'
+    if (block === 'team-only') return 'You watch. The team (the members of this space) presses the scenes.'
+    if (block === 'not-allowed') return 'You can see this show, not press its scenes.'
+    if (cooldownLeftMs > 0 && mine?.title) return `You pressed ${mine.title} — next press in ${durationWords(cooldownLeftMs)}.`
+    if (cooldownLeftMs > 0) return `Someone just pressed. Next press in ${durationWords(cooldownLeftMs)}.`
+    if (who === 'operator' && data.you?.authOff) return `Sign-in is off here, so everyone who opens this page is the operator. Press a scene.`
+    if (who === 'operator') return `Press a scene. Who may choose: ${choosers}.`
+    return `Press a scene. ${choosers === 'everyone' ? 'Everyone here' : 'The team'} presses; one press per ${durationWords(data.control?.cooldownMs || 10000)}.`
 }
 
 /** Cards under act headings: a cue that names no act stays under the act before it. */
@@ -130,7 +138,7 @@ export const cleanName = (value) => String(value || '').normalize('NFC').replace
 
 /** Why a cue cannot be tapped right now, in the person's words ('' when it can). Shared by the show page and the room's list. */
 export const cueBlockWords = (cue, block, lightBlocked) => {
-    if (cue?.laser) return 'laser moment — operator only'
+    if (cue?.laser) return 'laser scene — operator only'
     if (lightBlocked === 'busy') return "Light plays another list"
     if (lightBlocked) return 'Light is not open here'
     if (block === 'cooldown') return 'wait for the cooldown'

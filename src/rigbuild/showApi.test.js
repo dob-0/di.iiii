@@ -37,9 +37,9 @@ describe('the show page words', () => {
         const base = { light: { state: 'open' }, clock: {}, control: { choosers: 'team', cooldownMs: 10000 } }
         expect(youWords({ ...base, you: { who: 'visitor', block: 'team-only' } })).toMatch(/^You watch\. The team/)
         expect(youWords({ ...base, you: { who: 'member', block: 'operator-only' } })).toMatch(/^Locked by the operator/)
-        expect(youWords({ ...base, you: { who: 'member', block: '' } }, 4200)).toBe('Someone just chose. Next choice in 5 s.')
-        expect(youWords({ ...base, you: { who: 'member', block: '' } })).toMatch(/^Tap a cue to send it to Light\. The team chooses; one choice per 10 s\./)
-        expect(youWords({ ...base, light: { state: 'none' }, you: { who: 'member', block: '' } })).toMatch(/plays by the clock/)
+        expect(youWords({ ...base, you: { who: 'member', block: '' } }, 4200)).toBe('Someone just pressed. Next press in 5 s.')
+        expect(youWords({ ...base, you: { who: 'member', block: '' } })).toMatch(/^Press a scene\. The team presses; one press per 10 s\./)
+        expect(youWords({ ...base, light: { state: 'none' }, you: { who: 'member', block: '' } })).toMatch(/plays by the clock|scenes play by the clock/)
     })
 })
 

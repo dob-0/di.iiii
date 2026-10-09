@@ -1513,6 +1513,7 @@ function createDesk(opts = {}) {
       json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
     },
     'POST /api/cues/stop': (req, res) => json(res, { ...cueRunner.stop(), cues: cueRunner.full() }),
+    'POST /api/cues/autoplay': (req, res, body) => json(res, { ...cueRunner.setAutoplay(body.autoplay === true), cues: cueRunner.full() }),
     'POST /api/cues/loop': (req, res, body) => json(res, { ...cueRunner.setLoop(body.loop === true), cues: cueRunner.full() }),
 
     'POST /api/master': (req, res, body) => {

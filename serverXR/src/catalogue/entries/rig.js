@@ -74,7 +74,7 @@ module.exports = [
   },
   {
     route: "POST /api/spaces/:spaceId/show/:projectId/choose",
-    summary: "send one cue of the project's list to Light (the desk's cue runner, in process) — the show page's tap",
+    summary: "send one scene of the project's list to Light (the desk's cue runner, in process) - it goes live and HOLDS until another is pressed - the show page's press",
     reach: "private",
     role: "guest",
     agent: false,
@@ -105,5 +105,20 @@ module.exports = [
       }
     },
     note: "operator only (the space's owner, an admin, or the person at the machine). 'everyone' opens choosing to visitors, which is why this is reach public. Stored in <DATA_ROOT>/show/control.json."
+  },
+  {
+    route: "POST /api/spaces/:spaceId/show/:projectId/autoplay",
+    summary: "the operator's one switch on the show page: play the scenes in order (each for its hold), or let a pressed scene hold. Off by default; a press of any scene turns it off",
+    reach: "public",
+    role: "editor",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        properties: { autoplay: { type: "boolean" } },
+        required: ["autoplay"]
+      }
+    },
+    note: "operator only; needs Light on this machine playing this project's list (409 otherwise). Lasers are still never fired from here."
   },
 ]
