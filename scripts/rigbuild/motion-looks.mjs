@@ -13,14 +13,19 @@ import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
 import { lookFrame } from '../../src/rigbuild/looks.js'
 import { v1Looks, v1RenderOps, deskStep } from './epic-build.mjs'
-import { LAYER_FILE as WORKLIGHT_FILE, RIG_V11 } from './worklight-looks.mjs'
+import { LAYER_FILE as WORKLIGHT_FILE, RIG_V11, withFloor } from './worklight-looks.mjs'
 
 export const LAYER_FILE = 'scripts/place/rigs/moxir-looks-v1-1-motion-2026-10-09.json'
 export const SCRATCH_PROJECT = 'moxir-v1-1-motion'
 
-/** The two layers as one: looks (work light first, then the ten) with `motion` re-attached, cues (the ten first). Pure. */
+/**
+ * The two layers as one: looks (work light first, then the ten) with `motion` re-attached, cues (the ten first). Pure.
+ * The work-light layer keeps its readable floor as ONE key (`floor`, #858 371347a0): a look with `floor: true` takes it
+ * through withFloor, as worklight-looks.mjs applies it. Without that, every work-light look on the motion project lost
+ * its floor (MOXIR one integration, 2026-10-09: #866 was written against the layer's first commit, floor inline).
+ */
 export const merged = (worklight, motion, withMotion) => {
-    const looks = [...worklight.looks, ...motion.looks]
+    const looks = [...worklight.looks.map((l) => withFloor(worklight, l)), ...motion.looks]
     const cues = [...motion.cues, ...worklight.cues]
     return { looks, cues, motionOf: new Map(motion.looks.map((l) => [l.id.replace(/_/g, '-'), l.motion])) , withMotion }
 }
