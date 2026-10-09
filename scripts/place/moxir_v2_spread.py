@@ -487,9 +487,11 @@ def build(repo, out, table_path, placement_file=None):
     T['checks'] = checks
     T['not_hung'] = [dict(r, hung=6, not_hung=0) if r['code'] == 'EXT-LC-ULTRA-MK2' else r for r in T['not_hung']]
     zb, za = zone_counts(BT, Z), zone_counts(T, Z)
+    eyes_ba = {'before': EY.eye_totals(W, F, BT), 'after': EY.eye_totals(W, F, T), 'eyes': EY.EYES,
+               'what': 'every unit at full, the placement metric (moxir_v2_eyes.py): PAR = lx at the eye from the lit steel (rho 0.2867, an upper bound), beams = G per unit flux'}
     T['review'] = {
         'from': RIG_BT, 'owner': 'look what stage is totally dark ... you closed in one area ... check the lasers place on the other crane ... how much light goes to truss? (on PR #853, 2026-10-09)',
-        'moves': moves, 'zones': ZONES_SRC, 'zones_before': zb, 'zones_after': za,
+        'moves': moves, 'zones': ZONES_SRC, 'eyes_before_after': eyes_ba, 'zones_before': zb, 'zones_after': za,
         'stage_light_before': sl_before, 'stage_light_after': sl, 'dj_glare': glare, 'dj_glare_all_at_full': glare_full,
         'laser_clearance': sorted(clear, key=lambda c: c['margin_m']), 'crane_and_smoke': crane_vs, 'beam_checks': beams,
         'cut': cut12, 'stand': PIT_STAND,
@@ -621,7 +623,7 @@ def contact_sheet(out):
     rows = [(k, st, lk) for st in STATES for lk in LOOKS for k in ('bt', 'sl')]
     sheet = Image.new('RGB', (len(VORDER) * (W_ + pad) + 230, len(rows) * (H_ + lab + pad) + 40), (12, 12, 13))
     d = ImageDraw.Draw(sheet)
-    d.text((10, 12), 'MOXIR v2 - B tuned (old) vs B + stage + lasers (new) - measurement mode EV100 2.84 fixed - Full quality - RTX 3080 - 2026-10-09', fill=(232, 228, 220))
+    d.text((10, 12), 'MOXIR v2 - B tuned (old) vs B spread (new) - measurement mode EV100 2.84 fixed - Full quality - RTX 3080 - 2026-10-09', fill=(232, 228, 220))
     for c, v in enumerate(VORDER):
         d.text((230 + c * (W_ + pad) + 4, 26), VIEWS[v]['label'].replace('’', "'"), fill=(160, 160, 160))
     for r, (k, st, lk) in enumerate(rows):
@@ -667,15 +669,18 @@ def page(repo, out):
     cutrows = ''.join('<tr><td>%s</td><td>%s kg (headroom %s kg)</td><td>%s %% / %s %%</td><td>%s lx</td><td>%s m</td></tr>' % (
         n, c['worst_pick_kg'], c['headroom_kg'], c['shafts_separate_pct_15'], c['shafts_separate_pct_25'], c['dj_face_lx_full'], c['laser_min_margin_m']) for n, c in cut.items())
     lz = ''.join('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (E(c['id']), E(c['part']), c['margin_m'], c['nearest_beam']) for c in sp['laser_clearance'][:8])
-    doc = TEMPLATE.format(pairs=pairs, zones=zones, stage=stage, cutrows=cutrows, lz=lz, hero='<div class="pair">%s%s</div>' % (fig('bt-t40-peak-floor'), fig('sl-t40-peak-floor')),
-                          hero2='<div class="pair">%s%s</div>' % (fig('bt-t40-peak-mid'), fig('sl-t40-peak-mid')))
+    eb = sp['eyes_before_after']
+    eyes = ''.join('<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.3f</td><td>%.3f</td></tr>' % (E(e), eb['before']['par_steel_lux_at_eye'][e], eb['after']['par_steel_lux_at_eye'][e],
+                   eb['before']['beam_G'][e], eb['after']['beam_G'][e]) for e in eb['eyes'])
+    doc = TEMPLATE.format(eyes=eyes, pairs=pairs, zones=zones, stage=stage, cutrows=cutrows, lz=lz, hero='<div class="pair">%s%s</div>' % (fig('bt-t40-peak-floor'), fig('sl-t40-peak-floor')),
+                          hero2='<div class="pair">%s%s</div><div class="pair">%s%s</div>' % (fig('bt-t40-peak-wingL'), fig('sl-t40-peak-wingL'), fig('bt-t40-peak-behind'), fig('sl-t40-peak-behind')))
     open(os.path.join(out, 'index.html'), 'w').write(doc)
     print('page -> %s' % os.path.join(out, 'index.html'))
 
 
 TEMPLATE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MOXIR v2 stage and lasers</title>
+<title>MOXIR v2 spread</title>
 <style>
 :root {{ --bg:#0b0c0e; --panel:#141518; --ink:#e8e4dc; --dim:#9aa0a8; --ember:#ff3a12; --line:#2a2c31; }}
 * {{ box-sizing:border-box; border-radius:0; }}
@@ -696,25 +701,35 @@ td, th {{ border:1px solid var(--line); padding:6px 8px; vertical-align:top; tex
 .wrap {{ overflow-x:auto; }}
 @media (max-width: 800px) {{ .pair {{ grid-template-columns:1fr; }} }}
 </style></head><body><main>
-<h1>MOXIR v2 — the stage lit, the truss count, the lasers in</h1>
+<h1>MOXIR v2 — B spread over your hot zone</h1>
 <p class="lead">You said the stage was totally dark and everything was closed into one area. Left: <b>B tuned</b> as you saw it.
-Right: the same B with the DJ, the booth and the speaker faces <b>lit from the audience side</b>. The truss count is decided,
-and the six lasers hang on the <b>free crane, moved to z −12</b>. Spreading the lights into the audience half waits for your
-painted plan of the hall's areas.</p>
+Right: <b>B spread</b>. The DJ, the booth and the speaker faces are lit from the audience side. Every light now stands inside
+the hot zone you painted. The lights were placed from where people will stand: both wings and behind the stage, on brackets
+out of reach. The six lasers hang on the <b>free crane, moved to z −12</b>.</p>
 {hero}
 {hero2}
 <div class="reco"><b>The truss: 10 PARs, nothing else.</b> No moving beams on it. It is behind the DJ, so it cannot light his
 face (0 lx from either 10 or 12). Twelve would add 9.8 kg on the middle pick. With the 25° lens a third of the shafts would merge.
-It would also bring a lamp closer to laser 4a. The two spare PARs light his face from the front instead.</div>
+The two spare PARs light his face from the front instead.</div>
+<div class="reco"><b>Why B tuned had to move, not just grow:</b> with people in the wings and behind the stage, B tuned's six
+plane-2 heads stand on the floor among them. Nine of its beams point at someone standing in the hot zone (within 30°). In the
+spread every beam passes: no ray into people, at least 3 m over the floor everywhere, no beam ending in the bar or the chill
+area, and nobody within 30° of looking down a beam.</div>
 
-<h2>Where the lamps are — before and after</h2>
-<div class="wrap"><table><tr><th>zone</th><th>B tuned</th><th>new</th></tr>{zones}</table></div>
+<h2>What each place in the hot zone sees — before and after</h2>
+<p class="note">Every unit at full. The light the lit steel sends to that eye (lx, an upper bound), and the beams' glow in the
+haze toward it (G, a design metric). The drop in G is the glare that was removed: B tuned's beams pointed at people now
+standing there.</p>
+<div class="wrap"><table><tr><th>eye (1.7 m)</th><th>lit steel, B tuned</th><th>lit steel, spread</th><th>beam glow G, B tuned</th><th>beam glow G, spread</th></tr>{eyes}</table></div>
+
+<h2>Where the lamps are — your zones, before and after</h2>
+<div class="wrap"><table><tr><th>zone</th><th>B tuned</th><th>B spread</th></tr>{zones}</table></div>
 
 <h2>The stage from the floor — light on a vertical plane facing the crowd</h2>
 <p class="note">Measured in the room (measurement mode, lux probe, Full quality, the look held), and computed: E = I cos i / d², the
 room's spot cone and the hall's shadows. The room draws a PAR at 30 478 cd. The spec figure we can name is 11 000 cd, another
 maker's, an upper estimate. The target is 30–80 lx at EV100 2.84.</p>
-<div class="wrap"><table><tr><th>where</th><th>look</th><th>B tuned, probe lx</th><th>new, probe lx</th><th>new, computed (room 30 478 cd)</th><th>new, computed (spec 11 000 cd)</th></tr>{stage}</table></div>
+<div class="wrap"><table><tr><th>where</th><th>look</th><th>B tuned, probe lx</th><th>spread, probe lx</th><th>spread, computed (room 30 478 cd)</th><th>spread, computed (spec 11 000 cd)</th></tr>{stage}</table></div>
 
 <h2>How many on the truss — 10 or 12</h2>
 <div class="wrap"><table><tr><th>PARs on the cut</th><th>worst pick (cap 146 kg)</th><th>shafts separate, 15° / 25° lens</th><th>light on the DJ's face (full)</th><th>closest lamp body to a laser tube</th></tr>{cutrows}</table></div>
@@ -727,7 +742,7 @@ every laser tube. The tube is the axis plus the fan's 1.008° half angle. The 8 
 
 <h2>All frames — old left, new right</h2>
 <p class="note">Measurement mode, EV100 2.84 fixed for every frame, Full quality, the hall's bounce kept, one smoke machine
-(two-zone model, UNVALIDATED until the haze is measured on site). Lasers on in the peak look of the new version; B tuned had none.</p>
+(two-zone model, UNVALIDATED until the haze is measured on site). Lasers on in the peak look of B spread (7.5 W cubes, one static beam each); B tuned had none.</p>
 {pairs}
 <p class="note">Contact sheet: <a href="contact-sheet.png">contact-sheet.png</a> · every number: <a href="checks.json">checks.json</a>, <a href="candidates.json">candidates.json</a>,
 <a href="probe.json">probe.json</a>, <a href="frame-luma.json">frame-luma.json</a>, <a href="frames/frames.json">frames/frames.json</a>.</p>

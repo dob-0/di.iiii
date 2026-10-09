@@ -263,3 +263,25 @@ def place(repo, W, F, Z, taken, n_par, n_beam, log=print):
     pars, ptot = greedy([c for c in pc if c['place'] not in used], n_par, lambda c: c['place'])
     return {'eyes': EYES, 'par_candidates': pc, 'beam_candidates': bc, 'pars': pars, 'beams': beams,
             'per_eye_par_lux': {k: R3(v) for k, v in ptot.items()}, 'per_eye_beam_G': {k: round(v, 5) for k, v in gtot.items()}}
+
+
+def eye_totals(W, F, rig, skip=('audience',)):
+    """A whole rig seen from the 8 eyes, every unit at full (the same design metric as the placement): the light its PARs' lit
+    steel sends to each eye (lx), and the beams' G per eye. Compares layouts; it is not a look."""
+    import lights_beta_options as L
+    par = {e: 0.0 for e in EYES}
+    G = {e: 0.0 for e in EYES}
+    for f in rig['fixtures']:
+        if f['type'] == 'up-pl5403':
+            ev, _ = eye_lux_from_par(W, f['p'], L.aim_dir(f['r']), skip)
+            for e in EYES:
+                par[e] += ev[e]
+        elif f['type'] == 'up-b380f':
+            import occlusion_sky as S
+            head = np.array([f['p'][0], f['p'][1] - 0.7 + HEAD_Y, f['p'][2]])
+            d = L.aim_dir(f['r'])
+            t = f.get('throw_m') or 60.0
+            g, _ = beam_glow(W, F, head, d, t, skip, step=1.0)
+            for e in EYES:
+                G[e] += g[e]
+    return {'par_steel_lux_at_eye': {k: R3(v) for k, v in par.items()}, 'beam_G': {k: round(v, 5) for k, v in G.items()}}

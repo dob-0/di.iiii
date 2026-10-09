@@ -6832,6 +6832,95 @@
    }
   ],
   "zones": "scripts/place/rigs/moxir-v2-zones-2026-10-09.json (the owner's paint, 17:42; read_paint.py, commit 465b57e7)",
+  "eyes_before_after": {
+   "before": {
+    "par_steel_lux_at_eye": {
+     "dance floor": 1.413,
+     "mid": 0.555,
+     "front edge": 0.337,
+     "behind the stage": 3.363,
+     "wing L front": 0.686,
+     "wing L back": 1.639,
+     "wing R front": 0.688,
+     "wing R back": 2.018
+    },
+    "beam_G": {
+     "dance floor": 0.11534,
+     "mid": 0.12436,
+     "front edge": 0.10977,
+     "behind the stage": 0.19377,
+     "wing L front": 0.04733,
+     "wing L back": 0.09292,
+     "wing R front": 0.26972,
+     "wing R back": 0.44653
+    }
+   },
+   "after": {
+    "par_steel_lux_at_eye": {
+     "dance floor": 3.868,
+     "mid": 2.391,
+     "front edge": 1.376,
+     "behind the stage": 2.449,
+     "wing L front": 3.117,
+     "wing L back": 1.682,
+     "wing R front": 3.088,
+     "wing R back": 3.143
+    },
+    "beam_G": {
+     "dance floor": 0.1162,
+     "mid": 0.106,
+     "front edge": 0.09682,
+     "behind the stage": 0.05893,
+     "wing L front": 0.06721,
+     "wing L back": 0.07238,
+     "wing R front": 0.03889,
+     "wing R back": 0.0644
+    }
+   },
+   "eyes": {
+    "dance floor": [
+     -3.75,
+     1.7,
+     18.1
+    ],
+    "mid": [
+     -2.0,
+     1.7,
+     30.0
+    ],
+    "front edge": [
+     0.0,
+     1.7,
+     40.0
+    ],
+    "behind the stage": [
+     -4.0,
+     1.7,
+     -20.0
+    ],
+    "wing L front": [
+     -20.0,
+     1.7,
+     14.0
+    ],
+    "wing L back": [
+     -20.0,
+     1.7,
+     -14.0
+    ],
+    "wing R front": [
+     18.0,
+     1.7,
+     14.0
+    ],
+    "wing R back": [
+     18.0,
+     1.7,
+     -14.0
+    ]
+   },
+   "what": "every unit at full, the placement metric (moxir_v2_eyes.py): PAR = lx at the eye from the lit steel (rho 0.2867, an upper bound), beams = G per unit flux"
+  },
   "zones_before": {
    "the cut (truss)": {
     "PAR": 10
