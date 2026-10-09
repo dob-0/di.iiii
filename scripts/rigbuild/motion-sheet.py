@@ -28,7 +28,7 @@ def crop_box(img, frac):
     x0, y0, x1, y1 = frac
     return (int(x0 * w), int(y0 * h), int(x1 * w), int(y1 * h))
 
-rows, out = [], []
+rows, out, extra = [], [], []
 TW = 480
 for sid, surface in scenes.items():
     frames = [Image.open(os.path.join(frames_dir, f'rig-{sid}-{k}.png')).convert('RGB') for k in range(4)]
@@ -36,6 +36,14 @@ for sid, surface in scenes.items():
     L = [luma(f.crop(box)) for f in frames]
     mad = [float(np.abs(L[i + 1] - L[i]).mean()) for i in range(3)]
     ge = sum(1 for m in mad if m >= THRESH)
+    # every named crop, for the reader: where does this scene's motion show at all (the pass test uses the named one only)
+    allc = {}
+    for name, fr in crops.items():
+        b = crop_box(frames[0], fr)
+        La = [luma(f.crop(b)) for f in frames]
+        m = [float(np.abs(La[i + 1] - La[i]).mean()) for i in range(3)]
+        allc[name] = f"{m[0]:.2f}/{m[1]:.2f}/{m[2]:.2f}"
+    extra.append([sid, *[allc[n] for n in crops]])
     out.append([sid, surface, ','.join(f'{v:.3f}' for v in crops[surface]), *[f'{float(l.mean()):.2f}' for l in L], *[f'{m:.2f}' for m in mad], ge, 'PASS' if ge >= 2 else 'FAIL'])
     tiles = []
     for f in frames:
@@ -57,3 +65,9 @@ with open(csv_path, 'w', newline='') as f:
     w.writerow(['scene', 'surface', 'crop_frac_x0,y0,x1,y1', 'luma_f0', 'luma_f1', 'luma_f2', 'luma_f3', 'mad_01', 'mad_12', 'mad_23', 'pairs_ge_3', 'result'])
     w.writerows(out)
 print(open(csv_path).read())
+
+with open(csv_path.replace('.csv', '-all-crops.csv'), 'w', newline='') as f:
+    w = csv.writer(f)
+    w.writerow(['scene', *[f'mad_pairs_{n}' for n in crops]])
+    w.writerows(extra)
+print(open(csv_path.replace('.csv', '-all-crops.csv')).read())

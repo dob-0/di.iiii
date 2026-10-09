@@ -323,7 +323,7 @@
    },
    "motion": {
     "mode": "blocks",
-    "bpm": 60,
+    "bpm": 120,
     "depth": 255,
     "spatial": "x",
     "kinds": [

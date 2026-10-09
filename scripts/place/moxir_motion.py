@@ -45,7 +45,7 @@ SCENES = [
  scene('ping_pong', 'Ping-pong', 'Build: one head of ash bounces from the left end of the truss to the right and back.',
        {'curtain': [A, 1], 'x': [A, 1], 'press graze': [E, .7], 'halo': [E, .6]}, 'pingpong', 90, 'x', [PL]),
  scene('blocks', 'Blocks', 'Build: five blocks of the rig flip on and off on the beat, ember on the columns.',
-       {'span columns': [E, 1], 'far columns': [E, 1], 'curtain': [A, .7], 'halo': [E, .7]}, 'blocks', 60, 'x', [PL]),
+       {'span columns': [E, 1], 'far columns': [E, 1], 'curtain': [A, .7], 'halo': [E, .7]}, 'blocks', 120, 'x', [PL]),
  scene('floor_pulse', 'Floor pulse', 'Peak: the DJ, the press and the floor beneath the truss breathe in and out once a second.',
        {'curtain': [A, 1], 'x': [A, 1], 'press graze': [E, 1], 'halo': [E, .8]}, 'pulse', 60, 'patch', [PL], 220),
  scene('sparkle_b380f', 'Sparkle', 'Peak: the B380F beams sparkle, each on its own count. Glitch was tried and measured at 4 flashes a second on a lamp (cap 3): sparkle at the slowest tempo is 3.',

@@ -38,34 +38,73 @@ const renderer = (page) => page.evaluate(() => { const c = document.createElemen
     const modes = (process.env.PROBE || 'scenes') === 'all' ? ['phone', 'scenes', 'frametime'] : [process.env.PROBE || 'scenes']
     for (const mode of modes) {
     if (mode === 'scenes') {
+        // SIGMAS=0.00027,0.0169 : the same ten scenes in thin haze (the Sevan kit's one machine) and in the v1.0 thick haze, each into its own folder.
+        // The haze is the scratch project's own render setting, written through its ops route (scratch stack only).
+        const sigmas = (process.env.SIGMAS || '').split(',').filter(Boolean)
+        const origin = new globalThis.URL(URL).origin
+        const setSigma = async (sigma) => {
+            const doc = await (await fetch(`${origin}/serverXR/api/projects/moxir-v1-1-motion/document`)).json()
+            const r = await fetch(`${origin}/serverXR/api/projects/moxir-v1-1-motion/ops`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseVersion: doc.version, ops: [{ type: 'setRenderSettings', opId: `probe-${Date.now()}`, clientId: 'motion-probe', payload: { patch: { atmosphere: { scattering: Number(sigma), anisotropy: 0.7, haze: null } } } }] }) })
+            console.log('haze sigma', sigma, 'set, status', r.status)
+        }
+        for (const sg of (sigmas.length ? sigmas : [null])) {
+        if (sg) await setSigma(sg)
+        const OUTD = sg ? path.join(OUT, `sigma-${sg}`) : OUT
+        fs.mkdirSync(OUTD, { recursive: true })
         const { page } = await open(browser, { width: 1280, height: 720 })
         const ids = await favs(page)
-        const manifest = { renderer: await renderer(page), scenes: [] }
+        // the view the scenes are judged from: one of the room's own view buttons (default: the floor, 20 m from the stage)
+        const view = process.env.VIEW || 'Floor z 20'
+        await page.click(`text="${view}"`)
+        await sleep(4500)
+        const manifest = { view, sigma: sg, renderer: await renderer(page), scenes: [] }
         for (const id of ids) {
             await press(page, id)
             await sleep(2200) // the fade is 1 s; the press goes to the server, the desk, and back
+            // CDP screencast: the compositor's own frames with their own timestamps (page.screenshot takes ~2 s here, far too slow
+            // for frames 250 ms apart). Four frames are picked at 0, 250, 500, 750 ms from the first; the real gaps are recorded.
+            const cdp = await page.context().newCDPSession(page)
+            const got = []
+            cdp.on('Page.screencastFrame', (f) => { got.push({ t: f.metadata.timestamp * 1000, data: f.data }); cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {}) })
+            await cdp.send('Page.startScreencast', { format: 'png', everyNthFrame: 1 })
+            await sleep(1800)
+            await cdp.send('Page.stopScreencast')
+            await cdp.detach().catch(() => {})
+            const first = got[0].t
             const shots = []
-            const t0 = Date.now()
             for (let k = 0; k < 4; k++) {
-                const want = t0 + k * 250
-                const wait = want - Date.now()
-                if (wait > 0) await sleep(wait)
-                const t = Date.now()
-                await page.screenshot({ path: path.join(OUT, `${id}-${k}.png`), type: 'png' })
-                shots.push(t - t0)
+                const want = first + k * 250
+                const pick = got.reduce((best, g) => (Math.abs(g.t - want) < Math.abs(best.t - want) ? g : best), got[0])
+                fs.writeFileSync(path.join(OUTD, `${id}-${k}.png`), Buffer.from(pick.data, 'base64'))
+                shots.push(Math.round(pick.t - first))
             }
+            console.log(id, 'screencast frames', got.length, 'picked at ms', shots.join(' '))
             manifest.scenes.push({ id, live: await page.$eval(`[data-fav="${id}"]`, (e) => e.getAttribute('aria-current')), shotsAtMs: shots })
             console.log(id, shots.join(' '))
         }
-        fs.writeFileSync(path.join(OUT, 'frames.json'), JSON.stringify(manifest, null, 1))
+        fs.writeFileSync(path.join(OUTD, 'frames.json'), JSON.stringify(manifest, null, 1))
         await clear(page)
+        }
     } else if (mode === 'frametime') {
         const seconds = Number(process.env.SECONDS || 12)
+        console.log('frametime: opening the room')
         const { page } = await open(browser, { width: 1280, height: 720 })
+        console.log('frametime: room open, visibility', await page.evaluate(() => document.visibilityState))
         const ids = await favs(page)
         const moving = process.env.MOVING || 'rig-pump-beat'
         const still = process.env.STILL || 'rig-work-light'
-        const measure = () => page.evaluate((s) => new Promise((resolve) => {
+        // main-thread work too (CDP Performance.getMetrics: TaskDuration / ScriptDuration, seconds, cumulative): a 60 Hz screen caps the
+        // frame time at 16.7 ms whether the page has 2 ms or 12 ms to spare, so the work per second is the number that can move.
+        const perf = await page.context().newCDPSession(page)
+        await perf.send('Performance.enable')
+        const metric = async () => Object.fromEntries((await perf.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]))
+        const measure = async () => {
+            const m0 = await metric()
+            const r = await measureFrames()
+            const m1 = await metric()
+            return { ...r, mainThreadMsPerS: Math.round(((m1.TaskDuration - m0.TaskDuration) / seconds) * 10000) / 10, scriptMsPerS: Math.round(((m1.ScriptDuration - m0.ScriptDuration) / seconds) * 10000) / 10 }
+        }
+        const measureFrames = () => page.evaluate((s) => new Promise((resolve) => {
             const ts = []
             const end = performance.now() + s * 1000
             const tick = (t) => { ts.push(t); if (t < end) requestAnimationFrame(tick); else { const d = ts.slice(1).map((v, i) => v - ts[i]).sort((a, b) => a - b); resolve({ frames: ts.length, medianMs: d[d.length >> 1], p95Ms: d[Math.floor(d.length * 0.95)], maxMs: d[d.length - 1], seconds: s }) } }
@@ -84,7 +123,9 @@ const renderer = (page) => page.evaluate(() => { const c = document.createElemen
         }
         const out = { renderer: await renderer(page), rounds: [] }
         for (const [label, id] of [['motion on', moving], ['motion off', still], ['motion on', moving], ['motion off', still]]) {
+            console.log('frametime: choosing', id)
             const status = await setLook(id)
+            console.log('frametime: chosen, status', status, 'measuring', seconds, 's')
             const m = await measure()
             out.rounds.push({ label, look: id, choose: status, ...m })
             console.log(label, id, JSON.stringify(m))
