@@ -187,7 +187,7 @@ export default function ShowSurface({ spaceId, projectId }) {
                         <input value={name} maxLength={24} autoComplete="nickname" placeholder="optional"
                             onChange={(e) => { setName(e.target.value); keepName(e.target.value) }} />
                     </label>
-                    <p className="show-operator__note">One press per {durationWords(data.control.cooldownMs)}, for everybody. Laser scenes are never fired from this page.{data.you.authOff ? ' Sign-in is off here, so everyone is the operator.' : ''}</p>
+                    <p className="show-operator__note">The team waits {durationWords(data.control.cooldownMs)} between presses; the operator never waits. Laser scenes are never fired from this page.{data.you.authOff ? ' Sign-in is off here, so everyone is the operator and nobody waits.' : ''}</p>
                     {roomHref ? <a className="show-link" href={roomHref}>see the room</a> : null}
                 </section>
             ) : null}

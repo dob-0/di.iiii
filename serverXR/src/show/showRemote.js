@@ -18,8 +18,9 @@
 //            choose. Kept open for a cloud mode where people who are not on the local
 //            system choose from afar: the setting says WHO, decideChoose's `light` says
 //            WHERE Light is, and the two are independent (RIG_BUILD.md §24).
-//   cooldown one choice per COOLDOWN_MS from this page, for everybody — the operator's
-//            immediate hand is GO on the cards page and on Light, which this never slows.
+//   cooldown one choice per COOLDOWN_MS from this page for the team and everyone; NEVER for
+//            the operator (owner 10-09: "why do I need to wait after the scene changes?").
+//            With sign-in off everyone is the operator, so a local install never waits.
 //   lasers   a cue whose look would light a laser is never fired from here, by anyone
 //            (shared/laserMoments.cjs). A look the server cannot read counts as one.
 //
@@ -230,7 +231,7 @@ const chooseBlock = ({ who, control, now }) => {
   const choosers = CHOOSERS.includes(control?.choosers) ? control.choosers : DEFAULT_CHOOSERS
   if (who !== 'operator' && choosers === 'operator') return 'operator-only'
   if (who === 'visitor' && choosers !== 'everyone') return 'team-only'
-  if (cooldownLeftMs(control, now) > 0) return 'cooldown'
+  if (who !== 'operator' && cooldownLeftMs(control, now) > 0) return 'cooldown'
   return ''
 }
 

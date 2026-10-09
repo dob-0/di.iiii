@@ -150,13 +150,12 @@ describe('choosing a cue', () => {
     expect(ask({ who: 'operator', control }).ok).toBe(true)
   })
 
-  it('one choice per cooldown, for everybody', () => {
+  it('one choice per cooldown for the team; the operator never waits (owner 10-09)', () => {
     const control = sanitizeControl({ last: { index: 0, cueId: 'x', by: 'a', at: now - COOLDOWN_MS + 3000 } })
-    for (const who of ['operator', 'member']) {
-      const out = ask({ who, control })
-      expect(out).toMatchObject({ ok: false, status: 429, code: 'cooldown' })
-      expect(out.error).toMatch(/Next choice in 3 s/)
-    }
+    const out = ask({ who: 'member', control })
+    expect(out).toMatchObject({ ok: false, status: 429, code: 'cooldown' })
+    expect(out.error).toMatch(/Next choice in 3 s/)
+    expect(ask({ who: 'operator', control }).ok).toBe(true)
     expect(ask({ control: sanitizeControl({ last: { index: 0, cueId: 'x', by: 'a', at: now - COOLDOWN_MS } }) }).ok).toBe(true)
   })
 

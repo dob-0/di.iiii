@@ -12,7 +12,7 @@
 // What must hold, and what this proves on the wire:
 //   - a laser moment is refused for everyone, the operator included, and Light never moves;
 //   - who may choose is the operator's SETTING: team (default) · everyone · operator;
-//   - one choice per cooldown, for everybody;
+//   - one choice per cooldown for the team and everyone; the operator never waits;
 //   - the choice really reaches Light's cue runner, and every viewer reads it back with
 //     who chose it;
 //   - a private space is not shown to a stranger; the setting is the operator's alone.
@@ -217,12 +217,12 @@ describe('the show page — choosing', () => {
         expect((await off.json()).live.autoplay).toBe(false)
     })
 
-    it('then one choice per cooldown, for the operator too', async () => {
-        for (const token of [MEMBER, ADMIN]) {
-            const out = await choose(token, 2)
-            expect(out.status).toBe(429)
-            expect((await out.json()).code).toBe('cooldown')
-        }
+    it('then one choice per cooldown for the team; the operator never waits (owner 10-09)', async () => {
+        const out = await choose(MEMBER, 2)
+        expect(out.status).toBe(429)
+        expect((await out.json()).code).toBe('cooldown')
+        const op = await ok(await choose(ADMIN, 2))
+        expect((await op.json()).control.cooldownLeftMs).toBe(0)
     })
 
     it('who may choose is the operator\'s setting, and only his', async () => {

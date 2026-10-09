@@ -173,7 +173,7 @@ function registerShowRoutes(router, {
       control: {
         choosers: control.choosers,
         cooldownMs: COOLDOWN_MS,
-        cooldownLeftMs: cooldownLeftMs(control, t),
+        cooldownLeftMs: ctx.who === 'operator' ? 0 : cooldownLeftMs(control, t), // the operator never waits
         favourites: favouritesOf(cues, control.favourites),
         favouritesSet: Array.isArray(control.favourites),
         last: control.last ? { index: control.last.index, name: lastCue?.name || null, by: control.last.by, at: control.last.at } : null
