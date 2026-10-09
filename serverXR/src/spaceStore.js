@@ -901,6 +901,105 @@ function createSpaceStore({
     })()
   }
 
+  /*
+   * Ops beyond the version their space's scene stands at — the scene twin of
+   * projectStore.js "Ops beyond the version" (same rule, same reasons).
+   *
+   * spaces.scene_version is the truth: it is what every reader and follower
+   * was told. Rows in space_ops above it were never part of the scene anyone
+   * was shown, so they are moved whole into space_ops_quarantine with the
+   * version the space stood at and the reason, and logged. Nothing is deleted.
+   * The old scene write (scene.json, then ops, then version, as three
+   * commits) left such rows when it was cut off between its steps or when two
+   * servers wrote one space at once (audit 2026-10-09, data F1); every later
+   * write then failed the UNIQUE (space_id, version) index with a 500.
+   */
+  const SCENE_ORPHAN_REASON = 'ops above the version the scene stands at (two writers on one data folder, or a scene write cut off between its steps)'
+
+  let _sq = null
+  let _sqDb = null
+  const sq = () => {
+    const db = getDb()
+    if (_sq && _sqDb === db) return _sq
+    _sqDb = db
+    _sq = {
+      orphans:        db.prepare('SELECT * FROM space_ops WHERE space_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
+      quarantine:     db.prepare('INSERT INTO space_ops_quarantine (space_id, version, data, created_at, actor, actor_type, actor_label, original_seq, document_version, reason, quarantined_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      dropOrphans:    db.prepare('DELETE FROM space_ops WHERE space_id = ? AND version > ?'),
+      orphanedSpaces: db.prepare('SELECT s.id AS id FROM spaces s JOIN space_ops o ON o.space_id = s.id AND o.version > s.scene_version GROUP BY s.id'),
+      versionOf:      db.prepare('SELECT scene_version, deleted_at FROM spaces WHERE id = ?'),
+      bumpVersion:    db.prepare('UPDATE spaces SET scene_version = ?, updated_at = ?, last_touched_at = ? WHERE id = ?'),
+      listQuarantined: db.prepare('SELECT * FROM space_ops_quarantine WHERE space_id = ? ORDER BY version ASC, seq ASC')
+    }
+    return _sq
+  }
+
+  // Inside a transaction only (two statements that make sense together).
+  const quarantineOrphanSceneOpsInTx = (spaceId, sceneVersion, reason = SCENE_ORPHAN_REASON) => {
+    const rows = sq().orphans.all(spaceId, sceneVersion)
+    if (!rows.length) return null
+    const at = Date.now()
+    for (const row of rows) {
+      sq().quarantine.run(spaceId, row.version, row.data, row.created_at, row.actor ?? null, row.actor_type ?? null, row.actor_label ?? null, row.seq, sceneVersion, reason, at)
+    }
+    sq().dropOrphans.run(spaceId, sceneVersion)
+    return { spaceId, sceneVersion, moved: rows.length, from: rows[0].version, to: rows[rows.length - 1].version, reason }
+  }
+
+  const describeSceneQuarantine = (healed) =>
+    `[spaces] ${healed.spaceId}: ${healed.moved} op(s) v${healed.from}–v${healed.to} were above the version its scene stands at (v${healed.sceneVersion}) — moved to space_ops_quarantine, scene kept as it is. Reason: ${healed.reason}`
+
+  /** At startup: every space with ops above its scene version, healed and said. */
+  const healOrphanSpaceOps = ({ log = null } = {}) => {
+    const healed = []
+    for (const row of sq().orphanedSpaces.all()) {
+      const result = getDb().transaction(() => {
+        const current = sq().versionOf.get(row.id)
+        return current ? quarantineOrphanSceneOpsInTx(row.id, Number(current.scene_version) || 0) : null
+      }, { immediate: true })()
+      if (result) {
+        healed.push(result)
+        log?.warn?.(describeSceneQuarantine(result))
+      }
+    }
+    return healed
+  }
+
+  const listQuarantinedSceneOps = (spaceId) => sq().listQuarantined.all(spaceId)
+
+  const readSceneVersion = (spaceId) => Number(sq().versionOf.get(spaceId)?.scene_version) || 0
+
+  /**
+   * The one database step of a scene write: the version check, the op append
+   * and the version bump in ONE transaction that holds SQLite's write lock
+   * from its first read (BEGIN IMMEDIATE, https://sqlite.org/lang_transaction.html).
+   * Two processes cannot both pass the check: the loser gets { conflict } —
+   * the ordinary 409 — and writes nothing. Ops above the current version are
+   * quarantined first, so a space left in that state takes this write.
+   *
+   * `ops` must already carry versions baseVersion+1 … nextVersion.
+   */
+  const commitSceneOps = ({ spaceId, baseVersion, ops, nextVersion, maxHistory = 500, maxAgeMs = 0, actor = null }) => {
+    const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
+    return getDb().transaction(() => {
+      const row = sq().versionOf.get(spaceId)
+      if (!row || row.deleted_at) return { notFound: true }
+      const current = Number(row.scene_version) || 0
+      if (current !== baseVersion) return { conflict: true, latestVersion: current }
+      const healed = quarantineOrphanSceneOpsInTx(spaceId, current)
+      const now = Date.now()
+      for (const op of ops) {
+        opsInsert.run(spaceId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now,
+          actor?.actor ?? null, actor?.type ?? null, actor?.label ?? null)
+      }
+      const { cnt } = opsCount.get(spaceId)
+      if (cnt > maxHistory) opsTrim.run(spaceId, spaceId, cnt - maxHistory)
+      if (maxAgeMs > 0) opsTrimAged.run(spaceId, now - maxAgeMs)
+      sq().bumpVersion.run(nextVersion, now, now, spaceId)
+      return { ok: true, healed }
+    }, { immediate: true })()
+  }
+
   const collectSceneAssetRefs = (objects = []) => {
     const refs = new Map()
     const addRef = (asset) => {
@@ -1087,6 +1186,10 @@ function createSpaceStore({
 
   return {
     appendOpsHistory,
+    commitSceneOps,
+    healOrphanSpaceOps,
+    listQuarantinedSceneOps,
+    readSceneVersion,
     archiveIdleAccountSandboxes,
     buildMeta,
     collectSceneAssetRefs,
