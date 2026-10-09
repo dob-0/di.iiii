@@ -2,10 +2,12 @@
 # moxir_v2_ground.py — MOXIR v2 GROUND (2026-10-09): every wash and beam that is not on the truss stands ON THE GROUND, spread
 # over the owner's painted hot zone and both wings, placed from where the audience stands.
 #
-#   python3 -I scripts/place/moxir_v2_ground.py candidates --repo . --out <dir>   # score every ground place from 9 eyes (~30 min, one core)
+#   python3 -I scripts/place/moxir_v2_ground.py candidates --repo . --out <dir>   # score every ground place from 9 eyes (~25 min, one core)
 #   python3 -I scripts/place/moxir_v2_ground.py build      --repo . --out <dir>   # pick, write the ground layer + the full rig, check
 #   python3 -I scripts/place/moxir_v2_ground.py plan       --repo . --out <dir>   # the frame plan (moxir-v2-true-frames.cjs)
+#   python3 -I scripts/place/moxir_v2_ground.py measured   --repo . --out <dir>   # the measured floor white-out into both rig files
 #   python3 -I scripts/place/moxir_v2_ground.py page       --repo . --out <dir>   # the comparison page (old spread | new ground)
+# Run from the repo root (lights_beta_options reads its rig files relative to it).
 #
 # THE OWNER (2026-10-09 21:05, ledger N465): "and also other washes and beams what we dont use make on the ground, not on the
 #   arcs, and also washs are so close on the ground for now you can use the left places of the area so we need epic thing you
@@ -34,15 +36,20 @@
 #     bright cluster loses to the same light spread into the steel at several depths (a stated design metric, not a luminance).
 #   GROUND: every lamp of this layer stands on the floor: a PAR body at 0.31 m (v1.1's floor bracket), a B380F base on the floor
 #     (its tilt axis 0.5 m up: occlusion_sky.HEAD_Y). Nothing on a column, an arch, the roof or a machine top.
-#   PAR SPACING (the owner: "washs are so close"): no two ground PARs closer than PAR_MIN_SPACING_M = 5.0 m. From the structure:
-#     the columns stand 6 m apart along a row (5.5 m across the expansion joint pair, z +-0.5, one column foot), so the rule keeps
-#     one PAR per column foot and forbids the two-faces-of-one-column pairs of the spread (1.68 m); a 15 deg cone lights a 2.85 m
-#     disc on the space frame at 10.8 m, so pools 5 m apart keep a dark gap >= 2.1 m between them: steel lit in pieces, not a wash.
-#     The scores agree: run without the rule, the greedy picks pairs (counted in the report).
+#   PAR SPACING (the owner: "washs are so close"): no two ground PARs closer than PAR_MIN_SPACING_M = 6.0 m. The structure: the
+#     columns stand 6 m apart along a row, so at most one PAR per column foot (the joint pair z +-0.5 is one foot); a 15 deg cone
+#     lights a 2.85 m disc on the space frame at 10.8 m, so pools 6 m apart keep a dark gap >= 3.1 m: steel lit in pieces. The
+#     scores: build() runs the whole pick at 0 / 3 / 5 / 6 / 7 / 8 m and writes the curve; 6 m is its knee.
+#   COVERAGE (the owner: "use the left places of the area"): the PAR pick is two-phase. First the maximal covering location greedy
+#     (Church & ReVelle 1974): every painted place gets a lit PAR within one roof height (PAR_COVER_R_M = 10.8 m, at most ~45 deg up
+#     from a standing eye), each pick the lamp that covers the most still-uncovered cells (ties: the eye objective), among lamps
+#     that light something an eye sees; then the remaining picks by the eye objective. Its cost against the eye objective alone is
+#     written into the rig (par_coverage.plain_greedy_6m).
 #   PAR PLACES: every face of every column foot in the painted area (nave, span, entry and stage faces; 0.44 m off the face,
 #     leaned 4 deg onto it, v1.1's vista bracket), a 3 m floor grid aimed straight up into the roof steel (not in the dance floor,
-#     the entry corridor, the FOH riser, a machine or the bar / chill zones), and the three v1.1 embers that stand inside the
-#     machines at <= 0.3 m. ONE DJ key on the floor of the pit, in the only gap that sees him past the two PA boxes (a ground
+#     the entry corridor, the FOH riser, a machine, the bar / chill zones or the entry-laser tower's pen), the same floor places
+#     3-9 m off a column row aimed instead at the crane runway girder (7.5 m) or the nearest column's flared head (6.6 m), and
+#     the three v1.1 embers that stand inside the machines at <= 0.3 m. ONE DJ key on the floor of the pit, in the only gap that sees him past the two PA boxes (a ground
 #     OPTION: "combine with the truss DJ light").
 #   BEAM PENS: a ground beam is below a raised hand (2.8 m, the brief) for its first metres; outside its pen it must stay >= 3.0 m
 #     over every standing level (the v2 rule, moxir_v2.low_over_standing: the floor 0, the DJ step 0.4, the FOH riser 0.6; the
@@ -50,14 +57,25 @@
 #     (it contains the 2.8 m one, both reported), kept BARRIER_REACH_M = 0.6 m (ASSUMED: a hand over a 1.1 m barrier; the Purple
 #     Guide is owed) inside a fenced ISLAND. Islands: the stage pen (crew only, the six plane-1 heads around the smoke machine, as
 #     B tuned) + three fenced islands of four heads, chosen from candidate islands on the column lines (each side of a row,
-#     between two columns: the columns anchor the barrier) and free 5 x 5 m squares in the painted area, >= 15 m apart.
+#     between two columns: the columns anchor the barrier), the stage edge (pens that share one side with the stage pen's own
+#     barrier) and free 5 x 5 m squares in the painted area; fenced islands >= 15 m apart. No island in the dance floor, the
+#     entry corridor, the FOH riser, the crane park or the entry-laser tower's pen. The hall's walls lie 6-36 m outside the
+#     painted area, so no pen uses a wall line (the spread's rule kept: no unit outside the paint).
 #   BEAM AIMS: per head, every direction az 0..345 / el 35..80 (15 x 5 deg), the best refined (3 x 1.5 deg); refused when: the
 #     pen leaves its island; it ends in glass, a lantern frame, people, a crane (the free crane at z -12 and its laser hang) or the
 #     crane park volume (x -12..12, z -2..7, 2.5..10.8 m); it ends in the bar or the chill + food zone or on the entry wall (the
-#     LA40WF builder's area and the door); its throw is under 8 m; an eye (the 9 + the DJ) looks down it within 30 deg (eyes.py
-#     GLARE_DEG: forward scatter at g 0.74). The ring of 8 rays at the 0.9 deg half beam is checked the same way.
-#   SELECTION: greedy on the objective (above). Beams: the stage pen's six first, then the island whose best four heads add the
-#     most, three times. PARs: the DJ key first, then 37 by the greedy under the spacing rule (38 ground PARs).
+#     LA40WF builder's area and the door); it comes within 1 m of a laser unit (the entry lasers' KO-1 box, #873, or the cubes'
+#     box on the free crane) or ends within 3 m of a far-wall laser termination block (both margins ASSUMED); its throw is under
+#     8 m; an eye (the 9 + the DJ) looks down it within 30 deg (eyes.py GLARE_DEG: forward scatter at g 0.74). The ring of 8 rays
+#     at the 0.9 deg half beam is checked the same way.
+#   SKY (occlusion_sky.sky, 1200 equal-area rays from the head): per head slot, the share of its sky that is clear >= 30 m, ends
+#     on the roof steel, or is blocked (crane, runway, columns, walls, the keep-outs). Under a 10.8 m roof every steep direction
+#     ends on the roof within 30 m, so "clear" is ~16-24 % at every floor place and barely separates them; the island choice uses
+#     the OPEN share (clear + roof: where a moving head's beam runs free until the roof steel).
+#   SELECTION: greedy on the objective (above). Beams: the stage pen's six first, then, three times, the island whose best four
+#     heads score most: their objective gain x their mean open sky share (a moving head with more open sky keeps more of its
+#     movement usable; a stated design weight). PARs: the DJ key first, then 37 by the two-phase pick (COVERAGE) under the
+#     spacing rule (38 ground PARs).
 #   POWER / DMX: 16 A radials <= 2 944 W from the nearest v1.1 distro, split also where the chain's volt drop would pass 5 % with
 #     4 mm2 (BS 7671 Table 4D2B; Appendix 4, 6.4); DMX lines <= 32 devices (ANSI E1.11 / EIA-485) and <= 512 channels, from the
 #     nearest v1.1 node and its ports. The cut's 10 PARs, the smoke machine and the cubes keep theirs in the plan.
@@ -98,7 +116,33 @@ DEPTH_NAMES = ('0-12 m', '12-25 m', '25-40 m', '>= 40 m')
 GROUND_MAX_Y = 1.0
 PAR_Y = 0.31
 HEAD_Y = 0.5
-PAR_MIN_SPACING_M = 5.0
+# PAR SPACING (2026-10-10, continuation): 6.0 m = the column pitch along a row (at most one PAR per column foot; the joint pair
+# at z +-0.5 is one foot) AND the knee of the score curve: the greedy's objective, against no rule, is -9 % at 5 m, -12 % at 6 m,
+# -24 % at 7 m, and at 8 m only 34 of the 37 places fit (build() recomputes this curve and writes it into the rig).
+PAR_MIN_SPACING_M = 6.0
+# COVERAGE (the owner: "use the left places of the area"): every place of the painted area has a lit PAR within one roof height
+# (10.8 m, the space frame's bottom chord, hall json truss_bottom_m): from a standing eye that lit steel is at most ~45 deg up.
+PAR_COVER_R_M = 10.8
+SPACING_CURVE_M = (0.0, 3.0, 5.0, 6.0, 7.0, 8.0)
+# THE ENTRY LASERS (#873, scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json on feat/moxir-entry-lasers-2026-10-09, a30b4757):
+# two UP-LA40WF on a ground-supported truss tower, house left at the column line z 48; their beams end on the far end wall's
+# matte block. Their own keep-out boxes, as written there: KO-1 the units + T-bar, KO-2 the tower + its pen on the floor.
+ENTRY_LASERS = {
+    'source': 'scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json @ a30b4757 (PR #873), keep_out.boxes + fixtures',
+    'ko1': {'x_m': (-8.654, -6.834), 'y_m': (5.776, 6.471), 'z_m': (47.95, 48.605)},
+    'ko2': {'x_m': (-10.244, -5.244), 'y_m': (0.0, 6.471), 'z_m': (45.778, 50.778)},
+    'apertures': [[-8.094, 5.944, 48.0], [-7.394, 5.944, 48.0]],
+    'far_wall_blocks': [[-6.794, 6.669, -53.8], [-6.619, 6.669, -53.8]],
+}
+APERTURE_PAD_M = 1.0          # ASSUMED: no B380F ray within 1 m of a laser unit's box (KO-1, the cubes' box): never into an aperture
+BLOCK_FREE_M = 3.0            # ASSUMED: no B380F beam ends within 3 m of a far-wall laser termination block (no pool on it)
+# THE CUBES (N464, #873's world): moving to sit ON the free crane at z -12, a keep-out box on its bridge top (x +-11.35, y 8.3-9.4),
+# over its girders (z -12 +- 1.1, 0.7 m wide). Another workflow owns them: here they are only a place no beam may end or pass near.
+CUBES_TOP = {'x_m': (-11.35, 11.35), 'y_m': (8.3, 9.4), 'z_m': (-13.45, -10.55)}
+KEEP_OUT_CLS = ('laser tower', 'laser aperture')
+BEAM_WORLD = ('v2 night world (free crane z -12 + its laser hang) + the crane park as a solid + the entry-laser tower and its units padded 1 m '
+              '(#873) + the cubes on the free crane padded 1 m (N464) + no end within 3 m of a far-wall laser block (2026-10-10)')   # refused for a beam; not an obstacle to an eye (a mast + a low pen, not a wall)
+ROOM_LEVEL_EXP = 1            # the room draws a look's level ONCE since the #868 fix (cherry-picked here): E x level, not level^2
 TRUSS_RESERVED = 12
 GROUND_PARS = 38
 STAGE_PEN_HEADS = 6
@@ -121,7 +165,8 @@ CRANE_PARK_NAME = 'the crane park zone (x -12..12, z -2..7, 2.5-10.8 m)'
 ALBEDO = {'column': 0.2867, 'column head': 0.2867, 'upper column': 0.2867, 'machine': 0.1583, 'press': 0.0407}
 ALBEDO_STEEL_ASSUMED = 0.2867
 LIT = {'column', 'column head', 'upper column', 'space frame', 'roof deck', 'runway', 'crane', 'steel', 'end wall', 'side wall', 'block wall', 'machine'}
-BAD_END = {'lantern glass', 'wall glass', 'lantern frame', 'audience', 'dj', 'crane', 'crane park', 'pa', 'barrier', 'foh', 'booth', 'floor'}
+BAD_END = {'lantern glass', 'wall glass', 'lantern frame', 'audience', 'dj', 'crane', 'crane park', 'pa', 'barrier', 'foh', 'booth', 'floor'} | set(KEEP_OUT_CLS)
+EYE_SKIP = ('crane park',) + KEEP_OUT_CLS   # what an eye's line of sight (and a PAR's light) passes through
 DANCE = {'x_m': (-11.0, 3.5), 'z_m': (8.2, 28.0)}                      # the v1.1 dance floor (stage json floor): the crowd's core
 ENTRY_CORRIDOR = {'x_m': (-5.0, 5.0), 'z_m': (28.0, 54.0)}            # from the door to the floor, between the chill and the bar
 FOH_RISER = {'x_m': (-6.7, -3.7), 'z_m': (28.0, 30.0)}
@@ -211,6 +256,14 @@ def world(repo):
     W = SP.night_world(repo)
     W.boxes = [b for b in W.boxes if b.cls != 'audience']
     W.boxes.append(S.OBox.aabb(CRANE_PARK_NAME, 'crane park', CRANE_PARK['x_m'], CRANE_PARK['y_m'], CRANE_PARK['z_m']))
+    # the entry lasers (#873) and the cubes on the free crane: places no beam may end on or pass within APERTURE_PAD_M of
+    pad = lambda R, m: tuple((R[0] - m, R[1] + m))
+    E = ENTRY_LASERS
+    W.boxes.append(S.OBox.aabb('entry-laser tower + pen (KO-2, #873)', 'laser tower', E['ko2']['x_m'], E['ko2']['y_m'], E['ko2']['z_m']))
+    W.boxes.append(S.OBox.aabb('entry lasers + T-bar, padded %.1f m (KO-1, #873)' % APERTURE_PAD_M, 'laser aperture',
+                               pad(E['ko1']['x_m'], APERTURE_PAD_M), pad(E['ko1']['y_m'], APERTURE_PAD_M), pad(E['ko1']['z_m'], APERTURE_PAD_M)))
+    W.boxes.append(S.OBox.aabb('the 6 cubes on the free crane z -12, padded %.1f m (N464)' % APERTURE_PAD_M, 'laser aperture',
+                               pad(CUBES_TOP['x_m'], APERTURE_PAD_M), pad(CUBES_TOP['y_m'], APERTURE_PAD_M), pad(CUBES_TOP['z_m'], APERTURE_PAD_M)))
     n = np.cross(W.E1, W.E2)
     W.N = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
     return W
@@ -275,7 +328,7 @@ def objective(M):
 
 
 # ====================================================================== PAR: the light its lit surfaces send to the eyes
-def par_eye_light(W, p, d, cd=PAR_I, skip=('crane park',)):
+def par_eye_light(W, p, d, cd=PAR_I, skip=EYE_SKIP):
     """E (lx) at each eye and depth bin from one PAR's lit surfaces (method above). Returns (E[eye][bin], info)."""
     import numpy as np
     import occlusion_lib as O
@@ -341,7 +394,7 @@ def beam_G(W, F, p, d, t, step=2.0, occlude=True):
         c = u @ d
         g = sg * hg_vec(c) * np.exp(-tau) * np.exp(-F['fill'] * L) * step
         if occlude:
-            te, _, _, _ = cast_full(W, e, -u, reach=float(L.max()) + 1.0, tmin=0.3, skip=('crane park',))
+            te, _, _, _ = cast_full(W, e, -u, reach=float(L.max()) + 1.0, tmin=0.3, skip=EYE_SKIP)
             g = np.where(te >= L - 0.4, g, 0.0)
         np.add.at(G[k], bin_of(L), g)
     return G
@@ -390,6 +443,27 @@ def pen_of_beam(p, d, t, island):
     return ok, R3(r30), R3(r28), seg
 
 
+def block_gap(end):
+    """Distance (m) from a beam's end to the nearest far-wall laser termination block (#873)."""
+    return min(math.dist(end, b) for b in ENTRY_LASERS['far_wall_blocks'])
+
+
+def aperture_gap(head, d, t):
+    """The closest a beam's axis (to its first hit) comes to an entry-laser aperture or the cubes' box centre line (m)."""
+    import numpy as np
+    head, d = np.asarray(head, float), np.asarray(d, float)
+    out = []
+    for a in ENTRY_LASERS['apertures']:
+        s = min(max(float((np.asarray(a) - head) @ d), 0.0), t)
+        out.append(float(np.linalg.norm(head + d * s - np.asarray(a))))
+    # the cubes' box: sample the axis, distance to the box (0 inside)
+    lo = np.array([CUBES_TOP['x_m'][0], CUBES_TOP['y_m'][0], CUBES_TOP['z_m'][0]])
+    hi = np.array([CUBES_TOP['x_m'][1], CUBES_TOP['y_m'][1], CUBES_TOP['z_m'][1]])
+    q = head + d * np.arange(0.0, t + 0.25, 0.25)[:, None]
+    out.append(float(np.min(np.linalg.norm(np.maximum(np.maximum(lo - q, q - hi), 0.0), axis=1))))
+    return round(min(out[:2]), 3), round(out[2], 3)
+
+
 def ring_check(W, A, head, d):
     """The beam as the room draws it: axis + a ring of 8 at the 0.9 deg half beam (occlusion_lib.SPEC_RINGS), each to its first
     hit. Refused if any ends in a refused class, the bar / chill zone or on the entry wall."""
@@ -406,6 +480,8 @@ def ring_check(W, A, head, d):
             return False, 'a ring ray ends on %s' % names[k], sorted(set(e for e in ends if e))
         if A.ends_bad(end[0], end[2]) or end[2] > 53.0:
             return False, 'a ring ray ends in the bar / chill zone or on the entry wall', sorted(set(e for e in ends if e))
+        if block_gap(end) < BLOCK_FREE_M:
+            return False, 'a ring ray ends within %.0f m of a far-wall laser block' % BLOCK_FREE_M, sorted(set(e for e in ends if e))
     return True, None, sorted(set(e for e in ends if e))
 
 
@@ -426,7 +502,21 @@ def island_candidates(G, A, spread):
             'slots': [[f['p'][0], f['p'][1] - 0.7 + HEAD_Y, f['p'][2]] for f in plane1], 'slot_ids': [f['id'] for f in plane1],
             'crew_only': True, 'why': 'crew only (the DJ, the pit, backstage): the six plane-1 heads stay where B tuned put them, 1 m apart around the smoke machine'}]
     stage = {'x_m': tuple(A.stage_pen['x_m']), 'z_m': tuple(A.stage_pen['z_m'])}
-    keep_out = [('the dance floor', DANCE), ('the entry corridor', ENTRY_CORRIDOR), ('the FOH riser', FOH_RISER), ('the stage pen', stage)]
+    ko2 = {'x_m': ENTRY_LASERS['ko2']['x_m'], 'z_m': ENTRY_LASERS['ko2']['z_m']}
+    keep_out = [('the dance floor', DANCE), ('the entry corridor', ENTRY_CORRIDOR), ('the FOH riser', FOH_RISER), ('the stage pen', stage),
+                ('the entry-laser tower pen (KO-2)', ko2), ('the crane park', {'x_m': CRANE_PARK['x_m'], 'z_m': CRANE_PARK['z_m']})]
+    # THE STAGE EDGE: pens that share one side with the stage pen's own barrier (3 new sides, not 4)
+    (sx0, sx1), (sz0, sz1) = stage['x_m'], stage['z_m']
+    for name, R, shared in (('stage edge, behind, house left', {'x_m': (sx0, sx0 + 6.0), 'z_m': (sz0 - 5.0, sz0)}, 6.0),
+                            ('stage edge, behind, house right', {'x_m': (sx1 - 6.0, sx1), 'z_m': (sz0 - 5.0, sz0)}, 6.0),
+                            ('stage edge, house right side', {'x_m': (sx1, sx1 + 5.0), 'z_m': (sz0, CRANE_PARK['z_m'][0])}, CRANE_PARK['z_m'][0] - sz0)):
+        if not A.rect_allowed(R, 0.0) or any(rects_overlap(R, K) for n, K in keep_out if n != 'the stage pen') or rect_massing(G, R):
+            continue
+        cx, cz = (R['x_m'][0] + R['x_m'][1]) / 2, (R['z_m'][0] + R['z_m'][1]) / 2
+        hx, hz = (R['x_m'][1] - R['x_m'][0]) / 2 - 1.5, (R['z_m'][1] - R['z_m'][0]) / 2 - 1.25
+        out.append({'id': name, 'kind': 'stage edge', 'rect': R, 'shared_side_m': R3(shared),
+                    'slots': [[cx + dx, HEAD_Y, cz + dz] for dx in (-hx, hx) for dz in (-hz, hz)],
+                    'why': 'against the stage pen: its barrier is one side of this pen (crew side), so the pen adds three sides'})
     zs = sorted(G['column_grid_z_m'])
     for s in (-1, 1):
         for za, zb in zip(zs, zs[1:]):
@@ -456,6 +546,7 @@ def island_candidates(G, A, spread):
 
 
 def par_candidates(G, A, spread):
+    import numpy as np
     a = math.radians(4.05)
     out = []
     for s in (-1, 1):
@@ -478,8 +569,28 @@ def par_candidates(G, A, spread):
                 continue
             if inside_rect(x, z, stage_front) or near_column(G, x, z, 2.0) or massing_hits(G, x, z, 0.0, 0.5, 0.4):
                 continue
+            if inside_rect(x, z, {'x_m': ENTRY_LASERS['ko2']['x_m'], 'z_m': ENTRY_LASERS['ko2']['z_m']}, -0.5):
+                continue
             out.append({'id': 'floor x %d z %d' % (x, z), 'kind': 'floor uplight', 'p': [float(x), PAR_Y, float(z)], 'dir': [0.0, 1.0, 0.0],
                         'part': 'roof', 'colour': ASH, 'position': 'floor plate at x %d z %d, straight up into the roof steel' % (x, z)})
+            # 2026-10-10: the same floor place may instead light the steel lines near it, from 3-9 m off a column row: the crane
+            # runway girder (x +-11.35, 7.06-7.96 m, the long lines down the hall) or the nearest column's flared head (6.2-7.1 m)
+            rx = 11.35 if x > 0 else -11.35
+            off = abs(x - rx)
+            if 3.0 <= off <= 9.0:
+                face = rx + (0.35 if x > rx else -0.35)
+                tgt = [face, 7.5, float(z)]
+                d = unit(np.asarray(tgt) - np.asarray([x, PAR_Y, z]))
+                out.append({'id': 'floor x %d z %d, to the runway' % (x, z), 'kind': 'floor to runway', 'p': [float(x), PAR_Y, float(z)], 'dir': [R3(v) for v in d],
+                            'part': 'runway', 'colour': ASH, 'position': 'floor plate at x %d z %d, aimed at the crane runway girder x %+.2f (7.5 m) beside it' % (x, z, rx)})
+                zc = min(G['column_grid_z_m'], key=lambda c: abs(c - z))
+                cx = 12.0 if x > 0 else -12.0
+                if abs(zc - z) <= 4.0:
+                    hx = cx + (0.95 if x > cx else -0.95)
+                    d = unit(np.asarray([hx, 6.6, zc]) - np.asarray([x, PAR_Y, z]))
+                    out.append({'id': 'floor x %d z %d, to the column head' % (x, z), 'kind': 'floor to column head', 'p': [float(x), PAR_Y, float(z)],
+                                'dir': [R3(v) for v in d], 'part': 'columns', 'colour': EMBER,
+                                'position': 'floor plate at x %d z %d, aimed at the flared head of the column x %+d z %g (6.6 m)' % (x, z, cx, zc)})
     for f in spread['fixtures']:
         if f['part'] == 'embers' and f['p'][1] <= GROUND_MAX_Y:
             out.append({'id': 'ember %s' % f['id'], 'kind': 'ember', 'p': list(f['p']), 'dir': [R3(v) for v in aim_dir(f['r'])], 'part': 'embers',
@@ -505,7 +616,7 @@ def legal(W, A, head, island, D):
         if tk < MIN_THROW_M:
             continue
         end = np.asarray(head, float) + d * tk
-        if A.ends_bad(end[0], end[2]) or end[2] > 53.0:
+        if A.ends_bad(end[0], end[2]) or end[2] > 53.0 or block_gap(end) < BLOCK_FREE_M:
             continue
         ok, r30, r28, seg = pen_of_beam(head, d, tk, island['rect'])
         if not ok:
@@ -592,14 +703,17 @@ def candidates(repo, out):
     print('islands: %d, head slots %d' % (len(isl), sum(len(i['slots']) for i in isl)), file=sys.stderr, flush=True)
     for i, I in enumerate(isl):
         rec = C['islands'].get(I['id'])
-        if rec and len(rec.get('slot_options', [])) == len(I['slots']):
+        if rec and len(rec.get('slot_options', [])) == len(I['slots']) and len(rec.get('sky', [])) == len(I['slots']) and rec.get('world') == BEAM_WORLD:
             continue
-        rec = dict(I, slot_options=[], legal_dirs=[])
+        rec = dict(I, slot_options=[], legal_dirs=[], sky=[], world=BEAM_WORLD)
         for s in I['slots']:
             S.wait_cool()
             opts, n_legal = slot_options(W, A, F, np.asarray(s, float), I)
             rec['slot_options'].append(opts)
             rec['legal_dirs'].append(n_legal)
+            sk = S.sky(W, [s[0], s[1] - HEAD_Y, s[2]])          # occlusion_sky.py: the head's whole sky, 1200 equal-area rays
+            rec['sky'].append({'clear_pct': sk['clear_pct'], 'roof_pct': sk['roof_pct'], 'blocked_pct': sk['blocked_pct'], 'glass_pct': sk['glass_pct'],
+                               'open_pct': round(sk['clear_pct'] + sk['roof_pct'], 1), 'top_blockers': sk['top_blockers'][:3]})
         C['islands'][I['id']] = rec
         save()
         best = [o[0]['score'] if o else 0 for o in rec['slot_options']]
@@ -647,19 +761,25 @@ def pick_beams(C):
         h['slot_id'] = sp['slot_ids'][h['slot']]
     picked = [sp['id']]
     trail = []
+    def open_share(I, ch):
+        sk = I.get('sky') or []
+        vals = [sk[h['slot']]['open_pct'] for h in ch if h['slot'] < len(sk)]
+        return sum(vals) / len(vals) / 100.0 if vals else 1.0
     for k in range(ISLANDS):
         best = None
         for iid, I in isl.items():
             if iid in picked or I['kind'] == 'stage pen':
                 continue
-            if any(math.dist(centre(I), centre(isl[p])) < ISLAND_MIN_GAP_M for p in picked):
+            if any(math.dist(centre(I), centre(isl[p])) < ISLAND_MIN_GAP_M for p in picked if isl[p]['kind'] != 'stage pen'):
                 continue
             ch, gain, t2 = best_heads(I, HEADS_PER_ISLAND, tot)
             if len(ch) < HEADS_PER_ISLAND:
                 continue
-            trail.append({'round': k + 1, 'island': iid, 'gain': R3(gain)})
-            if best is None or gain > best[1]:
-                best = (iid, gain, ch, t2)
+            sky = open_share(I, ch)
+            score = gain * sky
+            trail.append({'round': k + 1, 'island': iid, 'gain': R3(gain), 'open_sky': R3(sky), 'score': R3(score)})
+            if best is None or score > best[1]:
+                best = (iid, score, ch, t2)
         if best is None:
             raise SystemExit('no island left for round %d' % (k + 1))
         picked.append(best[0])
@@ -668,33 +788,84 @@ def pick_beams(C):
     ranking = {}
     for r in trail:
         ranking.setdefault(r['round'], []).append(r)
-    ranking = {k: sorted(v, key=lambda r: -r['gain'])[:6] for k, v in ranking.items()}
+    ranking = {k: sorted(v, key=lambda r: -r['score'])[:6] for k, v in ranking.items()}
     return heads, picked, tot, ranking
 
 
-def pick_pars(C, n, spacing, fixed=()):
-    """The greedy on the objective under the spacing rule (fixed units first). Returns the picks and the totals."""
+def pick_pars(C, n, spacing, fixed=(), cover=None):
+    """n PARs under the spacing rule (fixed units first). With cover=(cells, R), two phases (2026-10-10, the owner: "you can use
+    the left places of the area"): first the maximal covering location greedy (Church & ReVelle 1974, Papers of the Regional
+    Science Association 32: 101-118): each pick is the lamp that brings the most still-uncovered painted cells within R of a lamp
+    (ties: the eye objective), among lamps that light something an eye sees (score > 0), until no lamp adds coverage; then the
+    rest by the eye objective. Without cover: the eye objective alone. Returns the picks (each with its phase) and the totals."""
     import numpy as np
     nE, nB = len(EYES), len(DEPTH_NAMES)
     tot = np.zeros((nE, nB))
     chosen = [dict(f) for f in fixed]
     cands = list(C['pars'].values())
+    if cover:
+        cells, R = cover
+        CP = np.asarray([[c['p'][0], c['p'][2]] for c in cands], float)
+        reach = np.hypot(cells[:, None, 0] - CP[None, :, 0], cells[:, None, 1] - CP[None, :, 1]) <= R
+        covered = np.zeros(len(cells), bool)
+        for f in fixed:
+            covered |= np.hypot(cells[:, 0] - f['p'][0], cells[:, 1] - f['p'][2]) <= R
+    phase = 'cover' if cover else 'eyes'
     while len(chosen) < n + len(fixed):
         base = objective(tot)
-        bi, bg = None, None
+        bi, bk = None, None
         have = {o.get('id') for o in chosen}
         for i, c in enumerate(cands):
-            if c['id'] in have or any(math.hypot(c['p'][0] - o['p'][0], c['p'][2] - o['p'][2]) < spacing for o in chosen):
+            if c['id'] in have or any(math.hypot(c['p'][0] - o['p'][0], c['p'][2] - o['p'][2]) < spacing - 1e-9 for o in chosen):
                 continue
             g = objective(tot + np.asarray(c['E'])) - base
-            if bg is None or g > bg:
-                bi, bg = i, g
+            if phase == 'cover':
+                if c['score'] <= 0:
+                    continue
+                newc = int(np.sum(reach[:, i] & ~covered))
+                if newc == 0:
+                    continue
+                k = (newc, g)
+            else:
+                k = (g,)
+            if bk is None or k > bk:
+                bi, bk = i, k
         if bi is None:
+            if phase == 'cover':
+                phase = 'eyes'
+                continue
             break
         c = cands[bi]
-        chosen.append(dict(c, gain=R3(bg)))
+        chosen.append(dict(c, gain=R3(objective(tot + np.asarray(c['E'])) - base), phase=phase))
         tot += np.asarray(c['E'])
+        if cover:
+            covered |= reach[:, bi]
     return chosen[len(fixed):], tot
+
+
+def painted_cells(A):
+    """Every 1 m cell of the owner's hot zone and wings, less the bar and the chill + food zone (x, z), as an array."""
+    import numpy as np
+    seen, out = set(), []
+    for zid in ('hot', 'use'):
+        for row in A.Z.areas[zid]:
+            for x0, x1 in row['x_runs']:
+                for x in range(int(round(x0)), int(round(x1)) + 1):
+                    k = (x, row['z'])
+                    if k in seen or A.Z.inside('bar', x, row['z'], 0.0) or A.Z.inside('chill', x, row['z'], 0.0):
+                        continue
+                    seen.add(k)
+                    out.append(k)
+    return np.asarray(out, float)
+
+
+def coverage(units, cells):
+    """How much of the painted area a set of lamps reaches: for every cell, the plan distance to the nearest lamp. The median, the
+    90th percentile and the largest gap (the radius of the largest lamp-free circle centred on a cell), and the share within 6 m."""
+    import numpy as np
+    P = np.asarray([[u['p'][0], u['p'][2]] for u in units], float)
+    d = np.min(np.hypot(cells[:, None, 0] - P[None, :, 0], cells[:, None, 1] - P[None, :, 1]), axis=1)
+    return {'gap_median_m': R3(np.median(d)), 'gap_p90_m': R3(np.percentile(d, 90)), 'gap_max_m': R3(d.max()), 'within_6m_pct': R3(100.0 * np.mean(d <= 6.0))}
 
 
 def pairs_closer(units, d):
@@ -819,9 +990,40 @@ def patch(units, sites):
 
 # ====================================================================== build: the ground layer + the full rig + the checks
 RIG11 = 'scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json'
-GONE_PARTS = ('halo', 'stage columns', 'speaker face L', 'speaker face R', 'stage key', 'roof', 'embers', 'columns',
+GONE_PARTS = ('halo', 'stage columns', 'speaker face L', 'speaker face R', 'stage key', 'roof', 'embers', 'columns', 'runway',
               'plane 2 (the wings)', 'plane 3 (behind the stage)', 'plane 4 (the entry side)', 'DJ key (ground option)')
+# THE LOOKS' LEVELS for the ground layer, under the room's LINEAR level law (#868: a fader at L draws L). The dark look keeps the
+# spread's own design faders (B tuned's, now drawn as written: ember only, no roof). The peak keeps them too, except the beams
+# toward the wings and the entry, which take the spread's MEASURED budget: its wing fader 0.45 drew 0.2025 when the floor's
+# white-out was measured inside 0.65 % (9ca71bc6), so the same light is a fader of 0.2 now. Re-measured on this rig's own frames
+# (moxir_v2_ground.py measured); the laser part keeps the look's cap (0.4).
+# PLANE 1, MEASURED (2026-10-10): the stage pen's six heads can only fan sideways (the crane park is in front of them), so from
+# behind the stage their cores cross in one X. White-out of that view, frames held with plane 1 at a level (setKeys, the browser's
+# copy only; EV100 2.84, Full, t40): peak 1.0 -> 0.92 %, 0.6 -> 0.67 %, 0.4 -> 0.47 %; dark 0.8 -> 0.75 %, 0.5 -> 0.51 %; the
+# floor at the peak 1.0 -> 0.58 %, 0.6 -> 0.44 %. Every audience view is held to the floor's budget (0.65 %): plane 1 at 0.5.
+LEVEL_TUNING = {'part': 'plane 1 (behind the DJ)', 'level': 0.5, 'budget_white_pct': 0.65, 'why': 'the behind-the-stage view, held to the floor\'s budget',
+                'measured': [{'view': 'behind', 'look': 'peak', 'level': 1.0, 'white_pct': 0.92}, {'view': 'behind', 'look': 'peak', 'level': 0.6, 'white_pct': 0.67},
+                             {'view': 'behind', 'look': 'peak', 'level': 0.4, 'white_pct': 0.47}, {'view': 'behind', 'look': 'dark', 'level': 0.8, 'white_pct': 0.75},
+                             {'view': 'behind', 'look': 'dark', 'level': 0.5, 'white_pct': 0.51}, {'view': 'floor', 'look': 'peak', 'level': 1.0, 'white_pct': 0.58},
+                             {'view': 'floor', 'look': 'peak', 'level': 0.6, 'white_pct': 0.44}],
+                'method': 'moxir-v2-true-frames.cjs setKeys on the six plane-1 groups (the browser\'s copy only), frame_luma.py; frames-split/ next to the page'}
+LOOK_LEVELS = {
+    'dark': {'plane 1 (behind the DJ)': [EMBER, 0.5], 'plane 2 (the wings)': [EMBER, 0.8], 'plane 3 (behind the stage)': [EMBER, 0.35],
+             'plane 4 (the entry side)': [EMBER, 0.35], 'columns': [EMBER, 0.5]},
+    'peak': {'plane 1 (behind the DJ)': [EMBER, 0.5], 'plane 2 (the wings)': [ASH, 0.2], 'plane 3 (behind the stage)': [EMBER, 0.7],
+             'plane 4 (the entry side)': [ASH, 0.2], 'columns': [EMBER, 0.8], 'roof': [ASH, 0.6], 'runway': [ASH, 0.6], 'embers': [EMBER, 0.6]},
+}
 KEY_PART = 'DJ key (ground option)'
+OWED = [
+    'The crowd plan: the fenced pens (barrier type and height; 1.1 m and a 0.6 m reach are ASSUMED, the Purple Guide figures are not read), the stage pen\'s barrier (owed since the spread), and the guard cages over the floor PARs among people.',
+    'The venue\'s OK for floor plates in the public area, and cable ramps wherever a floor run crosses a walkway.',
+    'The PAR\'s candela: the scene draws 30 478 cd, the spec figure is 11 000 cd (EQUIVALENT): every lux and the white-out here are at the scene\'s figure.',
+    'The haze on site: the frames use the one machine\'s 40-minute estimate (UNVALIDATED).',
+    'The DJ key from the pit floor is an OPTION: its level is set on site with a lux meter at his face, combined with the truss DJ light (another workflow).',
+    'The truss, the near crane and the cubes are being moved by other workflows: every beam here treats the crane park (x -12..12, z -2..7, 2.5-10.8 m) as solid and keeps 1 m from the cubes\' box on the free crane; re-check the beams against their final places.',
+    'The entry lasers (#873): the 1 m (apertures) and 3 m (far-wall blocks) margins are ASSUMED; the laser session should look at these beams\' paths.',
+    'The owner\'s look at the page and at the project in the scene.',
+]
 KEY_TARGET_LX = 45.0
 RESERVED_IDS = ['rig-par-planes-24', 'rig-par-planes-28']    # the spread's speaker-face PARs: their job goes to the truss
 
@@ -849,11 +1051,15 @@ def beam_recheck(W, A, F, f, rect):
     pen_ok, r30, r28, seg = pen_of_beam(head, d, tk, rect)
     gl = glare_min_deg(head, d, tk, dict(EYES, **{'the DJ': DJ_EYE}))
     bad_end = A.ends_bad(end[0], end[2])
-    ok = (cls[0] not in BAD_END) and ring_ok and pen_ok and not bad_end and end[2] <= 53.0 and min(gl.values()) >= GLARE_DEG - 0.5 and tk >= MIN_THROW_M
+    bg = block_gap(end)
+    ap, cubes = aperture_gap(head, d, tk)
+    ok = ((cls[0] not in BAD_END) and ring_ok and pen_ok and not bad_end and end[2] <= 53.0 and min(gl.values()) >= GLARE_DEG - 0.5 and tk >= MIN_THROW_M
+          and bg >= BLOCK_FREE_M and ap >= APERTURE_PAD_M and cubes >= APERTURE_PAD_M)
     return {'id': f['id'], 'part': f['part'], 'island': f.get('island'), 'throw_m': R3(tk), 'ends_on': names[0], 'end_cls': cls[0], 'end': [R3(v) for v in end],
             'ring_ok': ring_ok, 'ring_why': ring_why, 'ring_ends': ring_ends, 'pen_inside_island': pen_ok, 'pen_m': r30, 'pen_hand_m': r28,
             'ends_in_bar_or_chill': bad_end, 'ends_on_entry_wall': end[2] > 53.0, 'glare_min_deg': gl, 'glare_min_deg_any': min(gl.values()),
-            'into_crane_or_park': cls[0] in ('crane', 'crane park'), 'ok': ok}
+            'into_crane_or_park': cls[0] in ('crane', 'crane park'), 'far_wall_block_gap_m': R3(bg), 'entry_aperture_gap_m': ap, 'cubes_box_gap_m': cubes,
+            'into_laser_keep_out': cls[0] in KEEP_OUT_CLS, 'ok': ok}
 
 
 def eye_totals(W, F, fixtures):
@@ -871,7 +1077,7 @@ def eye_totals(W, F, fixtures):
         elif f['type'] == 'up-b380f':
             head = np.array([f['p'][0], f['p'][1] - 0.7 + HEAD_Y, f['p'][2]])
             d = aim_dir(f['r'])
-            t, _, _, _ = cast_full(W, head, d[None, :], reach=120.0, skip=('crane park',))
+            t, _, _, _ = cast_full(W, head, d[None, :], reach=120.0, skip=EYE_SKIP)
             B += beam_G(W, F, head, d, float(t[0]) if np.isfinite(t[0]) else 120.0, step=2.0, occlude=True)
     layers = lambda M: {e: int(sum(1 for v in M[k] if v >= 0.05 * max(M[k].sum(), 1e-12))) for k, e in enumerate(EYES)}
     return {'par_lux_at_eye': {e: R3(P[k].sum()) for k, e in enumerate(EYES)}, 'beam_G': {e: round(float(B[k].sum()), 5) for k, e in enumerate(EYES)},
@@ -920,13 +1126,15 @@ def build(repo, out):
             fid = was['id']
         d = np.asarray(h['dir'], float)
         az, el = az_el(d)
-        sk = S.sky(W, [h['head'][0], 0.0, h['head'][2]], skip=('crane park',))
+        sky_rows = I.get('sky') or []
+        sk = sky_rows[h['slot']] if h['slot'] < len(sky_rows) else S.sky(W, [h['head'][0], 0.0, h['head'][2]])
         beams.append({'id': fid, 'type': 'up-b380f', 'part': part, 'layer': 'beams', 'status': 'used', 'moments': [],
                       'position': '%s: base on the floor; aim %.0f/%.0f deg (az/el), throw %.1f m to %s; below 3.0 m for its first %.1f m (2.8 m: %.1f m), inside its fenced pen' % (
                           I['id'], az, el, h['throw_m'], h['ends_on'], h['pen_m'], h['pen_hand_m']),
                       'p': [R3(h['head'][0]), R3(h['head'][1] - HEAD_Y + 0.7), R3(h['head'][2])], 'r': rot_for_dir(d), 'colour': colour, 'angle_rad': 0.0157,
                       'throw_m': h['throw_m'], 'ends_on': h['ends_on'], 'island': I['id'], 'pen_m': h['pen_m'], 'pen_hand_m': h['pen_hand_m'],
                       'pen_segment': h['pen_segment'], 'glare_min_deg': R3(min(h['glare_min_deg'].values())), 'sky_clear_pct': sk['clear_pct'],
+                      'sky_open_pct': sk.get('open_pct', round(sk['clear_pct'] + sk['roof_pct'], 1)), 'sky_blocked_pct': sk['blocked_pct'],
                       'eye_G': {e: round(float(sum(h['G'][k])), 5) for k, e in enumerate(EYES)}, 'gain': h['gain'],
                       'moved_from': {'p': was['p'], 'part': was['part'], 'plan_m': R3(dd)}, 'power_w': POWER_W['up-b380f']})
 
@@ -934,13 +1142,30 @@ def build(repo, out):
     kd = unit(np.asarray(KEY['aim']) - np.asarray(KEY['p']))
     key = {'id': 'DJ key', 'kind': 'DJ key', 'p': KEY['p'], 'dir': [R3(v) for v in kd], 'part': KEY_PART, 'colour': ASH,
            'position': 'DJ key, a GROUND OPTION (combine with the truss DJ light): floor of the pit, %s' % KEY['why']}
-    pars, Ptot = pick_pars(C, GROUND_PARS - 1, PAR_MIN_SPACING_M, fixed=[key])
+    cells = painted_cells(A)
+    cover = (cells, PAR_COVER_R_M)
+    pars, Ptot = pick_pars(C, GROUND_PARS - 1, PAR_MIN_SPACING_M, fixed=[key], cover=cover)
     if len(pars) != GROUND_PARS - 1:
         raise SystemExit('the spacing rule left room for %d PARs, needs %d' % (len(pars), GROUND_PARS - 1))
-    free_pick, _ = pick_pars(C, GROUND_PARS - 1, 0.0, fixed=[key])
+    free_pick, _ = pick_pars(C, GROUND_PARS - 1, 0.0, fixed=[key], cover=cover)
+    plain, plain_tot = pick_pars(C, GROUND_PARS - 1, PAR_MIN_SPACING_M, fixed=[key])          # the eye objective alone, for comparison
+    plain_cmp = {'objective': R3(objective(plain_tot)), 'objective_cover': R3(objective(Ptot)), 'cost_pct': R3(100.0 * (objective(Ptot) / objective(plain_tot) - 1.0)),
+                 'coverage_plain': coverage([key] + plain, cells), 'cover_picks': sum(1 for q in pars if q.get('phase') == 'cover'),
+                 'what': 'the same 6 m rule with the eye objective alone (no coverage phase): what the coverage phase costs and gives'}
     without_rule = {'pairs_closer_than_rule': len(pairs_closer([key] + free_pick, PAR_MIN_SPACING_M)),
                     'pairs_under_2m': len(pairs_closer([key] + free_pick, 2.0)),
                     'same_column_foot': sum(1 for a, b in __import__('itertools').combinations([q for q in free_pick if q.get('foot')], 2) if a['foot'] == b['foot'])}
+    # the spacing rule from the scores: the greedy at every spacing of SPACING_CURVE_M, its objective against no rule, how close
+    # the lamps sit and how much of the painted area they reach (written into the rig: the stated rule's evidence)
+    curve = []
+    for sp in SPACING_CURVE_M:
+        pk, tt = pick_pars(C, GROUND_PARS - 1, sp, fixed=[key], cover=cover)
+        allp = [key] + pk
+        nnc = sorted(min(math.hypot(a['p'][0] - b['p'][0], a['p'][2] - b['p'][2]) for b in allp if b is not a) for a in allp)
+        curve.append({'spacing_m': sp, 'placed': len(pk), 'objective': R3(objective(tt)), 'nn_min_m': R3(nnc[0]), 'nn_median_m': R3(nnc[len(nnc) // 2]),
+                      'kinds': {k: sum(1 for q in pk if q['kind'] == k) for k in sorted(set(q['kind'] for q in pk))}, **coverage(allp, cells)})
+    for c in curve:
+        c['objective_vs_no_rule_pct'] = R3(100.0 * (c['objective'] / curve[0]['objective'] - 1.0))
     old_pars = [f for f in SPR['fixtures'] if f['type'] == 'up-pl5403' and not f['part'].startswith('cut')]
     old_by.update({f['id']: f for f in old_pars})
     pool = [f for f in old_pars if f['id'] not in RESERVED_IDS and f['id'] != 'rig-par-planes-25']
@@ -990,14 +1215,11 @@ def build(repo, out):
         for g in GONE_PARTS:
             p.pop(g, None)
         col = EMBER if lk['id'] == 'dark' else ASH
-        key_lv[lk['id']] = R3(min(1.0, math.sqrt(KEY_TARGET_LX / max(e_full * SP.lum_factor(col), 1e-9)))) if e_full > 0 else 0.0
-        if lk['id'] == 'dark':
-            p.update({'plane 1 (behind the DJ)': [EMBER, 0.8], 'plane 2 (the wings)': [EMBER, 0.8], 'plane 3 (behind the stage)': [EMBER, 0.35],
-                      'plane 4 (the entry side)': [EMBER, 0.35], 'columns': [EMBER, 0.5], KEY_PART: [EMBER, key_lv['dark']]})
-        if lk['id'] == 'peak':
-            p.update({'plane 1 (behind the DJ)': [EMBER, 1.0], 'plane 2 (the wings)': [ASH, SP.PLANE2_PEAK], 'plane 3 (behind the stage)': [EMBER, 0.7],
-                      'plane 4 (the entry side)': [ASH, SP.PLANE2_PEAK], 'columns': [EMBER, 0.8], 'roof': [ASH, 0.6], 'embers': [EMBER, 0.6],
-                      KEY_PART: [ASH, key_lv['peak']]})
+        # LINEAR (#868): E on his face = E at full x level, so the level for KEY_TARGET_LX is the plain ratio (no square root)
+        key_lv[lk['id']] = R3(min(1.0, KEY_TARGET_LX / max(e_full * SP.lum_factor(col), 1e-9))) if e_full > 0 else 0.0
+        if lk['id'] in LOOK_LEVELS:
+            p.update(copy.deepcopy(LOOK_LEVELS[lk['id']]))
+            p[KEY_PART] = [col, key_lv[lk['id']]]
         lk['parts'] = {k: v for k, v in p.items() if k in present or k == 'laser'}
     for c in T['cues']:
         c['name'] = c['name'].replace('B tuned + stage + lasers', 'v2 ground')
@@ -1014,7 +1236,9 @@ def build(repo, out):
         f['circuit'] = cid[f['id']]
     laser_c = next(c for c in SPR['power']['circuits'] if c['circuit'] == 'C-LASER')
     T['power'] = {'circuits': circ + [laser_c], 'phases_w': ph, 'method': 'moxir_v2_ground.circuits: nearest v1.1 distro, one kind and side per circuit, <= 2 944 W and <= 5 % volt drop (BS 7671 4D2B)'}
-    T['patch'] = {'lines': lines, 'method': 'moxir_v2_ground.patch: nearest v1.1 node and port, <= 32 devices and <= 512 channels per line (ANSI E1.11)'}
+    T['patch'] = {'branches': [{'branch': l['line'], 'universe': l['universe'], 'devices': l['devices'], 'channels': l['channels'], 'ok': l['ok']} for l in lines],
+                  'slots': {str(l['universe']): l['channels'] for l in lines}, 'lines': lines,
+                  'method': 'moxir_v2_ground.patch: nearest v1.1 node and port, one universe per line, <= 32 devices (EIA-485 unit loads, no splitter) and <= 512 channels (ANSI E1.11)'}
     lay_by = {f['id']: f for f in layer}
     for f in T['fixtures']:
         if f['id'] in lay_by:
@@ -1032,17 +1256,32 @@ def build(repo, out):
     clear = sorted(({'id': f['id'], 'margin_m': R3(SP.tube_clearance(tubes, f['p'], SP.BODY_R[f['type']])[0])} for f in nontruss), key=lambda c: c['margin_m'])
     glare = {lk: SP.dj_glare(T, lk) for lk in ('dark', 'peak')}
     glare_full = SP.dj_glare(dict(T, looks=[{'id': 'full', 'parts': {p: [ASH, 1.0] for p in present}}]), 'full')
-    stage = {lk: {'room_30478cd': SP.stage_light(W_sp, T, lk), 'spec_11000cd': SP.stage_light(W_sp, T, lk, SP.PAR_CD_SPEC)} for lk in ('dark', 'peak')}
+    stage = {lk: {'room_30478cd': SP.stage_light(W_sp, T, lk, SP.PAR_CD_ROOM, ROOM_LEVEL_EXP), 'spec_11000cd': SP.stage_light(W_sp, T, lk, SP.PAR_CD_SPEC, ROOM_LEVEL_EXP)}
+             for lk in ('dark', 'peak')}
     pens = []
     for iid, I in isl.items():
         hs = [f for f in T['fixtures'] if f.get('island') == iid]
         (x0, x1), (z0, z1) = I['rect']['x_m'], I['rect']['z_m']
         pens.append({'island': iid, 'kind': I['kind'], 'rect': I['rect'], 'size_m': [R3(x1 - x0), R3(z1 - z0)], 'area_m2': R3((x1 - x0) * (z1 - z0)),
-                     'barrier_m': 0.0 if I['kind'] == 'stage pen' else R3(2 * ((x1 - x0) + (z1 - z0))),
-                     'barrier': 'the stage pen\'s own barrier (crew only; owed since the spread)' if I['kind'] == 'stage pen' else 'crowd barrier (1.1 m) round the island, tied to its columns where it has them',
+                     'barrier_m': 0.0 if I['kind'] == 'stage pen' else R3(2 * ((x1 - x0) + (z1 - z0)) - I.get('shared_side_m', 0.0)),
+                     'barrier': ('the stage pen\'s own barrier (crew only; owed since the spread)' if I['kind'] == 'stage pen' else
+                                 'crowd barrier (1.1 m) on three sides; the fourth is the stage pen\'s own barrier' if I['kind'] == 'stage edge' else
+                                 'crowd barrier (1.1 m) round the island, tied to its two columns' if I['kind'] == 'column line' else 'crowd barrier (1.1 m) round the island'),
                      'heads': [f['id'] for f in hs], 'pen_m_max': max(f['pen_m'] for f in hs), 'pen_hand_m_max': max(f['pen_hand_m'] for f in hs),
                      'pars_inside': [f['id'] for f in gp if f.get('inside') == iid], 'why': I['why']})
     zb, za = SP.zone_counts(SPR, Z), SP.zone_counts(T, Z)
+    # the entry lasers (#873): no unit, stand or pen in the tower's pen; no beam into an aperture; no beam pool on a far-wall block
+    ko2 = {'x_m': ENTRY_LASERS['ko2']['x_m'], 'z_m': ENTRY_LASERS['ko2']['z_m']}
+    entry = {'source': ENTRY_LASERS['source'],
+             'units_in_tower_pen': [f['id'] for f in T['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f', 'up-yz31p') and inside_rect(f['p'][0], f['p'][2], ko2)],
+             'pens_overlapping_tower_pen': [p_['island'] for p_ in pens if rects_overlap(p_['rect'], ko2)],
+             'beam_aperture_gap_min_m': min(b['entry_aperture_gap_m'] for b in brows), 'beam_cubes_box_gap_min_m': min(b['cubes_box_gap_m'] for b in brows),
+             'beam_far_wall_block_gap_min_m': min(b['far_wall_block_gap_m'] for b in brows), 'beams_into_laser_keep_out': [b['id'] for b in brows if b['into_laser_keep_out']],
+             'rules': {'aperture_pad_m': APERTURE_PAD_M, 'block_free_m': BLOCK_FREE_M, 'why': 'ASSUMED margins: no B380F ray within 1 m of a laser unit, no B380F end within 3 m of a block'},
+             'par_pools_on_the_far_wall': 'none can reach it: every PAR stands at z >= -31 and its throw is 30 m (the far wall is z -53.8)'}
+    cov_new = coverage(gp, cells)
+    cov_old = coverage([f for f in SPR['fixtures'] if f['type'] == 'up-pl5403' and not f['part'].startswith('cut')], cells)
+    onn = sorted(min(math.hypot(a['p'][0] - b['p'][0], a['p'][2] - b['p'][2]) for b in old_pars if b is not a) for a in old_pars)
     S.wait_cool()
     eyes_b = eye_totals(W, F, SPR['fixtures'])
     eyes_a = eye_totals(W, F, T['fixtures'])
@@ -1056,13 +1295,21 @@ def build(repo, out):
         'units_above_3m_not_truss': [f['id'] for f in T['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f', 'up-yz31p') and not f['part'].startswith('cut') and f['p'][1] > 3.0],
         'in_the_crane_park_above_2_5m': in_park,
         'par_spacing': {'rule_m': PAR_MIN_SPACING_M, 'min_m': R3(nn[0]), 'median_m': R3(nn[len(nn) // 2]), 'pairs_closer': pairs_closer(gp, PAR_MIN_SPACING_M),
-                        'without_the_rule': without_rule},
+                        'without_the_rule': without_rule, 'curve': curve, 'spread_min_m': R3(onn[0]), 'spread_median_m': R3(onn[len(onn) // 2])},
+        'par_coverage': {'ground': cov_new, 'spread': cov_old, 'cells': len(cells), 'cover_r_m': PAR_COVER_R_M, 'plain_greedy_6m': plain_cmp,
+                         'what': 'plan distance from every 1 m cell of the hot zone + wings (not the bar or chill zone) to the nearest non-truss PAR'},
+        'entry_lasers': entry,
         'pens': {'count': len(pens), 'fenced_islands': sum(1 for p in pens if p['kind'] != 'stage pen'), 'radius_m_max': max(p['pen_m_max'] for p in pens),
                  'radius_hand_m_max': max(p['pen_hand_m_max'] for p in pens), 'barrier_m': R3(sum(p['barrier_m'] for p in pens)), 'islands': pens},
         'guards': {'count': len(guards), 'pars': guards},
         'beams': len(brows), 'beams_ok': sum(b['ok'] for b in brows), 'beams_ending_in_bar_or_chill': [b['id'] for b in brows if b['ends_in_bar_or_chill']],
         'beams_into_crane_or_park': [b['id'] for b in brows if b['into_crane_or_park']], 'beam_glare_min_deg': min(b['glare_min_deg_any'] for b in brows),
         'dj_glare_ok': {k: v['ok'] for k, v in glare.items()}, 'dj_glare_all_at_full_ok': glare_full['ok'],
+        'dj_key': {'deg_from_eye_line': next((r['deg_from_eye_line'] for r in glare_full['lenses_seen'] if r['part'] == KEY_PART), None),
+                   'lx_at_eye_full_room': next((r['lx_at_eye_room'] for r in glare_full['lenses_seen'] if r['part'] == KEY_PART), None),
+                   'levels': key_lv, 'face_lx_full_room': R3(e_full), 'combine_with': 'the truss DJ light (another workflow)'},
+        'level_law': 'linear: a fader at L draws L (the #868 fix, cherry-picked 5716104d); stage light computed with exponent %d' % ROOM_LEVEL_EXP,
+        'level_tuning': LEVEL_TUNING,
         'dj_face_lx_room': {lk: stage[lk]['room_30478cd']['DJ face']['lx'] for lk in stage},
         'laser_body_min_margin_m': clear[0]['margin_m'], 'laser_tubes_entered': [c['id'] for c in clear if c['margin_m'] < 0],
         'circuits': len(circ) + 1, 'circuits_ok': all(c['ok'] for c in circ), 'phases_w': ph, 'dmx_lines_ok': all(l['ok'] for l in lines),
@@ -1074,7 +1321,14 @@ def build(repo, out):
     reserved = {'pars': TRUSS_RESERVED, 'hung_on_the_cut_now': sum(f['part'].startswith('cut') for f in T['fixtures']), 'held_back': len(RESERVED_IDS),
                 'held_back_ids': RESERVED_IDS, 'owner': 'the truss workflow (the cut and the near crane, "half behind the DJ"): it decides 10 or 12',
                 'why_these_ids': 'the spread\'s two speaker-face PARs (5.1 / 5.55 m on a column bracket): their job, the stage front, belongs with the truss now'}
-    rules = {'ground_max_y_m': GROUND_MAX_Y, 'par_min_spacing_m': PAR_MIN_SPACING_M, 'par_spacing_why': 'one PAR per column foot (columns 6 m apart, 5.5 m at the joint pair); a 15 deg pool on the space frame at 10.8 m is 2.85 m across, so 5 m keeps a dark gap >= 2.1 m',
+    c6 = next(c for c in curve if c['spacing_m'] == PAR_MIN_SPACING_M)
+    c7 = next((c for c in curve if c['spacing_m'] == PAR_MIN_SPACING_M + 1.0), None)
+    rules = {'ground_max_y_m': GROUND_MAX_Y, 'par_min_spacing_m': PAR_MIN_SPACING_M,
+             'par_spacing_why': ('the structure: the column pitch along a row is 6 m, so at most one PAR per column foot (the joint pair z +-0.5 is one foot), and a 15 deg '
+                                 'pool on the space frame at 10.8 m is 2.85 m across, so pools keep a dark gap >= 3.1 m (steel lit in pieces). The scores: the greedy '
+                                 'loses %.1f %% of its objective at %.0f m against no rule%s (par_spacing.curve).') % (
+                                 -c6['objective_vs_no_rule_pct'], PAR_MIN_SPACING_M,
+                                 ', %.1f %% at %.0f m' % (-c7['objective_vs_no_rule_pct'], c7['spacing_m']) if c7 else ''),
              'crane_park': CRANE_PARK, 'pen_clear_over_m': CLEAR_OVER_M, 'hand_m': HAND_M, 'barrier_reach_m': BARRIER_REACH_M, 'glare_deg': GLARE_DEG,
              'dj_rule_deg': DJ_RULE_DEG, 'min_throw_m': MIN_THROW_M, 'islands': '%d heads in the stage pen + %d fenced islands x %d heads, >= %.0f m apart' % (STAGE_PEN_HEADS, ISLANDS, HEADS_PER_ISLAND, ISLAND_MIN_GAP_M),
              'eyes': EYES, 'depth_bins': DEPTH_NAMES, 'objective': 'sum over eyes and depth bins of sqrt(light): PAR lx from lit surfaces (Lambertian, one bounce), beam G (single scattering, haze t40)'}
@@ -1082,19 +1336,24 @@ def build(repo, out):
               'beam_checks': brows, 'island_rounds': ranking, 'dj_glare': glare, 'dj_glare_all_at_full': glare_full, 'stage_light': stage,
               'key_levels': key_lv, 'key_full_room_lx': R3(e_full), 'laser_clearance_tightest': clear[:5], 'pens': pens}
     T.update({'snapshot': 'moxir-v2-ground-%s' % DATE, 'version': 'MOXIR v2 ground · every wash and beam on the floor', 'title': 'MOXIR v2 ground · the whole painted area, from the floor',
-              'what': 'The spread, with every wash and beam that is not on the truss brought down to the floor (owner 10-09 21:05): one PAR per column foot and the roof steel lit in pieces from floor plates, 5 m apart at least, over the hot zone and both wings; the beams in four pens (the stage pen and three fenced islands), placed from nine audience eyes; the truss, its lamps and the cubes as the spread had them (other workflows).',
+              'what': ('The spread, with every wash and beam that is not on the truss brought down to the floor (owner 10-09 21:05): %d PARs on the floor, '
+                       'no two closer than %.0f m (one per column foot at most), lighting the column feet, the column heads, the runway girders and the roof '
+                       'steel in pieces over the hot zone and both wings; the 18 beams in %d pens (%s), placed from nine audience eyes; the truss, its lamps '
+                       'and the cubes as the spread had them (other workflows).') % (len(gp), PAR_MIN_SPACING_M, len(pens), '; '.join(p_['island'] for p_ in pens)),
               'written_by': 'scripts/place/moxir_v2_ground.py build (from %s; the layer %s)' % (RIG_SP, LAYER), 'date': DATE, 'from_rig': RIG_SP, 'ground_layer': LAYER,
-              'reserved_for_truss': reserved, 'ground_rules': rules, 'checks': checks, 'review': review})
+              'reserved_for_truss': reserved, 'ground_rules': rules, 'checks': checks, 'review': review, 'owed': OWED})
     T['not_hung'] = [dict(r, hung=checks['kit']['UP-PL5403']['hung'], not_hung=0, reserved_for_truss=len(RESERVED_IDS)) if r['code'] == 'UP-PL5403' else r for r in T['not_hung']]
     T['requires'] = dict(T['requires'], ground=('%d fenced islands for the beams (%.0f m of crowd barrier) + the stage pen\'s barrier; %d guard cages for the floor PARs in the public area; '
                                                 'cable ramps where a floor run crosses a walkway; the venue\'s OK for floor plates; the rigger\'s check of nothing (no unit hangs)' % (
                                                     checks['pens']['fenced_islands'], checks['pens']['barrier_m'], len(guards))))
     T['requires'].pop('stage_front', None)
-    L_ = {'what': 'MOXIR v2 GROUND LAYER: ONLY the lamps on the floor (38 UP-PL5403 + 18 UP-B380F); ids kept from %s where a unit just moves' % RIG_SP,
+    L_ = {'what': 'MOXIR v2 GROUND LAYER: ONLY the lamps on the floor (%d UP-PL5403 + %d UP-B380F); ids kept from %s where a unit just moves' % (
+              len(gpars), len(beams), RIG_SP),
           'date': DATE, 'owner': OWNER_WORDS, 'ledger': 'N465', 'written_by': 'scripts/place/moxir_v2_ground.py build', 'from_rig': RIG_SP, 'full_rig': RIG_GR,
           'frame': SPR['frame'], 'rules': rules, 'islands': pens, 'reserved_for_truss': reserved, 'fixtures': layer,
-          'checks': {k: checks[k] for k in ('units_on_ground', 'units_above_ground', 'units_above_3m_not_truss', 'in_the_crane_park_above_2_5m', 'par_spacing', 'pens', 'guards',
-                                             'beams', 'beams_ok', 'beams_ending_in_bar_or_chill', 'beams_into_crane_or_park', 'beam_glare_min_deg', 'dj_glare_ok', 'dj_glare_all_at_full_ok')}}
+          'checks': {k: checks[k] for k in ('units_on_ground', 'units_above_ground', 'units_above_3m_not_truss', 'in_the_crane_park_above_2_5m', 'par_spacing', 'par_coverage',
+                                             'pens', 'guards', 'beams', 'beams_ok', 'beams_ending_in_bar_or_chill', 'beams_into_crane_or_park', 'beam_glare_min_deg',
+                                             'entry_lasers', 'dj_glare_ok', 'dj_glare_all_at_full_ok', 'dj_key', 'level_law', 'floor_glare_peak_measured')}}
     json.dump(L_, open(os.path.join(repo, LAYER), 'w'), indent=1, default=JD)
     json.dump(T, open(os.path.join(repo, RIG_GR), 'w'), indent=1, default=JD)
     os.makedirs(out, exist_ok=True)
@@ -1143,6 +1402,14 @@ def plan_picture(rig, pens, path, title):
     ax.add_patch(Rectangle((-11.35, -13.45), 22.7, 2.9, fc='#d8b400', alpha=0.15, zorder=2))
     ax.text(-11.2, -15.0, 'free crane z -12 (lasers)', color='#c8a800', fontsize=7)
     ax.add_patch(Rectangle((-6.7, 3.65), 3.0, 2.0, fc='#2fbf5a', alpha=0.6, zorder=3))
+    k2 = ENTRY_LASERS['ko2']
+    ax.add_patch(Rectangle((k2['x_m'][0], k2['z_m'][0]), k2['x_m'][1] - k2['x_m'][0], k2['z_m'][1] - k2['z_m'][0], fill=False, ec='#e070ff', lw=1.0, zorder=3))
+    for a_ in ENTRY_LASERS['apertures']:
+        ax.plot(a_[0], a_[2], 'D', color='#e070ff', ms=3, zorder=7)
+    ax.text(k2['x_m'][0] - 0.6, (k2['z_m'][0] + k2['z_m'][1]) / 2, 'entry-laser tower + pen (#873)', color='#e070ff', fontsize=7, ha='right', va='center')
+    for b_ in ENTRY_LASERS['far_wall_blocks'][:1]:
+        ax.add_patch(plt.Circle((b_[0], b_[2]), BLOCK_FREE_M, fill=False, ec='#e070ff', lw=0.8, ls='--', zorder=3))
+        ax.text(b_[0] + 3.6, b_[2] + 1.5, 'far-wall laser blocks: no beam ends within %.0f m' % BLOCK_FREE_M, color='#e070ff', fontsize=7)
     if pens:
         for p in pens:
             R = p['rect']
@@ -1165,7 +1432,7 @@ def plan_picture(rig, pens, path, title):
             if not cut and f['p'][1] > 1.5:
                 ax.plot(x, z, 'o', fillstyle='none', color='#ffffff', ms=8, mew=0.8, zorder=6)
             if f.get('guard'):
-                ax.plot(x, z, 'o', fillstyle='none', color='#9aa0a8', ms=7, mew=0.5, zorder=6)
+                ax.plot(x, z, 's', fillstyle='none', color='#8a9098', ms=8, mew=0.6, zorder=6)
         elif f['type'] == 'up-yz31p':
             ax.plot(x, z, '*', color='#cfd8ff', ms=11, zorder=7)
         elif f['type'] == 'ext-lc-ultra-mk2':
@@ -1176,14 +1443,15 @@ def plan_picture(rig, pens, path, title):
     hand = [plt.Line2D([], [], marker='o', ls='', color='#ff3a12', label='PAR, ember (column foot)'), plt.Line2D([], [], marker='o', ls='', color='#e8e4dc', label='PAR, ash (floor plate up into the roof)'),
             plt.Line2D([], [], marker='o', ls='', color='#ffb08a', label='PAR on the cut (truss: not this layer)'), plt.Line2D([], [], marker='s', ls='', color='#cfe6ff', label='B380F + its beam to its first hit'),
             plt.Line2D([], [], marker='o', ls='', fillstyle='none', color='#ffffff', label='white ring: up on the steel (over 1.5 m)'),
-            plt.Line2D([], [], color='#9fd0ff', lw=1.4, label='fenced island (the beams\' pens)'), plt.Line2D([], [], marker='x', ls='', color='#ffd84a', label='an audience eye (1.7 m)')]
-    ax.legend(handles=hand, loc='lower right', fontsize=7, facecolor='#1a1b1e', labelcolor='#e8e4dc')
+            plt.Line2D([], [], marker='s', ls='', fillstyle='none', color='#8a9098', label='guard cage (a floor PAR among people)'),
+            plt.Line2D([], [], color='#9fd0ff', lw=1.4, label='fenced pen (the beams\' low runs)'), plt.Line2D([], [], marker='x', ls='', color='#ffd84a', label='an audience eye (1.7 m)')]
+    ax.legend(handles=hand, loc='lower right', fontsize=7, facecolor='#1a1b1e', labelcolor='#e8e4dc', framealpha=0.92)
     ax.set_xlim(-37, 37)
-    ax.set_ylim(-36, 54)
+    ax.set_ylim(56, -56)                      # as the owner's own plan: the stage end at the top, the entry at the bottom
     ax.set_aspect('equal')
     ax.tick_params(colors='#9aa0a8', labelsize=7)
     ax.set_xlabel('x (m): house left - / + house right', color='#9aa0a8', fontsize=8)
-    ax.set_ylabel('z (m): the stage end - / + the entry', color='#9aa0a8', fontsize=8)
+    ax.set_ylabel('z (m): the stage end (top, -) to the entry (bottom, +)', color='#9aa0a8', fontsize=8)
     ax.set_title(title, color='#e8e4dc', fontsize=10)
     fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches='tight')
     plt.close(fig)
@@ -1201,18 +1469,16 @@ VORDER = ('floor', 'wingL', 'wingR', 'behind', 'entry')
 LOOKS = ('peak', 'dark')
 FRAME_LAYOUTS = {'sl': ('v2 spread (old, PR #864)', 'moxir-v2-stage-lasers', '/moxir/p/moxir-v2-stage-lasers'),
                  'gr': ('v2 ground (new)', 'moxir-v2-ground', '/moxir/p/moxir-v2-ground')}
+# 2026-10-10: 10 frames of the new room in 3 calls (the brief), then the SAME 10 views of the old spread, drawn again now: its
+# frames of 10-09 were drawn while the orbit view squared every level (#868), so they are not comparable with frames drawn with
+# the fix. At most 4 frames per call (the heat rule), each call under `timeout 1200`.
 BATCHES = [['gr-t40-peak-floor', 'gr-t40-dark-floor', 'gr-t40-peak-entry', 'gr-t40-dark-entry'],
            ['gr-t40-peak-wingL', 'gr-t40-dark-wingL', 'gr-t40-peak-wingR', 'gr-t40-dark-wingR'],
-           ['gr-t40-peak-behind', 'gr-t40-dark-behind', 'sl-t40-peak-entry', 'sl-t40-dark-entry']]
-# the old spread's frames already drawn (moxir_v2_spread.py, 2026-10-09): the floor pair at the lasers' own levels (the caps run,
-# setKeys), the wings and behind from the 19:xx run (the lasers then at 100 % in both looks: before the laser-level fix 31d72f04)
-OLD_FRAMES = {'sl-t40-peak-floor': ('caps/cap-peak-040.png', 'lasers at the 40 % cap'), 'sl-t40-dark-floor': ('caps/cap-dark-000.png', 'lasers off, as the dark look'),
-              'sl-t40-peak-wingL': ('frames/sl-t40-peak-wingL.png', 'lasers at 100 % (drawn before the laser-level fix)'),
-              'sl-t40-dark-wingL': ('frames/sl-t40-dark-wingL.png', 'lasers at 100 % (drawn before the laser-level fix)'),
-              'sl-t40-peak-wingR': ('frames/sl-t40-peak-wingR.png', 'lasers at 100 % (drawn before the laser-level fix)'),
-              'sl-t40-dark-wingR': ('frames/sl-t40-dark-wingR.png', 'lasers at 100 % (drawn before the laser-level fix)'),
-              'sl-t40-peak-behind': ('frames/sl-t40-peak-behind.png', 'lasers at 100 % (drawn before the laser-level fix)'),
-              'sl-t40-dark-behind': ('frames/sl-t40-dark-behind.png', 'lasers at 100 % (drawn before the laser-level fix)')}
+           ['gr-t40-peak-behind', 'gr-t40-dark-behind'],
+           ['sl-t40-peak-floor', 'sl-t40-dark-floor', 'sl-t40-peak-entry', 'sl-t40-dark-entry'],
+           ['sl-t40-peak-wingL', 'sl-t40-dark-wingL', 'sl-t40-peak-wingR', 'sl-t40-dark-wingR'],
+           ['sl-t40-peak-behind', 'sl-t40-dark-behind']]
+OLD_FRAMES = {}
 GLARE_BUDGET_PCT = 0.65
 
 
@@ -1228,8 +1494,7 @@ def plan(repo, out):
                 v = VIEWS[view]
                 job = {'name': name, 'layout': key, 'state': 't40', 'look': look, 'view': view, 'project': project, 'path': path,
                        'atmosphere': V.STATES['t40'][2], 'camera': {'position': v['position'], 'target': v['target'], 'fov': v['fov']}}
-                if key == 'sl':
-                    job['setKeys'] = {'laser-': 0.4 if look == 'peak' else 0.0}      # the old room at the lasers' own levels
+                job['recordLamps'] = 0.5                       # the drawn laser intensities (the laser part's level reaches the room)
                 jobs.append(job)
     p = {'base': 'http://moxir-ground.diiii.localhost', 'query': V.QUERY, 'size': [1440, 900], 'settle_s': 15, 'jobs': jobs, 'batches': BATCHES}
     os.makedirs(out, exist_ok=True)
@@ -1238,83 +1503,105 @@ def plan(repo, out):
 
 
 def measured(repo, out, luma_path):
-    """Write the measured white-out of the new floor peak frame into both rig files' checks (the test reads it)."""
+    """Write the measured white-out into both rig files' checks (the test reads it): the floor's peak frame against the budget,
+    every other audience view held to the same budget, and the old spread's frames drawn the same way, for the record."""
     luma = json.load(open(luma_path or os.path.join(out, 'frame-luma.json')))
     fr = luma.get('gr-t40-peak-floor')
     if not fr:
-        raise SystemExit('no gr-t40-peak-floor in %s' % luma_path)
+        raise SystemExit('no gr-t40-peak-floor in %s' % (luma_path or 'frame-luma.json'))
+    views = {k: v for k, v in sorted(luma.items()) if k.startswith('gr-')}
+    over = sorted(k for k, v in views.items() if v['white_pct'] > GLARE_BUDGET_PCT)
+    frames = json.load(open(os.path.join(out, 'frames', 'frames.json')))
+    gf = frames.get('gr-t40-peak-floor', {})
+    lam = [round(l['intensity_scene'], 1) for l in gf.get('lamps') or []]
     rec = {'frame': 'gr-t40-peak-floor', 'white_pct': fr['white_pct'], 'mean_Y': fr['mean_Y'], 'budget_pct': GLARE_BUDGET_PCT, 'ok': fr['white_pct'] <= GLARE_BUDGET_PCT,
-           'laser_fader': 0.4, 'method': 'moxir-v2-true-frames.cjs, measurement mode EV100 2.84, Full quality, haze t40 (one machine, closed hall), the floor eye 1.7 m z 18.1; frame_luma.py: the share of pixels with every channel >= 240',
-           'all_frames': {k: v for k, v in sorted(luma.items()) if k.startswith('gr-')}}
+           'laser_fader': 0.4, 'laser_lines_drawn_scene_intensity': sorted(set(lam)),
+           'every_view_ok': not over, 'views_over_budget': over, 'all_frames': views,
+           'spread_drawn_now': {k: v for k, v in sorted(luma.items()) if k.startswith('sl-')},
+           'drawn_by': {'commit': gf.get('commit'), 'gpu': (gf.get('gpu') or '')[:80], 'ev100': gf.get('ev100'), 'at': gf.get('at')},
+           'method': 'moxir-v2-true-frames.cjs, measurement mode EV100 2.84, Full quality, haze t40 (one machine, closed hall), the floor eye 1.7 m z 18.1; frame_luma.py: the share of pixels with every channel >= 240 (the toolbars cut off)'}
     for f in (RIG_GR, LAYER):
         T = json.load(open(os.path.join(repo, f)))
         T['checks']['floor_glare_peak_measured'] = rec
         json.dump(T, open(os.path.join(repo, f), 'w'), indent=1, default=JD)
-    print(json.dumps(rec, indent=1))
+    T = json.load(open(os.path.join(repo, RIG_GR)))
+    json.dump({'checks': T['checks'], 'review': T['review']}, open(os.path.join(out, 'checks.json'), 'w'), indent=1, default=JD)
+    print(json.dumps({k: v for k, v in rec.items() if k not in ('all_frames', 'spread_drawn_now')}, indent=1))
 
 
 def page(repo, out):
+    """The comparison page: the old spread and the new ground layout, the numbers first, then every frame pair with its own
+    numbers above it (mean luminance and white-out, frame_luma.py), the spacing evidence, the pens, the zones and what is owed."""
     import html
-    import shutil
     E = html.escape
     T = json.load(open(os.path.join(repo, RIG_GR)))
     SPR = json.load(open(os.path.join(repo, RIG_SP)))
     ck, rv = T['checks'], T['review']
-    luma = json.load(open(os.path.join(out, 'frame-luma.json'))) if os.path.exists(os.path.join(out, 'frame-luma.json')) else {}
-    old_dir = os.path.expanduser('~/Downloads/moxir/v2-spread')
-    os.makedirs(os.path.join(out, 'frames-old'), exist_ok=True)
-    for name, (src, _) in OLD_FRAMES.items():
-        s = os.path.join(old_dir, src)
-        if os.path.exists(s) and not os.path.exists(os.path.join(out, 'frames-old', name + '.png')):
-            shutil.copy2(s, os.path.join(out, 'frames-old', name + '.png'))
-    luma_old = json.load(open(os.path.join(out, 'frames-old', 'frame-luma.json'))) if os.path.exists(os.path.join(out, 'frames-old', 'frame-luma.json')) else {}
+    lp = os.path.join(out, 'frame-luma.json')
+    luma = json.load(open(lp)) if os.path.exists(lp) else {}
     cap = json.load(open(os.path.join(out, 'captions.json'))) if os.path.exists(os.path.join(out, 'captions.json')) else {}
+    fmt_l = lambda L: ('mean luminance %.4f · white-out %.2f %%' % (L['mean_Y'], L['white_pct'])) if L else 'not drawn'
 
     def fig(name):
         k, _, lk, v = name.split('-')
-        if k == 'sl':
-            src = 'frames-old/%s.png' % name if os.path.exists(os.path.join(out, 'frames-old', name + '.png')) else 'frames/%s.png' % name
-            L = luma_old.get(name) or luma.get(name, {})
-            note = OLD_FRAMES.get(name, ('', 'lasers at the look\'s own level (setKeys), drawn now'))[1]
-        else:
-            src, L, note = 'frames/%s.png' % name, luma.get(name, {}), 'lasers at the look\'s own level'
+        src = 'frames/%s.png' % name
         if not os.path.exists(os.path.join(out, src)):
-            return '<figure class="missing"><figcaption><b>%s</b><span>not drawn</span></figcaption></figure>' % E(name)
-        return ('<figure><a href="%s"><img src="%s" alt="%s" loading="lazy"></a><figcaption><b>%s · %s look · %s</b><span>%s</span>'
-                '<small>mean luminance %s · white-out %s %% · %s</small></figcaption></figure>') % (
-            src, src, E(cap.get(name, name)), E(FRAME_LAYOUTS[k][0]), lk, E(VIEWS[v]['label']), E(cap.get(name, '')), L.get('mean_Y', '–'), L.get('white_pct', '–'), E(note))
-    pairs = ''.join('<h3>%s · %s look</h3><div class="pair">%s%s</div>' % (E(VIEWS[v]['label']), lk, fig('sl-t40-%s-%s' % (lk, v)), fig('gr-t40-%s-%s' % (lk, v)))
-                    for v in VORDER for lk in LOOKS)
+            return '<figure class="missing"><figcaption><b>%s · %s look</b><span>not drawn</span></figcaption></figure>' % (E(FRAME_LAYOUTS[k][0]), lk)
+        return ('<figure><a href="%s"><img src="%s" alt="%s, %s look, %s" loading="lazy"></a><figcaption><b>%s · %s look</b>%s</figcaption></figure>') % (
+            src, src, E(FRAME_LAYOUTS[k][0]), lk, E(VIEWS[v]['label']), E(FRAME_LAYOUTS[k][0]), lk,
+            ('<span>%s</span>' % E(cap[name])) if cap.get(name) else '')
+
+    def pair(v, lk):
+        a, b = 'sl-t40-%s-%s' % (lk, v), 'gr-t40-%s-%s' % (lk, v)
+        return ('<h3>%s · %s look</h3><p class="nums"><span>old: %s</span><span>new: %s</span></p><div class="pair">%s%s</div>' % (
+            E(VIEWS[v]['label']), lk, fmt_l(luma.get(a)), fmt_l(luma.get(b)), fig(a), fig(b)))
+    pairs = ''.join(pair(v, lk) for v in VORDER for lk in LOOKS)
     zb, za = rv['zones_before'], rv['zones_after']
     zk = [k for k in za if isinstance(za[k], dict)] + [k for k in zb if isinstance(zb[k], dict) and k not in za]
-    fmt = lambda d: ', '.join('%d %s' % (v, t) for t, v in d.items()) if d else '0'
-    zones = ''.join('<tr><td>%s</td><td>%s</td><td>%s</td></tr>' % (E(k), fmt(zb.get(k, {})), fmt(za.get(k, {}))) for k in zk)
-    old_pars = [f for f in SPR['fixtures'] if f['type'] == 'up-pl5403' and not f['part'].startswith('cut')]
-    onn = sorted(min(math.hypot(a['p'][0] - b['p'][0], a['p'][2] - b['p'][2]) for b in old_pars if b is not a) for a in old_pars)
-    old_ground = [f for f in SPR['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f') and not f['part'].startswith('cut') and f['p'][1] <= GROUND_MAX_Y]
-    old_n = sum(1 for f in SPR['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f') and not f['part'].startswith('cut'))
+    fz = lambda d: ', '.join('%d %s' % (v, t) for t, v in d.items()) if d else '0'
+    zones = ''.join('<tr><td>%s</td><td>%s</td><td>%s</td></tr>' % (E(k), fz(zb.get(k, {})), fz(za.get(k, {}))) for k in zk)
+    old_n = [f for f in SPR['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f') and not f['part'].startswith('cut')]
+    old_ground = [f for f in old_n if f['p'][1] <= GROUND_MAX_Y]
     gm = ck.get('floor_glare_peak_measured') or {}
-    old_floor_white = (luma_old.get('sl-t40-peak-floor') or {}).get('white_pct', 0.57)
-    sp_ = ck['par_spacing']
-    pens = ck['pens']
-    eb, ea = rv['eyes_before'], rv['eyes_after']
-    eyes = ''.join('<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%d → %d</td><td>%.4f</td><td>%.4f</td><td>%d → %d</td></tr>' % (
-        E(e), eb['par_lux_at_eye'][e], ea['par_lux_at_eye'][e], eb['par_layers'][e], ea['par_layers'][e], eb['beam_G'][e], ea['beam_G'][e], eb['beam_layers'][e], ea['beam_layers'][e]) for e in EYES)
-    isl = ''.join('<tr><td>%s</td><td>%s × %s m</td><td>%d</td><td>%.1f m (%.1f m)</td><td>%s</td><td>%s</td></tr>' % (
-        E(p['island']), p['size_m'][0], p['size_m'][1], len(p['heads']), p['pen_m_max'], p['pen_hand_m_max'], ('%.0f m' % p['barrier_m']) if p['barrier_m'] else 'its own (crew only)',
-        len(p['pars_inside'])) for p in pens['islands'])
+    old_w = (luma.get('sl-t40-peak-floor') or {}).get('white_pct')
+    sp_, cv, pens, el = ck['par_spacing'], ck['par_coverage'], ck['pens'], ck['entry_lasers']
     nums = [
-        ('on the floor', '%d of %d' % (ck['units_on_ground'], ck['ground_units']), '%d of %d' % (len(old_ground), old_n), 'every wash and beam not on the truss, body at most 1.0 m up'),
-        ('above the floor (over 1.0 m)', '%d' % len(ck['units_above_ground']), '%d' % (old_n - len(old_ground)), 'column brackets, a stand, machine tops: none now'),
-        ('PAR spacing, nearest', 'min %.1f m · median %.1f m' % (sp_['min_m'], sp_['median_m']), 'min %.1f m · median %.1f m' % (onn[0], onn[len(onn) // 2]), 'rule: no two ground PARs closer than %.1f m' % sp_['rule_m']),
-        ('beam pens', '%d (stage pen + %d islands)' % (pens['count'], pens['fenced_islands']), 'none (heads at 3.0 m on brackets)', 'pen radius up to %.1f m (under 3.0 m) · %.0f m of barrier' % (pens['radius_m_max'], pens['barrier_m'])),
-        ('floor glare at the peak', ('%.2f %%' % gm['white_pct']) if gm else 'not measured yet', '%.2f %%' % old_floor_white, 'white-out from the floor centre, budget %.2f %%, lasers at their 40 %% cap' % GLARE_BUDGET_PCT),
-        ('beams that pass every rule', '%d of %d' % (ck['beams_ok'], ck['beams']), '18 of 18 (its own rules)', 'none ends in the bar or the chill zone, none crosses the crane park, nobody looks down one within 30°'),
-        ('guard cages', '%d' % ck['guards']['count'], '%d lamps within reach' % len(SPR['checks'].get('units_within_reach_outside_the_stage_pen', [])), 'floor PARs in the public area (the rest stand inside a fenced pen or a machine)'),
+        ('on the floor (body at most 1.0 m up)', '%d of %d' % (ck['units_on_ground'], ck['ground_units']), '%d of %d' % (len(old_ground), len(old_n)), 'every wash and beam that is not on the truss'),
+        ('above the floor', '%d' % len(ck['units_above_ground']), '%d' % (len(old_n) - len(old_ground)), 'column brackets, stands, machine tops'),
+        ('PAR spacing, nearest neighbour', 'min %.1f m · median %.1f m' % (sp_['min_m'], sp_['median_m']), 'min %.1f m · median %.1f m' % (sp_['spread_min_m'], sp_['spread_median_m']),
+         'rule: no two ground PARs closer than %.1f m' % sp_['rule_m']),
+        ('how far the painted area is from a PAR', 'median %.1f m · 90 %% within %.1f m · largest gap %.1f m' % (cv['ground']['gap_median_m'], cv['ground']['gap_p90_m'], cv['ground']['gap_max_m']),
+         'median %.1f m · 90 %% within %.1f m · largest gap %.1f m' % (cv['spread']['gap_median_m'], cv['spread']['gap_p90_m'], cv['spread']['gap_max_m']),
+         'over %d one-metre cells of the hot zone and wings (not the bar or chill)' % cv['cells']),
+        ('beam pens', '%d (%d fenced, %.0f m of barrier)' % (pens['count'], pens['fenced_islands'], pens['barrier_m']), 'none (heads up at 3.7 m)',
+         'longest low run %.1f m under 3.0 m (%.1f m under 2.8 m)' % (pens['radius_m_max'], pens['radius_hand_m_max'])),
+        ('floor glare at the peak (white-out)', ('%.2f %%' % gm['white_pct']) if gm else 'not measured', ('%.2f %%' % old_w) if old_w is not None else 'not drawn',
+         'from the floor centre, budget %.2f %%, lasers at their 40 %% cap, both drawn now with the fixed level law' % GLARE_BUDGET_PCT),
+        ('beams that pass every rule', '%d of %d' % (ck['beams_ok'], ck['beams']), '18 of 18 (its own rules)', 'none ends in the bar or chill zone, none into the crane park or a laser, nobody looks down one within 30°'),
+        ('guard cages on floor PARs', '%d' % ck['guards']['count'], '–', 'floor PARs among people; the rest stand inside a pen or a machine'),
+        ('entry lasers (#873)', 'nearest beam %.1f m from an aperture · nearest beam end %.1f m from a far-wall block' % (el['beam_aperture_gap_min_m'], el['beam_far_wall_block_gap_min_m']),
+         '–', 'nothing in the tower\'s pen; rules 1 m / 3 m (ASSUMED margins)'),
+        ('DJ key from the pit floor (option)', '%.0f lx on his face at the peak · %.0f° off his eye line' % (ck['dj_face_lx_room'].get('peak', 0), ck['dj_key']['deg_from_eye_line'] or 0),
+         'keys on a column bracket and a stand', 'combine with the truss DJ light; computed at the scene\'s PAR candela'),
     ]
     numrows = ''.join('<tr><td>%s</td><td><b>%s</b></td><td>%s</td><td class="dim">%s</td></tr>' % (E(a), E(b), E(c), E(d)) for a, b, c, d in nums)
-    doc = PAGE.format(numrows=numrows, zones=zones, eyes=eyes, isl=isl, pairs=pairs, key_lx=ck['dj_face_lx_room'].get('peak', '–'),
-                      owner=E(OWNER_WORDS), rule=sp_['rule_m'])
+    curve = ''.join('<tr%s><td>%.0f m</td><td>%d</td><td>%+.1f %%</td><td>%.1f / %.1f m</td><td>%.1f m</td><td>%.1f m</td><td>%.0f %%</td></tr>' % (
+        ' class="chosen"' if c['spacing_m'] == sp_['rule_m'] else '', c['spacing_m'], c['placed'] + 1, c['objective_vs_no_rule_pct'], c['nn_min_m'], c['nn_median_m'],
+        c['gap_p90_m'], c['gap_max_m'], c['within_6m_pct']) for c in sp_['curve'])
+    isl = ''.join('<tr><td>%s</td><td>%s × %s m</td><td>%d</td><td>%.1f m (%.1f m)</td><td>%s</td><td>%s</td></tr>' % (
+        E(p['island']), p['size_m'][0], p['size_m'][1], len(p['heads']), p['pen_m_max'], p['pen_hand_m_max'], ('%.0f m' % p['barrier_m']) if p['barrier_m'] else 'its own (crew only)',
+        E(p['barrier'])) for p in pens['islands'])
+    eb, ea = rv['eyes_before'], rv['eyes_after']
+    eyes = ''.join('<tr><td>%s</td><td>%.2f → %.2f</td><td>%d → %d</td><td>%.4f → %.4f</td><td>%d → %d</td></tr>' % (
+        E(e), eb['par_lux_at_eye'][e], ea['par_lux_at_eye'][e], eb['par_layers'][e], ea['par_layers'][e], eb['beam_G'][e], ea['beam_G'][e], eb['beam_layers'][e],
+        ea['beam_layers'][e]) for e in EYES)
+    owed = ''.join('<li>%s</li>' % E(o) for o in T.get('owed', []))
+    by = {c['spacing_m']: c for c in sp_['curve']}
+    c_r, c_n = by.get(sp_['rule_m']), by.get(sp_['rule_m'] + 1.0)
+    curve_note = ('At %.0f m the pick keeps %.0f %% of its score and no column foot holds two lamps; at %.0f m it keeps %.0f %%.' % (
+        sp_['rule_m'], 100 + c_r['objective_vs_no_rule_pct'], c_n['spacing_m'], 100 + c_n['objective_vs_no_rule_pct'])) if c_r and c_n else ''
+    doc = PAGE.format(numrows=numrows, zones=zones, eyes=eyes, isl=isl, pairs=pairs, curve=curve, owed=owed, owner=E(OWNER_WORDS), rule=sp_['rule_m'],
+                      curve_note=E(curve_note))
     open(os.path.join(out, 'index.html'), 'w').write(doc)
     print('page -> %s' % os.path.join(out, 'index.html'))
 
@@ -1323,48 +1610,60 @@ PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MOXIR v2 ground</title>
 <style>
-:root {{ --bg:#0b0c0e; --panel:#141518; --ink:#e8e4dc; --dim:#9aa0a8; --ember:#ff3a12; --line:#2a2c31; }}
+:root {{ --bg:#0b0c0e; --panel:#141518; --ink:#e8e4dc; --dim:#9aa0a8; --ember:#ff3a12; --line:#2a2c31; --hi:#ffb08a; }}
 * {{ box-sizing:border-box; border-radius:0; }}
 body {{ margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, sans-serif; }}
 main {{ max-width:1500px; margin:0 auto; padding:24px 16px 64px; }}
 h1 {{ font-size:26px; margin:0 0 6px; }} h2 {{ font-size:20px; margin:42px 0 8px; border-top:1px solid var(--line); padding-top:18px; }}
-h3 {{ font-size:15px; margin:22px 0 4px; color:#ffb08a; }}
-.lead {{ font-size:17px; max-width:1000px; }} .lead b {{ color:#ffb08a; }} q {{ color:#ffb08a; }}
+h3 {{ font-size:15px; margin:22px 0 2px; color:var(--hi); }}
+.lead {{ font-size:17px; max-width:1000px; }} .lead b {{ color:var(--hi); }} q {{ color:var(--hi); }}
 .note, .dim {{ color:var(--dim); }} .note {{ max-width:1000px; margin:4px 0 10px; }}
-.pair {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0 14px; }}
+.nums {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:2px 0 6px; font-size:13.5px; color:var(--dim); font-variant-numeric:tabular-nums; }}
+.pair {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 14px; }}
 figure {{ margin:0; background:var(--panel); border:1px solid var(--line); }}
 figure img {{ width:100%; display:block; }} figure.missing {{ min-height:120px; }}
 figcaption {{ padding:8px 10px 10px; font-size:13.5px; }} figcaption b {{ display:block; color:var(--dim); font-weight:600; font-size:12px; }}
-figcaption span {{ display:block; margin:3px 0; }} figcaption small {{ color:#6f747b; }}
-table {{ border-collapse:collapse; width:100%; margin:10px 0; font-size:13.5px; }}
+figcaption span {{ display:block; margin:3px 0; }}
+table {{ border-collapse:collapse; width:100%; margin:10px 0; font-size:13.5px; font-variant-numeric:tabular-nums; }}
 td, th {{ border:1px solid var(--line); padding:6px 8px; vertical-align:top; text-align:left; }} th {{ color:var(--dim); font-weight:600; }}
+tr.chosen td {{ background:#1d1410; }}
 .wrap {{ overflow-x:auto; }}
-@media (max-width: 800px) {{ .pair {{ grid-template-columns:1fr; }} }}
+ul {{ max-width:1000px; }}
+@media (max-width: 800px) {{ .pair, .nums {{ grid-template-columns:1fr; }} }}
 </style></head><body><main>
 <h1>MOXIR v2 — every wash and beam on the floor</h1>
-<p class="lead">You said: <q>{owner}</q>. Left: <b>the spread</b> as you saw it (PARs and beams up on column brackets, PARs in pairs).
-Right: <b>the ground layout</b>. Every PAR and beam that is not on the truss now stands on the floor, at least {rule} m from the
-next PAR. They are spread over your hot zone and both wings. The beams stand in four fenced pens: the stage pen, plus three islands
-placed from where people will stand. The truss, its lamps and the lasers stay as they were: another workflow is moving them.</p>
+<p class="lead">You said: <q>{owner}</q>. Left: <b>the spread</b> (PARs and beams up on column brackets, some PARs in pairs).
+Right: <b>the ground layout</b>. Every PAR and beam that is not on the truss now stands on the floor, at least {rule:.0f} m from
+the next PAR, over your hot zone and both wings. The beams stand in a few fenced pens. The truss, its lamps and the lasers stay
+as they were: another workflow is moving them.</p>
 <h2>The numbers</h2>
 <div class="wrap"><table><tr><th></th><th>ground (new)</th><th>spread (old)</th><th>what it means</th></tr>{numrows}</table></div>
 <h2>The plan, from above</h2>
 <div class="pair"><figure><a href="plan-spread.png"><img src="plan-spread.png" alt="the spread from above" loading="lazy"></a><figcaption><b>v2 spread (old)</b><span>White rings mark units up on the steel.</span></figcaption></figure>
-<figure><a href="plan-ground.png"><img src="plan-ground.png" alt="the ground layout from above" loading="lazy"></a><figcaption><b>v2 ground (new)</b><span>Blue boxes are the fenced islands. Each beam is drawn to the first thing it hits. Grey rings mark a guard cage.</span></figcaption></figure></div>
+<figure><a href="plan-ground.png"><img src="plan-ground.png" alt="the ground layout from above" loading="lazy"></a><figcaption><b>v2 ground (new)</b><span>Blue boxes are the fenced pens. Each beam is drawn to the first thing it hits. Grey squares mark a guard cage.</span></figcaption></figure></div>
+<h2>The frames — old left, new right</h2>
+<p class="note">Both projects drawn now, on the real GPU, with the same viewer (the level fix #868 in): measurement mode at EV100 2.84, Full quality,
+haze after 40 minutes of one machine in the closed hall (an estimate until measured on site). Above each pair: the frame's mean
+luminance and its white-out (the share of pixels white in every channel).</p>
+{pairs}
+<h2>Why {rule:.0f} m between PARs</h2>
+<p class="note">The same pick at each spacing: first every place of your painted area gets a lit PAR within one roof height (10.8 m),
+then the rest go where the nine audience eyes see the most lit steel, at four depths. {curve_note}</p>
+<div class="wrap"><table><tr><th>spacing</th><th>PARs placed</th><th>objective vs no rule</th><th>nearest neighbour min / median</th><th>90 % of the area within</th><th>largest gap</th><th>area within 6 m</th></tr>{curve}</table></div>
 <h2>The pens</h2>
-<p class="note">A beam that starts on the floor stays low for its first metres. Inside its pen nobody can reach it. Outside its pen, its lower edge stays at least 3.0 m above every standing level. The pen radius is given at 3.0 m, with the raised-hand value (2.8 m) in brackets.</p>
-<div class="wrap"><table><tr><th>pen</th><th>size</th><th>beam heads</th><th>longest low run</th><th>barrier</th><th>PARs inside</th></tr>{isl}</table></div>
+<p class="note">A beam that starts on the floor stays low for its first metres. Inside its pen nobody can reach it; outside, its lower edge stays at least 3.0 m above every standing level. The low run is given under 3.0 m, with the raised-hand value (2.8 m) in brackets.</p>
+<div class="wrap"><table><tr><th>pen</th><th>size</th><th>beam heads</th><th>longest low run</th><th>barrier</th><th>how</th></tr>{isl}</table></div>
 <h2>Where the lamps are — your zones, old and new</h2>
 <div class="wrap"><table><tr><th>zone</th><th>spread</th><th>ground</th></tr>{zones}</table></div>
 <h2>What each place sees</h2>
-<p class="note">Every lamp at full. PAR: the light its lit steel sends to that eye (lx, one bounce, Lambertian). Beam: its glow in the haze toward that eye (G, a design metric). Layers: how many depth bands (0–12, 12–25, 25–40, over 40 m) give that eye light.</p>
-<div class="wrap"><table><tr><th>eye (1.7 m)</th><th>PAR lx, spread</th><th>PAR lx, ground</th><th>PAR layers</th><th>beam G, spread</th><th>beam G, ground</th><th>beam layers</th></tr>{eyes}</table></div>
-<h2>The frames — old left, new right</h2>
-<p class="note">Measurement mode at EV100 2.84 for every frame, Full quality, haze after 40 min of one machine in the closed hall (UNVALIDATED until measured on site). The DJ key from the floor of the pit is an option, to combine with the truss DJ light; it gives about {key_lx} lx on his face at the peak. Each old frame says which laser level it was drawn at.</p>
-{pairs}
+<p class="note">Every lamp at full. PAR: the light its lit steel sends to that eye (lx, one bounce). Beam: its glow in the haze toward that eye (G, a design metric). Layers: how many depth bands (0–12, 12–25, 25–40, over 40 m) give that eye light.</p>
+<div class="wrap"><table><tr><th>eye (1.7 m)</th><th>PAR lx</th><th>PAR layers</th><th>beam G</th><th>beam layers</th></tr>{eyes}</table></div>
+<h2>Not checked yet, owed</h2>
+<ul>{owed}</ul>
 <p class="note">Every number: <a href="checks.json">checks.json</a>, <a href="candidates.json">candidates.json</a>, <a href="frame-luma.json">frame-luma.json</a>, <a href="frames/frames.json">frames/frames.json</a>.</p>
 </main></body></html>
 """
+
 
 def main():
     ap = argparse.ArgumentParser()

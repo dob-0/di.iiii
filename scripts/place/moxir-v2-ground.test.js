@@ -15,7 +15,7 @@ const layer = () => read('moxir-v2-ground-layer-2026-10-09.json') // read where 
 const OLD = read('moxir-v2-spread-2026-10-09.json')
 const ZONES = read('moxir-v2-zones-2026-10-09.json')
 
-const MIN_PAR_SPACING_M = 5.0 // the stated rule (moxir_v2_ground.py PAR_MIN_SPACING_M): one PAR per column foot, pools in pieces
+const MIN_PAR_SPACING_M = 6.0 // the stated rule (moxir_v2_ground.py PAR_MIN_SPACING_M): the column pitch, one PAR per column foot, pools in pieces
 const MAX_NON_TRUSS_M = 3.0 // the brief: no unit off the truss above 3 m
 const GROUND_M = 1.0 // the brief: on the floor
 const BARRIER_REACH_M = 0.6
@@ -34,7 +34,7 @@ const groundViolations = (rig, minSpacing = MIN_PAR_SPACING_M) => {
     for (let i = 0; i < pars.length; i++) {
         for (let j = i + 1; j < pars.length; j++) {
             const d = plan(pars[i].p, pars[j].p)
-            if (d < minSpacing) out.push(`${pars[i].id} and ${pars[j].id} are ${d.toFixed(2)} m apart`)
+            if (d < minSpacing - 1e-6) out.push(`${pars[i].id} and ${pars[j].id} are ${d.toFixed(2)} m apart`)
         }
     }
     return out
@@ -51,7 +51,7 @@ const inZone = (id, x, z, margin = 0) => ZONES.zones.filter((zz) => zz.id === id
 const inRect = (x, z, r, m = 0) => r.x_m[0] + m <= x && x <= r.x_m[1] - m && r.z_m[0] + m <= z && z <= r.z_m[1] - m
 
 describe('MOXIR v2 ground: every wash and beam that is not on the truss stands on the floor', () => {
-    it('stands nothing off the truss above 3 m, every lamp on the floor, and no two ground PARs closer than 5 m', () => {
+    it('stands nothing off the truss above 3 m, every lamp on the floor, and no two ground PARs closer than 6 m', () => {
         expect(groundViolations(N)).toEqual([])
         for (const f of offTruss(N).filter((u) => u.type !== 'up-yz31p')) expect(f.p[1], f.id).toBeLessThanOrEqual(GROUND_M)
     })
@@ -116,6 +116,21 @@ describe('MOXIR v2 ground: every wash and beam that is not on the truss stands o
             if (inPark) expect(f.p[1], f.id).toBeLessThanOrEqual(CRANE_PARK.above)
         }
     })
+    it('keeps clear of the entry lasers (#873): nothing in the tower\'s pen, no beam within 1 m of a laser unit, no beam end within 3 m of a far-wall block', () => {
+        const ko2 = { x_m: [-10.244, -5.244], z_m: [45.778, 50.778] }
+        for (const f of N.fixtures.filter((u) => u.type !== 'ext-lc-ultra-mk2')) expect(inRect(f.p[0], f.p[2], ko2), f.id).toBe(false)
+        for (const p of layer().islands) {
+            const apart = p.rect.x_m[1] <= ko2.x_m[0] || ko2.x_m[1] <= p.rect.x_m[0] || p.rect.z_m[1] <= ko2.z_m[0] || ko2.z_m[1] <= p.rect.z_m[0]
+            expect(apart, p.island).toBe(true)
+        }
+        const blocks = [[-6.794, 6.669, -53.8], [-6.619, 6.669, -53.8]]
+        for (const b of N.review.beam_checks) {
+            expect(Math.min(...blocks.map((k) => Math.hypot(b.end[0] - k[0], b.end[1] - k[1], b.end[2] - k[2]))), b.id).toBeGreaterThanOrEqual(3)
+            expect(b.entry_aperture_gap_m, b.id).toBeGreaterThanOrEqual(1)
+            expect(b.cubes_box_gap_m, b.id).toBeGreaterThanOrEqual(1)
+            expect(b.into_laser_keep_out, b.id).toBe(false)
+        }
+    })
     it('never blinds the DJ: no lamp he sees lit stands within 20 deg of his eye line toward the crowd, at full', () => {
         for (const f of N.fixtures.filter((u) => u.type === 'up-pl5403' || u.type === 'up-b380f')) {
             const v = DJ_EYE.map((e, i) => e - f.p[i])
@@ -154,6 +169,19 @@ describe('MOXIR v2 ground: every wash and beam that is not on the truss stands o
             expect(l.devices).toBeLessThanOrEqual(32)
             expect(l.channels).toBeLessThanOrEqual(512)
         }
+        // the spread's own summary shape (branches + slots) stays, every branch within the line limits
+        for (const b of N.patch.branches) expect(b.ok && b.devices <= 32 && b.channels <= 512, b.branch).toBe(true)
+        for (const ch of Object.values(N.patch.slots)) expect(ch).toBeLessThanOrEqual(512)
+        // every lamp's address range sits inside its universe, and no two lamps share a channel
+        const used = new Map()
+        for (const f of N.fixtures.filter((u) => u.dmx)) {
+            expect(f.dmx.address + f.dmx.footprint - 1, f.id).toBeLessThanOrEqual(512)
+            for (let c = f.dmx.address; c < f.dmx.address + f.dmx.footprint; c++) {
+                const k = `${f.dmx.universe}/${c}`
+                expect(used.has(k), `${f.id} on ${k} with ${used.get(k)}`).toBe(false)
+                used.set(k, f.id)
+            }
+        }
     })
     it('measured the floor glare at the peak within the budget (0.65 % white-out, lasers at their 40 % cap)', () => {
         const g = N.checks.floor_glare_peak_measured
@@ -161,6 +189,11 @@ describe('MOXIR v2 ground: every wash and beam that is not on the truss stands o
         expect(g.white_pct).toBeLessThanOrEqual(0.65)
         expect(g.laser_fader).toBe(0.4)
         expect(N.looks.find((l) => l.id === 'peak').parts.laser[1]).toBe(0.4)
+        // every other audience view (both looks) held to the same budget, drawn on the real GPU at EV100 2.84
+        expect(g.every_view_ok).toBe(true)
+        for (const [name, f] of Object.entries(g.all_frames)) expect(f.white_pct, name).toBeLessThanOrEqual(0.65)
+        expect(Object.keys(g.all_frames).length).toBe(10)
+        expect(g.drawn_by.ev100).toBe(2.84)
     })
     it('builds: every look holds only parts the rig has, and the room draws every lamp and the 6 laser lines', () => {
         const parts = new Set(N.fixtures.map((f) => f.part))
