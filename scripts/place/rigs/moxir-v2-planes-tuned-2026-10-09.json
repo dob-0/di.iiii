@@ -3018,6 +3018,11 @@
   "why": "the hall's haze builds with the time the ONE machine has run: ~0.0024 /m at 10 min, ~0.0086 /m at 40 min (two-zone model, UNVALIDATED). Pre-hazing is standard practice; it moves the doors moment from the 10-min picture to the 40-min one (3.6x the air).",
   "owed": "the decay test + transmissometer on site (simulation-method 3.4 step 8); the venue's rule on shutting vents; the machine's real output"
  },
+ "requires": {
+  "par_lens": "15 deg (the rental's PL5403 lens is UNKNOWN; with 25 deg the columns read about a third as bright: occlusion_sky par_on_steel)",
+  "b380f_optics": "open beam: no gobo, no prism, no frost in the haze looks",
+  "why": "in thin air a beam is seen by its flux per width: the B380F's fixed 1.8 deg beam is already its narrowest; a gobo or prism takes flux out of the shaft (beamOptics.js: a prism of N facets gives N beams of 1/N the candela), so each shaft gets fainter. The room's gobo shapes are ASSUMED (no image of the wheel), so the claim that texture helps the eye in thin haze is not testable here."
+ },
  "tuned_from": "scripts/place/rigs/moxir-v2-planes-2026-10-09.json",
  "tunes": [
   {
@@ -3277,6 +3282,13 @@
    "change": "dark: columns 0.25 -> 0.5, stage columns 0.6 (new); peak: stage columns 0.8, plane 3 0.35 -> 0.7",
    "why": "faders, inside each lamp's real output, never a gain on the room. Plane 3 runs toward the crowd and was capped at 0.35 against white-out at 0.0169 /m; its forward scatter is proportional to the haze, so at the tank state (~0.0086 /m, half) 0.7 gives the air the same luminance the cap allowed. Checked on the frames: white-out of the floor view at the peak.",
    "kind": "look levels (data)"
+  },
+  {
+   "id": "T6",
+   "title": "Narrow and open",
+   "change": "rig file `requires`: PARs with the 15 deg lens; B380F open (no gobo, prism or frost) in the haze looks",
+   "why": "in thin air a beam is seen by its flux per width: the B380F's fixed 1.8 deg beam is already its narrowest; a gobo or prism takes flux out of the shaft (beamOptics.js: a prism of N facets gives N beams of 1/N the candela), so each shaft gets fainter. The room's gobo shapes are ASSUMED (no image of the wheel), so the claim that texture helps the eye in thin haze is not testable here.",
+   "kind": "spec (data)"
   }
  ],
  "design_metric": {
