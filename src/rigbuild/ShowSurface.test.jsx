@@ -109,3 +109,51 @@ describe('the show page', () => {
         }
     })
 })
+
+describe('the show page — cue-page bug pass 2026-10-09', () => {
+    it('a dropped link is a banner at the TOP, and the last list stays', async () => {
+        let fail = false
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => (fail ? Promise.reject(new TypeError('offline')) : respond(answer())))
+        render(<ShowSurface spaceId="moxir" projectId="v1-0" />)
+        await screen.findByRole('heading', { level: 1 })
+        fail = true
+        await act(async () => { await new Promise((r) => setTimeout(r, 1100)) })
+        const banner = await screen.findByRole('alert')
+        const main = screen.getByTestId('show-page')
+        expect(main.firstElementChild).toBe(banner)
+        expect(banner.textContent).toMatch(/old/)
+        expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    })
+
+    it('with sign-in off it says plainly that everyone is the operator', async () => {
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'operator', block: '', authOff: true } })))
+        render(<ShowSurface spaceId="moxir" projectId="v1-0" />)
+        await screen.findByRole('heading', { level: 1 })
+        expect(screen.getAllByText(/everyone (who opens this page )?is the operator|everyone is the operator/).length).toBeGreaterThan(0)
+    })
+
+    it('the person who chose is told "You chose X", not "Someone just chose"', async () => {
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => (init?.method === 'POST'
+            ? respond(answer({ control: { choosers: 'team', cooldownMs: 10000, cooldownLeftMs: 9000, last: null }, you: { who: 'member', block: 'cooldown', authOff: false } }))
+            : respond(answer())))
+        render(<ShowSurface spaceId="moxir" projectId="v1-0" />)
+        await screen.findByRole('heading', { level: 1 })
+        await act(async () => { fireEvent.click(document.querySelector('[data-cue="2"]')) })
+        expect(await screen.findByText(/You chose the black — next choice in \d+ s/)).toBeTruthy()
+    })
+
+    it('an unknown project has a way back and the tab says so', async () => {
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond({ error: 'Not found.' }, 404))
+        render(<ShowSurface spaceId="moxir" projectId="nope" />)
+        expect(await screen.findByText('There is no show at this address.')).toBeTruthy()
+        expect(screen.getByRole('link', { name: 'back to the space' })).toBeTruthy()
+        expect(document.title).toBe('No show here')
+    })
+
+    it('the tab is named after the project', async () => {
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer()))
+        render(<ShowSurface spaceId="moxir" projectId="v1-0" />)
+        await screen.findByRole('heading', { level: 1 })
+        expect(document.title).toBe('MOXIR v1.0 — show')
+    })
+})

@@ -679,6 +679,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         onEntities={setLookEntities}
                         showChip={!isPreview && !isEmbed}
                         top={rigChipTop}
+                        spaceId={resolvedRouteSpaceId}
+                        projectId={projectId}
                     />
                 </Suspense>
             ) : null}

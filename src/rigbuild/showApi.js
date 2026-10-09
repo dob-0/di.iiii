@@ -82,17 +82,20 @@ const CHOOSERS_WORDS = {
 }
 
 /** The line that tells this person whether a tap will do anything, and why not. */
-export const youWords = (data, cooldownLeftMs = 0) => {
+export const youWords = (data, cooldownLeftMs = 0, mine = null) => {
     if (!data) return ''
     const who = data.you?.who
     const block = data.you?.block || ''
     const choosers = CHOOSERS_WORDS[data.control?.choosers] || 'the team'
     if (data.light?.state === 'none') return 'Light runs on a local di.iiii. Here the cue list plays by the clock — watch, nothing to choose.'
     if (data.clock?.showSource === 'clock') return 'This show plays by its own clock — watch, nothing to choose.'
+    if (data.light?.otherList || data.light?.otherShow) return "Light is playing another project's list. Stop it on Light first — then you can choose here."
     if (block === 'operator-only') return 'Locked by the operator — only the operator chooses now.'
     if (block === 'team-only') return 'You watch. The team (the members of this space) chooses the cue.'
     if (block === 'not-allowed') return 'You can see this show, not choose its cue.'
+    if (cooldownLeftMs > 0 && mine?.title) return `You chose ${mine.title} — next choice in ${durationWords(cooldownLeftMs)}.`
     if (cooldownLeftMs > 0) return `Someone just chose. Next choice in ${durationWords(cooldownLeftMs)}.`
+    if (who === 'operator' && data.you?.authOff) return `Sign-in is off here, so everyone who opens this page is the operator. Tap a cue to send it to Light.`
     if (who === 'operator') return `Tap a cue to send it to Light. Who may choose: ${choosers}.`
     return `Tap a cue to send it to Light. ${choosers === 'everyone' ? 'Everyone here' : 'The team'} chooses; one choice per ${durationWords(data.control?.cooldownMs || 10000)}.`
 }
@@ -121,3 +124,23 @@ export const swatchWords = (swatch = []) => {
 
 export const CHOOSERS = ['operator', 'team', 'everyone']
 export const choosersLabel = (value) => ({ operator: 'operator only', team: 'team', everyone: 'everyone' })[value] || value
+
+/** The name the server will keep (serverXR show/showRemote.js cleanName): letters of any script, digits, space . ' _ -, at most 24. */
+export const cleanName = (value) => String(value || '').normalize('NFC').replace(/[^\p{L}\p{N} .'_-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 24)
+
+/** Why a cue cannot be tapped right now, in the person's words ('' when it can). Shared by the show page and the room's list. */
+export const cueBlockWords = (cue, block, lightBlocked) => {
+    if (cue?.laser) return 'laser moment — operator only'
+    if (lightBlocked === 'busy') return "Light plays another list"
+    if (lightBlocked) return 'Light is not open here'
+    if (block === 'cooldown') return 'wait for the cooldown'
+    if (block === 'operator-only') return 'locked by the operator'
+    if (block) return 'you watch'
+    return ''
+}
+
+/** What a person may do right now, from one show answer: the same rule the page used inline. */
+export const blockOf = (data, cooldownLeftMs) => {
+    if (!data) return 'loading'
+    return data.you?.block === 'cooldown' && cooldownLeftMs <= 0 ? '' : (data.you?.block || '')
+}

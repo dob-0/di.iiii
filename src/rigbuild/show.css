@@ -12,8 +12,14 @@
     --show-accent: var(--di-cyan, #4df9ff);
     --show-accent-dim: rgba(77, 249, 255, 0.1);
     --show-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-    min-height: 100vh;
-    min-height: 100dvh;
+    /* base.css pins html/body/#root (position: fixed; height: 100%) for the 3D room, so this
+       page scrolls ITSELF: its own height and overflow, as the scenes page does (scenes.css).
+       Blocker found 2026-10-09: cues below the first screen could not be reached. */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     box-sizing: border-box;
     max-width: 720px;
     margin: 0 auto;
@@ -85,11 +91,13 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
 .show-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--show-faint); border-radius: 2px; }
 .show-seg button {
     min-height: 44px;
+    padding: 0 4px;
+    white-space: nowrap;
     border: 0;
     border-radius: 0;
     background: transparent;
     color: var(--show-muted);
-    font: 600 0.85rem/1.2 var(--show-mono);
+    font: 600 0.8rem/1.2 var(--show-mono);
     letter-spacing: 0.04em;
     cursor: pointer;
 }
@@ -153,3 +161,22 @@ html:has(.show-page), body:has(.show-page) { background: #000; }
 @media (prefers-reduced-motion: no-preference) {
     .show-cue__button { transition: border-color 160ms ease, background-color 160ms ease; }
 }
+
+/* the link dropped: the first thing on the page, and it stays while you scroll */
+.show-offline {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    margin: 0 -16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 6px 16px;
+    background: #ff3b3b;
+    color: #000;
+    font: 700 0.85rem/1.25 var(--show-mono);
+}
+.show-page.is-offline .show-live { top: 44px; }
+.show-operator__note a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
+.show-operator__note.is-plain { color: var(--show-text); }
+.show-empty .show-link { justify-content: center; }

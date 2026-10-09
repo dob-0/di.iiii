@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useShowFeed } from './useShowFeed.js'
 import { SIGN_IN_SEGMENT, buildAppSpacePath, buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { buildCardsPath } from './cardsRouting.js'
-import { CHOOSERS, ShowError, chooseCue, choosersLabel, durationWords, fetchShow, groupByAct, liveOf, setChoosers, swatchWords, youWords } from './showApi.js'
+import { CHOOSERS, ShowError, chooseCue, choosersLabel, cleanName, durationWords, groupByAct, liveOf, setChoosers, swatchWords, youWords } from './showApi.js'
 import './show.css'
 
 // THE SHOW PAGE — /{space}/show/{project} (docs/architecture/RIG_BUILD.md §24).
@@ -16,7 +17,6 @@ import './show.css'
 //
 // No WebGL, no project document, no socket: one small JSON a second. The room is a link.
 
-const POLL_MS = 1000
 const buildSignInPath = () => `${buildAppSpacePath(null).replace(/\/$/, '')}/${SIGN_IN_SEGMENT}`
 const NAME_KEY = 'di.show.name'
 
@@ -68,8 +68,7 @@ function CueCard({ cue, live, next, block, sending, onChoose }) {
 }
 
 export default function ShowSurface({ spaceId, projectId }) {
-    const [data, setData] = useState(null)
-    const [error, setError] = useState(null) // { status, message }
+    const { data, error, take } = useShowFeed(spaceId, projectId)
     const [notice, setNotice] = useState('')
     // A notice answers one tap; it goes after a few seconds, or a phone left on the page would
     // keep saying "on Light now" about a cue the list moved past long ago (seen 2026-10-08).
@@ -79,40 +78,16 @@ export default function ShowSurface({ spaceId, projectId }) {
         return () => clearTimeout(timer)
     }, [notice])
     const [sending, setSending] = useState(false)
+    const [mine, setMine] = useState(null) // the cue this person chose last: { title, at }
     const [name, setName] = useState(readName)
     const now = useNow()
 
-    const take = useCallback((body, t0, t1) => {
-        if (!body) return
-        // The server's clock minus ours, from this one round trip (its midpoint): the clock
-        // fallback and every countdown read the server's time, not this phone's.
-        const offset = Number.isFinite(body.now) ? body.now - (t0 + t1) / 2 : 0
-        setData({ ...body, receivedAt: t1, offset })
-        setError(null)
-    }, [])
-
+    // The tab says what is open (it said the landing page's title before).
     useEffect(() => {
-        let gone = false
-        let controller = null
-        const tick = async () => {
-            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
-            controller?.abort()
-            controller = new AbortController()
-            const t0 = Date.now()
-            try {
-                const body = await fetchShow(spaceId, projectId, { signal: controller.signal })
-                if (!gone) take(body, t0, Date.now())
-            } catch (e) {
-                if (gone || e?.name === 'AbortError') return
-                setError({ status: e instanceof ShowError ? e.status : 0, message: e instanceof ShowError ? e.message : 'The server does not answer. Trying again…' })
-            }
-        }
-        tick()
-        const timer = setInterval(tick, POLL_MS)
-        const onVisible = () => { if (document.visibilityState === 'visible') tick() }
-        document.addEventListener('visibilitychange', onVisible)
-        return () => { gone = true; clearInterval(timer); controller?.abort(); document.removeEventListener('visibilitychange', onVisible) }
-    }, [spaceId, projectId, take])
+        const before = document.title
+        document.title = data ? `${data.project.title} — show` : error?.status === 404 ? 'No show here' : 'Show'
+        return () => { document.title = before }
+    }, [data, error?.status])
 
     const serverNow = now + (data?.offset || 0)
     const live = useMemo(() => liveOf(data, serverNow), [data, serverNow])
@@ -122,7 +97,8 @@ export default function ShowSurface({ spaceId, projectId }) {
     const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - (now - data.receivedAt)) : 0
     const block = data ? (data.you?.block === 'cooldown' && cooldownLeftMs <= 0 ? '' : data.you?.block) : 'loading'
     const lightBlocked = data && (data.light?.state === 'none' || data.clock?.showSource === 'clock')
-    const cardBlock = lightBlocked ? 'no-light' : block
+    const lightBusy = Boolean(data && (data.light?.otherList || data.light?.otherShow))
+    const cardBlock = lightBlocked ? 'no-light' : lightBusy ? 'busy' : block
     const groups = useMemo(() => groupByAct(cues), [cues])
     const roomHref = data ? buildVanityProjectPath(spaceId, data.project?.slug || data.project?.id || projectId) : null
 
@@ -132,8 +108,9 @@ export default function ShowSurface({ spaceId, projectId }) {
         setNotice(`Sending ${cue.index + 1} · ${cue.title || cue.name}…`)
         const t0 = Date.now()
         try {
-            const body = await chooseCue(spaceId, projectId, { index: cue.index, cueId: cue.id, name: name.trim() })
+            const body = await chooseCue(spaceId, projectId, { index: cue.index, cueId: cue.id, name: cleanName(name) })
             take(body, t0, Date.now())
+            setMine({ title: cue.title || cue.name, at: Date.now() })
             setNotice(`${cue.index + 1} · ${cue.title || cue.name} — on Light now.`)
         } catch (e) {
             if (e instanceof ShowError && e.body?.cues) take(e.body, t0, Date.now())
@@ -160,6 +137,7 @@ export default function ShowSurface({ spaceId, projectId }) {
             <main className="show-page">
                 <p className="show-empty" role="alert">{sentence}</p>
                 {error.status === 401 || error.status === 403 ? <p className="show-empty"><a className="show-link" href={buildSignInPath()}>sign in</a></p> : null}
+                <p className="show-empty"><a className="show-link" href={buildAppSpacePath(spaceId)}>back to the space</a></p>
             </main>
         )
     }
@@ -172,7 +150,8 @@ export default function ShowSurface({ spaceId, projectId }) {
                     : live?.source === 'light' ? (live.running ? 'Light — playing' : 'Light — stopped') : 'Light — not playing this show'
 
     return (
-        <main className="show-page" data-testid="show-page">
+        <main className={`show-page${error ? ' is-offline' : ''}`} data-testid="show-page">
+            {error ? <p className="show-offline" role="alert">{error.status ? error.message : 'No link to the server — what you see is old. Trying again…'}</p> : null}
             <header className="show-top">
                 <div className="show-top__title">
                     <span className="show-top__mark" aria-hidden="true" />
@@ -204,7 +183,7 @@ export default function ShowSurface({ spaceId, projectId }) {
                 <p className="show-live__source">{lightWords}</p>
             </section>
 
-            <p className={`show-you${block && block !== 'cooldown' ? ' is-blocked' : ''}`} data-block={block || ''}>{youWords(data, cooldownLeftMs)}</p>
+            <p className={`show-you${block && block !== 'cooldown' ? ' is-blocked' : ''}`} data-block={block || ''}>{youWords(data, cooldownLeftMs, mine)}</p>
 
             {data.you.who === 'operator' ? (
                 <section className="show-operator" aria-label="Operator">
@@ -217,6 +196,7 @@ export default function ShowSurface({ spaceId, projectId }) {
                             </button>
                         ))}
                     </div>
+                    {data.you.authOff ? <p className="show-operator__note is-plain">Sign-in is off here: everyone is the operator, so this setting stops nobody.</p> : null}
                     <details className="show-operator__more">
                         <summary>{data.you.authOff ? 'sign-in is off here — read this' : 'about lasers and choosing'}</summary>
                         {data.you.authOff ? <p className="show-operator__note">Sign-in is off on this di.iiii, so everyone who opens this page is the operator. For a night with guests, start it with <code>di up --lan --guests</code>.</p> : null}
@@ -245,7 +225,6 @@ export default function ShowSurface({ spaceId, projectId }) {
                     <input value={name} maxLength={24} autoComplete="nickname" placeholder="optional"
                         onChange={(e) => { setName(e.target.value); keepName(e.target.value) }} />
                 </label>
-                {error ? <p className="show-notice is-error" role="alert">{error.message}</p> : null}
             </footer>
         </main>
     )
