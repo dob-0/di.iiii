@@ -26,7 +26,14 @@ two wings, a bar and a chill + food area, and asked for the lights to be placed 
   Units outside the hot zone: 27 → 0. Read against the hot zone, B tuned had 6 floor heads among people and 9 beams
   someone looks down within 30°; the spread has 0 and 0.
 
-Owed: the frames still rendering at hand-back are listed in the report; the column brackets and the pit stand
+- **Measured in the room:** the lux probe reads 0 → ~44 lx on the DJ's face in both looks. The room SQUARES a look's level
+  (the renderer's lamp list: intensity = nominal × level²; the second factor is not found: owed to the viewport), so the
+  faders are set for the room. White-out from the floor at the peak is 0.88 %; the lamps alone are 0.52 % (budget 0.65 %)
+  and the 7.5 W laser lines add the rest. The DJ sees a veil: the keys light the haze around him.
+- **Fixed:** a frames or probe run killed by `timeout` left its tab drawing the room (close-on-signal.cjs, known-fixes).
+  Laser lines now carry the 7.5 W cube's flux per beam.
+
+Owed: the viewport's level² factor; the DJ's veil and the lasers' glare share (the owner's call); the column brackets and the pit stand
 (the venue's OK, the rigger's check); the stage pen's barrier; guard cages for the floor PARs at the stage columns;
 the room's PAR candela (30 478 cd) vs the spec figure (11 000 cd); the crane's on-site move, inspection and lock-out;
 hall v10 with the crane at z −12.
