@@ -64,6 +64,7 @@ const optionalValues = {
     GITHUB_APP_PRIVATE_KEY_PATH: process.env.GITHUB_APP_PRIVATE_KEY_PATH || '',
     GITHUB_APP_PRIVATE_KEY_B64: process.env.GITHUB_APP_PRIVATE_KEY_B64 || '',
     GITHUB_APP_WEBHOOK_SECRET: process.env.GITHUB_APP_WEBHOOK_SECRET || '',
+    GITHUB_SYNC_ALLOWED_REPOS: process.env.GITHUB_SYNC_ALLOWED_REPOS || '',
     // Optional Google Drive asset import (folder listing + metadata). Keyless
     // single-file import works without it.
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',

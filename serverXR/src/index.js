@@ -101,6 +101,7 @@ const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
 const { createGithubSync } = require('./githubSync')
+const githubLinkPolicy = require('./githubLinkPolicy')
 const { createSpaceHistory } = require('./spaceHistory')
 const { createContentProposals } = require('./contentProposals')
 const { serverActor } = require('./opActor')
@@ -1662,7 +1663,12 @@ router.post('/api/github/webhook', async (req, res) => {
     const links = owner && repo ? spaceLinkStore.getLinksByRepo(owner, repo) : []
     if (!links.length) return res.json({ ok: true, linked: false, repo: full })
     const synced = []
+    const allowedRepos = githubLinkPolicy.parseAllowedRepos(process.env.GITHUB_SYNC_ALLOWED_REPOS)
     for (const link of links) {
+      if (link.approvedBy !== 'admin' && !githubLinkPolicy.isRepoOnList(link.owner, link.repo, allowedRepos)) {
+        synced.push({ space: link.spaceId, ok: false, error: 'Link not approved: an admin re-saves it, or the repo is added to GITHUB_SYNC_ALLOWED_REPOS.' })
+        continue
+      }
       try {
         const r = await syncLinkedSpace(link)
         if (after) spaceLinkStore.setLastSyncSha(link.spaceId, after)
@@ -2398,13 +2404,18 @@ router.get('/api/github/repos', async (req, res, next) => {
   if (!requireSignedInUser(req, res)) return
   if (!githubApp.isConfigured()) return res.json({ configured: false, repos: [] })
   try {
+    // An admin sees every repo the App reaches; anyone else only the repos
+    // the operator approved for linking (githubLinkPolicy.js).
+    const isAdmin = (req.authState || {}).role === 'admin'
+    const allowedRepos = githubLinkPolicy.parseAllowedRepos(process.env.GITHUB_SYNC_ALLOWED_REPOS)
+    const visible = (repos) => isAdmin ? repos : repos.filter((r) => githubLinkPolicy.isRepoOnList(r.owner, r.repo, allowedRepos))
     const fresh = req.query?.refresh === '1'
     if (!fresh && _repoCache.repos && Date.now() - _repoCache.at < 60_000) {
-      return res.json({ configured: true, repos: _repoCache.repos, cached: true })
+      return res.json({ configured: true, repos: visible(_repoCache.repos), cached: true })
     }
     const repos = await githubApp.listAccessibleRepos()
     _repoCache = { at: Date.now(), repos }
-    res.json({ configured: true, repos })
+    res.json({ configured: true, repos: visible(repos) })
   } catch (error) { next(error) }
 })
 
@@ -2416,6 +2427,14 @@ router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {
     if (!ctx) return
     const { owner, repo, ref = null, projectId, entry = 'index.html' } = req.body || {}
     if (!owner || !repo || !projectId) return res.status(400).json({ error: 'owner, repo, projectId are required.' })
+    // Managing the space is not enough: the repo must be one this caller may
+    // read through the platform's GitHub App (githubLinkPolicy.js).
+    const isAdmin = ctx.state.role === 'admin'
+    const allowed = githubLinkPolicy.checkLinkRequest({ owner, repo, ref, entry }, {
+      isAdmin,
+      allowedRepos: githubLinkPolicy.parseAllowedRepos(process.env.GITHUB_SYNC_ALLOWED_REPOS)
+    })
+    if (!allowed.ok) return res.status(allowed.status).json({ error: allowed.error })
     // requireSpaceOwnerOrAdmin above proves the caller owns the space in the
     // URL — it says nothing about the projectId in the BODY. Without this
     // check any signed-in account could point their own space's link at a
@@ -2427,7 +2446,7 @@ router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {
     if (!linkedProject) return res.status(404).json({ error: 'Project not found in this space.' })
     let installationId = null
     try { installationId = (await githubApp.getInstallationForRepo(owner, repo))?.installationId || null } catch {}
-    const link = spaceLinkStore.upsertLink({ spaceId: ctx.spaceId, owner, repo, ref, projectId, entry, installationId })
+    const link = spaceLinkStore.upsertLink({ spaceId: ctx.spaceId, owner, repo, ref: ref || null, projectId, entry, installationId, approvedBy: isAdmin ? 'admin' : 'list' })
     let initialSync = null
     try { initialSync = await syncLinkedSpace(link) } catch (e) { initialSync = { error: e.message } }
     res.status(201).json({ ok: true, link, initialSync })

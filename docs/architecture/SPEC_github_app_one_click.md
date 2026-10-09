@@ -61,6 +61,8 @@ GITHUB_APP_CLIENT_ID=... / GITHUB_APP_CLIENT_SECRET=...
 - Webhook HMAC verified before any work; reject on mismatch.
 - One-way **repo → space**; `Contents: Read-only` is enough for v1 (we never write the repo).
 - Per-space binding; a compromised install/token touches only its linked spaces' content.
+- Who may link which repo (2026-10-09, `serverXR/src/githubLinkPolicy.js`): an admin links any repo the App reaches; a space owner who is not an admin links only a repo on `GITHUB_SYNC_ALLOWED_REPOS` (`owner/repo` or `owner/*`). Each link records how it was approved (`space_links.approved_by`); a push syncs a link only if an admin made it or its repo is still on the list. The repo picker shows a non-admin only the listed repos. `entry` must be an `.html` file at a plain path; `ref` a plain branch/tag/commit name.
+- The sync writes through this machine only (`serverXR/src/githubSync.js`): `SELF_API_URL`, when set, must be a loopback address.
 - Full review by security-auditor before prod (auth + secrets + webhook signature).
 
 ## First move

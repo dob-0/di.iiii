@@ -3288,6 +3288,64 @@ describe('saving and opening a space as a file', () => {
         expect(refused.status).toBe(403)
     })
 
+    // A GitHub link pulls repo files into the space with the platform's own
+    // App credentials, so which repo a space may link to is decided by the
+    // server operator: an admin, or a repo on GITHUB_SYNC_ALLOWED_REPOS.
+    it('lets a space owner link only a repo the operator approved; an admin links any', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false', GITHUB_SYNC_ALLOWED_REPOS: 'studio-org/site, Open-Org/*' }
+        })
+        const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'linker', password: 'linker-passphrase-9x' })
+        })
+        expect(register.status).toBeLessThan(300)
+        let cookie = (register.headers.get('set-cookie') || '').split(';')[0]
+        const made = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'linker space' })
+        })
+        expect(made.status).toBe(201)
+        const madeBody = await made.json()
+        const spaceId = madeBody.space?.id || madeBody.spaceId || 'linker-space'
+        cookie = (made.headers.get('set-cookie') || '').split(';')[0] || cookie
+        const projectRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ title: 'Site', slug: 'site', source: 'studio-v3' })
+        })
+        expect(projectRes.status).toBe(201)
+        const projectId = (await projectRes.json()).project.id
+        const link = (headers, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/github-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify({ projectId, ...body })
+        })
+
+        // A repo nobody approved: refused, and nothing is stored.
+        const refused = await link({ Cookie: cookie }, { owner: 'someone-else', repo: 'private-notes', entry: 'config/.env' })
+        expect(refused.status).toBe(403)
+        const stored = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/github-link`, { headers: { Cookie: cookie } })
+        expect((await stored.json()).link ?? null).toBe(null)
+
+        // Entry must be a page at a plain path.
+        const badEntry = await link({ Cookie: cookie }, { owner: 'studio-org', repo: 'site', entry: '../secrets.html' })
+        expect(badEntry.status).toBe(400)
+
+        // An approved repo (exact, and by owner/*, case-insensitive) links.
+        const approved = await link({ Cookie: cookie }, { owner: 'studio-org', repo: 'site', entry: 'index.html' })
+        expect(approved.status).toBe(201)
+        const approvedByOwner = await link({ Cookie: cookie }, { owner: 'open-org', repo: 'anything' })
+        expect(approvedByOwner.status).toBe(201)
+
+        // The operator's admin token may link any repo the App reaches.
+        const admin = await link(withAuth(server.apiToken), { owner: 'someone-else', repo: 'private-notes' })
+        expect(admin.status).toBe(201)
+    })
+
     it('keeps node\'s own warnings out of what the browser is shown', async () => {
         // node prints an ExperimentalWarning the first time node:sqlite loads.
         // In a terminal it is noise; in a dialog it is the first thing read.

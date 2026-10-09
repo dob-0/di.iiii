@@ -58,6 +58,7 @@ services:
       GITHUB_APP_ID: ${DEV_GITHUB_APP_ID:-}
       GITHUB_APP_PRIVATE_KEY_B64: ${DEV_GITHUB_APP_PRIVATE_KEY_B64:-}
       GITHUB_APP_WEBHOOK_SECRET: ${DEV_GITHUB_APP_WEBHOOK_SECRET:-}
+      GITHUB_SYNC_ALLOWED_REPOS: ${DEV_GITHUB_SYNC_ALLOWED_REPOS:-}
       MESH_ROOM_SECRET: ${DEV_MESH_ROOM_SECRET:-}
       # The dev tier mints links for a DIFFERENT bot with a DIFFERENT secret, or a
       # token minted here would open a crossing on production.

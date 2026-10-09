@@ -154,7 +154,8 @@ const SCHEMA = `
     installation_id INTEGER,
     last_sync_sha TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    approved_by TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_space_links_repo ON space_links(owner, repo);
 
@@ -605,6 +606,10 @@ function initDb(dbPath) {
   // Per-space trusted list: JSON array of account ids (spaceStore.trustedUserIds).
   ensureColumn(db, 'spaces', 'trusted_user_ids', 'TEXT')
   ensureColumn(db, 'projects', 'slug', 'TEXT')
+  // How a GitHub link's repo was approved: 'admin' (an admin made the link) or
+  // 'list' (the repo was on GITHUB_SYNC_ALLOWED_REPOS). NULL for links made
+  // before this column; those sync only while their repo is on the list.
+  ensureColumn(db, 'space_links', 'approved_by', 'TEXT')
   // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
   // `state` replaces the only archive the platform had: five titles with
   // "[archived]" typed in front of them, which filtered nothing.
