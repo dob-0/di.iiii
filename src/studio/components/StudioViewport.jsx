@@ -23,6 +23,7 @@ import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.js
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import LaserView from '../../rigbuild/LaserView.jsx'
 import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -729,6 +730,8 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            {/* MOXIR's LaserCubes: what the laser server is drawing, as beams (rigbuild/laserView.js) */}
+            <LaserView entities={document.entities} />
             <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />

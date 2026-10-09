@@ -1712,6 +1712,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-03'
     },
     {
+        id: 'laser-out-node',
+        category: 'Editing',
+        title: 'Laser and Laser Out — draw for the LaserCubes',
+        summary: 'The Laser node draws a shape; Laser Out shows it in a small preview and sends it to the LaserCubes through this di.iiii.',
+        body: [
+            'Add a Laser node and pick a shape: circle, line, square, triangle, star, wave, fan or spiral. Size is 0 to 1, Rotation is in turns (0.25 is a quarter turn), and Spin turns the shape on its own, in turns per second. Colour is the beam colour, Level is its brightness from 0 to 1 — wire a Sound’s volume into Level and the shape breathes with the music. Points is how many points trace the shape.',
+            'Wire the Laser’s Frame into a Laser Out node. Laser Out draws the frame in a small square preview, so you can see the shape before it goes anywhere, and sends it to the lasers whenever it changes — at most 25 times a second. Cube is “all” to drive every cube, or one cube’s name to drive just that one.',
+            'The server holds the lasers DISARMED until a laser safety officer has signed off. While it is disarmed, Laser Out says so plainly — “Lasers off — disarmed on the server” — and nothing reaches the cubes, however the graph is wired. The preview still shows the shape, so you can build the whole show disarmed.',
+            'Laser Out also shows how many cubes the server knows and how many are connected, and whether the server is simulating them. Blackout kills the beams the moment it rises — a Button, a Compare or a Toggle makes a good Blackout — and the frame that was queued is dropped, not sent after it.',
+            'The preview shades the lower half of the field red behind a dashed line: the server blanks every point below the cube’s own aim (its keep-in zone), so no beam can point lower than the cube, toward the crowd. Height lifts a shape up the field — its default, 0.5, keeps a shape of size 0.5 wholly above the line.',
+            'Under the preview Laser Out lists every cube: what it is doing (armed, ready, simulated, stopped and why) and what the cube said about itself — model, firmware, points per second it plays and its maximum, its buffer, its temperature, how it is connected, its address and serial number. A cube that has never answered is not armed, even with the sign-off; a cube under the maker’s 10 °C floor is marked.',
+            'Two stops work by themselves while the lasers are armed. If no frame reaches a cube for 200 ms — the editor closed, the tab hidden, the network gone — the cube is blanked and switched off; it comes back on with the next frame. If a frame holds the beam still (a dot, or one spot taking half the frame), for 200 ms, the cube is blanked too, unless the laser safety officer listed that still beam for that cube. Both numbers are still to be tested on a real cube. Laser Out keeps a held frame alive by itself; keep the editor in front during a show.',
+            'The 3D view of a room with LaserCubes draws what the laser server holds, as beams from each cube (cube 1 is the first LaserCube of the rig, and so on), so a drawing can be judged in the hall before show day. It does not yet draw a stopped cube dark.',
+            'The laser server only exists on a local di.iiii (`di up`, or npm run dev). On a hosted tab Laser Out is honest and idle, and says it cannot find the laser server.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'beam', 'show', 'device', 'performance', 'safety', 'blackout'],
+        updated: '2026-10-09'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
