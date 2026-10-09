@@ -20,6 +20,11 @@ def main():
     a.add_argument('--hall', required=True); a.add_argument('--stage', required=True)
     a.add_argument('--out', required=True); a.add_argument('--ppm', type=float, default=40.0)
     a.add_argument('--full', action='store_true', help='the whole building, wall to wall and end to end')
+    a.add_argument('--title', default='MOXIR beta v0.9 — from above. Paint: where lasers can be, and what we light.')
+    a.add_argument('--lasers', help="aerial json (bridge + lasers): draw the free crane where the show parks it, the cubes and their lines")
+    a.add_argument('--views', help='rig json: mark its eye-height views (y < 3 m) as audience view points')
+    a.add_argument('--quiet-lamps', action='store_true', help='pendant lamps as small marks, one legend line, no label each')
+    a.add_argument('--key', help='one line under the title: what to paint')
     o = a.parse_args()
     g = json.load(open(o.hall))['geometry']; st = json.load(open(o.stage))
     global X0, X1, Z0, Z1
@@ -65,8 +70,11 @@ def main():
     # permanent objects with their height
     # the three pipe racks share one footprint: one box, one label
     items, racks = [], [m for m in g['massing'] if m['id'].startswith('pipe-rack')]
+    lamps = [m for m in g['massing'] if o.quiet_lamps and m['id'].startswith('pendant-lamp')]
+    for m in lamps:
+        (x0, x1), (z0, z1) = m['x_m'], m['z_m']; d.rectangle(rect(x0, x1, z0, z1), fill=(200, 170, 90))
     for m in g['massing']:
-        if m['id'].startswith('pipe-rack'): continue
+        if m['id'].startswith('pipe-rack') or m in lamps: continue
         items.append((m['id'].replace('-', ' '), m['x_m'], m['z_m'], m['y_m']))
     if racks:
         items.append(('pipe racks ×3', racks[0]['x_m'], racks[0]['z_m'], [min(r['y_m'][0] for r in racks), max(r['y_m'][1] for r in racks)]))
@@ -92,14 +100,45 @@ def main():
     b = st['booth']; zf = b['front_z_m']; bw = b.get('width_m', 3.0); bc = b.get('centre_x_m', 0.0)
     d.rectangle(rect(bc - bw / 2, bc + bw / 2, zf - b.get('depth_m', 2.0), zf), fill=(20, 150, 135))
     d.text(px(bc, zf - 1.0), f"DJ step {b.get('deck_h_m', 0.4):g} m", fill=(10, 20, 20), font=f, anchor='mm')
-    for sx in (-5.4, 5.4): d.rectangle(rect(sx - 0.67, sx + 0.67, zf - 0.72, zf), fill=(70, 90, 240)); d.text(px(sx, zf - 0.36), 'PA', fill=(255, 255, 255), font=fs, anchor='mm')
+    if isinstance(st.get('pa'), dict) and st['pa'].get('boxes'):   # v1.1+: the organiser's speaker boxes at his marks
+        for bx_ in st['pa']['boxes']:
+            (x0, x1), (z0, z1) = bx_['x_m'], bx_['z_m']; d.rectangle(rect(x0, x1, z0, z1), fill=(70, 90, 240)); d.text(px((x0 + x1) / 2, (z0 + z1) / 2), f"speaker {bx_['id']}", fill=(255, 255, 255), font=fs, anchor='mm')
+    else:
+        for sx in (-5.4, 5.4): d.rectangle(rect(sx - 0.67, sx + 0.67, zf - 0.72, zf), fill=(70, 90, 240)); d.text(px(sx, zf - 0.36), 'PA', fill=(255, 255, 255), font=fs, anchor='mm')
     d.line([px(-12, zf), px(12, zf)], fill=(60, 255, 60), width=3); d.text((px(12, zf)[0], px(0, zf)[1] + 4), 'stage line', fill=(60, 255, 60), font=fs, anchor='ra')
     bz = st['barrier']['z_m']; bx = st['barrier'].get('x_m', [-5.35, 5.35])
     d.line([px(bx[0], bz), px(bx[1], bz)], fill=(235, 235, 235), width=3)
-    d.rectangle(rect(-5.35, 5.35, bz, 48), outline=(255, 160, 100), width=2)
-    d.text(px(0, 40), 'AUDIENCE\n(dance floor)', fill=(255, 170, 120), font=fb, anchor='mm', align='center')
+    if st.get('floor'):   # v1.1+: the dance floor as the stage record draws it, and the FOH riser
+        (x0, x1), (z0, z1) = st['floor']['x_m'], st['floor']['z_m']
+        d.rectangle(rect(x0, x1, z0, z1), outline=(255, 160, 100), width=2)
+        d.text(px((x0 + x1) / 2, z0 + 2.5), 'dance floor (today)', fill=(255, 170, 120), font=fb, anchor='mm', align='center')
+        if st.get('foh'):
+            fx, _, fz_ = st['foh']['p']; sw, sd = st['foh']['size_m']
+            d.rectangle(rect(fx - sw / 2, fx + sw / 2, fz_ - sd / 2, fz_ + sd / 2), fill=(90, 90, 100)); d.text(px(fx, fz_), 'FOH', fill=(255, 255, 255), font=fs, anchor='mm')
+    else:
+        d.rectangle(rect(-5.35, 5.35, bz, 48), outline=(255, 160, 100), width=2)
+        d.text(px(0, 40), 'AUDIENCE\n(dance floor)', fill=(255, 170, 120), font=fb, anchor='mm', align='center')
+    if lamps: d.text((M + 900, 50), f'small yellow marks = the hall\'s pendant lamps ({len(lamps)}), 9.5–10.6 m', fill=(200, 170, 90), font=fs)
+    if o.lasers:   # the free crane at its show park + the six cubes and their beams (data from the aerial json, as given)
+        A = json.load(open(o.lasers)); br = A['aerial']['bridge']; fz = br['z']
+        for dz in (-1.1, 1.1): d.rectangle(rect(-12, 12, fz + dz - 0.35, fz + dz + 0.35), fill=(150, 125, 30))
+        d.text((px(-11.5, fz - 1.6)[0], px(0, fz - 1.6)[1] - 12), f"FREE crane, moved to z {fz:g} (was {br.get('as_found_rig_z', '?'):g}) · the 6 lasers hang under it at {br['y']:g} m", fill=(220, 190, 70), font=fs)
+        for L in A['lasers']:
+            f0 = L['from']
+            d.line([px(f0[0], f0[2]), px(L['to'][0], L['to'][2])], fill=(255, 80, 60), width=3)
+            d.rectangle(rect(f0[0] - 0.3, f0[0] + 0.3, f0[2] - 0.3, f0[2] + 0.3), fill=(255, 255, 255))
+        d.text((px(6, fz)[0] + 10, px(0, fz)[1] + 14), f"laser lines run over the audience to the entry wall, end {A['lasers'][0].get('end_height_m', '?')} m up", fill=(255, 120, 100), font=fs)
+    if o.views:   # audience eye points from the rig's own view presets
+        for v in json.load(open(o.views))['views']['viewPresets']:
+            x, y, z = v['position']
+            if y < 3:
+                c = px(x, z); d.ellipse([c[0] - 9, c[1] - 9, c[0] + 9, c[1] + 9], outline=(255, 255, 255), width=3)
+                t = px(*[v['target'][0], v['target'][2]]); dx, dy = t[0] - c[0], t[1] - c[1]; n = max((dx * dx + dy * dy) ** 0.5, 1)
+                d.line([c, (c[0] + dx / n * 60, c[1] + dy / n * 60)], fill=(255, 255, 255), width=3)
+                d.text((c[0] + 14, c[1] + 4), f"eye: {v['label']}", fill=(255, 255, 255), font=fs)
     # titles
-    d.text((M, 18), 'MOXIR beta v0.9 — from above. Paint: where lasers can be, and what we light.', fill=(235, 235, 240), font=fb)
+    d.text((M, 18), o.title, fill=(235, 235, 240), font=fb)
+    if o.key: d.text((M, 46), o.key, fill=(255, 210, 120), font=f)
     d.text((M, H - 34), 'stage at the top, entry at the bottom, house left on the LEFT (as the dance floor sees it) · grid 6 m · heights = permanent objects', fill=(160, 166, 176), font=fs)
     if not o.full: d.text(px(0, Z1 - 0.6), 'ENTRY', fill=(200, 200, 205), font=f, anchor='mm')
     meta = PngImagePlugin.PngInfo()
