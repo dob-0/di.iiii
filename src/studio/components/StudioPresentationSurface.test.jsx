@@ -75,6 +75,8 @@ describe('StudioPresentationSurface', () => {
         expect(iframe).not.toBeNull()
         expect(iframe?.getAttribute('srcdoc')).toContain('Studio code preview')
         expect(iframe?.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
+        // The page learns its host, as on the public view (di.laser hung without it, 2026-10-05).
+        expect(iframe?.getAttribute('srcdoc')).toContain(`window.diiPageOrigin = "${window.location.origin}"`)
         // Without escape, tabs opened by preview content inherit the sandbox's
         // opaque origin and white-screen (module loads become cross-origin).
         expect(iframe?.getAttribute('sandbox')).toContain('allow-popups-to-escape-sandbox')

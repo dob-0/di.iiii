@@ -51,6 +51,10 @@ Push your branch the day you make it, even unfinished; a draft PR is fine. On a 
 every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
 which are for keeping work safe, not for review.
 
+## Starting a dev server
+
+**On aylmo: `di-dev up <tree>` (di-atlas tools/di-dev); never a relative `DATA_ROOT`.** serverXR refuses to start in a git checkout with an unset or relative `DATA_ROOT` (absolute path, or `DI_SCRATCH=1` for a throwaway) — `serverXR/src/dataRootGuard.js`.
+
 ## The start check
 
 Before you start any task, and before you push:
@@ -243,6 +247,14 @@ resolve by the project's id alone, unaffected by a move. The short vanity form
 writes a `project_moves` row, and the server's resolver
 (`GET /api/resolve/:spaceSegment/:projectSegment`) answers a project that left with a
 pointer to its new address instead of a 404.
+
+**From the product (2026-10-05):** the same move is `POST /api/projects/:id/move`
+(`{ "toSpace": "...", "unpublish": false, "dryRun": false }`; an admin, or the owner of both
+spaces) and `di move PROJECT --to SPACE [--from URL] [--dry-run] [--unpublish]` (a token for
+`--from` comes from `DI_TOKEN` or `--token -` on stdin). Both call `serverXR/src/projectMove.js`,
+which the script also uses. Unlike the script, the route refuses a slug already used in the
+target (409) instead of dropping it. A follow does not carry a move: run it on each install
+that follows either space.
 
 ## Golden rule
 

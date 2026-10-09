@@ -225,10 +225,16 @@ export const getNodeCardSummary = (node) => {
 // pure function of the node and never of the font.
 export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
 
-export const getNodeCardLines = (node) => {
+// The one field a card shows and lets you edit in place (Enter or a
+// double-click on its text). The side column keeps everything else. Both write
+// node.values[key] — one value, no second copy (owner, 2026-10-05).
+export const CARD_MAIN_FIELD = { 'view.text': { key: 'content', label: 'Content' } }
+export const getCardMainField = (typeId) => CARD_MAIN_FIELD[typeId] || null
+
+export const getNodeCardLines = (node, { unlimited = false } = {}) => {
     if (!node) return null
     if (node.typeId === 'view.list') {
-        const max = CARD_CONTENT_MAX_LINES['view.list']
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.list']
         const items = (Array.isArray(node.values?.items) ? node.values.items : [])
             .filter((it) => String(it?.text || '').trim())
         if (!items.length) return null
@@ -257,7 +263,7 @@ export const getNodeCardLines = (node) => {
         return { lines, more: items.length - shown }
     }
     if (node.typeId === 'view.text') {
-        const max = CARD_CONTENT_MAX_LINES['view.text']
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.text']
         const text = String(node.values?.content ?? node.values?.text ?? '')
         const all = text.split('\n').map((line) => line.trim()).filter(Boolean)
         if (!all.length) return null
@@ -2914,6 +2920,11 @@ export const NODE_TYPES = {
         id: 'agent.keeper',
         label: 'Keeper',
         category: 'agent',
+        // "Keeper" is the rite's word for it, not the one anyone searches with.
+        // Without these, typing "local llm", "llama" or "openai" in the palette
+        // found nothing and the node might as well not exist. Same words as the
+        // keeper-node article's tags (src/wiki/wikiContent.js).
+        keywords: ['local', 'llm', 'llama', 'llama.cpp', 'ollama', 'openai', 'model', 'ai', 'offline', 'keeper'],
         runtime: 'web',
         singleton: false,
         inputs: [

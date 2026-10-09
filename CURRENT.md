@@ -13,12 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the desk's Touch page plays looks and the cue list
-- a followed space stays one space: no lost edits, copies agree, restarts resume
-- Studio stands inside a Geo
-- MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
-- MOXIR previs: the haze worked out from the hazers, real beam fall-off, real bloom
-- …and 27 more notes, each in full in PROGRESS.md
+- a space on its own domain (yokozo.xyz shows taronx), set up by the server
 
 Full detail: `PROGRESS.md`.
 

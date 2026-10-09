@@ -65,7 +65,7 @@ export const followFileLines = (files) => {
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
     if (files.pending > 0) {
         const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
-        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}${files.listed > files.pending ? `, of ${files.listed} listed` : ''}`))
     }
     const failures = Array.isArray(files.failures) ? files.failures : []
     if (files.failed > 0 || failures.length) {
@@ -79,6 +79,14 @@ export const followFileLines = (files) => {
     }
     return lines
 }
+
+/**
+ * What a follow says about the space's own settings (label, visibility, front
+ * door — serverXR/src/follow/followSettings.js): only what it could not do, so
+ * a quiet line means the settings agree. An install too old to report sends none.
+ */
+export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
+    .map(note => style.dim(`settings: ${note}`))
 
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
@@ -216,19 +224,27 @@ export const ui = {
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
-    followList: (follows, live) => {
+    // `carrier` is what the server says about who carries this data folder's
+    // follows (serverXR/src/follow/lease.js). When it is another server on the
+    // same folder — the installed di beside a dev stack — the list says so
+    // instead of calling every follow "not running".
+    followList: (follows, live, carrier = null) => {
         const ids = Object.keys(follows || {})
         if (!ids.length) return `this di.iiii follows nothing. ${style.dim(`${CMD} follow <space> --from <url> --key <key>`)}`
         const byId = new Map((live || []).map(entry => [entry.spaceId, entry]))
-        return ids.map((id) => {
+        const elsewhere = carrier && carrier.carriedHere === false
+        const by = elsewhere && carrier.carriedBy ? `pid ${carrier.carriedBy.pid}, port ${carrier.carriedBy.port}` : 'another server'
+        const head = elsewhere ? [style.yellow(`another di.iiii server on this data folder carries these follows (${by}). ask that one how they are doing; this one takes over if it stops.`)] : []
+        return [...head, ...ids.map((id) => {
             const entry = follows[id]
             const state = byId.get(id)
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            if (!state && elsewhere) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim(`(carried by ${by})`)}`
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
-        }).join('\n')
+            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
+        })].join('\n')
     },
 
     unfollowed: (spaceId) => `no longer following ${spaceId}. ${style.dim('your copy stays exactly as it is.')}`,
@@ -462,7 +478,9 @@ export const ui = {
     followUsage: () => [
         style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
         '',
-        'both sides keep the whole work; edits travel both ways.',
+        'both sides keep the whole work; edits travel both ways. The host\'s label, front door',
+        'and visibility come too (never more public than either side has it).',
+        `a new key for a follow that exists: ${CMD} follow SPACE --from URL --key - --into SPACE (takes effect while di runs)`,
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
@@ -787,7 +805,51 @@ export const ui = {
         'work, and until it lands a stage machine drives the screen it is given.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage() })[name]?.() || null,
+    serviceUsage: () => [
+        style.bold(`${CMD} service install`) + style.dim(' — systemd keeps the server up, and starts it again if it dies'),
+        '',
+        'without it, the server runs on its own after `up` and nothing notices if it stops.',
+        'with it, the server is a systemd user unit: started at login, restarted within',
+        'seconds whenever it exits unasked (a crash, a stray kill), logged to the journal.',
+        `${CMD} up, down, status, logs and update drive the unit from then on — nothing else changes.`,
+        'linux with systemd only; on other machines di starts the server itself, as before.',
+        '',
+        `  --name NAME     the unit's name (default ${'di-server'}), e.g. a second install on one machine`,
+        '',
+        style.dim(`  ${CMD} service status   the unit, its main pid, how often it was restarted`),
+        style.dim(`  ${CMD} service remove   undo exactly what install did — the server keeps running, unsupervised`)
+    ].join('\n'),
+
+    serviceNoSystemd: () => 'this machine has no systemd user manager, so there is nothing to hand the server to.\n'
+        + `${CMD} up keeps starting it itself, as before.`,
+    serviceNotInDocker: () => 'this supervises the node install only; a docker install is started by docker compose and is not covered yet.',
+    serviceBadName: (name) => `"${name}" is not a name di will give a unit — letters, digits, ".", "_" and "-", without ".service".`,
+    serviceOtherName: (name) => `this install is already supervised as ${name}.service — ${CMD} service remove first.`,
+    serviceInstalled: (svc, started) => [
+        `installed ${svc.unit} — systemd now keeps di.iiii up, and starts it at login.`,
+        style.dim(`  unit  ${svc.unitFile}`),
+        style.dim(`  log   journalctl --user -u ${svc.unit}   (or ${CMD} logs)`),
+        started ? null : style.dim(`  not started now — ${CMD} up starts it under systemd`),
+        style.dim(`  undo  ${CMD} service remove`)
+    ].filter(Boolean).join('\n'),
+    serviceRemoved: (svc) => `removed ${svc.unit}. ${CMD} up starts the server itself again, unsupervised.`,
+    serviceNone: () => `nothing supervises this install — ${CMD} service install hands it to systemd.`,
+    serviceStatus: (svc, unit) => [
+        `${svc.unit}  ${unit.state}${unit.sub ? ` (${unit.sub})` : ''}  ${unit.enabled || ''}`.trimEnd(),
+        style.dim(`  main pid ${unit.mainPid || '-'} · restarted ${unit.restarts} time${unit.restarts === 1 ? '' : 's'} since it was started`),
+        style.dim(`  unit ${svc.unitFile}`)
+    ].join('\n'),
+    // One line under `di status`. A unit systemd has given up on is the one
+    // thing here a person must hear: it will not come back by itself.
+    supervisorLine: (svc, unit) => {
+        if (unit.state === 'failed') return `systemd gave up on ${svc.unit} (${unit.result || 'failed'}) — ${CMD} logs says why; ${CMD} up tries again.`
+        if (unit.active) return style.dim(`kept up by systemd (${svc.unit}, pid ${unit.mainPid || '-'}, restarted ${unit.restarts}×)`)
+        if (unit.sub === 'auto-restart') return `systemd is restarting ${svc.unit} (restarted ${unit.restarts}× so far) — ${CMD} logs says why.`
+        return style.dim(`${svc.unit} is stopped — ${CMD} up starts it under systemd.`)
+    },
+    unsupervisedWhileInstalled: (svc) => `answering, but not under ${svc.unit} — a server started some other way. ${CMD} down && ${CMD} up puts it under systemd.`,
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), service: () => ui.serviceUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -801,6 +863,7 @@ export const ui = {
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
         `  ${CMD} spaces        what is in this di.iiii`,
+        `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
@@ -814,6 +877,8 @@ export const ui = {
         '',
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
+        '',
+        `  ${CMD} service install   systemd keeps it up and restarts it if it dies (linux)`,
         '',
         `  ${CMD} update        get the newest version — never touches your work`,
         `  ${CMD} update --from FILE   update from an artifact on this machine (no network)`,

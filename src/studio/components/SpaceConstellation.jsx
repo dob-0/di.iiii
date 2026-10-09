@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
+import Canvas from '../../components/GuardedCanvas.jsx'
 import { Html, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { useWebglContextGuard, WebglContextLostOverlay } from '../../components/WebglContextGuard.jsx'

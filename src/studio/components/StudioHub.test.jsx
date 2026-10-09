@@ -20,10 +20,12 @@ const createCollection = vi.fn()
 const setProjectShelf = vi.fn()
 const listTrash = vi.fn(async () => ({ projects: [], ttlMs: 0 }))
 const restoreProject = vi.fn()
+const moveProject = vi.fn()
 const updateProject = vi.fn()
 const updateProjectDocument = vi.fn()
 const uploadProjectAsset = vi.fn()
 const getServerSpace = vi.fn()
+const listServerSpaces = vi.fn(async () => [])
 const updateServerSpace = vi.fn()
 const navigateToStudioPath = vi.fn()
 const importLegacySceneFile = vi.fn()
@@ -41,6 +43,7 @@ vi.mock('../../project/services/projectsApi.js', () => ({
     setProjectShelf: (...args) => setProjectShelf(...args),
     listTrash: (...args) => listTrash(...args),
     restoreProject: (...args) => restoreProject(...args),
+    moveProject: (...args) => moveProject(...args),
     updateProject: (...args) => updateProject(...args),
     updateProjectDocument: (...args) => updateProjectDocument(...args),
     uploadProjectAsset: (...args) => uploadProjectAsset(...args),
@@ -55,7 +58,7 @@ vi.mock('../../services/serverSpaces.js', () => ({
     getServerSpace: (...args) => getServerSpace(...args),
     updateServerSpace: (...args) => updateServerSpace(...args),
     // GridFloorBackground (rendered by StudioHub) also calls this directly.
-    listServerSpaces: () => Promise.resolve([])
+    listServerSpaces: (...args) => listServerSpaces(...args)
 }))
 
 vi.mock('../../project/import/importLegacyScene.js', () => ({
@@ -558,6 +561,61 @@ describe('private projects', () => {
 
         fireEvent.change(await screen.findByLabelText('Who sees it'), { target: { value: 'private' } })
         expect(await screen.findByText(/published front door/)).toBeTruthy()
+    })
+})
+
+// ── Move a project to another space (POST /api/projects/:id/move, #787) ─────
+describe('move a project', () => {
+    beforeEach(() => {
+        moveProject.mockReset()
+        moveProject.mockResolvedValue({ ok: true })
+        listServerSpaces.mockReset()
+        listServerSpaces.mockResolvedValue([
+            { id: 'moxir', label: 'MOXIR', isOwner: true },
+            { id: 'elsewhere', label: 'Elsewhere', isOwner: true },
+            { id: 'theirs', label: 'Theirs', isOwner: false },
+            { id: 'sandbox-x', label: 'Sandbox', isOwner: true, kind: 'sandbox' }
+        ])
+        getServerSpace.mockReset()
+        listCollections.mockResolvedValue([])
+    })
+
+    it('offers only the other spaces this account owns, and moves on confirm', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: true })
+        listProjects.mockResolvedValue([{ id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }])
+
+        render(<StudioHub spaceId="moxir" />)
+
+        const control = await screen.findByLabelText('Move to another space')
+        await waitFor(() => expect([...control.options].map(o => o.textContent)).toEqual(['move to…', 'Elsewhere']))
+        fireEvent.change(control, { target: { value: 'elsewhere' } })
+        await waitFor(() => expect(moveProject).toHaveBeenCalledWith('hall', 'elsewhere'))
+        expect(await screen.findByText(/Moved "Hall" to "Elsewhere"/)).toBeTruthy()
+    })
+
+    it('asks again when the project is the space\'s front door, then moves it with unpublish', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: true })
+        listProjects.mockResolvedValue([{ id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }])
+        const refused = Object.assign(new Error('front door'), { data: { code: 'is_published' } })
+        moveProject.mockRejectedValueOnce(refused)
+
+        render(<StudioHub spaceId="moxir" />)
+
+        const control = await screen.findByLabelText('Move to another space')
+        await waitFor(() => expect(control.options.length).toBe(2))
+        fireEvent.change(control, { target: { value: 'elsewhere' } })
+        await waitFor(() => expect(moveProject).toHaveBeenLastCalledWith('hall', 'elsewhere', { unpublish: true }))
+    })
+
+    it('gives no control to someone who does not steward the space', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: false })
+        listProjects.mockResolvedValue([{ id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }])
+        render(<StudioHub spaceId="moxir" />)
+        await screen.findByText('Hall')
+        expect(screen.queryByLabelText('Move to another space')).toBeNull()
     })
 })
 

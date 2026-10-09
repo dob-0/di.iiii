@@ -3,6 +3,7 @@ import { cloneValue } from '../../shared/projectSchema.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
 import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 import FixtureField from './FixtureField.jsx'
 
 // Clip names only exist once a viewport has loaded the model file, so this
@@ -90,6 +91,8 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
     const num = Number.isFinite(Number(value)) ? Number(value) : 0
     const intervalRef = useRef(null)
     const inputRef = useRef(null)
+    // Shown rounded while not being edited; while focused the field shows what is typed.
+    const [draft, setDraft] = useState(null)
 
     // Keep latest values accessible inside stable listeners
     const stateRef = useRef({ num, baseStep, fieldMin, fieldMax, onChange })
@@ -104,6 +107,7 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
 
     const applyDelta = useCallback((dir, s) => {
         const { num: n, fieldMin: lo, fieldMax: hi, onChange: cb } = stateRef.current
+        setDraft(null)
         cb(Math.min(hi, Math.max(lo, parseFloat((n + dir * s).toFixed(10)))))
     }, [])
 
@@ -144,11 +148,14 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
                     ref={inputRef}
                     type="number"
                     className="insp-input insp-num-input"
-                    value={num}
+                    value={draft ?? formatNumberDisplay(num)}
                     min={field.min}
                     max={field.max}
                     step={baseStep}
+                    onFocus={(e) => setDraft(e.target.value)}
+                    onBlur={() => setDraft(null)}
                     onChange={(e) => {
+                        setDraft(e.target.value)
                         const v = Number(e.target.value)
                         // Skip intermediate states like '' or a lone '-' (both
                         // parse to 0/NaN) instead of committing 0 — otherwise

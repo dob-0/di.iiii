@@ -146,6 +146,35 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'shoot-sheet',
+        category: 'Spaces & access',
+        title: 'The shoot sheet: one link for a film crew',
+        summary: 'A shoot day on one page — call times, outfits and a tick per prop — that the whole crew edits through a single link, no accounts.',
+        body: [
+            'A shoot sheet lives at /shoot/ followed by a long code. The code is the key: whoever has the link can tick a prop as ready, write a note under it ("Ani brings it", "it is in the van"), add a link to where it can be bought or printed, and add a prop that was missing. Nobody signs in, so share the link only with the crew.',
+            'Actors are listed in the order they arrive. Each one has a call time, a costume photo, the outfit and the sounds they make, and their props as pictures you tap to tick. "Actor has everything" ticks all of an actor\'s props at once.',
+            'Every phone with the sheet open checks for changes every few seconds, so a tick made on one phone shows on the others without reloading. The top corner says Saved or, if the connection drops, that the last change was not saved.',
+            'The plan and its photos are written onto the server by whoever runs the shoot (scripts/shoot-sheet-push.mjs), never into this public repository. A sheet only exists for a key the server has been told about; any other code answers "No shoot sheet here."'
+        ],
+        tags: ['shoot', 'film', 'crew', 'call sheet', 'props', 'checklist', 'share', 'link'],
+        updated: '2026-10-07'
+    },
+    {
+        id: 'delete-a-space-and-the-trash',
+        category: 'Spaces & access',
+        title: 'Delete a space, the Trash, and moving a project',
+        summary: 'Deleting a space moves it, with its projects, to the Trash for 30 days; Restore brings it back whole. Permanent and front-room spaces are never deleted.',
+        body: [
+            'On the Spaces page, Manage on a space card has Delete. It does not delete yet: it opens a box that says what goes — how many projects and how much space on disk — and that the space goes to the Trash for 30 days. Move to Trash is the only button that does anything.',
+            'The Trash button appears on the Spaces page once something is in it. Each row shows how many projects went with the space and how many days are left. Restore brings the space back with exactly the projects that went with it; a project you had deleted on its own earlier stays in that project trash. Delete forever… asks twice and is the only way the files go before the 30 days are up.',
+            'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
+            'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door.',
+            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.'
+        ],
+        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'your-space-your-word',
         category: 'Spaces & access',
         title: 'Your space, your word: owners and trusted people',
@@ -187,13 +216,16 @@ export const WIKI_ARTICLES = [
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
             'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'WHICH PAGE ANSWERS. A camera that runs on another machine is opened by a page on THAT machine that has the same project open — a projector page showing a different project cannot send it. Open Nodes from your own machine\'s di (localhost), not from the other machine\'s address: a page over plain http from another machine cannot open any camera, and the Camera In card then says so instead of staying black. A browser that opens another machine\'s di by its address is a VISITOR there: the Desk says so, it lists none of that machine\'s devices, and that machine\'s operators reach it as pictures.',
             'WHEN BOTH CHANGE THE SAME THING. Edits to different things always reach both machines. If two people change the same thing at the same moment — both move one box — both machines settle on the HOST\'s version (the install that ran `di invite`), and the other change is undone; a restore point is kept first. A follow also remembers where it was, so a restart picks up without sending old edits again.',
-            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
+            'THE SPACE\'S OWN SETTINGS come from the host: its name, whether it is public, and which project is its front door. A host that keeps the space private makes your copy private; a public host never makes a copy you kept private public — `di follows` says so. A project only you hold is copied whole to the host the first time the two are compared. To give an existing follow a new key, run `di follow` again with `--key -` — it takes effect while di runs.',
+            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. After a restart it checks again what the project lists against what the other machine holds, and carries what is missing; `di follows` says how many files are still coming, out of how many are listed. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
+            'TWO di.iiii ON ONE MACHINE, ONE DATA FOLDER. When the installed di and a second server (a dev stack) open the same data folder, only one of them carries the follows and the machine links; the other says which one (`di follows` names its pid and port) and takes over by itself within seconds if that one stops. Edits through either server to the same project are kept in order — the slower one is told to retry, never given an error.',
             'SEND OUT puts a picture on the network so OTHER programs can use it — Resolume, OBS, a media server, somebody else\'s rig, or a machine that cannot run the patch. End a chain in a Send Out, give it a name, and that name appears as a source on the local network for anything that speaks NDI to pick up. No name means it sends nothing, which is the default. Between two linked di.iiii machines you do not need this at all: the patch itself travels and the wall draws it natively, at better quality than any encoding. It needs the NDI runtime installed on the machine that sends — di.iiii never ships it, and the operator says so plainly when it is missing. NDI\u00ae is a registered trademark of Vizrt NDI AB.',
             'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
         tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock', 'send', 'ndi', 'resolume', 'obs'],
-        updated: '2026-10-01'
+        updated: '2026-10-07'
     },
     {
         id: 'vj-deck-and-clip-in',
@@ -735,6 +767,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'space-own-domain',
+        category: 'Spaces & access',
+        title: 'Your space on your own domain',
+        summary: 'Type a domain you own into the space, add one DNS record, and that domain shows your space. You keep editing on di.iiii.',
+        body: [
+            'Open Manage on your space card on the Spaces page (/studio) and choose Own domain. Type the domain, for example yokozo.xyz, and press Add domain. Only the space\'s owner (or an admin) can do this, and only for a public space.',
+            'The panel then shows the record to add at the company that runs your domain\'s DNS: a CNAME pointing your domain at domains.diiii.xyz, and sometimes a TXT record that proves the domain is yours. A bare domain (yokozo.xyz rather than www.yokozo.xyz) needs a DNS provider that can flatten a CNAME at the root, such as Cloudflare.',
+            'Nothing else is needed. di.iiii checks every two minutes and switches the domain on by itself once the record is in place and the certificate is issued; Check now asks straight away. A domain that never gets its record is let go after 7 days, so nobody can hold someone else\'s name.',
+            'Once it is live, yourdomain.com shows the space and yourdomain.com/<project> shows that project, exactly as on di.iiii, with your domain staying in the address bar. It is the same space, not a copy: what you change on di.iiii shows on your domain at once.',
+            'Editing stays on di.iiii. Opening the editor, the admin page or sign-in on your domain takes you to the same place on di.iiii, where your session lives.',
+            'Add www.yourdomain.com as a second domain if you want both. Remove takes a domain off the space at once. A space can have up to 3 domains.',
+            'Once a domain is live, Copy link and the share buttons for a public space or one of its projects give the address on your domain (yourdomain.com/<project>) instead of the di.iiii one; the di.iiii addresses keep working, and editor links stay on di.iiii.'
+        ],
+        tags: ['domain', 'custom domain', 'own domain', 'dns', 'publishing', 'owner', 'spaces'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'space-ownership',
         category: 'Spaces & access',
         title: 'Who owns a space, and how to hand one over',
@@ -1039,6 +1088,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'dev-copy-label',
+        category: 'For developers',
+        title: 'Which copy is this tab?',
+        summary: 'A tab running a developer copy of di.iiii wears a small label at the bottom right: "dev copy · <tree>".',
+        body: [
+            'A developer copy is di.iiii run from a git checkout (a "tree") by the di-dev tool, so a change can be tried without touching your real di. It looks the same as your real di, so it says so: a small label at the bottom right of every surface reads "dev copy · <tree> · your di\'s data", with the checkout\'s name.',
+            { list: [
+                'your di\'s data — the copy shows your real di\'s spaces and projects, and what you change there is saved there.',
+                'SCRATCH data, thrown away (red) — the copy has its own throwaway data; nothing done in it is kept.'
+            ] },
+            'Your installed di and the live sites never show this label. Hover it for the one-sentence explanation.'
+        ],
+        tags: ['dev copy', 'tree', 'checkout', 'di-dev', 'developers'],
+        updated: '2026-10-02'
+    },
+    {
         id: 'license-and-openness',
         category: 'For developers',
         title: 'License & openness',
@@ -1103,6 +1168,24 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['github', 'sync', 'developers', 'deploy'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'unsaved-changes',
+        category: 'Editing',
+        title: 'When the server does not answer',
+        summary: 'Your changes wait in this browser, the page says how many, and they are sent when the server is back.',
+        body: [
+            'Every change you make to a project in Studio or Nodes is sent to the server that holds it. If that server does not answer — a local install that was stopped, a laptop that lost its network — a bar across the top of the page says so: “Not saved — server unreachable · 3 changes waiting”. Keep working if you like; the count follows.',
+            { list: [
+                'The waiting changes are kept in this browser, so a reload or a closed tab does not lose them. When the project is opened again and the server answers, they are sent, and the bar goes away.',
+                'Changes the server already has are not sent twice.',
+                'While changes are waiting, leaving the page asks first.',
+                'They are kept at this address only. The same project opened at another address (127.0.0.1 instead of local.thedi.studio, say) is another browser store and does not see them — come back to the address you worked at.',
+                'If the server at this address turns out to hold another copy of the project (an older or different database), the changes are not sent to it. They stay in this browser and the project’s activity list says so.'
+            ] }
+        ],
+        tags: ['save', 'saving', 'not saved', 'offline', 'server', 'reload', 'sync', 'local'],
+        updated: '2026-10-07'
     },
     {
         id: 'google-drive-import',
@@ -1318,12 +1401,31 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-02'
     },
     {
+        id: 'nodes-settings-column-and-inside',
+        category: 'Editing',
+        title: 'Nodes: the settings column and inside a node',
+        summary: 'Select a card and its column opens on the right — name, settings, ports with their live values, Open, and Delete at the bottom. Open a node and you see what it is made of at once: a List as a table, a Text as text, code as inputs, lines and outputs.',
+        body: [
+            'The right side of Nodes holds one thing at a time, beside the canvas and never over it: the selected card’s settings, the Outliner, Chat, Help, or a card’s reading (what it is made of). Opening one replaces whatever was there, and the canvas gives up the width and re-fits.',
+            { list: [
+                'The column opens a moment after a click, once a double-click can no longer be on its way, so a double-click always goes inside instead of landing in the column.',
+                'The column, top to bottom: the node’s name (click it, or press F2, to rename) and its kind; its settings, when it has any beyond what is typed in the card; its ports, each with what is in it now and where it is wired from or to; Open; and Delete, pinned to the bottom. It is never empty. A Text’s words are typed in its card: click the text of a selected Text card.',
+                'Open — double-click the card, press Enter, or the Open button — goes inside, every time. A container (Scene, Geo, Kiosk…) shows the nodes in it. A List opens as an editable table, a Text as a text editor, each with its ports down the sides. A maths, value or logic node opens as its inputs, its own settings above the platform’s lines that work it out (read-only — they are the same code for every project), and its outputs. A Cube or another shape shows what you placed in it above and its code below. A tool (Outliner, Library, Webcam…) fills the canvas.',
+                'The strip under the bar says where you are: ← Back, the node’s name, its kind and its counts. Escape goes back too.',
+                'On a phone the column is a sheet at the bottom, with Open first and Delete at the foot.'
+            ] }
+        ],
+        tags: ['nodes', 'raw', 'settings', 'inside', 'editing'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'raw-windows-travel-with-the-canvas',
         category: 'Editing',
         title: 'Panel windows: travelling with the canvas, or pinned to the screen',
-        summary: 'An unpinned panel window (Scene, Text, Image, List) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
+        summary: 'An unpinned panel window (Scene, Image, Browser, Monitor) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
         body: [
-            'A panel node — Text, Scene, Image, List, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
+            'Text and List have no window any more, on a computer or a phone: the card is where you read them and opening one is where you edit it (see “Nodes: the settings column and inside a node”).',
+            'A panel node — Scene, Image, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
@@ -1334,7 +1436,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-02'
+        updated: '2026-10-05'
     },
     {
         id: 'raw-on-a-phone',
@@ -1449,6 +1551,7 @@ export const WIKI_ARTICLES = [
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, whether the room can reach it, and how much space your work takes',
+                'di service install — on Linux, hands the server to systemd: it starts at login and is started again within seconds if it ever stops without being asked (a crash, a stray kill). di down still stops it for good; di service remove undoes it',
                 'di up --lan — answers on this wifi too, so a phone in the room can open it (the lighting desk’s Touch page, for one). Auth is off on a local di.iiii, so this means anyone on that network can edit — di up says so every time, and it lasts for that start only: the next di up is back to this machine alone',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing',
                 'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
@@ -1460,7 +1563,7 @@ export const WIKI_ARTICLES = [
             'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-09-23'
+        updated: '2026-10-02'
     },
     {
         id: 'tools-room',
@@ -1513,10 +1616,10 @@ export const WIKI_ARTICLES = [
         title: 'The Keeper: a language model as a node',
         summary: 'Point a Keeper node at a model — one on this machine, or a box on the same network — and its answer becomes a value the rest of the graph can use.',
         body: [
-            'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
+            'Add a Keeper from the palette (category Agent — or search for local, llm or llama) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
             'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine, and it works with no internet at all — which is the situation it was built for.',
             { list: [
-                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. Anything with a path is used as given.',
+                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. An OpenAI base URL, the address ending in /v1 that llama.cpp, vLLM and LM Studio give their clients (http://127.0.0.1:8090/v1), is completed to its chat route too. Anything with a longer path is used as given.',
                 'Model — the model name that server knows, for example qwen3.',
                 'System — an optional instruction that shapes every answer.'
             ] },
@@ -1525,7 +1628,7 @@ export const WIKI_ARTICLES = [
             'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
         ],
         tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama', 'llama.cpp'],
-        updated: '2026-09-11'
+        updated: '2026-10-07'
     },
     {
         id: 'the-toybox',
@@ -1639,6 +1742,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['room', 'space', 'jam', 'placement', 'build zones', 'photos', 'arrange'],
         updated: '2026-09-03'
+    },
+    {
+        id: 'nodes-one-bar',
+        category: 'Editing',
+        title: 'Nodes: one bar, one Help sheet, one opening view',
+        summary: 'The node canvas has one 40-pixel bar, a ? for Help, your account as its last square, and a canvas that opens the same way every time.',
+        body: [
+            'On a project\'s node canvas the tools sit in the same bar as every other surface — there is no second toolbar under it, and the project is named once. On the right, in one style of small square cells: Scene, the node count (it opens the outliner), Chat, ? (Help) and ⋯. Your account is the last square of the bar; it no longer floats over the canvas. Standing inside a node, the bar shows ← Back (Esc) and where you are. Projects, Spaces and the Wiki are in the ⋯ menu.',
+            'Help is one sheet, with no tabs. Press ? or the ? cell. Its first line is about the canvas you have open — “5 nodes · nothing wired yet” — followed by seven lines: Make, Wire, Open, Back, Move, Zoom, Delete. Every key on it is read from the canvas\'s own key table, and “Every key and mouse action” lists the rest.',
+            'The zoom strip is one small row at the bottom left: − 100% + Fit. Press the percentage to return to 100%; H fits everything, F frames the selected node. On a touch screen it is Fit alone, because you pinch.',
+            'The canvas opens with every card in view, the first card 24 pixels from the top-left corner, and never larger than 100%. It waits for the card font to arrive, so the same project opens at the same zoom every time. Card text is 13 units; when the zoom would make it smaller than 11 pixels on screen the card shows a summary instead (its title, each group\'s name and row count), and below half size just its title. A fit therefore always shows every card — there is no “showing 3 of 5”.'
+        ],
+        tags: ['nodes', 'raw', 'bar', 'help', 'zoom', 'fit', 'account', 'canvas', 'opening view'],
+        updated: '2026-10-05'
     },
     {
         id: 'raw-zen-workspace',
@@ -1820,13 +1937,14 @@ export const WIKI_ARTICLES = [
                 'The six views, keys 1–6 or the row at the bottom: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig; a project can carry its own under presentationState.viewPresets.',
                 'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges and the roof left out, the rig at full strength — for checking what hangs where and where it points.',
                 'A link can open on a view: add #view-top (or floor, dj, side, rig, crane) to the room\'s address.',
-                'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.'
+                'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.',
+                'Zoom never stops: past the closest the camera may come to the point it circles, the wheel (or a pinch) carries both forward together, so you can scroll your way down the hall.'
             ] },
             'In Studio the same views and X-ray sit at the top of the viewport and the keys act on the pane under the pointer; a number a cue already uses stays the cue\'s. Studio keeps no camera limits, so you can still look up from under a thing.',
             'Walking and flying, the fixed opening shot and headset entry are unchanged.'
         ],
-        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place'],
-        updated: '2026-09-29'
+        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place', 'zoom', 'scroll', 'pinch'],
+        updated: '2026-10-04'
     },
     {
         id: 'room-quality-lite-full',

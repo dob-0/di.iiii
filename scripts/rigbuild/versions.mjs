@@ -27,7 +27,8 @@ import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
 import { billedDays } from '../../src/rigbuild/equipment.js'
 import { powerOf, typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
-import { linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
+import { LASER_FIXTURES, linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
+import { clearUnderCab, tieoffCabClashes } from './safety.mjs'
 
 const DEG = Math.PI / 180
 
@@ -246,8 +247,8 @@ export const craneCut = ({ spec, base, groups, classes }) => {
         why: cut.owner,
         trim_m: trim,
         trim_why: `derived (versions.mjs craneCut): the high pick's bridle at its ${r.bridle.max_included_deg}° limit puts its apex at ${r2(apexMax)} m; the hoist's shortest drop under it (${r2(drop)} m) and the chords at that pick leave ${trim} m for the bottom chord over the axis`,
-        ends: uEnds.map((u) => ({ u_m: u, x_m: r2(u * Math.cos(th) + stage0.axis), bottom_chord_m: r2(bottomAt(u)) })),
-        rise_m: r2(cut.truss.width_m * Math.sin(th)),
+        ends: uEnds.map((u) => ({ u_m: u, x_m: r2(u * Math.cos(th) + (stage0.trussAxis ?? stage0.axis)), bottom_chord_m: r2(bottomAt(u)) })),
+        rise_m: r2(cut.truss.width_m * Math.abs(Math.sin(th))),
         rigging: { ...clone(r), hoists: r.picks_u_m.length, drop_m: r2(drop), bridle: { ...clone(r.bridle), leg_spread_m: r2(legSpread) }, source: spec.craneCut }
     }
     const rig = { stage: base.stage, truss }
@@ -259,9 +260,14 @@ export const craneCut = ({ spec, base, groups, classes }) => {
     const gridZ = [...g.column_grid_z_m].sort((p, q) => Math.abs(p - crane.z_m) - Math.abs(q - crane.z_m))[0]
     truss.rigging.tieoffs = r.tieoffs.map((tie) => {
         const end = linePoint(stage, tie.u_m, 'axis')
-        const to = [tie.side * g.column_inner_face_x_m, tie.y_m === 'end' ? r2(end[1]) : tie.y_m, gridZ]
-        return { ...clone(tie), from_m: end.map(r2), to_m: to, length_m: r2(Math.hypot(to[0] - end[0], to[1] - end[1], to[2] - end[2])) }
+        // `grid_z_m`: a tie-off to a stated column grid line (the bridge parked between two: 2026-10-07, behind the DJ)
+        const to = [tie.side * g.column_inner_face_x_m, tie.y_m === 'end' ? r2(end[1]) : tie.y_m, tie.grid_z_m ?? gridZ]
+        const under = clearUnderCab(end, to, hall)
+        return { ...clone(tie), from_m: end.map(r2), to_m: to, length_m: r2(Math.hypot(to[0] - end[0], to[1] - end[1], to[2] - end[2])), under_cab_m: under == null ? null : r2(under) }
     })
+    // audit A-02 (2026-10-05): a tie-off through a crane cab is refused at the build, not only in a test
+    const clash = tieoffCabClashes({ truss }, hall)
+    if (clash.length) throw new Error(`craneCut: tie-off ${clash.join(', ')} passes through a crane cab of ${spec.hall} — move its anchor`)
 
     // what hangs on the line, where, and its weight (the type library's, the makers' figures)
     const kgOf = (code) => types.find((x) => x.code === code)?.weight_kg?.value ?? null
@@ -319,13 +325,19 @@ export const craneCut = ({ spec, base, groups, classes }) => {
     }
     // clearances: the lowest thing on the line (a hung body, else the bottom chord) against raised hands
     const heightOf = (code) => (types.find((y) => y.code === code)?.model3d?.sizeAtHome_mm?.height_y ?? 0) / 1000
-    const low = Math.min(bottomAt(uEnds[0]), ...lamps.filter((l) => l.hung).map((l) => bottomAt(l.u) - heightOf(l.code)))
+    // BOTH ends, the low one first: since the flip (2026-10-07) the -x end is the HIGH end, so reading only
+    // uEnds[0] measured the wrong end (it was right only because a hung lamp sat on the low end).
+    const endsLowFirst = [...uEnds].sort((p, q) => bottomAt(p) - bottomAt(q))
+    const lowEnd = endsLowFirst[0]
+    const low = Math.min(...endsLowFirst.map(bottomAt), ...lamps.filter((l) => l.hung).map((l) => bottomAt(l.u) - heightOf(l.code)))
+    const lowSide = x(lowEnd) < 0 ? 'house-left' : 'house-right'
     truss.clearance = {
         lowest_m: r2(low),
+        low_end: { u_m: lowEnd, side: lowSide, bottom_chord_m: r2(bottomAt(lowEnd)), over_raised_hands_m: r2(bottomAt(lowEnd) - cut.clearance.raised_hands_m) },
         over_raised_hands_m: r2(low - cut.clearance.raised_hands_m),
         over_dj_raised_hands_m: r2(bottomAt(0) - (cut.clearance.dj_deck_m + cut.clearance.raised_hands_m)),
         raised_hands_m: cut.clearance.raised_hands_m,
-        note: 'the line hangs in the bridge\'s plane (z 4.8), behind the crowd barrier: no audience stands under it; the low end is over the back of house-left'
+        note: `the line hangs in the bridge's plane (z ${r2(crane.z_m)}), behind the crowd barrier: no audience stands under it; the low end is over the back of ${lowSide}`
     }
     // sway: the natural periods and the limits the looks keep (versions.test.js holds them)
     const periods = truss.rigging.picks.flatMap((p) => [p.period_x_s, p.period_z_s])
@@ -471,11 +483,12 @@ export const versionRig = ({ spec, base, id }) => {
     const truss = v.truss === 'none'
         ? { kind: 'none', note: 'this version hangs nothing overhead: no goalpost, the floor line is the rig' }
         : v.truss === 'crane' ? craneTruss(spec, groups, classes)
-            : v.truss === 'crane-cut' ? craneCut({ spec, base, groups, classes })
+            // a version may name its own cut overlay (known-full-flipped, 2026-10-07: the same line mirrored)
+            : v.truss === 'crane-cut' ? craneCut({ spec: v.craneCut ? { ...spec, craneCut: v.craneCut } : spec, base, groups, classes })
             : v.truss === 'halo' ? haloTruss(v, groups, classes)
             : v.truss === 'crane-x' ? craneTruss(spec, groups, classes, 'craneX')
                 : clone(base.truss)
-    const hasLaser = groups.some((g) => classes[g.class]?.fixture === 'laser')
+    const hasLaser = groups.some((g) => LASER_FIXTURES.has(classes[g.class]?.fixture))
     return {
         rig: `${base.rig.replace(/ — .*$/, '')} — ${v.title}`,
         version: base.version,
@@ -489,7 +502,7 @@ export const versionRig = ({ spec, base, id }) => {
         assumptions: [
             ...base.assumptions.slice(0, 3),
             ...(truss.kind === 'none' ? ['No truss: this version stands every fixture on the floor (the booth line, the pit, the column bases, the press).']
-                : truss.shape === 'slope' ? [`No stage deck, no towers: the DJ stand alone. THE CUT: one straight ${truss.width_m} m line of ${truss.section_class}, sloped ${truss.slope_deg}° in the bridge's plane — bottom chord ${truss.ends[0].bottom_chord_m} m at house left (x ${truss.ends[0].x_m}) to ${truss.ends[1].bottom_chord_m} m at house right (x ${truss.ends[1].x_m}) — on ${truss.rigging.hoists} bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ ${truss.rigging.load.total_kg[0]} kg, ${truss.rigging.load.per_point_kg.join(' / ')} kg a pick (house left → right, ESTIMATE). ${truss.rigging.signoff.split(':')[0]}.`]
+                : truss.shape === 'slope' ? [`No stage deck, no towers: the DJ stand alone. THE CUT: one straight ${truss.width_m} m line of ${truss.section_class}, sloped ${Math.abs(truss.slope_deg)}° in the bridge's plane — bottom chord ${truss.ends[0].bottom_chord_m} m at house left (x ${truss.ends[0].x_m}) to ${truss.ends[1].bottom_chord_m} m at house right (x ${truss.ends[1].x_m}) — on ${truss.rigging.hoists} bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ ${truss.rigging.load.total_kg[0]} kg, ${truss.rigging.load.per_point_kg.join(' / ')} kg a pick (house left → right, ESTIMATE). ${truss.rigging.signoff.split(':')[0]}.`]
                 : truss.shape === 'triangle' ? [`No stage deck, no towers: the DJ stand alone. A flat equilateral triangle of ${truss.section_class}, ${truss.side_m} m a side, lies at ${truss.trim_m} m (bottom chord) centred under the crane bridge over the DJ, its apex toward the ${truss.apex || 'audience'}, on 3 chain hoists (one per corner, each on a two-leg bridle) with safety steels; load ≈ ${truss.rigging.load.total_kg} kg, corners ${truss.rigging.load.per_point_kg.apex} / ${truss.rigging.load.per_point_kg.left} / ${truss.rigging.load.per_point_kg.right} kg (apex / left / right). ${truss.rigging.signoff.split(':')[0]}.`]
                 : truss.kind === 'crane-hung' ? [`No stage deck, no towers: the DJ stand alone. One ${truss.width_m} m line of ${truss.section_class} hangs from the bridge of the overhead crane parked over the DJ, bottom chord ${truss.trim_m} m, on ${truss.rigging.hoists} chain hoists with safety steels; load on the line ≈ ${truss.rigging.load.total_kg[0]}–${truss.rigging.load.total_kg[1]} kg, ≈ ${truss.rigging.load.per_point_kg[0]}–${truss.rigging.load.per_point_kg[1]} kg a point. ${truss.rigging.signoff.split(':')[0]}.`]
                     : truss.kind === 'crane-x' ? [`No stage deck, no towers: the DJ stand alone. Two ${truss.arm_m} m arms of ${truss.section_class} cross FLAT at a 4-way junction (${truss.junction.code}) under the bridge of the overhead crane parked over the DJ, one arm along the bridge, one across it pointing out over the crowd; bottom chord ${truss.trim_m} m, on ${truss.rigging.load.points} climbing chain hoists, each on a two-leg bridle from the girders, a safety steel each, and two restraint steels at every arm end; load on the X ≈ ${truss.rigging.load.total_kg[0]} kg, on the crane ≈ ${truss.rigging.load.on_crane_kg[0]} kg. ${truss.rigging.signoff.split(':')[0]}.`]
@@ -589,17 +602,25 @@ export const costing = ({ spec, list, days = [1, 2] }) => {
     const rateOf = new Map(list.catalogue.map((c) => [c.code, c.rate]))
     const extraDay = list.rule?.extraDay ?? 0.5
     const need = new Map(rental.map((i) => [i.code, i.ordered]))
+    // The rates are the supplier's and are not in the repo (privatePrices.mjs adds them at
+    // script time on the owner's machine). A sum with any rate missing is null, never a partial.
     const perDay = (pkgs) => {
         const cover = new Map()
         for (const p of pkgs) for (const [code, n] of Object.entries(p.covers)) cover.set(code, (cover.get(code) || 0) + n)
-        let sum = pkgs.reduce((s, p) => s + p.rate, 0)
+        let sum = 0
+        let priced = true
+        for (const p of pkgs) { if (Number.isFinite(p.rate)) sum += p.rate; else priced = false }
         const alaCarte = []
         for (const [code, n] of need) {
             const rest = Math.max(0, n - (cover.get(code) || 0))
-            if (rest) { sum += rest * (rateOf.get(code) || 0); alaCarte.push({ code, n: rest, rate: rateOf.get(code) }) }
+            if (rest) {
+                const rate = rateOf.get(code)
+                if (Number.isFinite(rate)) sum += rest * rate; else priced = false
+                alaCarte.push({ code, n: rest, rate: Number.isFinite(rate) ? rate : null })
+            }
         }
         const unused = [...cover].map(([code, n]) => ({ code, n: Math.max(0, n - (need.get(code) || 0)) })).filter((u) => u.n > 0)
-        return { perDay: sum, alaCarte, unused }
+        return { perDay: priced ? sum : null, alaCarte, unused }
     }
     const pkgs = spec.packages.items
     const options = [
@@ -608,17 +629,19 @@ export const costing = ({ spec, list, days = [1, 2] }) => {
         { id: pkgs.map((p) => p.id).join('+'), label: `${pkgs.map((p) => p.label).join(' + ')} + the rest à la carte`, packages: pkgs }
     ].map((o) => {
         const c = perDay(o.packages)
-        return { ...o, packages: o.packages.map((p) => ({ id: p.id, label: p.label, rate: p.rate, cells: p.cells })), ...c, byDays: Object.fromEntries(days.map((d) => [d, c.perDay * billedDays(d, extraDay)])) }
+        return { ...o, packages: o.packages.map((p) => ({ id: p.id, label: p.label, rate: p.rate ?? null, cells: p.cells })), ...c, byDays: Object.fromEntries(days.map((d) => [d, c.perDay == null ? null : c.perDay * billedDays(d, extraDay)])) }
     })
-    const best = [...options].sort((a, b) => a.perDay - b.perDay)[0]
+    const priced = options.every((o) => o.perDay != null)
+    const best = priced ? [...options].sort((a, b) => a.perDay - b.perDay)[0] : null
     const alaCarte = options[0]
     return {
         rule: list.rule,
         options,
-        best: best.id,
-        cheaperThanALaCarte: options.filter((o) => o.id !== 'a-la-carte' && o.perDay < alaCarte.perDay).map((o) => ({ id: o.id, saves: alaCarte.perDay - o.perDay })),
+        priced,
+        best: best ? best.id : null,
+        cheaperThanALaCarte: !priced ? [] : options.filter((o) => o.id !== 'a-la-carte' && o.perDay < alaCarte.perDay).map((o) => ({ id: o.id, saves: alaCarte.perDay - o.perDay })),
         otherSupplierLines: list.items.filter((i) => i.from === 'other').map((i) => ({ code: i.code, ordered: i.ordered, note: i.note })),
-        caveat: 'Rental lines only; other-supplier lines have no rate yet. VAT excluded; delivery, rigging and de-rig on request (the quote calculator\'s default 150,000 is a term, not added). Packages read from the hidden "Price data" sheet; the day rule is assumed to apply to them.'
+        caveat: 'Rental lines only; other-supplier lines have no rate yet; the rental house\'s rates are private (DI_PRIVATE_PRICES) and without them every sum is null. VAT excluded; delivery, rigging and de-rig on request (the quote calculator\'s default delivery term is not added). Packages read from the hidden "Price data" sheet; the day rule is assumed to apply to them.'
     }
 }
 

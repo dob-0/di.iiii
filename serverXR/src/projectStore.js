@@ -140,8 +140,11 @@ const s = () => {
     // Ordered by the shelf, then by hand, then by recency — a project that has
     // never been dragged keeps exactly the order it had before collections.
     selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? AND deleted_at IS NULL ORDER BY position ASC, updated_at DESC'),
-    selectTrashed:    db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
-    selectTrashedInSpace: db.prepare('SELECT * FROM projects WHERE space_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
+    // A project that went to the trash WITH its space (same stamp) belongs to
+    // the space's entry in the trash, not to this list: restoring it alone would
+    // put live work inside a space nobody can open.
+    selectTrashed:    db.prepare('SELECT p.* FROM projects p WHERE p.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM spaces s WHERE s.id = p.space_id AND s.deleted_at IS NOT NULL) ORDER BY p.deleted_at DESC'),
+    selectTrashedInSpace: db.prepare('SELECT p.* FROM projects p WHERE p.space_id = ? AND p.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM spaces s WHERE s.id = p.space_id AND s.deleted_at IS NOT NULL) ORDER BY p.deleted_at DESC'),
     selectPurgeable:  db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL AND deleted_at < ?'),
     softDelete:       db.prepare('UPDATE projects SET deleted_at = ?, updated_at = ? WHERE id = ?'),
     restore:          db.prepare('UPDATE projects SET deleted_at = NULL, updated_at = ? WHERE id = ?'),
@@ -351,6 +354,192 @@ const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory =
   })()
 }
 
+/*
+ * Ops beyond the version their project stands at — and what is done with them.
+ *
+ * A project's version is `projects.document_version`; its log is the rows of
+ * `project_ops`. They are written together (commitProjectOps below), so a row
+ * above the version should never exist. It did, on 2026-10-02: two servers on
+ * one data folder each ran a follower into the same database, and the old
+ * three-step write (document, then ops, then version) let one process's ops
+ * land while the other's version did not. The project sat at 809 with ops up
+ * to 819, and every later write at 810 failed the UNIQUE index — a 500, every
+ * 25 seconds, for hours, with nothing anywhere saying why.
+ *
+ * THE RULE: the version is the truth. It is what every reader, every editor and
+ * every follower was told; the document on disk is the one written with it.
+ * Ops above it never became the project — no reader could have been told about
+ * them — so they are set aside, not replayed: moved whole into
+ * `project_ops_quarantine` with the version the project stood at and the
+ * reason, and logged. Nothing is deleted. A followed project then agrees with
+ * its host again through the follow's own convergence (follow/followConverge.js),
+ * which compares the documents and takes the host's.
+ *
+ * Replaying them instead (bumping the version to 819) was rejected: those ops
+ * came from two processes at once, the document holds an unknown subset of
+ * their effects, and publishing them would hand every reader a log that does
+ * not describe the document it sits beside.
+ */
+const ORPHAN_REASON = 'ops above the version the project stands at (two writers on one data folder, or a write cut off between its steps)'
+
+let _qs = null
+let _qsDb = null
+const qs = () => {
+  const db = getDb()
+  if (_qs && _qsDb === db) return _qs
+  _qsDb = db
+  _qs = {
+    orphans:       db.prepare('SELECT * FROM project_ops WHERE project_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
+    quarantine:    db.prepare('INSERT INTO project_ops_quarantine (project_id, version, data, created_at, actor, actor_type, actor_label, original_seq, document_version, reason, quarantined_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+    dropOrphans:   db.prepare('DELETE FROM project_ops WHERE project_id = ? AND version > ?'),
+    // Every project with a row above its version — the state the heal is for.
+    orphanedProjects: db.prepare('SELECT p.id AS id, p.space_id AS space_id, p.document_version AS document_version, MAX(o.version) AS max_version, COUNT(o.seq) AS n FROM projects p JOIN project_ops o ON o.project_id = p.id AND o.version > p.document_version GROUP BY p.id'),
+    versionOf:     db.prepare('SELECT document_version FROM projects WHERE id = ?'),
+    bumpVersion:   db.prepare('UPDATE projects SET title = ?, document_version = ?, updated_at = ?, last_touched_at = ? WHERE id = ?'),
+    listQuarantined: db.prepare('SELECT * FROM project_ops_quarantine WHERE project_id = ? ORDER BY version ASC, seq ASC')
+  }
+  return _qs
+}
+
+// Must run inside a transaction (it is two statements that only make sense
+// together). Returns null when there was nothing to move.
+const quarantineOrphanOpsInTx = (projectId, documentVersion, reason = ORPHAN_REASON) => {
+  const rows = qs().orphans.all(projectId, documentVersion)
+  if (!rows.length) return null
+  const at = Date.now()
+  for (const row of rows) {
+    qs().quarantine.run(projectId, row.version, row.data, row.created_at, row.actor ?? null, row.actor_type ?? null, row.actor_label ?? null, row.seq, documentVersion, reason, at)
+  }
+  qs().dropOrphans.run(projectId, documentVersion)
+  return { projectId, documentVersion, moved: rows.length, from: rows[0].version, to: rows[rows.length - 1].version, reason }
+}
+
+const describeQuarantine = (healed) =>
+  `[projects] ${healed.projectId}: ${healed.moved} op(s) v${healed.from}–v${healed.to} were above the version it stands at (v${healed.documentVersion}) — moved to project_ops_quarantine, document kept as it is. Reason: ${healed.reason}`
+
+/**
+ * At startup: every project with ops above its version is healed, each in its
+ * own transaction, each said in the log. Returns what was moved.
+ */
+const healOrphanProjectOps = ({ log = null } = {}) => {
+  const healed = []
+  for (const row of qs().orphanedProjects.all()) {
+    const result = getDb().transaction(() => {
+      // Re-read inside the write lock: the version may have moved since the scan.
+      const current = qs().versionOf.get(row.id)
+      return current ? quarantineOrphanOpsInTx(row.id, Number(current.document_version) || 0) : null
+    }, { immediate: true })()
+    if (result) {
+      healed.push(result)
+      log?.warn?.(describeQuarantine(result))
+    }
+  }
+  return healed
+}
+
+const listQuarantinedOps = (projectId) => qs().listQuarantined.all(projectId)
+
+/**
+ * The one database step of a project write: the version check, the op append
+ * and the version bump, in ONE transaction that holds SQLite's write lock from
+ * its first read (BEGIN IMMEDIATE). Two processes cannot both pass the check:
+ * the loser of a race gets { conflict } — the ordinary 409 — and writes
+ * nothing, never ops without the version that goes with them.
+ *
+ * Ops above the current version are quarantined first (see the rule above), so
+ * a project left in that state takes its next write instead of failing it.
+ *
+ * `ops` must already carry versions baseVersion+1 … nextVersion.
+ */
+const commitProjectOps = ({ projectId, baseVersion, ops, nextVersion, title = undefined, maxHistory = 500, maxAgeMs = 0, actor = null }) => {
+  const { selectAnyById, opsInsert, opsCount, opsTrim, opsTrimAged } = s()
+  const db = getDb()
+  return db.transaction(() => {
+    const row = selectAnyById.get(projectId)
+    if (!row) return { notFound: true }
+    const current = Number(row.document_version) || 0
+    if (current !== baseVersion) return { conflict: true, latestVersion: current }
+    const healed = quarantineOrphanOpsInTx(projectId, current)
+    const now = Date.now()
+    for (const op of ops) {
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now,
+        actor?.actor ?? null, actor?.type ?? null, actor?.label ?? null)
+    }
+    const { cnt } = opsCount.get(projectId)
+    if (cnt > maxHistory) opsTrim.run(projectId, projectId, cnt - maxHistory)
+    if (maxAgeMs > 0) opsTrimAged.run(projectId, now - maxAgeMs)
+    const nextTitle = title !== undefined ? (String(title || '').trim() || row.title) : row.title
+    qs().bumpVersion.run(nextTitle, nextVersion, now, now, projectId)
+    if (row.deleted_at) s().restore.run(now, projectId)
+    return {
+      ok: true,
+      healed,
+      meta: rowToMeta({ ...row, title: nextTitle, document_version: nextVersion, updated_at: now, last_touched_at: now, deleted_at: null })
+    }
+  }, { immediate: true })()
+}
+
+/*
+ * The document file and the database cannot share a transaction, so a write
+ * is ordered so that a crash at any point leaves something whole
+ * (write-ahead, then commit, then apply — the rename is atomic on POSIX):
+ *
+ *   1. the new document is written beside the old as document.json.v<N>.pending
+ *   2. the database commits version N (commitProjectOps)
+ *   3. the pending file is renamed over document.json
+ *
+ * Killed after 1: N never committed; the pending file is removed on the next
+ * write. Killed after 2: N committed; the next write (or the next start) puts
+ * the pending file in place before anything else. node --watch restarts a dev
+ * server mid-request, so this is not a theoretical window.
+ */
+const PENDING_RE = /^document\.json\.v(\d+)\.pending$/
+const pendingDocumentPath = (spacesDir, spaceId, projectId, version) =>
+  path.join(getProjectPaths(spacesDir, spaceId, projectId).projectDir, `document.json.v${version}.pending`)
+
+const stageProjectDocument = async (spacesDir, spaceId, projectId, document, version) => {
+  const projectMeta = await loadProjectMeta(spacesDir, spaceId, projectId)
+  const pendingPath = pendingDocumentPath(spacesDir, spaceId, projectId, version)
+  const coerced = coerceProjectDocument(spaceId, projectId, document, projectMeta)
+  await writeJson(pendingPath, coerced)
+  return { pendingPath, document: coerced }
+}
+
+const applyStagedDocument = async (spacesDir, spaceId, projectId, pendingPath) => {
+  const { documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
+  await fsp.rename(pendingPath, documentPath)
+}
+
+const discardStagedDocument = async (pendingPath) => {
+  await fsp.rm(pendingPath, { force: true })
+}
+
+/**
+ * Finish or drop what a stopped writer left. Call only while holding the
+ * project's write lock (projectWrite.js). Returns what it did, for the log.
+ */
+const recoverStagedDocuments = async (spacesDir, spaceId, projectId) => {
+  const { projectDir, documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
+  let names = []
+  try { names = await fsp.readdir(projectDir) } catch { return [] }
+  const pending = names.map((name) => [name, PENDING_RE.exec(name)]).filter(([, m]) => m)
+  if (!pending.length) return []
+  const current = Number(qs().versionOf.get(projectId)?.document_version) || 0
+  const done = []
+  for (const [name, match] of pending) {
+    const version = Number(match[1])
+    const file = path.join(projectDir, name)
+    if (version === current) {
+      await fsp.rename(file, documentPath)
+      done.push({ version, action: 'applied' })
+    } else {
+      await fsp.rm(file, { force: true })
+      done.push({ version, action: version > current ? 'dropped-uncommitted' : 'dropped-superseded' })
+    }
+  }
+  return done
+}
+
 const ensureProject = async (spacesDir, spaceId, projectId, overrides = {}) => {
   const { projectDir, assetsDir, documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
   await ensureDir(projectDir)
@@ -518,6 +707,14 @@ module.exports = {
   readProjectOpsSince,
   upsertProjectMeta,
   appendProjectOps,
+  commitProjectOps,
+  healOrphanProjectOps,
+  listQuarantinedOps,
+  quarantineOrphanOpsInTx,
+  stageProjectDocument,
+  applyStagedDocument,
+  discardStagedDocument,
+  recoverStagedDocuments,
   writeJson,
   writeProjectDocument,
   writeProjectOps

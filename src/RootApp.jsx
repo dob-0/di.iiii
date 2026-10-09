@@ -9,10 +9,12 @@ import {
     isRawLocation,
     RAW_PAGE_OUT,
     RAW_PAGE_PROJECT,
-    RAW_PAGE_PROJECTS
+    RAW_PAGE_PROJECTS,
+    rawShowsFloatingAccount,
 } from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import ModeMark from './components/ModeMark.jsx'
+import TreeChip from './components/TreeChip.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -41,7 +43,7 @@ import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SHOOT, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -95,6 +97,7 @@ const SpaceContentsPage = lazy(() => import('./pages/SpaceContentsPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 const ForAppsPage = lazy(() => import('./pages/ForAppsPage.jsx'))
+const ShootPage = lazy(() => import('./pages/shoot/ShootPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
@@ -152,7 +155,7 @@ function RawSurfaceRoute({ rawState, spaceId }) {
             requiredSpaceId={spaceId}
             outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
             // The floating account chip must not hang over the show.
-            showAccountButton={rawState.page !== RAW_PAGE_OUT}
+            showAccountButton={rawShowsFloatingAccount(rawState)}
         >
             {surface}
         </ProtectedSurface>
@@ -819,6 +822,15 @@ function AppRouter() {
         )
     }
 
+    // `/shoot/{key}` — a crew's shared shoot sheet, opened by its link.
+    if (appState.page === APP_PAGE_SHOOT) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Opening the shoot sheet" detail="" />}>
+                <ShootPage sheetKey={appState.shootKey} />
+            </Suspense>
+        )
+    }
+
     const isRootLanding = !appState.spaceId
         && appState.page !== APP_PAGE_PREFERENCES
         && appState.page !== APP_PAGE_WIKI
@@ -826,6 +838,7 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TERMS
         && appState.page !== APP_PAGE_TOOLS
         && appState.page !== APP_PAGE_FOR_APPS
+        && appState.page !== APP_PAGE_SHOOT
 
     if (isRootLanding) {
         // ?tour=1 keeps the landing reachable on a local install, where `/` is
@@ -916,6 +929,7 @@ export default function RootApp() {
         <BrowserRouter>
             <AuthReturnNotice />
             <ModeMark />
+            <TreeChip />
             <AppRouter />
         </BrowserRouter>
     )

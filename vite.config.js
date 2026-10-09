@@ -243,6 +243,82 @@ const localProfilePlugin = () => ({
     }
 })
 
+// `virtual:kit-versions` — the version of every npm package, as the lock files
+// resolve it, for the "What we use" table on /tools (src/kit/kitStack.js).
+//
+// The table used to carry each version by hand, and kitCatalogue.test.js failed
+// any change that moved one — so every Dependabot bump failed CI by design until
+// someone edited the table (2026-10-05: eight bumps stuck, e.g. "dotenv: installed
+// 18.0.4, table says 18.0.3"). Reading the lock files during the build makes the
+// printed version the one this revision installs, by construction. The lock
+// files, not node_modules: they are committed, so a Docker build, CI and a fresh
+// clone all have them, and a bump rewrites them in the same change.
+const kitVersionsPlugin = () => {
+    const VIRTUAL_ID = 'virtual:kit-versions'
+    const RESOLVED_ID = `\0${VIRTUAL_ID}`
+    // Exactly the packages the table names (`npm:` / `server: true` in kitStack.js,
+    // read with acorn, as node-anatomy reads its sources — never regexed), each as
+    // its lock file resolves it at the top level: what `import 'x'` gets. Some are
+    // not direct dependencies (zod comes with the MCP SDK). All ~750 installed
+    // packages would put ~25 KB on /tools for 37 rows.
+    const tablePackages = async (root) => {
+        const { Parser } = await import('acorn')
+        const source = fs.readFileSync(path.join(root, 'src', 'kit', 'kitStack.js'), 'utf8')
+        const ast = Parser.parse(source, { ecmaVersion: 'latest', sourceType: 'module' })
+        const found = []
+        const visit = (node) => {
+            if (!node || typeof node.type !== 'string') return
+            if (node.type === 'ObjectExpression') {
+                const prop = (key) => node.properties.find((p) => p.type === 'Property' && (p.key.name ?? p.key.value) === key)?.value
+                const npm = prop('npm')
+                if (npm?.type === 'Literal' && typeof npm.value === 'string') {
+                    found.push({ name: npm.value, server: prop('server')?.value === true })
+                }
+            }
+            for (const value of Object.values(node)) {
+                if (Array.isArray(value)) value.forEach(visit)
+                else if (value && typeof value === 'object') visit(value)
+            }
+        }
+        visit(ast)
+        return found
+    }
+    const lockPackages = (dir) => {
+        const lockFile = path.join(dir, 'package-lock.json')
+        return fs.existsSync(lockFile) ? JSON.parse(fs.readFileSync(lockFile, 'utf8')).packages || {} : {}
+    }
+    return {
+        name: 'kit-versions',
+        resolveId(id) {
+            return id === VIRTUAL_ID ? RESOLVED_ID : null
+        },
+        async load(id) {
+            if (id !== RESOLVED_ID) return null
+            const root = path.dirname(fileURLToPath(import.meta.url))
+            const locks = { client: lockPackages(root), server: lockPackages(path.join(root, 'serverXR')) }
+            const versions = { client: {}, server: {} }
+            for (const { name, server } of await tablePackages(root)) {
+                const side = server ? 'server' : 'client'
+                const version = locks[side][`node_modules/${name}`]?.version
+                if (version) versions[side][name] = version
+            }
+            return `export default ${JSON.stringify(versions)}`
+        },
+        configureServer(server) {
+            // A row added to the table, or a lock file rewritten by an install,
+            // shows its version without restarting the dev server.
+            const sources = ['src/kit/kitStack.js', 'package-lock.json', 'serverXR/package-lock.json']
+                .map((file) => path.join(server.config.root, file))
+            server.watcher.add(sources)
+            server.watcher.on('change', (file) => {
+                if (!sources.includes(file)) return
+                const module = server.moduleGraph.getModuleById(RESOLVED_ID)
+                if (module) server.moduleGraph.invalidateModule(module)
+            })
+        }
+    }
+}
+
 // `virtual:node-anatomy` — where every node type's code lives, as line ranges
 // the "what is it made of" sheet slices real source by.
 //
@@ -460,6 +536,9 @@ export default {
 
         // virtual:node-anatomy — measured from the sources, never committed
         nodeAnatomyPlugin(),
+
+        // virtual:kit-versions — the /tools stack table's versions, from the lock files
+        kitVersionsPlugin(),
 
         // Publish install.sh / install.ps1 as /get.sh and /get.ps1
         emitInstallScriptsPlugin(),

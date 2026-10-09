@@ -29,10 +29,22 @@ function registerSpaceRoutes(router, {
   buildMeta,
   collectSceneAssetRefs = null,
   config = {},
+  findPrimaryHostForSpace = null,
+  mapPrimaryHosts = null,
   countSpacesOwnedBy = null,
   spaceLimit = 3,
   grantSpaceToSessionUser = null,
   deleteSpace,
+  trashSpace = null,
+  restoreSpace = null,
+  listTrashedSpaces = null,
+  loadTrashedSpaceMeta = null,
+  spaceFootprint = null,
+  purgeTrashedSpace = null,
+  protectedReason = () => null,
+  spaceTrashTtlMs = 30 * 24 * 60 * 60 * 1000,
+  isSpaceOwnerOrAdminState = () => true,
+  requireTrashedSpaceOwnerOrAdminWrite = (req, res, next) => next(),
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
@@ -98,6 +110,14 @@ function registerSpaceRoutes(router, {
   // apply immediately — gating is for what a visitor sees or who can reach a
   // space, not routine editing.
 
+  // A follower of this space compares its settings (label, visibility, front
+  // door) and holds its read open on the space's change mark: end that wait, and
+  // wake a follow running here. Called on every path that lands a PATCH.
+  const announceSpaceSettingsChange = (spaceId) => {
+    try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+    try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+  }
+
   if (approvalGate) {
     approvalGate.registerExecutor('spaces.patch', async ({ spaceId, patch, nextOwnerUserId }) => {
       // Re-checked at execution: an approval can wait an hour, and the project
@@ -109,6 +129,7 @@ function registerSpaceRoutes(router, {
         }
       }
       const meta = await upsertSpaceMeta(spaceId, patch)
+      announceSpaceSettingsChange(spaceId)
       if (nextOwnerUserId && findUserById && setUserSpaces) {
         try {
           const user = findUserById(nextOwnerUserId)
@@ -119,10 +140,16 @@ function registerSpaceRoutes(router, {
       }
       return { space: meta }
     })
+    // Delete is the SOFT delete now: the space and its projects go to the trash
+    // and come back with POST /restore for 30 days. Only the purge removes bytes.
     approvalGate.registerExecutor('spaces.delete', async ({ spaceId }) => {
+      const receipt = await trashSpace(spaceId)
+      return { ok: true, trashed: true, ...(receipt || {}) }
+    })
+    approvalGate.registerExecutor('spaces.purge', async ({ spaceId }) => {
       if (typeof onDeleteSpace === 'function') await onDeleteSpace(spaceId)
-      await deleteSpace(spaceId)
-      return { ok: true }
+      const purged = await purgeTrashedSpace(spaceId)
+      return { ok: true, purged }
     })
     approvalGate.registerExecutor('commons.asset.delete', ({ assetId }) => ({ ok: true, removed: commonsStore.unshareAsset(assetId) }))
   }
@@ -184,6 +211,19 @@ function registerSpaceRoutes(router, {
     return { ...rest, ...(mayManage ? { trustedUserIds: trustedUserIds || [] } : {}), isOwner }
   }
 
+  // The address a public space's share links should use: its live own domain
+  // (docs/architecture/SPEC_space_own_domain.md), else null. Private spaces never
+  // advertise one. Optional dependency: without it the field is simply null.
+  const withDomain = (space, hostOf) => {
+    let domain = null
+    if (space?.isPublic && space.kind !== 'sandbox') {
+      try { domain = hostOf(space.id) || null } catch { domain = null }
+    }
+    return { ...space, domain }
+  }
+
+  const hostOfSpace = (id) => (typeof findPrimaryHostForSpace === 'function' ? findPrimaryHostForSpace(id) : null)
+
   router.get('/api/spaces', async (req, res, next) => {
     try {
       const spaces = await listSpaces()
@@ -233,8 +273,12 @@ function registerSpaceRoutes(router, {
           projectCounts = null
         }
       }
+      let hosts = null
+      if (typeof mapPrimaryHosts === 'function') {
+        try { hosts = mapPrimaryHosts() } catch { hosts = null }
+      }
       const mapped = visible.map((space) => {
-        const meta = withIsOwner(state, space)
+        const meta = withDomain(withIsOwner(state, space), (id) => hosts?.get(id))
         if (!projectCounts || !(state.authenticated && canAccessSpace(state, space.id))) return meta
         const held = projectCounts[space.id] || { projects: 0, published: 0 }
         return { ...meta, projectCount: held.projects, publishedCount: held.published }
@@ -278,6 +322,9 @@ function registerSpaceRoutes(router, {
       }
       if (await spaceExists(spaceId)) {
         return res.status(409).json({ error: 'Space already exists.' })
+      }
+      if (loadTrashedSpaceMeta && await loadTrashedSpaceMeta(spaceId)) {
+        return res.status(409).json({ error: `"${spaceId}" is in the trash. Restore it from the Trash, or purge it, to use the name again.`, code: 'space_in_trash' })
       }
 
       const state = req.authState || {}
@@ -324,7 +371,10 @@ function registerSpaceRoutes(router, {
       if (!meta) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      res.json({ space: withIsOwner(req.authState || getPublicAuthState(req), meta) })
+      res.json({
+        space: withDomain(withIsOwner(req.authState || getPublicAuthState(req), meta),
+          hostOfSpace)
+      })
     } catch (error) {
       next(error)
     }
@@ -337,7 +387,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds, archived } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -475,6 +525,7 @@ function registerSpaceRoutes(router, {
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {}),
         ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
         ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
+        ...(archived !== undefined ? { archived: Boolean(archived) } : {}),
         ...(slug !== undefined ? { slug: nextSlug } : {}),
         ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {}),
         ...(trustedUserIds !== undefined ? { trustedUserIds: nextTrustedUserIds } : {})
@@ -488,6 +539,7 @@ function registerSpaceRoutes(router, {
       const touchesSensitive = SENSITIVE_SPACE_PATCH_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(req.body || {}, f))
       if (!touchesSensitive || !approvalGate) {
         const meta = await upsertSpaceMeta(spaceId, patch)
+        announceSpaceSettingsChange(spaceId)
         // A person who cannot reach the space cannot be its owner or be trusted
         // with it: ownership and trust carry scope with them.
         if (findUserById && setUserSpaces) {
@@ -500,7 +552,7 @@ function registerSpaceRoutes(router, {
             } catch { /* scope is a convenience grant here; the row already landed */ }
           }
         }
-        return res.json({ space: withIsOwner(req.authState, meta) })
+        return res.json({ space: withDomain(withIsOwner(req.authState, meta), hostOfSpace) })
       }
       const changeDesc = Object.keys(patch).map((k) => `${k}→${JSON.stringify(patch[k])}`).join(', ')
       const outcome = await approvalGate.gateOrApply({
@@ -684,6 +736,15 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // Sends a refusal the store raised on purpose (protected space, name in the
+  // trash) as its own status and code instead of a bare 500.
+  const sendRefusal = (res, error) => {
+    if (error?.code === 'space_protected' || error?.code === 'space_in_trash') {
+      return res.status(error.status || 409).json({ error: error.message, code: error.code, ...(error.reason ? { reason: error.reason } : {}) })
+    }
+    return false
+  }
+
   router.delete('/api/spaces/:spaceId', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -691,23 +752,100 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
+      const meta = req.spaceMeta || await loadSpaceMeta(spaceId)
       // The shared guest-entry space must survive its owner; admins only.
       if (config.requireAuth && req.authState?.role !== 'admin') {
-        const meta = req.spaceMeta || await loadSpaceMeta(spaceId)
         if (meta?.kind === 'global') {
           return res.status(403).json({ error: 'Only an admin can delete the shared global space.' })
         }
       }
+      // The front room, the shared space, a sandbox and anything marked
+      // permanent are refused up front — an admin who really means it clears
+      // `permanent` first (PATCH), on the record.
+      const reason = protectedReason(meta)
+      if (reason) {
+        return res.status(409).json({ error: `"${spaceId}" is a ${reason} space and cannot be deleted.`, code: 'space_protected', reason })
+      }
       if (!approvalGate) {
-        if (typeof onDeleteSpace === 'function') await onDeleteSpace(spaceId)
-        await deleteSpace(spaceId)
-        return res.json({ ok: true })
+        const receipt = await trashSpace(spaceId)
+        return res.json({ ok: true, trashed: true, ...(receipt || {}) })
       }
       const outcome = await approvalGate.gateOrApply({
         kind: 'spaces.delete',
         args: { spaceId },
         actorState: req.authState,
-        summary: `delete space "${spaceId}"`,
+        summary: `move space "${spaceId}" to the trash`,
+        req
+      })
+      if (outcome.pending) {
+        return res.status(202).json({ status: 'pending_approval', approvalId: outcome.id, expiresAt: outcome.expiresAt })
+      }
+      res.json(outcome.result)
+    } catch (error) {
+      if (sendRefusal(res, error) === false) next(error)
+    }
+  })
+
+  // What deleting would take — read before the click, so the confirm can name it.
+  router.get('/api/spaces/:spaceId/footprint', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const meta = req.spaceMeta || await loadSpaceMeta(spaceId)
+      if (!meta) return res.status(404).json({ error: 'Space not found.' })
+      const held = await spaceFootprint(spaceId)
+      res.json({ spaceId, label: meta.label, ...held, protected: protectedReason(meta), holdMs: spaceTrashTtlMs })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // The trash view: spaces the caller may manage (owner, or admin).
+  router.get('/api/trash/spaces', async (req, res, next) => {
+    try {
+      const state = req.authState || getPublicAuthState(req)
+      let spaces = await listTrashedSpaces()
+      if (config.requireAuth) {
+        spaces = state.authenticated ? spaces.filter((space) => isSpaceOwnerOrAdminState(state, space)) : []
+      }
+      res.json({ spaces, ttlMs: spaceTrashTtlMs })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.post('/api/spaces/:spaceId/restore', requireTrashedSpaceOwnerOrAdminWrite, async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const result = await restoreSpace(spaceId)
+      if (!result) return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
+      announceSpaceSettingsChange(spaceId)
+      res.json({ ok: true, ...result })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // The explicit, irreversible one: only for a space already in the trash.
+  router.delete('/api/spaces/:spaceId/purge', requireTrashedSpaceOwnerOrAdminWrite, async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const meta = await loadTrashedSpaceMeta(spaceId)
+      if (!meta) {
+        return res.status(409).json({ error: 'Only a space already in the trash can be purged. Delete it first.', code: 'not_in_trash' })
+      }
+      if (!approvalGate) {
+        if (typeof onDeleteSpace === 'function') await onDeleteSpace(spaceId)
+        await purgeTrashedSpace(spaceId)
+        return res.json({ ok: true, purged: true })
+      }
+      const outcome = await approvalGate.gateOrApply({
+        kind: 'spaces.purge',
+        args: { spaceId },
+        actorState: req.authState,
+        summary: `permanently remove space "${spaceId}" from the trash`,
         req
       })
       if (outcome.pending) {

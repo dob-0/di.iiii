@@ -1,0 +1,34 @@
+{
+  "site": "MOXIR, Charentsavan",
+  "date": "2026-10-07",
+  "layer": "show-cleared",
+  "source": "owner's decision",
+  "notes": "What is cleared out of the hall for the 17 Oct show. Apply this layer LAST and only for the show hall: the as-found layers (dims 10-02, 10-07) still describe the hall as it stands. Each entry names who decided and when; the move is checked on site. `cleared_not_modelled` lists what is also cleared but was never in the hall model's massing (the bulk bags, kept out on purpose, see hall-bags.test.js); hall.py does not read it, so the show hall's geometry is unchanged by it.",
+  "massing_remove": [
+    {
+      "id": "prefab-cabin",
+      "label": "white prefab cabin, house left (x -12..-9, z 30.7-35.3)",
+      "why": "It stands inside the audience area (z > 24.5, the stage line from the owner's marks on video 954).",
+      "said_by": "owner, 2026-10-07: \"cabin will go it small thing from left\"",
+      "check_on_site": "2026-10-08: confirm it can be moved (no foundation, no services) and who moves it before 17 Oct.",
+      "seen_2026_10_08": "already gone as found (170604: its place is empty); the site layer moxir-hall-site-2026-10-08.json removes it from the as-found hall, and hall.py notes this entry as already gone"
+    }
+  ],
+  "cleared_not_modelled": [
+    {
+      "id": "white-bags",
+      "label": "the white bulk bags behind the DJ place (z 22-26.5, in the photos; not in the hall model's massing)",
+      "why": "They stand where the stage, the step and the PA go.",
+      "said_by": "owner, 2026-10-08: \"they will be moved before the show\"",
+      "check_on_site": "2026-10-08: who moves them and when; what is in them",
+      "seen_2026_10_08": "still there on 10-08, at x -0.6..2.4, z 19-23, up to ~1.9 m (170604, fitted camera; moxir-hall-site-2026-10-08.json as_found.white_bags): about 3 m nearer the press than the 10-07 read"
+    },
+    {
+      "id": "gas-cylinders",
+      "label": "the loose compressed-gas cylinders seen on 10-08 (165547 t=27 s, t=183 s; not in the hall model's massing)",
+      "why": "fire and pressure risk near lamps, cables and the smoke machines",
+      "said_by": "owner, 2026-10-08 night (via the coordinator): \"the gas cylinders will be out\"",
+      "check_on_site": "on the build day: none left in the hall, including the far half"
+    }
+  ]
+}

@@ -185,7 +185,8 @@ export default function SpotLightObject({
 
 // The per-frame half of a strobing shutter, mounted only while one strobes.
 function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
-    useFrame(() => {
+    useFrame((frameState) => {
+        frameState.invalidate() // a strobe is continuous: keeps an on-demand loop running
         const env = strobeEnvelope(Date.now() / 1000, hz)
         if (lightRef.current) lightRef.current.intensity = intensity * env
         const mat = coneRef.current?.material
@@ -252,7 +253,8 @@ function BeamPart({ gl, part, values }) {
 // flat cone's (StrobeDriver above), on the beam's own intensity. Mounted only while
 // the desk strobes the lamp; nothing runs per frame otherwise.
 function BeamAirStrobe({ material, values }) {
-    useFrame(() => {
+    useFrame((frameState) => {
+        frameState.invalidate() // continuous while strobing
         material.uniforms.uIntensity.value = Math.max(0, Number(values.intensity) || 0) * strobeEnvelope(Date.now() / 1000, values.strobeHz)
     })
     useEffect(() => () => setBeamAirUniforms(material, values), [material, values])

@@ -3,7 +3,8 @@ import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
 import { runViewCommand } from '../utils/viewCommands.js'
 import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
+import Canvas from '../../components/GuardedCanvas.jsx'
 import * as THREE from 'three'
 import '../styles/studio.css'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
@@ -34,7 +35,8 @@ import {
     advanceTimelinePreview,
     getTimelinePreview,
     isTimelinePreviewPosed,
-    setTimelinePreview
+    setTimelinePreview,
+    subscribeTimelinePreview
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
@@ -46,6 +48,7 @@ import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
+import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
@@ -154,7 +157,13 @@ function useEntityPose(entity, groupRef, isDraggingRef = null) {
 }
 
 function TimelinePreviewDriver() {
-    useFrame((_, delta) => advanceTimelinePreview(delta))
+    const invalidate = useThree((s) => s.invalidate)
+    // A scrub or a stop changes the pose with no React render: draw it.
+    useEffect(() => subscribeTimelinePreview(() => invalidate()), [invalidate])
+    useFrame((frameState, delta) => {
+        advanceTimelinePreview(delta)
+        if (getTimelinePreview().playing) frameState.invalidate() // playing is continuous
+    })
     return null
 }
 
@@ -510,6 +519,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
 
 function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
     const isXrPresenting = useXR((state) => state.session != null)
+    useHoldFrames(isXrPresenting, 'xr') // a headset session is the headset's own loop
     const scene = useThree((state) => state.scene)
     const getScene = useCallback(() => scene, [scene])
 
@@ -573,7 +583,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     }, [isOrtho, preset.id])
 
     // Smooth FOV lerp — runs every frame inside the R3F canvas
-    useFrame(() => {
+    useFrame((frameState) => {
         const cc = controlsRef.current
         if (!cc) return
         const cam = cc._camera
@@ -582,6 +592,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         if (Math.abs(cam.fov - target) < 0.05) return
         cam.fov += (target - cam.fov) * 0.08
         cam.updateProjectionMatrix()
+        frameState.invalidate() // on-demand loop: until the lens has arrived
     })
 
     // Break out of ortho when the user starts rotating
@@ -603,6 +614,10 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             ref={controlsRef}
             makeDefault
             dollyToCursor={preset.dollyToCursor}
+            // Zoom never stops: at minDistance the wheel carries the target forward with the
+            // camera instead of doing nothing (a room's Inside lock holds the camera ≥ 2 m from
+            // its target, and the zoom used to die there). The target stays in its boundary.
+            infinityDolly
             smoothTime={0.15}
             draggingSmoothTime={0.0}
             minDistance={0.35}
@@ -1140,6 +1155,40 @@ export default function StudioViewport({
         const timer = setTimeout(() => setSettled(true), 8000)
         return () => clearTimeout(timer)
     }, [lowPower])
+
+    // Render on demand (src/studio/utils/renderDemand.jsx): the loop draws frames only while
+    // something is declared moving or for a short burst after an input or an edit. A published
+    // viewer (playTimelines) and a card still booting keep the continuous loop they always had.
+    const demand = useStableDemand()
+    useEffect(() => {
+        if (!playTimelines && !(lowPower && !settled)) return undefined
+        return demand.hold(playTimelines ? 'published-viewer' : 'card-boot')
+    }, [demand, playTimelines, lowPower, settled])
+    const screenCount = screens?.size || 0
+    useEffect(() => (screenCount > 0 ? demand.hold('live-screens') : undefined), [demand, screenCount])
+    // Edits (the owner's, a collaborator's, a `di follow` carry), selection, tool and view changes:
+    // one burst. Cards never see input and keep the one-frame-per-change behaviour.
+    useEffect(() => {
+        if (!lowPower) demand.kick()
+    }, [demand, lowPower, document, selectedEntityId, selectedEntityIds, editMode, gizmoMode, gizmoAxis, gizmoVisible, transformOp, cameraView, enableNavigation, smartOn])
+    // The window: resize, a tab coming back, any key (shortcuts move things).
+    useEffect(() => {
+        if (lowPower) return undefined
+        const kick = () => demand.kick()
+        const visible = () => { if (!window.document.hidden) kick() }
+        window.addEventListener('resize', kick)
+        window.addEventListener('keydown', kick, true)
+        window.addEventListener('keyup', kick, true)
+        window.document.addEventListener('visibilitychange', visible)
+        return () => {
+            window.removeEventListener('resize', kick)
+            window.removeEventListener('keydown', kick, true)
+            window.removeEventListener('keyup', kick, true)
+            window.document.removeEventListener('visibilitychange', visible)
+        }
+    }, [demand, lowPower])
+    const frameloop = useFrameloopMode(demand, lowPower ? settled : true)
+    const kickInput = lowPower ? undefined : () => demand.kick(KICK_AFTER_INPUT_MS)
     const camera = cameraView || document.worldState?.savedView || {}
 
     const handlePointerMove = (event) => {
@@ -1157,7 +1206,12 @@ export default function StudioViewport({
         <div
             ref={viewportRef}
             className="studio-viewport-shell"
-            onPointerMove={handlePointerMove}
+            onPointerMove={(event) => { kickInput?.(); handlePointerMove(event) }}
+            onPointerDownCapture={kickInput}
+            onPointerUpCapture={kickInput}
+            onWheelCapture={kickInput}
+            onTouchStartCapture={kickInput}
+            onTouchMoveCapture={kickInput}
             onPointerEnter={() => setPointerOver(true)}
             onPointerLeave={(event) => {
                 setPointerOver(false)
@@ -1174,7 +1228,7 @@ export default function StudioViewport({
                     powerPreference: lowPower ? 'low-power' : 'default'
                 }}
                 dpr={lowPower ? 1 : [document.renderSettings?.dprMin ?? 1, document.renderSettings?.dprMax ?? 2]}
-                frameloop={lowPower && settled ? 'demand' : 'always'}
+                frameloop={frameloop}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
                     fov: camera.fov || 50,
@@ -1186,6 +1240,7 @@ export default function StudioViewport({
                 onPointerMissed={() => onSelectEntity?.(null)}
             >
                 <XR store={xrStore}>
+                    <RenderDemandProvider demand={demand}>
                     <StudioOrbit
                         controlsRef={controlsRef}
                         cameraView={camera}
@@ -1219,6 +1274,7 @@ export default function StudioViewport({
                         smartView={smartViewProps}
                         graphRoom={graphRoom}
                     />
+                    </RenderDemandProvider>
                 </XR>
             </Canvas>
 

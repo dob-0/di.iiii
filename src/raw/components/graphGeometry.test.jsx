@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import RawGraphSurface, { LOD_TIERS, lodTierForZoom } from './RawGraphSurface.jsx'
+import { CARD_BODY_FONT_PX, CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, summarizeCardContent } from '../utils/cardGeometry.js'
 import { createNode, getNodeType } from '../../project/nodeRegistry.js'
 
 // THE invariant behind semantic zoom.
@@ -22,7 +23,7 @@ const makeNode = (typeId, overrides = {}) => ({
 
 // A zoom comfortably inside each tier, so the assertions do not sit on a
 // hysteresis boundary.
-const ZOOM_IN_TIER = { block: 0.1, header: 0.25, compact: 0.45, full: 1 }
+const ZOOM_IN_TIER = { block: 0.1, header: 0.3, summary: 0.65, full: 1 }
 
 const geometryAtZoom = (nodes, edges, zoom) => {
     const { container, unmount } = render(
@@ -90,13 +91,14 @@ describe('lodTierForZoom', () => {
         const justBelow = LOD_LABELS_BOUNDARY - 0.01
         expect(lodTierForZoom(justBelow, 'full')).toBe('full')
         // …but a decisive move past the band does change tier.
-        expect(lodTierForZoom(LOD_LABELS_BOUNDARY - 0.05, 'full')).toBe('compact')
+        expect(lodTierForZoom(LOD_LABELS_BOUNDARY - 0.05, 'full')).toBe('summary')
     })
 })
 
-// Mirrors the module's LOD_LABELS. Kept local so the test fails loudly if the
-// production threshold moves without the test being reconsidered.
-const LOD_LABELS_BOUNDARY = 0.62
+// The full tier starts where the 13-unit card body is 11 screen px (11 / 13).
+// Kept local so the test fails loudly if the production threshold moves without
+// the test being reconsidered.
+const LOD_LABELS_BOUNDARY = 11 / 13
 
 // A card's height is Math.max(inputs, outputs, 1) rows. Containers gained
 // outputs in 2026-08-19's "a wire can start from a container" change, and every
@@ -139,5 +141,47 @@ describe('a Scene gaining Objects and Picture moved no existing joint', () => {
         const type = getNodeType('universe.world')
         expect(type.inputs.slice(0, 2).map((port) => port.id)).toEqual(['title', 'bgColor'])
         expect(type.outputs.slice(0, 2).map((port) => port.id)).toEqual(['title', 'bgColor'])
+    })
+})
+
+// Audit 2026-10-05 row 7: semantic zoom keyed to ON-SCREEN size.
+describe('semantic zoom by on-screen size', () => {
+    it('shows the full card while the 13-unit body is at least 11px on screen, and not below', () => {
+        expect(CARD_BODY_FONT_PX).toBe(13)
+        expect(lodTierForZoom(11 / 13 + 0.001)).toBe('full')
+        expect(lodTierForZoom(11 / 13 - 0.05)).toBe('summary')
+        for (const zoom of [0.85, 1, 1.5, 2]) expect(CARD_BODY_FONT_PX * zoom).toBeGreaterThanOrEqual(11)
+    })
+
+    it('is the summary from 50 % up to the full tier, then the title alone', () => {
+        expect(lodTierForZoom(0.5)).toBe('summary')
+        expect(lodTierForZoom(0.7)).toBe('summary')
+        expect(lodTierForZoom(0.45)).toBe('header')
+        expect(lodTierForZoom(0.2)).toBe('header')
+    })
+
+    it('keeps the card 200 wide while its body text is 13 on an 18 line', () => {
+        expect(CARD_WIDTH).toBe(200)
+        expect(CARD_CONTENT_LINE_HEIGHT).toBe(18)
+    })
+
+    it('summarises a List as group names with counts, never its rows', () => {
+        const lines = [
+            { kind: 'group', text: 'Bar' }, { kind: 'row', text: 'ice' }, { kind: 'row', text: 'limes' },
+            { kind: 'group', text: 'Studio' }, { kind: 'row', text: 'cables' }
+        ]
+        expect(summarizeCardContent(lines)).toEqual(['Bar · 2', 'Studio · 1'])
+        expect(summarizeCardContent([{ kind: 'row', text: 'a' }, { kind: 'row', text: 'b' }])).toEqual(['2 rows'])
+        expect(summarizeCardContent([{ kind: 'line', text: 'a' }, { kind: 'line', text: 'b' }, { kind: 'line', text: 'c' }])).toEqual(['3 lines'])
+    })
+
+    it('draws the summary tier without the rows', () => {
+        const list = { ...createNode('view.list', { graphX: 0, graphY: 0, values: { groups: ['Bar'], items: [{ text: 'ice', group: 'Bar' }, { text: 'limes', group: 'Bar' }] } }), id: 'l1' }
+        const full = render(<RawGraphSurface nodes={[list]} edges={[]} initialZoom={1} />)
+        expect(full.container.querySelectorAll('.raw-graph-node-content-line.is-row').length).toBeGreaterThan(0)
+        full.unmount()
+        const summary = render(<RawGraphSurface nodes={[list]} edges={[]} initialZoom={0.65} />)
+        expect(summary.container.querySelector('.raw-graph-node-content.is-summary')).toBeTruthy()
+        expect(summary.container.querySelectorAll('.raw-graph-node-content-line.is-row').length).toBe(0)
     })
 })

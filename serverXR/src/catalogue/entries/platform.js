@@ -120,7 +120,7 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines."
+    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines. One server per data folder carries the follows (follow/lease.js): on any other server on the same folder the list is empty and `carriedHere: false` + `carriedBy` {pid, port} + `message` say which one does."
   },
   {
     route: "GET /api/health",
@@ -175,6 +175,46 @@ module.exports = [
     note: "public, unauthenticated, rate-limited — registered ahead of the /api auth gates; the rate limiter's per-IP key is the only guard and is never persisted."
   },
   {
+    route: "GET /api/shoot/:key",
+    summary: "a film crew's shared shoot sheet (?rev= answers {unchanged:true} for pollers)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "public, unauthenticated, rate-limited — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "POST /api/shoot/:key/ops",
+    summary: "apply crew edits to a shoot sheet: tick, note, link, add or remove a prop, set a cast member's details",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "anyone holding the link may edit — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "PUT /api/shoot/:key/plan",
+    summary: "write a shoot sheet's whole plan (the seed); this replaces the crew's ticks",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "anyone holding the link may rewrite it — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "GET /api/shoot/:key/files/:name",
+    summary: "one costume or prop picture of a shoot sheet (webp, jpg or png)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves image bytes, not JSON — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "PUT /api/shoot/:key/files/:name",
+    summary: "upload one picture (webp, jpg or png, up to 5 MB) to a shoot sheet",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "body is the raw image bytes — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
     route: "GET /api/trash",
     summary: "trashed (soft-deleted) projects, optionally filtered to one space, with the trash TTL",
     reach: "read",
@@ -205,5 +245,30 @@ module.exports = [
     role: "guest",
     agent: false,
     note: "serves an HTML page for crawlers, not JSON; a private space's card never distinguishes 'private' from 'does not exist'."
+  },
+  {
+    route: "GET /api/host",
+    summary: "which space this host shows — how a space's own domain (yokozo.xyz) knows it is that space",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "answers from the request's own host; `space` is null for di.iiii's own addresses and for any domain that is not live on a public space. Cached for 60 s."
+  },
+  {
+    route: "GET /api/domain-check",
+    summary: "may this hostname have a certificate? Caddy's on-demand TLS `ask` endpoint for a space's own domain",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    input: {
+      query: {
+        type: "object",
+        required: ["domain"],
+        properties: {
+          domain: { type: "string", description: "the hostname Caddy is about to get a certificate for, e.g. yokozo.xyz" }
+        }
+      }
+    },
+    note: "answers 200 only when the hostname is a live domain of a public space, 404 for anything else; Caddy reads only the status (https://caddyserver.com/docs/caddyfile/options#on-demand-tls). Never cached."
   },
 ]

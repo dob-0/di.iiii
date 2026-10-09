@@ -1,0 +1,693 @@
+{
+ "set": "moxir-design-paint-2026-10-08",
+ "title": "MOXIR beta v0.9: the design from the owner's painted plan (lasers behind the stage, the building washed)",
+ "writtenAt": "2026-10-08",
+ "status": "PROPOSAL, pictures only, nothing built. Drawn and checked by scripts/place/design_paint.py against the hall GLB's triangles, the VGGT point cloud and the photos.",
+ "owner": [
+  "2026-10-08, painted on paint-plan-full-place.png (GIMP): a green loop from the far gate to the truss (where lasers can be), yellow crane bridges at about z -33 and -18, teal washes in both side spans, the nave behind the stage and beside the audience; notes: 'i saw crane here mb can 3 here or we can move crane or use the truss', 'other 2 lasers we can use mb till the stage and', 'and one here', 'we have alot wash so we can use hte place right'",
+  "2026-10-08 (via the main session): YES to the reading of 6 points (your-paint-my-reading.png): 3 lasers at the far end, 2 between there and the stage, 1 in the right side span near z 0, never over the crowd; wash the hall itself",
+  "2026-10-08: 'also look at the photos and the analysed data we have, so nothing blocks the lights and beams — we need a full audit'"
+ ],
+ "paint": "~/Downloads/moxir/stage/occlusion/paint-zones-full-place.json (scripts/place/paint_zones.py on 'dob edited paint-plan-full-place.png', clean baseline sha256 kept beside it)",
+ "base_plot": "scripts/place/rigs/moxir-lights-beta-mix-2026-10-08-blocking.json",
+ "keep_groups": [
+  "the X (truss)",
+  "the curtain (truss)",
+  "the bridge-up PARs (truss top)",
+  "the backlight fan (floor, behind the riser)",
+  "the spine (floor, behind the truss)",
+  "the halo PARs (floor, behind the riser)",
+  "the press crown (floor, in front of the press)",
+  "the vista (far columns)",
+  "the column arch (floor, column rows)",
+  "smoke"
+ ],
+ "rules": {
+  "lasers_behind": 21.0,
+  "lasers_behind_why": "every point of every laser ray stays at z <= 21.0, the truss plane behind the DJ: never over the crowd (owner's green loop)",
+  "suspected_open_roof": [
+   {
+    "x_m": [
+     10.0,
+     14.0
+    ],
+    "z_m": [
+     -54,
+     54
+    ],
+    "why": "AERIAL_2026-10-07.md: a dark lattice band along the x +12 row (2024 capture): deck stripped or walkways, SUSPECTED"
+   },
+   {
+    "x_m": [
+     -12.0,
+     36.0
+    ],
+    "z_m": [
+     -3.0,
+     3.0
+    ],
+    "why": "AERIAL_2026-10-07.md: the same band across the nave and the right span at the joint, SUSPECTED"
+   }
+  ],
+  "suspected_open_roof_rule": "no laser ray may END on the deck inside these bands (a space-frame member there still counts as steel structure)"
+ },
+ "lasers": {
+  "type": "ext-lc-ultra-mk2",
+  "option_far": "A: on the far crane where it stands (z -22.2): CHOSEN. B: the crane moved to the owner's yellow z -33 ('or we can move crane'); C: a ground-support truss there ('or use the truss'): B and C hang the cubes in the same place, so one test serves both. Measured on the same tracer (design_paint.py, far_options in the page): A passes all 3 fields and the dance floor sees 85 / 25 / 67 % of their length; at z -33 two fields pass within 0.3 m of the lantern's frame and the floor sees 58 / 45 / 40 %. A also needs no crane move and no truss that is not on the order. A crane moves on its runway only with the venue's OK and its operator.",
+  "cubes": [
+   {
+    "id": "rig-lasercube-cut-01",
+    "name": "far 1 (house left)",
+    "group": "lasers: the far crane trio",
+    "p": [
+     -4.0,
+     7.45,
+     -20.4
+    ],
+    "target": [
+     7.5,
+     13.35,
+     -12.0
+    ],
+    "fan_deg": [
+     5,
+     1.5
+    ],
+    "mount": "far crane z -22.2, FRONT girder (z -21.45..-20.75, underside 7.95 m, measured by photo 007 on the far crane): girder clamp + 0.5 m drop arm, cube 0.35 m in front of the face"
+   },
+   {
+    "id": "rig-lasercube-cut-02",
+    "name": "far 2 (centre, backward)",
+    "group": "lasers: the far crane trio",
+    "p": [
+     0.0,
+     7.45,
+     -24.0
+    ],
+    "target": [
+     0.0,
+     13.35,
+     -50.0
+    ],
+    "fan_deg": [
+     5,
+     1.5
+    ],
+    "mount": "far crane z -22.2, BACK girder (z -23.65..-22.95): clamp + 0.5 m drop arm, facing the far gate"
+   },
+   {
+    "id": "rig-lasercube-cut-03",
+    "name": "far 3 (house right)",
+    "group": "lasers: the far crane trio",
+    "p": [
+     4.0,
+     7.45,
+     -20.4
+    ],
+    "target": [
+     -7.5,
+     13.35,
+     -12.0
+    ],
+    "fan_deg": [
+     5,
+     1.5
+    ],
+    "mount": "far crane z -22.2, FRONT girder, mirror of far 1"
+   },
+   {
+    "id": "rig-lasercube-cut-04",
+    "name": "mid 1 (house left)",
+    "group": "lasers: the mid pair",
+    "p": [
+     -11.25,
+     5.2,
+     -6.0
+    ],
+    "target": [
+     7.3,
+     13.35,
+     12.0
+    ],
+    "fan_deg": [
+     3,
+     1.0
+    ],
+    "mount": "nave column x -12, z -6: column clamp 0.35 m off the inner face at 5.2 m (1.86 m under the runway)"
+   },
+   {
+    "id": "rig-lasercube-cut-05",
+    "name": "mid 2 (house right)",
+    "group": "lasers: the mid pair",
+    "p": [
+     11.25,
+     5.2,
+     -6.0
+    ],
+    "target": [
+     -7.3,
+     13.35,
+     12.0
+    ],
+    "fan_deg": [
+     3,
+     1.0
+    ],
+    "mount": "nave column x +12, z -6: column clamp, mirror of mid 1"
+   },
+   {
+    "id": "rig-lasercube-cut-06",
+    "name": "side (right span, z 0)",
+    "group": "lasers: the right span",
+    "p": [
+     12.75,
+     5.2,
+     0.5
+    ],
+    "target": [
+     32.0,
+     13.35,
+     -18.0
+    ],
+    "fan_deg": [
+     3,
+     1.5
+    ],
+    "mount": "the joint pair's column x +12, z +0.5, OUTER face (into the right span): column clamp 0.35 m off at 5.2 m"
+   }
+  ]
+ },
+ "wash_types": {
+  "up-hk1915": {
+   "kind": "wash",
+   "beam_deg_default": 60,
+   "reach_m": 30,
+   "intensity_cd_at_4deg": 350000,
+   "source": "types/moxir.json optics: 14000 lux at 5 m (zoom 4-60 deg)"
+  },
+  "up-250bsw": {
+   "kind": "spot",
+   "beam_deg_default": 30,
+   "reach_m": 30,
+   "intensity_cd_at_13deg": 363925,
+   "source": "types/moxir.json optics: 14557 lux at 5 m, beam 13 deg, zoom 10-30 deg"
+  },
+  "up-pl5403": {
+   "kind": "par",
+   "beam_deg_default": 15,
+   "reach_m": 24
+  }
+ },
+ "inventory": {
+  "beta_v0_9": {
+   "up-pl5403": 50,
+   "up-b380f": 18,
+   "ext-lc-ultra-mk2": 6,
+   "ext-hazer": 6,
+   "up-yz31p": 4
+  },
+  "on_the_order_not_in_the_beta": {
+   "up-hk1915": {
+    "ordered": 8,
+    "stock": 14
+   },
+   "up-250bsw": {
+    "ordered": 12,
+    "stock": 12
+   }
+  },
+  "order_source": "~/Downloads/moxir-hall-equipment.csv (the rental house's price list rows, 'ordered as 8x UP-HK1915', '12x UP-250BSW'): confirm they are still booked",
+  "not_used": "2 x UP-LA40WF (40 W, on the order): not placed; their static-beam NOHD is about 2 km and they need their own LSO plan. 6 CO2, 4 cold spark: the brief's 'no commercial vocabulary'."
+ },
+ "washes": [
+  {
+   "name": "wash: left span roof (HK1915, up)",
+   "type": "up-hk1915",
+   "layer": "hall",
+   "beam_deg": 60,
+   "aim": {
+    "rule": "up"
+   },
+   "ids": [
+    "new-hk1915-01",
+    "new-hk1915-02",
+    "new-hk1915-03",
+    "new-hk1915-04"
+   ],
+   "positions": [
+    [
+     -24,
+     0.5,
+     -42
+    ],
+    [
+     -24,
+     0.5,
+     -24
+    ],
+    [
+     -24,
+     0.5,
+     -6
+    ],
+    [
+     -24,
+     0.5,
+     16
+    ]
+   ],
+   "why": "the owner's teal stroke down the left span, end to end: the space frame's underside lit from the floor in 4 pools of about 12 m (60 deg at 10.8 m). No lantern over this span (aerial: solar rows on top, not on the underside)."
+  },
+  {
+   "name": "wash: right span roof (HK1915, up)",
+   "type": "up-hk1915",
+   "layer": "hall",
+   "beam_deg": 40,
+   "aim": {
+    "rule": "up"
+   },
+   "ids": [
+    "new-hk1915-05",
+    "new-hk1915-06",
+    "new-hk1915-07",
+    "new-hk1915-08"
+   ],
+   "positions": [
+    [
+     30.5,
+     0.5,
+     -40
+    ],
+    [
+     30.5,
+     0.5,
+     -24
+    ],
+    [
+     30.5,
+     0.5,
+     -8
+    ],
+    [
+     30.5,
+     0.5,
+     16
+    ]
+   ],
+   "why": "his teal in the right span. First drawn at x 33 leaned 8 deg off the lantern: the blocking pass found the cone in the span's own runway girder (x 35.35) and the x 36 column heads (11-22 % of it). Now at x 30.5, straight up, 40 deg: clear of the runway; its inner edge lights the lantern's rim (x 28-30) from below — a light box, reported, not a block."
+  },
+  {
+   "name": "wash: left span wall columns (PAR uplights)",
+   "type": "up-pl5403",
+   "layer": "hall",
+   "intent": "own column",
+   "aim": {
+    "rule": "column_face",
+    "x_face": -35.6,
+    "y": 6.0
+   },
+   "ids": [
+    "rig-par-columns-01",
+    "rig-par-columns-02",
+    "rig-par-columns-03",
+    "rig-par-columns-04",
+    "rig-par-columns-05",
+    "rig-par-columns-07",
+    "rig-par-columns-09"
+   ],
+   "positions": [
+    [
+     -34.9,
+     0.31,
+     -48
+    ],
+    [
+     -34.9,
+     0.31,
+     -36
+    ],
+    [
+     -34.9,
+     0.31,
+     -24
+    ],
+    [
+     -34.9,
+     0.31,
+     -12
+    ],
+    [
+     -34.9,
+     0.31,
+     0.5
+    ],
+    [
+     -34.9,
+     0.31,
+     12
+    ],
+    [
+     -34.9,
+     0.31,
+     24
+    ]
+   ],
+   "why": "the outer wall's columns of the left span, every other one, grazed from their base: the span's length drawn in vertical lines. These are the beta's 14 side-shaft PARs + the machine-reveal PAR, re-used (the hall group of the mix). Aimed at the column face 6.0 m up (the head starts at 6.21): above it the outer rows carry the neighbour runway girders (x +-35.35 / +-36.65, 7.06-7.96 m), which the first aim (9 m) lit from below (blocking pass, 22 % of each cone)."
+  },
+  {
+   "name": "wash: right span wall columns (PAR uplights)",
+   "type": "up-pl5403",
+   "layer": "hall",
+   "intent": "own column",
+   "aim": {
+    "rule": "column_face",
+    "x_face": 35.6,
+    "y": 6.0
+   },
+   "ids": [
+    "rig-par-columns-10",
+    "rig-par-columns-11",
+    "rig-par-columns-12",
+    "rig-par-columns-13",
+    "rig-par-columns-14",
+    "rig-par-columns-15",
+    "rig-par-columns-16",
+    "rig-par-columns-08"
+   ],
+   "positions": [
+    [
+     34.9,
+     0.31,
+     -48
+    ],
+    [
+     34.9,
+     0.31,
+     -36
+    ],
+    [
+     34.9,
+     0.31,
+     -24
+    ],
+    [
+     34.9,
+     0.31,
+     -12
+    ],
+    [
+     34.9,
+     0.31,
+     0.5
+    ],
+    [
+     34.9,
+     0.31,
+     12
+    ],
+    [
+     34.9,
+     0.31,
+     24
+    ],
+    [
+     34.9,
+     0.31,
+     36
+    ]
+   ],
+   "why": "the same on the right span's outer row x +36. Aimed at the column face 6.0 m up (the head starts at 6.21): above it the outer rows carry the neighbour runway girders (x +-35.35 / +-36.65, 7.06-7.96 m), which the first aim (9 m) lit from below (blocking pass, 22 % of each cone)."
+  },
+  {
+   "name": "wash: the far end wall (BSW250)",
+   "type": "up-250bsw",
+   "layer": "hall",
+   "beam_deg": 30,
+   "aim": {
+    "rule": "targets",
+    "targets": [
+     [
+      -9,
+      7.0,
+      -53.8
+     ],
+     [
+      -3,
+      7.0,
+      -53.8
+     ],
+     [
+      3,
+      7.0,
+      -53.8
+     ],
+     [
+      9,
+      7.0,
+      -53.8
+     ]
+    ]
+   },
+   "ids": [
+    "new-bsw250-01",
+    "new-bsw250-02",
+    "new-bsw250-03",
+    "new-bsw250-04"
+   ],
+   "positions": [
+    [
+     -9,
+     0.5,
+     -49.5
+    ],
+    [
+     -3,
+     0.5,
+     -49.5
+    ],
+    [
+     3,
+     0.5,
+     -49.5
+    ],
+    [
+     9,
+     0.5,
+     -49.5
+    ]
+   ],
+   "why": "his teal down the nave behind the stage, to the far gate: the far end wall washed, 75 m behind the DJ, seen under the far crane: the depth of the hall as the set. With the 8 vista PARs (kept) on the nave columns."
+  },
+  {
+   "name": "wash: the side spans' far ends (BSW250)",
+   "type": "up-250bsw",
+   "layer": "hall",
+   "beam_deg": 30,
+   "aim": {
+    "rule": "targets",
+    "targets": [
+     [
+      -30,
+      7.0,
+      -53.8
+     ],
+     [
+      -18,
+      7.0,
+      -53.8
+     ],
+     [
+      18,
+      7.0,
+      -53.8
+     ],
+     [
+      30,
+      7.0,
+      -53.8
+     ]
+    ]
+   },
+   "ids": [
+    "new-bsw250-05",
+    "new-bsw250-06",
+    "new-bsw250-07",
+    "new-bsw250-08"
+   ],
+   "positions": [
+    [
+     -30,
+     0.5,
+     -49.5
+    ],
+    [
+     -18,
+     0.5,
+     -49.5
+    ],
+    [
+     18,
+     0.5,
+     -49.5
+    ],
+    [
+     30,
+     0.5,
+     -49.5
+    ]
+   ],
+   "why": "his teal strokes at the far ends of both side spans (left x -31..-9, right x 14-17, z -54..-40)."
+  },
+  {
+   "name": "wash: beside the audience (BSW250, up)",
+   "type": "up-250bsw",
+   "layer": "hall",
+   "beam_deg": 20,
+   "aim": {
+    "rule": "lean_x_signed",
+    "deg": 6
+   },
+   "ids": [
+    "new-bsw250-09",
+    "new-bsw250-10",
+    "new-bsw250-11",
+    "new-bsw250-12"
+   ],
+   "positions": [
+    [
+     -24,
+     0.5,
+     33
+    ],
+    [
+     -24,
+     0.5,
+     42
+    ],
+    [
+     32,
+     0.5,
+     33
+    ],
+    [
+     32,
+     0.5,
+     42
+    ]
+   ],
+   "why": "his teal beside the dance floor (left x -30..-18, right x 19-30, z 31-43): the roof over the side spans next to the crowd, lit straight up so no eye is in a cone; on the right on the deck strip beside the lantern."
+  }
+ ],
+ "moves": [
+  {
+   "ids": [
+    "rig-hazer-hall-03",
+    "rig-hazer-hall-04"
+   ],
+   "positions": [
+    [
+     -10.6,
+     0.23,
+     -18.0
+    ],
+    [
+     10.6,
+     0.23,
+     -18.0
+    ]
+   ],
+   "why": "the lasers now live behind the stage: 2 of the 4 hall hazers move from z 45 to the far nave (z -18), so the web has air to show in"
+  },
+  {
+   "ids": [
+    "rig-hazer-back-01",
+    "rig-hazer-back-02",
+    "rig-hazer-hall-01",
+    "rig-hazer-hall-02"
+   ],
+   "keep": true
+  }
+ ],
+ "looks": [
+  {
+   "id": "hallset",
+   "title": "The hall as the set",
+   "layers": [
+    "hall",
+    "A"
+   ],
+   "groups": [
+    "wash:",
+    "the backlight fan (floor, behind the riser)",
+    "the halo PARs (floor, behind the riser)",
+    "the vista (far columns)"
+   ]
+  },
+  {
+   "id": "web",
+   "title": "The web behind the DJ",
+   "layers": [
+    "laser",
+    "A",
+    "hall"
+   ],
+   "groups": [
+    "lasers:",
+    "the spine (floor, behind the truss)",
+    "wash: the far end wall (BSW250)",
+    "the vista (far columns)"
+   ]
+  },
+  {
+   "id": "silhouette",
+   "title": "The silhouette (kept)",
+   "layers": [
+    "A",
+    "B"
+   ],
+   "groups": [
+    "the X (truss)",
+    "the curtain (truss)",
+    "the bridge-up PARs (truss top)",
+    "the backlight fan (floor, behind the riser)",
+    "the halo PARs (floor, behind the riser)",
+    "the press crown (floor, in front of the press)"
+   ]
+  },
+  {
+   "id": "arches",
+   "title": "The arches (kept)",
+   "layers": [
+    "C",
+    "B"
+   ],
+   "groups": [
+    "the column arch (floor, column rows)",
+    "the curtain (truss)"
+   ]
+  }
+ ],
+ "eye_review": {
+  "_how": "2026-10-08: the contact sheets (audit-sheet-*.png) looked at by eye, tile by tile; where a photo contradicts the automatic verdict, this entry wins and the page says so. A pinhole projection cannot see a real object that the model lacks in FRONT of the path.",
+  "new-hk1915-03": {
+   "verdict": "UNKNOWN",
+   "note": "frame 963 t0.3 is a close-up of machinery (pipes, a steel frame) in the foreground: the path behind it is not visible, so this photo does not see it"
+  },
+  "new-bsw250-10": {
+   "verdict": "UNKNOWN",
+   "note": "photo 011: a concrete column face fills the foreground where the path is drawn: the path is not visible"
+  },
+  "rig-par-press-cut-03": {
+   "verdict": "CHECK",
+   "note": "photo 867: a steel lattice crosses the drawn path, probably the near crane where it is parked today (z 4.8, underside 7.95 m), above the beam's 5 m target if so: confirm on site"
+  },
+  "rig-par-press-sides-01": {
+   "verdict": "CHECK",
+   "note": "photo 867: as press-cut-03"
+  },
+  "rig-par-press-sides-02": {
+   "verdict": "CHECK",
+   "note": "photo 867: as press-cut-03"
+  }
+ }
+}

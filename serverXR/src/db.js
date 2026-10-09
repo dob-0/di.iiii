@@ -61,6 +61,30 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops ON project_ops(project_id, version);
 
+  -- Ops that claimed a version their project never reached: rows in
+  -- project_ops above projects.document_version. Two servers on one data
+  -- folder (2026-10-02, aylmo) left a project at document_version 809 with ops
+  -- 805-819, and every later write at 810 failed the UNIQUE index with a 500,
+  -- forever. projectStore.js quarantineOrphanOps moves such rows here, with
+  -- the reason and the version the project actually stood at, instead of
+  -- deleting them: nothing is lost, and a person can read what was set aside.
+  -- No foreign key on purpose — this is a record, it outlives the project.
+  CREATE TABLE IF NOT EXISTS project_ops_quarantine (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    actor TEXT,
+    actor_type TEXT,
+    actor_label TEXT,
+    original_seq INTEGER,
+    document_version INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    quarantined_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_project_ops_quarantine ON project_ops_quarantine(project_id, quarantined_at);
+
   -- A breadcrumb left by scripts/project-move.mjs. Project ids are global and
   -- the row it moves keeps its id, so /api/projects/:projectId keeps working
   -- on its own — but the OLD space's bare vanity link
@@ -365,6 +389,45 @@ const SCHEMA = `
     consumed_at INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_telegram_login_expiry ON telegram_login_tokens(expires_at);
+
+  -- di.bo acting as a team member (telegramActTokenStore.js). A short-lived
+  -- bearer bound to one account; only the SHA-256 of its secret is kept.
+  -- token_version is the account's at mint time, so signing out everywhere
+  -- kills these too, exactly as it kills the person's own cookies.
+  -- No SCHEMA_VERSION bump: a new table is invisible to an older build.
+  CREATE TABLE IF NOT EXISTS telegram_act_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    telegram_id TEXT NOT NULL,
+    label TEXT,
+    token_version INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_telegram_act_expiry ON telegram_act_tokens(expires_at);
+
+  -- A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+  -- One row per hostname: yokozo.xyz and www.yokozo.xyz are two rows for the
+  -- same space. The host -> space lookup only ever answers for state 'active',
+  -- so a row nobody has pointed DNS at yet changes nothing anyone sees.
+  -- cf_hostname_id is Cloudflare's id for the custom hostname; null when the
+  -- platform is not connected to Cloudflare (a local install, dev).
+  CREATE TABLE IF NOT EXISTS space_domains (
+    hostname TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    state TEXT NOT NULL DEFAULT 'pending',
+    cf_hostname_id TEXT,
+    records TEXT NOT NULL DEFAULT '[]',
+    last_error TEXT,
+    added_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    checked_at INTEGER,
+    active_since INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_domains_space ON space_domains(space_id);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used
@@ -377,11 +440,18 @@ function addCompatLayer(db) {
   // better-sqlite3: db.transaction(fn) returns a callable that runs fn inside
   // a BEGIN/COMMIT/ROLLBACK block. Track nesting so re-entrant calls run
   // inline instead of starting a nested BEGIN (which SQLite rejects).
+  //
+  // `{ immediate: true }` starts with BEGIN IMMEDIATE: the database write lock
+  // is taken before the first read, so a check made inside the transaction
+  // ("is the project still at the version this write was based on?") cannot
+  // be overtaken by another PROCESS writing the same file between the read and
+  // the write. A deferred BEGIN only takes the write lock at the first write,
+  // which is after the check. SQLite documents this: https://sqlite.org/lang_transaction.html
   let _inTx = false
-  db.transaction = (fn) => (...args) => {
+  db.transaction = (fn, { immediate = false } = {}) => (...args) => {
     if (_inTx) return fn(...args)
     _inTx = true
-    db.exec('BEGIN')
+    db.exec(immediate ? 'BEGIN IMMEDIATE' : 'BEGIN')
     try {
       const result = fn(...args)
       db.exec('COMMIT')
@@ -501,6 +571,13 @@ function initDb(dbPath) {
   addCompatLayer(db)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+  // More than one server may open this file — the installed di and a dev stack
+  // on the same data folder do, on purpose. Without a busy timeout the second
+  // writer gets SQLITE_BUSY the instant the first holds the write lock, and
+  // that surfaced as a 500. Five seconds of waiting inside SQLite's own busy
+  // handler (https://sqlite.org/pragma.html#pragma_busy_timeout); a write
+  // transaction here lasts milliseconds.
+  db.pragma('busy_timeout = 5000')
   // BEFORE any migration runs: is this data from a build newer than this one?
   const found = readSchemaVersion(db)
   if (found > SCHEMA_VERSION && !ALLOW_OLDER_CODE()) {
@@ -547,6 +624,9 @@ function initDb(dbPath) {
   // touches the bytes.
   ensureColumn(db, 'projects', 'deleted_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
+  // Archive: the space is kept whole and only leaves the default list. Nullable,
+  // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
+  ensureColumn(db, 'spaces', 'archived_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')

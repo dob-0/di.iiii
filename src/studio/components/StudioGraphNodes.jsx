@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
+import { useHoldFrames } from '../utils/renderDemand.jsx'
 import { Html, TransformControls } from '@react-three/drei'
 import GraphRoomNodes from '../../raw/components/GraphRoomNodes.jsx'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
@@ -46,6 +47,8 @@ function SelectedNodeChrome({ object, label, gizmoActive, gizmoMode, gizmoAxis, 
     // The outline and the pill follow the object every frame: a node's values
     // can be wired to a clock, so it may move with nobody touching it.
     const box = useRef(new THREE.Box3())
+    // clock-wired values move with no edit: the selected node holds the loop
+    useHoldFrames(Boolean(object), 'graph-node')
     useFrame(() => {
         if (!object) return
         helperRef.current?.setFromObject(object)

@@ -1,0 +1,7432 @@
+{
+ "source": "Microsoft Global ML Building Footprints (github.com/microsoft/GlobalMLBuildingFootprints)",
+ "licence": "ODbL 1.0",
+ "quadkey_z9": "122111113",
+ "fetched": "2026-10-07T11:38:18Z",
+ "buildings": [
+  {
+   "id": "ms/Armenia/89",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 9087.1,
+   "vertices": 30,
+   "inner_rings": 0,
+   "contains_pin": true,
+   "dist_to_pin_m": 0.0,
+   "obb": {
+    "long_m": 109.29,
+    "short_m": 95.57,
+    "long_axis_bearing_deg": 147.3,
+    "centre_utm": [
+     469138.56,
+     4472954.22
+    ],
+    "centre_latlon": [
+     40.4066297,
+     44.636288
+    ],
+    "corners_utm": [
+     [
+      469127.57,
+      4472882.47
+     ],
+     [
+      469068.91,
+      4472974.68
+     ],
+     [
+      469149.54,
+      4473025.98
+     ],
+     [
+      469208.2,
+      4472933.77
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469068.91,
+     4472974.68
+    ],
+    [
+     469127.51,
+     4472882.56
+    ],
+    [
+     469153.3,
+     4472898.84
+    ],
+    [
+     469153.12,
+     4472905.06
+    ],
+    [
+     469161.24,
+     4472910.18
+    ],
+    [
+     469138.25,
+     4472946.32
+    ],
+    [
+     469127.08,
+     4472939.27
+    ],
+    [
+     469121.69,
+     4472947.73
+    ],
+    [
+     469121.67,
+     4472948.38
+    ],
+    [
+     469130.3,
+     4472953.83
+    ],
+    [
+     469113.48,
+     4472980.25
+    ],
+    [
+     469120.32,
+     4472980.45
+    ],
+    [
+     469124.1,
+     4472982.84
+    ],
+    [
+     469134.86,
+     4472965.92
+    ],
+    [
+     469153.8,
+     4472966.47
+    ],
+    [
+     469157.84,
+     4472960.13
+    ],
+    [
+     469150.72,
+     4472955.64
+    ],
+    [
+     469151.32,
+     4472935.43
+    ],
+    [
+     469158.14,
+     4472935.63
+    ],
+    [
+     469158.63,
+     4472919.01
+    ],
+    [
+     469158.35,
+     4472919.0
+    ],
+    [
+     469160.62,
+     4472915.44
+    ],
+    [
+     469160.99,
+     4472915.68
+    ],
+    [
+     469170.64,
+     4472915.96
+    ],
+    [
+     469170.61,
+     4472917.0
+    ],
+    [
+     469182.37,
+     4472924.43
+    ],
+    [
+     469184.01,
+     4472921.84
+    ],
+    [
+     469206.37,
+     4472935.96
+    ],
+    [
+     469206.35,
+     4472936.69
+    ],
+    [
+     469149.72,
+     4473025.69
+    ],
+    [
+     469068.91,
+     4472974.68
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/14",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 417.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 53.2,
+   "obb": {
+    "long_m": 31.08,
+    "short_m": 13.44,
+    "long_axis_bearing_deg": 59.25,
+    "centre_utm": [
+     469173.29,
+     4472880.11
+    ],
+    "centre_latlon": [
+     40.4059633,
+     44.6367008
+    ],
+    "corners_utm": [
+     [
+      469190.09,
+      4472882.21
+     ],
+     [
+      469163.31,
+      4472866.43
+     ],
+     [
+      469156.48,
+      4472878.01
+     ],
+     [
+      469183.26,
+      4472893.79
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469156.48,
+     4472878.01
+    ],
+    [
+     469163.35,
+     4472866.45
+    ],
+    [
+     469190.09,
+     4472882.21
+    ],
+    [
+     469183.22,
+     4472893.77
+    ],
+    [
+     469156.48,
+     4472878.01
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/53",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 83.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 76.3,
+   "obb": {
+    "long_m": 9.7,
+    "short_m": 8.6,
+    "long_axis_bearing_deg": 152.56,
+    "centre_utm": [
+     469243.45,
+     4472948.64
+    ],
+    "centre_latlon": [
+     40.4065833,
+     44.6375244
+    ],
+    "corners_utm": [
+     [
+      469241.84,
+      4472942.36
+     ],
+     [
+      469237.4,
+      4472950.99
+     ],
+     [
+      469245.06,
+      4472954.92
+     ],
+     [
+      469249.49,
+      4472946.29
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469249.49,
+     4472946.29
+    ],
+    [
+     469245.07,
+     4472954.9
+    ],
+    [
+     469237.4,
+     4472950.99
+    ],
+    [
+     469241.83,
+     4472942.39
+    ],
+    [
+     469249.49,
+     4472946.29
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/91",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 383.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 80.8,
+   "obb": {
+    "long_m": 28.61,
+    "short_m": 13.44,
+    "long_axis_bearing_deg": 59.21,
+    "centre_utm": [
+     469131.04,
+     4472851.49
+    ],
+    "centre_latlon": [
+     40.4057039,
+     44.6362044
+    ],
+    "corners_utm": [
+     [
+      469146.77,
+      4472852.97
+     ],
+     [
+      469122.14,
+      4472838.43
+     ],
+     [
+      469115.31,
+      4472850.0
+     ],
+     [
+      469139.94,
+      4472864.55
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469122.18,
+     4472838.46
+    ],
+    [
+     469146.77,
+     4472852.97
+    ],
+    [
+     469139.9,
+     4472864.52
+    ],
+    [
+     469115.31,
+     4472850.0
+    ],
+    [
+     469122.18,
+     4472838.46
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/66",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 218.1,
+   "vertices": 12,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 81.5,
+   "obb": {
+    "long_m": 18.44,
+    "short_m": 15.99,
+    "long_axis_bearing_deg": 145.25,
+    "centre_utm": [
+     469187.21,
+     4472853.57
+    ],
+    "centre_latlon": [
+     40.4057247,
+     44.6368663
+    ],
+    "corners_utm": [
+     [
+      469199.03,
+      4472850.5
+     ],
+     [
+      469185.85,
+      4472841.44
+     ],
+     [
+      469175.4,
+      4472856.64
+     ],
+     [
+      469188.58,
+      4472865.7
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469194.58,
+     4472856.94
+    ],
+    [
+     469187.66,
+     4472852.18
+    ],
+    [
+     469185.64,
+     4472855.09
+    ],
+    [
+     469192.1,
+     4472859.53
+    ],
+    [
+     469188.07,
+     4472865.35
+    ],
+    [
+     469177.46,
+     4472858.06
+    ],
+    [
+     469183.62,
+     4472849.18
+    ],
+    [
+     469181.52,
+     4472847.74
+    ],
+    [
+     469185.87,
+     4472841.46
+    ],
+    [
+     469193.56,
+     4472846.74
+    ],
+    [
+     469192.25,
+     4472848.64
+    ],
+    [
+     469197.72,
+     4472852.4
+    ],
+    [
+     469194.58,
+     4472856.94
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/31",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 420.3,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 86.1,
+   "obb": {
+    "long_m": 24.88,
+    "short_m": 16.93,
+    "long_axis_bearing_deg": 146.73,
+    "centre_utm": [
+     469231.07,
+     4472870.8
+    ],
+    "centre_latlon": [
+     40.4058816,
+     44.6373823
+    ],
+    "corners_utm": [
+     [
+      469230.75,
+      4472855.76
+     ],
+     [
+      469217.19,
+      4472876.62
+     ],
+     [
+      469231.39,
+      4472885.85
+     ],
+     [
+      469244.95,
+      4472864.99
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469217.19,
+     4472876.62
+    ],
+    [
+     469230.72,
+     4472855.81
+    ],
+    [
+     469244.95,
+     4472864.99
+    ],
+    [
+     469231.42,
+     4472885.8
+    ],
+    [
+     469217.19,
+     4472876.62
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/99",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 131.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 90.3,
+   "obb": {
+    "long_m": 19.45,
+    "short_m": 6.78,
+    "long_axis_bearing_deg": 152.56,
+    "centre_utm": [
+     469115.29,
+     4473031.09
+    ],
+    "centre_latlon": [
+     40.4073213,
+     44.6360101
+    ],
+    "corners_utm": [
+     [
+      469116.72,
+      4473020.89
+     ],
+     [
+      469107.83,
+      4473038.19
+     ],
+     [
+      469113.87,
+      4473041.29
+     ],
+     [
+      469122.75,
+      4473023.99
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469122.75,
+     4473023.99
+    ],
+    [
+     469113.87,
+     4473041.27
+    ],
+    [
+     469107.83,
+     4473038.19
+    ],
+    [
+     469116.71,
+     4473020.91
+    ],
+    [
+     469122.75,
+     4473023.99
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/100",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 208.4,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 96.4,
+   "obb": {
+    "long_m": 31.77,
+    "short_m": 6.57,
+    "long_axis_bearing_deg": 144.59,
+    "centre_utm": [
+     469265.19,
+     4472901.71
+    ],
+    "centre_latlon": [
+     40.4061613,
+     44.6377828
+    ],
+    "corners_utm": [
+     [
+      469258.72,
+      4472916.59
+     ],
+     [
+      469277.02,
+      4472890.62
+     ],
+     [
+      469271.65,
+      4472886.83
+     ],
+     [
+      469253.35,
+      4472912.8
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469277.02,
+     4472890.62
+    ],
+    [
+     469258.73,
+     4472916.57
+    ],
+    [
+     469253.35,
+     4472912.8
+    ],
+    [
+     469271.64,
+     4472886.85
+    ],
+    [
+     469277.02,
+     4472890.62
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/34",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 1034.3,
+   "vertices": 13,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 97.4,
+   "obb": {
+    "long_m": 51.77,
+    "short_m": 23.52,
+    "long_axis_bearing_deg": 145.1,
+    "centre_utm": [
+     469079.78,
+     4473035.54
+    ],
+    "centre_latlon": [
+     40.4073601,
+     44.6355913
+    ],
+    "corners_utm": [
+     [
+      469074.73,
+      4473063.52
+     ],
+     [
+      469104.17,
+      4473020.94
+     ],
+     [
+      469084.82,
+      4473007.56
+     ],
+     [
+      469055.38,
+      4473050.15
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469101.58,
+     4473024.69
+    ],
+    [
+     469074.77,
+     4473063.46
+    ],
+    [
+     469056.51,
+     4473050.92
+    ],
+    [
+     469056.71,
+     4473048.23
+    ],
+    [
+     469068.57,
+     4473031.07
+    ],
+    [
+     469068.3,
+     4473034.75
+    ],
+    [
+     469078.37,
+     4473020.18
+    ],
+    [
+     469088.52,
+     4473020.92
+    ],
+    [
+     469090.61,
+     4473017.9
+    ],
+    [
+     469093.85,
+     4473018.14
+    ],
+    [
+     469095.4,
+     4473015.9
+    ],
+    [
+     469100.36,
+     4473019.3
+    ],
+    [
+     469101.97,
+     4473019.41
+    ],
+    [
+     469101.58,
+     4473024.69
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/86",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 2636.3,
+   "vertices": 16,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 99.2,
+   "obb": {
+    "long_m": 74.25,
+    "short_m": 54.42,
+    "long_axis_bearing_deg": 58.04,
+    "centre_utm": [
+     469280.55,
+     4473009.2
+    ],
+    "centre_latlon": [
+     40.4071302,
+     44.6379588
+    ],
+    "corners_utm": [
+     [
+      469263.29,
+      4472966.53
+     ],
+     [
+      469234.66,
+      4473012.82
+     ],
+     [
+      469297.82,
+      4473051.87
+     ],
+     [
+      469326.44,
+      4473005.58
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469263.25,
+     4472966.59
+    ],
+    [
+     469280.63,
+     4472977.25
+    ],
+    [
+     469280.32,
+     4472977.74
+    ],
+    [
+     469307.31,
+     4472994.3
+    ],
+    [
+     469306.34,
+     4472995.88
+    ],
+    [
+     469325.26,
+     4473007.49
+    ],
+    [
+     469316.75,
+     4473021.26
+    ],
+    [
+     469311.15,
+     4473017.83
+    ],
+    [
+     469307.6,
+     4473023.57
+    ],
+    [
+     469306.69,
+     4473023.0
+    ],
+    [
+     469301.88,
+     4473030.77
+    ],
+    [
+     469261.56,
+     4473006.03
+    ],
+    [
+     469258.01,
+     4473011.77
+    ],
+    [
+     469250.05,
+     4473006.88
+    ],
+    [
+     469243.15,
+     4473018.03
+    ],
+    [
+     469234.66,
+     4473012.82
+    ],
+    [
+     469263.25,
+     4472966.59
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/59",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 1037.7,
+   "vertices": 24,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 99.7,
+   "obb": {
+    "long_m": 48.52,
+    "short_m": 25.71,
+    "long_axis_bearing_deg": 57.78,
+    "centre_utm": [
+     469095.88,
+     4472834.0
+    ],
+    "centre_latlon": [
+     40.4055451,
+     44.6357909
+    ],
+    "corners_utm": [
+     [
+      469082.12,
+      4472810.25
+     ],
+     [
+      469068.5,
+      4472832.06
+     ],
+     [
+      469109.65,
+      4472857.76
+     ],
+     [
+      469123.27,
+      4472835.95
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469068.5,
+     4472832.06
+    ],
+    [
+     469072.64,
+     4472825.41
+    ],
+    [
+     469076.3,
+     4472826.17
+    ],
+    [
+     469077.39,
+     4472820.94
+    ],
+    [
+     469079.48,
+     4472817.61
+    ],
+    [
+     469078.07,
+     4472816.73
+    ],
+    [
+     469082.1,
+     4472810.28
+    ],
+    [
+     469089.79,
+     4472815.04
+    ],
+    [
+     469086.69,
+     4472820.01
+    ],
+    [
+     469086.56,
+     4472820.6
+    ],
+    [
+     469097.24,
+     4472822.82
+    ],
+    [
+     469096.7,
+     4472825.42
+    ],
+    [
+     469105.12,
+     4472827.17
+    ],
+    [
+     469104.57,
+     4472826.83
+    ],
+    [
+     469109.6,
+     4472827.87
+    ],
+    [
+     469109.08,
+     4472830.39
+    ],
+    [
+     469114.8,
+     4472833.93
+    ],
+    [
+     469104.93,
+     4472831.88
+    ],
+    [
+     469114.81,
+     4472838.01
+    ],
+    [
+     469112.62,
+     4472837.56
+    ],
+    [
+     469119.57,
+     4472841.87
+    ],
+    [
+     469116.25,
+     4472847.19
+    ],
+    [
+     469116.48,
+     4472846.09
+    ],
+    [
+     469109.41,
+     4472857.41
+    ],
+    [
+     469068.5,
+     4472832.06
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/79",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 798.1,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 100.0,
+   "obb": {
+    "long_m": 65.65,
+    "short_m": 15.55,
+    "long_axis_bearing_deg": 147.5,
+    "centre_utm": [
+     469213.4,
+     4473052.17
+    ],
+    "centre_latlon": [
+     40.4075149,
+     44.6371653
+    ],
+    "corners_utm": [
+     [
+      469202.45,
+      4473084.08
+     ],
+     [
+      469237.5,
+      4473028.57
+     ],
+     [
+      469224.35,
+      4473020.27
+     ],
+     [
+      469189.3,
+      4473075.78
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469208.8,
+     4473067.19
+    ],
+    [
+     469203.6,
+     4473063.93
+    ],
+    [
+     469201.04,
+     4473067.98
+    ],
+    [
+     469209.33,
+     4473073.18
+    ],
+    [
+     469202.48,
+     4473084.03
+    ],
+    [
+     469189.3,
+     4473075.78
+    ],
+    [
+     469224.33,
+     4473020.3
+    ],
+    [
+     469234.41,
+     4473026.62
+    ],
+    [
+     469208.8,
+     4473067.19
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/39",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 251.0,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 103.6,
+   "obb": {
+    "long_m": 24.83,
+    "short_m": 10.12,
+    "long_axis_bearing_deg": 137.85,
+    "centre_utm": [
+     469172.16,
+     4473057.48
+    ],
+    "centre_latlon": [
+     40.4075612,
+     44.636679
+    ],
+    "corners_utm": [
+     [
+      469176.69,
+      4473044.86
+     ],
+     [
+      469160.1,
+      4473063.34
+     ],
+     [
+      469167.63,
+      4473070.1
+     ],
+     [
+      469184.22,
+      4473051.63
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469176.66,
+     4473044.89
+    ],
+    [
+     469184.22,
+     4473051.63
+    ],
+    [
+     469167.66,
+     4473070.08
+    ],
+    [
+     469160.1,
+     4473063.34
+    ],
+    [
+     469176.66,
+     4473044.89
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/36",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 377.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 107.6,
+   "obb": {
+    "long_m": 46.89,
+    "short_m": 8.05,
+    "long_axis_bearing_deg": 135.52,
+    "centre_utm": [
+     469044.03,
+     4473000.17
+    ],
+    "centre_latlon": [
+     40.4070401,
+     44.6351718
+    ],
+    "corners_utm": [
+     [
+      469057.51,
+      4472980.57
+     ],
+     [
+      469024.79,
+      4473014.15
+     ],
+     [
+      469030.56,
+      4473019.77
+     ],
+     [
+      469063.27,
+      4472986.18
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469063.27,
+     4472986.18
+    ],
+    [
+     469030.58,
+     4473019.75
+    ],
+    [
+     469024.79,
+     4473014.15
+    ],
+    [
+     469057.49,
+     4472980.59
+    ],
+    [
+     469063.27,
+     4472986.18
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/0",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 14.5,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 108.1,
+   "obb": {
+    "long_m": 4.69,
+    "short_m": 3.11,
+    "long_axis_bearing_deg": 135.95,
+    "centre_utm": [
+     469132.06,
+     4473049.29
+    ],
+    "centre_latlon": [
+     40.4074859,
+     44.6362067
+    ],
+    "corners_utm": [
+     [
+      469132.56,
+      4473046.52
+     ],
+     [
+      469129.31,
+      4473049.9
+     ],
+     [
+      469131.55,
+      4473052.05
+     ],
+     [
+      469134.8,
+      4473048.67
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469134.8,
+     4473048.67
+    ],
+    [
+     469131.56,
+     4473052.05
+    ],
+    [
+     469129.31,
+     4473049.9
+    ],
+    [
+     469132.55,
+     4473046.53
+    ],
+    [
+     469134.8,
+     4473048.67
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/65",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 353.9,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 111.0,
+   "obb": {
+    "long_m": 21.64,
+    "short_m": 18.51,
+    "long_axis_bearing_deg": 144.43,
+    "centre_utm": [
+     469258.56,
+     4472865.45
+    ],
+    "centre_latlon": [
+     40.4058344,
+     44.6377066
+    ],
+    "corners_utm": [
+     [
+      469257.27,
+      4472851.27
+     ],
+     [
+      469244.76,
+      4472868.92
+     ],
+     [
+      469259.86,
+      4472879.63
+     ],
+     [
+      469272.37,
+      4472861.98
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469272.37,
+     4472861.98
+    ],
+    [
+     469259.9,
+     4472879.57
+    ],
+    [
+     469244.76,
+     4472868.92
+    ],
+    [
+     469255.41,
+     4472853.89
+    ],
+    [
+     469267.22,
+     4472862.2
+    ],
+    [
+     469269.04,
+     4472859.63
+    ],
+    [
+     469272.37,
+     4472861.98
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/69",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 425.4,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 113.4,
+   "obb": {
+    "long_m": 37.48,
+    "short_m": 11.36,
+    "long_axis_bearing_deg": 146.32,
+    "centre_utm": [
+     469061.64,
+     4473030.16
+    ],
+    "centre_latlon": [
+     40.4073109,
+     44.6353778
+    ],
+    "corners_utm": [
+     [
+      469067.23,
+      4473011.39
+     ],
+     [
+      469046.57,
+      4473042.66
+     ],
+     [
+      469056.05,
+      4473048.92
+     ],
+     [
+      469076.71,
+      4473017.65
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469076.71,
+     4473017.65
+    ],
+    [
+     469056.07,
+     4473048.89
+    ],
+    [
+     469046.57,
+     4473042.66
+    ],
+    [
+     469067.2,
+     4473011.42
+    ],
+    [
+     469076.71,
+     4473017.65
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/27",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 99.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 117.5,
+   "obb": {
+    "long_m": 12.27,
+    "short_m": 8.15,
+    "long_axis_bearing_deg": 54.77,
+    "centre_utm": [
+     469127.28,
+     4472822.36
+    ],
+    "centre_latlon": [
+     40.4054414,
+     44.6361615
+    ],
+    "corners_utm": [
+     [
+      469134.64,
+      4472822.54
+     ],
+     [
+      469124.59,
+      4472815.51
+     ],
+     [
+      469119.92,
+      4472822.18
+     ],
+     [
+      469129.97,
+      4472829.22
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469119.92,
+     4472822.18
+    ],
+    [
+     469124.62,
+     4472815.52
+    ],
+    [
+     469134.64,
+     4472822.54
+    ],
+    [
+     469129.94,
+     4472829.2
+    ],
+    [
+     469119.92,
+     4472822.18
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/58",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 331.3,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 121.0,
+   "obb": {
+    "long_m": 44.71,
+    "short_m": 7.42,
+    "long_axis_bearing_deg": 57.84,
+    "centre_utm": [
+     469271.15,
+     4473035.26
+    ],
+    "centre_latlon": [
+     40.4073647,
+     44.6378467
+    ],
+    "corners_utm": [
+     [
+      469292.09,
+      4473043.93
+     ],
+     [
+      469254.14,
+      4473020.29
+     ],
+     [
+      469250.22,
+      4473026.59
+     ],
+     [
+      469288.17,
+      4473050.23
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469292.09,
+     4473043.93
+    ],
+    [
+     469288.15,
+     4473050.21
+    ],
+    [
+     469250.22,
+     4473026.59
+    ],
+    [
+     469254.16,
+     4473020.31
+    ],
+    [
+     469292.09,
+     4473043.93
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/93",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 319.5,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 122.1,
+   "obb": {
+    "long_m": 43.12,
+    "short_m": 7.41,
+    "long_axis_bearing_deg": 59.39,
+    "centre_utm": [
+     469278.7,
+     4473025.9
+    ],
+    "centre_latlon": [
+     40.4072807,
+     44.6379361
+    ],
+    "corners_utm": [
+     [
+      469299.18,
+      4473033.61
+     ],
+     [
+      469261.98,
+      4473011.81
+     ],
+     [
+      469258.23,
+      4473018.2
+     ],
+     [
+      469295.43,
+      4473040.0
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469262.0,
+     4473011.82
+    ],
+    [
+     469299.18,
+     4473033.61
+    ],
+    [
+     469295.41,
+     4473039.99
+    ],
+    [
+     469258.23,
+     4473018.2
+    ],
+    [
+     469262.0,
+     4473011.82
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/67",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 628.5,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 122.4,
+   "obb": {
+    "long_m": 44.91,
+    "short_m": 19.1,
+    "long_axis_bearing_deg": 55.39,
+    "centre_utm": [
+     469260.68,
+     4473049.98
+    ],
+    "centre_latlon": [
+     40.4074969,
+     44.6377226
+    ],
+    "corners_utm": [
+     [
+      469236.75,
+      4473045.18
+     ],
+     [
+      469273.82,
+      4473070.54
+     ],
+     [
+      469284.61,
+      4473054.77
+     ],
+     [
+      469247.54,
+      4473029.42
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469280.58,
+     4473060.61
+    ],
+    [
+     469245.42,
+     4473036.56
+    ],
+    [
+     469242.42,
+     4473040.92
+    ],
+    [
+     469277.27,
+     4473064.76
+    ],
+    [
+     469273.46,
+     4473070.29
+    ],
+    [
+     469236.75,
+     4473045.18
+    ],
+    [
+     469247.59,
+     4473029.46
+    ],
+    [
+     469284.61,
+     4473054.77
+    ],
+    [
+     469280.58,
+     4473060.61
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/88",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 663.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 123.3,
+   "obb": {
+    "long_m": 33.04,
+    "short_m": 20.13,
+    "long_axis_bearing_deg": 56.08,
+    "centre_utm": [
+     469304.14,
+     4472939.61
+    ],
+    "centre_latlon": [
+     40.4065041,
+     44.6382401
+    ],
+    "corners_utm": [
+     [
+      469323.47,
+      4472940.39
+     ],
+     [
+      469295.98,
+      4472922.07
+     ],
+     [
+      469284.81,
+      4472938.82
+     ],
+     [
+      469312.31,
+      4472957.14
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469296.04,
+     4472922.11
+    ],
+    [
+     469323.47,
+     4472940.39
+    ],
+    [
+     469312.25,
+     4472957.1
+    ],
+    [
+     469284.81,
+     4472938.82
+    ],
+    [
+     469296.04,
+     4472922.11
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/42",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 328.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 123.6,
+   "obb": {
+    "long_m": 25.56,
+    "short_m": 12.88,
+    "long_axis_bearing_deg": 46.0,
+    "centre_utm": [
+     469024.85,
+     4472950.14
+    ],
+    "centre_latlon": [
+     40.4065887,
+     44.6349482
+    ],
+    "corners_utm": [
+     [
+      469038.54,
+      4472954.33
+     ],
+     [
+      469020.08,
+      4472936.65
+     ],
+     [
+      469011.17,
+      4472945.95
+     ],
+     [
+      469029.63,
+      4472963.64
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469011.17,
+     4472945.95
+    ],
+    [
+     469020.12,
+     4472936.69
+    ],
+    [
+     469038.54,
+     4472954.33
+    ],
+    [
+     469029.59,
+     4472963.6
+    ],
+    [
+     469011.17,
+     4472945.95
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/4",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 124.0,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 128.7,
+   "obb": {
+    "long_m": 12.52,
+    "short_m": 9.94,
+    "long_axis_bearing_deg": 140.01,
+    "centre_utm": [
+     469115.46,
+     4473070.6
+    ],
+    "centre_latlon": [
+     40.4076773,
+     44.6360102
+    ],
+    "corners_utm": [
+     [
+      469115.64,
+      4473062.61
+     ],
+     [
+      469107.64,
+      4473072.24
+     ],
+     [
+      469115.28,
+      4473078.59
+     ],
+     [
+      469123.29,
+      4473068.97
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469115.62,
+     4473062.64
+    ],
+    [
+     469123.29,
+     4473068.97
+    ],
+    [
+     469115.31,
+     4473078.56
+    ],
+    [
+     469107.64,
+     4473072.24
+    ],
+    [
+     469115.62,
+     4473062.64
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/77",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 280.2,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 131.9,
+   "obb": {
+    "long_m": 42.49,
+    "short_m": 6.75,
+    "long_axis_bearing_deg": 55.86,
+    "centre_utm": [
+     469250.9,
+     4473065.56
+    ],
+    "centre_latlon": [
+     40.4076369,
+     44.6376066
+    ],
+    "corners_utm": [
+     [
+      469231.39,
+      4473056.51
+     ],
+     [
+      469266.65,
+      4473080.21
+     ],
+     [
+      469270.41,
+      4473074.61
+     ],
+     [
+      469235.15,
+      4473050.9
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469231.39,
+     4473056.51
+    ],
+    [
+     469234.02,
+     4473052.62
+    ],
+    [
+     469236.67,
+     4473054.41
+    ],
+    [
+     469237.82,
+     4473052.7
+    ],
+    [
+     469270.42,
+     4473074.61
+    ],
+    [
+     469266.63,
+     4473080.2
+    ],
+    [
+     469231.39,
+     4473056.51
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/37",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 317.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 135.4,
+   "obb": {
+    "long_m": 42.89,
+    "short_m": 7.42,
+    "long_axis_bearing_deg": 57.82,
+    "centre_utm": [
+     469243.84,
+     4473075.05
+    ],
+    "centre_latlon": [
+     40.4077221,
+     44.6375229
+    ],
+    "corners_utm": [
+     [
+      469263.99,
+      4473083.25
+     ],
+     [
+      469227.6,
+      4473060.56
+     ],
+     [
+      469223.68,
+      4473066.85
+     ],
+     [
+      469260.07,
+      4473089.54
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469223.68,
+     4473066.85
+    ],
+    [
+     469227.63,
+     4473060.57
+    ],
+    [
+     469263.99,
+     4473083.25
+    ],
+    [
+     469260.05,
+     4473089.53
+    ],
+    [
+     469223.68,
+     4473066.85
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/44",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 224.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 136.1,
+   "obb": {
+    "long_m": 16.89,
+    "short_m": 13.33,
+    "long_axis_bearing_deg": 150.08,
+    "centre_utm": [
+     469042.82,
+     4473028.28
+    ],
+    "centre_latlon": [
+     40.4072933,
+     44.6351561
+    ],
+    "corners_utm": [
+     [
+      469041.22,
+      4473017.64
+     ],
+     [
+      469032.85,
+      4473032.31
+     ],
+     [
+      469044.43,
+      4473038.91
+     ],
+     [
+      469052.8,
+      4473024.24
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469041.19,
+     4473017.68
+    ],
+    [
+     469052.8,
+     4473024.24
+    ],
+    [
+     469044.45,
+     4473038.87
+    ],
+    [
+     469032.85,
+     4473032.31
+    ],
+    [
+     469041.19,
+     4473017.68
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/22",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 1946.1,
+   "vertices": 10,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 137.9,
+   "obb": {
+    "long_m": 80.83,
+    "short_m": 62.66,
+    "long_axis_bearing_deg": 147.2,
+    "centre_utm": [
+     469253.96,
+     4473070.46
+    ],
+    "centre_latlon": [
+     40.4076811,
+     44.6376424
+    ],
+    "corners_utm": [
+     [
+      469258.62,
+      4473121.38
+     ],
+     [
+      469302.12,
+      4473053.26
+     ],
+     [
+      469249.31,
+      4473019.53
+     ],
+     [
+      469205.8,
+      4473087.65
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469295.08,
+     4473048.8
+    ],
+    [
+     469302.12,
+     4473053.26
+    ],
+    [
+     469258.74,
+     4473121.19
+    ],
+    [
+     469205.81,
+     4473087.65
+    ],
+    [
+     469218.24,
+     4473068.17
+    ],
+    [
+     469258.81,
+     4473093.87
+    ],
+    [
+     469261.79,
+     4473089.21
+    ],
+    [
+     469263.89,
+     4473090.54
+    ],
+    [
+     469261.63,
+     4473094.08
+    ],
+    [
+     469264.86,
+     4473096.13
+    ],
+    [
+     469295.08,
+     4473048.8
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/75",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 3893.0,
+   "vertices": 16,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 144.2,
+   "obb": {
+    "long_m": 90.68,
+    "short_m": 56.2,
+    "long_axis_bearing_deg": 56.29,
+    "centre_utm": [
+     469178.94,
+     4473134.96
+    ],
+    "centre_latlon": [
+     40.4082594,
+     44.6367552
+    ],
+    "corners_utm": [
+     [
+      469156.62,
+      4473086.51
+     ],
+     [
+      469125.63,
+      4473133.38
+     ],
+     [
+      469201.26,
+      4473183.4
+     ],
+     [
+      469232.26,
+      4473136.53
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469163.17,
+     4473103.22
+    ],
+    [
+     469186.99,
+     4473118.85
+    ],
+    [
+     469185.9,
+     4473120.48
+    ],
+    [
+     469215.59,
+     4473139.96
+    ],
+    [
+     469221.12,
+     4473131.6
+    ],
+    [
+     469231.16,
+     4473138.2
+    ],
+    [
+     469211.25,
+     4473168.31
+    ],
+    [
+     469195.1,
+     4473157.72
+    ],
+    [
+     469190.51,
+     4473164.65
+    ],
+    [
+     469184.81,
+     4473160.92
+    ],
+    [
+     469183.77,
+     4473162.49
+    ],
+    [
+     469180.13,
+     4473160.1
+    ],
+    [
+     469175.96,
+     4473166.41
+    ],
+    [
+     469125.63,
+     4473133.38
+    ],
+    [
+     469156.59,
+     4473086.56
+    ],
+    [
+     469168.87,
+     4473094.61
+    ],
+    [
+     469163.17,
+     4473103.22
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/76",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 396.3,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 153.1,
+   "obb": {
+    "long_m": 29.84,
+    "short_m": 18.05,
+    "long_axis_bearing_deg": 50.63,
+    "centre_utm": [
+     469084.33,
+     4473087.33
+    ],
+    "centre_latlon": [
+     40.4078268,
+     44.6356425
+    ],
+    "corners_utm": [
+     [
+      469101.6,
+      4473089.75
+     ],
+     [
+      469078.45,
+      4473070.91
+     ],
+     [
+      469067.06,
+      4473084.91
+     ],
+     [
+      469090.21,
+      4473103.75
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469099.35,
+     4473092.52
+    ],
+    [
+     469090.17,
+     4473103.71
+    ],
+    [
+     469081.19,
+     4473096.41
+    ],
+    [
+     469085.48,
+     4473091.18
+    ],
+    [
+     469071.33,
+     4473079.67
+    ],
+    [
+     469078.49,
+     4473070.94
+    ],
+    [
+     469097.6,
+     4473086.48
+    ],
+    [
+     469095.33,
+     4473089.25
+    ],
+    [
+     469099.35,
+     4473092.52
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/24",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 210.1,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 159.3,
+   "obb": {
+    "long_m": 20.3,
+    "short_m": 10.79,
+    "long_axis_bearing_deg": 49.55,
+    "centre_utm": [
+     468992.29,
+     4472919.82
+    ],
+    "centre_latlon": [
+     40.4063143,
+     44.6345659
+    ],
+    "corners_utm": [
+     [
+      468981.06,
+      4472917.39
+     ],
+     [
+      468996.55,
+      4472930.49
+     ],
+     [
+      469003.52,
+      4472922.25
+     ],
+     [
+      468988.03,
+      4472909.15
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468982.73,
+     4472915.41
+    ],
+    [
+     468988.05,
+     4472909.17
+    ],
+    [
+     469003.52,
+     4472922.25
+    ],
+    [
+     468996.52,
+     4472930.47
+    ],
+    [
+     468983.61,
+     4472919.54
+    ],
+    [
+     468985.28,
+     4472917.58
+    ],
+    [
+     468982.73,
+     4472915.41
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/9",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 209.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 159.7,
+   "obb": {
+    "long_m": 28.01,
+    "short_m": 7.47,
+    "long_axis_bearing_deg": 145.16,
+    "centre_utm": [
+     469052.88,
+     4472816.56
+    ],
+    "centre_latlon": [
+     40.4053863,
+     44.635285
+    ],
+    "corners_utm": [
+     [
+      469057.76,
+      4472802.91
+     ],
+     [
+      469041.86,
+      4472825.96
+     ],
+     [
+      469048.01,
+      4472830.21
+     ],
+     [
+      469063.91,
+      4472807.16
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469041.86,
+     4472825.96
+    ],
+    [
+     469057.75,
+     4472802.93
+    ],
+    [
+     469063.91,
+     4472807.16
+    ],
+    [
+     469048.02,
+     4472830.18
+    ],
+    [
+     469041.86,
+     4472825.96
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/16",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 68.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 163.2,
+   "obb": {
+    "long_m": 13.17,
+    "short_m": 5.23,
+    "long_axis_bearing_deg": 142.42,
+    "centre_utm": [
+     469128.31,
+     4473109.32
+    ],
+    "centre_latlon": [
+     40.4080266,
+     44.6361597
+    ],
+    "corners_utm": [
+     [
+      469130.23,
+      4473102.49
+     ],
+     [
+      469122.24,
+      4473112.97
+     ],
+     [
+      469126.4,
+      4473116.14
+     ],
+     [
+      469134.39,
+      4473105.67
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469134.39,
+     4473105.67
+    ],
+    [
+     469126.41,
+     4473116.12
+    ],
+    [
+     469122.24,
+     4473112.97
+    ],
+    [
+     469130.22,
+     4473102.51
+    ],
+    [
+     469134.39,
+     4473105.67
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/1",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 395.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 171.3,
+   "obb": {
+    "long_m": 30.6,
+    "short_m": 12.95,
+    "long_axis_bearing_deg": 142.23,
+    "centre_utm": [
+     469063.51,
+     4472788.87
+    ],
+    "centre_latlon": [
+     40.4051373,
+     44.6354116
+    ],
+    "corners_utm": [
+     [
+      469067.7,
+      4472772.79
+     ],
+     [
+      469049.05,
+      4472797.06
+     ],
+     [
+      469059.33,
+      4472804.95
+     ],
+     [
+      469077.97,
+      4472780.68
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469077.97,
+     4472780.68
+    ],
+    [
+     469059.36,
+     4472804.91
+    ],
+    [
+     469049.05,
+     4472797.06
+    ],
+    [
+     469067.67,
+     4472772.83
+    ],
+    [
+     469077.97,
+     4472780.68
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/21",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 366.6,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 173.0,
+   "obb": {
+    "long_m": 48.38,
+    "short_m": 7.91,
+    "long_axis_bearing_deg": 146.7,
+    "centre_utm": [
+     469315.35,
+     4473030.54
+    ],
+    "centre_latlon": [
+     40.4073237,
+     44.6383679
+    ],
+    "corners_utm": [
+     [
+      469325.24,
+      4473008.11
+     ],
+     [
+      469298.84,
+      4473048.65
+     ],
+     [
+      469305.47,
+      4473052.97
+     ],
+     [
+      469331.87,
+      4473012.42
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469331.87,
+     4473012.42
+    ],
+    [
+     469305.48,
+     4473052.94
+    ],
+    [
+     469299.73,
+     4473049.23
+    ],
+    [
+     469300.87,
+     4473047.48
+    ],
+    [
+     469304.06,
+     4473049.54
+    ],
+    [
+     469305.58,
+     4473047.21
+    ],
+    [
+     469301.49,
+     4473044.58
+    ],
+    [
+     469325.22,
+     4473008.13
+    ],
+    [
+     469331.87,
+     4473012.42
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/94",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 41.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 186.1,
+   "obb": {
+    "long_m": 6.49,
+    "short_m": 6.45,
+    "long_axis_bearing_deg": 62.78,
+    "centre_utm": [
+     469098.73,
+     4472762.38
+    ],
+    "centre_latlon": [
+     40.4049,
+     44.6358279
+    ],
+    "corners_utm": [
+     [
+      469103.08,
+      4472760.98
+     ],
+     [
+      469097.3,
+      4472758.04
+     ],
+     [
+      469094.37,
+      4472763.79
+     ],
+     [
+      469100.15,
+      4472766.73
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469094.37,
+     4472763.79
+    ],
+    [
+     469097.32,
+     4472758.05
+    ],
+    [
+     469103.08,
+     4472760.98
+    ],
+    [
+     469100.14,
+     4472766.72
+    ],
+    [
+     469094.37,
+     4472763.79
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/92",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 418.4,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 193.5,
+   "obb": {
+    "long_m": 29.18,
+    "short_m": 14.36,
+    "long_axis_bearing_deg": 59.67,
+    "centre_utm": [
+     469370.09,
+     4472964.88
+    ],
+    "centre_latlon": [
+     40.4067342,
+     44.6390161
+    ],
+    "corners_utm": [
+     [
+      469353.87,
+      4472963.77
+     ],
+     [
+      469379.12,
+      4472978.4
+     ],
+     [
+      469386.32,
+      4472965.98
+     ],
+     [
+      469361.07,
+      4472951.35
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469353.87,
+     4472963.77
+    ],
+    [
+     469361.11,
+     4472951.37
+    ],
+    [
+     469386.32,
+     4472965.98
+    ],
+    [
+     469379.07,
+     4472978.38
+    ],
+    [
+     469353.87,
+     4472963.77
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/7",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 12.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 193.7,
+   "obb": {
+    "long_m": 4.14,
+    "short_m": 3.11,
+    "long_axis_bearing_deg": 155.55,
+    "centre_utm": [
+     468997.07,
+     4473049.36
+    ],
+    "centre_latlon": [
+     40.4074815,
+     44.6346159
+    ],
+    "corners_utm": [
+     [
+      468996.5,
+      4473046.83
+     ],
+     [
+      468994.8,
+      4473050.61
+     ],
+     [
+      468997.64,
+      4473051.88
+     ],
+     [
+      468999.34,
+      4473048.11
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468994.8,
+     4473050.61
+    ],
+    [
+     468996.5,
+     4473046.84
+    ],
+    [
+     468999.34,
+     4473048.11
+    ],
+    [
+     468997.64,
+     4473051.88
+    ],
+    [
+     468994.8,
+     4473050.61
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/15",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 492.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 195.2,
+   "obb": {
+    "long_m": 32.94,
+    "short_m": 14.98,
+    "long_axis_bearing_deg": 57.89,
+    "centre_utm": [
+     468999.14,
+     4473071.3
+    ],
+    "centre_latlon": [
+     40.4076793,
+     44.6346393
+    ],
+    "corners_utm": [
+     [
+      469017.09,
+      4473073.64
+     ],
+     [
+      468989.11,
+      4473056.24
+     ],
+     [
+      468981.2,
+      4473068.96
+     ],
+     [
+      469009.18,
+      4473086.36
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468989.16,
+     4473056.27
+    ],
+    [
+     469017.09,
+     4473073.64
+    ],
+    [
+     469009.13,
+     4473086.33
+    ],
+    [
+     468981.2,
+     4473068.96
+    ],
+    [
+     468989.16,
+     4473056.27
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/35",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 68.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 203.2,
+   "obb": {
+    "long_m": 10.88,
+    "short_m": 6.27,
+    "long_axis_bearing_deg": 45.07,
+    "centre_utm": [
+     468985.98,
+     4473052.9
+    ],
+    "centre_latlon": [
+     40.407513,
+     44.634485
+    ],
+    "corners_utm": [
+     [
+      468992.05,
+      4473054.49
+     ],
+     [
+      468984.31,
+      4473046.84
+     ],
+     [
+      468979.91,
+      4473051.3
+     ],
+     [
+      468987.64,
+      4473058.95
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468992.05,
+     4473054.49
+    ],
+    [
+     468987.63,
+     4473058.93
+    ],
+    [
+     468979.91,
+     4473051.3
+    ],
+    [
+     468984.33,
+     4473046.86
+    ],
+    [
+     468992.05,
+     4473054.49
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/62",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 164.2,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 205.7,
+   "obb": {
+    "long_m": 15.56,
+    "short_m": 11.98,
+    "long_axis_bearing_deg": 144.06,
+    "centre_utm": [
+     469015.85,
+     4473098.3
+    ],
+    "centre_latlon": [
+     40.4079232,
+     44.6348348
+    ],
+    "corners_utm": [
+     [
+      469015.53,
+      4473088.49
+     ],
+     [
+      469006.45,
+      4473101.13
+     ],
+     [
+      469016.17,
+      4473108.12
+     ],
+     [
+      469025.25,
+      4473095.48
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469020.16,
+     4473091.82
+    ],
+    [
+     469018.12,
+     4473094.66
+    ],
+    [
+     469023.22,
+     4473098.3
+    ],
+    [
+     469016.2,
+     4473108.08
+    ],
+    [
+     469006.45,
+     4473101.13
+    ],
+    [
+     469015.51,
+     4473088.51
+    ],
+    [
+     469020.16,
+     4473091.82
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/49",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 11.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 206.4,
+   "obb": {
+    "long_m": 4.53,
+    "short_m": 2.63,
+    "long_axis_bearing_deg": 59.81,
+    "centre_utm": [
+     469087.22,
+     4473136.67
+    ],
+    "centre_latlon": [
+     40.4082715,
+     44.6356741
+    ],
+    "corners_utm": [
+     [
+      469089.84,
+      4473136.66
+     ],
+     [
+      469085.92,
+      4473134.4
+     ],
+     [
+      469084.6,
+      4473136.68
+     ],
+     [
+      469088.52,
+      4473138.94
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469084.6,
+     4473136.68
+    ],
+    [
+     469085.92,
+     4473134.41
+    ],
+    [
+     469089.84,
+     4473136.66
+    ],
+    [
+     469088.52,
+     4473138.93
+    ],
+    [
+     469084.6,
+     4473136.68
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/56",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 160.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 206.5,
+   "obb": {
+    "long_m": 12.82,
+    "short_m": 12.58,
+    "long_axis_bearing_deg": 51.4,
+    "centre_utm": [
+     469073.25,
+     4472746.31
+    ],
+    "centre_latlon": [
+     40.4047542,
+     44.6355284
+    ],
+    "corners_utm": [
+     [
+      469082.18,
+      4472745.35
+     ],
+     [
+      469072.13,
+      4472737.4
+     ],
+     [
+      469064.32,
+      4472747.26
+     ],
+     [
+      469074.37,
+      4472755.22
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469082.18,
+     4472745.35
+    ],
+    [
+     469074.33,
+     4472755.19
+    ],
+    [
+     469064.32,
+     4472747.26
+    ],
+    [
+     469072.17,
+     4472737.43
+    ],
+    [
+     469082.18,
+     4472745.35
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/2",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 170.7,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 208.0,
+   "obb": {
+    "long_m": 18.16,
+    "short_m": 10.27,
+    "long_axis_bearing_deg": 55.42,
+    "centre_utm": [
+     469095.48,
+     4473147.32
+    ],
+    "centre_latlon": [
+     40.4083677,
+     44.6357709
+    ],
+    "corners_utm": [
+     [
+      469105.87,
+      4473148.2
+     ],
+     [
+      469090.88,
+      4473137.95
+     ],
+     [
+      469085.09,
+      4473146.43
+     ],
+     [
+      469100.08,
+      4473156.68
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469090.33,
+     4473150.01
+    ],
+    [
+     469091.7,
+     4473148.01
+    ],
+    [
+     469086.46,
+     4473144.43
+    ],
+    [
+     469090.9,
+     4473137.97
+    ],
+    [
+     469105.87,
+     4473148.2
+    ],
+    [
+     469100.05,
+     4473156.65
+    ],
+    [
+     469090.33,
+     4473150.01
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/29",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 81.5,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 208.1,
+   "obb": {
+    "long_m": 12.33,
+    "short_m": 6.62,
+    "long_axis_bearing_deg": 143.91,
+    "centre_utm": [
+     469065.97,
+     4473134.65
+    ],
+    "centre_latlon": [
+     40.4082525,
+     44.6354238
+    ],
+    "corners_utm": [
+     [
+      469066.9,
+      4473127.71
+     ],
+     [
+      469059.68,
+      4473137.71
+     ],
+     [
+      469065.04,
+      4473141.59
+     ],
+     [
+      469072.27,
+      4473131.59
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469072.27,
+     4473131.59
+    ],
+    [
+     469065.06,
+     4473141.57
+    ],
+    [
+     469059.68,
+     4473137.71
+    ],
+    [
+     469066.88,
+     4473127.73
+    ],
+    [
+     469072.27,
+     4473131.59
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/45",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 458.9,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 217.9,
+   "obb": {
+    "long_m": 49.77,
+    "short_m": 17.93,
+    "long_axis_bearing_deg": 143.5,
+    "centre_utm": [
+     469045.6,
+     4472748.46
+    ],
+    "centre_latlon": [
+     40.4047725,
+     44.6352025
+    ],
+    "corners_utm": [
+     [
+      469053.09,
+      4472723.09
+     ],
+     [
+      469023.65,
+      4472763.22
+     ],
+     [
+      469038.11,
+      4472773.83
+     ],
+     [
+      469067.55,
+      4472733.7
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469023.65,
+     4472763.22
+    ],
+    [
+     469050.68,
+     4472726.39
+    ],
+    [
+     469057.04,
+     4472731.02
+    ],
+    [
+     469059.42,
+     4472727.78
+    ],
+    [
+     469067.55,
+     4472733.7
+    ],
+    [
+     469063.55,
+     4472739.15
+    ],
+    [
+     469056.01,
+     4472733.66
+    ],
+    [
+     469030.6,
+     4472768.28
+    ],
+    [
+     469023.65,
+     4472763.22
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/32",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 3497.5,
+   "vertices": 14,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 218.1,
+   "obb": {
+    "long_m": 121.92,
+    "short_m": 79.01,
+    "long_axis_bearing_deg": 146.78,
+    "centre_utm": [
+     469362.1,
+     4473106.56
+    ],
+    "centre_latlon": [
+     40.4080104,
+     44.6389151
+    ],
+    "corners_utm": [
+     [
+      469362.15,
+      4473033.92
+     ],
+     [
+      469295.77,
+      4473136.18
+     ],
+     [
+      469362.04,
+      4473179.2
+     ],
+     [
+      469428.42,
+      4473076.94
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469374.64,
+     4473060.14
+    ],
+    [
+     469316.58,
+     4473149.59
+    ],
+    [
+     469295.77,
+     4473136.18
+    ],
+    [
+     469355.49,
+     4473044.19
+    ],
+    [
+     469375.02,
+     4473056.77
+    ],
+    [
+     469379.88,
+     4473049.27
+    ],
+    [
+     469385.48,
+     4473052.88
+    ],
+    [
+     469387.14,
+     4473050.33
+    ],
+    [
+     469423.95,
+     4473074.04
+    ],
+    [
+     469421.88,
+     4473077.23
+    ],
+    [
+     469426.36,
+     4473080.12
+    ],
+    [
+     469421.09,
+     4473088.25
+    ],
+    [
+     469415.8,
+     4473084.84
+    ],
+    [
+     469414.98,
+     4473086.12
+    ],
+    [
+     469374.64,
+     4473060.14
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/10",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 84.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 221.7,
+   "obb": {
+    "long_m": 12.61,
+    "short_m": 6.73,
+    "long_axis_bearing_deg": 51.4,
+    "centre_utm": [
+     469087.82,
+     4473156.96
+    ],
+    "centre_latlon": [
+     40.4084542,
+     44.6356802
+    ],
+    "corners_utm": [
+     [
+      469094.85,
+      4473158.23
+     ],
+     [
+      469084.96,
+      4473150.4
+     ],
+     [
+      469080.78,
+      4473155.68
+     ],
+     [
+      469090.67,
+      4473163.51
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469080.78,
+     4473155.68
+    ],
+    [
+     469084.98,
+     4473150.42
+    ],
+    [
+     469094.85,
+     4473158.23
+    ],
+    [
+     469090.65,
+     4473163.49
+    ],
+    [
+     469080.78,
+     4473155.68
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/51",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 182.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 222.3,
+   "obb": {
+    "long_m": 24.41,
+    "short_m": 7.47,
+    "long_axis_bearing_deg": 146.28,
+    "centre_utm": [
+     469215.39,
+     4473169.38
+    ],
+    "centre_latlon": [
+     40.4085709,
+     44.637183
+    ],
+    "corners_utm": [
+     [
+      469211.77,
+      4473181.62
+     ],
+     [
+      469225.24,
+      4473161.26
+     ],
+     [
+      469219.01,
+      4473157.14
+     ],
+     [
+      469205.54,
+      4473177.49
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469205.54,
+     4473177.49
+    ],
+    [
+     469218.99,
+     4473157.16
+    ],
+    [
+     469225.24,
+     4473161.26
+    ],
+    [
+     469211.79,
+     4473181.59
+    ],
+    [
+     469205.54,
+     4473177.49
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/33",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 43.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 222.4,
+   "obb": {
+    "long_m": 7.01,
+    "short_m": 6.27,
+    "long_axis_bearing_deg": 52.16,
+    "centre_utm": [
+     468965.86,
+     4473056.59
+    ],
+    "centre_latlon": [
+     40.4075455,
+     44.6342478
+    ],
+    "corners_utm": [
+     [
+      468970.55,
+      4473056.25
+     ],
+     [
+      468965.0,
+      4473051.97
+     ],
+     [
+      468961.17,
+      4473056.93
+     ],
+     [
+      468966.73,
+      4473061.21
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468961.17,
+     4473056.93
+    ],
+    [
+     468965.02,
+     4473051.98
+    ],
+    [
+     468970.55,
+     4473056.25
+    ],
+    [
+     468966.71,
+     4473061.2
+    ],
+    [
+     468961.17,
+     4473056.93
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/55",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 9.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 225.5,
+   "obb": {
+    "long_m": 4.54,
+    "short_m": 2.12,
+    "long_axis_bearing_deg": 68.98,
+    "centre_utm": [
+     469021.15,
+     4472762.85
+    ],
+    "centre_latlon": [
+     40.4049013,
+     44.6349136
+    ],
+    "corners_utm": [
+     [
+      469023.65,
+      4472762.67
+     ],
+     [
+      469019.4,
+      4472761.06
+     ],
+     [
+      469018.65,
+      4472763.04
+     ],
+     [
+      469022.9,
+      4472764.65
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469023.65,
+     4472762.67
+    ],
+    [
+     469022.89,
+     4472764.65
+    ],
+    [
+     469018.65,
+     4472763.04
+    ],
+    [
+     469019.41,
+     4472761.06
+    ],
+    [
+     469023.65,
+     4472762.67
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/52",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 44.0,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 228.8,
+   "obb": {
+    "long_m": 8.28,
+    "short_m": 5.33,
+    "long_axis_bearing_deg": 139.12,
+    "centre_utm": [
+     469289.07,
+     4473136.75
+    ],
+    "centre_latlon": [
+     40.4082797,
+     44.638053
+    ],
+    "corners_utm": [
+     [
+      469289.74,
+      4473131.88
+     ],
+     [
+      469284.35,
+      4473138.16
+     ],
+     [
+      469288.4,
+      4473141.63
+     ],
+     [
+      469293.79,
+      4473135.35
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469284.35,
+     4473138.16
+    ],
+    [
+     469289.73,
+     4473131.89
+    ],
+    [
+     469293.79,
+     4473135.35
+    ],
+    [
+     469288.41,
+     4473141.61
+    ],
+    [
+     469284.35,
+     4473138.16
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/17",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 164.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 232.9,
+   "obb": {
+    "long_m": 25.31,
+    "short_m": 6.52,
+    "long_axis_bearing_deg": 60.69,
+    "centre_utm": [
+     469003.38,
+     4472754.19
+    ],
+    "centre_latlon": [
+     40.4048226,
+     44.6347047
+    ],
+    "corners_utm": [
+     [
+      469016.03,
+      4472757.49
+     ],
+     [
+      468993.91,
+      4472745.2
+     ],
+     [
+      468990.74,
+      4472750.9
+     ],
+     [
+      469012.86,
+      4472763.19
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469016.03,
+     4472757.49
+    ],
+    [
+     469012.84,
+     4472763.18
+    ],
+    [
+     468990.74,
+     4472750.9
+    ],
+    [
+     468993.93,
+     4472745.21
+    ],
+    [
+     469016.03,
+     4472757.49
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/40",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 150.4,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 233.8,
+   "obb": {
+    "long_m": 17.48,
+    "short_m": 10.35,
+    "long_axis_bearing_deg": 35.71,
+    "centre_utm": [
+     468982.81,
+     4472778.19
+    ],
+    "centre_latlon": [
+     40.4050381,
+     44.6344611
+    ],
+    "corners_utm": [
+     [
+      468992.13,
+      4472782.23
+     ],
+     [
+      468981.87,
+      4472768.08
+     ],
+     [
+      468973.49,
+      4472774.15
+     ],
+     [
+      468983.76,
+      4472788.31
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468986.62,
+     4472780.17
+    ],
+    [
+     468989.49,
+     4472784.15
+    ],
+    [
+     468984.64,
+     4472787.64
+    ],
+    [
+     468977.1,
+     4472777.24
+    ],
+    [
+     468976.2,
+     4472777.89
+    ],
+    [
+     468973.49,
+     4472774.15
+    ],
+    [
+     468981.9,
+     4472768.11
+    ],
+    [
+     468989.26,
+     4472778.27
+    ],
+    [
+     468986.62,
+     4472780.17
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/47",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 1288.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 234.3,
+   "obb": {
+    "long_m": 72.57,
+    "short_m": 17.77,
+    "long_axis_bearing_deg": 145.74,
+    "centre_utm": [
+     468958.9,
+     4473123.34
+    ],
+    "centre_latlon": [
+     40.4081466,
+     44.6341625
+    ],
+    "corners_utm": [
+     [
+      468945.97,
+      4473158.38
+     ],
+     [
+      468986.57,
+      4473098.23
+     ],
+     [
+      468971.84,
+      4473088.29
+     ],
+     [
+      468931.24,
+      4473148.44
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468946.0,
+     4473158.33
+    ],
+    [
+     468931.24,
+     4473148.44
+    ],
+    [
+     468971.81,
+     4473088.35
+    ],
+    [
+     468986.57,
+     4473098.23
+    ],
+    [
+     468946.0,
+     4473158.33
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/74",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 1373.6,
+   "vertices": 10,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 235.2,
+   "obb": {
+    "long_m": 71.52,
+    "short_m": 21.04,
+    "long_axis_bearing_deg": 55.96,
+    "centre_utm": [
+     469320.43,
+     4473161.77
+    ],
+    "centre_latlon": [
+     40.4085063,
+     44.6384213
+    ],
+    "corners_utm": [
+     [
+      469284.86,
+      4473150.62
+     ],
+     [
+      469344.29,
+      4473190.41
+     ],
+     [
+      469355.99,
+      4473172.93
+     ],
+     [
+      469296.57,
+      4473133.14
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469355.99,
+     4473172.93
+    ],
+    [
+     469344.22,
+     4473190.37
+    ],
+    [
+     469287.95,
+     4473152.69
+    ],
+    [
+     469294.36,
+     4473143.19
+    ],
+    [
+     469291.24,
+     4473141.1
+    ],
+    [
+     469294.28,
+     4473136.58
+    ],
+    [
+     469303.98,
+     4473143.07
+    ],
+    [
+     469304.5,
+     4473142.29
+    ],
+    [
+     469314.66,
+     4473149.1
+    ],
+    [
+     469316.45,
+     4473146.45
+    ],
+    [
+     469355.99,
+     4473172.93
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/71",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 168.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 235.4,
+   "obb": {
+    "long_m": 15.26,
+    "short_m": 11.1,
+    "long_axis_bearing_deg": 140.72,
+    "centre_utm": [
+     469016.33,
+     4472748.09
+    ],
+    "centre_latlon": [
+     40.4047681,
+     44.6348576
+    ],
+    "corners_utm": [
+     [
+      469016.83,
+      4472738.67
+     ],
+     [
+      469007.22,
+      4472750.52
+     ],
+     [
+      469015.84,
+      4472757.51
+     ],
+     [
+      469025.45,
+      4472745.66
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469007.22,
+     4472750.52
+    ],
+    [
+     469016.8,
+     4472738.7
+    ],
+    [
+     469025.45,
+     4472745.66
+    ],
+    [
+     469015.87,
+     4472757.48
+    ],
+    [
+     469007.22,
+     4472750.52
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/87",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 4348.8,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 235.6,
+   "obb": {
+    "long_m": 79.75,
+    "short_m": 58.58,
+    "long_axis_bearing_deg": 56.96,
+    "centre_utm": [
+     469003.85,
+     4473155.82
+    ],
+    "centre_latlon": [
+     40.4084409,
+     44.6346906
+    ],
+    "corners_utm": [
+     [
+      468986.2,
+      4473109.6
+     ],
+     [
+      468954.46,
+      4473158.84
+     ],
+     [
+      469021.5,
+      4473202.04
+     ],
+     [
+      469053.23,
+      4473152.8
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468956.51,
+     4473155.67
+    ],
+    [
+     468986.08,
+     4473109.79
+    ],
+    [
+     469038.8,
+     4473143.5
+    ],
+    [
+     469036.78,
+     4473146.64
+    ],
+    [
+     469051.24,
+     4473155.89
+    ],
+    [
+     469021.53,
+     4473202.0
+    ],
+    [
+     469008.99,
+     4473193.98
+    ],
+    [
+     469011.16,
+     4473190.62
+    ],
+    [
+     468956.51,
+     4473155.67
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/46",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 37.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 241.7,
+   "obb": {
+    "long_m": 6.68,
+    "short_m": 5.66,
+    "long_axis_bearing_deg": 64.55,
+    "centre_utm": [
+     469205.01,
+     4473184.51
+    ],
+    "centre_latlon": [
+     40.4087068,
+     44.63706
+    ],
+    "corners_utm": [
+     [
+      469200.78,
+      4473185.64
+     ],
+     [
+      469206.83,
+      4473188.49
+     ],
+     [
+      469209.24,
+      4473183.37
+     ],
+     [
+      469203.19,
+      4473180.52
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469200.78,
+     4473185.64
+    ],
+    [
+     469203.21,
+     4473180.53
+    ],
+    [
+     469209.24,
+     4473183.37
+    ],
+    [
+     469206.81,
+     4473188.48
+    ],
+    [
+     469200.78,
+     4473185.64
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/11",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 88.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 244.5,
+   "obb": {
+    "long_m": 12.05,
+    "short_m": 7.39,
+    "long_axis_bearing_deg": 54.6,
+    "centre_utm": [
+     469152.38,
+     4473193.05
+    ],
+    "centre_latlon": [
+     40.4087818,
+     44.6364394
+    ],
+    "corners_utm": [
+     [
+      469159.44,
+      4473193.5
+     ],
+     [
+      469149.59,
+      4473186.56
+     ],
+     [
+      469145.33,
+      4473192.6
+     ],
+     [
+      469155.18,
+      4473199.54
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469159.44,
+     4473193.5
+    ],
+    [
+     469155.16,
+     4473199.52
+    ],
+    [
+     469145.33,
+     4473192.6
+    ],
+    [
+     469149.61,
+     4473186.57
+    ],
+    [
+     469159.44,
+     4473193.5
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/30",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 45.5,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 246.8,
+   "obb": {
+    "long_m": 6.77,
+    "short_m": 6.74,
+    "long_axis_bearing_deg": 60.93,
+    "centre_utm": [
+     468984.45,
+     4472764.66
+    ],
+    "centre_latlon": [
+     40.4049162,
+     44.634481
+    ],
+    "corners_utm": [
+     [
+      468989.04,
+      4472763.34
+     ],
+     [
+      468983.11,
+      4472760.07
+     ],
+     [
+      468979.86,
+      4472765.97
+     ],
+     [
+      468985.79,
+      4472769.24
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468983.13,
+     4472760.08
+    ],
+    [
+     468989.04,
+     4472763.34
+    ],
+    [
+     468985.77,
+     4472769.23
+    ],
+    [
+     468979.86,
+     4472765.97
+    ],
+    [
+     468983.13,
+     4472760.08
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/61",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 167.0,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 248.5,
+   "obb": {
+    "long_m": 13.35,
+    "short_m": 12.55,
+    "long_axis_bearing_deg": 149.49,
+    "centre_utm": [
+     469006.59,
+     4472737.64
+    ],
+    "centre_latlon": [
+     40.4046736,
+     44.6347433
+    ],
+    "corners_utm": [
+     [
+      469004.54,
+      4472728.71
+     ],
+     [
+      468997.81,
+      4472740.24
+     ],
+     [
+      469008.65,
+      4472746.57
+     ],
+     [
+      469015.38,
+      4472735.04
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469015.38,
+     4472735.04
+    ],
+    [
+     469008.67,
+     4472746.53
+    ],
+    [
+     468997.81,
+     4472740.24
+    ],
+    [
+     469004.52,
+     4472728.75
+    ],
+    [
+     469015.38,
+     4472735.04
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/38",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 841.1,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 250.1,
+   "obb": {
+    "long_m": 54.3,
+    "short_m": 17.26,
+    "long_axis_bearing_deg": 57.76,
+    "centre_utm": [
+     469430.75,
+     4473010.17
+    ],
+    "centre_latlon": [
+     40.4071445,
+     44.6397289
+    ],
+    "corners_utm": [
+     [
+      469458.35,
+      4473017.24
+     ],
+     [
+      469412.31,
+      4472988.47
+     ],
+     [
+      469403.16,
+      4473003.1
+     ],
+     [
+      469449.2,
+      4473031.88
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469404.89,
+     4473000.34
+    ],
+    [
+     469412.35,
+     4472988.49
+    ],
+    [
+     469458.35,
+     4473017.24
+    ],
+    [
+     469449.87,
+     4473030.71
+    ],
+    [
+     469431.88,
+     4473019.47
+    ],
+    [
+     469431.16,
+     4473020.6
+    ],
+    [
+     469420.48,
+     4473013.93
+    ],
+    [
+     469422.22,
+     4473011.17
+    ],
+    [
+     469404.89,
+     4473000.34
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/96",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 436.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 253.6,
+   "obb": {
+    "long_m": 24.2,
+    "short_m": 18.09,
+    "long_axis_bearing_deg": 146.77,
+    "centre_utm": [
+     469268.34,
+     4473187.9
+    ],
+    "centre_latlon": [
+     40.4087397,
+     44.6378061
+    ],
+    "corners_utm": [
+     [
+      469267.34,
+      4473172.82
+     ],
+     [
+      469254.16,
+      4473193.12
+     ],
+     [
+      469269.33,
+      4473202.97
+     ],
+     [
+      469282.51,
+      4473182.67
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469269.37,
+     4473202.92
+    ],
+    [
+     469254.16,
+     4473193.12
+    ],
+    [
+     469267.31,
+     4473172.87
+    ],
+    [
+     469282.51,
+     4473182.67
+    ],
+    [
+     469269.37,
+     4473202.92
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/57",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 287.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 257.8,
+   "obb": {
+    "long_m": 33.9,
+    "short_m": 8.5,
+    "long_axis_bearing_deg": 54.61,
+    "centre_utm": [
+     469201.57,
+     4473211.79
+    ],
+    "centre_latlon": [
+     40.4089524,
+     44.6370182
+    ],
+    "corners_utm": [
+     [
+      469217.88,
+      4473218.07
+     ],
+     [
+      469190.16,
+      4473198.55
+     ],
+     [
+      469185.27,
+      4473205.51
+     ],
+     [
+      469212.98,
+      4473225.02
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469185.27,
+     4473205.51
+    ],
+    [
+     469190.19,
+     4473198.57
+    ],
+    [
+     469217.88,
+     4473218.07
+    ],
+    [
+     469212.96,
+     4473225.0
+    ],
+    [
+     469185.27,
+     4473205.51
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/95",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 158.8,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 263.0,
+   "obb": {
+    "long_m": 16.08,
+    "short_m": 13.4,
+    "long_axis_bearing_deg": 55.23,
+    "centre_utm": [
+     469172.44,
+     4473212.79
+    ],
+    "centre_latlon": [
+     40.4089604,
+     44.6366748
+    ],
+    "corners_utm": [
+     [
+      469169.62,
+      4473202.72
+     ],
+     [
+      469162.02,
+      4473213.76
+     ],
+     [
+      469175.27,
+      4473222.87
+     ],
+     [
+      469182.86,
+      4473211.83
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469169.34,
+     4473218.79
+    ],
+    [
+     469171.77,
+     4473215.25
+    ],
+    [
+     469164.44,
+     4473210.24
+    ],
+    [
+     469167.15,
+     4473206.3
+    ],
+    [
+     469170.62,
+     4473208.67
+    ],
+    [
+     469173.06,
+     4473205.14
+    ],
+    [
+     469182.86,
+     4473211.83
+    ],
+    [
+     469175.28,
+     4473222.85
+    ],
+    [
+     469169.34,
+     4473218.79
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/83",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 77.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 265.5,
+   "obb": {
+    "long_m": 11.73,
+    "short_m": 6.65,
+    "long_axis_bearing_deg": 55.79,
+    "centre_utm": [
+     468924.59,
+     4472809.83
+    ],
+    "centre_latlon": [
+     40.4053209,
+     44.6337733
+    ],
+    "corners_utm": [
+     [
+      468931.31,
+      4472810.35
+     ],
+     [
+      468921.58,
+      4472803.79
+     ],
+     [
+      468917.86,
+      4472809.31
+     ],
+     [
+      468927.59,
+      4472815.86
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468921.6,
+     4472803.81
+    ],
+    [
+     468931.31,
+     4472810.35
+    ],
+    [
+     468927.57,
+     4472815.85
+    ],
+    [
+     468917.86,
+     4472809.31
+    ],
+    [
+     468921.6,
+     4472803.81
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/73",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 35.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 266.0,
+   "obb": {
+    "long_m": 8.11,
+    "short_m": 4.42,
+    "long_axis_bearing_deg": 143.98,
+    "centre_utm": [
+     468965.84,
+     4472758.42
+    ],
+    "centre_latlon": [
+     40.4048593,
+     44.634262
+    ],
+    "corners_utm": [
+     [
+      468966.41,
+      4472753.84
+     ],
+     [
+      468961.67,
+      4472760.42
+     ],
+     [
+      468965.26,
+      4472763.0
+     ],
+     [
+      468970.0,
+      4472756.42
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468966.4,
+     4472753.85
+    ],
+    [
+     468970.0,
+     4472756.42
+    ],
+    [
+     468965.27,
+     4472762.99
+    ],
+    [
+     468961.67,
+     4472760.42
+    ],
+    [
+     468966.4,
+     4472753.85
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/3",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 27.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 266.1,
+   "obb": {
+    "long_m": 5.73,
+    "short_m": 4.83,
+    "long_axis_bearing_deg": 142.84,
+    "centre_utm": [
+     468920.5,
+     4472823.08
+    ],
+    "centre_latlon": [
+     40.4054401,
+     44.6337245
+    ],
+    "corners_utm": [
+     [
+      468920.29,
+      4472819.34
+     ],
+     [
+      468916.85,
+      4472823.92
+     ],
+     [
+      468920.71,
+      4472826.82
+     ],
+     [
+      468924.15,
+      4472822.24
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468916.85,
+     4472823.92
+    ],
+    [
+     468920.28,
+     4472819.35
+    ],
+    [
+     468924.15,
+     4472822.24
+    ],
+    [
+     468920.72,
+     4472826.81
+    ],
+    [
+     468916.85,
+     4472823.92
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/50",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 58.5,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 269.4,
+   "obb": {
+    "long_m": 8.55,
+    "short_m": 6.87,
+    "long_axis_bearing_deg": 57.27,
+    "centre_utm": [
+     468938.64,
+     4472783.54
+    ],
+    "centre_latlon": [
+     40.4050846,
+     44.6339402
+    ],
+    "corners_utm": [
+     [
+      468944.09,
+      4472782.95
+     ],
+     [
+      468936.88,
+      4472778.35
+     ],
+     [
+      468933.19,
+      4472784.14
+     ],
+     [
+      468940.4,
+      4472788.74
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468944.09,
+     4472782.95
+    ],
+    [
+     468940.38,
+     4472788.72
+    ],
+    [
+     468933.19,
+     4472784.14
+    ],
+    [
+     468936.9,
+     4472778.36
+    ],
+    [
+     468944.09,
+     4472782.95
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/80",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 179.4,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 269.4,
+   "obb": {
+    "long_m": 17.17,
+    "short_m": 13.75,
+    "long_axis_bearing_deg": 62.44,
+    "centre_utm": [
+     469326.96,
+     4472719.61
+    ],
+    "centre_latlon": [
+     40.4045231,
+     44.6385196
+    ],
+    "corners_utm": [
+     [
+      469316.18,
+      4472721.78
+     ],
+     [
+      469331.43,
+      4472729.66
+     ],
+     [
+      469337.74,
+      4472717.45
+     ],
+     [
+      469322.49,
+      4472709.57
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469319.8,
+     4472714.83
+    ],
+    [
+     469328.21,
+     4472719.17
+    ],
+    [
+     469330.94,
+     4472713.93
+    ],
+    [
+     469337.74,
+     4472717.45
+    ],
+    [
+     469331.39,
+     4472729.64
+    ],
+    [
+     469316.18,
+     4472721.78
+    ],
+    [
+     469319.8,
+     4472714.83
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/5",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 82.7,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 270.0,
+   "obb": {
+    "long_m": 11.59,
+    "short_m": 7.15,
+    "long_axis_bearing_deg": 53.97,
+    "centre_utm": [
+     468906.93,
+     4472834.74
+    ],
+    "centre_latlon": [
+     40.4055447,
+     44.6335641
+    ],
+    "corners_utm": [
+     [
+      468913.73,
+      4472835.23
+     ],
+     [
+      468904.32,
+      4472828.45
+     ],
+     [
+      468900.14,
+      4472834.25
+     ],
+     [
+      468909.54,
+      4472841.03
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468913.73,
+     4472835.23
+    ],
+    [
+     468909.52,
+     4472841.02
+    ],
+    [
+     468900.14,
+     4472834.25
+    ],
+    [
+     468904.35,
+     4472828.47
+    ],
+    [
+     468913.73,
+     4472835.23
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/41",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 38.5,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 271.7,
+   "obb": {
+    "long_m": 6.79,
+    "short_m": 5.68,
+    "long_axis_bearing_deg": 143.63,
+    "centre_utm": [
+     468946.8,
+     4472771.27
+    ],
+    "centre_latlon": [
+     40.4049744,
+     44.634037
+    ],
+    "corners_utm": [
+     [
+      468946.51,
+      4472766.85
+     ],
+     [
+      468942.5,
+      4472772.34
+     ],
+     [
+      468947.09,
+      4472775.69
+     ],
+     [
+      468951.09,
+      4472770.2
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468946.49,
+     4472766.87
+    ],
+    [
+     468951.09,
+     4472770.2
+    ],
+    [
+     468947.1,
+     4472775.68
+    ],
+    [
+     468942.5,
+     4472772.34
+    ],
+    [
+     468946.49,
+     4472766.87
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/19",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 79.3,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 272.2,
+   "obb": {
+    "long_m": 9.67,
+    "short_m": 8.22,
+    "long_axis_bearing_deg": 62.15,
+    "centre_utm": [
+     469341.15,
+     4472731.12
+    ],
+    "centre_latlon": [
+     40.4046273,
+     44.6386864
+    ],
+    "corners_utm": [
+     [
+      469347.34,
+      4472729.72
+     ],
+     [
+      469338.78,
+      4472725.24
+     ],
+     [
+      469334.97,
+      4472732.53
+     ],
+     [
+      469343.53,
+      4472737.01
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469334.97,
+     4472732.53
+    ],
+    [
+     469338.8,
+     4472725.26
+    ],
+    [
+     469347.34,
+     4472729.72
+    ],
+    [
+     469343.51,
+     4472737.0
+    ],
+    [
+     469334.97,
+     4472732.53
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/60",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 2642.0,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 272.7,
+   "obb": {
+    "long_m": 123.42,
+    "short_m": 21.97,
+    "long_axis_bearing_deg": 55.92,
+    "centre_utm": [
+     469289.5,
+     4473243.04
+    ],
+    "centre_latlon": [
+     40.4092373,
+     44.6380529
+    ],
+    "corners_utm": [
+     [
+      469346.87,
+      4473268.3
+     ],
+     [
+      469244.37,
+      4473199.55
+     ],
+     [
+      469232.13,
+      4473217.79
+     ],
+     [
+      469334.63,
+      4473286.54
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469319.34,
+     4473276.28
+    ],
+    [
+     469232.13,
+     4473217.79
+    ],
+    [
+     469236.83,
+     4473210.85
+    ],
+    [
+     469239.48,
+     4473212.63
+    ],
+    [
+     469247.09,
+     4473201.37
+    ],
+    [
+     469346.87,
+     4473268.3
+    ],
+    [
+     469335.3,
+     4473285.41
+    ],
+    [
+     469320.08,
+     4473275.2
+    ],
+    [
+     469319.34,
+     4473276.28
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/98",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 41.3,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 274.6,
+   "obb": {
+    "long_m": 7.7,
+    "short_m": 5.38,
+    "long_axis_bearing_deg": 151.16,
+    "centre_utm": [
+     469350.35,
+     4472736.94
+    ],
+    "centre_latlon": [
+     40.40468,
+     44.6387945
+    ],
+    "corners_utm": [
+     [
+      469349.83,
+      4472732.27
+     ],
+     [
+      469346.15,
+      4472739.03
+     ],
+     [
+      469350.87,
+      4472741.61
+     ],
+     [
+      469354.56,
+      4472734.85
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469346.15,
+     4472739.03
+    ],
+    [
+     469349.82,
+     4472732.29
+    ],
+    [
+     469354.56,
+     4472734.85
+    ],
+    [
+     469350.88,
+     4472741.59
+    ],
+    [
+     469346.15,
+     4472739.03
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/18",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 17.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 276.8,
+   "obb": {
+    "long_m": 5.21,
+    "short_m": 3.29,
+    "long_axis_bearing_deg": 139.62,
+    "centre_utm": [
+     468922.46,
+     4472798.94
+    ],
+    "centre_latlon": [
+     40.4052227,
+     44.6337488
+    ],
+    "corners_utm": [
+     [
+      468922.88,
+      4472795.88
+     ],
+     [
+      468919.52,
+      4472799.87
+     ],
+     [
+      468922.04,
+      4472801.99
+     ],
+     [
+      468925.39,
+      4472798.01
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468919.52,
+     4472799.87
+    ],
+    [
+     468922.87,
+     4472795.89
+    ],
+    [
+     468925.39,
+     4472798.01
+    ],
+    [
+     468922.04,
+     4472801.98
+    ],
+    [
+     468919.52,
+     4472799.87
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/101",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 32.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 277.9,
+   "obb": {
+    "long_m": 6.79,
+    "short_m": 4.73,
+    "long_axis_bearing_deg": 154.73,
+    "centre_utm": [
+     468976.92,
+     4472730.03
+    ],
+    "centre_latlon": [
+     40.4046039,
+     44.634394
+    ],
+    "corners_utm": [
+     [
+      468976.21,
+      4472725.95
+     ],
+     [
+      468973.34,
+      4472732.1
+     ],
+     [
+      468977.63,
+      4472734.1
+     ],
+     [
+      468980.5,
+      4472727.95
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468976.21,
+     4472725.96
+    ],
+    [
+     468980.5,
+     4472727.95
+    ],
+    [
+     468977.63,
+     4472734.09
+    ],
+    [
+     468973.34,
+     4472732.1
+    ],
+    [
+     468976.21,
+     4472725.96
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/43",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 34.4,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 278.7,
+   "obb": {
+    "long_m": 6.04,
+    "short_m": 5.71,
+    "long_axis_bearing_deg": 148.75,
+    "centre_utm": [
+     468928.28,
+     4472784.45
+    ],
+    "centre_latlon": [
+     40.4050924,
+     44.6338182
+    ],
+    "corners_utm": [
+     [
+      468927.39,
+      4472780.39
+     ],
+     [
+      468924.28,
+      4472785.56
+     ],
+     [
+      468929.18,
+      4472788.51
+     ],
+     [
+      468932.29,
+      4472783.33
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468932.29,
+     4472783.33
+    ],
+    [
+     468929.19,
+     4472788.49
+    ],
+    [
+     468924.28,
+     4472785.56
+    ],
+    [
+     468927.38,
+     4472780.4
+    ],
+    [
+     468932.29,
+     4472783.33
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/28",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 20.4,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 278.8,
+   "obb": {
+    "long_m": 5.63,
+    "short_m": 3.63,
+    "long_axis_bearing_deg": 136.56,
+    "centre_utm": [
+     468933.11,
+     4472778.92
+    ],
+    "centre_latlon": [
+     40.4050427,
+     44.6338753
+    ],
+    "corners_utm": [
+     [
+      468933.71,
+      4472775.62
+     ],
+     [
+      468929.85,
+      4472779.72
+     ],
+     [
+      468932.5,
+      4472782.21
+     ],
+     [
+      468936.36,
+      4472778.11
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468936.36,
+     4472778.11
+    ],
+    [
+     468932.51,
+     4472782.2
+    ],
+    [
+     468929.85,
+     4472779.72
+    ],
+    [
+     468933.7,
+     4472775.63
+    ],
+    [
+     468936.36,
+     4472778.11
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/20",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 31.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 279.4,
+   "obb": {
+    "long_m": 6.95,
+    "short_m": 4.5,
+    "long_axis_bearing_deg": 153.94,
+    "centre_utm": [
+     469004.02,
+     4472707.2
+    ],
+    "centre_latlon": [
+     40.4043993,
+     44.6347144
+    ],
+    "corners_utm": [
+     [
+      469003.51,
+      4472703.09
+     ],
+     [
+      469000.48,
+      4472709.35
+     ],
+     [
+      469004.53,
+      4472711.31
+     ],
+     [
+      469007.56,
+      4472705.05
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469000.48,
+     4472709.35
+    ],
+    [
+     469003.5,
+     4472703.1
+    ],
+    [
+     469007.56,
+     4472705.05
+    ],
+    [
+     469004.54,
+     4472711.29
+    ],
+    [
+     469000.48,
+     4472709.35
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/48",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 25.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 282.1,
+   "obb": {
+    "long_m": 6.88,
+    "short_m": 3.77,
+    "long_axis_bearing_deg": 152.87,
+    "centre_utm": [
+     468953.63,
+     4472747.74
+    ],
+    "centre_latlon": [
+     40.4047626,
+     44.6341187
+    ],
+    "corners_utm": [
+     [
+      468953.76,
+      4472751.66
+     ],
+     [
+      468956.87,
+      4472745.52
+     ],
+     [
+      468953.5,
+      4472743.82
+     ],
+     [
+      468950.39,
+      4472749.95
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468950.39,
+     4472749.95
+    ],
+    [
+     468953.5,
+     4472743.83
+    ],
+    [
+     468956.87,
+     4472745.52
+    ],
+    [
+     468953.76,
+     4472751.65
+    ],
+    [
+     468950.39,
+     4472749.95
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/6",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 35.2,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 285.8,
+   "obb": {
+    "long_m": 6.77,
+    "short_m": 6.36,
+    "long_axis_bearing_deg": 58.22,
+    "centre_utm": [
+     468958.33,
+     4472735.73
+    ],
+    "centre_latlon": [
+     40.4046546,
+     44.6341747
+    ],
+    "corners_utm": [
+     [
+      468962.88,
+      4472734.79
+     ],
+     [
+      468957.11,
+      4472731.25
+     ],
+     [
+      468953.78,
+      4472736.67
+     ],
+     [
+      468959.55,
+      4472740.21
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468955.91,
+     4472737.98
+    ],
+    [
+     468957.54,
+     4472735.36
+    ],
+    [
+     468955.4,
+     4472734.04
+    ],
+    [
+     468957.12,
+     4472731.26
+    ],
+    [
+     468962.88,
+     4472734.79
+    ],
+    [
+     468959.53,
+     4472740.2
+    ],
+    [
+     468955.91,
+     4472737.98
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/63",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 46.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 286.4,
+   "obb": {
+    "long_m": 7.26,
+    "short_m": 6.37,
+    "long_axis_bearing_deg": 148.02,
+    "centre_utm": [
+     468996.97,
+     4472702.75
+    ],
+    "centre_latlon": [
+     40.4043589,
+     44.6346316
+    ],
+    "corners_utm": [
+     [
+      468996.17,
+      4472697.99
+     ],
+     [
+      468992.35,
+      4472704.16
+     ],
+     [
+      468997.77,
+      4472707.52
+     ],
+     [
+      469001.59,
+      4472701.34
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468992.35,
+     4472704.16
+    ],
+    [
+     468996.16,
+     4472698.01
+    ],
+    [
+     469001.59,
+     4472701.34
+    ],
+    [
+     468997.78,
+     4472707.5
+    ],
+    [
+     468992.35,
+     4472704.16
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/70",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 408.9,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 287.6,
+   "obb": {
+    "long_m": 31.95,
+    "short_m": 15.18,
+    "long_axis_bearing_deg": 152.79,
+    "centre_utm": [
+     469331.67,
+     4472690.09
+    ],
+    "centre_latlon": [
+     40.4042572,
+     44.6385766
+    ],
+    "corners_utm": [
+     [
+      469332.16,
+      4472672.4
+     ],
+     [
+      469317.66,
+      4472700.88
+     ],
+     [
+      469331.19,
+      4472707.77
+     ],
+     [
+      469345.69,
+      4472679.29
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469335.0,
+     4472700.28
+    ],
+    [
+     469326.94,
+     4472696.21
+    ],
+    [
+     469323.15,
+     4472703.65
+    ],
+    [
+     469317.66,
+     4472700.88
+    ],
+    [
+     469332.14,
+     4472672.45
+    ],
+    [
+     469345.69,
+     4472679.29
+    ],
+    [
+     469335.0,
+     4472700.28
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/85",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 144.6,
+   "vertices": 8,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 287.6,
+   "obb": {
+    "long_m": 24.39,
+    "short_m": 6.9,
+    "long_axis_bearing_deg": 147.32,
+    "centre_utm": [
+     469367.9,
+     4472724.29
+    ],
+    "centre_latlon": [
+     40.4045667,
+     44.6390019
+    ],
+    "corners_utm": [
+     [
+      469364.27,
+      4472736.43
+     ],
+     [
+      469377.36,
+      4472715.85
+     ],
+     [
+      469371.54,
+      4472712.15
+     ],
+     [
+      469358.45,
+      4472732.73
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469377.36,
+     4472715.85
+    ],
+    [
+     469364.28,
+     4472736.41
+    ],
+    [
+     469358.45,
+     4472732.73
+    ],
+    [
+     469362.49,
+     4472726.37
+    ],
+    [
+     469365.63,
+     4472728.35
+    ],
+    [
+     469368.36,
+     4472724.06
+    ],
+    [
+     469365.55,
+     4472722.28
+    ],
+    [
+     469371.85,
+     4472712.37
+    ],
+    [
+     469377.36,
+     4472715.85
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/54",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 54.1,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 288.4,
+   "obb": {
+    "long_m": 8.79,
+    "short_m": 6.79,
+    "long_axis_bearing_deg": 51.99,
+    "centre_utm": [
+     468923.37,
+     4472771.93
+    ],
+    "centre_latlon": [
+     40.4049794,
+     44.6337609
+    ],
+    "corners_utm": [
+     [
+      468928.93,
+      4472771.93
+     ],
+     [
+      468921.98,
+      4472766.55
+     ],
+     [
+      468917.82,
+      4472771.92
+     ],
+     [
+      468924.77,
+      4472777.3
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468928.93,
+     4472771.93
+    ],
+    [
+     468924.75,
+     4472777.28
+    ],
+    [
+     468917.82,
+     4472771.92
+    ],
+    [
+     468921.12,
+     4472767.69
+    ],
+    [
+     468924.09,
+     4472769.99
+    ],
+    [
+     468924.97,
+     4472768.87
+    ],
+    [
+     468928.93,
+     4472771.93
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/12",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 29.3,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 288.9,
+   "obb": {
+    "long_m": 6.14,
+    "short_m": 4.79,
+    "long_axis_bearing_deg": 147.31,
+    "centre_utm": [
+     468912.26,
+     4472791.65
+    ],
+    "centre_latlon": [
+     40.4051567,
+     44.633629
+    ],
+    "corners_utm": [
+     [
+      468911.88,
+      4472787.77
+     ],
+     [
+      468908.59,
+      4472792.95
+     ],
+     [
+      468912.63,
+      4472795.52
+     ],
+     [
+      468915.92,
+      4472790.34
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468911.87,
+     4472787.79
+    ],
+    [
+     468915.92,
+     4472790.34
+    ],
+    [
+     468912.64,
+     4472795.51
+    ],
+    [
+     468908.59,
+     4472792.95
+    ],
+    [
+     468911.87,
+     4472787.79
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/97",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 202.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 289.8,
+   "obb": {
+    "long_m": 26.66,
+    "short_m": 7.59,
+    "long_axis_bearing_deg": 146.47,
+    "centre_utm": [
+     469349.51,
+     4472704.19
+    ],
+    "centre_latlon": [
+     40.404385,
+     44.6387861
+    ],
+    "corners_utm": [
+     [
+      469353.65,
+      4472690.97
+     ],
+     [
+      469339.02,
+      4472713.25
+     ],
+     [
+      469345.36,
+      4472717.42
+     ],
+     [
+      469360.0,
+      4472695.13
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469353.64,
+     4472690.99
+    ],
+    [
+     469360.0,
+     4472695.13
+    ],
+    [
+     469345.37,
+     4472717.4
+    ],
+    [
+     469339.02,
+     4472713.25
+    ],
+    [
+     469353.64,
+     4472690.99
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/13",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 18.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 290.4,
+   "obb": {
+    "long_m": 5.91,
+    "short_m": 3.19,
+    "long_axis_bearing_deg": 155.58,
+    "centre_utm": [
+     468966.65,
+     4472723.56
+    ],
+    "centre_latlon": [
+     40.4045453,
+     44.6342733
+    ],
+    "corners_utm": [
+     [
+      468966.41,
+      4472720.21
+     ],
+     [
+      468963.99,
+      4472725.6
+     ],
+     [
+      468966.9,
+      4472726.91
+     ],
+     [
+      468969.32,
+      4472721.51
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468963.99,
+     4472725.6
+    ],
+    [
+     468966.41,
+     4472720.22
+    ],
+    [
+     468969.32,
+     4472721.51
+    ],
+    [
+     468966.9,
+     4472726.9
+    ],
+    [
+     468963.99,
+     4472725.6
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/90",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 137.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 291.3,
+   "obb": {
+    "long_m": 19.8,
+    "short_m": 6.93,
+    "long_axis_bearing_deg": 142.27,
+    "centre_utm": [
+     469040.82,
+     4473218.9
+    ],
+    "centre_latlon": [
+     40.4090106,
+     44.6351232
+    ],
+    "corners_utm": [
+     [
+      469044.1,
+      4473208.94
+     ],
+     [
+      469032.04,
+      4473224.65
+     ],
+     [
+      469037.54,
+      4473228.87
+     ],
+     [
+      469049.6,
+      4473213.16
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469032.04,
+     4473224.65
+    ],
+    [
+     469044.08,
+     4473208.96
+    ],
+    [
+     469049.6,
+     4473213.16
+    ],
+    [
+     469037.56,
+     4473228.85
+    ],
+    [
+     469032.04,
+     4473224.65
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/84",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 34.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 291.6,
+   "obb": {
+    "long_m": 5.94,
+    "short_m": 5.89,
+    "long_axis_bearing_deg": 138.89,
+    "centre_utm": [
+     468930.76,
+     4472759.28
+    ],
+    "centre_latlon": [
+     40.4048658,
+     44.6338486
+    ],
+    "corners_utm": [
+     [
+      468930.48,
+      4472755.11
+     ],
+     [
+      468926.59,
+      4472759.6
+     ],
+     [
+      468931.05,
+      4472763.46
+     ],
+     [
+      468934.94,
+      4472758.97
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468926.59,
+     4472759.6
+    ],
+    [
+     468930.47,
+     4472755.13
+    ],
+    [
+     468934.94,
+     4472758.97
+    ],
+    [
+     468931.06,
+     4472763.44
+    ],
+    [
+     468926.59,
+     4472759.6
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/64",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 12.9,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 293.4,
+   "obb": {
+    "long_m": 4.45,
+    "short_m": 2.9,
+    "long_axis_bearing_deg": 168.29,
+    "centre_utm": [
+     468961.77,
+     4473160.85
+    ],
+    "centre_latlon": [
+     40.4084846,
+     44.6341945
+    ],
+    "corners_utm": [
+     [
+      468960.8,
+      4473158.38
+     ],
+     [
+      468959.91,
+      4473162.74
+     ],
+     [
+      468962.75,
+      4473163.32
+     ],
+     [
+      468963.64,
+      4473158.96
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468963.64,
+     4473158.96
+    ],
+    [
+     468962.75,
+     4473163.31
+    ],
+    [
+     468959.91,
+     4473162.74
+    ],
+    [
+     468960.8,
+     4473158.39
+    ],
+    [
+     468963.64,
+     4473158.96
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/78",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 23.0,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 293.9,
+   "obb": {
+    "long_m": 6.21,
+    "short_m": 3.72,
+    "long_axis_bearing_deg": 143.31,
+    "centre_utm": [
+     468916.89,
+     4472776.1
+    ],
+    "centre_latlon": [
+     40.4050168,
+     44.6336844
+    ],
+    "corners_utm": [
+     [
+      468917.25,
+      4472772.5
+     ],
+     [
+      468913.55,
+      4472777.5
+     ],
+     [
+      468916.54,
+      4472779.7
+     ],
+     [
+      468920.23,
+      4472774.71
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468920.23,
+     4472774.71
+    ],
+    [
+     468916.55,
+     4472779.69
+    ],
+    [
+     468913.55,
+     4472777.5
+    ],
+    [
+     468917.24,
+     4472772.51
+    ],
+    [
+     468920.23,
+     4472774.71
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/8",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 49.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 294.3,
+   "obb": {
+    "long_m": 10.46,
+    "short_m": 4.76,
+    "long_axis_bearing_deg": 145.13,
+    "centre_utm": [
+     469311.06,
+     4473200.92
+    ],
+    "centre_latlon": [
+     40.4088586,
+     44.638309
+    ],
+    "corners_utm": [
+     [
+      469312.07,
+      4473195.26
+     ],
+     [
+      469306.13,
+      4473203.87
+     ],
+     [
+      469310.05,
+      4473206.58
+     ],
+     [
+      469315.99,
+      4473197.97
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469315.99,
+     4473197.97
+    ],
+    [
+     469310.06,
+     4473206.56
+    ],
+    [
+     469306.13,
+     4473203.87
+    ],
+    [
+     469312.06,
+     4473195.28
+    ],
+    [
+     469315.99,
+     4473197.97
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/72",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 69.1,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 295.3,
+   "obb": {
+    "long_m": 10.8,
+    "short_m": 6.42,
+    "long_axis_bearing_deg": 51.1,
+    "centre_utm": [
+     469215.34,
+     4473239.05
+    ],
+    "centre_latlon": [
+     40.4091986,
+     44.6371791
+    ],
+    "corners_utm": [
+     [
+      469221.56,
+      4473239.92
+     ],
+     [
+      469213.13,
+      4473233.18
+     ],
+     [
+      469209.12,
+      4473238.19
+     ],
+     [
+      469217.55,
+      4473244.93
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469213.15,
+     4473233.19
+    ],
+    [
+     469221.56,
+     4473239.92
+    ],
+    [
+     469217.53,
+     4473244.92
+    ],
+    [
+     469209.12,
+     4473238.19
+    ],
+    [
+     469213.15,
+     4473233.19
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/82",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 23.8,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 297.2,
+   "obb": {
+    "long_m": 6.25,
+    "short_m": 3.81,
+    "long_axis_bearing_deg": 130.2,
+    "centre_utm": [
+     468917.92,
+     4472767.76
+    ],
+    "centre_latlon": [
+     40.4049417,
+     44.6336968
+    ],
+    "corners_utm": [
+     [
+      468919.06,
+      4472764.28
+     ],
+     [
+      468914.3,
+      4472768.34
+     ],
+     [
+      468916.78,
+      4472771.24
+     ],
+     [
+      468921.53,
+      4472767.18
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468919.05,
+     4472764.29
+    ],
+    [
+     468921.53,
+     4472767.18
+    ],
+    [
+     468916.79,
+     4472771.23
+    ],
+    [
+     468914.3,
+     4472768.34
+    ],
+    [
+     468919.05,
+     4472764.29
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/25",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 45.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 297.3,
+   "obb": {
+    "long_m": 8.21,
+    "short_m": 5.52,
+    "long_axis_bearing_deg": 64.33,
+    "centre_utm": [
+     468939.69,
+     4472737.48
+    ],
+    "centre_latlon": [
+     40.4046697,
+     44.6339549
+    ],
+    "corners_utm": [
+     [
+      468944.58,
+      4472736.75
+     ],
+     [
+      468937.17,
+      4472733.22
+     ],
+     [
+      468934.8,
+      4472738.21
+     ],
+     [
+      468942.21,
+      4472741.73
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468934.8,
+     4472738.21
+    ],
+    [
+     468937.18,
+     4472733.23
+    ],
+    [
+     468944.58,
+     4472736.75
+    ],
+    [
+     468942.2,
+     4472741.73
+    ],
+    [
+     468934.8,
+     4472738.21
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/81",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 56.6,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 297.5,
+   "obb": {
+    "long_m": 8.89,
+    "short_m": 6.38,
+    "long_axis_bearing_deg": 65.22,
+    "centre_utm": [
+     468998.81,
+     4472686.92
+    ],
+    "centre_latlon": [
+     40.4042164,
+     44.6346541
+    ],
+    "corners_utm": [
+     [
+      469004.18,
+      4472685.87
+     ],
+     [
+      468996.09,
+      4472682.17
+     ],
+     [
+      468993.44,
+      4472687.98
+     ],
+     [
+      469001.53,
+      4472691.67
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     469004.18,
+     4472685.87
+    ],
+    [
+     469001.51,
+     4472691.66
+    ],
+    [
+     468993.44,
+     4472687.98
+    ],
+    [
+     468996.11,
+     4472682.18
+    ],
+    [
+     469004.18,
+     4472685.87
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/23",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 28.2,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 298.0,
+   "obb": {
+    "long_m": 6.28,
+    "short_m": 4.5,
+    "long_axis_bearing_deg": 134.89,
+    "centre_utm": [
+     468931.49,
+     4472749.18
+    ],
+    "centre_latlon": [
+     40.4047748,
+     44.6338577
+    ],
+    "corners_utm": [
+     [
+      468932.11,
+      4472745.37
+     ],
+     [
+      468927.68,
+      4472749.82
+     ],
+     [
+      468930.87,
+      4472753.0
+     ],
+     [
+      468935.3,
+      4472748.54
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468935.3,
+     4472748.54
+    ],
+    [
+     468930.88,
+     4472752.98
+    ],
+    [
+     468927.68,
+     4472749.82
+    ],
+    [
+     468932.1,
+     4472745.38
+    ],
+    [
+     468935.3,
+     4472748.54
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/26",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 31.3,
+   "vertices": 4,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 298.1,
+   "obb": {
+    "long_m": 6.36,
+    "short_m": 4.93,
+    "long_axis_bearing_deg": 140.72,
+    "centre_utm": [
+     468926.43,
+     4472755.19
+    ],
+    "centre_latlon": [
+     40.4048287,
+     44.6337978
+    ],
+    "corners_utm": [
+     [
+      468926.52,
+      4472751.17
+     ],
+     [
+      468922.51,
+      4472756.1
+     ],
+     [
+      468926.35,
+      4472759.21
+     ],
+     [
+      468930.35,
+      4472754.27
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468926.5,
+     4472751.18
+    ],
+    [
+     468930.35,
+     4472754.27
+    ],
+    [
+     468926.36,
+     4472759.2
+    ],
+    [
+     468922.51,
+     4472756.1
+    ],
+    [
+     468926.5,
+     4472751.18
+    ]
+   ]
+  },
+  {
+   "id": "ms/Armenia/68",
+   "properties": {
+    "height": -1.0,
+    "confidence": -1.0
+   },
+   "file": "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=Armenia/quadkey=122111113/part-00196-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz",
+   "area_m2": 56.0,
+   "vertices": 6,
+   "inner_rings": 0,
+   "contains_pin": false,
+   "dist_to_pin_m": 299.8,
+   "obb": {
+    "long_m": 8.4,
+    "short_m": 7.34,
+    "long_axis_bearing_deg": 64.03,
+    "centre_utm": [
+     468945.96,
+     4472726.74
+    ],
+    "centre_latlon": [
+     40.4045732,
+     44.6340293
+    ],
+    "corners_utm": [
+     [
+      468951.34,
+      4472725.26
+     ],
+     [
+      468943.77,
+      4472721.61
+     ],
+     [
+      468940.59,
+      4472728.22
+     ],
+     [
+      468948.15,
+      4472731.87
+     ]
+    ]
+   },
+   "exterior_utm": [
+    [
+     468947.31,
+     4472724.67
+    ],
+    [
+     468947.84,
+     4472723.57
+    ],
+    [
+     468951.34,
+     4472725.26
+    ],
+    [
+     468948.13,
+     4472731.86
+    ],
+    [
+     468940.59,
+     4472728.22
+    ],
+    [
+     468943.26,
+     4472722.72
+    ],
+    [
+     468947.31,
+     4472724.67
+    ]
+   ]
+  }
+ ]
+}

@@ -16,7 +16,7 @@ export const KEYMAP = [
     // ---- add and find
     { id: 'add', keys: ['/', 'Ctrl+K'], mouse: 'Double-click or right-click empty canvas', does: 'Add a node', group: 'Add' },
     // ---- move through levels
-    { id: 'enter', keys: ['I'], mouse: 'Double-click a card, or its ›', does: 'Go inside the selected node', group: 'Levels', source: 'TouchDesigner, Houdini' },
+    { id: 'enter', keys: ['I'], mouse: 'Double-click a card (or Enter on it)', does: 'Open the selected node', group: 'Levels', source: 'TouchDesigner, Houdini' },
     { id: 'leave', keys: ['U'], mouse: 'Mouse Back button', does: 'Leave one level', group: 'Levels', source: 'TouchDesigner, Houdini' },
     { id: 'escape', keys: ['Escape'], does: 'Close the menu or dialog, let go of a marked wire, clear the selection, then leave one level', group: 'Levels', source: 'di.desk' },
     // ---- view

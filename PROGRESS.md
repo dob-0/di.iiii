@@ -5,6 +5,731 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-07 — a space on its own domain (yokozo.xyz shows taronx), set up by the server
+
+- The owner asked for yokozo.xyz to show Taron's space `taronx` live, controlled from Taron's account, and for the work
+  to be done "on the server side, so we don't repeat the work". He turned a redirect down. This is item 3c (custom
+  domains) of `SPEC_space_urls_and_portability.md`; the design is `docs/architecture/SPEC_space_own_domain.md`.
+- serverXR:
+  - `space_domains` table, `domainStore.js` (hostname rules; the host lookup answers only for an active domain).
+  - `cloudflareSaas.js`: Cloudflare for SaaS custom hostnames.
+  - `domainService.js`: add, check and remove. A pending domain is checked every 2 minutes and dropped after 7 days if
+    nothing points at it. Limits: 3 per space, 90 on the platform. di.iiii's own names are refused.
+  - `GET /api/host`, plus the owner-or-admin routes under `/api/spaces/:spaceId/domains`.
+  - The crawler card on a domain previews the space at that domain. Five catalogue entries.
+- Client:
+  - `hostSpace.js` asks `/api/host` once at boot, and never on our own addresses.
+  - `spaceRouting.js` reads `/x` on the domain as `/<space>/x`, and the link builders leave the space out.
+  - Editor and platform paths on the domain go to the same place on diiii.xyz, because the session lives there.
+  - `SpaceDomainPanel` is under Manage → Own domain on the space card. There is also a wiki entry.
+- Tests: 24 for the store and service, 6 for the routes over real HTTP, 3 for the crawler card, 22 for the client
+  routing and host checks, 6 for the panel. Server contracts 199/199, catalogue 3/3. Taking out the active-only rule
+  fails 5 tests.
+- Not done, owed:
+  - Cloudflare platform setup (`domains.diiii.xyz` as fallback origin). This waits on the owner's Cloudflare login;
+    the steps are in di-atlas `services/space-domains.md`.
+  - The prod serverXR env (three `CLOUDFLARE_SAAS_*` values).
+  - The Mac tunnel's catch-all, di-atlas PR #45.
+  - yokozo.xyz's DNS.
+  - A security review of the self-serve path.
+  - A look on a real screen, desktop and phone.
+- Unproven: an apex domain served through CNAME flattening, when the domain's zone and the SaaS zone are in the same
+  account. yokozo.xyz is the first measurement, and the spec names the fallback.
+
+## 2026-10-05 — Nodes: one right region (row 3) and inside a node opens its substance (row 4)
+
+Cloud routine (no owner live). Spec: `docs/ai/audits/raw-ui-2026-10-05/audit.md` §3.5, §3.6, §3.10, build plan rows 3 and 4 (branch `docs/raw-ui-audit-2026-10-05`).
+
+**Branch.** `cloud/raw-column-inside-2026-10-05`, cut from `fix/raw-one-open-2026-10-05` (#773, on #771), then `--no-ff` merge of `feat/raw-settings-column-2026-10-05` (#769). One conflict, `RawGraphSurface.jsx`: imports (both kept) and the card's Enter. Resolved: Enter and double-click keep #773's single meaning (Open); #769's in-card typing stays, reached by a click on the text of an already-selected card (`pressedSelectedRef`). The `mainField` tests follow that.
+
+**Row 3 — one right region (§3.5).**
+- `RawEditor.jsx`: `regionPanel` state; the region holds one occupant — settings (when something is selected), outliner, chat or help. Opening one replaces the other; a card picked on the canvas takes it back for settings; Escape in the column closes the occupant. Outliner and chat are no longer floating windows; Help renders inline (`RawHelpDialog inline`).
+- The column: name, settings (main field still typed in the card), **Ports** with live values and wired from/to (`NodePorts.jsx`, from `readNode`), Open (a container's reads "Open: N nodes inside"), and **Delete pinned in the footer**. The Delete FAB and its CSS are gone. The column is never empty.
+- List and Text windows are retired on desktop (`WINDOWLESS_ON_DESKTOP`); a phone keeps them.
+- `PropertyInspector.jsx`: `children` (ports) after the settings, Open after them, `footer`.
+
+**Row 4 — inside a node (§3.6).** `utils/insideView.js` decides the kind; `NodeInsideView.jsx` draws it: List = its table (`ListPanelWindow`) with In/Out rails, Text = its editor, code = inputs · its settings + the platform's lines labelled `platform code · read-only` (fetched at once, no "Show the lines") · outputs, spatial = sub-graph above and code below, tool = its own body filling the canvas, picture = `TopInsidePanel`, container = sub-graph. The round "inside" pill, its "?" button, the empty-state "explain" button and the "code, no room of its own" sentence are gone; a rectangular strip `← Back · › name · kind · counts` replaces the pill.
+
+**Rectangles.** Every new rule is radius 0; a test reads `raw.css` and fails on any radius > 2 px or `--di-radius-pill` in the region/inside/ports rules, and on any `.raw-scope-marker` / `.raw-delete-fab` rule. Also fixed three style-spine failures #769 had brought in (a `--raw-column-w` fallback, an 18 px font-size, a 4 px padding).
+
+**Tests.** New: `RawRegionAndInside.test.jsx` (13) and `utils/insideView.test.js` (3). On the base (the merge commit, before this work): 13 fail, and the util file fails to load (3); after: 16 pass. Updated to the new behaviour: outliner is a `complementary` region, not a dialog; window-arrangement and window-pile tests use tool panels (List/Text have no desktop window); the anatomy tests reach the sheet through the card's reading; PropertyInspector's Open order. `src/raw` + `src/styles` + copyVocabulary: 1286 pass. `npm run build` passes.
+
+**Seen (second pass, same day, owner said "go").** Local stack (`npm run dev`, server on 4360, driver account `ann`), headless Chromium, local canvas with 5 nodes, at 1440×900, 1140×940 @1.5 and 390×844 (iPhone 13). Script and shots: `.verify-surfaces/raw-region/` (untracked). Measured on select: 0 cards under the column on desktop and 1140, Delete visible in the footer, no FAB, no horizontal scroll, no console errors; Help and the reading occupy the column, no modal. Fixed from what the shots showed:
+- a double-click on a card near the right edge landed in the column (column now waits out a double-click, `COLUMN_OPEN_DELAY_MS`);
+- on the phone the List window opened with its × under the bar, uncloseable — List/Text windows retired at every width;
+- the code view's settings stretched and pushed the code to the bottom edge, and repeated the node name;
+- the inside view's top rail sat under the Back strip;
+- in the spatial split the zoom strip spilled over the code view;
+- Help in the column used the modal's wide layout (the diagram showed through);
+- the column had two "Ports" headings — the derived settings section is now "Settings" / "Operation and settings" (`nodeInspectorSections.js`).
+Still seen and NOT fixed (other rows): the account "A" button floats over the column and the code view (B6, row 5); the top bar and mode mark are fixed over the column's top padding (row 5); Help still says "The canvas starts empty." over a full canvas (row 8); "showing 3 of 5 — fit all" on the phone (row 7); the phone sheet covers a card below the selected one (by design of the sheet). Not run: `npm run verify:surfaces` against dev (the branch is not deployed).
+
+**Not done.**
+- Tool windows (webcam, monitor, director, timeline) do not move into the region; they stay canvas windows with pin/minimise. The hand-kept z-stack (`windowLayout.js:290-298`) stays.
+- The anatomy sheet is a region occupant now (second pass).
+- Tool windows into the region is a decision for the owner, not built: it would retire canvas windows outright (the Scene window included), and §3.6 already gives a tool its whole-canvas view on Open.
+- The node name is in the inside strip, not in the bar's crumb (row 5, one bar).
+- Text inside: 72-character measure is CSS only; List rows drag-to-reorder is whatever `ListPanelWindow` already does.
+- B9 (shared selection) untouched.
+
+## 2026-10-04 — apply-picture: the code's picture into every MOXIR version
+
+Owner: "go" — every version should show the hall the same, correct way (the round "porthole" on
+moxir-hall-known-ground was fog far 32 in a 108 m hall).
+
+- **Cause (cited).** `scripts/rigbuild/realism.mjs`, commit bc511e97 (2026-09-29): `hazeFog(0.05)` = far 32, exposure 3.5, atmosphere
+  0.05, written by hand per project. Rig files hold `night.fog` {60, 250}; no rig file holds exposure or atmosphere.
+- **Built.** `scripts/rigbuild/apply-picture.mjs` (new; why not `realism.mjs`: that one owns haze, hall copy and apertures and is local-only).
+  Tests `scripts/rigbuild/apply-picture.test.js` (6): far 32 → 60/250, lacking fields untouched, undo restores, dry-run writes nothing,
+  read-back mismatch refuses, unknown flags refused. Docs: RIG_BUILD.md §23.
+- **Not done / owed.** No server was written to. Ambient/directional from the rig assume exposure 1; on exposure-3.5 projects use
+  `--fields fog,background`. Match to reality (light-meter + photo test) is owed. Run it: dry-run first, then without `--dry-run`.
+
+## 2026-10-02 — systemd supervises the installed di (`di service install`), so it is restarted if it dies
+
+- Step H8 of the local-hosting decision (di-atlas `decisions/2026-10-02-local-hosting.md`). Measured on aylmo: the
+  installed di ran under a hand-written `di-up.service` (`Type=oneshot`, `ExecStart=di up --no-open`); the node server
+  was nobody's main process, so when it was killed (three times in September) systemd noticed nothing.
+- New `scripts/di/service.mjs`: a user unit whose main process IS the server (`Type=exec`, `Restart=always`,
+  `RestartSec=2` backing off to 60 s, start limit 10 in 300 s, journal). It names `<DI_HOME>/current`, so `di update`
+  needs no unit rewrite. `--lan`/`--guests` live in `$XDG_RUNTIME_DIR/<unit>.start.env` (gone at reboot).
+- `runner-node.mjs`: one `serverEnv()` for both paths; `start/stop/isRunning/readLog/followLog` drive the unit when
+  `state.json` names one, its file exists and systemd is usable — otherwise the detached path, unchanged.
+- `cli.mjs`: `di service install [--name N] | remove | status`; `di status` names the supervisor and says when systemd
+  gave up; `di uninstall` removes the unit first.
+- Proved on aylmo with a throwaway install (DI_HOME in the session scratchpad, unit `di-up-test`, port 4391, data in
+  scratch, DI_SCRATCH=1): kill -9 → restarted in 2 s, health 200; SIGTERM → restarted; down → flip `current` → up
+  served the new version with the unit file untouched; `di down` → inactive 10 s later; `di service remove` left no
+  unit file and no process. The owner's `di-up.service` and pid were not touched.
+- Tests: `scripts/di/service.test.js` (23; 6 fail on the old runner), `lan.test.js` call-site count 7 → 9.
+- Pre-existing, not from this branch: `openFile.test.js` "di mcp from an install … release version" fails on
+  origin/dev too.
+- Owed: the owner's switch-over is his go (commands in the PR body); it needs a build with this code installed on
+  aylmo first. launchd `KeepAlive` for macOS is not built (nothing to see it on here).
+
+## 2026-10-05 — merged with dev, the unit keeps its node, installed on aylmo
+
+- Merged `origin/dev` (conflicts only in `cli.mjs`: `di status` now prints the supervisor line and the autoupdate lines).
+- #785 (autoupdate pins the node on PATH) applies here too. `di service install` records the node it ran with
+  (`state.json` -> `service.node`); every later `di up` writes that node into `ExecStart=` and first on `PATH` in
+  `server.env` while the file exists, so a `di up` from a shell with `/usr/bin/node` (v26, no `cap_net_bind_service`,
+  cannot bind 443) cannot swap it. Test: "keeps the node the install ran with" in `service.test.js`.
+- Restart policy stays `Restart=always` (not `on-failure`): systemd counts SIGTERM as a clean exit. A SIGSEGV is a
+  failure under either; `systemctl stop` (`di down`) is never restarted under either.
+- Owed: the hand-written `di-up.service` (oneshot, `di up --no-open`) still runs at login and restarts the
+  supervised unit once; retire it after the proof. Session note renamed to the branch name the push gate expects.
+
+# feat/move-project-between-spaces-2026-10-05
+
+Owner (2026-10-05): the decisions -> what-we-have and drum-rhythms -> lab merges need a product way to move a
+project between spaces. Before: only `scripts/project-move.mjs`, offline, on the data root.
+
+## What was built
+- `serverXR/src/projectMove.js`: the one move (row, folder, blobs, space-asset links, `project_moves` line).
+  Atomic by order: additive copies, folder rename, one database transaction; a failure restores the folder and the
+  document text. Slug clash is refused (409) by default; the script passes `onSlugClash: 'drop'` to keep its old choice.
+- `POST /api/projects/:projectId/move` in `routes/projectRoutes.js`, catalogue entry (not offered to agents).
+  Allowed: admin, or the owner of both spaces (`isSpaceOwnerOrAdminState` on each). Under no-auth (a local install) anyone.
+- `di move PROJECT --to SPACE [--from URL] [--token -] [--dry-run] [--unpublish]`.
+- `scripts/project-move.mjs` now calls the shared module (its 8 tests are unchanged and pass).
+
+## Measured (aylmo, 2026-10-05, only the touched files)
+projectMove.test.js 9, projectMoveContracts.test.js 6 (one real server), scripts/di/move.test.js 4,
+scripts/project-move.test.js 8, plus catalogueContracts, projectVisibilityContracts, cliRouting, copyVocabulary: all pass.
+Red first: with `projectMove.js` removed the new tests fail (module not found, server exits at start).
+
+## Limits, owed
+- **Follow does not carry a move.** A follow carries op logs; a move is not an op, and a move/delete out of a followed
+  space is not carried. After moving on dev, each install that follows either space (aylmo, Emilya's, Kiara's) must run
+  the same `di move`, or the follow shows a project in the old space on one side. Owed: a carried move (a `moved` line
+  in the follow stream, read from `project_moves`).
+- Not tried against the owner's real dev data (told not to): the contract test ran on a throwaway server.
+- The owner-of-both-spaces path (a signed-in session) is covered by the shared `isSpaceOwnerOrAdminState`, not by its own
+  test; the contract test covers admin allowed, editor refused, no-token and viewer refused.
+- Live editors with the project open keep their old URL until reload; the stable link `/{space}/p/{id}` does not change.
+
+## 2026-10-04 — MOXIR's lasers become 6 LaserCube Ultra MK2, off DMX; a room can be copied from another install
+
+- Emily: "from fixture all wash and spot what we know and have DMX charts, and 6 laser cube" — the show keeps only fixtures with real charts (50 UP-PL5403 wash, 18 UP-B380F beam, tested at Sevan) plus the hazers and smoke off DMX; the 2 UP-LA40WF are replaced by 6 Wicked Lasers LaserCube Ultra MK2 (the owner's own, laseros.com).
+- New fixture kind `lasercube` (code EXT-LC-ULTRA-MK2, identified EXACT from the maker's page and ULTRA MK2 Guide v1.2): Blender body from the existing laser archetype, its Head 155 × 150 × 155 mm (0 % off the datasheet); the maker's default 16-channel DMX/Art-Net profile as a MAKER channel list (pp. 57-59; ch 5 Fader named dimmer so master/blackout reach it).
+- Emily will NOT use DMX for the cubes: they are to be drawn live from di Raw and streamed over a wired network (laser previs and the Raw → server → cube path are the next work). So in Known · full they are `offDmx`, like the hazers; the chart is the reference.
+- Known · full: group `lasercube-cut`, 6 on the cut's top chord at u ±1, ±3, ±5 — PROVISIONAL, to be placed with Emily in the room; sign-off text now says 6 × 10 W class 4.
+- Plot: two laser types shared the letter L inside the diamond — the cube gets K (`LETTER_BY_TYPE`), so the key tells them apart.
+- `copy-version.mjs --from-api/--from-token-file`: read a room on another install, write the copy here (assets re-uploaded, the original only read). Checked end to end from PONYO's Tailscale address into a throwaway project and `--undo`ne. `scripts/place/rigs/moxir-ponyo-to-dev-siblings-2026-10-04.json` is the version row for putting PONYO's Known · full / Known · ground into dev's moxir space under new ids.
+- Not done: laser shapes in the room (cubes still drawn as one dark thin beam), placement, the Raw laser nodes and server output; `scripts/place/fixtures.test.js`'s script-hash check fails on a Windows checkout (CRLF) for every kind, this one included — LF hash recorded, as for the others.
+
+## 2026-10-04 — add files to a sources project that already hangs
+
+- **What.** `scripts/place/add-sources.mjs`: reads the project `<space>-sources`, skips files whose name is already
+  on it, uploads the rest, hangs them in new rows above the top row. `import.mjs` now exports `uploadAsset`,
+  `sendOps`, `must`, and `uploadAsset` takes `onRefused` so a refusal carries name, size, status, reason.
+- **Why.** In space `moxir` the project `moxir-sources` holds a wall of 37 hall photos hung by `import.mjs` on
+  09-23. 14 files exist that are not on it (12 X-T5 JPGs, plus a 111 MB mp4 and a 17 MB jpg the first import
+  skipped). `import.mjs` hangs a whole folder once and cannot add to a wall that exists.
+- **Why a separate file.** `import.mjs` needs a `place.json` work folder and a hall to run; this needs only a
+  space, a folder and the API.
+- **Layout.** The wall was built with the total known, so its top row is the contact sheet's first row. New
+  pictures use `sourceWallSlot` with the total unknown (a full row of 8, centred), starting one row above the
+  highest picture read from the document, so no existing transform is touched. Limit: about 8.6 m up on a 37-picture
+  wall; owner may prefer a second wall beside it (not built).
+- **How proven.** vitest, `scripts/place/add-sources.test.js`, 7 tests against a stand-in server; with
+  `import.test.js` `Tests 24 passed`. Each guard fails when its fix is reverted (layout 1 failed, skip guard 3,
+  refusal report 1, exit code 1, bare-name match 1) and the file has `no tests` (fails to load) on origin/dev.
+  NOT run against any real server: the dry run on moxir and the real run are the next step, and the wall has to be
+  looked at in the browser afterwards.
+- **Limits.** Name match only (a renamed copy of a hung picture would be hung again). Reads the document once and
+  does not re-check between upload and write (a concurrent writer to the wall could produce a clashing id). No
+  delete or rename of pictures.
+- **`--originals` (owner's addition, same day).** dev's `moxir-sources` holds reduced copies (e.g. `000-file_83.JPG`
+  1,204,458 B on dev vs 2,885,346 B original). With the flag, a hung name whose local file is larger is uploaded and
+  the SAME entity is pointed at it (`updateComponent` media `{assetId}` only), the old asset dropped after a
+  read-back. Proof: 5 more tests (12 in the file); reverted guards fail (swap-when-not-larger 1, no read-back check 1,
+  flag ignored 4, patch widened beyond assetId 1). The 111 MB mp4 is over `MAX_UPLOAD_MB=100`
+  (`serverXR/src/config.js:137`) and is reported as refused, not transcoded.
+
+## 2026-10-04 — one version list per production, in the space, with a status and one "for the show"
+
+- **Why.** MOXIR has 17 versions, each a project. Each one carried its own copy of the others in
+  `rigVariant.siblings`, copied when it was made and never updated. 16 versions showed 6 different rows (measured
+  read-only by the main session). The code's versions file names 4 of the 17 as the set. Nothing said which
+  version is for the show. The owner approved the design: *"yes and for all future project too"*.
+- **What.** The decision, with the method (ShotGrid/Flow PublishedFile + status, the USD resolver practice, git
+  refs), the options and the limits: `docs/architecture/decisions/2026-10-04-production-versions.md`.
+  - The data: `src/shared/productionVersions.js`. Both schema copies normalise it.
+  - The list is the project `<production>-versions`, born private, with one entity per version. `di follow`
+    carries it like any project.
+  - Status is one of `for-the-show` · `candidate` · `kept-copy` · `archived`. At most one version is for the
+    show, and "none chosen" is valid.
+  - Each entry records madeFrom, madeBy (machine, install, tool, commit), madeAt and the fingerprint. The
+    fingerprint is sha256 over tier-sync's normalisation; `stripVolatile` and `byName` are now exported.
+- **Tools.** `scripts/production/versions.mjs` (`list`, `set-status`, `register`, `put`, `remove`, `--dry-run`).
+  Every write is re-read, read back and comes with a printed undo.
+  - `load-version.mjs` lists a version in the same step that makes it.
+  - `copy-version.mjs` lists it in the same run. The list step runs around `main()`, so PR #754's `--from-api`
+    lines are untouched. A copy with `from == to` is a candidate.
+  - `versions-audit.mjs` compares installs and git and exits 1 on any mismatch. Run it after a follow settles,
+    after a land and before the show; CI is owed (it needs the dev token).
+  - `build-moxir-versions.mjs` does the one-time MOXIR build. **It was NOT run against any server.**
+- **The version row** reads the list when the viewer can read it. The version for the show comes first and is
+  marked "for the show". Candidates follow, kept copies fold, and archived versions are not on the row. A
+  visitor, or an install with no list, sees exactly what they saw before. `siblings` is now only the last
+  fallback. The wiki entry `rig-version-switch` is updated.
+- **Tests.** Each new test was run on origin/dev code: the test files alone, and then with only the data module
+  added.
+  - The row tests and the schema tests fail there and pass here. One of them is "the same row from every
+    version where the rows carry no marks": on origin/dev it shows 6 different rows from 16 constructed versions
+    (`expected 6 to be 1`).
+  - The tool, audit and build tests fail there because the modules are new.
+  - The touched suites (src/rigbuild, scripts/rigbuild, serverXR/src/follow, schemaSync, tier-sync, src/shared,
+    scripts/production): see the PR for the counts, before and after.
+- **Owed.**
+  - Run the build on dev (`--dry-run` first), then the audit dev ↔ local after the follow carries it.
+  - Measure fingerprint stability on the real pair.
+  - The owner looks at the row with "for the show" on his screen.
+  - A CI job for the audit.
+  - Retire the `siblings` writers once every install runs this code.
+
+## 2026-10-05 — Raw cards can be resized from a square corner handle
+
+- A square handle (no rounding) in a card's bottom-right corner resizes width and height. The size lives in the node's own values as `values.cardSize = { w, h }` (graph units); `shared/projectSchema.cjs` keeps all node values, so nothing was added there, and `cardSize.test.js` proves it through an `updateNode` op.
+- Same rule as the drag fix: the card changes in local state while held, ONE `updateNode` on release, none for a click. Double-click on the handle writes `cardSize: null` (the auto size); the value is null rather than deleted because node values merge shallowly.
+- Minimum: width 140, height = header + ports + picture + foot (`cardGeometry.js`); the title and every port row stay readable.
+- A taller text or list card draws as many lines as its box holds at its width and says "+ N more" only for the rest (`cardContentLayout`). Measured at the real pointer: 6 lines auto, 14 when dragged 260 px taller.
+- Zoom-correct: the pointer's travel is divided by the zoom; at 79, 99 and 149 % a 60 x 40 px drag grew the card by exactly 60 x 40 on screen (`scripts/verify-raw-resize.mjs`, Playwright page.mouse, DPR 1.25). The zoom buttons step by 10 %, so 82/100/153 % were reached as 79/99/149 %.
+- Wires, the fit and the on-screen count use the card's own width. Placement of NEW cards (`cardPlacement.js`, `objectCards.js`) still assumes the default width: a resized card can overlap a neighbour placed later. Owed.
+- Resize is wired for the main canvas only (`RawEditor` node surface); the world-panel surface does not pass `onResizeNode`, so it shows no handle.
+- The handle is a pointer affordance only (aria-hidden); a keyboard way to resize is owed.
+
+## Raw: the selected node's settings are a side column (2026-10-05)
+
+Owner, with a screenshot of a Raw project: the settings panel "comes from the right" and covered the 4th and 5th cards. Chosen: a fixed column on the right; the canvas shrinks and re-fits beside it. Refinement: a node's one main field is edited IN its card; the column keeps everything else.
+
+**What changed**
+- `RawEditor.jsx`: `.raw-workbench` holds the canvas section and the settings column as siblings (flex row, `has-column`). Width 260-560 px (default 320, 45 % of the window at most), remembered in `localStorage` (`di.raw.settingsColumnWidth`, try/catch), drag handle or arrow keys on its left edge. Close button and Escape; focus moves into the column on select and back to the card on close. Under 700 px it stays the existing bottom sheet. Pure helpers: `src/raw/utils/settingsColumn.js`.
+- The canvas re-fits through the existing `ResizeObserver` in `RawGraphSurface.jsx` (known-fixes "The Nodes canvas opened tiny"). Found in the real browser: the column touches the bottom edge and was read as a bottom sheet (bottom inset 900 px, zoom 34 %); `graphBottomInset` now counts only a full-width element.
+- In-card edit: `getCardMainField` in `nodeRegistry.js` (today only Text, `content`). Enter or double-click on the card opens a box in the card; the card grows to fit, never past the next card below; Escape leaves. It writes `node.values.content`, the same value the Text window writes; the column no longer lists that field (no double state).
+- `PropertyInspector.jsx`: `onClose`, `skipField`. Same fields, same order otherwise. Delete stays (the button on desktop, above the sheet on phone).
+
+**Measured** (headless Chromium, local canvas, 6 cards): 1440x900 canvas width 1440 -> 1120 on select, no card behind the column, no horizontal overflow; back to 1440 on Escape. 390x844 DPR 3: bottom sheet, no overflow, selected card visible. Shots: `~/Downloads/raw-settings-column-2026-10-05/` (before-, after-).
+
+**Tests**: `RawSettingsColumn.test.jsx`, `RawGraphSurface.mainField.test.jsx` (8 fail on origin/dev, the rest guard behaviour that must not change).
+
+**Owed / limits**
+- Only Text has an in-card field. Number and other nodes show no value on their card; adding one is a `CARD_MAIN_FIELD` entry plus a card body.
+- Double-click on a Text card now edits instead of entering; the door (›) still enters.
+- A phone cannot scroll the view to the node beyond what the existing fit does (34 % floor).
+- Not touched on purpose: top bar, Help, › arrows, zoom block (a separate audit).
+
+## 2026-10-05 — release channels: installs follow the build the hub serves, by themselves
+
+- **Why.** Owner: *"it would be better to have all places the same way, synced"*, *"main is always older than dev,
+  people start with the old version — fix that gap"*. aylmo was updated by hand; Releases' latest is v0.4.3.
+- **What.** Decision with the cited practice (Chrome channels, VS Code Insiders, Debian suites, unattended-upgrades,
+  systemd.timer): `docs/architecture/decisions/2026-10-05-release-channels.md`.
+  - CI: job `publish-dev-channel` in `deploy-vps-dev.yml` publishes a `dev-<sha8>` prerelease (tarball + sha256),
+    keeps 20, never "latest".
+  - `di update --channel dev|stable`, `di channel`: dev = the prerelease of the commit dev.diiii.xyz serves
+    (`/serverXR/api/health`), checksum verified, same backup and rollback path.
+  - `di autoupdate on|off|status|run`: systemd user timer every 15 min, heat guard at 85 C, one log line per run in
+    `~/.di/logs/autoupdate.log`, `di status` shows last check / update / error.
+  - `pack-runtime.mjs` records `gitCommit` in release.json.
+- **Tests.** `channels.test.js`, `autoupdate.test.js`, `devChannelWorkflow.test.js` (new; fail on origin/dev because
+  the modules and job do not exist); `updateSafety`, `updateCheck`, `releaseWorkflow`, `cliRouting` unchanged and green.
+- **Owed.** The CI job has not run on GitHub (runs after merge); Windows/macOS timers; a hold for installs running a
+  show; the promotion-PR workflow and promote-the-exact-tarball for stable (design in the decision note); `di update`
+  on aylmo to enter the channel, then `di channel dev && di autoupdate on` (not run here, by rule).
+
+## 2026-10-04 — the room gets a Lite output for phones and visitors; the work machine keeps Full
+
+- Emily's call: the work side (building and simulating the show) may be heavy, the output must run everywhere, phones included, because at show time this system runs the lights.
+- Output mode (`src/project/viewport/outputMode.js`, `useOutputMode.js`): Lite keeps every beam cone, the lens and the haze, carries the light on the room with a 4-slot light pool, and drops shadows, bloom, the floor surface model and antialias at DPR 1; the saved document is never written, the viewer draws a copy.
+- Who gets which: a coarse pointer or a non-local address gets Lite, the local work machine with a mouse gets Full; `?quality=full|lite` and the Full/Lite button under Walk / Fly (remembered per browser) override; walk mode follows the same choice.
+- Decided from the hostname before the first frame on purpose: waiting for `/api/config` remounted the renderer mid-compile (PublicProjectViewer tests caught it as detached nodes).
+- Measured on the AMD 860M with the frame cap off, Known · full (70 lamps): Full on a desktop still blank after 60 s of shader compiles; Lite 418 fps desktop, 239 fps at a phone viewport, following the desk's cues (Vista → Red room → Forest).
+- Carries the two 2026-10-03 perf commits that were still local: background shader warm-up, spot lamps skipped outside their cone, quality-governor steps that stick.
+- The DMX never depends on any screen: `serverXR/src/lighting/desk.js` sends at 40 Hz on its own timer.
+- Wiki: new entry "Lite and Full — a room light enough for a phone".
+- Still open: Lite's floor reads black (no surface model) — a cheap glow under the beams is the next step; not yet measured on a real phone.
+- Review fix (aylmo): the shader warm-up could hold the last frame forever — three 0.185 caches the `null` a released program answers, so waiting for `true` never ended. A released or non-`false` program now counts as settled and the hold is capped at 8 s; on the AMD 860M this was the "Full still blank after 60 s" and a Studio that stayed black.
+- Scope note: `<ShaderWarmup/>` in StudioViewport and spotLightSkip's patch of three's ShaderChunk reach the Studio editor too; checked on the 860M (writes blocked): Studio draws by 30 s and stays responsive, where untouched dev froze its page ~2 min. Studio's partly-drawn first view looks the same on dev — not this branch.
+- Open, Gevorg's call: dev.diiii.xyz and tailnet names (`*.ts.net`) count as non-local, so his own desktop sees Lite there by default (Full is one tap, and remembered).
+
+## 2026-10-04 — a fifth version status, `concept`
+
+- **Why.** Owner: "keep the others as concept, take only the good ones and concentrate on the new setup." MOXIR has
+  17 versions; one setup is for the show, the rest are ideas worth keeping and not worth a main-row place.
+- **What.** Status `concept` in both normalisers (`src/shared/productionVersions.js`, `shared/projectSchema.cjs`),
+  ordered after kept copies and before archived. `versions.mjs set-status <id> concept`, and
+  `set-status --all-except <id,...> <status> [--dry-run]` (candidates only; refuses a for-the-show not named;
+  refuses unknown ids). `list` prints a `concept (n)` group; the audit lists a concept like any version.
+  The row (`RigVersionSwitch.jsx`) folds concepts under ONE "Concepts (n)" button, same button style, 44 px,
+  2 px radius, same open/close and same horizontal scroll as "Old versions (n)", so it does not overflow a
+  phone; a concept you stand in is not folded.
+- **Older installs.** Unknown status is dropped by the old normaliser (not shown, never promoted); an old server
+  also drops the component from its document copy. Order of work: land, deploy dev, `di update --from` every
+  install, then set statuses. Written in the decision note, "Concept".
+- **Tests.** 4 new (shared order and both schema copies, `set-status concept` + list, `--all-except` dry run,
+  refusals and result, the row fold). Run on the dev code the changed expectation and the new ones fail
+  (5 failed of 1399); here src/rigbuild + src/shared + scripts/production + schemaSync: 1459 passed.
+- **Owed.** Not seen on a real phone screen (tests only). The set-status on MOXIR is run by the main session.
+
+## 2026-10-06 — serverXR: proxy-addr 2.0.7 → 2.0.8 (critical advisory blocked every dev deploy)
+
+- Dev deploys of #787 and #788 failed at "Audit dependencies (serverXR)": `npm audit --omit=dev` reported
+  GHSA-jqcg-44mw-7w3h (critical, proxy-addr ≤ 2.0.7: IP spoofing via IPv4-mapped IPv6 trust subnet), published
+  overnight. The gate did its job.
+- Fix: `npm audit fix --package-lock-only --omit=dev` in serverXR — only proxy-addr moves (2.0.7 → 2.0.8, lockfile
+  only). `npm audit --omit=dev` after: 0 vulnerabilities.
+
+## 2026-10-05 — di autoupdate restarts di with the node it was installed with
+
+- Measured on aylmo: after each autoupdate (15:31 → 10b1e514) the installed di stayed down. server.log:
+  `listen EACCES: permission denied 127.0.0.1:443` under Node v26.10.0; autoupdate.log: `failed … pkexec setcap
+  cap_net_bind_service=+ep /usr/bin/node` (a password prompt nobody was there to answer).
+- Cause: `di-autoupdate.service` set no PATH. systemd's user PATH puts /usr/bin first, so the shim's
+  "whatever node the machine has" became /usr/bin/node (v26, no bind capability) instead of the v22 that
+  `di up` uses from a shell.
+- Fix: `unitTexts` writes `Environment=PATH=<dir of the node that ran \`di autoupdate on\`>:/usr/local/bin:/usr/bin:/bin`.
+  Guard test red without it (1 failed), green with it (14/14).
+- To take effect on an install: `di autoupdate on` once after updating (it rewrites the unit).
+- Owed (named): di still has no supervisor that restarts a crashed server (draft #733).
+
+## 2026-10-04 — follow carries projects that were made empty
+
+Seen on aylmo following dev.diiii.xyz (space `hayfilm`): six follower-only projects at documentVersion 0 never reached the host.
+
+**Cause.** `refreshStreams` (follow/follower.js) made a project only when the host had it and the follower did not. The other direction relied on ops arriving, but a project that does not exist on the host answers 404 on its ops stream and is skipped, and an empty project has no ops. The follower also titled a made project with its id, not its title. Separately, creating a project woke no one, so a host-made empty project waited out the 20 s park.
+
+**Fix.** `refreshStreams` makes missing projects in both directions (title as made, private stays private, a refusal warned once per project and side). `POST /api/spaces/:id/projects` nudges the follower and the space's waiters. Deletions are not carried (still owed).
+
+**Test.** `followIntegration.test.js` "a project made empty on either side appears on both": 2 tests, both red on the base branch (fix/follow-wake-after-carry-2026-10-04), green after. `vitest run serverXR/src/follow` 73/73; `test:server-contracts` 193/193; eslint clean on the three changed files.
+
+**Owed.** Not seen on aylmo against dev.diiii.xyz yet; the six existing projects will be made on the host on its next tick once this is installed on aylmo.
+
+**Review fix.** Making projects in both directions would have resurrected a project deleted on one side (deletes are not carried, and the create route restores a trashed id). `refreshStreams` reads each side's trash and skips trashed ids, warning once per id. Tests: 2 more integration cases (trashed on host, trashed on follower), red on 639d8684 (2 failed), now follow 75/75, server-contracts 193/193, eslint clean.
+
+**Sync-key check.** Reported: `GET /api/trash?space=hayfilm` with a hayfilm sync key answers 403 on dev.diiii.xyz. On a real auth-on server here the same call answers 200 for the key's own space, 403 for another, and the unscoped list excludes other spaces (new contract test); the empty-project integration tests now use that key on an auth-on host. The 403 on dev is not reproduced and not explained: owed, needs the body of the answer and dev's build (dev.diiii.xyz not touched from here). When the trash cannot be read the follower makes nothing there and says so once.
+
+## 2026-10-04 — fix/follow-cli-safety-2026-10-04: di follow refuses unsafe merges, keeps a corrupt follows.json, writes keys 0600
+
+Source: `docs/ai/audits/follow-audit-2026-10-04.md` (branch `docs/follow-audit-2026-10-04`), findings F5, F6, F15, F19, F20.
+Files: `scripts/di/{follow,follows,cli,ui,stage}.mjs`, `serverXR/src/follow/followStore.js`; test `scripts/di/followSafety.test.js`.
+
+- F5: stopped install now checks `<data>/di.db` (`spaces` table, read-only `node:sqlite`). The audit's "`<data>/spaces/<id>`" is not where spaces live; they are rows. Unreadable db = refuse.
+- F6/F15: both follows.json writers are temp + fsync + rename, 0600 every write; a file that does not parse is kept, copied to `.corrupt-<time>`, and the write refused (`corrupt`). `di follows` still reads it as empty (unchanged, not warned yet: owed).
+- F19: CLI removes the state file; `writeFollowState` skips when the space is not in follows.json, so a late save cannot revive it. Owed: follower.js should stop before state removal (not edited, another agent's file).
+- F20 decision: refuse `http://` unless host is loopback, `.local`, private LAN, link-local or Tailscale 100.64/10 (or pinned by `--at` to one of those); else `--insecure`. Applies to `di follow` and `di stage join`.
+- Not done: `.part` sweep (F20 first half), `di follows` warning for loose mode / corrupt file.
+- Measured: new test file 12 tests, 9 failed on origin/dev code, 12 pass now; `vitest run scripts/di serverXR/src/follow` 35 files, 408 passed.
+
+## 2026-10-04 — a follow starts from now, and never erases work only the follower has (audit F4)
+
+- **Why.** The owner's install (aylmo) is to follow space `moxir` from https://dev.diiii.xyz, whose projects hold
+  long local histories (876 / 2378 ops) already on dev. A first follow start had null cursors, so
+  `readOps(local, …, null)` replayed this install's whole history onto the host, and `planConverge` then let the
+  host win over any difference, silently erasing work only the follower had.
+- **Fix.**
+  1. `follower.js`: a follow with no saved state sets each stream's cursors to the latest version on both sides
+     (stream = the room, and every project on BOTH sides at the first tick), then compares the documents once.
+     `start: 'replay'` / `di follow --replay` keeps the old start (history the other side never saw).
+  2. `followConverge.js`: a difference where this copy holds entities / nodes / assets / scene objects the host
+     lacks is refused (no write). `lastError` and a `warn` log say the project and the counts; the refusal is
+     remembered until the stream agrees (also fixes the one-tick refusal of audit F7 for these cases).
+  3. `di follow --take-host | --take-mine`: saved as `direction` in follows.json, applied to each stream's first
+     comparison, then cleared (`clearDirection`). `index.js` restarts a running follower when a new direction
+     appears. `take-mine` writes this copy to the host through the host's write route.
+  4. Restore point: the two POST ops routes now take a restore point (reason `before-whole-replace-op`) for any
+     batch carrying `replaceScene` / `replaceDocument`, burst or not — before, a whole-work op sent as an op got one
+     only at the start of a burst. The follower logs the newest restore point id (readable only with a key that
+     may list snapshots; otherwise it says the write route took it).
+- **Guards.** `followIntegration.test.js` "a follow starts from now …" (5 tests, two real servers; 4 red on
+  origin/dev), `followConverge.test.js` (6), `scripts/di/follows.test.js` (2).
+- **Limits.** The first tick decides from-now; an existing follow with saved state is unchanged. A one-sided
+  project still replays. Restore point id may be unreadable with a per-space sync key. #750 / #751 / #752 touch
+  `follower.js` / `followStore.js`; rebase conflicts are expected and mechanical. Not run against a real install.
+
+## 2026-10-05 — five gaps in follow (live sync), stacked on #764
+
+Owner, 2026-10-05: five gaps found on the real install, "go one by one". Branch `fix/follow-gaps-2026-10-05`, based on
+`origin/fix/follow-integration-flaky-2026-10-05` (#764, the from-now timestamp fix, not merged). One commit per gap.
+
+| Gap | Cause found | Fix | Guard (red on base, green after) |
+|---|---|---|---|
+| 1 new key ignored while di runs | `startFollows` restarted a follower only for a new `direction`; follows.json was read correctly (watched every 2 s) but the follower kept its old `side` token | restart on any change of remote / key / address / start; resumes from saved cursors | `index.test.js` |
+| 2 remote without `/serverXR` | dev.diiii.xyz answers `/api/health` 200 text/html; any 200 passed, so one dropped `/serverXR` answer fell through to the bare address. Not about di being down: the CLI path is the same up or down | health must be JSON ok:true; mount asked twice; op-log check must see an op log; else `unreachable`, nothing stored | `scripts/di/followRemote.test.js` (4) |
+| 3 transfer not resumed | chase started AFTER the room's 20 s park; documents compared once per run; settled files never re-asked. A plain two-server restart already resumed on the base, so no single cause was reproduced | chase kicked before the park, comparison every 10 min incl. settled files, stale `.part` cleared, `listed`/`missing` in state and `di follows` | `assets.test.js` (2), integration "interrupted file transfer" |
+| 4 settings not carried | never designed | `followSettings.js`: host to follower, `isPublic:false` wins, front door only onto a non-private project that is here; space PATCH ends held reads (also on the approval-gated path) | `followSettings.test.js`, integration "space's own settings" |
+| 5 follower-only project refused | the host's new copy is made empty from the listing; content that came as a whole-work op is never carried | `seeded` streams (saved in follow-state) fill the host copy once via `replaceDocument` | `followConverge.test.js`, integration "only the follower holds" |
+
+Decisions and limits:
+- Gap 1 design: the file is the contract between CLI and server (works while di is down, no new route). The race of the
+  server's own `clearDirection` (read-modify-write) with a concurrent CLI write is a tiny window, not closed here.
+- Gap 4: follower to host is NOT done (host PATCH is owner/admin only; a sync key is neither). A public host does not
+  make a private copy public; it says so. Settings changes made on the host while the follower is parked cross in about a
+  second (the PATCH ends the held read). A PATCH that waits for approval is said once.
+- Gap 3 owed: whether the owner's 101/79/29 case had a different cause (a final failure, a size limit) is not known; no
+  log from that install was read. `di follows` now shows "N still coming, of M listed" and failures, so the next time it
+  can be told.
+- No real install was touched; tests spawn their own servers.
+
+# fix/follow-integration-flaky-2026-10-05
+
+## What changed and why
+
+- CI failed a different followIntegration test on each of three PRs (#760 ×2, #763). Cause: since #757 a from-now follow took its starting point at its first pass over each stream, a moment after startFollowing() returned; an edit made in between was folded into the history and NEVER carried — a product race, not only a test problem.
+- Fix (follower.js): "now" is the moment the follow is started (startedAt). The first pass sets each cursor just before the first op stamped at or after startedAt (startCursorAt reads the latest version and the last 200 ops, never the whole log). No margin on either side: a margin replays history made just before the start. Remaining window: two clocks' skew (NTP).
+- The started() waits added to the tests earlier on this branch are removed: they hid the race.
+- Guard: 'an edit made the instant a follow starts is carried' — startCursorAt lands exactly between an op before and an op after the start; both sides' first edits are carried. Red on origin/dev (2 failed), green after. serverXR/src/follow: 8 files, 93 tests passed (aylmo, ≤ 81 °C, no load).
+
+## 2026-10-04 — a follow steps past whole-work ops once the copies agree
+
+- **Seen.** aylmo following dev.diiii.xyz, space `wcc`: every project had `replaceDocument` ops, equal on both
+  sides, and `di follows` said "one side replaced a whole scene" for good; cursors stood at `{13, null}` in a log of
+  124.
+- **Reproduced** (two real servers, `followIntegration.test.js`): a whole-work op with no opId in each log (what an
+  older log holds) pinned the cursor and the message never cleared. Whole-work ops that do carry an opId did NOT
+  pin it on the base branch (that case passed before the fix and is kept as a guard) — so hayfilm, whose ops have
+  ids, cleared by itself. This is the best-supported cause, not proven on the wcc data itself (that data was not
+  opened, by rule).
+- **Fix.** `followPlan.accountedThrough` passes whole-work ops; `follower.js` compares the copies when it sees one
+  and keeps `disagree` per stream (names the project, re-checks every tick, never writes); status is also built
+  before the room's park. Host-wins converge unchanged.
+- **Measured.** Follow folder 76/76 pass (before: 3 of the 4 new tests red); `test:server-contracts` 193/193;
+  eslint clean on the four changed files.
+- **Owed.** Run on aylmo against dev.diiii.xyz (real surface). `PUT /api/projects/:id/document` does not call
+  `nudgeFollow`. `replaceScene` on the room is covered by the same code (scene stream has a documentPath) but has no
+  integration test of its own.
+
+## 2026-10-04 — a followed space carries the edit made right after another at once, not after 20 s
+
+- **What was wrong.** It was measured on aylmo following dev.diiii.xyz, in the `hayfilm` space. After a quiet
+  spell an edit crossed in about 0.5 s. But an edit made right after another had crossed waited out the whole
+  20-second park, in both directions: aylmo→dev 652 / 21389 / 21482 ms, dev→aylmo 20789 / 20676 / 20697 ms.
+  `di follows` said "following" with no error.
+- **Why.** Each tick reads every project's log first and parks on the scene's log last. An edit that landed
+  between those two steps was lost on either machine:
+  - **On the follower:** `wake()` found the loop neither asleep nor parked, so it did nothing, and the park that
+    followed held the edit for 20 s.
+  - **On the host:** the write released nobody, because the follower had not parked yet. The park, once made,
+    checked only the scene's log, which had nothing new.
+
+  A person who edits the moment they see the last edit arrive lands in exactly that gap. It is several round
+  trips wide over the internet and microseconds wide on loopback, which is why the existing loopback tests never
+  showed it.
+- **Fix (the lost-wakeup rule: a signal that can come before the wait must be latched):**
+  1. **The follower latches its wake** (`follower.js`, `woken`). The flag is cleared when a tick starts. A wake
+     that arrives later keeps that tick from parking and sends the loop straight round. A park abandoned for a
+     local edit no longer reports "the other di.iiii is not answering" for one tick.
+  2. **The server keeps a change mark per space** (`follow/waiters.js` `changeMark`, from a process name and a
+     count of writes). `GET /api/spaces/:id/ops` returns `changeMark`. The follower parks with
+     `&mark=<last mark>`, and if anything in the space (its scene or any project) was written since, the park
+     answers at once. This is the same method as a blocking query's index (Consul `?index=`, etcd watch
+     revision). Only keys someone has asked a mark for are counted, so the machine hub's per-mailbox keys don't
+     pile up. Older servers ignore `mark` and older followers ignore `changeMark`. Either way the behaviour is the
+     same as before, never worse.
+- **Measured.** The new test runs the follow inside the following server, started from its `follows.json` the way
+  `di follow` sets it up, and reaches the host through a proxy that delays every chunk 80 ms each way. The edits
+  alternate, each made as soon as the last one landed. There are two projects, as in hayfilm.
+  - On origin/dev code: follower→host 21091 / 20740 / 20743 ms and host→follower 20782 / 20777 / 20786 ms. That
+    reproduces both real failures.
+  - With the fix: 745–1090 ms every time (two runs).
+  - With only one half of the fix, the other direction returns to 20.7 s, so each half is needed.
+  - Not yet measured: aylmo ↔ dev on the real machines. That needs this branch on dev AND on aylmo's installed di.
+- **Tests.**
+  - New `followIntegration.test.js` block "a followed space answers at once, edit after edit". It checks that all
+    six crossings take less than 3 s and that a quiet space still parks (fewer than 12 proxy chunks in 3 s).
+  - Four new `waiters.test.js` change-mark cases. These cover: a write made while nobody was parked, a hold
+    when nothing changed, a mark from another process, and counting only marked spaces (the route hands marks
+    out only for spaces that exist).
+  - The existing "never applies the same op twice" test now counts edits and leaves out the follower's own
+    convergence write. The faster follow converges the rug/door ordering before that test looks; on origin/dev
+    it was still 20 s away.
+  - Results: `vitest run serverXR/src/follow/` gives 71 passed (origin/dev code with the new tests: 1 failed, 66
+    passed; follower→host 21117 / 20749 / 20756 ms, host→follower 20725 / 20782 / 20741 ms). `npm run test:server-contracts` gives 193 passed. `serverXR/src/machines/` with `statusRoutes` gives
+    37 passed. eslint is clean.
+- **Owed.** A re-measure on aylmo ↔ dev.diiii.xyz once this has landed on dev and is installed on aylmo.
+
+## 2026-10-05 — /tools versions come from the lock files, so Dependabot bumps can pass
+
+- Eight Dependabot PRs (#687–#693, #695) failed CI on one test only, each naming its own package:
+  `kitCatalogue.test.js` › "prints the version and licence of the package that is installed".
+  `src/kit/kitStack.js` typed every npm version by hand.
+- `virtual:kit-versions` (`kitVersionsPlugin` in `vite.config.js`) reads the table's `npm:` names
+  with acorn and resolves each from `package-lock.json` / `serverXR/package-lock.json`.
+- Guard test: no hand-typed npm version; every listed package must be in its lock file.
+- Proof: #691's lock change on this branch → kit tests 32/32; /tools seen on the dev server,
+  desktop and phone (390 px, no sideways scroll).
+- Still owed after this lands: each Dependabot PR needs a rebase onto dev (`@dependabot rebase`)
+  to pick this up; #694 (three-mesh-bvh 0.7 → 0.9) and #689 (three 0.185 → 0.186) want a look
+  in a 3D scene before merging — a green test run is not that look.
+
+## 2026-10-05 — Poligraf's prices out of the public repo
+
+- Owner, 2026-10-05: the rental house's (Poligraf's) prices must not be public. This repo is public, so the
+  supplier rates in `scripts/rigbuild/rentals/*.json`, two package rates in the MOXIR versions file and one
+  "AMD/day" text in the item library were removed. Prices live in the private di-atlas repo
+  (`production/rental-house-2026-09-27.csv`).
+- Pages and reports still count everything; where a price was, the equipment page says "price: private".
+  On the owner's machine a script can read real prices from `DI_PRIVATE_PRICES` (a csv kept in di-atlas)
+  through `scripts/rigbuild/privatePrices.mjs`; `src/` never imports it and nothing packs it.
+- Guard: `scripts/rigbuild/noSupplierPrices.test.js` fails if a price field or an AMD amount returns
+  (seen failing on the old files).
+- Still undone: the dev document `moxir-hall-known-full` holds the same rates in `rig-show` →
+  `rentalList` (`items[].rate`, `catalogue[].rate`); that is a data edit for the owner and Emilya. Git
+  history and older PR branches still hold the numbers; purging them would need a force-push, the owner's call.
+
+## fix/raw-drag-clamp-2026-10-05: the drag clamp measures the card's top-left; edge auto-pan
+
+Source: `~/Downloads/raw-ui-audit-2026-10-05/audit.md` section 1 B1 and B8, section 4 PR 1 (owner approved the plan 2026-10-05).
+
+**What was wrong.** `RawGraphSurface.jsx` dragged a card with the placement clamp, which assumes the point is the card's centre. A drag moves the card's top-left, so the card stopped half a card (100 units), the door (34 px) and 24 px short of the left edge (x = 132 / 158 / 171 / 208 at 74 / 100 / 113 / 150 %), and 44 units short of the top.
+
+**What changed.**
+- `src/raw/utils/dragClamp.js`: `dragClamp` keeps the top-left 24 px inside every edge of the canvas (stated in screen px, so it is zoom-independent); `edgePanVelocity` gives the auto-pan speed (24 px band, up to 900 px/s, proportional to depth, full speed past the edge).
+- `RawGraphSurface.jsx`: the drag effect uses both. Auto-pan runs on animation frames while the pointer rests in the band; the pointer and clock live in a ref (`dragPanRef`) because each committed move re-runs the effect. `pointercancel` now ends a drag like `pointerup`. The placement clamp (double-click to create) is unchanged.
+- Tests: `utils/dragClamp.test.js` (pure), `components/RawGraphSurface.dragClamp.test.jsx` (pointerdown, 16 pointermoves, pointerup against a laid-out canvas).
+
+**Measured** (headless Chromium via `di-dev up rawpr1`, audit's `method/drag2.cjs`, Studio dragged -700 and -500): left edge x = 24 at all four zooms; top y = 119 (bar 95 + 24). Held at the left edge for 500 ms the canvas panned 370 px and stopped on release. Evidence: `~/Downloads/raw-ui-audit-2026-10-05/build/pr1/`.
+
+**Limits / owed.**
+- B8 (the +525 px jump) did NOT reproduce in jsdom on origin/dev: the repro test passes both before and after. It stays a guard. The suspected cause (a drag left running after a release outside the window) is covered by `pointercancel` and by pointer capture, not proven.
+- Auto-pan speed (900 px/s) and band (24 px) are the audit's "speed proportional to depth" with a chosen ceiling; the owner's look on dev may retune the ceiling.
+- The right and bottom limits keep 24 px of the card on screen (title grabbable), not the whole card.
+
+## 2026-10-05 — Raw card drag: one op on release, held card on top, edge pan in the visible band
+
+- Found by a real mouse drag (xdotool, Zen, dev.diiii.xyz): a drag wrote one `updateNode` op per frame (255 ops for ~70 moves; 401 in 49 min, 92 identical). Proven here with Playwright `page.mouse` at DPR 1.25 in `scripts/verify-raw-drag.mjs`: before, one 40-step drag sent 40 ops (131 for an edge carry); after, 1.
+- The held card now lives in local state (`dragPos` in `RawGraphSurface.jsx`); the document hears one `updateNode` on release, and none for a click or a drop where it began. Live co-editors see the card jump on release, not slide: the price of not flooding the server; a throttle can be added later if watching a card move live is wanted.
+- The held card gets `.is-held` (z-index 20) and goes back to its place in the document order on release. Before, The night slid under Pricing (DOM order). No persistent bring-to-front op exists in this codebase, so none was added.
+- Edge auto-pan and the clamp now use the visible band (`contentInsets` + `bottomInset`), not the window edge; `dragClamp` takes an `inset`. Whether the owner's floating settings panel is inside `contentInsets` is not proven: that is draft PR #777 (side column).
+- Bug 1 (pan the wrong way, graphX 541 to -897): NOT reproduced with a real mouse in a clean scratch project (card moved right, 637 to 1157 and 870 to 1390). Most likely cause, unproven: echoes of the older ops pulled the card back under the held pointer while the view panned. With one op per drag that path is gone; reopen if the owner sees it again.
+- Bug 5 (key renamed Bar to "o"): NOT reproduced; letters o, x, a typed with a card selected wrote no rename. The only label writer is the inspector title field, opened by N or F2 (`input/keymap.js`, documented). N followed by o gives exactly that result, so it was likely the two keys N, o typed. Nothing changed.
+- Owed: run the same script on a tall docked/floating panel once #777 lands; follow-up for a dev deploy and `di update --from` (dev and local stay one).
+
+## fix/raw-one-open-2026-10-05: one meaning for Open; the › door goes (stacked on fix/raw-drag-clamp-2026-10-05)
+
+Source: `~/Downloads/raw-ui-audit-2026-10-05/audit.md` B2, sections 3.4 and 3.5, PR 2 of section 4.
+
+**What was wrong.** `handleEnterNode` opened a closed List/Text window the first time and the empty inside the second.
+
+**What changed.**
+- `handleEnterNode` always goes inside. The › door (element, CSS, fit gutter, placement-clamp term) is removed. A container's card shows `▸ N` as plain meta text.
+- Double-click, Enter on a focused card, `I`, the card menu (`Open`, one word for every kind) and a new `Open` row in the selection settings (`PropertyInspector` `onOpen`; 28 px, 44 px on coarse pointers, first row under the header, so it is the phone sheet's first row) all call it.
+- `DesktopWindow` loses `Enter ›` (and the `onEnter` prop). Help text and the keymap say Open.
+- A closed window still comes back through the palette (`hiddenPanelNodes`), which test `Escape closes the window the person just opened` now uses.
+
+**Double-click on a Text card, with PR #769 (feat/raw-settings-column-2026-10-05).** #769 runs `startEditing` first on double-click and on Enter for a card that has a main field (today only Text), so Text edits its Content in the card. Resolution: on Text, double-click and Enter edit in place; Open (the settings row or column, the card menu, `I`) goes inside. Every other kind: double-click, Enter and Open all go inside. This is the one exception to audit 3.4 and follows 3.5 (Content edited in the card, no second copy). The two PRs touch the same lines in `RawGraphSurface.jsx` (`onDoubleClick`, `handleNodeKeyDown`): whichever lands second merges by keeping #769's `startEditing` guard before `onEnterNode`.
+
+**Measured** (headless Chromium, `di-dev up rawpr2`, real project): `.raw-graph-node-door` count 0; double-click Bar three times (Escape between) gives the same inside view each time, 0 windows opened; Enter on a focused Studio card and the Open button (320x28 on desktop, 390x44 at 390x844 touch) go inside. Evidence: `build/pr2/`.
+
+**Owed / limits.**
+- Inside a List or Text is still the empty canvas plus "What it's made of" (B3, PR 4). Until PR 3/4, a List's rows are read on its card, and its closed window is reachable only via the palette.
+- The window kind-specific `Open its window` verb is gone; the windows themselves are retired in PR 3.
+- Phone: the Open row sits in the existing sheet; no double-tap added.
+
+## 2026-10-05 — Raw: raise the moved card, rename opens at the end
+
+Seen on the owner's screen: a card dropped on another sank back under it; N then one key left the label "o".
+- Fix: `.is-selected` z 10 (below `.is-held` 20); `TitleField` puts the caret at the end instead of select-all.
+- Proof, `scripts/verify-raw-raise-rename.mjs`, Playwright mouse/keyboard, 1440x900, DPR 1.25, `di-dev up raw-followup --api scratch`:
+  origin/dev 2 FAILED (A1 topmost at overlap n-pricing; B1 field "o"); with the fix all 5 checks pass (A1 n-night; B1 "Baro"; B2, B3, A2 pass).
+- `npx vitest run src/raw`: 84 files, 951 tests passed.
+- Limits: one scratch project, four cards; selection z-index also lifts a selected card over later cards when nothing was moved (intended).
+- The scratch stack needed di-atlas PR #43 (own session secret); the script uses the auth-disabled scratch session, no sign-in.
+
+# Raw: the preview, the lag, the visual bugs (2026-10-05)
+
+Branch `fix/raw-scene-preview-and-lag-2026-10-05` off origin/dev ee1bacf2. Throwaway stacks `di-dev up rawprev-before|rawprev-now --api scratch` (25084310 and this branch), wiped at the end.
+
+## Findings
+
+Measured with real pointer input (Playwright, 1568x882, DPR 1.25):
+- The 3D scene was never beside the cards in either build. Selecting a Box showed its settings only; the scene was the fullscreen Scene button. Before 25084310 List/Text windows stood over the canvas (retired by #777, on purpose).
+- Object cards never drew a picture; node cards (Cube, Sphere) do, in both builds.
+- Found on the way: in-card editing of a Text (#769) never opened with a real click.
+- Lag: not reproduced. Frame deltas are 16.7 ms (p95 16.7-16.8, max 16.8), zero long tasks, in all four gestures, on all three builds, 3 runs each. Limit: headless Chromium, vsync-capped, 8 cards. The owner's laptop (fan fault, 95-100 C) is not this run. Open: profile on his machine.
+
+## Owed
+
+ account button not seen (scratch stacks run with auth off); the owner's 1950x1440 window not reproduced; React re-render counts not taken.
+
+## 2026-10-05 — the secrets backup leaves this repo for di-atlas (private)
+
+- **What.** `deploy/secrets-backup.sh` pulled production's `.env` files from the VPS, which is offline (prod runs
+  on the Mac since 09-26), so the nightly timer failed every night. It was rebuilt to pull from the Mac and keep
+  the encrypted bundle on aylmo and asuz, then — owner's word 10-05, "atlas" — moved to the private di-atlas repo:
+  `tools/secrets-backup/` (script, units, `install.sh` / `install.sh uninstall`). This repo keeps no copy, so
+  the list of production's secret file paths is no longer public.
+- **Measured.** Installed unit run 10-05 15:17: 6 files, `age` to aylmo's key + di-mac's backup key, 8.0 KB,
+  second copy on asuz verified by sha256, `Result=success`.
+- **Limits.** asuz only over the LAN name; the Tailscale route is refused by the Tailscale SSH check.
+- `docs/ai/known-fixes.md` keeps its row about the tar fix; the file it names now lives in di-atlas.
+
+## 2026-10-04 — shelf routes keep to the caller's space (audit F8)
+
+Branch `fix/shelf-routes-space-scope-2026-10-04`, from `origin/dev` 56ea6eea. Finding F8 of
+`docs/ai/audits/follow-audit-2026-10-04.md`.
+
+**This hole is also on the live site.** It is on `main` (diiii.xyz) and on dev until this branch is landed and promoted.
+Until then a leaked sync key or space-scoped editor token can rename or delete shelves in other spaces. Deleting a shelf
+loosens its projects; it does not delete work.
+
+- Cause and fix: see the `docs/ai/known-fixes.md` row. One middleware in `serverXR/src/index.js`.
+- Sweep: every `/api` route with a path parameter other than `:spaceId`/`:projectId` was listed. Only the two collection
+  routes lacked a space gate. The others are admin-only (`/api/commons/assets/:assetId` DELETE, users, open-calls,
+  app-visitors), local-operator only (agent-runs, agent-board), account-owned (ai chats, dm devices), or read-only.
+- Test: `shelfScopeContracts.test.js`, auth on, real server. Before the fix: 4 passed, 1 failed (cross-space PATCH
+  returned 200). After: 5 passed; `npm run test:server-contracts` 198 passed in 11 files.
+- Owed: a run against a real per-space sync key (the test uses `EDITOR_ALLOWED_SPACES`, the same scope check). A
+  non-existent shelf id answers 404 to every caller who passes the role gate; scoped callers get 404, not 403.
+
+## 2026-10-05 — Studio hands a code page its own host (di.laser hung on "loading the photographs")
+
+- Owner's screenshot: `dev.diiii.xyz/di-laser/studio/projects/di-laser`, The Light Put Back tab, stuck on its loader.
+- Cause: `buildPresentationPreviewDocument(html, query, origin)` writes `window.diiPageOrigin`. The public view
+  (`PublicProjectViewer`) passes `location.origin`; Studio (`StudioPresentationSurface`) and `PresentationCanvas`
+  passed nothing, so the page got `""` and fetched its assets from a relative hash. The same page works on the
+  public view (seen: headless load of `/di-laser`, every photo 200).
+- Fix: both Studio callers pass `window.location.origin`. Guard: the two existing srcdoc tests assert the origin
+  (red without the fix: 2 failed; green: 27/27 with presentationPreviewDocument.test.js).
+- Not seen in Studio yet: needs a signed-in browser on dev after deploy (owner's screen).
+
+## 2026-10-05 — batch landing: follow gaps, Raw drag + one Open, Kit versions, no supplier prices
+
+- One batch branch off dev 25084310 (owner's merge word 10-05 15:0x: "move to 5"), merged `--no-ff`:
+  #770 fix/follow-gaps-2026-10-05 · #773 fix/raw-one-open-2026-10-05 (carries #771) ·
+  #774 fix/kit-versions-derived · #775 fix/no-supplier-prices-in-public-2026-10-05.
+- File overlap checked first: only `docs/ai/known-fixes.md` (#770 + #774) — merged cleanly by git.
+- Not in this batch: #772 (MOXIR safety; its CI has a failure), the Raw cloud branches (unreviewed).
+- Limit: the supplier prices leave the tree, not the git history; the dev document
+  `moxir-hall-known-full` still holds them until it is edited (Emilya's project).
+
+# land/concept-picture-channels-2026-10-05
+
+## What landed and how
+
+- #760 concept status for the production version list (owner: 'keep the others as concept').
+- #761 apply-picture.mjs: the rig code's night/fog/background written into versions (the 'porthole' fix; already run on dev with --fields fog,background).
+- #762 release channels: dev prerelease per green commit, di update --channel dev, di autoupdate timer (owner: 'all places the same, synced'; installs need no GitHub account).
+- All three merged clean. Locally on this branch: followIntegration + lighting 35/35 (both failed once on GitHub in their own PR runs: #760 twice in followIntegration, #761 once in lighting.test 'a cue whose look is not on the desk'); this batch's CI decides — if they fail again it is a defect, not a re-run.
+- #762 channel tests 58/58 locally.
+
+# land/lite-default-745-2026-10-04
+
+## What landed and how
+
+- PR #745 (Emilya's fork, head f4c18cf4, Emily's yes): Lite is the default for every viewer, the work machine included; Full by the button or ?quality=full; every lamp's footprint drawn in Lite; the floor keeps its finish.
+- Owner, 2026-10-04: "these are all high quality — make also a light version, and Lite is the default".
+- #745 was 31 commits behind dev; one conflict, docs/ai/known-fixes.md, kept both sides. src/project/viewport + src/wiki after the merge: 33 files, 303 tests passed (aylmo).
+- Her measurements (Known · full, 74 lamps, frame cap off): RTX 5060 Lite 343 / Full 110 fps; AMD 860M Lite 207 / Full 49 fps. Lite reads darker than Full (her screenshots).
+- Owed: the owner's look on his screen (aylmo) in Lite and Full; frame time measured on aylmo.
+
+## 2026-10-04 — land the Nodes stack (#740 #730 #731 #736 #742 #729 #727) in one batch
+
+Owner, 2026-10-04: "lets work on di.iiii and moxir" after the order was named (Raw screen fixes build on Nodes).
+`land/nodes-2026-10-04` is cut from dev 08882a60. It takes `--no-ff` merges in stack order:
+#740 → #730 → #731 → #736 → #742 → #729 → #727. Each PR's own session note stays in place for the fold on dev.
+
+**Conflicts resolved (both sides kept):**
+- #731 vs dev's #738. Both fixed "a selection with no fields".
+  - The sheet header now shows when there are sections, `showHeaderWhenEmpty` (dev), or `onRename` (#731).
+  - The Raw selection sheet shows its caller's message once. Other callers show #731's "› on its card opens it" note.
+  - Wiki: dev's fit/resize/selection lines, plus #731's mark-then-Remove wire line.
+- #736 vs dev's #738. The keys branch read `workspaceState.selectedNodeId`; dev made the selection local (`selectedNodeId`). The keys code now reads the local one, keeping its Escape ladder and `handleDuplicateNode`.
+- #729 vs dev and #731.
+  - `countCardsOnScreen()` (dev) now counts only the free band, so a card under a docked window is not "shown". This is #729's rule, applied to all three callers.
+  - The palette hint keeps dev's "window" and opens in front.
+  - known-fixes and the List wiki article are unions.
+- #727. RawGraphSurface takes both prop sets. RawViewport uses #727's shared `buildSpatialChildMap` (it already holds the Constructor rule) plus dev's `sceneObjects`.
+
+**Also in this batch:**
+- **#735** (push gate looks at its own checkout only). The first push of this branch ran the old gate's `git status` over ~200 worktrees and held aylmo at 98–100 °C for minutes. With #735 merged here, the hook runs the new check. known-fixes conflict: union.
+- **The fold.** The gate refused the push: CURRENT.md was 3 days behind, because dev's land job cannot push to protected dev (GH006) and 32 notes were stranded. `land/*` is a fold branch, so session-land-lib's three functions ran here (branch guard and worktree sweep skipped). 32 notes went into PROGRESS/CURRENT; CURRENT.md is 47 lines. This note stays for the gate and folds on the next landing.
+
+**One fix on the land branch.** The rhythm guard (`styles/spine.test.js`) caught two literals.
+- #729's card-row `padding-bottom: 3px` → `var(--di-space-1)` (also 3px).
+- #736's context-menu `gap: 1px` → named as a raw.css hairline exception, like the `-1px` already there.
+
+**Verified on aylmo** (node_modules linked from the nodes-ui worktree: same lockfiles):
+- eslint on the 76 changed JS files: 0 errors.
+- vitest on `src/raw src/project/graph src/studio src/wiki src/styles src/input`: 153 files, 1862 tests passed (after the fix).
+- `rawTestScope` 2/2.
+- CPU 79 → 89 °C under the run (an rclone backup pull was also running).
+- Not run here: the full suite and the server suites (CI runs them). Not seen on screen yet: the owner's look at Nodes on dev after landing.
+
+# land/sync-versions-moxir-2026-10-04
+
+
+## What landed and how
+One batch of six PRs, on the owner's "go merge" (2026-10-04), so dev's required checks run once (branches must be up to
+date; #750 had already merged as 6615ffaa and put the rest BEHIND).
+
+- **In it:** #751 (follow CLI safety), #752 (empty projects both ways), #749 (shelf routes space scope, plus the audit doc it
+  cites), #753 (add-sources), #754 (6 LaserCube Ultra MK2; copy from another install), #756 (production version list).
+- **Conflicts resolved by keeping both sides:** `docs/ai/known-fixes.md` (new rows from #749, #750, #752) and
+  `serverXR/src/follow/followIntegration.test.js` (#750's and #752's new describe blocks, joined at their shared close).
+  Follow suite after the join: 8 files, 80 tests passed (aylmo, 2026-10-04).
+- **Not in it:** #745 (Lite by default; waits for the owner's own merge word) and #757 (follow from now, F4; rebases on
+  this batch once it lands — conflicts expected in follower.js / followStore.js / cli.mjs).
+- **After merge:** the six PRs close as merged; dev deploys; aylmo installs the same commit (owner's rule "dev and local stay one").
+
+## 2026-10-05 — /tools versions come from the lock files; Dependabot bumps can pass again
+
+- Eight Dependabot PRs (#687–#693, #695) failed CI on one assertion only, each naming its own package:
+  `kitCatalogue.test.js` › "prints the version and licence of the package that is installed"
+  (e.g. #691: "dotenv: installed 18.0.4, table says 18.0.3"; 7761 other tests passed).
+  `src/kit/kitStack.js` typed every npm version by hand, so a bump failed by design.
+- Now `virtual:kit-versions` (`kitVersionsPlugin` in `vite.config.js`, the same shape as
+  `virtual:node-anatomy`) reads the table's `npm:` names with acorn and resolves each from
+  `package-lock.json` / `serverXR/package-lock.json`, the top-level entry `import 'x'` gets.
+  Lock files, not node_modules: the Docker build, CI and a fresh clone all have them, and a
+  bump rewrites them in the same change. Only the 37 listed packages ship (all ~750 would be ~25 KB).
+- Guard: a new test fails on any hand-typed npm version (seen failing on dev's table, 37 lines)
+  and on any listed package missing from its lock file (it caught `zod`, which is transitive).
+- Proved on the real case: #691's lock change on top of this branch → kit tests 32/32 pass.
+  Looked at /tools on the dev server (`di-dev up kit-versions`): 57 rows, 38 with a version
+  (37 npm + Node.js), "—" only on standards and services; phone 390 px, no sideways scroll.
+
 ## 2026-10-01 — the desk's Touch page plays looks and the cue list
 
 Found for the MOXIR show: 0 desk scenes, a set of looks and a cue list. The Touch page rendered only

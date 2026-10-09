@@ -74,6 +74,10 @@ services:
       # secret sat in the host .env while the container never saw it.
       TELEGRAM_LOGIN_SECRET: ${TELEGRAM_LOGIN_SECRET:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      # di.bo act tokens: lifetime and tiers (serverXR/src/actTokenTier.js).
+      TELEGRAM_ACT_TOKEN_TTL_MINUTES: ${TELEGRAM_ACT_TOKEN_TTL_MINUTES:-}
+      ACT_TOKEN_ROOT_TELEGRAM_IDS: ${ACT_TOKEN_ROOT_TELEGRAM_IDS:-}
+      ACT_TOKEN_ADMIN_TELEGRAM_IDS: ${ACT_TOKEN_ADMIN_TELEGRAM_IDS:-}
 
       # GitHub App `dii-space-sync` (optional): one-click repo→space sync and
       # its push webhook. Distinct from the OAuth App above -- that one only
@@ -126,7 +130,23 @@ services:
       # approvals to (contentProposals.js — a file for an existing space).
       CONTENT_CHANGE_NOTICES_ENABLED: ${CONTENT_CHANGE_NOTICES_ENABLED:-false}
       APPROVAL_CALLBACK_URL: ${APPROVAL_CALLBACK_URL:-}
+
+      # A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+      # Empty = domains can be saved but nothing switches them on by itself.
+      # The token needs SSL and Certificates: Edit on the platform zone only.
+      CLOUDFLARE_SAAS_ZONE_ID: ${CLOUDFLARE_SAAS_ZONE_ID:-}
+      CLOUDFLARE_SAAS_API_TOKEN: ${CLOUDFLARE_SAAS_API_TOKEN:-}
+      CLOUDFLARE_SAAS_CNAME_TARGET: ${CLOUDFLARE_SAAS_CNAME_TARGET:-}
+      PLATFORM_ORIGIN: ${PLATFORM_ORIGIN:-}
+      PLATFORM_HOSTNAMES: ${PLATFORM_HOSTNAMES:-}
+      DOMAINS_MAX: ${DOMAINS_MAX:-}
       CONTENT_PROPOSAL_TTL_MS: ${CONTENT_PROPOSAL_TTL_MS:-}
+      # A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+      # caddy = this host has its own public IP and Caddy's on-demand TLS
+      # (the Caddyfile's CUSTOM_DOMAINS_SITE block) issues the certificates.
+      DOMAINS_PROVIDER: ${DOMAINS_PROVIDER:-}
+      DOMAINS_PUBLIC_TARGET: ${DOMAINS_PUBLIC_TARGET:-}
+      DOMAINS_PUBLIC_IPS: ${DOMAINS_PUBLIC_IPS:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the
@@ -261,6 +281,10 @@ services:
       # /{space}/map/{project}; this only gives it its own name to hand out.
       # Same inert-until-DNS-exists pattern as DEV_DOMAIN above.
       MAP_DOMAIN: ${MAP_DOMAIN:-map.invalid.internal}
+      # A space on its own domain, without Cloudflare: the Caddyfile's last
+      # block. `https://` turns it into the catch-all for every other name
+      # (with serverXR's DOMAINS_PROVIDER=caddy); the default keeps it inert.
+      CUSTOM_DOMAINS_SITE: ${CUSTOM_DOMAINS_SITE:-custom-domains.invalid.internal}
     # Lets the Caddyfile's dev-tier site block reach the dev tier's Compose
     # project's client container by its host-published port, without
     # joining the two projects to a shared Docker network.

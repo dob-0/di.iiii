@@ -113,7 +113,9 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             // absent) still means "don't touch" — JSON.stringify drops it.
             ...(updates.slug !== undefined ? { slug: updates.slug } : {}),
             ...(updates.ownerUserId !== undefined ? { ownerUserId: updates.ownerUserId } : {}),
-            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {})
+            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {}),
+            // Archive: kept whole, out of the default list (spaces.archived_at).
+            ...(updates.archived !== undefined ? { archived: Boolean(updates.archived) } : {})
         }
     })
     return data.space
@@ -137,6 +139,28 @@ export const listSpaceInvites = async (spaceId) => {
 // Stops one link working. People who already joined through it keep their access.
 export const revokeSpaceInvite = async (spaceId, inviteId) =>
     apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' })
+
+// A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+// Owner-or-admin. Each domain: { hostname, state, live, records, lastError,
+// checkedAt, activeSince }; `connected` is false when the platform is not
+// connected to Cloudflare and nothing will switch a domain on by itself.
+export const listSpaceDomains = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains`)
+    return { domains: Array.isArray(data?.domains) ? data.domains : [], connected: Boolean(data?.connected) }
+}
+
+export const addSpaceDomain = async (spaceId, hostname) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains`, { method: 'POST', body: { hostname } })
+    return data.domain
+}
+
+export const checkSpaceDomain = async (spaceId, hostname) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains/${encodeURIComponent(hostname)}/check`, { method: 'POST', body: {} })
+    return data.domain
+}
+
+export const removeSpaceDomain = async (spaceId, hostname) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains/${encodeURIComponent(hostname)}`, { method: 'DELETE' })
 
 // A space's restore points, newest first: { id, takenAt, reason, actor, objects,
 // projects }. Owner-or-admin. See serverXR/src/spaceStore.js.
@@ -172,9 +196,32 @@ export const redeemSpaceInvite = async (token) =>
 export const getServerSpaceAssetUrl = (spaceId, assetId, { width } = {}) =>
     `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}${width ? `?w=${width}` : ''}`
 
-export const deleteServerSpace = async (spaceId) => {
-    await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })
+// Delete is the soft delete: the space and its projects go to the trash and
+// come back with restoreServerSpace for 30 days. The answer says how many
+// projects went and until when it can be undone ({ trashed, projects,
+// restorableUntil }); a pending approval answers { status: 'pending_approval' }.
+export const deleteServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })
+
+// What a delete would take, read before the click so the confirm can name it:
+// { projects, bytes, protected, holdMs } — `protected` is 'permanent' | 'global' |
+// 'sandbox' | 'front-room' when the server will refuse.
+export const getSpaceFootprint = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/footprint`)
+
+// Spaces in the trash this account may restore, each with the number of
+// projects that went with it and `restorableUntil`.
+export const listTrashedSpaces = async () => {
+    const data = await apiFetch('/api/trash/spaces')
+    return { spaces: data.spaces || [], ttlMs: data.ttlMs || 0 }
 }
+
+export const restoreServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/restore`, { method: 'POST' })
+
+// The one irreversible call: only for a space already in the trash.
+export const purgeServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/purge`, { method: 'DELETE' })
 
 export const touchServerSpace = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/touch`, { method: 'POST' })

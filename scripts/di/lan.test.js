@@ -148,8 +148,10 @@ describe('status and where ask the server which bind is in force', () => {
         expect(cli.split('probeListen(').length - 1).toBe(2)
         // open-file, update and restore each ask before their stop; status, where and
         // the already-running branch of up ask to report the reach; invite asks
-        // so the line it prints names an address the other machine can reach.
-        expect(cli.split('probeReach(home, ').length - 1).toBe(7)
+        // so the line it prints names an address the other machine can reach;
+        // `service install` and `service remove` ask before they hand the
+        // server over, so a `--lan` start comes back as one.
+        expect(cli.split('probeReach(home, ').length - 1).toBe(9)
     })
 })
 
