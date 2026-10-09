@@ -15,11 +15,14 @@ import { surfacesOf } from './surfaces.js'
 import SurfaceOverrides from './SurfaceOverrides.jsx'
 import BeamMirrors from './BeamMirrors.jsx'
 import NightOutside from './NightOutside.jsx'
+import useMeasureRequest from './measure/useMeasureRequest.js'
 
 // The room in high dynamic range with bloom (HdrBloom.jsx): loaded only by a room that asks.
 const HdrBloom = lazy(() => import('./HdrBloom.jsx'))
 // The frame-rate governor (qualityGovernor.js): in a room drawn with a physical haze.
 const QualityGovernor = lazy(() => import('./QualityGovernor.jsx'))
+// The measurement mode (measure/MeasurementMode.jsx): loaded only when asked for (?measure, Alt+Shift+M).
+const MeasurementMode = lazy(() => import('./measure/MeasurementMode.jsx'))
 
 // The document's tone-mapping name → three.js's operator. ACES (Narkowicz's fit,
 // three.js's ACESFilmic) stays the default; 'AgX' (T. Sobotka's AgX, three.js
@@ -104,9 +107,15 @@ export default function RenderSettingsEffect({ renderSettings }) {
         return subscribeHazeField(gl, read)
     }, [gl])
     useHoldFrames(heavyRoom && patchy, 'haze-eddies')
-    if (!heavyRoom) return null
+    // fixed EV100, no auto exposure / bloom / veil / work light, probes (MEASUREMENT_MODE.md)
+    const measureRequest = useMeasureRequest()
+    const measure = measureRequest ? (
+        <MeasurementMode renderSettings={renderSettings} request={measureRequest} toneMapping={toneMappingOf(renderSettings?.toneMapping)} />
+    ) : null
+    if (!heavyRoom) return measure ? <Suspense fallback={null}>{measure}</Suspense> : null
     return (
         <Suspense fallback={null}>
+            {measure}
             {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}
             {governed ? <QualityGovernor renderSettings={renderSettings} /> : null}
             {surfaces ? <SurfaceOverrides surfaces={surfaces} /> : null}
