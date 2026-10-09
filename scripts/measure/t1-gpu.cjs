@@ -40,7 +40,14 @@ const main = async () => {
     page.on('console', (m) => { if (m.type() === 'error') logs.push(m.text()) })
     try {
         await page.goto(url, { waitUntil: 'load', timeout: 60000 })
-        await page.waitForFunction(() => window.__T1 && window.__T1.done, null, { timeout: 180000, polling: 500 })
+        // a background tab gets no animation frames: the scene would never draw
+        await page.bringToFront()
+        const visibility = await page.evaluate(() => document.visibilityState)
+        if (visibility !== 'visible') console.log(`warning: the page is ${visibility}; frames may be throttled`)
+        await page.waitForFunction(() => window.__T1 && window.__T1.done, null, { timeout: 180000, polling: 500 }).catch(async (e) => {
+            const where = await page.evaluate(() => ({ visibility: document.visibilityState, mode: Boolean(window.__diMeasure), t1: window.__T1 || null })).catch(() => null)
+            throw new Error(`${e.message}; page state ${JSON.stringify(where)}; console errors ${JSON.stringify(logs.slice(0, 10))}`)
+        })
         const r = await page.evaluate(() => window.__T1)
         if (r.error) throw new Error(`the harness failed: ${r.error}`)
         const gpu = r.state?.renderer?.gpu || 'unknown'
