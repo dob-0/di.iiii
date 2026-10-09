@@ -14,20 +14,23 @@
 #   Three rigid moves, each from its source:
 #     D_DJ   the stage floor (the halo PARs, the fan and spine B380F behind the step, smoke machine 4): the step's move,
 #            v1.0 booth centre (0.128, 23.5; the owner's hand placement kept in the copy) -> (-5.2, 4.65)
-#     D_CUT  everything on the cut (curtain, x, ash-wall grazers, blinders): the cut's rigid offset as stage-line.mjs
+#     D_CUT  everything on the cut (curtain, x, the back grazers, blinders): the cut's rigid offset as stage-line.mjs
 #            derives it (recutOps over slopedLineRigging: the 10-07 cut at z 21 / axis -1 / girder 7.95 -> the v1.1 cut at
 #            z 0.15 / axis -5.0 / girder 7.6): (-4.0, -0.35, -20.85); hall-site test re-derives it
-#     D_WALL the ash wall (the lasers' beam stop) stays BEHIND THE DJ (x follows D_DJ) and hangs from the bridge's back
-#            girder as in v1.0 (y and z follow D_CUT)
+#     (v1.0's ash wall, the lasers' beam stop, is GONE in v1.1: owner 2026-10-09 "I don't need the ash wall"; no panel goes back
+#      without his word. The lasers end on the hall's own press, below.)
 #   Every unit's aim: a unit that moved keeps its rotation (the look is relative to the stage), EXCEPT where its v1.0 beam
 #   ended on a stage thing that moved by another delta (e.g. the grazers on the wall): it is re-aimed at that same point,
 #   moved. A hall-fixed unit keeps its rotation unless its v1.0 beam ended on a stage thing (re-aimed the same way).
 #   "Ended on" = the first thing its axis meets, cast against the hall's triangles + the rig's boxes (occlusion_lib.Obstacles,
 #   Moller-Trumbore), in the v1.0 world (hall v8-show-back21-far41 + v1.0's solids + the 10-07 cut) and in the v1.1 world.
-#   Lasers: each of the 12 beams re-aimed at its own v1.0 point on the ash wall, moved by D_WALL; checked with the v1.0
-#   method: 25 test rays over the controller zone + mount tolerance (0.8 deg, review B2), every ray must end on the wall;
-#   the margin is the largest fan that still all ends on it, minus 0.8 deg. Safety at the 6 W unit (owner 10-08 night:
-#   6 W for brightness AND safety): NOHD (IEC 60825-1:2014 Table A.1, 0.25 s, 4 mm, 1 mrad).
+#   Lasers (owner 2026-10-09): ONE static beam per LaserCube (6 beams; the 12 of v1.0 were our own 2-point-scan choice, not his),
+#   the cube's whole 6 W in it (duty 1), and no beam-stop panel. Each cube's beam is re-aimed to end on the hall's own matte
+#   press (the press body's -z face, or the crown's): per cube a grid of 47 candidate points (LASER_GRID: the -z face, the crown's front, the two side faces), cast with the v1.0 method (occlusion_lib over hall v9-show-park + the rig boxes, no panel): the axis plus 60 rays
+#   over the controller zone + mount tolerance (0.8 deg, review B2) must ALL first-hit the press, at >= 3.0 m (HS(G)95) and
+#   z <= 3.3; the margin is the largest fan that still all ends on it, minus 0.8 deg. The cube keeps the candidate with the
+#   larger margin; the next best is recorded as `alt` (the one to swap in by eye). Safety at the 6 W unit, ONE beam (the scan-failure case of IEC TR 60825-3,
+#   unchanged from v1.0): NOHD (IEC 60825-1:2014 Table A.1, 0.25 s, 4 mm, 1 mrad).
 #   Power: the same units, so the same connected and running loads (moxir_v1.py power()); the circuits re-derived by
 #   epic_plot.circuits() from the moved distro (D-STAGE behind the stage, house left) - cable runs = nearest-neighbour
 #   floor Manhattan + rises + 10 % (as v1.0), BS 7671 Table 4D2B volt drop.
@@ -63,8 +66,7 @@ OLD_BOOTH = (0.128, 23.5)                                  # v1.0 copy: decks at
 NEW_BOOTH = (DES['booth']['centre_x_m'], DES['booth']['front_z_m'] - DES['booth']['depth_m'] / 2)
 D_DJ = np.array([NEW_BOOTH[0] - OLD_BOOTH[0], 0.0, NEW_BOOTH[1] - OLD_BOOTH[1]])
 D_CUT = np.array([-4.0, -0.35, -20.85])                    # stage-line.mjs recut offset (spread 0.000 m), see the header
-D_WALL = np.array([D_DJ[0], D_CUT[1], D_CUT[2]])
-CUT_PARTS = {'curtain', 'x', 'ash wall', 'blinders'}
+CUT_PARTS = {'curtain', 'x', 'ash wall', 'press graze', 'blinders'}
 FLOOR_PARTS = {'halo', 'fan', 'spine'}
 FAN_DEG, ZONE_DEG = 0.8, 0.3
 LASER_W = 6.0                                               # owner 10-08 night: 6 W for brightness AND safety
@@ -126,9 +128,8 @@ def new_solids():
     out = []
     for s in V10['solids']:
         if s['id'] == 'rig-ash-wall':
-            out.append(dict(s, p=[R3(v) for v in np.array(s['p']) + D_WALL],
-                            name=s['name'].replace('20.2', '%.2f' % (s['p'][2] + D_WALL[2]))))
-        elif s['id'] == 'rig-tower-cube6':
+            continue                                       # v1.1: no beam-stop panel (owner 2026-10-09); the lasers end on the press
+        if s['id'] == 'rig-tower-cube6':
             out.append(dict(s))
         # the barrier and v1.0's PA by class are replaced below
     bx0, bx1 = DES['barrier']['x_m']
@@ -146,8 +147,7 @@ def new_solids():
 
 SOLIDS = new_solids()
 NEW_W = world(GLB_NEW, G_NEW, SOLIDS, TRUSS_NEW, crane_boxes(G_NEW), NEW_BOOTH)
-WALL = next(s for s in SOLIDS if s['id'] == 'rig-ash-wall')
-STAGE_THINGS = {'ash-wall': D_WALL, 'truss': D_CUT, 'the DJ': D_DJ, 'deck-1': D_DJ, 'deck-2': D_DJ, 'deck-3': D_DJ}
+STAGE_THINGS = {'truss': D_CUT, 'the DJ': D_DJ, 'deck-1': D_DJ, 'deck-2': D_DJ, 'deck-3': D_DJ}
 
 
 def first_hit(Wd, p, d, skip_box=(), reach=80.0):
@@ -157,6 +157,11 @@ def first_hit(Wd, p, d, skip_box=(), reach=80.0):
 
 def own_mount(f):
     return ('truss',) if f.get('part') in CUT_PARTS else ()
+
+
+# The four back grazers lit v1.0's ash wall (their v1.0 beams ended on it). With the wall gone they are re-aimed to graze the hall's
+# own press face from the cut (x spread along it, y low on the face): lit ember 12 % they only kiss the press (albedo 0.04). Part renamed.
+PRESS_GRAZE = {'rig-par-cut-bridge-01': (0.7, 3.4, 0.25), 'rig-par-cut-bridge-02': (1.3, 3.4, 0.25), 'rig-par-cut-bridge-03': (1.9, 3.4, 0.25), 'rig-par-cut-bridge-04': (2.5, 3.4, 0.25)}
 
 
 # ------------------------------------------------------------------ the units
@@ -188,6 +193,11 @@ def move_units():
             target = hit + STAGE_THINGS[n0]
             if dl is not None and np.allclose(STAGE_THINGS[n0], dl):
                 target = None                              # moved with what it lights: the rotation already holds
+        if n0 == 'ash-wall':
+            target = np.array(PRESS_GRAZE[f['id']], float)    # v1.1: the wall is gone; graze the press face instead
+            row['re_aimed_at_press'] = [R3(v) for v in target]
+            g['part'] = 'press graze'
+            g['position'] = g['position'].replace('to graze the ash wall', 'to graze the hall\'s press face (v1.1: no ash wall)')
         if f['id'] in OFF_FLOOR and t0 is not None:
             target = np.array(f['p']) + t0 * d0            # the same point it lit, from its new place
         if target is not None:
@@ -242,45 +252,117 @@ def nudge(units, bad):
 
 
 # ------------------------------------------------------------------ the lasers
-def wall_rect():
-    x0, x1 = WALL['p'][0] - WALL['s'][0] / 2, WALL['p'][0] + WALL['s'][0] / 2
-    return (x0, x1), (WALL['p'][1], WALL['p'][1] + WALL['s'][1]), WALL['p'][2] - WALL['s'][2] / 2
+LASER_ALLOWED = {'press', 'press-crown'}      # what a beam may end on: the hall's own matte press (albedo 0.04, hall.json); never steel, glass, a column of the crowd's side
+LASER_MIN_END_M = 3.0                          # HS(G)95: >= 3.0 m over anywhere people can stand
+LASER_MAX_Z = 3.3                              # the press ends at z 3.2; nothing may end past it (the barrier is z 8.2)
+# Candidate end points on the press per cube: x 0.5 ... 2.9 every 0.3 m across the face, at y 3.6 / 3.9 / 4.2 on the face (z 0.2) and y 4.5 / 4.9 on the
+# crown's front (z 0.8). Each is cast with the full fan; the cube keeps the best margin, the second best (>= 0.5 m from every other chosen end) is `alt`.
+LASER_GRID = ([(x, y, 0.2) for x in (0.5, 0.8, 1.1, 1.4, 1.7, 2.0, 2.3, 2.6, 2.9) for y in (3.6, 3.9, 4.2)]
+              + [(x, y, 0.8) for x in (0.7, 1.4, 2.1, 2.8) for y in (4.5, 4.9)]
+              # and the press body's two side faces (x 0.25 facing house left, x 3.05 facing house right; each z 0.2-3.2 deep, so 3 m of target)
+              + [(xf, y, z) for xf in (0.25, 3.05) for y in (3.5, 3.9) for z in (1.0, 1.8, 2.6)])
 
 
-def all_on_wall(p, d, half, length):
+def ends_on_press(p, d, half):
+    """The axis + the controller-zone/mount fan (occlusion_lib AREA_RINGS: 61 rays): every ray's FIRST hit must be the press
+    (or its crown) at >= 3.0 m and z <= 3.3. Returns (ok, the set of names hit, the lowest end height)."""
     dirs, _ = O.cone_rays(d, half, O.AREA_RINGS)
+    names, low = set(), 99.0
     for q in dirs:
-        t, n, c = first_hit(NEW_W, p, q, reach=length + 3.0)
-        if n != 'ash-wall':
-            return False, n
-    return True, 'ash-wall'
+        t, n, c = first_hit(NEW_W, p, q, reach=120.0)
+        if t is None:
+            return False, {'open air'}, low
+        h = p + t * q
+        names.add(n)
+        low = min(low, float(h[1]))
+        if n not in LASER_ALLOWED or h[1] < LASER_MIN_END_M or h[2] > LASER_MAX_Z:
+            return False, names, low
+    return True, names, low
+
+
+def fan_margin(p, d):
+    lo, hi = 0.0, 3.0                              # the largest fan (half angle) that still all ends on the press
+    if not ends_on_press(p, d, 0.0)[0]:
+        return None
+    for _ in range(10):
+        mid = (lo + hi) / 2
+        if ends_on_press(p, d, mid)[0]:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+LASER_SPOT_APART_M = 0.5                        # two beams never end within 0.5 m of each other (6 W + 6 W + 2 W on one spot of paint is a burn, not a mark)
+
+
+def laser_candidates(f):
+    p = np.array(f['p'], float)
+    cands = []
+    for (x, y, zf) in LASER_GRID:
+        T = np.array([x, y, zf])
+        d = (T - p) / np.linalg.norm(T - p)
+        if not ends_on_press(p, d, FAN_DEG)[0]:            # the 0.8 deg fan must all end on the press; else not a candidate
+            continue
+        m = fan_margin(p, d)
+        t, nm, cl = first_hit(NEW_W, p, d, reach=120.0)           # where the axis REALLY lands (a side-face aim point can lie behind the near face)
+        hit = [R3(q) for q in p + t * d]
+        if any(c['to'] == hit for c in cands):
+            continue
+        cands.append({'to': hit, 'aimed_at': [R3(q) for q in T], 'half_fan_deg': round(m, 2), 'margin_after_zone_deg': round(m - FAN_DEG, 2)})
+    cands.sort(key=lambda c: (-c['half_fan_deg'], c['to'][1], c['to'][0]))
+    return cands
 
 
 def lasers(units):
     out = []
-    for f in units:
-        if f['type'] != 'ext-lc-ultra-mk2':
-            continue
+    cubes = [f for f in units if f['type'] == 'ext-lc-ultra-mk2']
+    cand = {f['id']: laser_candidates(f) for f in cubes}
+    order = sorted(cubes, key=lambda f: (len(cand[f['id']]), f['id']))              # the most constrained cube first
+    best = {'score': None, 'pick': None}
+
+    def apart(c, taken):
+        return all(np.linalg.norm(np.array(c['to']) - np.array(t['to'])) >= LASER_SPOT_APART_M for t in taken.values())
+
+    def dfs(i, taken):                                   # every cube gets a candidate, no two ends within 0.5 m: maximise the smallest margin, then the sum
+        if i == len(order):
+            sc = (min(c['half_fan_deg'] for c in taken.values()), sum(c['half_fan_deg'] for c in taken.values()))
+            if best['score'] is None or sc > best['score']:
+                best['score'], best['pick'] = sc, dict(taken)
+            return
+        for c in cand[order[i]['id']]:
+            if apart(c, taken):
+                taken[order[i]['id']] = c
+                dfs(i + 1, taken)
+                del taken[order[i]['id']]
+    dfs(0, {})
+    pick = best['pick'] or {f['id']: ({'to': [1.4, 3.9, 0.2], 'half_fan_deg': 0.0, 'margin_after_zone_deg': -FAN_DEG}) for f in cubes}
+    for f in cubes:
+        n = int(f['id'][-2:])
         p = np.array(f['p'], float)
-        for b in f['laser']['beams']:
-            to = np.array(b['to'], float) + D_WALL
-            v = to - p
-            length = float(np.linalg.norm(v))
-            d = v / length
-            ok, end = all_on_wall(p, d, FAN_DEG, length)
-            lo, hi = 0.0, 3.0                              # the largest fan that still all ends on the wall
-            for _ in range(10):
-                mid = (lo + hi) / 2
-                if all_on_wall(p, d, mid, length)[0]:
-                    lo = mid
-                else:
-                    hi = mid
-            near = []                                      # what the axis passes nearest (sampled every 0.25 m), the wall excluded
-            b.update({'to': [R3(x) for x in to], 'length_m': round(length, 1), 'pass': ok, 'margin_after_zone_deg': round(lo - FAN_DEG, 2),
-                      'r': L.rot_for_dir(d), 'ends_on': end, 'max_z_m': R3(max(p[2], to[2]))})
-            out.append({'beam': b['id'], 'cube': f['id'], 'from': f['p'], 'to': b['to'], 'length_m': b['length_m'], 'pass': ok, 'ends_on': end,
-                        'margin_after_zone_deg': b['margin_after_zone_deg'], 'max_z_m': b['max_z_m']})
-        f['laser']['note_v1_1'] = 'beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL %s); the cube stays where v1.0 hangs it' % [R3(x) for x in D_WALL]
+        cs = cand[f['id']]
+        keep = pick[f['id']]
+        # the swap-in alternative: the best other candidate that is still 0.5 m from every OTHER cube's chosen end
+        others = [np.array(pick[k]['to']) for k in pick if k != f['id']]
+        alt = next((c for c in cs if c['to'] != keep['to'] and all(np.linalg.norm(np.array(c['to']) - t) >= LASER_SPOT_APART_M for t in others)), None)
+        T = np.array(keep['to'], float)
+        v = T - p
+        length = float(np.linalg.norm(v))
+        d = v / length
+        ok, names, low = ends_on_press(p, d, FAN_DEG)
+        old = [b['id'] for b in f['laser']['beams']]
+        beam = {'id': '%da' % n, 'to': [R3(x) for x in T], 'length_m': round(length, 1), 'pass': ok, 'margin_after_zone_deg': keep['margin_after_zone_deg'],
+                'r': L.rot_for_dir(d), 'ends_on': sorted(names)[0] if len(names) == 1 else sorted(names), 'max_z_m': R3(T[2]), 'end_height_m': R3(T[1]),
+                'lowest_end_m_over_fan': R3(low), 'alt': alt, 'was_v1_0_beams': old, 'duty': 1.0, 'candidates_that_pass': len(cs)}
+        f['laser']['beams'] = [beam]
+        f['laser']['duty'] = 1.0
+        f['laser']['room_flux_share'] = 1.0
+        f['laser']['note_v1_1'] = ("ONE static beam per cube, the cube's whole 6 W (owner 2026-10-09: 6 beams, not 12); no ash wall: the beam ends on the hall's press at %s "
+                                   "(margin %s deg); next best %s. Beam id kept as %da so the looks (cube6a) still match; v1.0 had %s." % (
+                                       beam['to'], beam['margin_after_zone_deg'], None if alt is None else '%s (%s deg)' % (alt['to'], alt['margin_after_zone_deg']), n, old))
+        out.append({'beam': beam['id'], 'cube': f['id'], 'from': f['p'], 'to': beam['to'], 'length_m': beam['length_m'], 'pass': ok, 'ends_on': beam['ends_on'],
+                    'margin_after_zone_deg': beam['margin_after_zone_deg'], 'max_z_m': beam['max_z_m'], 'end_height_m': beam['end_height_m'], 'alt': alt,
+                    'was_v1_0_beams': old})
     return out
 
 
@@ -325,9 +407,56 @@ def spotter(units):
             'method': 'each beam sampled every 1 m; a sample is seen if the sight line from the eye reaches it with nothing in between (occlusion_lib.Obstacles over hall v9-show-park + the rig boxes); "whole" = the share of samples seen'}
 
 
-def nohd(P=LASER_W, a=0.004, phi=0.001):
+def nohd(P=LASER_W, a=0.004, phi=0.001, rho=None):
+    """NOHD of ONE beam carrying the cube's whole power P (the scan-failure case; the same figure with 1 or 2 beams drawn, because the
+    safety case never split the power), and the diffuse hazard distance off a surface of reflectance rho (default: the press, hall.json)."""
+    rho = G_NEW['albedo']['press'] if rho is None else rho
     mpe = 18 * 0.25 ** 0.75 / 0.25
-    return round((math.sqrt(4 * P / (math.pi * mpe)) - a) / phi), round(math.sqrt(0.05 * P / (math.pi * mpe)), 3)
+    return round((math.sqrt(4 * P / (math.pi * mpe)) - a) / phi), round(math.sqrt(rho * P / (math.pi * mpe)), 3)
+
+
+EYES = {'foh': (-5.2, 1.6, 29.0), 'z38': (0.0, 1.6, 38.0)}
+
+
+def brightness(units, sigmas=(0.005, 0.02)):
+    """cd/m2 of each beam in haze, the moxir_v1.py beam_vis method (Henyey-Greenstein g 0.7 single scattering, a 4 mm + 1 mrad beam,
+    9 samples along it, the median of the samples an eye sees), at the 6 W unit with the cube's whole power in the ONE beam (duty 1).
+    Eyes: the FOH desk (z 29) and v1.0's z 38. The same call with duty 0.45 reproduces v1.0's two-beam figures."""
+    sys.argv = [sys.argv[0], '--repo', REPO]
+    import epic_plot as EPL
+    LV = EPL.LV
+    g = LV.V2['haze']['g']
+    out = {}
+    for f in units:
+        if f['type'] != 'ext-lc-ultra-mk2':
+            continue
+        b = f['laser']['beams'][0]
+        w = LV.VARIANTS['6W']
+        mix = {455: 1.0, 525: 1.0, 638: 1.0} if f['laser']['colour'] == 'ash white' else {638: 1.0, 525: 0.1}
+        Pc = sum(w[l] * k for l, k in mix.items())
+        lm = sum(683 * LV.V_LAMBDA[l] * w[l] * k for l, k in mix.items())
+        p = np.array(f['p'], float)
+        to = np.array(b['to'], float)
+        length = float(np.linalg.norm(to - p))
+        d = (to - p) / length
+        row = {'lm_full_power': round(lm, 1), 'optical_w': round(Pc, 2), 'duty': b.get('duty', 1.0)}
+        for en, eye in EYES.items():
+            e = np.array(eye, float)
+            for sg in sigmas:
+                pts = []
+                for sm in np.linspace(1.0, length - 0.5, 9):
+                    q = p + d * sm
+                    v = q - e
+                    dist = float(np.linalg.norm(v))
+                    t, nm, cl = first_hit(NEW_W, e, v / dist, reach=dist - 0.3)
+                    th = math.acos(max(-1.0, min(1.0, float((-v / dist) @ d))))
+                    wd = L.LASER_A_M + L.LASER_PHI * sm
+                    Lr = sg * LV.p_hg(th, g) * Pc * row['duty'] * math.exp(-sg * sm) / (wd * max(math.sin(th), 1e-3)) * math.exp(-sg * dist) * (lm / Pc)
+                    pts.append((t is None, Lr))
+                seen = [c for s_, c in pts if s_]
+                row['%s_sigma_%g' % (en, sg)] = {'seen_share': round(len(seen) / len(pts), 2), 'cd_m2': round(float(np.median(seen)), 1) if seen else 0.0}
+        out[b['id']] = row
+    return out
 
 
 # ------------------------------------------------------------------ power (the same units; circuits from the moved distro)
@@ -458,22 +587,23 @@ def fig_plan(units, solids, path, xr=(-16, 16), zr=(-44, 32), keep_labels=None, 
     for s in solids:
         x, _, z = s['p']
         sx, _, sz = (0.29, 0, 0.29) if s['kind'] == 'tower' else s['s']
-        c = {'rig-ash-wall': '#ffffff', 'rig-crowd-barrier': '#ff4a3a', 'rig-foh-riser': '#7f9cff'}.get(s['id'], '#6fa8ff' if s['id'].startswith('rig-pa-') else '#cccccc')
+        c = {'rig-crowd-barrier': '#ff4a3a', 'rig-foh-riser': '#7f9cff'}.get(s['id'], '#6fa8ff' if s['id'].startswith('rig-pa-') else '#cccccc')
         ax.add_patch(Rectangle((x - sx / 2, z - sz / 2), sx, max(sz, 0.15), fc=c, ec=c, zorder=7))
-        lx, lz = (x - sx / 2 + 0.1, z) if s['id'].startswith('rig-pa-') else (x + sx / 2 + 0.2, z - (0.6 if s['id'] == 'rig-ash-wall' else 0))
-        ax.text(lx, lz, {'rig-ash-wall': 'ash wall (beam stop)', 'rig-crowd-barrier': 'barrier', 'rig-foh-riser': 'FOH', 'rig-pa-l': 'spk L\n(organiser)', 'rig-pa-r': 'spk R\n(organiser)', 'rig-tower-cube6': ''}.get(s['id'], s['id']),
+        lx, lz = (x - sx / 2 + 0.1, z) if s['id'].startswith('rig-pa-') else (x + sx / 2 + 0.2, z - 0)
+        ax.text(lx, lz, {'rig-crowd-barrier': 'barrier', 'rig-foh-riser': 'FOH', 'rig-pa-l': 'spk L\n(organiser)', 'rig-pa-r': 'spk R\n(organiser)', 'rig-tower-cube6': ''}.get(s['id'], s['id']),
                 color='#0d0e10' if s['id'].startswith('rig-pa-') else c, fontsize=(7 if xr[1] - xr[0] < 24 else 5), zorder=8, va='center')
     cx, mz = NEW_BOOTH
     ax.add_patch(Rectangle((cx - 1.5, mz - 1.0), 3.0, 2.0, fc='#1fa35a', ec='#6fe08f', zorder=7))
     ax.text(cx, mz, 'DJ step 0.4 m', color='#0d0e10', fontsize=7, ha='center', va='center', zorder=8)
     tx = [TRUSS_NEW.p[0] - TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE), TRUSS_NEW.p[0] + TRUSS_NEW.size[0] / 2 * math.cos(TRUSS_NEW_ANGLE)]
     ax.plot(tx, [TRUSS_NEW.p[2]] * 2, color='#ffb08a', lw=4, zorder=9)
-    ax.text(tx[0] + 0.2, TRUSS_NEW.p[2] + 0.45, 'the cut: LOW %.2f m house left -> HIGH %.2f m' % (CUT_ENDS[0], CUT_ENDS[1]), color='#ffb08a', fontsize=7, zorder=11, bbox=dict(fc='#141518', ec='none', alpha=0.85, pad=1))
+    ax.text(tx[0] + 0.2, TRUSS_NEW.p[2] - 2.0, 'the cut: LOW %.2f m house left -> HIGH %.2f m' % (CUT_ENDS[0], CUT_ENDS[1]), color='#ffb08a', fontsize=7, zorder=11, bbox=dict(fc='#141518', ec='none', alpha=0.85, pad=1))
     for u in units:
         x, y, z = u['p']
         if u['type'] == 'ext-lc-ultra-mk2':
             for b in u['laser']['beams']:
-                ax.plot([x, b['to'][0]], [z, b['to'][2]], color=EMBER if u['colour'].lower() == EMBER else ASH, lw=0.8, alpha=0.9, zorder=6)
+                ax.plot([x, b['to'][0]], [z, b['to'][2]], color=EMBER if u['colour'].lower() == EMBER else ASH, lw=1.0, alpha=0.95, zorder=6)
+                ax.plot(b['to'][0], b['to'][2], '*', color=EMBER if u['colour'].lower() == EMBER else '#ffffff', ms=7, zorder=12)
             ax.plot(x, z, 'o', color='#f5f2ea', ms=6, zorder=10)
             ax.text(x + 0.4, z, 'cube %s%s' % (u['id'][-1], ' + tower' if u['id'][-1] == '6' else ''), color='#f5f2ea', fontsize=7, zorder=10)
             continue
@@ -481,8 +611,8 @@ def fig_plan(units, solids, path, xr=(-16, 16), zr=(-44, 32), keep_labels=None, 
         ax.plot(x, z, 's' if u['status'] == 'used' else 'x', color=c, ms=3.2, zorder=10)
     ax.set_title("MOXIR v1.1 - the stage on the owner's new marks (2026-10-08 night): plan, the press end", color='#f5f2ea', fontsize=11, loc='left')
     lines = ['DJ step x -6.7..-3.7, z 3.65..5.65 (his box x -6.3..-4.1, z 3.7..5.6) · speakers = his boxes (L moved +0.4 m off the transformer and trimmed 0.3 m off the step; R moved +0.9 m off the press pedestal)',
-             'near crane parked z 0.15 (as found 42.5) · the cut axis x -5.0 · ash wall z %.2f, x %.2f +-2 · far crane z -41 (cubes 1-3)' % (WALL['p'][2], WALL['p'][0]),
-             'barrier z 8.2 · floor z 8.2..28 · FOH z 29 · squares = units used, x = held back · lines = the 12 laser beams onto the ash wall']
+             'near crane parked z 0.15 (as found 42.5) · the cut axis x -5.0 · no ash wall: the 6 beams end on the press (z 0.2 face / z 0.8 crown) · far crane z -41 (cubes 1-3)',
+             'barrier z 8.2 · floor z 8.2..28 · FOH z 29 · squares = units used, x = held back · lines = the 6 laser beams (one per cube) onto the hall\'s press']
     for i, t in enumerate(lines):
         fig.text(0.07, 0.035 - i * 0.012, t, color='#c9ccd1', fontsize=7.5)
     for t in ax.texts:
@@ -606,12 +736,14 @@ def run():
     laser_rows = lasers(units)
     n_m, r_nhz = nohd()
     checks = {
-        'deltas': {'D_DJ': [R3(v) for v in D_DJ], 'D_CUT': [R3(v) for v in D_CUT], 'D_WALL': [R3(v) for v in D_WALL]},
+        'deltas': {'D_DJ': [R3(v) for v in D_DJ], 'D_CUT': [R3(v) for v in D_CUT]},
         'units': rows, 'nudged': nudged,
         'lasers': laser_rows, 'lasers_pass': all(r['pass'] for r in laser_rows),
         'lasers_min_margin_deg': min(r['margin_after_zone_deg'] for r in laser_rows),
         'lasers_never_over_audience': all(r['max_z_m'] < DES['barrier']['z_m'] for r in laser_rows),
-        'laser_safety_6w': {'nohd_m': n_m, 'diffuse_nhz_m_off_the_wall': r_nhz, 'basis': 'IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho 0.05 (matte black paint, ASSUMED)'},
+        'laser_count': len(laser_rows), 'laser_beams_per_cube': 1, 'laser_rule_margin_deg_v1_0': 0.5,
+        'laser_brightness_6w_one_beam': brightness(units),
+        'laser_safety_6w': {'nohd_m': n_m, 'diffuse_nhz_m_off_the_press': r_nhz, 'nohd_unchanged_by_one_beam': True, 'basis': 'IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho = the press albedo 0.0407 (hall.json, matte dark; NOT measured). ONE beam carries the whole cube power of 6 W, as the scan-failure case always did, so the NOHD does not change with 1 or 2 beams drawn'},
         'ends_changed': [r for r in rows if 'v1_1_end' in r and r.get('v1_0_end') != r['v1_1_end']],
         'new_blocks': [r for r in rows if r.get('v1_1_end_cls') in ('crane', 'column', 'column head', 'barrier', 'pa', 'stage') and r.get('v1_0_end') != r.get('v1_1_end')],
         'on_the_floor': [u['id'] for u in units if on_floor(u['p']) and u['id'] not in OFF_FLOOR],
@@ -637,6 +769,9 @@ def rig_file(units, checks, P, net):
                       'the press crown 4.2-5.6 m (+-20 %): the park keeps 0.57 m from it', 'the LaserCubes: 6 W (owner 10-08 night) for brightness AND safety',
                       'the hall temperature at night: 0-5 C (measure)', 'the haze reach and sigma (designed for 0.005/m)', 'the distro and FOH places (walk them)']
     rig['fixtures'] = units
+    rig['laser_duty'] = 1.0
+    rig['lasers_what'] = ("v1.1 (owner 2026-10-09): 6 beams, ONE static beam per LaserCube with the cube's whole 6 W (duty 1); no ash wall, no panel; each beam ends on the hall's "
+                          "own press (face z 0.2 or crown z 0.8, >= 3.0 m, z <= 3.3). The 12 beams and the wall of v1.0 are v1.0's record.")
     rig['solids'] = SOLIDS
     rig.pop('plan_b_solids', None)
     rig['stage'] = {'booth_from': list(OLD_BOOTH), 'booth_to': [R3(v) for v in NEW_BOOTH], 'move_booth_by': [R3(v) for v in D_DJ], 'deck_h_m': DES['booth']['deck_h_m'],
@@ -655,20 +790,54 @@ def rig_file(units, checks, P, net):
     rig['power'] = P
     rig['network'] = dict(V10['network'], links=net['links'])
     rig['checks_v1_1'] = checks
-    rig['crew'] = CREW
+    rig['crew'] = crew_of(checks)
+    _retext(rig)
     rig['entrance'] = ENTRANCE
     rig['organiser'] = ORGANISER
     rig['schema'] = V10['schema'] + ' v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.'
     return rig
 
 
-CREW = [
-    {'who': 'the owner (Dob)', 'role': 'laser content: the scanner programmer (LaserOS cues per moment); not the operator on the E-stop', 'where': 'FOH'},
-    {'who': 'Emilya', 'role': 'lights: the lighting operator on the desk (the 13 cues, GO by the music), the looks', 'where': 'FOH'},
-    {'who': 'Dima', 'role': 'tech + laser: the laser operator, holds E-STOP 1 at FOH; the cubes, the network, the power-on checks', 'where': 'FOH (E-stop 1); the cubes on the build day'},
-    {'who': 'Kira', 'role': 'volunteer: the laser SPOTTER with E-STOP 2 at x -9, z 12 (house left, in front of the stage line; sees every beam whole with FOH, v1.0 engine)', 'where': 'x -9, z 12 (to re-check for v1.1: the stage moved)'},
-    {'who': 'Eter', 'role': "volunteer: smoke runs (the 4 UP-YZ31P: refill, the burst timer), the barrier line with the organiser's security, the artists' route kept clear", 'where': 'roaming; smoke 4 behind the stage, 1-2 in the far nave, 3 at the press'},
-    {'who': "the organiser (MOXIR)", 'role': 'tickets, the event safety lead (and the laser safety officer named on the permit, if not Dima), security, the sound (Poligraf), the power board and the electrician', 'where': '-'}]
+def crew_of(checks):
+    sp = checks['spotter']['chosen']
+    where = 'x %g, z %g' % (sp['at'][0], sp['at'][1])
+    return [
+        {'who': 'the owner (Dob)', 'role': 'laser content: the scanner programmer (LaserOS cues per moment); not the operator on the E-stop', 'where': 'FOH'},
+        {'who': 'Emilya', 'role': 'lights: the lighting operator on the desk (the 13 cues, GO by the music), the looks', 'where': 'FOH'},
+        {'who': 'Dima', 'role': 'tech + laser: the laser operator, holds E-STOP 1 at FOH; the cubes, the network, the power-on checks', 'where': 'FOH (E-stop 1); the cubes on the build day'},
+        {'who': 'Kira', 'role': 'volunteer: the laser SPOTTER with E-STOP 2 at %s (behind the barrier; with FOH sees >= %d %% of every beam; chosen by the v1.1 sight-line cast, not v1.0\'s x -9, z 12 which is on the v1.1 dance floor)' % (where, int(sp['with_foh_min'] * 100)), 'where': where},
+        {'who': 'Eter', 'role': "volunteer: smoke runs (the 4 UP-YZ31P: refill, the burst timer), the barrier line with the organiser's security, the artists' route kept clear", 'where': 'roaming; smoke 4 behind the stage, 1-2 in the far nave, 3 at the press'},
+        {'who': "the organiser (MOXIR)", 'role': 'tickets, the event safety lead (and the laser safety officer named on the permit, if not Dima), security, the sound (Poligraf), the power board and the electrician', 'where': '-'}]
+
+
+def _retext(rig):
+    """v1.0's texts that name the 12 lines, the 2 beams per cube or the ash wall: rewritten for v1.1 (the structure of the data is unchanged)."""
+    subs = [('all 12 laser lines', 'all 6 laser lines'), ('all 12 lines', 'all 6 lines'), ('never all 12', 'never all 6'),
+            ('the cube drawing a single point (duty ~0.9)', 'the cube drawing its one point (duty 1)'), ('duty ~0.9', 'duty 1'),
+            ('one beam (6a)', 'its one beam (6a)'), ('to the wall behind the DJ', 'to the press'), ('to graze the ash wall', "to graze the hall's press face"),
+            ('the 4 grazers, ember 5-15 %', 'the 4 back grazers on the press face, ember 5-15 %')]
+    def walk(o):
+        if isinstance(o, dict):
+            for k in list(o):
+                v = o[k]
+                if k == 'ash wall':                                  # a look part / console fader named after the wall
+                    o['press graze'] = o.pop(k)
+                    v = o['press graze']
+                    k = 'press graze'
+                o[k] = walk(v)
+            return o
+        if isinstance(o, list):
+            return [walk(x) for x in o]
+        if isinstance(o, str):
+            for a, b in subs:
+                o = o.replace(a, b)
+            return 'press graze' if o == 'ash wall' else o
+        return o
+    for key in ('looks', 'moments', 'arc', 'console', 'concept'):
+        rig[key] = walk(rig[key])
+    return rig
+
+
 ENTRANCE = {'owner_2026_10_08': '"not the big door from the video; it\'s the one before and close to the dance floor, not the backstage part"',
             'candidate': 'SUSPECTED: the side gate with the mesh door through a side span (today\'s way in, 20261008_164131.mp4 t=36 s -> t=58 s -> the nave), NOT placed: no fitted view; the 10-08 site layer fixed_not_placed side-gate-mesh-door',
             'needs': 'which long wall and its z: one photo of the gate from inside the nave with two columns in frame, or a tape from the nearest column line; it must open onto the dance floor (z 8-28) side, the press end (z < 8) kept for the artists',

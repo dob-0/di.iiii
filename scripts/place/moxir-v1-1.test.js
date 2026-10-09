@@ -1,6 +1,6 @@
 // MOXIR v1.1 part 2 (2026-10-08 night): the stage on the owner's new marks at the press end.
 // Guards what the design decided and what moxir_v1_1.py wrote: the crane park clears the press crown, the cut moves
-// rigidly by the offset the rig maths derives, every laser line ends on the ash wall and never reaches the audience,
+// rigidly by the offset the rig maths derives, every laser beam (one per cube) ends on the hall's press and never reaches the audience,
 // no unit stands on the new dance floor, the speaker placeholders clear the fixed massing, the power stays under the cap,
 // and epic-build moves the booth only from its old place.
 import { describe, it, expect } from 'vitest'
@@ -79,15 +79,30 @@ describe('MOXIR v1.1: the stage and the crane park', () => {
 })
 
 describe('MOXIR v1.1: the lights and lasers moved', () => {
-    it('ends every laser line on the ash wall with margin, never past the barrier', () => {
+    it('draws ONE static beam per cube (6, not 12), each ending on the hall\'s press with margin, never past the barrier, no ash wall', () => {
         const lasers = rig.checks_v1_1.lasers
-        expect(lasers).toHaveLength(12)
+        expect(lasers).toHaveLength(6)
+        expect(rig.solids.some((s) => s.id === 'rig-ash-wall')).toBe(false)
+        const cubes = rig.fixtures.filter((f) => f.type === 'ext-lc-ultra-mk2')
+        expect(cubes).toHaveLength(6)
+        for (const c of cubes) {
+            expect(c.laser.beams, c.id).toHaveLength(1)
+            expect(c.laser.duty).toBe(1)                                   // the cube's whole 6 W in its one beam
+            expect(c.laser.room_flux_share).toBe(1)
+        }
         for (const l of lasers) {
             expect(l.pass, l.beam).toBe(true)
-            expect(l.ends_on).toBe('ash-wall')
-            expect(l.margin_after_zone_deg).toBeGreaterThan(0.5)
-            expect(l.max_z_m).toBeLessThan(design.barrier.z_m)
+            expect([].concat(l.ends_on).every((n) => n === 'press' || n === 'press-crown'), `${l.beam} ends on ${l.ends_on}`).toBe(true)
+            expect(l.margin_after_zone_deg, l.beam).toBeGreaterThan(0)
+            expect(l.end_height_m, l.beam).toBeGreaterThanOrEqual(3.0)      // HS(G)95
+            expect(l.max_z_m).toBeLessThan(3.3)                             // the press ends at z 3.2; the barrier is z 8.2
         }
+        // two beams never end on one spot of paint (< 0.5 m)
+        for (let i = 0; i < lasers.length; i++) for (let j = i + 1; j < lasers.length; j++) {
+            const d = Math.hypot(...lasers[i].to.map((v, k) => v - lasers[j].to[k]))
+            expect(d, `${lasers[i].beam} vs ${lasers[j].beam}`).toBeGreaterThanOrEqual(0.5)
+        }
+        // one beam carries the whole cube power: the safety case (NOHD) was always this one
         expect(rig.checks_v1_1.laser_safety_6w.nohd_m).toBe(544)
     })
     it('leaves no unit on the new dance floor and keeps every unit of v1.0', () => {
