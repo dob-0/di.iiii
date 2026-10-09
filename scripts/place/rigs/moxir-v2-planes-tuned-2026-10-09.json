@@ -2368,11 +2368,15 @@
     ],
     "columns": [
      "#ff3a12",
-     0.25
+     0.5
     ],
     "cut down": [
      "#ff3a12",
      0.45
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.6
     ]
    }
   },
@@ -2391,7 +2395,7 @@
     ],
     "plane 3 (the far end)": [
      "#ff3a12",
-     0.35
+     0.7
     ],
     "cut down": [
      "#e8e4dc",
@@ -2424,6 +2428,10 @@
     "laser": [
      "#e8e4dc",
      1.0
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.8
     ]
    }
   }
@@ -3262,6 +3270,13 @@
     }
    ],
    "kind": "placement + aim (data)"
+  },
+  {
+   "id": "T5",
+   "title": "The looks: steel carries the dark; plane 3 at the old glare budget",
+   "change": "dark: columns 0.25 -> 0.5, stage columns 0.6 (new); peak: stage columns 0.8, plane 3 0.35 -> 0.7",
+   "why": "faders, inside each lamp's real output, never a gain on the room. Plane 3 runs toward the crowd and was capped at 0.35 against white-out at 0.0169 /m; its forward scatter is proportional to the haze, so at the tank state (~0.0086 /m, half) 0.7 gives the air the same luminance the cap allowed. Checked on the frames: white-out of the floor view at the peak.",
+   "kind": "look levels (data)"
   }
  ],
  "design_metric": {
