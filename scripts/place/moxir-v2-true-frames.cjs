@@ -19,6 +19,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { chromium } = require('playwright')
+const { closeOnSignal } = require('./close-on-signal.cjs')
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -35,6 +36,19 @@ const docForJob = (doc, job, now = Date.now()) => {
     doc.renderSettings = { ...(doc.renderSettings || {}), atmosphere: job.atmosphere }
     const cue = { id: `true-${job.look}`, name: `held: ${job.look}`, key: '', fade: 0, hold: 3600, lightLook: `rig-${job.look}`, surfaces: {} }
     doc.mappingState = { ...(doc.mappingState || {}), cues: [cue], loop: true, showEpoch: now - 500, showSource: 'clock' }
+    // job.zeroKeys / job.setKeys: hold the look's groups whose key holds one of these words at 0, or at a given level (a
+    // measurement split, e.g. the laser lines off, or at 40 %); the browser's copy only
+    const set = { ...Object.fromEntries((job.zeroKeys || []).map((w) => [w, 0])), ...(job.setKeys || {}) }
+    if (Object.keys(set).length) {
+        const show = (doc.entities || []).find((e) => Array.isArray(e?.components?.rigLooks?.looks))
+        for (const lk of show ? show.components.rigLooks.looks : []) {
+            if (job.look && lk.id !== job.look) continue
+            for (const key of Object.keys(lk.levels || {})) {
+                const w = Object.keys(set).find((word) => key.includes(word))
+                if (w !== undefined) lk.levels[key] = set[w]
+            }
+        }
+    }
     return doc
 }
 
@@ -51,6 +65,7 @@ const main = async () => {
     const browser = await chromium.connectOverCDP(cdp)
     const context = browser.contexts()[0] || (await browser.newContext())
     const page = await context.newPage()
+    closeOnSignal(() => page) // a `timeout` kill must not leave the tab drawing the room (2026-10-09)
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e.message || e).slice(0, 300)))
     let current = null
@@ -78,9 +93,14 @@ const main = async () => {
             if (SOFTWARE.test(gpu)) throw new Error(`refused: a software renderer (${gpu})`)
             const file = path.join(out, `${job.name}.png`)
             await page.screenshot({ path: file })
+            // job.recordLamps: the renderer's own lamps narrower than this many degrees (the laser lines: 0.11 deg), as drawn
+            const lamps = job.recordLamps ? await page.evaluate((deg) => {
+                const r = window.__diMeasure.lamps()
+                return (r.data || r).filter((l) => l.angleDeg < deg).map((l) => ({ position: l.position, intensity_scene: l.intensity_scene, candela: l.candela }))
+            }, job.recordLamps) : undefined
             index[job.name] = { job: { ...job, atmosphere: job.atmosphere }, url, at: new Date().toISOString(), ev100: state?.camera?.ev100, ev100Source: state?.camera?.ev100Source,
                 toneMappingExposure: state?.camera?.toneMappingExposure, sceneScale: state?.sceneScale, switchedOff: (state?.switchedOff || []).map((s) => s.kind + ':' + (s.name || '')),
-                gpu, commit: state?.renderer?.commit, pageErrors: [...errors] }
+                gpu, commit: state?.renderer?.commit, pageErrors: [...errors], ...(lamps ? { lamps } : {}) }
             fs.writeFileSync(indexFile, JSON.stringify(index, null, 1))
             console.log(`${job.name}: EV100 ${state?.camera?.ev100} · ${gpu.slice(0, 60)} · errors ${errors.length}`)
         }

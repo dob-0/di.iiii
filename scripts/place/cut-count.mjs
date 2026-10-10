@@ -75,13 +75,30 @@ export const placesFor = (n, { uEnds = [-6.25, 5.75], picks = [-5.75, -0.5, 5.25
     return out.sort((a, b) => a - b)
 }
 
-/** One count, every number. Pure. */
-export const cutCount = (n, cut = theCut()) => {
+/** The clamp points of the cut (every 0.5 m, 0.25 m in from each end, >= 0.25 m from a pick). Pure. */
+export const clampPoints = ({ uEnds = [-6.25, 5.75], picks = [-5.75, -0.5, 5.25], step = 0.5, inset = 0.25, gap = 0.25 } = {}) => {
+    const pts = []
+    for (let u = uEnds[0] + inset; u <= uEnds[1] - inset + 1e-9; u += step) {
+        if (picks.every((p) => Math.abs(p - u) >= gap - 1e-9)) pts.push(Math.round(u * 100) / 100)
+    }
+    return pts
+}
+
+/** One count, every number; `places` (u, metres) instead of the even spread when a lamp has to sit elsewhere (MOXIR v2
+ * spread, 2026-10-09: PAR 08 one clamp point toward house left, clear of laser 4a). Each must be a clamp point. Pure. */
+export const cutCount = (n, cut = theCut(), { places = null } = {}) => {
     const { truss, rigging } = cut
     const th = truss.slope_deg * DEG
     const uEnds = truss.ends.map((e) => e.u_m)
     const picksU = rigging.picks.map((p) => p.u_m)
-    const us = placesFor(n, { uEnds, picks: picksU })
+    let us = placesFor(n, { uEnds, picks: picksU })
+    if (places) {
+        const ok = new Set(clampPoints({ uEnds, picks: picksU }))
+        const bad = places.filter((u) => !ok.has(Math.round(u * 100) / 100))
+        if (bad.length) throw new Error(`not clamp points of the cut (every 0.5 m, clear of the picks): ${bad.join(', ')}`)
+        if (places.length !== n || new Set(places).size !== n) throw new Error(`${n} lamps need ${n} distinct places, got ${places.length}`)
+        us = [...places].sort((a, b) => a - b)
+    }
     const each = PER_LAMP.body_kg + PER_LAMP.coupler_kg + PER_LAMP.safety_kg + PER_LAMP.jumpers_kg
     const x = (u) => u * Math.cos(th)
     const trussKgm = rigging.truss_kg_per_m
@@ -132,6 +149,8 @@ export const table = (counts = [6, 8, 10, 12, 14, 16, 17, 20, 24]) => {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const i = process.argv.indexOf('--n')
-    const out = i > 0 ? cutCount(Number(process.argv[i + 1])) : { cut: { ends: theCut().truss.ends, trim_m: theCut().truss.trim_m, picks: theCut().rigging.picks.map((p) => ({ u_m: p.u_m, bridle_included_deg: p.bridle_included_deg })) }, cap_kg: PICK_CAP_KG, rows: table() }
+    const j = process.argv.indexOf('--places')
+    const places = j > 0 ? process.argv[j + 1].split(',').map(Number) : null
+    const out = i > 0 ? cutCount(Number(process.argv[i + 1]), theCut(), { places }) : { cut: { ends: theCut().truss.ends, trim_m: theCut().truss.trim_m, picks: theCut().rigging.picks.map((p) => ({ u_m: p.u_m, bridle_included_deg: p.bridle_included_deg })) }, cap_kg: PICK_CAP_KG, rows: table() }
     process.stdout.write(JSON.stringify(out, null, 1) + '\n')
 }

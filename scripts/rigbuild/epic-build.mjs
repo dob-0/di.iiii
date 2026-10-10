@@ -41,6 +41,7 @@ import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
 import { runnerList } from './show-loop.mjs'
 import { atmosphereOfRig } from '../place/rig-lib.mjs'
+import { laserColourFlux, driveOfHex, CUBE_NM } from '../../src/objectComponents/laserLine.js'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -69,17 +70,31 @@ const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250b
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
 // A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
 // wide: seen from the floor, near its axis, every line became a white blob of forward scatter + bloom, and side-on it was a
-// dim smear). Now: the beam's real luminous flux, the 6 W unit (fixtures.json variants_mw, CIE 1924 V(lambda)), its power
-// split between its 2 beams at the scan duty 0.45 (moxir_v1.py beam_vis): ash white 254 lm, ember red 72 lm per beam, into
-// a 2 mrad half-angle (a 4 mm aperture + ~1 mrad divergence + the 0.3 deg zone's wobble drawn as width, about one pixel at
-// 30 m: the narrowest the room can draw without aliasing). I = flux / solid angle, x the rig's one exposure number.
+// dim smear). The beam's real luminous flux into a 2 mrad half-angle (a 4 mm aperture + ~1 mrad divergence + the 0.3 deg
+// zone's wobble drawn as width, about one pixel at 30 m: the narrowest the room can draw without aliasing). I = flux / solid
+// angle, x the rig's one exposure number.
+// FLUX (2026-10-09, the owner's cubes are the 7.5 W Ultra MK2, ledger N449): read from fixtures.json
+// lasercube.specs.variant_in_use (the maker's per-diode mW), turned into lumens by laserLine.js laserColourFlux (Km V(lambda) P,
+// CIE 1931) at the unit's colour as its drive, x the beam's duty (the rig file's beam.duty, else the cube's laser.duty, else
+// v1.0's scan duty 0.45: moxir_v1.py beam_vis) x the cube's room_flux_share, split over its beams that are on. Before, every
+// line was a fixed 254 lm (ash) / 72 lm (ember): v1.0's 6 W cube split over 2 scanned beams; v1.1's aerial cubes run ONE
+// static beam at duty 1.0, so that figure drew them ~5x too dim, and at 6 W.
 export const LASER_ANGLE = 0.002
 export const LASER_APERTURE = 0.002
-export const laserIntensity = (colour) => {
-    const lm = String(colour).toLowerCase() === '#ff3a12' ? 72 : 254
-    const omega = 2 * Math.PI * (1 - Math.cos(LASER_ANGLE))
-    return Math.round((lm / omega) * SCALE)
+export const FIXTURES_FILE = 'scripts/place/fixtures/fixtures.json'
+export const cubeVariant = (file = path.join(REPO_ROOT, FIXTURES_FILE)) => JSON.parse(fs.readFileSync(file, 'utf8')).kinds.lasercube.specs.variant_in_use.value
+const CUBE = cubeVariant()
+/** Lumens in one laser beam of a cube unit (see FLUX above). Pure given the variant. */
+export const laserBeamLumens = (f, b, variant = CUBE) => {
+    const mW = CUBE_NM.map((nm) => Number(variant[`${nm}nm`]) || 0)
+    const { lumens } = laserColourFlux({ mW, drive: driveOfHex(f.colour) })
+    const on = (f.laser?.beams || []).filter((x) => !x.off).length || 1
+    const duty = b?.duty ?? f.laser?.duty ?? 0.45
+    return (lumens * duty * (f.laser?.room_flux_share ?? 1)) / on
 }
+export const laserIntensityOfLumens = (lm) => Math.round((lm / (2 * Math.PI * (1 - Math.cos(LASER_ANGLE)))) * SCALE)
+/** v1.0's laser intensity by colour alone (2 scanned beams per cube, duty 0.45), now from the cube in use. */
+export const laserIntensity = (colour) => laserIntensityOfLumens(laserBeamLumens({ colour, laser: { beams: [{}, {}], duty: 0.45 } }, null))
 
 /** The unit's beam direction from its stored rotation (three.js Euler XYZ, a spot's unrotated beam is -Y). Pure. */
 export const dirOfRotation = ([rx, ry, rz]) => {
@@ -122,7 +137,7 @@ export const v1Entities = (rig) => {
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
                         appearance: { color: f.colour, opacity: 1 },
-                        light: { color: f.colour, intensity: laserIntensity(f.colour), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
+                        light: { color: f.colour, intensity: laserIntensityOfLumens(laserBeamLumens(f, b)), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
                         beam: { visible: true, haze: 1, aperture: LASER_APERTURE },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
                         fixture: { type: 'ext-lc-ultra-mk2', unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
@@ -194,7 +209,10 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
             aims[key] = shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e)
             let on = null
             if (lk.parts) {
-                if (meta.part === 'laser') on = lk.parts.laser ? [null, 1] : (lk.parts.cube6a && meta.beam === '6a' ? [null, 1] : null)
+                // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09: the
+                // lasers' glare share capped per look). Every rig before it holds 1.0, so their rooms do not change.
+                const lv = (pair) => (Number.isFinite(Number(pair?.[1])) ? Math.min(1, Math.max(0, Number(pair[1]))) : 1)
+                if (meta.part === 'laser') on = lk.parts.laser ? [null, lv(lk.parts.laser)] : (lk.parts.cube6a && meta.beam === '6a' ? [null, lv(lk.parts.cube6a)] : null)
                 else on = lk.parts[meta.part] || null
             }
             colours[key] = ((on && on[0]) || meta.colour || '#e8e4dc').toLowerCase()
