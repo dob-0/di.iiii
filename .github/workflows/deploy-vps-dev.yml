@@ -55,7 +55,7 @@ jobs:
   # than rebasing a stale fold onto it (a rebase could leave a newly merged
   # note unfolded); bounded to three tries.
   land:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     permissions:
       contents: write
@@ -135,7 +135,7 @@ jobs:
   publish-dev-channel:
     needs: test
     if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
@@ -211,7 +211,7 @@ jobs:
 
   build-and-push:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
@@ -262,7 +262,7 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: dev
     env:
       # Where this tier runs: `vps` (the Docker Compose host over SSH, the default, so this
