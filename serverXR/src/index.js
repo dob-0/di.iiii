@@ -116,6 +116,7 @@ const { createDnsCheck } = require('./domainDns')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerLaserRoutes } = require('./routes/laserRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -522,6 +523,13 @@ const lighting = registerLightingRoutes(app, {
   listen: describeListenNow
 })
 
+// The lasers (serverXR/src/laser) at /laser — MOXIR's LaserCubes driven from the Nodes editor: the
+// desk's twin (built on first use, local-only, 404 hosted), and DISARMED at every start.
+const lasers = registerLaserRoutes(app, {
+  dataDir: config.directories.dataDir,
+  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])]
+})
+
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
 // built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
 // NDI runtime (installed by the person, never shipped) and koffi (an optional
@@ -537,6 +545,8 @@ const ndi = registerNdiRoutes(app, {
 // on one: it exits by itself when its IPC channel closes — a kill -9 of the server
 // included. This hook only makes an orderly process.exit() prompt about it.
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
+// Going down: every cube's output switched off, the socket closed (laserEngine.js close).
+process.once('exit', () => { try { lasers.close() } catch { /* going down anyway */ } })
 // The NDI autoscan: which sources are on the network right now, known before anyone
 // asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
 // a hosted tier. With no runtime it forks nothing — it records "no-runtime" and says so.
