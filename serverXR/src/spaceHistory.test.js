@@ -68,6 +68,28 @@ describe('restore points', () => {
         expect((await store.listSpaceSnapshots('wcc'))).toHaveLength(2)
     })
 
+    it('removes a space\'s restore points when the space itself is deleted, but not for the archive that relies on them', async () => {
+        const snapshotsDir = path.join(tmpDir, 'snapshots')
+        await store.takeRestorePoint('wcc', { reason: 'x' })
+        expect(fs.existsSync(path.join(snapshotsDir, 'wcc'))).toBe(true)
+        await store.deleteSpace('wcc', { keepSnapshots: true })
+        expect(fs.existsSync(path.join(snapshotsDir, 'wcc'))).toBe(true)
+        await store.deleteSpace('wcc')
+        expect(fs.existsSync(path.join(snapshotsDir, 'wcc'))).toBe(false)
+        expect(await store.listSpaceSnapshots('wcc')).toEqual([])
+    })
+
+    it('takes no new restore point when the newest one is younger than skipIfNewerThanMs', async () => {
+        const t = Date.parse('2026-09-16T10:00:00.000Z')
+        await store.takeRestorePoint('wcc', { reason: 'daily', now: t })
+        const young = await store.takeRestorePoint('wcc', { reason: 'daily', now: t + 60 * 60 * 1000, skipIfNewerThanMs: 23 * 60 * 60 * 1000 })
+        expect(young).toBeNull()
+        expect(await store.listSpaceSnapshots('wcc')).toHaveLength(1)
+        const old = await store.takeRestorePoint('wcc', { reason: 'daily', now: t + DAY, skipIfNewerThanMs: 23 * 60 * 60 * 1000 })
+        expect(old).not.toBeNull()
+        expect(await store.listSpaceSnapshots('wcc')).toHaveLength(2)
+    })
+
     it('reads one by id and refuses an id that is not the shape it writes', async () => {
         const point = await store.takeRestorePoint('wcc', { reason: 'x' })
         expect((await store.readSpaceSnapshot('wcc', point.id)).scene.objects[0].id).toBe('floor')

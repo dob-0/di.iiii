@@ -2902,7 +2902,10 @@ const PORT = config.port
 const snapshotOpenSpace = async () => {
   const openId = getCommunalSpaceId()
   if (!openId || !(await spaceExists(openId))) return
-  await takeRestorePoint(openId, { reason: 'daily', actor: serverActor('daily') })
+  // 23 h, not 24: the timer fires a day after the boot one, a hair later than
+  // its stamp. A restart inside the day writes nothing (A11: 3 restarts + 2
+  // resets had written 6 files in snapshots/open/).
+  await takeRestorePoint(openId, { reason: 'daily', actor: serverActor('daily'), skipIfNewerThanMs: 23 * 60 * 60 * 1000 })
 }
 
 initStorage()

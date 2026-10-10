@@ -368,11 +368,25 @@ function createSpaceStore({
     return s().countByOwner.get(userId)?.cnt || 0
   }
 
-  const deleteSpace = async (spaceId) => {
+  // The space's restore points go with it: they live outside spacesDir, so
+  // removing the folder alone left data/snapshots/<space>/ behind for ever
+  // (a trashed space keeps them -- trashSpace only marks; this is the purge).
+  // keepSnapshots is for the one caller that WANTS them to outlive the space:
+  // archiveIdleAccountSandboxes, whose revival reads the snapshot back.
+  const deleteSpace = async (spaceId, { keepSnapshots = false } = {}) => {
     s().deleteById.run(spaceId)
     commonsStore.deleteBySpace(spaceId)
     const { spaceDir } = getSpacePaths(spaceId)
     await fsp.rm(spaceDir, { recursive: true, force: true })
+    if (keepSnapshots) return
+    const snapshotDir = path.resolve(snapshotsDir, spaceId)
+    // Only a folder directly inside snapshotsDir: an id that climbs out of it
+    // (or is empty) must never turn this into a recursive delete elsewhere.
+    if (path.dirname(snapshotDir) !== path.resolve(snapshotsDir)) return
+    await fsp.rm(snapshotDir, { recursive: true, force: true })
+    for (const key of snapshotSummaryCache.keys()) {
+      if (key.startsWith(`${spaceId}/`)) snapshotSummaryCache.delete(key)
+    }
   }
 
   // ── The space trash ──────────────────────────────────────────────────────
@@ -541,7 +555,7 @@ function createSpaceStore({
     for (const row of rows) {
       if ((s().countProjectsInSpace.get(row.id)?.cnt || 0) > 0) continue
       if ((row.scene_version || 0) > 0) await takeRestorePoint(row.id, { reason: 'sandbox-archived', actor: serverActor('sandbox-archive'), keep: 1 })
-      await deleteSpace(row.id)
+      await deleteSpace(row.id, { keepSnapshots: true })
       archived.push(row.id)
     }
     return archived
@@ -698,7 +712,14 @@ function createSpaceStore({
   // before-change, daily, …) and `actor` who caused it (opActor.js shape).
   // Returns the summary — id, takenAt, reason, actor, counts — plus `file`,
   // or null when the space holds nothing to save yet.
-  const takeRestorePoint = async (spaceId, { reason = 'snapshot', actor = null, keep = null, now = Date.now() } = {}) => {
+  // skipIfNewerThanMs: the daily and start-up callers pass it, so a restart
+  // does not write a new file when the newest restore point is still fresh.
+  const takeRestorePoint = async (spaceId, { reason = 'snapshot', actor = null, keep = null, now = Date.now(), skipIfNewerThanMs = 0 } = {}) => {
+    if (skipIfNewerThanMs > 0) {
+      const newest = (await listSnapshotFileIds(spaceId)).pop()
+      const newestMs = newest ? snapshotIdToMs(newest) : null
+      if (newestMs !== null && now - newestMs < skipIfNewerThanMs) return null
+    }
     const { scenePath } = getSpacePaths(spaceId)
     const scene = await readJson(scenePath, null)
     const projects = await readSpaceProjectDocuments(spaceId)
