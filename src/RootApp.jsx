@@ -43,7 +43,7 @@ import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SHOOT, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_DEVICE, APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SHOOT, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -98,6 +98,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 const ForAppsPage = lazy(() => import('./pages/ForAppsPage.jsx'))
 const ShootPage = lazy(() => import('./pages/shoot/ShootPage.jsx'))
+const DeviceLoginPage = lazy(() => import('./pages/DeviceLoginPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
@@ -831,6 +832,17 @@ function AppRouter() {
         )
     }
 
+    // `/device` — the browser half of `di login` (src/pages/DeviceLoginPage.jsx).
+    // Not behind the gate: it asks for an account itself, and a person who arrives
+    // signed out needs the sign-in surface on this very address, not a redirect.
+    if (appState.page === APP_PAGE_DEVICE) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <DeviceLoginPage />
+            </Suspense>
+        )
+    }
+
     const isRootLanding = !appState.spaceId
         && appState.page !== APP_PAGE_PREFERENCES
         && appState.page !== APP_PAGE_WIKI
@@ -839,6 +851,7 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TOOLS
         && appState.page !== APP_PAGE_FOR_APPS
         && appState.page !== APP_PAGE_SHOOT
+        && appState.page !== APP_PAGE_DEVICE
 
     if (isRootLanding) {
         // ?tour=1 keeps the landing reachable on a local install, where `/` is

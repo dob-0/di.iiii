@@ -32,7 +32,7 @@ export const connect = async ({
     env = process.env
 } = {}) => {
     const resolvedBase = resolveBase({ tier, base })
-    const resolvedToken = resolveToken({ tier, token, env })
+    const resolvedToken = resolveToken({ tier, base, token, env })
     // A `di up` install on your own machine runs with auth off and has no
     // token to give — demanding one would make the SDK unusable in exactly the
     // place it is safest. Loopback only: anything reachable by another machine
@@ -42,6 +42,7 @@ export const connect = async ({
         throw new Error(
             `no token for ${tier || resolvedBase}.\n` +
             `  Set DI_TOKEN, or ${tier ? `DI_TOKEN_${tier.toUpperCase()}, or ` : ''}put one in ${credentialsPath()}.\n` +
+            `  Or sign in once from the terminal: ${tier ? `di login${tier === 'dev' ? '' : ` --tier ${tier}`}` : `di login --to ${resolveSite({ tier, base })}`}\n` +
             `  Do not read it out of di.iiii's checkout — a project that needs the platform's working tree is not a separate project.`
         )
     }

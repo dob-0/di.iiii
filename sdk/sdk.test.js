@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { connect } from './index.js'
 import { MOVES } from './moves.js'
 import { ApprovalPending, createHttp } from './http.js'
@@ -204,9 +204,75 @@ describe('credentials', () => {
         expect(() => resolveBase({ tier: 'live' })).toThrow(/unknown tier/)
     })
 
+    // `connect` reads ~/.config/di/credentials.json from the real home. Since `di login`
+    // writes that file, a test that expects "no token" must run in a home of its own: on a
+    // machine where someone had signed in to prod it would otherwise fail for the right reason.
+    const homes = []
+    const makeHome = (store = null) => {
+        const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-sdk-home-'))
+        homes.push(home)
+        if (store !== null) {
+            fs.mkdirSync(path.join(home, '.config', 'di'), { recursive: true })
+            fs.writeFileSync(path.join(home, '.config', 'di', 'credentials.json'), typeof store === 'string' ? store : JSON.stringify(store))
+        }
+        return home
+    }
+    const asHome = (home) => { vi.stubEnv('HOME', home); vi.stubEnv('USERPROFILE', home) }
+    afterEach(() => {
+        vi.unstubAllEnvs()
+        while (homes.length) fs.rmSync(homes.pop(), { recursive: true, force: true })
+    })
+
     it('demands a token for anything not on this machine, and not for loopback', async () => {
+        asHome(makeHome())
         await expect(connect({ tier: 'prod', env: {} })).rejects.toThrow(/no token for prod/)
         await expect(connect({ tier: 'local', env: {} })).resolves.toBeTruthy()
+    })
+
+    it('says how to sign in when there is no token: the tier\'s own command, or --to for any other host', async () => {
+        asHome(makeHome())
+        await expect(connect({ tier: 'prod', env: {} })).rejects.toThrow(/di login --tier prod/)
+        await expect(connect({ tier: 'dev', env: {} })).rejects.toThrow(/sign in once from the terminal: di login\n/)
+        await expect(connect({ base: 'https://example.org/serverXR', env: {} })).rejects.toThrow(/di login --to https:\/\/example\.org\n/)
+    })
+
+    // `di login` files a login under the tier's name, or under the server's origin for any other
+    // host (scripts/di/loginStore.mjs; scripts/di/loginStore.test.js holds the writer's side).
+    it('finds the login `di login` filed: by tier, and by the origin of a base that is not a tier', () => {
+        const home = makeHome({ dev: { token: 'dii_cli_dev' }, 'https://example.org': { token: 'dii_cli_org' }, 'http://127.0.0.1:5000': { token: 'dii_cli_lo' } })
+        expect(resolveToken({ tier: 'dev', env: {}, home })).toBe('dii_cli_dev')
+        expect(resolveToken({ tier: 'prod', env: {}, home })).toBeNull()
+        expect(resolveToken({ base: 'https://example.org/serverXR', env: {}, home })).toBe('dii_cli_org')
+        expect(resolveToken({ base: 'http://127.0.0.1:5000/serverXR/', env: {}, home })).toBe('dii_cli_lo')
+        // a base that IS a tier's site finds that tier's login
+        expect(resolveToken({ base: 'https://dev.diiii.xyz/serverXR', env: {}, home })).toBe('dii_cli_dev')
+        // never another host's
+        expect(resolveToken({ base: 'https://other.example/serverXR', env: {}, home })).toBeNull()
+        expect(resolveToken({ base: 'https://example.org:8443/serverXR', env: {}, home })).toBeNull()
+        expect(resolveToken({ base: 'not a url', env: {}, home })).toBeNull()
+        // what won before still wins
+        expect(resolveToken({ base: 'https://example.org/serverXR', env: { DI_TOKEN: 'ci' }, home })).toBe('ci')
+        expect(resolveToken({ tier: 'dev', base: 'https://example.org/serverXR', env: {}, home })).toBe('dii_cli_dev')
+        expect(resolveToken({ tier: 'dev', env: { DI_TOKEN_DEV: 'tier-var' }, home })).toBe('tier-var')
+    })
+
+    it('reads a file that is valid JSON but not an object as "no token", not as a crash', () => {
+        for (const text of ['null', '[]', '"a string"', '42', '{broken', '']) {
+            const home = makeHome(text)
+            expect(resolveToken({ tier: 'dev', env: {}, home }), JSON.stringify(text)).toBeNull()
+            expect(resolveToken({ base: 'https://example.org/serverXR', env: {}, home }), JSON.stringify(text)).toBeNull()
+        }
+    })
+
+    it('connect({ base }) signs its requests with the login filed for that host', async () => {
+        asHome(makeHome({ 'https://example.org': { token: 'dii_cli_org' } }))
+        const sent = []
+        const fetchImpl = async (url, options) => { sent.push({ url, authorization: options.headers.authorization }); return new Response('{}', { status: 200 }) }
+        const di = await connect({ base: 'https://example.org/serverXR', env: {}, fetchImpl })
+        await di.request('GET', '/api/spaces')
+        expect(sent).toEqual([{ url: 'https://example.org/serverXR/api/spaces', authorization: 'Bearer dii_cli_org' }])
+        // and a host with no login still refuses to start, as before
+        await expect(connect({ base: 'https://other.example/serverXR', env: {}, fetchImpl })).rejects.toThrow(/no token for https:\/\/other\.example\/serverXR/)
     })
 })
 

@@ -75,6 +75,8 @@ const SPINE_FILES = [
     'components/confirmDeleteDialog.css',
     'raw/styles/raw.css',
     'pages/spaceContents.css',
+    // Born on the spine, 2026-10-07 — the /device page (the browser half of `di login`).
+    'pages/deviceLogin.css',
     // Born on the spine, 2026-09-22 — the scanning page never carried a literal.
     'scan/scanSurface.css',
     'raw/components/vjDeck/vjDeck.css',

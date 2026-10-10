@@ -637,7 +637,7 @@ function AuthGateInner({
 // Its own surface rather than a branch inside the gate, because nothing here is
 // being gated: there is no space to be in scope for, and a person who is
 // already signed in has simply arrived somewhere they do not need.
-function SignInSurfaceInner() {
+function SignInSurfaceInner({ onSignedIn = null }) {
     const authSession = useAuthSession()
     const { refresh, loading, type } = authSession
     const [providers, setProviders] = useState(null)
@@ -661,9 +661,16 @@ function SignInSurfaceInner() {
     // every arrival as a fresh sign-in — measured, it redirected on load.
     const triedHere = useRef(false)
     const afterAttempt = useCallback(() => { triedHere.current = true; refresh?.() }, [refresh])
+    // `/login` has nowhere of its own to stay, so a sign-in made here goes in. A page
+    // that embeds this surface (`/device`) is already where the person wants to be:
+    // it is told, and decides what to show next. Told once per sign-in.
     useEffect(() => {
-        if (!loading && signedIn && triedHere.current) appNavigate('/')
-    }, [loading, signedIn])
+        if (!loading && signedIn && triedHere.current) {
+            triedHere.current = false
+            if (onSignedIn) onSignedIn()
+            else appNavigate('/')
+        }
+    }, [loading, signedIn, onSignedIn])
 
     if (loading) return <LoadingScreen label="Loading" detail="Checking your session" />
 
@@ -698,10 +705,10 @@ function SignInSurfaceInner() {
     )
 }
 
-export function SignInSurface() {
+export function SignInSurface({ onSignedIn = null }) {
     return (
         <ThemeProvider theme={diFontTheme}>
-            <SignInSurfaceInner />
+            <SignInSurfaceInner onSignedIn={onSignedIn} />
         </ThemeProvider>
     )
 }

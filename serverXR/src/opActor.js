@@ -29,6 +29,10 @@ const actorFromAuthState = (state = null) => {
   if (state.actor === 'di.bo') {
     return { actor: subject.slice(0, 200), type: 'di.bo', label: cleanLabel(`${label} via di.bo`), role: state.role || null }
   }
+  // A terminal signed in as the person (cliTokenGate.js): theirs, and says so.
+  if (state.actor === 'di.cli') {
+    return { actor: subject.slice(0, 200), type: 'di.cli', label: cleanLabel(`${label} via di CLI`), role: state.role || null }
+  }
   const type = state.type ? String(state.type) : 'unknown'
   return {
     actor: subject.slice(0, 200),
