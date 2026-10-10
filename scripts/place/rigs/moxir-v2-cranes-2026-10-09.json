@@ -68,8 +68,10 @@
     "universe": 1,
     "address": 1,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 101,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C07"
@@ -101,8 +103,10 @@
     "universe": 1,
     "address": 17,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 102,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C07"
@@ -134,8 +138,10 @@
     "universe": 1,
     "address": 33,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 103,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C07"
@@ -167,8 +173,10 @@
     "universe": 1,
     "address": 49,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 104,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C07"
@@ -200,8 +208,10 @@
     "universe": 1,
     "address": 65,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 105,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C08"
@@ -233,8 +243,10 @@
     "universe": 1,
     "address": 81,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 106,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C08"
@@ -263,11 +275,13 @@
    "throw_m": 19.7,
    "ends_on": "roof deck",
    "dmx": {
-    "universe": 2,
-    "address": 18,
+    "universe": 1,
+    "address": 97,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 107,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C01",
@@ -314,11 +328,13 @@
    "throw_m": 24.12,
    "ends_on": "space frame diagonals / top chord",
    "dmx": {
-    "universe": 2,
-    "address": 34,
+    "universe": 1,
+    "address": 113,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 108,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C01",
@@ -365,11 +381,13 @@
    "throw_m": 24.12,
    "ends_on": "space frame diagonals / top chord",
    "dmx": {
-    "universe": 2,
-    "address": 50,
+    "universe": 1,
+    "address": 129,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 109,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C02",
@@ -416,11 +434,13 @@
    "throw_m": 24.217,
    "ends_on": "roof deck",
    "dmx": {
-    "universe": 2,
-    "address": 66,
+    "universe": 1,
+    "address": 145,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 110,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C01",
@@ -467,11 +487,13 @@
    "throw_m": 47.376,
    "ends_on": "roof deck",
    "dmx": {
-    "universe": 2,
-    "address": 82,
+    "universe": 1,
+    "address": 161,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 111,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C02",
@@ -518,11 +540,13 @@
    "throw_m": 14.981,
    "ends_on": "steel (bracing, mullions)",
    "dmx": {
-    "universe": 2,
-    "address": 98,
+    "universe": 1,
+    "address": 177,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 112,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C01",
@@ -569,11 +593,13 @@
    "throw_m": 19.7,
    "ends_on": "roof deck",
    "dmx": {
-    "universe": 2,
-    "address": 114,
+    "universe": 1,
+    "address": 193,
     "footprint": 16,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 113,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C05",
@@ -621,10 +647,12 @@
    "ends_on": "space frame diagonals / top chord",
    "dmx": {
     "universe": 1,
-    "address": 97,
+    "address": 209,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 114,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C07",
@@ -683,10 +711,12 @@
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
-    "address": 113,
+    "address": 225,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 115,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C05",
@@ -734,10 +764,12 @@
    "ends_on": "space frame diagonals / top chord",
    "dmx": {
     "universe": 1,
-    "address": 129,
+    "address": 241,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 116,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C09",
@@ -785,10 +817,12 @@
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
-    "address": 145,
+    "address": 257,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 117,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C08",
@@ -836,10 +870,12 @@
    "ends_on": "roof deck",
    "dmx": {
     "universe": 1,
-    "address": 161,
+    "address": 273,
     "footprint": 16,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 118,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)"
    },
    "power_w": 500,
    "circuit": "C08",
@@ -885,11 +921,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 217,
+    "universe": 2,
+    "address": 1,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 201,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -925,11 +963,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 225,
+    "universe": 2,
+    "address": 9,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 202,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -965,11 +1005,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 233,
+    "universe": 2,
+    "address": 17,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 203,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1005,11 +1047,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 241,
+    "universe": 2,
+    "address": 25,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 204,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1045,11 +1089,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 249,
+    "universe": 2,
+    "address": 33,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 205,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1090,11 +1136,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 257,
+    "universe": 2,
+    "address": 41,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 206,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1130,11 +1178,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 265,
+    "universe": 2,
+    "address": 49,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 207,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1175,11 +1225,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 273,
+    "universe": 2,
+    "address": 57,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 208,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1215,11 +1267,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 281,
+    "universe": 2,
+    "address": 65,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 209,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -1255,11 +1309,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 289,
+    "universe": 2,
+    "address": 73,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 210,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -1295,11 +1351,13 @@
    "lit_column_m": 7.022,
    "lux_on_steel_median": 239.051,
    "dmx": {
-    "universe": 1,
-    "address": 369,
+    "universe": 2,
+    "address": 101,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 221,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C10"
@@ -1327,11 +1385,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": 60.357,
    "dmx": {
-    "universe": 1,
-    "address": 345,
+    "universe": 2,
+    "address": 109,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 222,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C10"
@@ -1359,11 +1419,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": 59.355,
    "dmx": {
-    "universe": 1,
-    "address": 353,
+    "universe": 2,
+    "address": 117,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 223,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C10"
@@ -1391,11 +1453,13 @@
    "lit_column_m": 7.022,
    "lux_on_steel_median": 475.109,
    "dmx": {
-    "universe": 1,
-    "address": 377,
+    "universe": 2,
+    "address": 125,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 224,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13"
@@ -1423,11 +1487,13 @@
    "lit_column_m": 4.581,
    "lux_on_steel_median": 685.49,
    "dmx": {
-    "universe": 1,
-    "address": 305,
+    "universe": 2,
+    "address": 133,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 225,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06"
@@ -1455,11 +1521,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": 64.069,
    "dmx": {
-    "universe": 1,
-    "address": 209,
+    "universe": 2,
+    "address": 141,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 226,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11"
@@ -1488,10 +1556,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 130,
+    "address": 149,
     "footprint": 8,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 227,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C03",
@@ -1539,10 +1609,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 138,
+    "address": 157,
     "footprint": 8,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 228,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C04",
@@ -1590,10 +1662,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 146,
+    "address": 165,
     "footprint": 8,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 229,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C03",
@@ -1641,10 +1715,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 154,
+    "address": 173,
     "footprint": 8,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 230,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C04",
@@ -1692,10 +1768,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 162,
+    "address": 181,
     "footprint": 8,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 231,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C03",
@@ -1743,10 +1821,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 170,
+    "address": 189,
     "footprint": 8,
-    "branch": "U2-far",
-    "node": "NODE-FAR"
+    "fixture": 232,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -1793,11 +1873,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 177,
+    "universe": 2,
+    "address": 197,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 233,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -1844,11 +1926,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 185,
+    "universe": 2,
+    "address": 205,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 234,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -1895,11 +1979,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 193,
+    "universe": 2,
+    "address": 213,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 235,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -1946,11 +2032,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 201,
+    "universe": 2,
+    "address": 221,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 236,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -1997,11 +2085,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 297,
+    "universe": 2,
+    "address": 229,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 237,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -2048,11 +2138,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 313,
+    "universe": 2,
+    "address": 237,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 238,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -2099,11 +2191,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 361,
+    "universe": 2,
+    "address": 245,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 239,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C10",
@@ -2150,11 +2244,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 385,
+    "universe": 2,
+    "address": 253,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 240,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -2201,11 +2297,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 425,
+    "universe": 2,
+    "address": 261,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 241,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2252,11 +2350,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 433,
+    "universe": 2,
+    "address": 269,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 242,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13",
@@ -2303,11 +2403,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 409,
+    "universe": 2,
+    "address": 277,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 243,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2348,11 +2450,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 417,
+    "universe": 2,
+    "address": 285,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 244,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2393,11 +2497,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 449,
+    "universe": 2,
+    "address": 293,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 245,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2444,11 +2550,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 457,
+    "universe": 2,
+    "address": 301,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 246,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2495,11 +2603,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 401,
+    "universe": 2,
+    "address": 309,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 247,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2540,11 +2650,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 465,
+    "universe": 2,
+    "address": 317,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 248,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -2591,11 +2703,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 473,
+    "universe": 2,
+    "address": 325,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 249,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2642,11 +2756,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 481,
+    "universe": 2,
+    "address": 333,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 250,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2693,11 +2809,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 489,
+    "universe": 2,
+    "address": 341,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 251,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13",
@@ -2744,11 +2862,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 497,
+    "universe": 2,
+    "address": 349,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 252,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C06",
@@ -2795,11 +2915,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 505,
+    "universe": 2,
+    "address": 357,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 253,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -2847,10 +2969,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 1,
+    "address": 365,
     "footprint": 8,
-    "branch": "U2-stage",
-    "node": "NODE-STAGE"
+    "fixture": 254,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13",
@@ -2898,10 +3022,12 @@
    "lux_on_steel_median": null,
    "dmx": {
     "universe": 2,
-    "address": 9,
+    "address": 373,
     "footprint": 8,
-    "branch": "U2-stage",
-    "node": "NODE-STAGE"
+    "fixture": 255,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C12",
@@ -2948,11 +3074,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 329,
+    "universe": 2,
+    "address": 381,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 256,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13"
@@ -2980,11 +3108,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 337,
+    "universe": 2,
+    "address": 389,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 257,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13"
@@ -3012,11 +3142,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 321,
+    "universe": 2,
+    "address": 397,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 258,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13"
@@ -3044,11 +3176,13 @@
    "lit_column_m": 0.0,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 441,
+    "universe": 2,
+    "address": 405,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 259,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)"
    },
    "power_w": 200,
    "circuit": "C13"
@@ -3075,11 +3209,13 @@
    "angle_rad": null,
    "power_w": 1500,
    "dmx": {
-    "universe": 2,
-    "address": 17,
+    "universe": 1,
+    "address": 501,
     "footprint": 1,
-    "branch": "U2-stage",
-    "node": "NODE-STAGE"
+    "fixture": 141,
+    "mode": "1ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-YZ31P smoke machine)"
    },
    "circuit": "C14"
   },
@@ -3538,11 +3674,13 @@
    "lit_column_m": null,
    "lux_on_steel_median": null,
    "dmx": {
-    "universe": 1,
-    "address": 393,
+    "universe": 2,
+    "address": 81,
     "footprint": 8,
-    "branch": "U1-stage",
-    "node": "NODE-STAGE"
+    "fixture": 211,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the cut)"
    },
    "power_w": 200,
    "circuit": "C11",
@@ -4302,27 +4440,34 @@
   "method": "moxir_v2.circuits on the v2 cranes units (re-run: the cut moved, the pit stand gone)"
  },
  "patch": {
-  "branches": [
+  "from": "scripts/place/rigs/moxir-v2-patch-2026-10-09.json",
+  "owner": "N460.2",
+  "universes": [
    {
-    "branch": "U1-stage",
-    "devices": 53,
-    "ok": false
+    "universe": 1,
+    "used": 353,
+    "devices": 21
    },
    {
-    "branch": "U2-stage",
-    "devices": 3,
-    "ok": true
-   },
+    "universe": 2,
+    "used": 400,
+    "devices": 50
+   }
+  ],
+  "not_in_this_rig": [
    {
-    "branch": "U2-far",
-    "devices": 13,
-    "ok": true
+    "universe": 1,
+    "block": "UP-LA40WF laser (Poligraf 40 W)",
+    "start": 401,
+    "units": 2,
+    "footprint": 32
    }
   ],
   "slots": {
-   "1": 512,
-   "2": 177
-  }
+   "1": 353,
+   "2": 400
+  },
+  "method": "addresses by unit id from the official v2 patch (scripts/place/rigs/moxir-v2-patch-2026-10-09.json; src/rigbuild/patchPlan.js lays the same); the plan follows this rig (cut 11 / planes 39); the two UP-LA40WF are in the entry-laser rig (#873), the cubes are on the LAN with no DMX"
  },
  "checks": {
   "beams": 18,
@@ -7029,5 +7174,5 @@
   "show_glb": "/mnt/data/footage/place-moxir-hall-v10-show-park-2026-10-09/hall-show.glb",
   "why": "the room must draw hall v10 (both cranes moved); a project still on v9 draws the free crane at z -41 and the near crane at 0.15"
  },
- "patch_note": "DMX addresses kept from v2 spread (#864); rig-par-cut-11 holds rig-par-planes-25's address (the pit key's slot). The owner's v2 patch layer (N460.2) is laid on top by its own builder."
+ "patch_note": "DMX addresses from the official v2 patch (N460.2) by unit id; rig-par-cut-11 (the DJ kicker, N463) is rig-par-planes-25 moved onto the cut, and the plan counts follow it (cut 11 / planes 39). Lines and cables are routed by the ground/compose builders."
 }

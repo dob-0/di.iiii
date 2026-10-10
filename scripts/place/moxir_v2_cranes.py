@@ -330,6 +330,32 @@ def rot_for_dir(d):
 
 
 # ====================================================================== 3. the v2 rig (from v2 spread, #864)
+def lay_patch(repo, T):
+    """The rig's DMX patch = the owner's official v2 patch (N460.2, rigs/moxir-v2-patch-2026-10-09.json), laid the way moxir_v2_ground.py and
+    moxir_v2_compose.py lay it (plan_addresses: src/rigbuild/patchPlan.js's rule, walked by unit id). The v2 spread's own `patch` block
+    (branches U1-stage / U2-stage / U2-far, U1 512 slots, ok:false) was NOT that patch; #880 shipped it unchecked. Raises when a block's units
+    differ from this rig's count (the plan follows the rig: cut 11 / planes 39, N463 + 9cfc8ee7)."""
+    import moxir_v2_ground as GR
+    out, plan, absent = GR.plan_addresses(repo, T['fixtures'])
+    for f in T['fixtures']:
+        if f['id'] in out:
+            f['dmx'] = out[f['id']]
+    used = {}
+    for f in T['fixtures']:
+        if f.get('dmx'):
+            used.setdefault(f['dmx']['universe'], []).append(f['dmx']['footprint'])
+    for a in absent:
+        used.setdefault(a['universe'], []).extend([a['footprint']] * (a['units'] or 0))
+    for u, v in used.items():
+        if sum(v) > 512:
+            raise SystemExit('universe %d: %d slots, past 512' % (u, sum(v)))
+    T['patch'] = {'from': GR.PATCH_PLAN, 'owner': 'N460.2', 'universes': [{'universe': u, 'used': sum(v), 'devices': len(v)} for u, v in sorted(used.items())],
+                  'not_in_this_rig': absent, 'slots': {str(u): sum(v) for u, v in sorted(used.items())},
+                  'method': 'addresses by unit id from the official v2 patch (%s; src/rigbuild/patchPlan.js lays the same); the plan follows this rig (cut 11 / planes 39); the two UP-LA40WF are in the entry-laser rig (#873), the cubes are on the LAN with no DMX' % GR.PATCH_PLAN}
+    T['patch_note'] = 'DMX addresses from the official v2 patch (N460.2) by unit id; rig-par-cut-11 (the DJ kicker, N463) is rig-par-planes-25 moved onto the cut, and the plan counts follow it (cut 11 / planes 39). Lines and cables are routed by the ground/compose builders.'
+    return T
+
+
 def rig_doc(repo, lamps, units, cc, ev):
     import numpy as np
     SP = rd(repo, RIG_SP)
@@ -440,7 +466,7 @@ def rig_doc(repo, lamps, units, cc, ev):
     T['power'] = {'circuits': circ + ([las] if las else []), 'phases_w': ph, 'method': 'moxir_v2.circuits on the v2 cranes units (re-run: the cut moved, the pit stand gone)'}
     T['patch_note'] = 'DMX addresses kept from v2 spread (#864); rig-par-cut-11 holds rig-par-planes-25\'s address (the pit key\'s slot). The owner\'s v2 patch layer (N460.2) is laid on top by its own builder.'
     T['review'] = {'from': RIG_SP, 'moves': moves}
-    return T
+    return lay_patch(repo, T)
 
 
 def data(repo):
@@ -1313,7 +1339,7 @@ def build(repo):
                             'roof_truss_bottom_m': TRUSS_BOTTOM_LOW, 'pendant_lamps': 'modelled rows z 0..24 + ASSUMED rows z -48..-6, 30..48, from 9.0 m'}
     L['checks']['passes'] = not passes(R)
     wr(repo, LASERS, L)
-    T = rd(repo, RIG_V2C)
+    T = lay_patch(repo, rd(repo, RIG_V2C))
     T['review'].update({k: R[k] for k in ('summary', 'rigging', 'people', 'dj_light', 'dj_glare', 'dj_glare_all_at_full', 'cut_light', 'b380f', 'truss')})
     T['review']['laser_clearance'] = R['lamp_clearance']
     T['review']['lasers'] = LASERS + ' checks'
