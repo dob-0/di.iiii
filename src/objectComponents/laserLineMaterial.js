@@ -112,6 +112,8 @@ export const laserLineGeometry = (lines, length, stations = 48) => {
     g.setAttribute('aSide', new BufferAttribute(side, 1))
     g.setAttribute('aFlux', new BufferAttribute(flux, 3))
     g.setIndex(index)
+    g.userData.vertsPerLine = per // read by the measurement API (beamsOf)
+    g.userData.lineCount = lines.length
     g.computeBoundingSphere()
     if (g.boundingSphere) g.boundingSphere.radius += 1 // the ribbon's width
     return g
