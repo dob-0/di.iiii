@@ -1250,8 +1250,8 @@ def checks(repo):
         'b380f_into_people_or_cubes': sum(v['into_people'] + v['into_cubes'] for v in b380),
         'b380f_rays_on_the_cut (a look finding, not a rule)': {v['id']: v['into_the_cut'] for v in b380 if v['into_the_cut']},
         'dj_face_eye_height_lx': {lk: light['room 30 478 cd, linear (the room since 28f4028d)'][lk]['face, eye height (+z)']['lx'] for lk in ('dark', 'peak')},
-        'dj_head_top_lx': {lk: light['room 30 478 cd, linear (the room since 28f4028d)'][lk]['head top (up)']['lx'] for lk in ('dark', 'peak')},
-        'runtime_s': round(time.time() - t0)}
+        'dj_head_top_lx': {lk: light['room 30 478 cd, linear (the room since 28f4028d)'][lk]['head top (up)']['lx'] for lk in ('dark', 'peak')}}
+    print('cranes build: %d s' % round(time.time() - t0), file=sys.stderr)   # the run time is not data: it made the rig differ on every build
     return {'summary': summary, 'beams': beams, 'casts': casts, 'setup_sheet': sheet, 'lamp_clearance': lampclear[:12], 'forty_watt': fw, 'rigging': rigging,
             'people': people, 'dj_light': light, 'dj_glare': glare, 'dj_glare_all_at_full': glare_full, 'cut_light': cut_light, 'b380f': b380,
             'truss': {k: truss[k] for k in ('ends', 'trim_m', 'clearance')}, 'far_wall_openings': FAR_WALL_OPENINGS}
