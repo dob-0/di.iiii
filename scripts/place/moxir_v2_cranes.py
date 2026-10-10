@@ -107,6 +107,24 @@ CUBES = [('rig-lasercube-cut-01', 'ash white', ASH, -4.50), ('rig-lasercube-cut-
 LASER_END = (-4.031, 9.181, -53.8)
 LASER_END_H1_ALL = (-7.825, 6.3, -53.8)       # round 2 item 3: clears G0/G2/G3/G4/G7 (+0.030 m) ONLY without #873's 40 W far keep-out; NOT used
 LASER_END_AFTER_H1 = (-4.162, 9.019, -53.8)                          # the re-aim once H1 confirms photo 007 (design 2.4), NOT used yet
+# round 3 item 1 (10-10): the 40 W route that keeps the near crane at z 3.20 AND the 40 W at the entry; NOT used (H8 stays, the 40 W stay dark)
+FORTY_ROUTE_R3 = {
+    'used': False, 'route': 'a + b: the FOH riser 2.0 m house right AND the 40 W rule fan 0.8 -> 0.4 deg (zone 0 = a static beam, mount tolerance 0.5 -> 0.4)',
+    'foh_dx_m': 2.0, 'foh_riser_x_m': [-4.7, -1.7], 'fan_deg': 0.4, 'body_fan_deg': 1.008, 'near_crane_z_m': 3.2, 'near_crane_underside_m': 7.2, 'near_crane_top_m': 8.92,
+    'apertures_m': [[-8.094, 5.225, 48.0], [-7.394, 5.225, 48.0]], 'ends_m': [[-7.65, 6.55, -53.8], [-7.45, 6.55, -53.8]],
+    'worst_m': 0.023, 'near_girder_margin_m': 0.023, 'binding': 'body: near crane girder z +2.10 (then DJ step 0.033, free crane far-side girder 0.038, FOH riser 0.047)',
+    'rules': "#873's place rule unchanged (person 2.0, 3.0 over or 2.5 beside, tube s tan(fan) + (10 mm + 1.3 mrad s)/2) + this branch's body rule unchanged (true box + 0.25, gap >= 0.25, body fan 1.008)",
+    'margin_sampling': 'search every 0.5 m along the tube; the reported margin re-taken every 0.02 m',
+    'routes': {'a_foh_moved': {'alone': 'FAILS', 'dx_m': {'1.5': -0.248, '2.0': -0.153, '2.5': -0.153, '3.5': -0.153, '5.0': -0.153, '7.2': -0.153},
+                               'why': 'the FOH row stops binding from dx 2.0, then the free crane far-side girder, the DJ step and the far steel door cap it at -0.153'},
+               'b_fan_narrowed': {'alone': 'PASSES only with the body tube following the fan (fan + 0.208)', 'fan_deg': {'0.7': -0.148, '0.6': -0.067, '0.55': -0.028, '0.53': -0.003, '0.5': 0.024, '0.4': 0.084},
+                                  'body_fan_held_1_008': {'0.5': -0.098, '0.4': -0.057, '0.1': -0.017}, 'why': 'the binding rows are vertical (girder underside, FOH over, door top): pan limits alone do not move them'},
+               'c_tower_moved': {'alone': 'FAILS', 'mount_x_m': {'-9': -0.398, '-8.094': -0.248, '-7': -0.339, '-5.5': -1.336, '-4': -0.787, '-2': -1.626, '0': -1.773, '2': -1.771}},
+               'a_plus_b_body_fan_1_008': {'2.0+0.5': -0.005, '2.0+0.45': 0.012, '2.0+0.4': 0.023, '2.0+0.35': 0.051, '2.0+0.3': 0.087}},
+    'the_5_86': 'FOH riser 0.6 (stage json foh.riser_m, ASSUMED) + person 2.0 (moxir_entry_lasers.PERSON_M) + 3.0 over (VERT_M) + 18 tan 0.8 = 0.251 + aperture 0.005 + 1.3 mrad x 18 / 2 = 0.012 = 5.868 at z 30 (s 18)',
+    'cost': 'static beams (no ±0.3 deg zone); the mount aimed to 0.4 deg (measured, owed); ends 0.86 m left, 0.12 m lower than #873; apertures 0.72 m lower on the tower (y 5.225); '
+            'the FOH 2 m house right takes floor at x -4.7..-1.7 (no ground-layer clash); the FOH to DJ sight line unchanged (DJ head 0.41 m over the front row, decks hidden by the crowd as today)',
+    'search': 'scripts/place/moxir_v2_forty_routes.py (compass, Hooke & Jeeves 1961; 12 starts)', 'source': '~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/round3/routes-*.json, fine-*.json'}
 # the cut's 11 PARs (crane-dj-light design.md 4): u along the line, how it is mounted, its part, where it is aimed
 CUT_LAMPS = [
     ('rig-par-cut-01', -5.0, 'up', 'cut up', None, 'rig-par-cut-01'),
@@ -1289,6 +1307,7 @@ def build(repo):
     L = rd(repo, LASERS)
     L['setup_sheet'] = R['setup_sheet']
     L['far_wall_openings'] = R['far_wall_openings']
+    L['forty_watt_route_r3'] = FORTY_ROUTE_R3
     L['checks'] = {k: R[k] for k in ('summary', 'beams', 'casts', 'lamp_clearance', 'forty_watt')}
     L['checks']['world'] = {'glb': GLB_V10, 'glb_sha256': GLB_V10_SHA, 'hall': HALL_V10, 'near_crane_z_m': NEAR_Z, 'free_crane_z_m': FREE_Z, 'near_top_m': list(NEAR_TOP),
                             'roof_truss_bottom_m': TRUSS_BOTTOM_LOW, 'pendant_lamps': 'modelled rows z 0..24 + ASSUMED rows z -48..-6, 30..48, from 9.0 m'}

@@ -317,3 +317,25 @@ describe('MOXIR v2 cranes: the six cubes ON the free crane (B-L)', () => {
         expect(boxDist(T, [ko.x_m[0], ko.y_m[0], ko.z_m[0]], [ko.x_m[1], ko.y_m[1], ko.z_m[1]]) - rBody(s) - 0.25, 'the 40 W far patch').toBeLessThan(0)
     })
 })
+
+describe('MOXIR v2 cranes: the 40 W route kept for later (round 3, NOT live)', () => {
+    const R = L.forty_watt_route_r3
+    it('is stored but not used: H8 stays, the 40 W pair stays dark at #873\'s aim', () => {
+        expect(R.used).toBe(false)
+        expect(entry.fixtures.map((f) => f.p)).not.toEqual(R.apertures_m)
+    })
+    it('passes the near girder z +2.10 body rule with the cubes\' 1.008 deg body fan (recomputed here, 2 cm steps)', () => {
+        // the 40 W tube: aperture 10 mm (ASSUMED) / 2 + 1.3 mrad x s / 2 + s tan(1.008 deg); body = true box + 0.25 pad; rule gap >= 0.25
+        const r40 = (s) => 0.005 + 0.00065 * s + s * Math.tan(rad(1.008))
+        const zc = R.near_crane_z_m - GIRDER.dz                            // the stage-side girder, z 2.10
+        const lo = [-11.35, R.near_crane_underside_m, zc - GIRDER.w / 2]
+        const hi = [11.35, R.near_crane_top_m, zc + GIRDER.w / 2]
+        const gaps = R.apertures_m.map((p, i) => Math.min(...samples(p, R.ends_m[i], 0.02).map(([q, s]) => boxDist(q, lo, hi) - r40(s) - 0.25)) - 0.25)
+        expect(Math.min(...gaps)).toBeGreaterThanOrEqual(0)
+        expect(Math.abs(Math.min(...gaps) - R.near_girder_margin_m)).toBeLessThan(0.01)
+    })
+    it('the moved FOH riser stays on the floor, left of the roller conveyor (x 3.6)', () => {
+        expect(R.foh_riser_x_m[1]).toBeLessThanOrEqual(3.6)
+        expect(R.worst_m).toBeGreaterThanOrEqual(0)
+    })
+})
