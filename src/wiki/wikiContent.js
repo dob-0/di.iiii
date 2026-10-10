@@ -1713,6 +1713,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-03'
     },
     {
+        id: 'laser-out-node',
+        category: 'Editing',
+        title: 'Laser and Laser Out — draw for the LaserCubes',
+        summary: 'The Laser node draws a shape; Laser Out shows it in a small preview and sends it to the LaserCubes through this di.iiii.',
+        body: [
+            'Add a Laser node and pick a shape: circle, line, square, triangle, star, wave, fan or spiral. Size is 0 to 1, Rotation is in turns (0.25 is a quarter turn), and Spin turns the shape on its own, in turns per second. Colour is the beam colour, Level is its brightness from 0 to 1 — wire a Sound’s volume into Level and the shape breathes with the music. Points is how many points trace the shape.',
+            'Wire the Laser’s Frame into a Laser Out node. Laser Out draws the frame in a small square preview, so you can see the shape before it goes anywhere, and sends it to the lasers whenever it changes — at most 25 times a second. Cube is “all” to drive every cube, or one cube’s name to drive just that one.',
+            'The server holds the lasers DISARMED until a laser safety officer has signed off. While it is disarmed, Laser Out says so plainly — “Lasers off — disarmed on the server” — and nothing reaches the cubes, however the graph is wired. The preview still shows the shape, so you can build the whole show disarmed.',
+            'Laser Out also shows how many cubes the server knows and how many are connected, and whether the server is simulating them. Blackout kills the beams the moment it rises — a Button, a Compare or a Toggle makes a good Blackout — and the frame that was queued is dropped, not sent after it.',
+            'The preview shades the lower half of the field red behind a dashed line: the server blanks every point below the cube’s own aim (its keep-in zone), so no beam can point lower than the cube, toward the crowd. Height lifts a shape up the field — its default, 0.5, keeps a shape of size 0.5 wholly above the line.',
+            'Under the preview Laser Out lists every cube: what it is doing (armed, ready, simulated, stopped and why) and what the cube said about itself — model, firmware, points per second it plays and its maximum, its buffer, its temperature, how it is connected, its address and serial number. A cube that has never answered is not armed, even with the sign-off; a cube under the maker’s 10 °C floor is marked.',
+            'Two stops work by themselves while the lasers are armed. If no frame reaches a cube for 200 ms — the editor closed, the tab hidden, the network gone — the cube is blanked and switched off; it comes back on with the next frame. If a frame holds the beam still (a dot, or one spot taking half the frame), for 200 ms, the cube is blanked too, unless the laser safety officer listed that still beam for that cube. Both numbers are still to be tested on a real cube. Laser Out keeps a held frame alive by itself; keep the editor in front during a show.',
+            'The 3D view of a room with LaserCubes draws what the laser server holds, as beams from each cube (cube 1 is the first LaserCube of the rig, and so on), so a drawing can be judged in the hall before show day. It does not yet draw a stopped cube dark.',
+            'The laser server only exists on a local di.iiii (`di up`, or npm run dev). On a hosted tab Laser Out is honest and idle, and says it cannot find the laser server.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'beam', 'show', 'device', 'performance', 'safety', 'blackout'],
+        updated: '2026-10-09'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
@@ -1995,6 +2014,23 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['scenes', 'scene deck', 'deck', 'timeline', 'cue', 'loop', 'intensity', 'colour', 'speed', 'fade', 'strobe', 'undo', 'restore', 'sync', 'file', 'export', 'rig', 'moxir'],
         updated: '2026-09-30'
+    },
+    {
+        id: 'rig-show-page',
+        category: 'Spaces & access',
+        title: 'The show page — everyone sees the cue, and the team chooses it',
+        summary: 'A page for a phone in the hall: the cue that is on, what comes next and when, and every cue of the show as a big card. Tap one and it goes to Light; every open page shows the change within a second, with who chose it.',
+        body: [
+            'Open it at /{space}/show/{project} — the project\'s id or its short name. It is a plain page with no 3D, so it opens fast on a phone; "see the room" opens the room itself.',
+            'At the top: the cue that is on, its act, the next cue and how long until it comes, and who chose it. Under it, the cues as cards grouped by act, each with its colours (ember, ash) as small squares.',
+            'Tap a card and that cue goes to Light, the lighting desk on the local di.iiii, which keeps playing the list from there. One choice every 10 seconds for everybody, so a room full of phones does not fight over it. You can type your name at the bottom; it is shown when you choose.',
+            'Who may choose is the operator\'s setting: TEAM (the members of this space — the default), EVERYONE (anyone who can see the show, a guest on a phone too) or OPERATOR ONLY. The operator is the space\'s owner, an admin, or the person at the machine. Everyone else sees the setting\'s effect, not the switch.',
+            'In the room itself, five favourite scene buttons stay on screen above the view bar: tap one and the light show changes to that scene and holds. The operator picks the five with the star on each scene in the SHOW list; everyone sees the same five. Laser scenes are never favourites.',
+            'A laser moment is never fired from this page, by anyone: its card says "laser moment — operator only". The operator fires it from the cards page or Light, after the laser safety sign-off.',
+            'On a di.iiii where sign-in is off, everyone who opens the page counts as the operator; for a night with guests, start it with di up --lan --guests. On a hosted di.iiii there is no Light: the page shows the show playing by its own clock, and there is nothing to choose.'
+        ],
+        tags: ['show', 'cue', 'cues', 'choose', 'phone', 'remote', 'light', 'operator', 'team', 'guests', 'laser', 'live', 'moxir', 'favourites', 'scene buttons'],
+        updated: '2026-10-09'
     },
     {
         id: 'rig-version-switch',

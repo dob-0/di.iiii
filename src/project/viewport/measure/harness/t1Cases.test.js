@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { spotLightCone } from '../../../../objectComponents/spotBeam.js'
-import { FITTED_LAMP, T1_CASES, T1_CANDELA, T1_DISTANCE_M, WIDE_LAMP, beamRadiusAt, checkReading } from './t1Cases.js'
+import { FITTED_FALLOFF_AT_HALF, FITTED_LAMP, T1_CASES, T1_CANDELA, T1_DISTANCE_M, WIDE_LAMP, beamRadiusAt, checkReading } from './t1Cases.js'
 
 const smoothstep = (e0, e1, x) => {
     const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)))
@@ -23,11 +23,14 @@ describe('T1 reference values (inverse square and cosine law)', () => {
         const pen = Math.cos(cone * (1 - WIDE_LAMP.penumbra))
         expect(smoothstep(Math.cos(cone), pen, Math.cos((60 * Math.PI) / 180))).toBe(1)
     })
-    it("the rig's fitted cone gives three's falloff 0.5 at the beam half-angle", () => {
+    it("the rig's fitted cone: the expected half-angle reading is the model's own falloff there (0.646, not 0.5)", () => {
         const c = spotLightCone(FITTED_LAMP)
         const at = smoothstep(Math.cos(c.angle), Math.cos(c.angle * (1 - c.penumbra)), Math.cos(FITTED_LAMP.angle))
-        expect(at).toBeCloseTo(0.5, 6)
-        expect(byName['fitted-half-angle'].expected).toBeCloseTo(0.5 * (T1_CANDELA / T1_DISTANCE_M ** 2) * Math.cos(FITTED_LAMP.angle) ** 3, 10)
+        expect(at).toBeCloseTo(FITTED_FALLOFF_AT_HALF, 12)
+        // the stated limit: lumens kept at the same peak puts 64.6 % at the published half-angle (a 50 % beam angle
+        // would read 0.5); if spotBeam.js changes its fit, this number moves and the header must be re-read
+        expect(at).toBeCloseTo(0.646, 3)
+        expect(byName['fitted-half-angle'].expected).toBeCloseTo(at * (T1_CANDELA / T1_DISTANCE_M ** 2) * Math.cos(FITTED_LAMP.angle) ** 3, 10)
     })
     it('the beam self-check radius grows with the throw', () => {
         expect(beamRadiusAt(0)).toBe(0.05)

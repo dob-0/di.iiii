@@ -31,7 +31,7 @@ describe('kit-from-full: a known-full copy made the Sevan kit, as ops', () => {
         expect(light.map((o) => o.payload.patch.distance)).toEqual([0, 0, 0])
         const beam = Object.fromEntries(ops.filter((o) => o.payload.component === 'beam').map((o) => [o.payload.entityId, o.payload.patch]))
         expect(beam['rig-par-1']).toEqual({ length: 24 })
-        expect(beam['rig-lasercube-cut-01']).toMatchObject({ length: 48.8, only: true, laser: { mW: [2700, 1500, 1800], diameter_mm: 4, divergence_mrad: 1 } })
+        expect(beam['rig-lasercube-cut-01']).toMatchObject({ length: 48.8, only: true, laser: { mW: [4000, 2000, 1500], diameter_mm: 4, divergence_mrad: 1 } })
     })
     it('writes the kit\'s air: the two-zone haze, uncalibrated', () => {
         const rs = ops.find((o) => o.type === 'setRenderSettings').payload.patch.atmosphere

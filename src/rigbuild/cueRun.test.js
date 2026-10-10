@@ -31,7 +31,8 @@ describe('the cue list on the desk', () => {
     })
 
     it('says where the desk is in words', () => {
-        expect(cueClockWords({ running: true, nextInMs: 11200, loop: true, missing: [] })).toBe('next in 12 s · loop')
+        expect(cueClockWords({ running: true, nextInMs: 11200, loop: true, autoplay: true, missing: [] })).toBe('next in 12 s · loop')
+        expect(cueClockWords({ running: true, nextInMs: null, loop: true, autoplay: false, missing: [] })).toBe('holds')
         expect(cueClockWords({ running: false, loop: false, missing: ['rig-x'] })).toBe('stopped · 1 look not on the desk')
     })
 

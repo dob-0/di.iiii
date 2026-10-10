@@ -78,6 +78,7 @@ const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const { registerEstateRoutes } = require('./routes/estateRoutes')
 const { registerTrackRoutes } = require('./routes/trackRoutes')
 const { registerShootRoutes } = require('./routes/shootRoutes')
+const { registerShowRoutes } = require('./routes/showRoutes')
 const { registerAppVisitorRoutes } = require('./routes/appVisitorRoutes')
 const { createVisitorRecorder, createVisitorBouncer } = require('./appVisitors')
 const { createGuestBook } = require('./appVisitorStore')
@@ -116,6 +117,7 @@ const { createDnsCheck } = require('./domainDns')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerLaserRoutes } = require('./routes/laserRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -522,6 +524,13 @@ const lighting = registerLightingRoutes(app, {
   listen: describeListenNow
 })
 
+// The lasers (serverXR/src/laser) at /laser — MOXIR's LaserCubes driven from the Nodes editor: the
+// desk's twin (built on first use, local-only, 404 hosted), and DISARMED at every start.
+const lasers = registerLaserRoutes(app, {
+  dataDir: config.directories.dataDir,
+  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])]
+})
+
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
 // built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
 // NDI runtime (installed by the person, never shipped) and koffi (an optional
@@ -537,6 +546,19 @@ const ndi = registerNdiRoutes(app, {
 // on one: it exits by itself when its IPC channel closes — a kill -9 of the server
 // included. This hook only makes an orderly process.exit() prompt about it.
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
+// Going down: every cube blanked and its output switched off twice, then the socket closed
+// (laserEngine.js shutdown). SIGTERM / SIGINT wait for those messages to leave (≤ 250 ms), then the
+// signal is raised again with this handler gone, so the process ends exactly as it did before. The
+// 'exit' hook is a last try only: nothing asynchronous — a UDP send — is sure to leave from it.
+// A kill -9 or a pulled cable cannot be caught here; the cube's own firmware is then the last word.
+const stopLasersThenExit = (signal) => () => {
+  const reraise = () => process.kill(process.pid, signal)
+  if (!lasers.hasEngine()) { reraise(); return }
+  Promise.resolve().then(() => lasers.close()).catch(() => {}).then(reraise)
+}
+process.once('SIGTERM', stopLasersThenExit('SIGTERM'))
+process.once('SIGINT', stopLasersThenExit('SIGINT'))
+process.once('exit', () => { try { lasers.close() } catch { /* going down anyway */ } })
 // The NDI autoscan: which sources are on the network right now, known before anyone
 // asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
 // a hosted tier. With no runtime it forks nothing — it records "no-runtime" and says so.
@@ -1983,6 +2005,32 @@ registerShootRoutes(router, {
   readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'shoot sheet reads' }),
   writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 600, name: 'shoot sheet edits' }),
   fileLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 120, name: 'shoot sheet photos' })
+})
+
+// The show page (/{space}/show/{project}): everyone in a space sees the live cue and,
+// as the operator allows, chooses one. Ahead of the /api role gates below on purpose —
+// a guest may choose once the operator opens it to guests, which the blanket write gate
+// would refuse — so its handlers make the read decision requireReadRole makes, then their
+// own (routes/showRoutes.js, show/showRemote.js). Every phone in the room polls it once
+// a second, hence the read cap: 1 Hz for ten minutes is 600.
+registerShowRoutes(router, {
+  dataDir: config.directories.dataDir,
+  readJson,
+  writeJson,
+  requireAuth: () => config.requireAuth,
+  normalizeSpaceId,
+  loadSpaceMeta,
+  findProjectById: (id) => findProjectById(SPACES_DIR, id),
+  findProjectBySlug,
+  canSeeProject,
+  canAccessSpace,
+  hasRequiredAuthRole,
+  isOwnerOrAdmin: (state, meta) => isSpaceOwnerOrAdminState(state, meta),
+  hasLocalRuntime,
+  lighting,
+  readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'show page reads' }),
+  writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 240, name: 'show page choices' }),
+  log: (line) => logger.info(line)
 })
 
 // Shared with registerSpaceRoutes below (same instance, not just the same

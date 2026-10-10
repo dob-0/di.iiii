@@ -133,6 +133,7 @@ export const v1Entities = (rig) => {
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
             for (const b of f.laser.beams) {
+                if (b.off) continue                                      // a cube that cannot pass the aerial rule (moxir_v1_1.py) draws no beam
                 out.push({ id: `rig-laser-${b.id}`, type: 'spotLight', name: `LaserCube ${f.id.slice(-1)} beam ${b.id} (${f.laser.colour}) — previs, never emitted from here`, parentId: null,
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
@@ -186,7 +187,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const byPart = new Map()
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
-            for (const b of f.laser.beams) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
+            for (const b of f.laser.beams) if (!b.off) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
         } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f) })
     }
     const aimOf = (e) => {
@@ -220,7 +221,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         }
         return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), aims, colours, levels }
     }
-    const looks = [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
+    const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
     return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
 }
 

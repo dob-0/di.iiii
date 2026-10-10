@@ -9,8 +9,10 @@
  "cranes": {
   "A1": {
    "near_z_m": 0.15,
-   "far_z_m": -41.0,
-   "near_as_found_z_m": 42.5
+   "far_z_m": -12.0,
+   "far_z_rig_json_m": -41.0,
+   "near_as_found_z_m": 42.5,
+   "far_why": "v1.1 aerial: the free crane carries all six LaserCubes (owner 2026-10-09) and must travel from -41 to -12 to pass the 3 m rule"
   }
  },
  "base": {
@@ -23,7 +25,9 @@
   "the near crane's girder underside: 7.6 m FROM ONE PHOTO (170604, 7.2-8.1), not taped",
   "the transformer's z (+-3 m) and the press pedestal / press-side cabinets: LOW, tape them (the speaker placeholders were moved off them)",
   "the press crown 4.2-5.6 m (+-20 %): the park keeps 0.57 m from it",
-  "the LaserCubes: 6 W (owner 10-08 night) for brightness AND safety",
+  "the LaserCubes: 6 W (owner 10-08 night) for brightness AND safety (lasers-exact.json: 2700+1500+1800 mW)",
+  "the free crane travels to z -12 and carries a laser bar 2.5 m under its bridge (bridge underside 7.69-8.24 m, photo 007, low end used)",
+  "the hall model still draws the far crane at z -41 (owed: hall v10 with it at the show z)",
   "the hall temperature at night: 0-5 C (measure)",
   "the haze reach and sigma (designed for 0.005/m)",
   "the distro and FOH places (walk them)"
@@ -462,8 +466,8 @@
   {
    "id": "rig-par-cut-bridge-01",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -476,9 +480,9 @@
     0.166
    ],
    "r": [
-    2.847714,
+    -0.111241,
     0.0,
-    0.584656
+    1.488805
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -495,8 +499,8 @@
   {
    "id": "rig-par-cut-bridge-02",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -509,9 +513,9 @@
     0.167
    ],
    "r": [
-    2.79788,
+    -0.072998,
     0.0,
-    0.124142
+    1.435516
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -528,8 +532,8 @@
   {
    "id": "rig-par-cut-bridge-03",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -542,9 +546,9 @@
     0.168
    ],
    "r": [
-    2.53524,
+    -0.037997,
     0.0,
-    -0.778048
+    1.156454
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -561,8 +565,8 @@
   {
    "id": "rig-par-cut-bridge-04",
    "type": "up-pl5403",
-   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the ash wall",
-   "part": "ash wall",
+   "position": "standing on the cut's top chords, half-coupler + safety, tilted back to graze the hall's press face (v1.1: no ash wall)",
+   "part": "press graze",
    "layer": "the cut",
    "status": "used",
    "moments": [
@@ -575,9 +579,9 @@
     0.168
    ],
    "r": [
-    2.324211,
+    -0.032285,
     0.0,
-    -1.096369
+    1.011365
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.1309,
@@ -3279,14 +3283,14 @@
   {
    "id": "rig-lasercube-cut-01",
    "type": "ext-lc-ultra-mk2",
-   "position": "the far crane rolled to z -41: girder clamp + 0.5 m drop arm in front of its front girder, cube at 7.45 m (needs the crane seen moving, its inspection, its lock-out)",
+   "position": "the free (far) crane parked at z -12 (rig json: z -41): a rigid laser bar hung 2.49 m under its bridge, this cube at x -5.4, beam height 5.2 m (v1.1 aerial layout, owner N411+N412; needs the crane seen moving, its inspection, its lock-out)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    -5.63,
-    7.45,
-    -39.2
+    -5.4,
+    5.2,
+    -12.0
    ],
    "r": [
     -1.55816,
@@ -3307,41 +3311,79 @@
      {
       "id": "1a",
       "to": [
-       -5.948,
-       6.35,
-       -0.7
+       -5.1,
+       10.2,
+       53.8
       ],
-      "length_m": 38.5,
-      "pass": true,
-      "margin_after_zone_deg": 0.98,
+      "length_m": 66.0,
       "r": [
-       -1.542233,
+       -1.646638,
        0.0,
-       -0.008256
+       0.004546
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "1b",
-      "to": [
-       -5.648,
-       6.35,
-       -0.7
-      ],
-      "length_m": 38.5,
+      "off": false,
+      "duty": 1.0,
       "pass": true,
-      "margin_after_zone_deg": 0.98,
-      "r": [
-       -1.542233,
-       0.0,
-       -0.000467
+      "ends_on": "end wall (block)",
+      "end_height_m": 10.2,
+      "max_z_m": 53.8,
+      "candidates_that_pass": 99,
+      "lowest_axis_distance_to_a_place_m": 3.23,
+      "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+      "nearest_place_at": [
+       -5.398,
+       5.23,
+       -11.601
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "nearest_fixture_margin_m": 1.62,
+      "worst_place": "hall floor (dance floor, backstage, everywhere)",
+      "worst_margin_m": 0.223,
+      "worst_at": [
+       -5.4,
+       5.23,
+       -11.6
+      ],
+      "crane_under_margin_m": 0.789,
+      "lamp_margin_m": 0.468,
+      "end_low_m": 9.244,
+      "end_high_m": 11.156,
+      "cast_all_rays_on_matte_block": true,
+      "cast_hits": [
+       "end wall z +54"
+      ],
+      "cast_end_y_range_m": [
+       9.277,
+       11.125
+      ],
+      "cast_meshes": [
+       "hall-block"
+      ],
+      "half_fan_deg": 1.008,
+      "margin_after_zone_deg": 0.208,
+      "was_v1_0_beams": [
+       "1a",
+       "1b"
+      ],
+      "composition_end": [
+       -5.4,
+       10.2,
+       53.8
+      ],
+      "nudge_m": [
+       0.3,
+       0.0
+      ]
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": [
+     -5.63,
+     7.45,
+     -39.2
+    ],
+    "note_v1_1": "ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x -5.4, y 5.2, z -12; over the heads to the far (NW, public-entrance) end wall at [-5.1, 10.2, 53.8] (matte block, 10.2 m up = door top + 4.2 m); lowest 0.223 m over the nearest standing person's top-plus-3 m (hall floor (dance floor, backstage, everywhere)), margin after the 0.8 deg fan 0.208 deg (owner N411)."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3349,14 +3391,14 @@
   {
    "id": "rig-lasercube-cut-02",
    "type": "ext-lc-ultra-mk2",
-   "position": "the far crane rolled to z -41: girder clamp + 0.5 m drop arm in front of its front girder, cube at 7.45 m (needs the crane seen moving, its inspection, its lock-out)",
+   "position": "the free (far) crane parked at z -12 (rig json: z -41): a rigid laser bar hung 2.49 m under its bridge, this cube at x -4, beam height 5.2 m (v1.1 aerial layout, owner N411+N412; needs the crane seen moving, its inspection, its lock-out)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    3.63,
-    7.45,
-    -39.2
+    -4.0,
+    5.2,
+    -12.0
    ],
    "r": [
     -1.55816,
@@ -3377,41 +3419,79 @@
      {
       "id": "2a",
       "to": [
-       -5.348,
-       6.35,
-       -0.7
+       -4.0,
+       10.2,
+       53.8
       ],
-      "length_m": 39.5,
-      "pass": true,
-      "margin_after_zone_deg": 0.93,
+      "length_m": 66.0,
       "r": [
-       -1.542233,
+       -1.646638,
        0.0,
-       -0.22901
+       0.0
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "2b",
-      "to": [
-       -5.048,
-       6.35,
-       -0.7
-      ],
-      "length_m": 39.5,
+      "off": false,
+      "duty": 1.0,
       "pass": true,
-      "margin_after_zone_deg": 0.94,
-      "r": [
-       -1.542233,
-       0.0,
-       -0.22161
+      "ends_on": "end wall (block)",
+      "end_height_m": 10.2,
+      "max_z_m": 53.8,
+      "candidates_that_pass": 99,
+      "lowest_axis_distance_to_a_place_m": 3.23,
+      "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+      "nearest_place_at": [
+       -4.0,
+       5.23,
+       -11.601
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "nearest_fixture_margin_m": 0.814,
+      "worst_place": "hall floor (dance floor, backstage, everywhere)",
+      "worst_margin_m": 0.223,
+      "worst_at": [
+       -4.0,
+       5.23,
+       -11.6
+      ],
+      "crane_under_margin_m": 0.789,
+      "lamp_margin_m": 1.172,
+      "end_low_m": 9.244,
+      "end_high_m": 11.156,
+      "cast_all_rays_on_matte_block": true,
+      "cast_hits": [
+       "end wall z +54"
+      ],
+      "cast_end_y_range_m": [
+       9.277,
+       11.125
+      ],
+      "cast_meshes": [
+       "hall-block"
+      ],
+      "half_fan_deg": 1.008,
+      "margin_after_zone_deg": 0.208,
+      "was_v1_0_beams": [
+       "2a",
+       "2b"
+      ],
+      "composition_end": [
+       -4.0,
+       10.2,
+       53.8
+      ],
+      "nudge_m": [
+       0.0,
+       0.0
+      ]
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": [
+     3.63,
+     7.45,
+     -39.2
+    ],
+    "note_v1_1": "ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x -4, y 5.2, z -12; over the heads to the far (NW, public-entrance) end wall at [-4.0, 10.2, 53.8] (matte block, 10.2 m up = door top + 4.2 m); lowest 0.223 m over the nearest standing person's top-plus-3 m (hall floor (dance floor, backstage, everywhere)), margin after the 0.8 deg fan 0.208 deg (owner N411)."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3419,14 +3499,14 @@
   {
    "id": "rig-lasercube-cut-03",
    "type": "ext-lc-ultra-mk2",
-   "position": "the far crane rolled to z -41: girder clamp + 0.5 m drop arm in front of its front girder, cube at 7.45 m (needs the crane seen moving, its inspection, its lock-out)",
+   "position": "the free (far) crane parked at z -12 (rig json: z -41): a rigid laser bar hung 2.49 m under its bridge, this cube at x 2.5, beam height 5.2 m (v1.1 aerial layout, owner N411+N412; needs the crane seen moving, its inspection, its lock-out)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    9.78,
-    7.45,
-    -39.2
+    2.5,
+    5.2,
+    -12.0
    ],
    "r": [
     -1.55816,
@@ -3447,41 +3527,79 @@
      {
       "id": "3a",
       "to": [
-       -4.748,
-       6.35,
-       -0.7
+       2.5,
+       10.2,
+       53.8
       ],
-      "length_m": 41.2,
-      "pass": true,
-      "margin_after_zone_deg": 0.87,
+      "length_m": 66.0,
       "r": [
-       -1.542233,
+       -1.646638,
        0.0,
-       -0.360695
+       0.0
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "3b",
-      "to": [
-       -4.448,
-       6.35,
-       -0.7
-      ],
-      "length_m": 41.1,
+      "off": false,
+      "duty": 1.0,
       "pass": true,
-      "margin_after_zone_deg": 0.87,
-      "r": [
-       -1.542233,
-       0.0,
-       -0.353859
+      "ends_on": "end wall (block)",
+      "end_height_m": 10.2,
+      "max_z_m": 53.8,
+      "candidates_that_pass": 99,
+      "lowest_axis_distance_to_a_place_m": 3.23,
+      "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+      "nearest_place_at": [
+       2.5,
+       5.23,
+       -11.601
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "nearest_fixture_margin_m": 2.457,
+      "worst_place": "hall floor (dance floor, backstage, everywhere)",
+      "worst_margin_m": 0.223,
+      "worst_at": [
+       2.5,
+       5.23,
+       -11.6
+      ],
+      "crane_under_margin_m": 0.789,
+      "lamp_margin_m": 1.672,
+      "end_low_m": 9.244,
+      "end_high_m": 11.156,
+      "cast_all_rays_on_matte_block": true,
+      "cast_hits": [
+       "end wall z +54"
+      ],
+      "cast_end_y_range_m": [
+       9.277,
+       11.125
+      ],
+      "cast_meshes": [
+       "hall-block"
+      ],
+      "half_fan_deg": 1.008,
+      "margin_after_zone_deg": 0.208,
+      "was_v1_0_beams": [
+       "3a",
+       "3b"
+      ],
+      "composition_end": [
+       2.5,
+       10.2,
+       53.8
+      ],
+      "nudge_m": [
+       0.0,
+       0.0
+      ]
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": [
+     9.78,
+     7.45,
+     -39.2
+    ],
+    "note_v1_1": "ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x 2.5, y 5.2, z -12; over the heads to the far (NW, public-entrance) end wall at [2.5, 10.2, 53.8] (matte block, 10.2 m up = door top + 4.2 m); lowest 0.223 m over the nearest standing person's top-plus-3 m (hall floor (dance floor, backstage, everywhere)), margin after the 0.8 deg fan 0.208 deg (owner N411)."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3489,14 +3607,14 @@
   {
    "id": "rig-lasercube-cut-04",
    "type": "ext-lc-ultra-mk2",
-   "position": "nave column x -12, z -24: clamp on its inner (+x) and far (-z) corner at 5.0 m. His loop is 1.8 m further out (x -13.1, z -25.8): from there the stage-ward beam would run into the next columns of the row, so the cube sits on the column's nave corner.",
+   "position": "the free (far) crane parked at z -12 (rig json: z -41): a rigid laser bar hung 2.49 m under its bridge, this cube at x -2.6, beam height 5.2 m (v1.1 aerial layout, owner N411+N412; needs the crane seen moving, its inspection, its lock-out)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    -11.25,
-    5.0,
-    -24.6
+    -2.6,
+    5.2,
+    -12.0
    ],
    "r": [
     -1.599838,
@@ -3517,41 +3635,79 @@
      {
       "id": "4a",
       "to": [
-       -6.398,
-       5.95,
-       -0.7
+       -2.6,
+       10.2,
+       53.8
       ],
-      "length_m": 24.4,
-      "pass": true,
-      "margin_after_zone_deg": 1.08,
+      "length_m": 66.0,
       "r": [
-       -1.610524,
+       -1.646638,
        0.0,
-       0.200137
+       0.0
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "4b",
-      "to": [
-       -6.098,
-       5.95,
-       -0.7
-      ],
-      "length_m": 24.5,
+      "off": false,
+      "duty": 1.0,
       "pass": true,
-      "margin_after_zone_deg": 1.07,
-      "r": [
-       -1.610524,
-       0.0,
-       0.212153
+      "ends_on": "end wall (block)",
+      "end_height_m": 10.2,
+      "max_z_m": 53.8,
+      "candidates_that_pass": 99,
+      "lowest_axis_distance_to_a_place_m": 3.23,
+      "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+      "nearest_place_at": [
+       -2.6,
+       5.23,
+       -11.601
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "nearest_fixture_margin_m": 0.37,
+      "worst_place": "hall floor (dance floor, backstage, everywhere)",
+      "worst_margin_m": 0.223,
+      "worst_at": [
+       -2.6,
+       5.23,
+       -11.6
+      ],
+      "crane_under_margin_m": 0.789,
+      "lamp_margin_m": 1.772,
+      "end_low_m": 9.244,
+      "end_high_m": 11.156,
+      "cast_all_rays_on_matte_block": true,
+      "cast_hits": [
+       "end wall z +54"
+      ],
+      "cast_end_y_range_m": [
+       9.277,
+       11.125
+      ],
+      "cast_meshes": [
+       "hall-block"
+      ],
+      "half_fan_deg": 1.008,
+      "margin_after_zone_deg": 0.208,
+      "was_v1_0_beams": [
+       "4a",
+       "4b"
+      ],
+      "composition_end": [
+       -2.6,
+       10.2,
+       53.8
+      ],
+      "nudge_m": [
+       0.0,
+       0.0
+      ]
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": [
+     -11.25,
+     5.0,
+     -24.6
+    ],
+    "note_v1_1": "ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x -2.6, y 5.2, z -12; over the heads to the far (NW, public-entrance) end wall at [-2.6, 10.2, 53.8] (matte block, 10.2 m up = door top + 4.2 m); lowest 0.223 m over the nearest standing person's top-plus-3 m (hall floor (dance floor, backstage, everywhere)), margin after the 0.8 deg fan 0.208 deg (owner N411)."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3559,14 +3715,14 @@
   {
    "id": "rig-lasercube-cut-05",
    "type": "ext-lc-ultra-mk2",
-   "position": "nave column x +12, z -24: the mirror of 4 (his loop x 13.3, z -23.8)",
+   "position": "the free (far) crane parked at z -12 (rig json: z -41): a rigid laser bar hung 2.49 m under its bridge, this cube at x 1.1, beam height 5.2 m (v1.1 aerial layout, owner N411+N412; needs the crane seen moving, its inspection, its lock-out)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    11.25,
-    5.0,
-    -24.6
+    1.1,
+    5.2,
+    -12.0
    ],
    "r": [
     -1.599838,
@@ -3587,41 +3743,79 @@
      {
       "id": "5a",
       "to": [
-       -4.298,
-       5.95,
-       -0.7
+       1.1,
+       10.2,
+       53.8
       ],
-      "length_m": 28.5,
-      "pass": true,
-      "margin_after_zone_deg": 0.81,
+      "length_m": 66.0,
       "r": [
-       -1.610524,
+       -1.646638,
        0.0,
-       -0.576397
+       0.0
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "5b",
-      "to": [
-       -3.998,
-       5.95,
-       -0.7
-      ],
-      "length_m": 28.4,
+      "off": false,
+      "duty": 1.0,
       "pass": true,
-      "margin_after_zone_deg": 0.69,
-      "r": [
-       -1.610524,
-       0.0,
-       -0.567529
+      "ends_on": "end wall (block)",
+      "end_height_m": 10.2,
+      "max_z_m": 53.8,
+      "candidates_that_pass": 99,
+      "lowest_axis_distance_to_a_place_m": 3.23,
+      "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+      "nearest_place_at": [
+       1.1,
+       5.23,
+       -11.601
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "nearest_fixture_margin_m": 1.112,
+      "worst_place": "hall floor (dance floor, backstage, everywhere)",
+      "worst_margin_m": 0.223,
+      "worst_at": [
+       1.1,
+       5.23,
+       -11.6
+      ],
+      "crane_under_margin_m": 0.789,
+      "lamp_margin_m": 0.468,
+      "end_low_m": 9.244,
+      "end_high_m": 11.156,
+      "cast_all_rays_on_matte_block": true,
+      "cast_hits": [
+       "end wall z +54"
+      ],
+      "cast_end_y_range_m": [
+       9.277,
+       11.125
+      ],
+      "cast_meshes": [
+       "hall-block"
+      ],
+      "half_fan_deg": 1.008,
+      "margin_after_zone_deg": 0.208,
+      "was_v1_0_beams": [
+       "5a",
+       "5b"
+      ],
+      "composition_end": [
+       1.1,
+       10.2,
+       53.8
+      ],
+      "nudge_m": [
+       0.0,
+       0.0
+      ]
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": [
+     11.25,
+     5.0,
+     -24.6
+    ],
+    "note_v1_1": "ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x 1.1, y 5.2, z -12; over the heads to the far (NW, public-entrance) end wall at [1.1, 10.2, 53.8] (matte block, 10.2 m up = door top + 4.2 m); lowest 0.223 m over the nearest standing person's top-plus-3 m (hall floor (dance floor, backstage, everywhere)), margin after the 0.8 deg fan 0.208 deg (owner N411)."
    },
    "power_w": 120,
    "circuit": "C15"
@@ -3629,14 +3823,14 @@
   {
    "id": "rig-lasercube-cut-06",
    "type": "ext-lc-ultra-mk2",
-   "position": "a 6.5 m ground-support tower in the nave behind the press (H30V tower on a base plate with outriggers, or a wind-up stand rated for it): his loop exactly. Stability check owed.",
+   "position": "the free (far) crane parked at z -12 (rig json: z -41): a rigid laser bar hung 2.49 m under its bridge, this cube at x 3.9, beam height 5.2 m (v1.1 aerial layout, owner N411+N412; needs the crane seen moving, its inspection, its lock-out)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    0.26,
-    6.5,
-    -9.23
+    3.9,
+    5.2,
+    -12.0
    ],
    "r": [
     -1.591216,
@@ -3657,87 +3851,85 @@
      {
       "id": "6a",
       "to": [
-       -6.698,
-       6.75,
-       -0.7
+       3.9,
+       10.2,
+       53.8
       ],
-      "length_m": 11.0,
-      "pass": true,
-      "margin_after_zone_deg": 1.16,
+      "length_m": 66.0,
       "r": [
-       -1.600096,
+       -1.646638,
        0.0,
-       -0.684036
+       0.0
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
-     },
-     {
-      "id": "6b",
-      "to": [
-       -3.698,
-       6.75,
-       -0.7
-      ],
-      "length_m": 9.4,
+      "off": false,
+      "duty": 1.0,
       "pass": true,
-      "margin_after_zone_deg": 2.2,
-      "r": [
-       -1.600096,
-       0.0,
-       -0.434279
+      "ends_on": "end wall (block)",
+      "end_height_m": 10.2,
+      "max_z_m": 53.8,
+      "candidates_that_pass": 99,
+      "lowest_axis_distance_to_a_place_m": 3.23,
+      "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+      "nearest_place_at": [
+       3.9,
+       5.23,
+       -11.601
       ],
-      "ends_on": "ash-wall",
-      "max_z_m": -0.7
+      "nearest_fixture_margin_m": 3.838,
+      "worst_place": "hall floor (dance floor, backstage, everywhere)",
+      "worst_margin_m": 0.223,
+      "worst_at": [
+       3.9,
+       5.23,
+       -11.6
+      ],
+      "crane_under_margin_m": 0.789,
+      "lamp_margin_m": 1.272,
+      "end_low_m": 9.244,
+      "end_high_m": 11.156,
+      "cast_all_rays_on_matte_block": true,
+      "cast_hits": [
+       "end wall z +54"
+      ],
+      "cast_end_y_range_m": [
+       9.277,
+       11.125
+      ],
+      "cast_meshes": [
+       "hall-block"
+      ],
+      "half_fan_deg": 1.008,
+      "margin_after_zone_deg": 0.208,
+      "was_v1_0_beams": [
+       "6a",
+       "6b"
+      ],
+      "composition_end": [
+       3.9,
+       10.2,
+       53.8
+      ],
+      "nudge_m": [
+       0.0,
+       0.0
+      ]
      }
     ],
-    "note_v1_1": "beams re-aimed at their v1.0 points on the ash wall, moved with it (D_WALL [-5.328, -0.35, -20.85]); the cube stays where v1.0 hangs it"
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": [
+     0.26,
+     6.5,
+     -9.23
+    ],
+    "note_v1_1": "ONE static beam, the cube's whole 6 W, hung on the free crane's laser bar at x 3.9, y 5.2, z -12; over the heads to the far (NW, public-entrance) end wall at [3.9, 10.2, 53.8] (matte block, 10.2 m up = door top + 4.2 m); lowest 0.223 m over the nearest standing person's top-plus-3 m (hall floor (dance floor, backstage, everywhere)), margin after the 0.8 deg fan 0.208 deg (owner N411)."
    },
    "power_w": 120,
    "circuit": "C15"
   }
  ],
  "solids": [
-  {
-   "id": "rig-ash-wall",
-   "name": "the ash wall: beam-stop panel, matte black, 4.0 x 2.4 m, 1.5 mm aluminium sheet on a light steel frame, ",
-   "kind": "box",
-   "p": [
-    -5.198,
-    5.15,
-    -0.65
-   ],
-   "r": [
-    0,
-    0,
-    0
-   ],
-   "s": [
-    4.0,
-    2.4000000000000004,
-    0.1
-   ]
-  },
-  {
-   "id": "rig-tower-cube6",
-   "name": "tower for laser 6 (H30V), base plate + ballast",
-   "kind": "tower",
-   "p": [
-    0.26,
-    0.0,
-    -9.23
-   ],
-   "r": [
-    0,
-    0,
-    0
-   ],
-   "s": [
-    1,
-    1.0417,
-    1
-   ]
-  },
   {
    "id": "rig-crowd-barrier",
    "name": "crowd barrier 13.6 m at z 8.20 (v1.1: 2.55 m pit to the step)",
@@ -3763,7 +3955,7 @@
    "name": "speaker L - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
    "kind": "box",
    "p": [
-    -8.25,
+    -8.4,
     0.0,
     5.4
    ],
@@ -3773,7 +3965,7 @@
     0
    ],
    "s": [
-    3.5,
+    3.2,
     2.0,
     2.6
    ]
@@ -3796,6 +3988,26 @@
     2.8,
     2.0,
     2.6
+   ]
+  },
+  {
+   "id": "rig-crane-bar",
+   "name": "laser bar: a rigid truss bar hung 2.5 m under the free crane's bridge (z -12), carries the six cubes at x [-5.4, -4.0, -2.6, 1.1, 2.5, 3.9]; its top is the cubes' mount; the drop frame is the rigger's (owed)",
+   "kind": "box",
+   "p": [
+    -0.75,
+    4.75,
+    -12.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    10.5,
+    0.3,
+    0.35
    ]
   },
   {
@@ -3927,13 +4139,13 @@
      "#ff3a12",
      0.8
     ],
-    "ash wall": [
-     "#ff3a12",
-     0.12
-    ],
     "halo": [
      "#ff3a12",
      0.4
+    ],
+    "press graze": [
+     "#ff3a12",
+     0.12
     ]
    }
   },
@@ -4066,9 +4278,9 @@
      1.0
     ]
    },
-   "units": "laser 6, one beam (6a), the cube drawing a single point (duty ~0.9)",
+   "units": "laser 6, its one beam (6a), the cube drawing its one point (duty 1)",
    "when": "act 1, the first 20 minutes after the doors; returns once, at the very end",
-   "why": "a single white line from the dark behind the press to the wall behind the DJ in an empty black hall: the first thing anyone sees, and it is almost nothing"
+   "why": "a single white line from the dark behind the press to the far wall over the heads in an empty black hall: the first thing anyone sees, and it is almost nothing"
   },
   {
    "id": "still_smoking",
@@ -4145,7 +4357,7 @@
      1.0
     ]
    },
-   "units": "all 12 laser lines + the fan of 7 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment",
+   "units": "all 6 laser lines + the fan of 7 and the spine (ash) + the 6 columns of fire (ember) + 4 blinders at <= 40 % (1-2 s hits) + 4 strobes up into the far roof (<= 4 Hz): the only 3-layer moment",
    "when": "act 3 only, on the drop, 16 bars, at most 3 times an hour; then the black",
    "why": "everything the night held back, at once, once: the fire burns again for 30 seconds and leaves ash"
   },
@@ -4190,10 +4402,10 @@
    "set": "the build (01:00-02:30)",
    "use": [
     "columns of fire appear at the first build",
-    "sparks: the chase one cube at a time (2, then 1+3 ... never all 12)",
+    "sparks: the chase one cube at a time (2, then 1+3 ... never all 6)",
     "the roof at 01:00 and 02:00"
    ],
-   "hold": "all 12 lines at once, the fan, the blinders, the strobes, the fire",
+   "hold": "all 6 lines at once, the fan, the blinders, the strobes, the fire",
    "layers": "2"
   },
   {
@@ -4249,8 +4461,8 @@
    ],
    [
     "F5",
-    "ash wall",
-    "the 4 grazers, ember 5-15 %"
+    "press graze",
+    "the 4 back grazers on the press face, ember 5-15 %"
    ],
    [
     "F6",
@@ -4483,7 +4695,7 @@
     "to": "cube 1 (192.168.1.101)",
     "what": "cube 1 (192.168.1.101)",
     "kind": "Cat6 U/FTP, etherCON",
-    "length_m": 25.9,
+    "length_m": 20.1,
     "limit_m": 100,
     "ok": 1.0
    },
@@ -4492,7 +4704,7 @@
     "to": "cube 2 (192.168.1.102)",
     "what": "cube 2 (192.168.1.102)",
     "kind": "Cat6 U/FTP, etherCON",
-    "length_m": 36.1,
+    "length_m": 21.7,
     "limit_m": 100,
     "ok": 1.0
    },
@@ -4501,7 +4713,7 @@
     "to": "cube 3 (192.168.1.103)",
     "what": "cube 3 (192.168.1.103)",
     "kind": "Cat6 U/FTP, etherCON",
-    "length_m": 42.8,
+    "length_m": 28.8,
     "limit_m": 100,
     "ok": 1.0
    },
@@ -4510,7 +4722,7 @@
     "to": "cube 4 (192.168.1.104)",
     "what": "cube 4 (192.168.1.104)",
     "kind": "Cat6 U/FTP, etherCON",
-    "length_m": 11.4,
+    "length_m": 23.2,
     "limit_m": 100,
     "ok": 1.0
    },
@@ -4519,7 +4731,7 @@
     "to": "cube 5 (192.168.1.105)",
     "what": "cube 5 (192.168.1.105)",
     "kind": "Cat6 U/FTP, etherCON",
-    "length_m": 25.7,
+    "length_m": 27.3,
     "limit_m": 100,
     "ok": 1.0
    },
@@ -4528,7 +4740,7 @@
     "to": "cube 6 (192.168.1.106)",
     "what": "cube 6 (192.168.1.106)",
     "kind": "Cat6 U/FTP, etherCON",
-    "length_m": 30.8,
+    "length_m": 30.4,
     "limit_m": 100,
     "ok": 1.0
    }
@@ -4536,7 +4748,7 @@
  },
  "power": {
   "summary": {
-   "connected_w": 35984,
+   "connected_w": 36104,
    "base_w": 12820,
    "worst_look_w": 16292,
    "pa_w": 0,
@@ -4544,7 +4756,7 @@
    "running_total_w": 17792,
    "cap_w": 30000,
    "ok": true,
-   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 21.8 kW with the PA and FOH = about 32 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.0 kW lighting + 4.0 kW PA; photograph the board today (breakers, phases, earth)",
+   "supply": "the factory's own 380 V 3-phase board (owner 10-08: no generator): running 17.8 kW with FOH = about 26 A per phase if balanced; ask for a 3-phase breaker of at least 40 A per phase (63 A gives headroom for the smoke machines' warm-up and the discharge lamps' inrush); connected 36.1 kW (lighting, smoke, lasers, network); the sound is the organiser's own supply; photograph the board today (breakers, phases, earth)",
    "watts_basis": "fixtures.json (supply W where the maker gives it, else rated W); LaserCube 120 W from its manual; running = per-look levels x the duties above (ESTIMATE)",
    "pa_note": "the sound is the organiser's (owner 10-08 night): v1.0 counted 4.0 kW for the PA; it is on the organiser's own supply plan, not in di's lighting total",
    "laser_note": "the cubes at 120 W each from their adapters (ULTRA MK2 manual), 6 W optical (owner 10-08 night)"
@@ -4884,21 +5096,21 @@
     "distro": "D-FAR",
     "kind": "lasers + network",
     "units": [
-     "rig-lasercube-cut-04",
      "rig-lasercube-cut-01",
      "rig-lasercube-cut-02",
-     "rig-lasercube-cut-03",
+     "rig-lasercube-cut-04",
      "rig-lasercube-cut-05",
+     "rig-lasercube-cut-03",
      "rig-lasercube-cut-06"
     ],
     "n": 6,
     "load_w": 840,
     "amps_230v": 3.7,
     "limit_w": 2944,
-    "cable_m": 102.6,
+    "cable_m": 32.0,
     "cable_mm2": 2.5,
-    "vdrop_v": 6.7,
-    "vdrop_pct": 2.9,
+    "vdrop_v": 2.1,
+    "vdrop_pct": 0.9,
     "ok": true,
     "cable": "H07RN-F 3G2.5, 16 A CEE / Schuko; daisy-chained PowerCON TRUE1 where the fixture has it",
     "phase": "L3"
@@ -5125,6 +5337,8 @@
    ]
   }
  },
+ "laser_duty": 1.0,
+ "lasers_what": "v1.1 aerial (owner 2026-10-09 N411/N412): 6 beams, ONE static beam per LaserCube (the cube's whole 6 W, duty 1), all six on a rigid bar under the FREE (far) crane, parked at z -12 (the rig json had it at z -41; from there no aim passes); the lines run over the heads of the audience to the far (NW, public-entrance) end wall, >= 3.0 m above a standing person's top (surface + 2.0 m) and >= 2.5 m from every place a person can rise to, under the near crane's bridge (safe underside 7.2 m), ending on the matte block wall >= 3.0 m above the door top. Standards: IEC TR 60825-3, ILDA audience-safety guidance, HSE HS(G)95. Numbers: checks_v1_1.aerial; v1.0's 12 beams, the ash wall and the press ends are v1.0's record.",
  "stage": {
   "booth_from": [
    0.128,
@@ -5178,7 +5392,7 @@
     "label": "Floor z 20"
    },
    {
-    "id": "foh",
+    "id": "rig",
     "position": [
      -5.2,
      2.2,
@@ -5190,7 +5404,7 @@
      -8.0
     ],
     "fov": 55,
-    "label": "FOH z 29"
+    "label": "Rig - FOH z 29"
    },
    {
     "id": "dj",
@@ -5263,11 +5477,6 @@
    ],
    "D_CUT": [
     -4.0,
-    -0.35,
-    -20.85
-   ],
-   "D_WALL": [
-    -5.328,
     -0.35,
     -20.85
    ]
@@ -5451,14 +5660,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -6.758,
-     6.683,
-     -0.6
+    "re_aimed_at_press": [
+     0.7,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 15.8
+    "re_aimed_at": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "column x 12 z 0.5 (shaft)",
+    "v1_1_end_cls": "column",
+    "aim_deg_change": 45.3
    },
    {
     "id": "rig-par-cut-bridge-02",
@@ -5469,14 +5683,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -6.777,
-     6.678,
-     -0.6
+    "re_aimed_at_press": [
+     1.3,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 28.2
+    "re_aimed_at": [
+     1.3,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 62.2
    },
    {
     "id": "rig-par-cut-bridge-03",
@@ -5487,14 +5706,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -4.336,
-     6.664,
-     -0.6
+    "re_aimed_at_press": [
+     1.9,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 44.6
+    "re_aimed_at": [
+     1.9,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 109.8
    },
    {
     "id": "rig-par-cut-bridge-04",
@@ -5505,14 +5729,19 @@
      -20.85
     ],
     "v1_0_end": "ash-wall",
-    "re_aimed_at": [
-     -3.607,
-     6.659,
-     -0.6
+    "re_aimed_at_press": [
+     2.5,
+     3.4,
+     0.25
     ],
-    "v1_1_end": "ash-wall",
-    "v1_1_end_cls": "stage",
-    "aim_deg_change": 28.4
+    "re_aimed_at": [
+     2.5,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 142.1
    },
    {
     "id": "rig-par-neighbour-02",
@@ -6277,241 +6506,790 @@
   ],
   "lasers": [
    {
+    "id": "1a",
+    "to": [
+     -5.1,
+     10.2,
+     53.8
+    ],
+    "length_m": 66.0,
+    "off": false,
+    "duty": 1.0,
+    "pass": true,
+    "ends_on": "end wall (block)",
+    "end_height_m": 10.2,
+    "max_z_m": 53.8,
+    "candidates_that_pass": 99,
+    "lowest_axis_distance_to_a_place_m": 3.23,
+    "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+    "nearest_place_at": [
+     -5.398,
+     5.23,
+     -11.601
+    ],
+    "nearest_fixture_margin_m": 1.62,
+    "worst_place": "hall floor (dance floor, backstage, everywhere)",
+    "worst_margin_m": 0.223,
+    "worst_at": [
+     -5.4,
+     5.23,
+     -11.6
+    ],
+    "crane_under_margin_m": 0.789,
+    "lamp_margin_m": 0.468,
+    "end_low_m": 9.244,
+    "end_high_m": 11.156,
+    "cast_all_rays_on_matte_block": true,
+    "cast_hits": [
+     "end wall z +54"
+    ],
+    "cast_end_y_range_m": [
+     9.277,
+     11.125
+    ],
+    "cast_meshes": [
+     "hall-block"
+    ],
+    "half_fan_deg": 1.008,
+    "margin_after_zone_deg": 0.208,
+    "was_v1_0_beams": [
+     "1a",
+     "1b"
+    ],
+    "composition_end": [
+     -5.4,
+     10.2,
+     53.8
+    ],
+    "nudge_m": [
+     0.3,
+     0.0
+    ],
     "beam": "1a",
     "cube": "rig-lasercube-cut-01",
     "from": [
+     -5.4,
+     5.2,
+     -12.0
+    ],
+    "moved_from": [
      -5.63,
      7.45,
      -39.2
-    ],
-    "to": [
-     -5.948,
-     6.35,
-     -0.7
-    ],
-    "length_m": 38.5,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.98,
-    "max_z_m": -0.7
+    ]
    },
    {
-    "beam": "1b",
-    "cube": "rig-lasercube-cut-01",
-    "from": [
-     -5.63,
-     7.45,
-     -39.2
-    ],
+    "id": "2a",
     "to": [
-     -5.648,
-     6.35,
-     -0.7
+     -4.0,
+     10.2,
+     53.8
     ],
-    "length_m": 38.5,
+    "length_m": 66.0,
+    "off": false,
+    "duty": 1.0,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.98,
-    "max_z_m": -0.7
-   },
-   {
+    "ends_on": "end wall (block)",
+    "end_height_m": 10.2,
+    "max_z_m": 53.8,
+    "candidates_that_pass": 99,
+    "lowest_axis_distance_to_a_place_m": 3.23,
+    "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+    "nearest_place_at": [
+     -4.0,
+     5.23,
+     -11.601
+    ],
+    "nearest_fixture_margin_m": 0.814,
+    "worst_place": "hall floor (dance floor, backstage, everywhere)",
+    "worst_margin_m": 0.223,
+    "worst_at": [
+     -4.0,
+     5.23,
+     -11.6
+    ],
+    "crane_under_margin_m": 0.789,
+    "lamp_margin_m": 1.172,
+    "end_low_m": 9.244,
+    "end_high_m": 11.156,
+    "cast_all_rays_on_matte_block": true,
+    "cast_hits": [
+     "end wall z +54"
+    ],
+    "cast_end_y_range_m": [
+     9.277,
+     11.125
+    ],
+    "cast_meshes": [
+     "hall-block"
+    ],
+    "half_fan_deg": 1.008,
+    "margin_after_zone_deg": 0.208,
+    "was_v1_0_beams": [
+     "2a",
+     "2b"
+    ],
+    "composition_end": [
+     -4.0,
+     10.2,
+     53.8
+    ],
+    "nudge_m": [
+     0.0,
+     0.0
+    ],
     "beam": "2a",
     "cube": "rig-lasercube-cut-02",
     "from": [
+     -4.0,
+     5.2,
+     -12.0
+    ],
+    "moved_from": [
      3.63,
      7.45,
      -39.2
-    ],
-    "to": [
-     -5.348,
-     6.35,
-     -0.7
-    ],
-    "length_m": 39.5,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.93,
-    "max_z_m": -0.7
+    ]
    },
    {
-    "beam": "2b",
-    "cube": "rig-lasercube-cut-02",
-    "from": [
-     3.63,
-     7.45,
-     -39.2
-    ],
+    "id": "3a",
     "to": [
-     -5.048,
-     6.35,
-     -0.7
+     2.5,
+     10.2,
+     53.8
     ],
-    "length_m": 39.5,
+    "length_m": 66.0,
+    "off": false,
+    "duty": 1.0,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.94,
-    "max_z_m": -0.7
-   },
-   {
+    "ends_on": "end wall (block)",
+    "end_height_m": 10.2,
+    "max_z_m": 53.8,
+    "candidates_that_pass": 99,
+    "lowest_axis_distance_to_a_place_m": 3.23,
+    "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+    "nearest_place_at": [
+     2.5,
+     5.23,
+     -11.601
+    ],
+    "nearest_fixture_margin_m": 2.457,
+    "worst_place": "hall floor (dance floor, backstage, everywhere)",
+    "worst_margin_m": 0.223,
+    "worst_at": [
+     2.5,
+     5.23,
+     -11.6
+    ],
+    "crane_under_margin_m": 0.789,
+    "lamp_margin_m": 1.672,
+    "end_low_m": 9.244,
+    "end_high_m": 11.156,
+    "cast_all_rays_on_matte_block": true,
+    "cast_hits": [
+     "end wall z +54"
+    ],
+    "cast_end_y_range_m": [
+     9.277,
+     11.125
+    ],
+    "cast_meshes": [
+     "hall-block"
+    ],
+    "half_fan_deg": 1.008,
+    "margin_after_zone_deg": 0.208,
+    "was_v1_0_beams": [
+     "3a",
+     "3b"
+    ],
+    "composition_end": [
+     2.5,
+     10.2,
+     53.8
+    ],
+    "nudge_m": [
+     0.0,
+     0.0
+    ],
     "beam": "3a",
     "cube": "rig-lasercube-cut-03",
     "from": [
+     2.5,
+     5.2,
+     -12.0
+    ],
+    "moved_from": [
      9.78,
      7.45,
      -39.2
-    ],
-    "to": [
-     -4.748,
-     6.35,
-     -0.7
-    ],
-    "length_m": 41.2,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.87,
-    "max_z_m": -0.7
+    ]
    },
    {
-    "beam": "3b",
-    "cube": "rig-lasercube-cut-03",
-    "from": [
-     9.78,
-     7.45,
-     -39.2
-    ],
+    "id": "4a",
     "to": [
-     -4.448,
-     6.35,
-     -0.7
+     -2.6,
+     10.2,
+     53.8
     ],
-    "length_m": 41.1,
+    "length_m": 66.0,
+    "off": false,
+    "duty": 1.0,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.87,
-    "max_z_m": -0.7
-   },
-   {
+    "ends_on": "end wall (block)",
+    "end_height_m": 10.2,
+    "max_z_m": 53.8,
+    "candidates_that_pass": 99,
+    "lowest_axis_distance_to_a_place_m": 3.23,
+    "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+    "nearest_place_at": [
+     -2.6,
+     5.23,
+     -11.601
+    ],
+    "nearest_fixture_margin_m": 0.37,
+    "worst_place": "hall floor (dance floor, backstage, everywhere)",
+    "worst_margin_m": 0.223,
+    "worst_at": [
+     -2.6,
+     5.23,
+     -11.6
+    ],
+    "crane_under_margin_m": 0.789,
+    "lamp_margin_m": 1.772,
+    "end_low_m": 9.244,
+    "end_high_m": 11.156,
+    "cast_all_rays_on_matte_block": true,
+    "cast_hits": [
+     "end wall z +54"
+    ],
+    "cast_end_y_range_m": [
+     9.277,
+     11.125
+    ],
+    "cast_meshes": [
+     "hall-block"
+    ],
+    "half_fan_deg": 1.008,
+    "margin_after_zone_deg": 0.208,
+    "was_v1_0_beams": [
+     "4a",
+     "4b"
+    ],
+    "composition_end": [
+     -2.6,
+     10.2,
+     53.8
+    ],
+    "nudge_m": [
+     0.0,
+     0.0
+    ],
     "beam": "4a",
     "cube": "rig-lasercube-cut-04",
     "from": [
+     -2.6,
+     5.2,
+     -12.0
+    ],
+    "moved_from": [
      -11.25,
      5.0,
      -24.6
-    ],
-    "to": [
-     -6.398,
-     5.95,
-     -0.7
-    ],
-    "length_m": 24.4,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 1.08,
-    "max_z_m": -0.7
+    ]
    },
    {
-    "beam": "4b",
-    "cube": "rig-lasercube-cut-04",
-    "from": [
-     -11.25,
-     5.0,
-     -24.6
-    ],
+    "id": "5a",
     "to": [
-     -6.098,
-     5.95,
-     -0.7
+     1.1,
+     10.2,
+     53.8
     ],
-    "length_m": 24.5,
+    "length_m": 66.0,
+    "off": false,
+    "duty": 1.0,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 1.07,
-    "max_z_m": -0.7
-   },
-   {
+    "ends_on": "end wall (block)",
+    "end_height_m": 10.2,
+    "max_z_m": 53.8,
+    "candidates_that_pass": 99,
+    "lowest_axis_distance_to_a_place_m": 3.23,
+    "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+    "nearest_place_at": [
+     1.1,
+     5.23,
+     -11.601
+    ],
+    "nearest_fixture_margin_m": 1.112,
+    "worst_place": "hall floor (dance floor, backstage, everywhere)",
+    "worst_margin_m": 0.223,
+    "worst_at": [
+     1.1,
+     5.23,
+     -11.6
+    ],
+    "crane_under_margin_m": 0.789,
+    "lamp_margin_m": 0.468,
+    "end_low_m": 9.244,
+    "end_high_m": 11.156,
+    "cast_all_rays_on_matte_block": true,
+    "cast_hits": [
+     "end wall z +54"
+    ],
+    "cast_end_y_range_m": [
+     9.277,
+     11.125
+    ],
+    "cast_meshes": [
+     "hall-block"
+    ],
+    "half_fan_deg": 1.008,
+    "margin_after_zone_deg": 0.208,
+    "was_v1_0_beams": [
+     "5a",
+     "5b"
+    ],
+    "composition_end": [
+     1.1,
+     10.2,
+     53.8
+    ],
+    "nudge_m": [
+     0.0,
+     0.0
+    ],
     "beam": "5a",
     "cube": "rig-lasercube-cut-05",
     "from": [
+     1.1,
+     5.2,
+     -12.0
+    ],
+    "moved_from": [
      11.25,
      5.0,
      -24.6
-    ],
-    "to": [
-     -4.298,
-     5.95,
-     -0.7
-    ],
-    "length_m": 28.5,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.81,
-    "max_z_m": -0.7
+    ]
    },
    {
-    "beam": "5b",
-    "cube": "rig-lasercube-cut-05",
-    "from": [
-     11.25,
-     5.0,
-     -24.6
-    ],
+    "id": "6a",
     "to": [
-     -3.998,
-     5.95,
-     -0.7
+     3.9,
+     10.2,
+     53.8
     ],
-    "length_m": 28.4,
+    "length_m": 66.0,
+    "off": false,
+    "duty": 1.0,
     "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 0.69,
-    "max_z_m": -0.7
-   },
-   {
+    "ends_on": "end wall (block)",
+    "end_height_m": 10.2,
+    "max_z_m": 53.8,
+    "candidates_that_pass": 99,
+    "lowest_axis_distance_to_a_place_m": 3.23,
+    "nearest_place": "hall floor (dance floor, backstage, everywhere)",
+    "nearest_place_at": [
+     3.9,
+     5.23,
+     -11.601
+    ],
+    "nearest_fixture_margin_m": 3.838,
+    "worst_place": "hall floor (dance floor, backstage, everywhere)",
+    "worst_margin_m": 0.223,
+    "worst_at": [
+     3.9,
+     5.23,
+     -11.6
+    ],
+    "crane_under_margin_m": 0.789,
+    "lamp_margin_m": 1.272,
+    "end_low_m": 9.244,
+    "end_high_m": 11.156,
+    "cast_all_rays_on_matte_block": true,
+    "cast_hits": [
+     "end wall z +54"
+    ],
+    "cast_end_y_range_m": [
+     9.277,
+     11.125
+    ],
+    "cast_meshes": [
+     "hall-block"
+    ],
+    "half_fan_deg": 1.008,
+    "margin_after_zone_deg": 0.208,
+    "was_v1_0_beams": [
+     "6a",
+     "6b"
+    ],
+    "composition_end": [
+     3.9,
+     10.2,
+     53.8
+    ],
+    "nudge_m": [
+     0.0,
+     0.0
+    ],
     "beam": "6a",
     "cube": "rig-lasercube-cut-06",
     "from": [
+     3.9,
+     5.2,
+     -12.0
+    ],
+    "moved_from": [
      0.26,
      6.5,
      -9.23
-    ],
-    "to": [
-     -6.698,
-     6.75,
-     -0.7
-    ],
-    "length_m": 11.0,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 1.16,
-    "max_z_m": -0.7
-   },
-   {
-    "beam": "6b",
-    "cube": "rig-lasercube-cut-06",
-    "from": [
-     0.26,
-     6.5,
-     -9.23
-    ],
-    "to": [
-     -3.698,
-     6.75,
-     -0.7
-    ],
-    "length_m": 9.4,
-    "pass": true,
-    "ends_on": "ash-wall",
-    "margin_after_zone_deg": 2.2,
-    "max_z_m": -0.7
+    ]
    }
   ],
   "lasers_pass": true,
-  "lasers_min_margin_deg": 0.69,
-  "lasers_never_over_audience": true,
+  "lasers_on": [
+   "1a",
+   "2a",
+   "3a",
+   "4a",
+   "5a",
+   "6a"
+  ],
+  "lasers_off": [],
+  "lasers_min_margin_deg": 0.208,
+  "laser_rule": {
+   "text": "over the heads of the audience to the far (NW, public-entrance) end wall, >= 3.0 m clear of every place a person can stand (person = surface + 2.0 m), >= 2.5 m from every place they can rise to; the end on matte block >= 3.0 m above the entrance door top; under the near crane bridge at its safe underside; no glass / skylight / steel in the path (owner N411, N412)",
+   "standards": [
+    "IEC TR 60825-3 (laser shows; 3.0 m above and 2.5 m from audience-accessible places)",
+    "ILDA audience-safety guidance (the same separations; dimming is not a control)",
+    "HSE HS(G)95 (>= 3 m and a matte beam stop)"
+   ],
+   "person_m": 2.0,
+   "vertical_m": 3.0,
+   "lateral_m": 2.5,
+   "end_min_y_m": 9.0,
+   "end_max_y_m": 13.3,
+   "end_z_m": 53.8,
+   "fan_deg": 0.8,
+   "crane_underside_used_m": 7.2,
+   "crane_z_m": 0.15,
+   "lamp_low_used_m": 9.0,
+   "ranges_used": {
+    "crane bridge underside (near crane, parked z 0.15)": "range 7.2-8.1 m (basis: photo 170604); used 7.2 (low end; the model draws 7.6)",
+    "pendant lamps": "lowest 9.0-10.0 m; used 9.0 (low end; the model draws 9.5)",
+    "standing person": "surface + 2.0 m (owner N412)",
+    "galleries 1-4": "the model box tops 7.4 / 6.9 / 6.3 / 5.8 m (site layer: 5.1-7.4 SE end falling to 3.2-5.8 at z 40): the top of the box used",
+    "crane runway walkway": "runway_top 7.96 m (hall.json), both rows, whole length (ladders on the right row, handrail on the left)",
+    "crane cab floor": "underside 7.2 - cab height 2.1 = 5.1 m (cab x 8.35-10.35, z = crane +-1.0)",
+    "entry platform + stairs": "hall.py: 2.4 m high, 7.0 x 3.0 m beside the gate (size a GUESS in the model), 12 steps; the top of it used",
+    "end wall": "block (hall-block, matte, roughness 0.95) from the floor to the parapet; the door 6.0 x 6.0 m, x -3..3"
+   },
+   "places": [
+    {
+     "name": "hall floor (dance floor, backstage, everywhere)",
+     "x_m": [
+      -36.4,
+      60.4
+     ],
+     "z_m": [
+      -53.8,
+      53.8
+     ],
+     "surface_m": 0.0,
+     "source": "hall.json walls_x_m / end walls"
+    },
+    {
+     "name": "DJ step",
+     "x_m": [
+      -6.7,
+      -3.7
+     ],
+     "z_m": [
+      3.65,
+      5.65
+     ],
+     "surface_m": 0.4,
+     "source": "stage json booth"
+    },
+    {
+     "name": "FOH riser",
+     "x_m": [
+      -6.7,
+      -3.7
+     ],
+     "z_m": [
+      28.0,
+      30.0
+     ],
+     "surface_m": 0.6,
+     "source": "stage json foh (riser 0.6 m, ASSUMED there)"
+    },
+    {
+     "name": "entry platform",
+     "x_m": [
+      3.6,
+      10.6
+     ],
+     "z_m": [
+      50.8,
+      53.8
+     ],
+     "surface_m": 2.4,
+     "source": "hall.py entry_platform (size a GUESS)"
+    },
+    {
+     "name": "entry stairs",
+     "x_m": [
+      10.6,
+      14.2
+     ],
+     "z_m": [
+      52.6,
+      53.8
+     ],
+     "surface_m": 2.4,
+     "source": "hall.py entry_platform (12 steps of 0.3 m)"
+    },
+    {
+     "name": "gallery 1",
+     "x_m": [
+      10.0,
+      11.6
+     ],
+     "z_m": [
+      6.0,
+      14.5
+     ],
+     "surface_m": 7.4,
+     "source": "hall.json massing pipe-rack-gallery-1 (top)"
+    },
+    {
+     "name": "gallery 2",
+     "x_m": [
+      10.0,
+      11.6
+     ],
+     "z_m": [
+      14.5,
+      23.0
+     ],
+     "surface_m": 6.9,
+     "source": "hall.json massing pipe-rack-gallery-2 (top)"
+    },
+    {
+     "name": "gallery 3",
+     "x_m": [
+      10.0,
+      11.6
+     ],
+     "z_m": [
+      23.0,
+      31.5
+     ],
+     "surface_m": 6.3,
+     "source": "hall.json massing pipe-rack-gallery-3 (top)"
+    },
+    {
+     "name": "gallery 4",
+     "x_m": [
+      10.0,
+      11.6
+     ],
+     "z_m": [
+      31.5,
+      40.0
+     ],
+     "surface_m": 5.8,
+     "source": "hall.json massing pipe-rack-gallery-4 (top)"
+    },
+    {
+     "name": "conveyor gallery (roller conveyor)",
+     "x_m": [
+      3.6,
+      4.6
+     ],
+     "z_m": [
+      16.5,
+      24.0
+     ],
+     "surface_m": 0.85,
+     "source": "hall.json massing roller-conveyor (top)"
+    },
+    {
+     "name": "runway walkway left row (ladders: right)",
+     "x_m": [
+      -12.65,
+      -11.0
+     ],
+     "z_m": [
+      -53.8,
+      53.8
+     ],
+     "surface_m": 7.96,
+     "source": "hall.json runway_top_m 7.96, crane_rail_x_m"
+    },
+    {
+     "name": "runway walkway right row (ladders: right)",
+     "x_m": [
+      11.0,
+      12.65
+     ],
+     "z_m": [
+      -53.8,
+      53.8
+     ],
+     "surface_m": 7.96,
+     "source": "hall.json runway_top_m 7.96, crane_rail_x_m"
+    },
+    {
+     "name": "crane cab (parked z 0.15)",
+     "x_m": [
+      8.35,
+      10.35
+     ],
+     "z_m": [
+      -0.85,
+      1.15
+     ],
+     "surface_m": 5.1,
+     "source": "hall.json cranes[0].cab, floor = safe underside - 2.1"
+    }
+   ]
+  },
+  "laser_count": 6,
+  "laser_beams_per_cube": 1,
+  "laser_rule_margin_deg_v1_0": 0.5,
+  "laser_brightness_6w_one_beam": {
+   "1a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 24.1
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 50.5
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 72.8
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 133.6
+    }
+   },
+   "2a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 23.3
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 48.7
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 86.1
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 158.8
+    }
+   },
+   "3a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 2.0
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 3.6
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 17.6
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 31.9
+    }
+   },
+   "4a": {
+    "lm_full_power": 317.8,
+    "optical_w": 1.95,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 5.9
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 12.2
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 28.6
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 53.0
+    }
+   },
+   "5a": {
+    "lm_full_power": 317.8,
+    "optical_w": 1.95,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 1.0,
+     "cd_m2": 3.7
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 1.0,
+     "cd_m2": 7.5
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 5.4
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 9.9
+    }
+   },
+   "6a": {
+    "lm_full_power": 1131.0,
+    "optical_w": 6.0,
+    "duty": 1.0,
+    "foh_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 2.0
+    },
+    "foh_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 3.6
+    },
+    "z38_sigma_0.005": {
+     "seen_share": 0.78,
+     "cd_m2": 15.3
+    },
+    "z38_sigma_0.02": {
+     "seen_share": 0.78,
+     "cd_m2": 27.6
+    }
+   }
+  },
   "laser_safety_6w": {
    "nohd_m": 544,
-   "diffuse_nhz_m_off_the_wall": 0.061,
-   "basis": "IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho 0.05 (matte black paint, ASSUMED)"
+   "diffuse_nhz_m_off_the_press": 0.055,
+   "nohd_unchanged_by_one_beam": true,
+   "basis": "IEC 60825-1:2014 Table A.1 (0.25 s aversion, 400-700 nm), 4 mm aperture, 1 mrad; the diffuse figure by the ANSI Z136.1 extended-source formula with rho = the press albedo 0.0407 (hall.json, matte dark; NOT measured). ONE beam carries the whole cube power of 6 W, as the scan-failure case always did, so the NOHD does not change with 1 or 2 beams drawn"
   },
   "ends_changed": [
    {
@@ -6552,6 +7330,98 @@
     "v1_1_end": "press",
     "v1_1_end_cls": "machine",
     "aim_deg_change": 0.0
+   },
+   {
+    "id": "rig-par-cut-bridge-01",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "column x 12 z 0.5 (shaft)",
+    "v1_1_end_cls": "column",
+    "aim_deg_change": 45.3
+   },
+   {
+    "id": "rig-par-cut-bridge-02",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     1.3,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     1.3,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 62.2
+   },
+   {
+    "id": "rig-par-cut-bridge-03",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     1.9,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     1.9,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 109.8
+   },
+   {
+    "id": "rig-par-cut-bridge-04",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     2.5,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     2.5,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "machine-line",
+    "v1_1_end_cls": "machine",
+    "aim_deg_change": 142.1
    },
    {
     "id": "rig-par-neighbour-02",
@@ -6658,7 +7528,31 @@
     "aim_deg_change": 0.0
    }
   ],
-  "new_blocks": [],
+  "new_blocks": [
+   {
+    "id": "rig-par-cut-bridge-01",
+    "part": "ash wall",
+    "moved": [
+     -4.0,
+     -0.35,
+     -20.85
+    ],
+    "v1_0_end": "ash-wall",
+    "re_aimed_at_press": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "re_aimed_at": [
+     0.7,
+     3.4,
+     0.25
+    ],
+    "v1_1_end": "column x 12 z 0.5 (shaft)",
+    "v1_1_end_cls": "column",
+    "aim_deg_change": 45.3
+   }
+  ],
   "on_the_floor": [],
   "off_floor_moves": {
    "rig-par-press-sides-02": [
@@ -6674,43 +7568,445 @@
     29.0
    ],
    "foh_per_beam": {
-    "1a": 0.28,
-    "1b": 0.28,
-    "2a": 0.6,
-    "2b": 0.62,
-    "3a": 0.43,
-    "3b": 0.45,
-    "4a": 0.6,
-    "4b": 0.56,
-    "5a": 0.31,
-    "5b": 0.31,
-    "6a": 0.33,
-    "6b": 0.7
+    "1a": 0.95,
+    "2a": 0.97,
+    "3a": 0.83,
+    "4a": 0.95,
+    "5a": 0.98,
+    "6a": 0.8
    },
-   "foh_min": 0.28,
+   "foh_min": 0.8,
    "chosen": {
     "at": [
-     -7.0,
-     -4.5
+     -8.0,
+     -2.5
     ],
     "eye_m": 1.7,
     "per_beam": {
-     "1a": 1.0,
-     "1b": 1.0,
-     "2a": 1.0,
-     "2b": 1.0,
-     "3a": 1.0,
-     "3b": 1.0,
-     "4a": 1.0,
-     "4b": 1.0,
-     "5a": 0.97,
-     "5b": 0.93,
-     "6a": 1.0,
-     "6b": 1.0
+     "1a": 0.98,
+     "2a": 0.98,
+     "3a": 0.97,
+     "4a": 0.98,
+     "5a": 1.0,
+     "6a": 0.95
     },
-    "with_foh_min": 0.93
+    "with_foh_min": 0.95
    },
    "method": "each beam sampled every 1 m; a sample is seen if the sight line from the eye reaches it with nothing in between (occlusion_lib.Obstacles over hall v9-show-park + the rig boxes); \"whole\" = the share of samples seen"
+  },
+  "aerial": {
+   "bridge": {
+    "z": -12.0,
+    "y": 5.2,
+    "xs": {
+     "rig-lasercube-cut-01": -5.4,
+     "rig-lasercube-cut-02": -4.0,
+     "rig-lasercube-cut-04": -2.6,
+     "rig-lasercube-cut-05": 1.1,
+     "rig-lasercube-cut-03": 2.5,
+     "rig-lasercube-cut-06": 3.9
+    },
+    "end_gain": 0.0,
+    "end_y": 10.2,
+    "as_found_rig_z": -41.0,
+    "underside_range_m": [
+     7.69,
+     8.24
+    ],
+    "underside_used_m": 7.69,
+    "underside_basis": "hall.json cranes[1].girder_bottom_basis: 7.95 m, 5-95 % 7.69-8.24 (photo 007); the LOW end used"
+   },
+   "far_crane_show_z_m": -12.0,
+   "far_crane_at_rig_z": {
+    "-41": {
+     "best_worst_margin_m_over_the_six_x": -0.697,
+     "any_aim_passes_all_six": false
+    },
+    "-30": {
+     "best_worst_margin_m_over_the_six_x": -0.281,
+     "any_aim_passes_all_six": false
+    },
+    "-24": {
+     "best_worst_margin_m_over_the_six_x": -0.031,
+     "any_aim_passes_all_six": false
+    },
+    "-18": {
+     "best_worst_margin_m_over_the_six_x": 0.222,
+     "any_aim_passes_all_six": true
+    },
+    "-12": {
+     "best_worst_margin_m_over_the_six_x": 0.233,
+     "any_aim_passes_all_six": true
+    }
+   },
+   "setup_sheet": [
+    {
+     "cube": "rig-lasercube-cut-01",
+     "beam": "1a",
+     "colour": "ash white",
+     "mount": {
+      "on": "the free crane's laser bar",
+      "crane_z_m": -12.0,
+      "x_m": -5.4,
+      "beam_height_m": 5.2,
+      "drop_under_bridge_m": 2.49,
+      "roll_deg": 0.0,
+      "cube_clamp": "the maker's tilt-lock screws + safety eye bolt (lasers-exact.json specs)"
+     },
+     "aim": {
+      "end_m": [
+       -5.1,
+       10.2,
+       53.8
+      ],
+      "pan_deg_from_hall_axis_plus_toward_x": 0.26,
+      "tilt_deg_above_level": 4.35,
+      "range_m": 66.0
+     },
+     "window_rule_holds_deg": {
+      "pan": [
+       -2.66,
+       3.26
+      ],
+      "tilt": [
+       3.35,
+       5.21
+      ],
+      "half_widths_pan_tilt": [
+       -2.92,
+       3.0,
+       -1.0,
+       0.86
+      ]
+     },
+     "laseros_safety_zone_keep_in_deg": {
+      "pan": [
+       -0.04,
+       0.56
+      ],
+      "tilt": [
+       4.05,
+       4.65
+      ],
+      "why": "the aim +-0.3 deg (the controller zone); the window above minus the 0.5 deg mount tolerance must still contain it: yes"
+     },
+     "beam_block": {
+      "lowest_ray_allowed_tilt_deg": 3.35,
+      "lowest_ray_allowed_height_at_cube_plus_m": null,
+      "setting": "block everything below 3.35 deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge"
+     }
+    },
+    {
+     "cube": "rig-lasercube-cut-02",
+     "beam": "2a",
+     "colour": "ash white",
+     "mount": {
+      "on": "the free crane's laser bar",
+      "crane_z_m": -12.0,
+      "x_m": -4.0,
+      "beam_height_m": 5.2,
+      "drop_under_bridge_m": 2.49,
+      "roll_deg": 0.0,
+      "cube_clamp": "the maker's tilt-lock screws + safety eye bolt (lasers-exact.json specs)"
+     },
+     "aim": {
+      "end_m": [
+       -4.0,
+       10.2,
+       53.8
+      ],
+      "pan_deg_from_hall_axis_plus_toward_x": 0.0,
+      "tilt_deg_above_level": 4.35,
+      "range_m": 66.0
+     },
+     "window_rule_holds_deg": {
+      "pan": [
+       -3.0,
+       3.0
+      ],
+      "tilt": [
+       3.35,
+       5.21
+      ],
+      "half_widths_pan_tilt": [
+       -3.0,
+       3.0,
+       -1.0,
+       0.86
+      ]
+     },
+     "laseros_safety_zone_keep_in_deg": {
+      "pan": [
+       -0.3,
+       0.3
+      ],
+      "tilt": [
+       4.05,
+       4.65
+      ],
+      "why": "the aim +-0.3 deg (the controller zone); the window above minus the 0.5 deg mount tolerance must still contain it: yes"
+     },
+     "beam_block": {
+      "lowest_ray_allowed_tilt_deg": 3.35,
+      "lowest_ray_allowed_height_at_cube_plus_m": null,
+      "setting": "block everything below 3.35 deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge"
+     }
+    },
+    {
+     "cube": "rig-lasercube-cut-03",
+     "beam": "3a",
+     "colour": "ash white",
+     "mount": {
+      "on": "the free crane's laser bar",
+      "crane_z_m": -12.0,
+      "x_m": 2.5,
+      "beam_height_m": 5.2,
+      "drop_under_bridge_m": 2.49,
+      "roll_deg": 0.0,
+      "cube_clamp": "the maker's tilt-lock screws + safety eye bolt (lasers-exact.json specs)"
+     },
+     "aim": {
+      "end_m": [
+       2.5,
+       10.2,
+       53.8
+      ],
+      "pan_deg_from_hall_axis_plus_toward_x": 0.0,
+      "tilt_deg_above_level": 4.35,
+      "range_m": 66.0
+     },
+     "window_rule_holds_deg": {
+      "pan": [
+       -3.0,
+       3.0
+      ],
+      "tilt": [
+       3.35,
+       5.21
+      ],
+      "half_widths_pan_tilt": [
+       -3.0,
+       3.0,
+       -1.0,
+       0.86
+      ]
+     },
+     "laseros_safety_zone_keep_in_deg": {
+      "pan": [
+       -0.3,
+       0.3
+      ],
+      "tilt": [
+       4.05,
+       4.65
+      ],
+      "why": "the aim +-0.3 deg (the controller zone); the window above minus the 0.5 deg mount tolerance must still contain it: yes"
+     },
+     "beam_block": {
+      "lowest_ray_allowed_tilt_deg": 3.35,
+      "lowest_ray_allowed_height_at_cube_plus_m": null,
+      "setting": "block everything below 3.35 deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge"
+     }
+    },
+    {
+     "cube": "rig-lasercube-cut-04",
+     "beam": "4a",
+     "colour": "ember red",
+     "mount": {
+      "on": "the free crane's laser bar",
+      "crane_z_m": -12.0,
+      "x_m": -2.6,
+      "beam_height_m": 5.2,
+      "drop_under_bridge_m": 2.49,
+      "roll_deg": 0.0,
+      "cube_clamp": "the maker's tilt-lock screws + safety eye bolt (lasers-exact.json specs)"
+     },
+     "aim": {
+      "end_m": [
+       -2.6,
+       10.2,
+       53.8
+      ],
+      "pan_deg_from_hall_axis_plus_toward_x": 0.0,
+      "tilt_deg_above_level": 4.35,
+      "range_m": 66.0
+     },
+     "window_rule_holds_deg": {
+      "pan": [
+       -3.0,
+       3.0
+      ],
+      "tilt": [
+       3.35,
+       5.21
+      ],
+      "half_widths_pan_tilt": [
+       -3.0,
+       3.0,
+       -1.0,
+       0.86
+      ]
+     },
+     "laseros_safety_zone_keep_in_deg": {
+      "pan": [
+       -0.3,
+       0.3
+      ],
+      "tilt": [
+       4.05,
+       4.65
+      ],
+      "why": "the aim +-0.3 deg (the controller zone); the window above minus the 0.5 deg mount tolerance must still contain it: yes"
+     },
+     "beam_block": {
+      "lowest_ray_allowed_tilt_deg": 3.35,
+      "lowest_ray_allowed_height_at_cube_plus_m": null,
+      "setting": "block everything below 3.35 deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge"
+     }
+    },
+    {
+     "cube": "rig-lasercube-cut-05",
+     "beam": "5a",
+     "colour": "ember red",
+     "mount": {
+      "on": "the free crane's laser bar",
+      "crane_z_m": -12.0,
+      "x_m": 1.1,
+      "beam_height_m": 5.2,
+      "drop_under_bridge_m": 2.49,
+      "roll_deg": 0.0,
+      "cube_clamp": "the maker's tilt-lock screws + safety eye bolt (lasers-exact.json specs)"
+     },
+     "aim": {
+      "end_m": [
+       1.1,
+       10.2,
+       53.8
+      ],
+      "pan_deg_from_hall_axis_plus_toward_x": 0.0,
+      "tilt_deg_above_level": 4.35,
+      "range_m": 66.0
+     },
+     "window_rule_holds_deg": {
+      "pan": [
+       -2.52,
+       3.0
+      ],
+      "tilt": [
+       3.35,
+       5.21
+      ],
+      "half_widths_pan_tilt": [
+       -2.52,
+       3.0,
+       -1.0,
+       0.86
+      ]
+     },
+     "laseros_safety_zone_keep_in_deg": {
+      "pan": [
+       -0.3,
+       0.3
+      ],
+      "tilt": [
+       4.05,
+       4.65
+      ],
+      "why": "the aim +-0.3 deg (the controller zone); the window above minus the 0.5 deg mount tolerance must still contain it: yes"
+     },
+     "beam_block": {
+      "lowest_ray_allowed_tilt_deg": 3.35,
+      "lowest_ray_allowed_height_at_cube_plus_m": null,
+      "setting": "block everything below 3.35 deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge"
+     }
+    },
+    {
+     "cube": "rig-lasercube-cut-06",
+     "beam": "6a",
+     "colour": "ash white",
+     "mount": {
+      "on": "the free crane's laser bar",
+      "crane_z_m": -12.0,
+      "x_m": 3.9,
+      "beam_height_m": 5.2,
+      "drop_under_bridge_m": 2.49,
+      "roll_deg": 0.0,
+      "cube_clamp": "the maker's tilt-lock screws + safety eye bolt (lasers-exact.json specs)"
+     },
+     "aim": {
+      "end_m": [
+       3.9,
+       10.2,
+       53.8
+      ],
+      "pan_deg_from_hall_axis_plus_toward_x": 0.0,
+      "tilt_deg_above_level": 4.35,
+      "range_m": 66.0
+     },
+     "window_rule_holds_deg": {
+      "pan": [
+       -3.0,
+       3.0
+      ],
+      "tilt": [
+       3.35,
+       5.21
+      ],
+      "half_widths_pan_tilt": [
+       -3.0,
+       3.0,
+       -1.0,
+       0.86
+      ]
+     },
+     "laseros_safety_zone_keep_in_deg": {
+      "pan": [
+       -0.3,
+       0.3
+      ],
+      "tilt": [
+       4.05,
+       4.65
+      ],
+      "why": "the aim +-0.3 deg (the controller zone); the window above minus the 0.5 deg mount tolerance must still contain it: yes"
+     },
+     "beam_block": {
+      "lowest_ray_allowed_tilt_deg": 3.35,
+      "lowest_ray_allowed_height_at_cube_plus_m": null,
+      "setting": "block everything below 3.35 deg above level (the 3 m plane over the nearest standing point is the limit); the maker prints no angle scale for the block (lasers-exact.json: mechanical beam block, lockable) so the setting is found with the cube powered off by a spirit-level and the tilt of the block edge"
+     }
+    }
+   ],
+   "ranges_used": {
+    "crane bridge underside (near crane, parked z 0.15)": "range 7.2-8.1 m (basis: photo 170604); used 7.2 (low end; the model draws 7.6)",
+    "pendant lamps": "lowest 9.0-10.0 m; used 9.0 (low end; the model draws 9.5)",
+    "standing person": "surface + 2.0 m (owner N412)",
+    "galleries 1-4": "the model box tops 7.4 / 6.9 / 6.3 / 5.8 m (site layer: 5.1-7.4 SE end falling to 3.2-5.8 at z 40): the top of the box used",
+    "crane runway walkway": "runway_top 7.96 m (hall.json), both rows, whole length (ladders on the right row, handrail on the left)",
+    "crane cab floor": "underside 7.2 - cab height 2.1 = 5.1 m (cab x 8.35-10.35, z = crane +-1.0)",
+    "entry platform + stairs": "hall.py: 2.4 m high, 7.0 x 3.0 m beside the gate (size a GUESS in the model), 12 steps; the top of it used",
+    "end wall": "block (hall-block, matte, roughness 0.95) from the floor to the parapet; the door 6.0 x 6.0 m, x -3..3"
+   },
+   "nohd_6w_m": {
+    "0.25 s (IEC 60825-1 Table A.1)": 544,
+    "10 s": 865,
+    "if the maker's 4 mm / 1 mrad are 1/e2 values": 771,
+    "source": "lasers-exact.json safety.nohd[\"6W (2.7+1.5+1.8)\"] (maker: 2700+1500+1800 mW, beam 4 mm, divergence 1 mrad)"
+   },
+   "dimming": {
+    "100 %": 543,
+    "10 %": 169,
+    "1 %": 51,
+    "note": "only ~0.1 % (6 mW) is under the eye limit everywhere: height, not dimming, is the control"
+   },
+   "shortest_axis_distance_to_a_place_m": {
+    "1a": 3.23,
+    "2a": 3.23,
+    "3a": 3.23,
+    "4a": 3.23,
+    "5a": 3.23,
+    "6a": 3.23
+   }
   }
  },
  "crew": [
@@ -6731,8 +8027,8 @@
   },
   {
    "who": "Kira",
-   "role": "volunteer: the laser SPOTTER with E-STOP 2 at x -9, z 12 (house left, in front of the stage line; sees every beam whole with FOH, v1.0 engine)",
-   "where": "x -9, z 12 (to re-check for v1.1: the stage moved)"
+   "role": "volunteer: the laser SPOTTER with E-STOP 2 at x -8, z -2.5 (behind the barrier; with FOH sees >= 95 % of every beam; chosen by the v1.1 sight-line cast, not v1.0's x -9, z 12 which is on the v1.1 dance floor)",
+   "where": "x -8, z -2.5"
   },
   {
    "who": "Eter",

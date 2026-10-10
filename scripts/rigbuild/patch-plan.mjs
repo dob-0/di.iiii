@@ -64,6 +64,7 @@ const main = async () => {
     if (r.errors.length) die(`the plan does not fit ${project}: ${r.errors.length} error(s), nothing written`)
     for (const w of r.warnings) warn(`  warning ${w}`)
     for (const u of r.universes) say(`  U${u.universe} port ${u.port || '—'}  ${String(u.lamps).padStart(2)} lamps  ${String(u.used).padStart(3)} ch used  ${u.free} free   ${u.label}`)
+    if (r.offDmx.length) say(`  ${r.offDmx.length} lamp${r.offDmx.length === 1 ? '' : 's'} kept off DMX, not patched: ${r.offDmx.join(', ')}`)
     say(`${r.assignments.length} lamps planned; ${r.allOps.length} to change`)
     if (!r.allOps.length) return say('the document already agrees with the plan')
     if (args['dry-run']) {

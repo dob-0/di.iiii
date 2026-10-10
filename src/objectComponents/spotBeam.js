@@ -172,3 +172,13 @@ export const spotLightCone = ({ angle, penumbra, fieldRatio } = {}) => {
     const oneMinusCos = Math.min(1, 2 * profileFlux(half, p))
     return { angle: Math.acos(1 - oneMinusCos), penumbra: 1 }
 }
+
+/**
+ * Does this spot entity carry the light of a RIG lamp, so that its `angle` is half the lamp's BEAM angle (the 50 % point) and
+ * its real light is fitted with spotLightCone? A rig lamp says so itself: it carries `components.fixture`. A light-pool slot
+ * (rigbuild/lightPool.js) draws the light of the lamp it holds and says so with `components.lightPool.fitted`. It must NOT
+ * carry the fixture itself: every reader of `components.fixture` (the lamps' bodies, the patch, the haze machines) would count
+ * the slot as a second lamp. Both renderers (LiveProjectScene, EntityContent) ask here. Before 2026-10-09 they asked only for
+ * the fixture, so Lite's slot reached three with the raw half-beam angle as its cutoff: half the lumens of the same lamp in Full.
+ */
+export const lampIsFitted = (components) => Boolean(components?.fixture) || components?.lightPool?.fitted === true
