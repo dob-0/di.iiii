@@ -1821,14 +1821,14 @@ def _natural(s):
     return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', s)]
 
 
-def plan_addresses(repo, fixtures):
+def plan_addresses(repo, fixtures, plan=None):
     """A1 / R2.6: every unit's address from the official v2 patch (scripts/place/rigs/moxir-v2-patch-2026-10-09.json, #872, owner
     N460.2), as src/rigbuild/patchPlan.js lays it: per universe, per block in order, the lamps the block selects (type; group =
     ids '<group>-NN') walked by unit id (natural order: id-asc), from the block's start, each its mode's footprint, fixture
     numbers from the block's first. Lamps the plan keeps off DMX (the cubes) get none. Returns ({id: dmx}, the plan, the blocks
     whose lamps are not in this rig (the two UP-LA40WF of #873))."""
     import re
-    P = json.load(open(os.path.join(repo, PATCH_PLAN)))
+    P = plan if plan is not None else json.load(open(os.path.join(repo, PATCH_PLAN)))
     out, absent = {}, []
     for u in P['universes']:
         for b in u['blocks']:
@@ -2475,6 +2475,64 @@ def operator_sheet(T, out_paths):
     return rows
 
 
+def patch_power(repo, T, A, G, SPR, RT, plan=None):
+    """A1 / R2.6 + R2.3: the patch (addresses by unit id), the DMX lines, power and the cable runs for T['fixtures'], written into
+    T['power'], T['patch'] and each unit's dmx / circuit. build() calls it; moxir_v2_compose.py calls it again on the composed
+    list (plan = the patch plan to lay, default the official file). Returns what build() uses later."""
+    units = [f for f in T['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f', 'up-yz31p')]
+    addr, plan_doc, absent = plan_addresses(repo, units, plan)
+    for f in units:
+        f['dmx'] = dict(addr[f['id']])
+    lines = lines_r2(units, A, RT, absent)
+    laser_c = next(c for c in SPR['power']['circuits'] if c['circuit'] == 'C-LASER')
+    circ, ph = circuits_r2(units, A, RT, extra=[laser_c])
+    cid = {u: c['circuit'] for c in circ for u in c['units']}
+    for f in units:
+        f['circuit'] = cid[f['id']]
+    feeders = trunk_runs(RT, FEEDERS, DISTROS_R2)
+    network = trunk_runs(RT, NETWORK, NODES_R2)
+    runs = [('power ' + c['circuit'], c.get('_cells', [])) for c in circ] + [('dmx ' + l['line'], l['_cells']) for l in lines] + \
+           [('feeder %s-%s' % (r['from'], r['to']), r['_cells']) for r in feeders] + [('network %s-%s' % (r['from'], r['to']), r['_cells']) for r in network]
+    union = sorted({c for _, cs in runs for c in cs})
+    xings = []
+    for name, cs in runs:
+        for x in RT.crossings(cs):
+            xings.append(dict(x, run=name))
+    for c in circ:
+        c.pop('_cells', None)
+    for l in lines:
+        l.pop('_cells', None)
+    for r in feeders + network:
+        r.pop('_cells', None)
+    cable_list = {'power': [{'circuit': c['circuit'], 'distro': c.get('distro'), 'mm2': c.get('cable_mm2'), 'legs': c.get('legs')} for c in circ if c.get('legs')],
+                  'dmx': [{'line': l['line'], 'legs': l['legs'], 'terminator': l['terminator']} for l in lines],
+                  'feeders': [{'from': r['from'], 'to': r['to'], 'run_m': r['run_m'], 'what': 'a 3-phase feeder (rating from the distro\'s load and the board, owed)'} for r in feeders],
+                  'network': [{'from': r['from'], 'to': r['to'], 'run_m': r['run_m'], 'what': 'Cat5e/Cat6 (Art-Net); over 90 m a switch or fibre (TIA-568 channel limit 100 m)'} for r in network]}
+    tot_stock = {}
+    for c in cable_list['power']:
+        for lg in c['legs']:
+            for s_ in lg['stock_m']:
+                tot_stock['power %dm' % s_] = tot_stock.get('power %dm' % s_, 0) + 1
+    for l in cable_list['dmx']:
+        for lg in l['legs']:
+            for s_ in lg['stock_m']:
+                tot_stock['dmx %dm' % s_] = tot_stock.get('dmx %dm' % s_, 0) + 1
+    cable_list['stock_totals'] = dict(sorted(tot_stock.items()))
+    cable_list['stock_lengths_assumed'] = {'power_m': STOCK_POWER_M, 'dmx_m': STOCK_DMX_M, 'slack_per_leg_m': CABLE_SLACK_M}
+    uni_used = {}
+    for f in units:
+        uni_used.setdefault(f['dmx']['universe'], []).append(f['dmx']['footprint'])
+    for a in absent:
+        uni_used.setdefault(a['universe'], []).extend([a['footprint']] * (a['units'] or 0))
+    T['power'] = {'circuits': circ, 'phases_w': ph, 'distros': DISTROS_R2, 'feeders': feeders,
+                  'method': 'moxir_v2_ground.circuits_r2: each area\'s distro (DISTROS_R2), one kind per circuit, <= 2 944 W and <= 5 %% volt drop (BS 7671 4D2B), every leg along the cable router\'s run (walls and the hall\'s edges; a public metre costs %g); C-LASER phased with the rest; the board ASSUMED at D-LEFT (owed)' % PUBLIC_COST}
+    T['patch'] = {'from': PATCH_PLAN, 'owner': 'N460.2', 'universes': [{'universe': u, 'used': sum(v), 'devices': len(v)} for u, v in sorted(uni_used.items())],
+                  'not_in_this_rig': absent, 'lines': lines, 'network': network, 'nodes': NODES_R2, 'control': CONTROL_SITE,
+                  'slots': {str(u): sum(v) for u, v in sorted(uni_used.items())},
+                  'method': 'addresses by unit id from the official v2 patch (%s; src/rigbuild/patchPlan.js lays the same); this rig routes the lines: one per area and universe (port A = U1, B = U2), <= %d devices (ANSI E1.11 / EIA-485, 4 of 32 spare), a 120 ohm terminator after the last unit' % (PATCH_PLAN, DMX_MAX_DEVICES)}
+    return dict(units=units, lines=lines, circ=circ, ph=ph, feeders=feeders, network=network, cable_list=cable_list, runs=runs, union=union, xings=xings, uni_used=uni_used, absent=absent)
+
+
 def build(repo, out):
     import numpy as np
     import occlusion_sky as S
@@ -2662,57 +2720,8 @@ def build(repo, out):
         c['name'] = c['name'].replace('B tuned + stage + lasers', 'v2 ground')
 
     # ---- 4. the patch (R2.6: the official v2 patch, by unit id), the DMX lines, power, the cable runs
-    units = [f for f in T['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f', 'up-yz31p')]
-    addr, plan_doc, absent = plan_addresses(repo, units)
-    for f in units:
-        f['dmx'] = dict(addr[f['id']])
-    lines = lines_r2(units, A, RT, absent)
-    laser_c = next(c for c in SPR['power']['circuits'] if c['circuit'] == 'C-LASER')
-    circ, ph = circuits_r2(units, A, RT, extra=[laser_c])
-    cid = {u: c['circuit'] for c in circ for u in c['units']}
-    for f in units:
-        f['circuit'] = cid[f['id']]
-    feeders = trunk_runs(RT, FEEDERS, DISTROS_R2)
-    network = trunk_runs(RT, NETWORK, NODES_R2)
-    runs = [('power ' + c['circuit'], c.get('_cells', [])) for c in circ] + [('dmx ' + l['line'], l['_cells']) for l in lines] + \
-           [('feeder %s-%s' % (r['from'], r['to']), r['_cells']) for r in feeders] + [('network %s-%s' % (r['from'], r['to']), r['_cells']) for r in network]
-    union = sorted({c for _, cs in runs for c in cs})
-    xings = []
-    for name, cs in runs:
-        for x in RT.crossings(cs):
-            xings.append(dict(x, run=name))
-    for c in circ:
-        c.pop('_cells', None)
-    for l in lines:
-        l.pop('_cells', None)
-    for r in feeders + network:
-        r.pop('_cells', None)
-    cable_list = {'power': [{'circuit': c['circuit'], 'distro': c.get('distro'), 'mm2': c.get('cable_mm2'), 'legs': c.get('legs')} for c in circ if c.get('legs')],
-                  'dmx': [{'line': l['line'], 'legs': l['legs'], 'terminator': l['terminator']} for l in lines],
-                  'feeders': [{'from': r['from'], 'to': r['to'], 'run_m': r['run_m'], 'what': 'a 3-phase feeder (rating from the distro\'s load and the board, owed)'} for r in feeders],
-                  'network': [{'from': r['from'], 'to': r['to'], 'run_m': r['run_m'], 'what': 'Cat5e/Cat6 (Art-Net); over 90 m a switch or fibre (TIA-568 channel limit 100 m)'} for r in network]}
-    tot_stock = {}
-    for c in cable_list['power']:
-        for lg in c['legs']:
-            for s_ in lg['stock_m']:
-                tot_stock['power %dm' % s_] = tot_stock.get('power %dm' % s_, 0) + 1
-    for l in cable_list['dmx']:
-        for lg in l['legs']:
-            for s_ in lg['stock_m']:
-                tot_stock['dmx %dm' % s_] = tot_stock.get('dmx %dm' % s_, 0) + 1
-    cable_list['stock_totals'] = dict(sorted(tot_stock.items()))
-    cable_list['stock_lengths_assumed'] = {'power_m': STOCK_POWER_M, 'dmx_m': STOCK_DMX_M, 'slack_per_leg_m': CABLE_SLACK_M}
-    uni_used = {}
-    for f in units:
-        uni_used.setdefault(f['dmx']['universe'], []).append(f['dmx']['footprint'])
-    for a in absent:
-        uni_used.setdefault(a['universe'], []).extend([a['footprint']] * (a['units'] or 0))
-    T['power'] = {'circuits': circ, 'phases_w': ph, 'distros': DISTROS_R2, 'feeders': feeders,
-                  'method': 'moxir_v2_ground.circuits_r2: each area\'s distro (DISTROS_R2), one kind per circuit, <= 2 944 W and <= 5 %% volt drop (BS 7671 4D2B), every leg along the cable router\'s run (walls and the hall\'s edges; a public metre costs %g); C-LASER phased with the rest; the board ASSUMED at D-LEFT (owed)' % PUBLIC_COST}
-    T['patch'] = {'from': PATCH_PLAN, 'owner': 'N460.2', 'universes': [{'universe': u, 'used': sum(v), 'devices': len(v)} for u, v in sorted(uni_used.items())],
-                  'not_in_this_rig': absent, 'lines': lines, 'network': network, 'nodes': NODES_R2, 'control': CONTROL_SITE,
-                  'slots': {str(u): sum(v) for u, v in sorted(uni_used.items())},
-                  'method': 'addresses by unit id from the official v2 patch (%s; src/rigbuild/patchPlan.js lays the same); this rig routes the lines: one per area and universe (port A = U1, B = U2), <= %d devices (ANSI E1.11 / EIA-485, 4 of 32 spare), a 120 ohm terminator after the last unit' % (PATCH_PLAN, DMX_MAX_DEVICES)}
+    R4 = patch_power(repo, T, A, G, SPR, RT)
+    units, lines, circ, ph, feeders, network, cable_list, runs, union, xings = (R4[k] for k in ('units', 'lines', 'circ', 'ph', 'feeders', 'network', 'cable_list', 'runs', 'union', 'xings'))
     lay_by = {f['id']: f for f in layer}
     for f in T['fixtures']:
         if f['id'] in lay_by:
