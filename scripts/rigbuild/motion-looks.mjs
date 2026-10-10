@@ -14,6 +14,7 @@ import { makeClient, readToken } from '../place/api.mjs'
 import { lookFrame } from '../../src/rigbuild/looks.js'
 import { v1Looks, v1RenderOps, deskStep } from './epic-build.mjs'
 import { LAYER_FILE as WORKLIGHT_FILE, RIG_V11, withFloor } from './worklight-looks.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 export const LAYER_FILE = 'scripts/place/rigs/moxir-looks-v1-1-motion-2026-10-09.json'
 export const SCRATCH_PROJECT = 'moxir-v1-1-motion'
@@ -60,4 +61,4 @@ const main = async () => {
         await deskStep({ api, project, document: d, cues: d.mappingState.cues, loop: d.mappingState.loop === true })
     }
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) main().catch((e) => die(e.stack || String(e)))
+if (isMainModule(import.meta.url)) main().catch((e) => die(e.stack || String(e)))

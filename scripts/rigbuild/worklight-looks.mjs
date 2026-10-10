@@ -12,6 +12,7 @@ import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
 import { lookFrame } from '../../src/rigbuild/looks.js'
 import { v1Looks, v1RenderOps, deskStep } from './epic-build.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 export const LAYER_FILE = 'scripts/place/rigs/moxir-looks-v1-1-worklight-2026-10-09.json'
 /** A look's parts with the layer's one readable floor under them (the look's own part wins). Motion layers use this too. */
@@ -45,4 +46,4 @@ const main = async () => {
         await deskStep({ api, project, document: d, cues: d.mappingState.cues, loop: d.mappingState.loop === true })
     }
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) main().catch((e) => die(e.stack || String(e)))
+if (isMainModule(import.meta.url)) main().catch((e) => die(e.stack || String(e)))
