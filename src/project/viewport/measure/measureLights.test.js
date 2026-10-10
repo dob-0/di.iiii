@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AmbientLight, DirectionalLight, HemisphereLight, PointLight, Scene, SpotLight, Texture } from 'three'
+import { AmbientLight, DirectionalLight, HemisphereLight, Mesh, PointLight, Scene, SpotLight, Texture } from 'three'
 import { RIG_BOUNCE_NAME, holdViewingAids, isViewingAid, releaseViewingAids } from './measureLights.js'
 
 const makeScene = () => {
@@ -57,5 +57,31 @@ describe('viewing aids are held at zero while measuring', () => {
         expect(r.work.intensity).toBe(0)
         releaseViewingAids(r.scene, saved)
         expect(r.work.intensity).toBe(0.25)
+    })
+})
+
+describe('beamsOf reads the beam-only lasers that lampsOf cannot see', () => {
+    it('returns one entry per laser line with position, direction and drawn flux', async () => {
+        const { beamsOf } = await import('./MeasurementMode.jsx')
+        const { laserLineGeometry, createLaserLineMaterial } = await import('../../../objectComponents/laserLineMaterial.js')
+        const scene = new Scene()
+        const lines = [
+            { dir: [0, 0, 1], flux: [0.5, 0, 0] },
+            { dir: [1, 0, 0], flux: [0, 0.25, 0] }
+        ]
+        const mesh = new Mesh(laserLineGeometry(lines, 10), createLaserLineMaterial())
+        mesh.name = 'cube'
+        mesh.position.set(1, 2, 3)
+        mesh.rotation.y = Math.PI / 2
+        scene.add(mesh)
+        const b = beamsOf(scene, 0.5)
+        expect(b).toHaveLength(2)
+        expect(b[0].position).toEqual([1, 2, 3])
+        expect(b[0].direction[0]).toBeCloseTo(1, 5)
+        expect(b[0].direction[2]).toBeCloseTo(0, 5)
+        expect(b[0].flux_scene).toEqual([0.5, 0, 0])
+        expect(b[0].flux).toEqual([1, 0, 0])
+        expect(b[1].drawn).toBe(true)
+        expect(b[0].name).toBe('cube')
     })
 })

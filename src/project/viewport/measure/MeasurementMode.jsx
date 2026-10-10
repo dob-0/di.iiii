@@ -89,6 +89,7 @@ export default function MeasurementMode({ renderSettings, request, toneMapping }
         const api = {
             state: () => report('state', null),
             lamps: () => report('lamps', lampList()),
+            beams: () => report('beams', beamsOf(scene, measurement.sceneScale)),
             lux: (points) => report('lux', measureLux(gl, scene, points, { sceneScale: measurement.sceneScale })),
             beamProfile: (spec = {}) => {
                 const lamp = Number.isInteger(spec.lamp) ? lampList()[spec.lamp] : null
@@ -138,6 +139,47 @@ export const lampsOf = (scene, sceneScale) => {
             decay: o.decay,
             castShadow: o.castShadow
         })
+    })
+    return out
+}
+
+const LINE_VERTS = 98 // laserLineGeometry: (48 stations + 1) x 2 vertices per line
+
+/**
+ * Every laser LINE drawn as a ribbon mesh (the beam-only lasers, which have no SpotLight and so are not in
+ * lampsOf): the mesh is found by its laser-line material (uDiam) and aFlux/aDir attributes. The look's level is
+ * already folded into aFlux (SpotLightObject LaserLines: flux = colour x duty x level x sceneScale), so `flux`
+ * is the line's drawn flux in scene units and `level` is not separable from it.
+ */
+export const beamsOf = (scene, sceneScale) => {
+    const out = []
+    const p = new Vector3()
+    const d = new Vector3()
+    scene.updateMatrixWorld()
+    scene.traverse((o) => {
+        const g = o.geometry
+        const u = o.material?.uniforms
+        if (!o.isMesh || !u?.uDiam || !g?.attributes?.aFlux || !g.attributes.aDir) return
+        p.setFromMatrixPosition(o.matrixWorld)
+        const lines = g.attributes.aDir.count / LINE_VERTS
+        for (let i = 0; i < lines; i += 1) {
+            const v = i * LINE_VERTS
+            d.set(g.attributes.aDir.getX(v), g.attributes.aDir.getY(v), g.attributes.aDir.getZ(v)).transformDirection(o.matrixWorld)
+            const flux = [0, 1, 2].map((c) => g.attributes.aFlux.array[v * 3 + c])
+            const sum = flux[0] + flux[1] + flux[2]
+            out.push({
+                index: out.length,
+                name: o.name || o.parent?.name || null,
+                visible: o.visible,
+                position: p.toArray().map(round),
+                direction: d.toArray().map(round),
+                flux_scene: flux.map(round),
+                flux: Number(sceneScale) > 0 ? flux.map((c) => round(c / sceneScale)) : null,
+                drawn: sum > 0,
+                diameter_m: u.uDiam.value,
+                divergence_rad: u.uDiv.value
+            })
+        }
     })
     return out
 }
