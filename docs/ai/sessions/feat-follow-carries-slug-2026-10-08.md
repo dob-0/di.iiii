@@ -1,7 +1,0 @@
-## 2026-10-08 — a follow carries project short names both ways
-
-- Owner wanted the MOXIR addresses (/moxir/show, /moxir/documents, …) set once and reaching dev and every install with no human step. A follow set a project's slug only when it first made the project (follower.js makeMissing, `slug: projectId`) and never compared slugs again; the dev write key is not on the install, so no other automatic route existed.
-- New `serverXR/src/follow/followSlugs.js` (pure rules) and `syncSlugs` in follower.js: a name chosen on one side and not the other is carried to the side without it, both ways, through PATCH /api/projects/:id (only visibility is owner-gated there, so a sync key may call it). Both chose and differ: the host wins. A slug equal to the project id means none chosen. Never clears. A name another project holds on the target side is reported in `di follows` (`slugs.notes`), not carried.
-- Tests: followSlugs.test.js (10) and followIntegration 'carries a project short name set on either side to the other' (two real servers, both directions). Follow suite: 10 files, 122 tests, 0 failed. Measured: 20.1 s per hop, one wait cycle of the loop, same as a project made on one side.
-- Not covered: clearing a name; trashed and archived projects (not compared); a real dev <-> install pair. After this lands on dev and the install updates, set a name on the install and watch `di follows` and the dev address.
-- Known-fixes row added. No `tools/lint-words.sh` exists in this repo, so the Vale check was not run.

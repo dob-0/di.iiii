@@ -13,7 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a space on its own domain (yokozo.xyz shows taronx), set up by the server
+- What and why
+- Copy link gives the address on a space's own domain
+- a follow carries project short names both ways
+- MOXIR hall measured from above: the grid holds (4 × 24 m, 6 m, 18 bays); lanterns 2.8 m short, end walls 0.7 m out
+- Asked
+- …and 40 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 
