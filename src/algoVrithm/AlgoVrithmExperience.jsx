@@ -1,5 +1,5 @@
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import Canvas from '../components/GuardedCanvas.jsx'
 import { XR, XROrigin } from '@react-three/xr'
 import { useXrAr } from '../hooks/useXrAr.js'
 import Backdrop from './Backdrop.jsx'
