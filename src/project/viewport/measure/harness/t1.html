@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>di.iiii measurement mode: T1 analytical check</title>
+    <!-- A test page served by the dev server only (vite root is src/; the build's one input is
+         index.html). Runs T1 by itself and leaves the result on window.__T1:
+         scripts/measure/t1-gpu.cjs reads it on the real GPU. -->
+    <style>html, body, #root { margin: 0; height: 100%; background: #000; color: #fff; font: 12px monospace; }</style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="./t1.jsx"></script>
+</body>
+</html>

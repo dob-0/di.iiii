@@ -475,10 +475,11 @@ export const WIKI_ARTICLES = [
             'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
             'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free. A room with many lamps still gets shadows: the twelve lamps putting the most light into the room at that moment throw them (fewer on a phone whose graphics chip has fewer slots), and they move to the next lamps up as a look changes.',
             'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.',
-            'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.'
+            'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.',
+            'THE SAME AIR FOR EVERYTHING. The haze dims what you see through it the way it dims the beams: a wall across a hazed hall keeps only part of its light, less the farther it is, so depth reads as it does in a real room. A lamp\'s light falls off with the square of the distance all the way, with no cut-off; its beam keeps its own drawn length. A laser is drawn as what it is \u2014 a line a few millimetres wide, as bright as the power of its colours makes it in that haze \u2014 never a wide cone. A room can also work its haze out from a single machine in a big hall: thick around the machine, thin across the hall. That is an estimate from published numbers, and the room says so until the haze is measured.'
         ],
-        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'air', 'exposure', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
-        updated: '2026-09-29'
+        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'air', 'exposure', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render', 'laser', 'fog'],
+        updated: '2026-10-09'
     },
     {
         id: 'the-rig',
@@ -1712,6 +1713,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-03'
     },
     {
+        id: 'laser-out-node',
+        category: 'Editing',
+        title: 'Laser and Laser Out — draw for the LaserCubes',
+        summary: 'The Laser node draws a shape; Laser Out shows it in a small preview and sends it to the LaserCubes through this di.iiii.',
+        body: [
+            'Add a Laser node and pick a shape: circle, line, square, triangle, star, wave, fan or spiral. Size is 0 to 1, Rotation is in turns (0.25 is a quarter turn), and Spin turns the shape on its own, in turns per second. Colour is the beam colour, Level is its brightness from 0 to 1 — wire a Sound’s volume into Level and the shape breathes with the music. Points is how many points trace the shape.',
+            'Wire the Laser’s Frame into a Laser Out node. Laser Out draws the frame in a small square preview, so you can see the shape before it goes anywhere, and sends it to the lasers whenever it changes — at most 25 times a second. Cube is “all” to drive every cube, or one cube’s name to drive just that one.',
+            'The server holds the lasers DISARMED until a laser safety officer has signed off. While it is disarmed, Laser Out says so plainly — “Lasers off — disarmed on the server” — and nothing reaches the cubes, however the graph is wired. The preview still shows the shape, so you can build the whole show disarmed.',
+            'Laser Out also shows how many cubes the server knows and how many are connected, and whether the server is simulating them. Blackout kills the beams the moment it rises — a Button, a Compare or a Toggle makes a good Blackout — and the frame that was queued is dropped, not sent after it.',
+            'The preview shades the lower half of the field red behind a dashed line: the server blanks every point below the cube’s own aim (its keep-in zone), so no beam can point lower than the cube, toward the crowd. Height lifts a shape up the field — its default, 0.5, keeps a shape of size 0.5 wholly above the line.',
+            'Under the preview Laser Out lists every cube: what it is doing (armed, ready, simulated, stopped and why) and what the cube said about itself — model, firmware, points per second it plays and its maximum, its buffer, its temperature, how it is connected, its address and serial number. A cube that has never answered is not armed, even with the sign-off; a cube under the maker’s 10 °C floor is marked.',
+            'Two stops work by themselves while the lasers are armed. If no frame reaches a cube for 200 ms — the editor closed, the tab hidden, the network gone — the cube is blanked and switched off; it comes back on with the next frame. If a frame holds the beam still (a dot, or one spot taking half the frame), for 200 ms, the cube is blanked too, unless the laser safety officer listed that still beam for that cube. Both numbers are still to be tested on a real cube. Laser Out keeps a held frame alive by itself; keep the editor in front during a show.',
+            'The 3D view of a room with LaserCubes draws what the laser server holds, as beams from each cube (cube 1 is the first LaserCube of the rig, and so on), so a drawing can be judged in the hall before show day. It does not yet draw a stopped cube dark.',
+            'The laser server only exists on a local di.iiii (`di up`, or npm run dev). On a hosted tab Laser Out is honest and idle, and says it cannot find the laser server.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'beam', 'show', 'device', 'performance', 'safety', 'blackout'],
+        updated: '2026-10-09'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
@@ -1994,6 +2014,23 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['scenes', 'scene deck', 'deck', 'timeline', 'cue', 'loop', 'intensity', 'colour', 'speed', 'fade', 'strobe', 'undo', 'restore', 'sync', 'file', 'export', 'rig', 'moxir'],
         updated: '2026-09-30'
+    },
+    {
+        id: 'rig-show-page',
+        category: 'Spaces & access',
+        title: 'The show page — everyone sees the cue, and the team chooses it',
+        summary: 'A page for a phone in the hall: the cue that is on, what comes next and when, and every cue of the show as a big card. Tap one and it goes to Light; every open page shows the change within a second, with who chose it.',
+        body: [
+            'Open it at /{space}/show/{project} — the project\'s id or its short name. It is a plain page with no 3D, so it opens fast on a phone; "see the room" opens the room itself.',
+            'At the top: the cue that is on, its act, the next cue and how long until it comes, and who chose it. Under it, the cues as cards grouped by act, each with its colours (ember, ash) as small squares.',
+            'Tap a card and that cue goes to Light, the lighting desk on the local di.iiii, which keeps playing the list from there. One choice every 10 seconds for everybody, so a room full of phones does not fight over it. You can type your name at the bottom; it is shown when you choose.',
+            'Who may choose is the operator\'s setting: TEAM (the members of this space — the default), EVERYONE (anyone who can see the show, a guest on a phone too) or OPERATOR ONLY. The operator is the space\'s owner, an admin, or the person at the machine. Everyone else sees the setting\'s effect, not the switch.',
+            'In the room itself, five favourite scene buttons stay on screen above the view bar: tap one and the light show changes to that scene and holds. The operator picks the five with the star on each scene in the SHOW list; everyone sees the same five. Laser scenes are never favourites.',
+            'A laser moment is never fired from this page, by anyone: its card says "laser moment — operator only". The operator fires it from the cards page or Light, after the laser safety sign-off.',
+            'On a di.iiii where sign-in is off, everyone who opens the page counts as the operator; for a night with guests, start it with di up --lan --guests. On a hosted di.iiii there is no Light: the page shows the show playing by its own clock, and there is nothing to choose.'
+        ],
+        tags: ['show', 'cue', 'cues', 'choose', 'phone', 'remote', 'light', 'operator', 'team', 'guests', 'laser', 'live', 'moxir', 'favourites', 'scene buttons'],
+        updated: '2026-10-09'
     },
     {
         id: 'rig-version-switch',

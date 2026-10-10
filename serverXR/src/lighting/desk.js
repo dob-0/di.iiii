@@ -1513,6 +1513,7 @@ function createDesk(opts = {}) {
       json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
     },
     'POST /api/cues/stop': (req, res) => json(res, { ...cueRunner.stop(), cues: cueRunner.full() }),
+    'POST /api/cues/autoplay': (req, res, body) => json(res, { ...cueRunner.setAutoplay(body.autoplay === true), cues: cueRunner.full() }),
     'POST /api/cues/loop': (req, res, body) => json(res, { ...cueRunner.setLoop(body.loop === true), cues: cueRunner.full() }),
 
     'POST /api/master': (req, res, body) => {
@@ -2393,6 +2394,11 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // The cue runner itself, for a caller in this process that drives the list on a
+    // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
+    // /api/cues routes call, so there is still ONE clock.
+    cueRunner,
+    hasLook: (id) => state.looks.some((l) => l.id === id),
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

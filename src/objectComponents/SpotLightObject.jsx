@@ -2,13 +2,15 @@ import { useContext, useEffect, useMemo, useRef } from 'react'
 import { context as fiberContext, useFrame } from '@react-three/fiber'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
-import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape, spotLightCone } from './spotBeam.js'
+import { beamCastsLight, beamFadeColors, beamIsVisible, edgeForExponent, fieldRatioOf, profileExponentForRatio, spotBeamShape, spotLightCone } from './spotBeam.js'
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
 import { registerBeamMesh, registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
+import { driveOfHex, laserColourFlux, laserOf, scanLines } from './laserLine.js'
+import { createLaserLineMaterial, laserLineBeforeRender, laserLineGeometry } from './laserLineMaterial.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -72,24 +74,29 @@ export default function SpotLightObject({
     // for a light in every shader whatever its intensity.
     const castsLight = beamCastsLight(beam)
     const cone = fitted ? spotLightCone({ angle, penumbra }) : { angle, penumbra }
-    const throwShape = spotBeamShape({ distance, angle, intensity, haze: beam?.haze })
+    // the drawn beam's length: its own field (beam.length) when the lamp has one — a rig lamp's light has
+    // no cutoff (distance 0) since 2026-10-09 — else the light's distance, as before
+    const throwShape = spotBeamShape({ distance: Number(beam?.length) > 0 ? Number(beam.length) : distance, angle, intensity, haze: beam?.haze })
+    // a laser drawn as a line source (laserLine.js), not a cone
+    const laser = laserOf(beam)
     // A cone that would draw at opacity 0 (haze 0, or a lamp held at 0) is not
     // mounted at all: an additive mesh at 0 adds nothing to the picture and
     // still costs a draw call and fill over the whole throw. It is how a strobe
     // draws NO cone in the room (looks.js flashEntities, RIG_BUILD.md §15.6).
     const showBeam = beamIsVisible(beam) && throwShape.opacity > 0
-    const physical = Boolean(atmosphere) && showBeam
+    const physical = Boolean(atmosphere) && showBeam && !laser
+    const laserLines = Boolean(atmosphere) && showBeam && Boolean(laser)
 
     // The cone is built by hand rather than as <coneGeometry> so the fade along
     // the throw can ride on it as vertex colours. Rebuilt only when the lamp's
     // reach or angle changes, and thrown away with the entity.
     const beamGeometry = useMemo(() => {
-        if (!showBeam || physical) return null
+        if (!showBeam || physical || laserLines) return null
         const geometry = new ConeGeometry(throwShape.radius, throwShape.length, 28, 12, true)
         const positions = geometry.getAttribute('position')
         geometry.setAttribute('color', new BufferAttribute(beamFadeColors(positions.array, throwShape.length), 3))
         return geometry
-    }, [showBeam, physical, throwShape.radius, throwShape.length])
+    }, [showBeam, physical, laserLines, throwShape.radius, throwShape.length])
     useEffect(() => () => beamGeometry?.dispose(), [beamGeometry])
 
     // The lamp's steady intensity, for whoever ranks lamps by their light (shadowCasting.js
@@ -142,13 +149,17 @@ export default function SpotLightObject({
                     <object3D ref={targetRef} position={spotTargetOffset()} />
                 </>
             ) : null}
+            {laserLines ? (
+                <LaserLines gl={gl} laser={laser} color={color} level={beam?.haze} length={throwShape.length} anisotropy={atmosphere.anisotropy} />
+            ) : null}
             {physical ? (
                 <BeamInAir
                     gl={gl}
                     color={color}
                     intensity={intensity}
                     angle={angle}
-                    penumbra={penumbra}
+                    // a rig lamp's profile in the air: its class equivalent's field/beam ratio (spotBeam.js)
+                    penumbra={fitted ? edgeForExponent(profileExponentForRatio(fieldRatioOf(penumbra))) : penumbra}
                     length={throwShape.length}
                     aperture={beam?.aperture}
                     opticsKey={JSON.stringify(beam?.optics ?? null)}
@@ -211,7 +222,8 @@ function BeamInAir({ gl, color, intensity, angle, penumbra, length, aperture, op
     // A beam's edge: the lamp's penumbra picks its cross-section (beamAir.js beamProfile:
     // hard → a beam fixture's steep-shouldered rod, soft → a wash's Gaussian). Never
     // harder than 0.2 (a real beam's edge is soft even through a sharp gobo, in haze).
-    const edge = Math.min(1, Math.max(0.2, Number(penumbra) || 0))
+    // (up to EDGE_MAX for a rig lamp whose class equivalent is softer than a Gaussian — beamAir.js)
+    const edge = Math.min(1.2, Math.max(0.2, Number(penumbra) || 0))
     // prism, honeycomb, frost, gobo (beamOptics.js) — keyed by value, so a re-render with
     // the same optics keeps the same hull
     const optics = useMemo(() => beamOpticsOf({ optics: JSON.parse(opticsKey) }), [opticsKey])
@@ -259,4 +271,33 @@ function BeamAirStrobe({ material, values }) {
     })
     useEffect(() => () => setBeamAirUniforms(material, values), [material, values])
     return null
+}
+
+// A LASER IN HAZE (laserLine.js): its lines — one static beam, or a scanned frame's sub-lines by duty share —
+// each a ribbon whose luminance is the line-source law. `level` is the look's level (the laser's beam.haze,
+// 1 = full); the colour is the cube's drive per diode (the lamp's colour read as r, g, b drive, as a frame
+// carries it), the flux Km·V(λ)·P per diode, in linear Rec.709 with the out-of-gamut lines desaturated at
+// constant luminance (stated in laserLine.js).
+function LaserLines({ gl, laser, color, level = 1, length, anisotropy }) {
+    const key = JSON.stringify([laser, color, level, length])
+    const geometry = useMemo(() => {
+        const lvl = Math.min(1, Math.max(0, Number(level ?? 1)))
+        const lines = scanLines(laser.frame, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => {
+            const { rgb } = laserColourFlux({ mW: laser.mW, nm: laser.nm, drive: l.drive })
+            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale) }
+        })
+        return laserLineGeometry(lines, Math.max(Number(length) || 20, 0.5))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key])
+    const material = useMemo(() => createLaserLineMaterial(hazeUniformsFor(gl)), [gl])
+    useEffect(() => () => geometry.dispose(), [geometry])
+    useEffect(() => () => material.dispose(), [material])
+    material.uniforms.uDiam.value = laser.diameter_mm / 1000
+    material.uniforms.uDiv.value = laser.divergence_mrad / 1000
+    material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
+    return <mesh geometry={geometry} material={material} raycast={() => null} frustumCulled={false} onBeforeRender={beforeLaserRender} />
+}
+
+function beforeLaserRender(renderer, scene, camera) {
+    laserLineBeforeRender(this, renderer, camera)
 }

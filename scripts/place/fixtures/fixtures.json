@@ -2,7 +2,7 @@
     "manifest": "MOXIR rig fixtures — identity, datasheet numbers, photometry and the 3D model of each, with a source for every number",
     "writtenAt": "2026-09-28",
     "accessed": "2026-09-28",
-    "howToRead": "Every spec is { value, src, basis }. `src` names an entry in `sources`. `basis` is EXACT (the maker's own page for this very model code), EQUIVALENT (a named fixture of the same class, because the maker publishes nothing for this field or the code could not be traced), TESTED (run on the rental units themselves — source SEVAN: the Sevan festival rig, 2026), or ASSUMED (no source; a stated guess). Nothing else here was measured by us.",
+    "howToRead": "Every spec is { value, src, basis }. `src` names an entry in `sources`. `basis` is EXACT (the maker's own page for this very model code), COMPONENT (exact data of the part inside, e.g. the lamp, when the unit's own figure is not published — conditional on that part being the one fitted), EQUIVALENT (a named fixture of the same class, because the maker publishes nothing for this field or the code could not be traced), TESTED (run on the rental units themselves — source SEVAN: the Sevan festival rig, 2026), UNKNOWN (looked for and not found: value null, said so), or ASSUMED (no source; a stated guess). Nothing here was measured by us (owner 2026-10-09: no measuring kit; the best published numbers, labelled).",
     "identification": {
         "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd. — own site pro-uplight.com, store up-light.en.made-in-china.com",
         "confirmed": "UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403: the model code is printed as 'Model' / 'Model NO.' on the maker's page (sources A, A2, B, B2, C, C2, C3, D). 2026-09-29: the maker's Chinese site uplight.com.cn (same company, same contact) prints model fields for UP-LA40WF too, and gives each MOXIR type's mode list (B380F 16; PL5403 8; 250BSW 24/30; HK1915 21/35/78/92/97) — still no channel ORDER for any (sources A-CN … LA-CN).",
@@ -147,6 +147,31 @@
         "LASEROS-MK2": {
             "url": "https://www.laseros.com/lasercube-models/",
             "what": "Wicked Lasers, LaserCube Ultra MK2: the maker's specs page, and its ULTRA MK2 Guide v1.2 (https://www.laseros.com/manual-mk2.pdf): specifications, connections, and the DMX/Art-Net default fixture channel layout (pp. 57-59). Accessed 2026-10-04"
+        },
+        "OSRAM380": {
+            "url": "https://www.osram.com/ecat/",
+            "what": "Osram eCat, SIRIUS HRI 380 W S PRO (ZMP_4061881): 20,000 lm, 7700 K, Ra 85, 70 V 5 A, 2500 h — values as quoted by a web search 2026-10-09; the product page answered HTTP 500 on a direct fetch, so UNVERIFIED at source. The lamp class of the UP-B380F (\"350XL/380\"); its make is not confirmed"
+        },
+        "NEREID": {
+            "url": "https://electromarket.co.uk/beamz-pro-nereid380b-outdoor-weatherproof-moving-head-beam-light-380w",
+            "what": "BeamZ Pro Nereid380B, 380 W IP65 beam, 1 deg; 209,000 lx @ 7 m from the beamZ 152.040B listing (manuals.plus), via a search snippet — the low end of the 380 W class bracket"
+        },
+        "UPLUSPAR": {
+            "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+            "what": "UPlus IP PAR-54X3 manual (another maker, another housing): an 8-channel chart for a 54 x 3 W RGBW PAR — the equivalent for the UP-PL5403 channel meanings"
+        },
+        "PROST380": {
+            "url": "https://www.pro-stagelighting.com/uploads/soft/20240103/1704289146.pdf",
+            "what": "Outdoor 380 W waterproof beam, 16 channels (another maker, YODN 380 W lamp, 550 W): the equivalent 16-channel chart for the UP-B380F"
+        },
+        "LASEROS-MK2-GUIDE": {
+            "url": "https://www.laseros.com/manual-mk2.pdf",
+            "what": "LaserCube Ultra MK2 Guide v1.2 (103 pp), pp. 11-12: the 10 W and 6.0 W variants per diode, 4 mm beam, 1 mrad (definition — 1/e or 1/e2, full or half angle — not stated). The local v1.0 manual (89 pp) has neither. Read 2026-10-09"
+        },
+        "LASEROS-MK2-MANUAL-V1": {
+            "file": "/mnt/data/backups/lasercube-mk2-sd-2026-09-10/ULTRA_MK2 Full Manual v1-0.pdf",
+            "sha256_16": "055b6761e13250f1",
+            "what": "LaserCube Ultra MK2 Full Manual v1.0 (89 pp), from the SD card of the owner's own cubes (backup 2026-09-10), pp. 11-12: the '7.5 Ultra Mk2' (7500 mW: blue 455 nm 4000, green 525 nm 2000, red 638 nm 1500 mW) and the 2.5 W variant. No beam diameter or divergence line. Read with pdftotext 2026-10-09"
         }
     },
     "kinds": {
@@ -219,6 +244,60 @@
                     "value": "power in/out: '专用防水音响插' (dedicated waterproof connector); DMX in/out: 3-pin waterproof",
                     "src": "A-CN",
                     "basis": "EXACT"
+                },
+                "field_deg": {
+                    "value": null,
+                    "basis": "UNKNOWN",
+                    "accessed": "2026-10-09",
+                    "note": "not published. ANSI E1.9 / CIE: beam = 50 % of peak, field = 10 %; the maker states no definition for its 1.8 deg. The renderer takes field = beam x the class ratio (spotBeam.js), labelled"
+                },
+                "lamp_component": {
+                    "value": {
+                        "model": "Osram SIRIUS HRI 380 W S PRO",
+                        "flux_lm": 20000,
+                        "cct_K": 7700,
+                        "cri_Ra": 85,
+                        "voltage_V": 70,
+                        "current_A": 5,
+                        "life_h": 2500,
+                        "arc_gap_mm": null
+                    },
+                    "src": "OSRAM380",
+                    "basis": "COMPONENT",
+                    "accessed": "2026-10-09",
+                    "note": "conditional: the unit's lamp make is not confirmed ('350XL/380'); arc gap not found"
+                },
+                "peak_cd_bracket": {
+                    "value": {
+                        "low_cd": 10200000,
+                        "high_cd": 50200000
+                    },
+                    "src": "NEREID, SHEHDS-GALAXYJET",
+                    "basis": "EQUIVALENT",
+                    "accessed": "2026-10-09",
+                    "note": "the 380 W class spans 5x (Nereid 1 deg 209,000 lx @ 7 m; GalaxyJet 1.8 deg 125,500 lx @ 20 m): a bracket, not a value. The rig uses the GalaxyJet figure (photometry)"
+                },
+                "cct": {
+                    "value": "3200-7500 K \"adjustable\", Ra 80 (maker); the lamp class itself ~7700 K",
+                    "src": "A",
+                    "basis": "EXACT",
+                    "accessed": "2026-10-09",
+                    "note": "a marketing range for a fixed discharge lamp"
+                },
+                "strobe_hz": {
+                    "value": "0.5-14 Hz (body) or 1-25 Hz (attributes)",
+                    "src": "A",
+                    "basis": "EXACT",
+                    "accessed": "2026-10-09",
+                    "note": "the page contradicts itself; kept as it is"
+                },
+                "dmx_order": {
+                    "value": "pan, tilt, pan fine, tilt fine, speed, frost, strobe (255 open), dimmer, colour, gobo, prism 1, prism 1 rot, ch13, ch14, focus, reset",
+                    "src": "SEVAN",
+                    "basis": "TESTED",
+                    "accessed": "2026-10-09",
+                    "open": "OPEN (2026-10-09): the two TESTED maps disagree from ch11 — src/rigbuild/fixtureTypes.js (above) vs the desk's show.json 'Beam 16ch' (…colour, gobo, FOCUS ch11, PRISM ch12, aux3 ch13 = 145 REQUIRED or no light, aux4-6), and artnet-desk CLAUDE.md says 'prism 2' is WRONG for these heads. ch11-16 are NOT tested until one unit is stepped 0..255 per channel on the desk. The manual the map came from was not found on disk.",
+                    "equivalent": "PROST380 16 ch: PAN, PAN FINE, TILT, TILT FINE, SPEED, FROST, DIMMER, STROBE, COLOR, GOBO, PRISM, PRISM1 R, PRISM2 R, FOCUS, RAINBOW, RESET/LAMP (100-105 off, 200-205 on, 240-255 reset). Re-read 2026-10-09 from the PDF itself (sha256 7fd7b59a22ff23d5, 16CH Mode, pp. 19-22): the lamp commands are on ch16 and 145 on ch13 is prism-2 rotation there, so this chart does NOT explain the console profile's \"ch13 must be 145\" (the earlier lamp-strike guess is withdrawn); the ten disagreements with the TESTED map are in docs/moxir/b380f-16ch-map-check-2026-10-09.md"
                 }
             },
             "look": "Low black base box with tubular grab bars at the ends and four round connectors on the front; tall flat-sided yoke arms with chevron vents; head = a round rear drum across the tilt axis (lamp, vent-hole ring) and a long cylindrical nose to the lens.",
@@ -529,6 +608,32 @@
                     "src": "D-CN",
                     "basis": "EXACT",
                     "note": "'通道模式：8通道模式' — the maker lists ONE mode, 8 channels; its channel ORDER is published nowhere (owed). Control: DMX512 / master-slave / sound"
+                },
+                "field_deg": {
+                    "value": null,
+                    "basis": "UNKNOWN",
+                    "accessed": "2026-10-09",
+                    "note": "not published; which lens (8 / 15 / 25 deg) the 50 units carry is not stated either"
+                },
+                "cct_white": {
+                    "value": "3200 K or 5600 K (optional); which one is fitted: not stated",
+                    "src": "D",
+                    "basis": "EXACT",
+                    "accessed": "2026-10-09"
+                },
+                "emitter_component": {
+                    "value": null,
+                    "basis": "UNKNOWN",
+                    "accessed": "2026-10-09",
+                    "note": "LED make, bin and peak wavelengths not published: no per-emitter chromaticity or flux, so colour mixing stays the sRGB-primary stand-in (dmxDecode.js), labelled"
+                },
+                "dmx_order": {
+                    "value": "dimmer, R, G, B, W, strobe, ch7 unused, ch8 unused (8 ch)",
+                    "src": "SEVAN",
+                    "basis": "TESTED",
+                    "accessed": "2026-10-09",
+                    "note": "ch7-8 meaning unknown; UPLUSPAR's 8-ch chart (function select, speed) is the hypothesis",
+                    "equivalent": "UPLUSPAR: total dimmer, R, G, B, W, total strobe, function (0-50 manual, 51-100 colours, 101-150 jump, 151-200 gradate, 201-250 pulse, 251-255 sound), speed/colour"
                 }
             },
             "look": "A round cast-aluminium can with deep radial cooling fins, a flat front bezel of 54 LEDs (~75% of the can), on a U-bracket of flat steel bar that folds into its own floor stand, two big black knobs at the pivots.",
@@ -790,6 +895,31 @@
                     ],
                     "src": "ANTARI",
                     "basis": "EQUIVALENT"
+                },
+                "warm_up_min": {
+                    "value": 10,
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT",
+                    "accessed": "2026-10-09",
+                    "note": "about 10 min to 'Ready To Fog'; no duty cycle or re-heat figure is published (UNKNOWN)"
+                },
+                "output_m3_min": {
+                    "value": null,
+                    "basis": "UNKNOWN",
+                    "accessed": "2026-10-09",
+                    "note": "Antari's manual gives no m3/min or cfm; resellers' 15-45 kcfm figures belong to other products — never copied"
+                },
+                "dmx_map": {
+                    "value": "1 ch: 0-5 off, 6-255 = 1-100 % output; RDM",
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT",
+                    "accessed": "2026-10-09"
+                },
+                "identity": {
+                    "value": null,
+                    "basis": "UNKNOWN",
+                    "accessed": "2026-10-09",
+                    "note": "UP-YZ31P: no maker, listing or sheet found (EN + ZH searches 2026-10-09); UPlight = 广州灯王舞台设备有限公司 (uplight.com.cn) lists no smoke machine. The Antari Z-1500 III is the equivalent"
                 }
             },
             "look": "A long grey box with a black front cap and a round nozzle in it, a white fluid tank and two carry handles on top.",
@@ -1124,11 +1254,38 @@
                     "basis": "EXACT"
                 },
                 "variants_mw": {
-                    "value": {"10W": {"455nm": 5000, "525nm": 2800, "638nm": 2800}, "6W": {"455nm": 2700, "525nm": 1500, "638nm": 1800}},
-                    "note": "both are sold as 'Ultra MK2'; the owner's cubes are taken as 10 W — CONFIRM on the cube's label (the 6 W unit has ~half the green)",
+                    "value": {
+                        "10W": {
+                            "455nm": 5000,
+                            "525nm": 2800,
+                            "638nm": 2800
+                        },
+                        "7.5W": {
+                            "455nm": 4000,
+                            "525nm": 2000,
+                            "638nm": 1500
+                        },
+                        "6W": {
+                            "455nm": 2700,
+                            "525nm": 1500,
+                            "638nm": 1800
+                        },
+                        "2.5W": {
+                            "455nm": 1300,
+                            "525nm": 800,
+                            "638nm": 400
+                        }
+                    },
+                    "note": "four variants are sold as 'Ultra MK2': 10 W and 6.0 W (Guide v1.2 p. 11-12), 7.5 W and 2.5 W (Manual v1.0 pp. 11-12, the owner's own SD card). The owner's cubes are 7.5 W (owner 2026-10-09 18:2x, N449)",
                     "src": "LASEROS-MK2",
                     "basis": "EXACT",
-                    "read": "ULTRA MK2 Guide spec tables, read 2026-10-08 with pdftotext"
+                    "read": "ULTRA MK2 Guide spec tables, read 2026-10-08 with pdftotext",
+                    "src_by_variant": {
+                        "10W": "LASEROS-MK2-GUIDE",
+                        "6W": "LASEROS-MK2-GUIDE",
+                        "7.5W": "LASEROS-MK2-MANUAL-V1",
+                        "2.5W": "LASEROS-MK2-MANUAL-V1"
+                    }
                 },
                 "control": {
                     "value": "Ethernet RJ45 100 Mbps (network stream, LaserOS protocol), WiFi 2.4 GHz, DMX512 in/out, Art-Net, ILDA, SD card playlists, Cube-Link sync",
@@ -1142,6 +1299,25 @@
                     "src": "LASEROS-MK2",
                     "basis": "EXACT",
                     "note": "the maker's default 16-channel profile: DMX selects cues of an SD-card playlist and scales, moves, rotates and recolours them. At MOXIR the cubes run OFF DMX, streamed over the wired network from di Raw (owner 2026-10-04)"
+                },
+                "variant_in_use": {
+                    "value": {
+                        "name": "7.5 W",
+                        "455nm": 4000,
+                        "525nm": 2000,
+                        "638nm": 1500
+                    },
+                    "src": "LASEROS-MK2-MANUAL-V1",
+                    "basis": "EXACT",
+                    "accessed": "2026-10-09",
+                    "owner": "2026-10-09 18:2x, his words: \"laser cube m2 7.5w\" / \"laercube mk2 7.5w\" (ledger N449). Replaces the 6.0 W taken on 10-08 night",
+                    "note": "the maker's 7.5 W variant per diode (Manual v1.0 p. 11, '7.5 Ultra Mk2', on the SD card of the owner's cubes). 1410 lm at full white (B 131 + G 1084 + R 196, Km·V(λ)·P; the 6 W was 1136). The 4 mm / 1 mrad optics are printed only for the 6 W and 10 W (Guide v1.2): taken as the same for the 7.5 W (ASSUMED, same housing and optics). Read each cube's label on site"
+                },
+                "beam_definition": {
+                    "value": null,
+                    "basis": "UNKNOWN",
+                    "accessed": "2026-10-09",
+                    "note": "4 mm / 1 mrad: whether 1/e or 1/e2, full or half angle, is not stated (asked of support@laseros.com, owed). The renderer reads 4 mm full width, 1 mrad full angle"
                 }
             },
             "look": "A black cube, a little under 16 cm a side, with a small output window in its front face; here in a short U-bracket to clamp it on the truss.",

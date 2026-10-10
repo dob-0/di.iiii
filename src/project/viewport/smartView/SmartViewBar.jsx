@@ -40,6 +40,9 @@ const visitorButton = (current) => ({
     fontSize: '0.9rem',
     fontFamily: 'inherit',
     whiteSpace: 'nowrap',
+    // Never shrink: on a 390 px phone seven labels squeezed into each other ("SideRig - FOH z 29Crane");
+    // the row scrolls sideways instead (overflowX on the row).
+    flex: '0 0 auto',
     cursor: 'pointer',
     color: current ? '#05070a' : '#f5f7fa',
     background: current ? '#f5f7fa' : 'transparent'

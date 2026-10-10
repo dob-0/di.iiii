@@ -7,6 +7,7 @@ import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
 import { dmxEntities } from './dmxPose.js'
 import { isAssumedMode, typeById } from './fixtureTypes.js'
 import { getServerOffset } from './serverClock.js'
+import { motionFrame, motionOf, motionPlan, serverNowOf, withMotion } from './lookMotion.js'
 
 // THE ROOM FOLLOWS THE LOOK (docs/architecture/RIG_BUILD.md §11.4). While the desk plays
 // one of the room's designed looks on a layer — fired by a cue, by the desk itself, or by
@@ -28,6 +29,8 @@ import { getServerOffset } from './serverClock.js'
 
 const NONE = ''
 const FADE_FRAME_MS = 33
+// A moving look redraws the lamps this often (about 30 Hz; the desk's own frame grid is 40 Hz, fx.js FRAME_MS 25).
+const MOTION_FRAME_MS = 33
 const NO_FIXTURES = Object.freeze([])
 const NO_DRIVEN = new Map()
 
@@ -54,13 +57,20 @@ export const roomInLook = ({ entities, library, looks, lookId }) => {
     return withWashLevel(posedEntities(entities, poses), washLevelOf(look))
 }
 
+// Where a look's radial motion measures from: the DJ (the booth), else null (the middle of the moving lamps).
+const djCentre = (entities) => {
+    const dj = entities.find((e) => e.id === 'rig-dj-table')
+    const p = dj?.components?.transform?.position
+    return Array.isArray(p) ? [p[0], 0, p[2]] : null
+}
+
 /** How far a fade has come, 0..1, at `now`. No fade (or none recorded) is 1. */
 export const fadeProgress = (fade, now = Date.now()) => {
     if (!fade || !(fade.fadeMs > 0)) return 1
     return Math.min(1, Math.max(0, (now - fade.firedAt) / fade.fadeMs))
 }
 
-export function useRigLookEntities(document, { explicit, mirror, library: baseLibrary = TYPE_LIBRARY } = {}) {
+export function useRigLookEntities(document, { explicit, mirror, library: baseLibrary = TYPE_LIBRARY, now: clockNow = () => Date.now() } = {}) {
     const list = document?.entities
     const entities = useMemo(() => list || [], [list])
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
@@ -132,6 +142,26 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     const assets = document?.assets
     const blended = useMemo(() => withLookWash(faded, { fromLookId: shownFrom ? fromId : '', toLookId: lookId, t: shownFrom ? t : 1, assets }), [faded, shownFrom, fromId, lookId, t, assets])
     const flashed = useMemo(() => flashEntities(blended, library), [blended, library])
+    // A MOVING LOOK (lookMotion.js): the look's `motion` is played on the lit lamps of its kinds, a level multiplier per lamp
+    // from the SERVER's time (the clock offset measured once for the page) counted from the moment the scene was fired, so
+    // every viewer is on the same beat. Level only: no lamp is moved or turned. Redrawn ~30 times a second, and not at all
+    // for a look that holds still (the same array passes through).
+    const playing = lookId && looks ? looks.looks.find((l) => l.id === lookId) || null : null
+    const plan = useMemo(() => {
+        if (!playing || !motionOf(playing)) return null
+        const level = new Map(shownTo.map((e) => [e.id, e.components?.rigShown?.level ?? 1]))
+        return motionPlan({ entities: shownTo, look: playing, levelOf: (id) => level.get(id) ?? 1, centre: djCentre(entities) })
+    }, [playing, shownTo, entities])
+    const [beat, setBeat] = useState(0)
+    useEffect(() => {
+        if (!plan) return undefined
+        const timer = setInterval(() => setBeat((n) => n + 1), MOTION_FRAME_MS)
+        return () => clearInterval(timer)
+    }, [plan])
+    const epoch = explicit !== undefined ? 0 : driver === 'clock' ? clock.state?.firedAt || 0 : (fade?.firedAt || 0)
+    const offsetMs = driver === 'clock' ? clock.offset?.offset || 0 : 0
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `beat` is the clock's tick; the time is read inside the memo
+    const frame = useMemo(() => (plan ? motionFrame(plan, serverNowOf(clockNow(), offsetMs), epoch) : null), [plan, epoch, offsetMs, beat])
     // DMX WINS (RIG_BUILD.md §18.4): while the desk is live, every lamp joined to a patched
     // fixture with a known channel list is drawn from what the desk sends, attribute by
     // attribute. A page's own GO (`explicit`) means no desk is being followed.
@@ -139,7 +169,8 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     const dmx = useMemo(() => (dmxOn
         ? dmxEntities({ shown: flashed, document: entities, fixtures: deskFixtures, library })
         : { entities: flashed, driven: NO_DRIVEN }), [dmxOn, flashed, entities, deskFixtures, library])
-    const shown = dmx.entities
+    // Motion rides on top of whatever draws the lamps, DMX included: the desk's values are the level, the look's motion is the beat.
+    const shown = useMemo(() => withMotion(dmx.entities, frame), [dmx.entities, frame])
     const lit = Boolean(looks && lookId && looks.looks.some((l) => l.id === lookId))
     return {
         entities: shown,
@@ -147,6 +178,7 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
         lookId: lit ? lookId : NONE,
         fromDesk: driver === 'desk' && Boolean(deskLook),
         fading: Boolean(shownFrom && t < 1),
+        moving: Boolean(plan),
         driver,
         show: driver === 'clock' ? show : null,
         clock: driver === 'clock' ? clock.state : null,
