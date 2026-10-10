@@ -1158,7 +1158,15 @@ describe('the trash has scope, same as everything else', () => {
             method: 'POST',
             headers: withAuth(EDITOR_TOKEN)
         })
-        expect(deniedRestore.status).toBe(403)
+        // 404, same answer as a project that is not in the trash at all: a 403
+        // would confirm the id is trashed and name the space it belongs to.
+        expect(deniedRestore.status).toBe(404)
+        expect(JSON.stringify(await deniedRestore.json())).not.toContain('secret-space')
+        const neverTrashed = await fetch(`${server.baseUrl}/api/projects/no-such-project-here/restore`, {
+            method: 'POST',
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(neverTrashed.status).toBe(404)
 
         const stillTrashed = await (await fetch(`${server.baseUrl}/api/trash?space=secret-space`, {
             headers: withAuth(ADMIN_TOKEN)

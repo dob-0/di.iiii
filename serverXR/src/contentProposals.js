@@ -266,7 +266,8 @@ function createContentProposals({
     for (const entry of bundle.projects) {
       inBundle.add(entry.id)
       const found = await (findProjectByIdAny || findProjectById)(entry.id)
-      if (found && found.spaceId !== spaceId) { collisions.push({ id: entry.id, spaceId: found.spaceId }); continue }
+      // The holder's space is never recorded: the sender may not be able to see it.
+      if (found && found.spaceId !== spaceId) { collisions.push({ id: entry.id }); continue }
       const document = remapSpaceUrls(entry.document, sourceId, spaceId)
       let current = null
       let currentVersion = 0
@@ -415,7 +416,7 @@ function createContentProposals({
     const meta = await loadSpaceMeta(spaceId)
     if (!meta) throw proposalError(404, 'That space is not here any more.')
     const summary = await inspect(spaceId, bundle, meta)
-    if (summary.collisions.length) throw proposalError(409, 'A project in the file belongs to another space here.', { code: 'project_collision' })
+    if (summary.collisions.length) throw proposalError(409, 'A project id in the file is already taken here.', { code: 'project_collision' })
     // Checked again at the moment of writing: a count given for one summary
     // never covers another.
     const gate = lossGate({ mediaLost: summary.mediaLost, acceptLoss })
@@ -534,7 +535,7 @@ function createContentProposals({
       const text = describe(summary, { proposer: publicActor(actor), from: cleanFrom, mode: willApply ? (dryRun ? 'dry' : 'applied') : 'proposal' })
       const base = { summary, text, trusted }
       if (summary.collisions.length) {
-        throw proposalError(409, `Projects in this file belong to other spaces here: ${summary.collisions.map((c) => `${c.id} (${c.spaceId})`).join(', ')}.`, { code: 'project_collision', body: base })
+        throw proposalError(409, `Project ids in this file are already taken here: ${summary.collisions.map((c) => c.id).join(', ')}. Give those projects other names and export again.`, { code: 'project_collision', body: base })
       }
       if (dryRun) return { status: 'dry_run', ...base }
       if (summary.nothingToApply) return { status: 'nothing_to_apply', ...base }

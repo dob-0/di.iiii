@@ -367,3 +367,35 @@ describe('a file that removes media says so, and needs the exact count', () => {
         expect((await documentOf(tgt, page)).entities).toHaveLength(9)
     })
 })
+
+// 2026-10-10 (A4): project ids are global, so a file can carry an id that is
+// already used by a project in a space the sender cannot see. The refusal says
+// the id clashes; it must not say which space holds it.
+describe('a refused project id clash does not name the other space', () => {
+    it('answers 409 project_collision with no trace of the space that holds the id', async () => {
+        const srcRoot = await makeTempDir('dii-proposal-clash-src-')
+        const src = await startServer(srcRoot)
+        await fetch(`${src.baseUrl}/api/spaces`, json('POST', { slug: 'wcc', label: 'WCC' }))
+        const page = (await (await fetch(`${src.baseUrl}/api/spaces/wcc/projects`, json('POST', { title: 'Page', slug: 'page' }))).json()).project.id
+        await putDocument(src, page, ['e1'])
+        await src.stop()
+        const out = await makeTempDir('dii-proposal-clash-out-')
+        const file = path.join(out, 'a.diiii')
+        await runBundle(['export', 'wcc', '--out', file], srcRoot)
+
+        // The target already has that id, in a different space, and an empty wcc.
+        const tgt = await startServer(await makeTempDir('dii-proposal-clash-tgt-'))
+        await fetch(`${tgt.baseUrl}/api/spaces`, json('POST', { slug: 'wcc', label: 'WCC' }))
+        await fetch(`${tgt.baseUrl}/api/spaces`, json('POST', { slug: 'hidden-space', label: 'Hidden' }))
+        const held = await fetch(`${tgt.baseUrl}/api/spaces/hidden-space/projects`, json('POST', { title: 'Page', slug: 'page' }))
+        expect(held.status).toBe(201)
+        expect((await held.json()).project.id).toBe(page)
+
+        for (const fields of [{}, { dryRun: 'true' }]) {
+            const refused = await propose(tgt, file, fields)
+            expect(refused.status).toBe(409)
+            expect(refused.body.code).toBe('project_collision')
+            expect(JSON.stringify(refused.body)).not.toContain('hidden-space')
+        }
+    })
+})

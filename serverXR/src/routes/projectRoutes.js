@@ -12,7 +12,7 @@ const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
 const { countProjectLayers } = require('../../../shared/layers.cjs')
-const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
+const { canAccessSpace } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 
 // A project's write: the version check, the document, the ops and the version
@@ -524,18 +524,13 @@ function registerProjectRoutes(router, {
       // middleware in index.js (it looks up live projects only), so
       // req.requiredSpaceId stayed null here and requireWriteRole's per-space
       // scope check never ran — an editor token scoped to one space could
-      // restore a project trashed in another. Checked explicitly instead,
-      // same rule (and same response shape) as everywhere else a write is
-      // scoped to a space.
+      // restore a project trashed in another. Checked explicitly instead.
+      // The answer is the same 404 as "not in the trash": a 403 naming the
+      // space would tell a caller outside it that the id is trashed, and where.
       if (config.requireAuth) {
         const state = req.authState || {}
         if (!(state.authenticated && canAccessSpace(state, trashed.spaceId))) {
-          return res.status(403).json({
-            error: 'Space access denied.',
-            requiredSpaceId: trashed.spaceId,
-            allowedSpaces: state.spaces,
-            allowedSpaceLabel: formatAuthScopeLabel(state.spaces)
-          })
+          return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
         }
       }
       await ensureSpaceWritable(trashed.spaceId)
