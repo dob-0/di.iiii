@@ -153,6 +153,41 @@ const createServerUnavailableError = (message, cause = null) => {
     return error
 }
 
+// 429 Too Many Requests (RFC 6585 section 4) may carry Retry-After: either
+// delay-seconds or an HTTP-date (RFC 9110 section 10.2.3). Null when absent or
+// unreadable.
+export const parseRetryAfterMs = (value, now = Date.now()) => {
+    const text = String(value ?? '').trim()
+    if (!text) return null
+    if (/^\d+$/.test(text)) return Number(text) * 1000
+    const at = Date.parse(text)
+    return Number.isNaN(at) ? null : Math.max(0, at - now)
+}
+
+// Only idempotent methods (RFC 9110 section 9.2.2) are retried, at most twice,
+// and never past 30 s of waiting; a POST or a longer Retry-After reaches the
+// caller as an error with status 429 and retryAfterMs, so a person is told.
+const RATE_LIMIT_MAX_RETRIES = 2
+const RATE_LIMIT_MAX_WAIT_MS = 30000
+const RETRYABLE_METHODS = new Set(['GET', 'HEAD'])
+const DEFAULT_RATE_LIMIT_WAIT_MS = 1000
+
+const waitFor = (ms, signal) => new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+        reject(signal.reason ?? new DOMException('Aborted', 'AbortError'))
+        return
+    }
+    const timer = setTimeout(() => {
+        signal?.removeEventListener?.('abort', onAbort)
+        resolve()
+    }, ms)
+    const onAbort = () => {
+        clearTimeout(timer)
+        reject(signal.reason ?? new DOMException('Aborted', 'AbortError'))
+    }
+    signal?.addEventListener?.('abort', onAbort, { once: true })
+})
+
 const createHttpError = async (response) => {
     const text = await response.text()
     let message = text || `Request failed with status ${response.status}`
@@ -169,6 +204,10 @@ const createHttpError = async (response) => {
     }
     const error = new Error(message)
     error.status = response.status
+    if (response.status === 429) {
+        error.isRateLimited = true
+        error.retryAfterMs = parseRetryAfterMs(response.headers?.get?.('Retry-After'))
+    }
     if (data) {
         error.data = data
     }
@@ -201,16 +240,23 @@ export async function apiFetch(path, {
         init.body = JSON.stringify(body)
         init.headers['Content-Type'] = 'application/json'
     }
+    const canRetry = RETRYABLE_METHODS.has(String(method).toUpperCase())
     let response
-    try {
-        response = await fetch(url, init)
-        clearServerUnavailable()
-    } catch (error) {
-        if (isServerNetworkError(error)) {
-            markServerUnavailable()
-            throw createServerUnavailableError('ServerXR is unreachable. Check that the server is running and CORS allows this origin.', error)
+    for (let attempt = 0; ; attempt += 1) {
+        try {
+            response = await fetch(url, init)
+            clearServerUnavailable()
+        } catch (error) {
+            if (isServerNetworkError(error)) {
+                markServerUnavailable()
+                throw createServerUnavailableError('ServerXR is unreachable. Check that the server is running and CORS allows this origin.', error)
+            }
+            throw error
         }
-        throw error
+        if (response.status !== 429 || !canRetry || attempt >= RATE_LIMIT_MAX_RETRIES) break
+        const waitMs = parseRetryAfterMs(response.headers?.get?.('Retry-After')) ?? DEFAULT_RATE_LIMIT_WAIT_MS
+        if (waitMs > RATE_LIMIT_MAX_WAIT_MS) break
+        await waitFor(waitMs, signal)
     }
     if (!response.ok) {
         throw await createHttpError(response)
