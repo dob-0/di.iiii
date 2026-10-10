@@ -74,7 +74,7 @@ GLB_V10_SHA = '1a1d47509200f81e9e281e966dd29269ccc64e82c9a0c014f55c1a996740ff2d'
 STAGE_V2C = RIGS + 'moxir-stage-v2-cranes-2026-10-09.json'
 CUT_V2C = RIGS + 'moxir-crane-cut-v2-cranes-2026-10-09.json'
 LASERS = RIGS + 'moxir-lasers-on-crane-2026-10-09.json'
-RIG_V2C = RIGS + 'moxir-v2-cranes-2026-10-09.json'
+RIG_V2C = os.environ.get('MOXIR_CRANES_RIG') or RIGS + 'moxir-v2-cranes-2026-10-09.json'   # check only: MOXIR_CRANES_RIG=<repo-relative path> points the checks at the composed v2.1 rig
 AERIAL_PREV = RIGS + 'moxir-aerial-far-crane-2026-10-09.json'
 AERIAL_PREV_SHA = '56826b0dea8b8e03b9ea704434e4eb34a58052db62b6e819210dbd5d90c8fefa'
 REPORTS = '~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/'
