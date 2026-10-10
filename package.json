@@ -5,8 +5,8 @@
     "version": "0.4.0",
     "type": "module",
     "engines": {
-        "node": "22.x",
-        "npm": "10.x"
+        "node": "22.x || 24.x",
+        "npm": ">=10"
     },
     "scripts": {
         "dev": "node scripts/dev-stack.mjs",

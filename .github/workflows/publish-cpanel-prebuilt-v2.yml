@@ -33,6 +33,7 @@ jobs:
   publish:
     needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
     env:
       SOURCE_REF:    ${{ inputs.source_ref != '' && inputs.source_ref || github.ref_name }}
@@ -50,7 +51,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '24'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install frontend dependencies
@@ -132,6 +133,7 @@ jobs:
     needs: publish
     if: needs.publish.outputs.published == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
       BASE_URL: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'https://di-studio.xyz' || 'https://dev.diiii.xyz' }}
       EXPECTED_SHA: ${{ needs.publish.outputs.source_sha }}
@@ -140,7 +142,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
 
       - name: Wait for the release to go live (10 min max)
         run: |

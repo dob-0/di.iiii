@@ -33,9 +33,19 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR branch supersedes the running suite. Only
+# pull_request runs cancel: when deploy-vps*.yml call this workflow on a push
+# to dev/main, github.event_name is that push, so cancel-in-progress is false
+# and a deploy gate is never cancelled. The `ci-` prefix keeps the group
+# distinct from the callers' own deploy groups.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,7 +53,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       # Local to this runner, never pushed. The fold is deterministic (same
@@ -128,3 +138,33 @@ jobs:
   # shared with the publish workflow, which gates deploys on the same suite.
   browser-checks:
     uses: ./.github/workflows/browser-checks.yml
+
+  # `engines` still promises Node 22.x, and the server uses the experimental
+  # node:sqlite, whose behaviour moves between majors. .nvmrc (24, what the
+  # Docker images run) is tested above; this job runs the build and the unit
+  # and server-contract suites on the supported older line.
+  node-22-compat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm --prefix serverXR ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm run test
+
