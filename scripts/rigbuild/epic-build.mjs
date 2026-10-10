@@ -40,6 +40,8 @@ import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
 import { runnerList } from './show-loop.mjs'
+import { atmosphereOfRig } from '../place/rig-lib.mjs'
+import { laserColourFlux, driveOfHex, CUBE_NM } from '../../src/objectComponents/laserLine.js'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -60,21 +62,39 @@ export const candelaOf = (f) => {
     }
 }
 const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30, 'ext-blinder': 25, 'ext-strobe': 20 }
+/** How far the room draws a unit's beam: the rig file's own cast throw to the first thing it meets (MOXIR v2, occlusion_sky.py:
+ * `throw_m`, null = open to the far end) when it has one, else the type's reach. The room draws a beam to its light's distance
+ * and does not stop it at the steel (spotBeam.js): without this a beam the cast stops at the roof is drawn through it. Pure. */
+export const reachOf = (f) => (f.throw_m !== undefined ? r3(Math.min(Math.max(f.throw_m ?? 120, 1), 120)) : DIST[f.type] || 24)
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
 // A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
 // wide: seen from the floor, near its axis, every line became a white blob of forward scatter + bloom, and side-on it was a
-// dim smear). Now: the beam's real luminous flux, the 6 W unit (fixtures.json variants_mw, CIE 1924 V(lambda)), its power
-// split between its 2 beams at the scan duty 0.45 (moxir_v1.py beam_vis): ash white 254 lm, ember red 72 lm per beam, into
-// a 2 mrad half-angle (a 4 mm aperture + ~1 mrad divergence + the 0.3 deg zone's wobble drawn as width, about one pixel at
-// 30 m: the narrowest the room can draw without aliasing). I = flux / solid angle, x the rig's one exposure number.
+// dim smear). The beam's real luminous flux into a 2 mrad half-angle (a 4 mm aperture + ~1 mrad divergence + the 0.3 deg
+// zone's wobble drawn as width, about one pixel at 30 m: the narrowest the room can draw without aliasing). I = flux / solid
+// angle, x the rig's one exposure number.
+// FLUX (2026-10-09, the owner's cubes are the 7.5 W Ultra MK2, ledger N449): read from fixtures.json
+// lasercube.specs.variant_in_use (the maker's per-diode mW), turned into lumens by laserLine.js laserColourFlux (Km V(lambda) P,
+// CIE 1931) at the unit's colour as its drive, x the beam's duty (the rig file's beam.duty, else the cube's laser.duty, else
+// v1.0's scan duty 0.45: moxir_v1.py beam_vis) x the cube's room_flux_share, split over its beams that are on. Before, every
+// line was a fixed 254 lm (ash) / 72 lm (ember): v1.0's 6 W cube split over 2 scanned beams; v1.1's aerial cubes run ONE
+// static beam at duty 1.0, so that figure drew them ~5x too dim, and at 6 W.
 export const LASER_ANGLE = 0.002
 export const LASER_APERTURE = 0.002
-export const laserIntensity = (colour) => {
-    const lm = String(colour).toLowerCase() === '#ff3a12' ? 72 : 254
-    const omega = 2 * Math.PI * (1 - Math.cos(LASER_ANGLE))
-    return Math.round((lm / omega) * SCALE)
+export const FIXTURES_FILE = 'scripts/place/fixtures/fixtures.json'
+export const cubeVariant = (file = path.join(REPO_ROOT, FIXTURES_FILE)) => JSON.parse(fs.readFileSync(file, 'utf8')).kinds.lasercube.specs.variant_in_use.value
+const CUBE = cubeVariant()
+/** Lumens in one laser beam of a cube unit (see FLUX above). Pure given the variant. */
+export const laserBeamLumens = (f, b, variant = CUBE) => {
+    const mW = CUBE_NM.map((nm) => Number(variant[`${nm}nm`]) || 0)
+    const { lumens } = laserColourFlux({ mW, drive: driveOfHex(f.colour) })
+    const on = (f.laser?.beams || []).filter((x) => !x.off).length || 1
+    const duty = b?.duty ?? f.laser?.duty ?? 0.45
+    return (lumens * duty * (f.laser?.room_flux_share ?? 1)) / on
 }
+export const laserIntensityOfLumens = (lm) => Math.round((lm / (2 * Math.PI * (1 - Math.cos(LASER_ANGLE)))) * SCALE)
+/** v1.0's laser intensity by colour alone (2 scanned beams per cube, duty 0.45), now from the cube in use. */
+export const laserIntensity = (colour) => laserIntensityOfLumens(laserBeamLumens({ colour, laser: { beams: [{}, {}], duty: 0.45 } }, null))
 
 /** The unit's beam direction from its stored rotation (three.js Euler XYZ, a spot's unrotated beam is -Y). Pure. */
 export const dirOfRotation = ([rx, ry, rz]) => {
@@ -113,11 +133,12 @@ export const v1Entities = (rig) => {
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
             for (const b of f.laser.beams) {
+                if (b.off) continue                                      // a cube that cannot pass the aerial rule (moxir_v1_1.py) draws no beam
                 out.push({ id: `rig-laser-${b.id}`, type: 'spotLight', name: `LaserCube ${f.id.slice(-1)} beam ${b.id} (${f.laser.colour}) — previs, never emitted from here`, parentId: null,
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
                         appearance: { color: f.colour, opacity: 1 },
-                        light: { color: f.colour, intensity: laserIntensity(f.colour), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
+                        light: { color: f.colour, intensity: laserIntensityOfLumens(laserBeamLumens(f, b)), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
                         beam: { visible: true, haze: 1, aperture: LASER_APERTURE },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
                         fixture: { type: 'ext-lc-ultra-mk2', unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
@@ -126,8 +147,11 @@ export const v1Entities = (rig) => {
             continue
         }
         if (f.type === 'up-yz31p') {
-            out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`, parentId: null,
-                components: { transform: { position: f.p, rotation: [0, 0, 0], scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
+            // the machine blows along its model's front (+Z) turned by its rotation (hazeField.js hazeMachinesOf): the rig
+            // file's own `r` (MOXIR v2 true look, 2026-10-09: the fan's direction is part of the design), else +Z as before
+            const r = Array.isArray(f.r) && f.r.length === 3 ? f.r.map(Number) : [0, 0, 0]
+            out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`.slice(0, 200), parentId: null,
+                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
             continue
         }
         if (f.angle_rad == null) continue
@@ -137,8 +161,10 @@ export const v1Entities = (rig) => {
             components: {
                 transform: { position: f.p, rotation: f.r, scale: [1, 1, 1] },
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: DIST[f.type] || 24, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
-                beam: { visible: true, haze: HAZE[f.type] ?? 0.35 },
+                // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
+                // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
+                beam: { visible: true, haze: HAZE[f.type] ?? 0.35, length: reachOf(f) },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
             } })
@@ -155,13 +181,22 @@ export const v1Entities = (rig) => {
     return out
 }
 
+/** What a build takes out of the copy before it lays the rig file's units: every rig lamp, hazer and smoke machine, the PA
+ * placeholders, FOH, the ash wall and cube 6's tower (all re-created from the file), and every solid an EARLIER rig file laid that
+ * this one no longer lists (MOXIR v2 cranes, 2026-10-10: the #844 laser bar and v2 spread's two far-crane boxes stayed in a copy
+ * of v2.0 once the cubes sat on the crane and hall v10 drew the free crane itself). Pure. */
+export const RIG_FILE_SOLIDS = /^rig-(crane-bar|far-crane-|ash-wall$|tower-)/
+export const oldEntities = (doc) => (Array.isArray(doc.entities) ? doc.entities : []).filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) ||
+    /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6' ||
+    (e.type === 'box' && RIG_FILE_SOLIDS.test(e.id)))    // laid by a rig file: taken out, and laid again only if this file still lists it
+
 /** The looks as rig looks: every unit its own named group, aimed at its own target. Pure. */
 export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const units = ents.filter((e) => e.type === 'spotLight')
     const byPart = new Map()
     for (const f of rig.fixtures) {
         if (f.type === 'ext-lc-ultra-mk2') {
-            for (const b of f.laser.beams) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
+            for (const b of f.laser.beams) if (!b.off) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
         } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f) })
     }
     const aimOf = (e) => {
@@ -184,7 +219,10 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
             aims[key] = shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e)
             let on = null
             if (lk.parts) {
-                if (meta.part === 'laser') on = lk.parts.laser ? [null, 1] : (lk.parts.cube6a && meta.beam === '6a' ? [null, 1] : null)
+                // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09: the
+                // lasers' glare share capped per look). Every rig before it holds 1.0, so their rooms do not change.
+                const lv = (pair) => (Number.isFinite(Number(pair?.[1])) ? Math.min(1, Math.max(0, Number(pair[1]))) : 1)
+                if (meta.part === 'laser') on = lk.parts.laser ? [null, lv(lk.parts.laser)] : (lk.parts.cube6a && meta.beam === '6a' ? [null, lv(lk.parts.cube6a)] : null)
                 else on = lk.parts[meta.part] || null
             }
             colours[key] = ((on && on[0]) || meta.colour || '#e8e4dc').toLowerCase()
@@ -192,9 +230,15 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         }
         return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), aims, colours, levels }
     }
-    const looks = [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
+    const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
     return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
 }
+
+/** A rig file's OWN cue list (MOXIR v2 layouts, 2026-10-09: rig.cues [{look, name, fade, hold}], one per look it carries), else
+ * v1.0's night. Pure. */
+export const cuesOf = (rig) => (Array.isArray(rig?.cues) && rig.cues.length
+    ? rig.cues.map((c, i) => ({ id: `v2-${String(i + 1).padStart(2, '0')}-${c.look}`, name: String(c.name).slice(0, 80), key: '', fade: c.fade ?? 0, hold: c.hold ?? 20, lightLook: `rig-${c.look}`, surfaces: {} }))
+    : v1Cues())
 
 /** The night as a cue list (holds in seconds, a demo of the arc: the real night is busked by GO). Pure. */
 export const v1Cues = () => [
@@ -218,10 +262,12 @@ export const V1_HAZE_SIGMA = 0.0169
 // chosen by eye on the real GPU in Lite (0.04 read as black, 0.3 shows columns, roof steel and the truss at a low level
 // while every look keeps its contrast). A measured lux reading on the night replaces it.
 export const V1_AMBIENT = 0.3
-export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT } = {}) => [
+export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null } = {}) => [
     // exposure.auto false: Full's camera adaptation (autoExposure.js, gain up to 3x) opened "the black" into a lit brown
     // hall (seen 10-08, Full, Floor z 38) — the old "flat brown" again. Full now draws at the room's one exposure, as Lite does.
-    { type: 'setRenderSettings', payload: { patch: { atmosphere: { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
+    // A rig file that states its own `atmosphere` (MOXIR v2 B tuned, 2026-10-09: the ONE machine's two-zone haze) is drawn
+    // with it; else v1.0's one uniform sigma.
+    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
     { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
 ]
 
@@ -318,9 +364,9 @@ const main = async () => {
     if (!got.ok) die(`reading ${project}: ${got.status}`)
     const doc = got.body.document
     if (args['render-only']) {
-        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`render ops: ${out.status} ${out.text.slice(0, 300)}`)
-        say(`render: haze sigma ${V1_HAZE_SIGMA}/m uniform, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
+        say(`render: haze ${rig.atmosphere ? `the rig's own (${rig.atmosphere.haze?.model || 'uniform'})` : `sigma ${V1_HAZE_SIGMA}/m uniform`}, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
         return
     }
     if (args['lasers-only']) {
@@ -355,10 +401,10 @@ const main = async () => {
     try { booth = boothMoveOps(doc, rig) } catch (e) { die(`${project}: ${e.message}`) }
     const ctx = lookFrame(booth.entities)
     if (!ctx) die(`${project}: no stage frame (riser + venue plan) to aim looks in`)
-    const old = doc.entities.filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
+    const old = oldEntities(doc)
     const ents = v1Entities(rig)
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
-    const cues = v1Cues()
+    const cues = cuesOf(rig)
     const ops = [...booth.ops]
     for (const e of old) ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
     for (const e of ents) ops.push({ type: 'createEntity', payload: { entity: e } })
@@ -375,14 +421,18 @@ const main = async () => {
         const items = v1RentalItems(rental, rig)
         if (JSON.stringify(items) !== JSON.stringify(rental.items)) ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rentalList', patch: { ...rental, items } } })
     }
-    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.version && rig.version !== V1_TITLE
+    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.title
+        ? { title: String(rig.title).slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
+        : rig.version && rig.version !== V1_TITLE
         ? { title: `${rig.version} — the stage at the press end, the epic lights moved to it`.slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
         : { title: 'MOXIR v1.0 — the epic lights, all wash + all beam hung, used minimally', summary: 'v0.9 + the epic plot (owner 10-08): every wash and beam of the order hung, 6 cubes (12 lines onto one matte ash wall), haze = the 4 smoke machines; looks dark-first, 2 layers (3 at the peak), ash white + ember red. Plan A1.' } } })
     for (const c of doc.mappingState?.cues || []) ops.push({ type: 'deleteMappingCue', payload: { cueId: c.id } })
     for (const c of cues) ops.push({ type: 'createMappingCue', payload: { cue: c } })
-    ops.push({ type: 'setMappingState', payload: { patch: { loop: true, showEpoch: Date.now() } } })
+    // a rig file may say its show plays by its own clock (mappingState.showSource 'clock'): a desk that answers on the stack
+    // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
+    ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
     ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
-    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }))
+    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
     say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })

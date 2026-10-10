@@ -196,11 +196,19 @@ export const stageFrame = (rig, hall) => {
         // stage line finishes, the crane line there"): the bridge nearest a point that far behind the riser's back edge,
         // and refused unless the line's plane stands at least that far behind it — nothing hung over the performer
         const behind = s.truss_behind_m
-        crane = behind !== undefined
-            ? craneNearestStage(hall, { front: back - into * behind })
-            : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        // `truss_crane_z_m` (MOXIR v2 cranes, owner N463 2026-10-09: "light the dj not the full back half back"): the park is
+        // the design's own z, neither a backdrop `truss_behind_m` behind the riser nor over the DJ within 1 m. The hall
+        // record must hold a bridge there (within 5 cm): the design is checked by its own builder (moxir_v2_cranes.py)
+        const parked = s.truss_crane_z_m
+        crane = parked !== undefined
+            ? craneNearestStage(hall, { front: parked })
+            : behind !== undefined
+                ? craneNearestStage(hall, { front: back - into * behind })
+                : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
         const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
-        if (behind !== undefined) {
+        if (parked !== undefined) {
+            if (!crane || Math.abs(crane.z_m - parked) > 0.05) throw new Error(`truss "crane-hung" at the design's park z ${parked}: the hall record's nearest bridge is at z ${crane?.z_m} — build the hall with that park (cranes_from_door_m)`)
+        } else if (behind !== undefined) {
             if (!crane || into * (back - crane.z_m) < behind - 1e-6) throw new Error(`truss "crane-hung" behind the DJ: the nearest bridge (z ${crane?.z_m}) is not ${behind} m behind the riser's back edge (z ${back.toFixed(2)}) — park it further back`)
         } else if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m
@@ -848,8 +856,17 @@ export const realIndices = (group, count, budget, mode) => {
 
 const staticAnim = { mode: 'static', speed: 1, amplitude: 1 }
 
-/** A real lamp's light distance (its cutoff) for a beam that stops at `reach`: see buildRig. */
-export const lightDistance = (reach) => reach * 2
+/**
+ * A real lamp's light distance: 0, which three.js reads as NO cutoff — pure inverse square, as
+ * light is (three's lights_pars_begin getDistanceAttenuation: a `distance` > 0 multiplies by the
+ * window (1 − (d/cutoff)⁴)², Karis 2013 / Frostbite eq. 26, a game-engine shortcut, not physics).
+ * Until 2026-10-09 the cutoff was twice the throw (88 % of the light reached the aimed surface,
+ * none past 2×): the MOXIR simulation audit, §2.2. `reach` is kept for callers that pass it.
+ */
+export const lightDistance = (_reach) => 0
+/** How long a lamp's drawn beam is (`beam.length`): twice the throw for a real lamp, so the cone
+ * runs on behind the surface it lands on (the surface hides it); the throw for a beam-only lamp. */
+export const beamLength = (reach, isReal) => (isReal ? reach * 2 : reach)
 
 // Rigging steel is drawn MATTE. The room has no environment map, so a metal surface (metalness 0.8-0.9) has
 // nothing to reflect and renders almost black in a dark hall: the truss and its hangers vanished and "the
@@ -923,6 +940,25 @@ export const classPhotometry = (rig, manifest) => {
             candela: cd,
             intensity: cd === null ? cls.intensity : round(cd * scale, 2),
             air: cd === null ? null : cd * Math.tan((angle * DEG) / 2)
+        }
+    }
+    // A LASER LINE (class `laserLine`, the kit version 2026-10-09): drawn as a line source by the
+    // renderer (src/objectComponents/laserLine.js) from its diodes' radiant power, beam diameter and
+    // divergence, read from the manifest (lasercube.specs.variant_in_use, beam_diameter_mm,
+    // divergence_mrad — the maker's Guide v1.2). Flux is worked out in the renderer (683·V(λ)·P).
+    for (const [id, cls] of Object.entries(rig.classes)) {
+        if (!cls.laserLine) continue
+        const specs = manifest?.kinds?.[cls.fixture]?.specs || {}
+        const mw = specs.variant_in_use?.value
+        if (!mw) throw new Error(`class ${id}: laserLine needs ${cls.fixture}.specs.variant_in_use in the manifest`)
+        out[id].laser = {
+            mW: [455, 525, 638].map((nm) => Number(mw[`${nm}nm`]) || 0),
+            nm: [455, 525, 638],
+            diameter_mm: Number(specs.beam_diameter_mm?.value) || 4,
+            divergence_mrad: Number(specs.divergence_mrad?.value) || 1,
+            // the rig's one exposure number: lumens × this, as every lamp's candela × this
+            sceneScale: rig.photometry?.sceneScale ?? 1,
+            source: `${specs.variant_in_use.src} (${specs.variant_in_use.basis}): ${mw.name || ''} variant`
         }
     }
     // A laser's beam is millimetres wide and not a cone: it is given its air
@@ -1230,7 +1266,8 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             // `solo` (an aim parameter): only the lamp of that rank — counted from the
             // left along x, the rank the rules use — keeps the group's level; the rest are out.
             const lampLevel = soloKeeps(spec, byX.indexOf(i)) ? level : 0
-            const isReal = real.has(i)
+            // a laser line is never a three.js lamp (laserLine.js draws it; a 1 mrad SpotLight lights a sub-pixel dot)
+            const isReal = real.has(i) && !op.laser
             if (isReal) groupReal += 1
             if (group.bake && !isReal && lampLevel > 0) {
                 const surface = washSurface(slot, aimed, from, to, half, ctx)
@@ -1252,21 +1289,23 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     light: {
                         color: colour,
                         intensity: round(op.intensity * lampLevel, 2),
-                        // One field is both the drawn cone's length and the
-                        // light's cutoff (three.js: (1 - (d/cutoff)^4)^2, zero AT
-                        // the cutoff). A real lamp cut at the surface it is aimed at
-                        // would put no light on it, so its cutoff is twice the
-                        // throw (88 % of the light at the surface); the cone runs on
-                        // behind that surface, where the surface hides it. A named
-                        // workaround: a separate beam length is OWED in the platform.
-                        distance: round(isReal ? lightDistance(reach) : reach, 2),
+                        // No cutoff (lightDistance: 0 = inverse square only). The drawn
+                        // beam's length is its own field, beam.length, below.
+                        distance: lightDistance(reach),
                         angle: round(half, 4),
                         penumbra: cls.penumbra,
                         decay: 2
                     },
                     // Level 0 keeps the cone (at haze 0, unseen) and `only`: a beam-only lamp
                     // whose beam were switched off would become a REAL light (beamCastsLight).
-                    beam: { visible: true, haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * lampLevel, 3), ...(isReal ? {} : { only: true }) },
+                    beam: {
+                        visible: true,
+                        haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * lampLevel, 3),
+                        length: round(beamLength(reach, isReal), 2),
+                        ...(isReal ? {} : { only: true }),
+                        // a laser drawn as a line source (laserLine.js): its diodes, beam and divergence
+                        ...(op.laser ? { laser: op.laser, only: true } : {})
+                    },
                     animation: staticAnim
                 }
             })
@@ -1577,7 +1616,21 @@ export const nightOps = (rig, { shadows, realLights = 0 } = {}) => {
         },
         {
             type: 'setRenderSettings',
-            payload: { patch: { shadows: true, shadowCasting: { enabled: casting, mapSize: rig.budget?.shadowMapSize || 1024 } } }
+            payload: {
+                patch: {
+                    shadows: true,
+                    shadowCasting: { enabled: casting, mapSize: rig.budget?.shadowMapSize || 1024 },
+                    // the room's air when the rig states one (versions file `atmosphere`, e.g. known-kit's haze from its
+                    // one smoke machine); the *Why notes stay in the rig file
+                    ...(rig.atmosphere ? { atmosphere: atmosphereOfRig(rig.atmosphere) } : {})
+                }
+            }
         }
     ]
+}
+
+/** The rig file's `atmosphere` as the document stores it: the numbers and the haze settings, not the notes. */
+export const atmosphereOfRig = (a) => {
+    const { anisotropyWhy, scatteringWhy, ...rest } = a || {}
+    return rest
 }

@@ -771,6 +771,45 @@ describe('device.midi.out status', () => {
     })
 })
 
+describe('device.laser.out status', () => {
+    it('reads the panel report from the live side channel, empty when unmounted', () => {
+        const doc = { nodes: [node('lo', 'device.laser.out')], edges: [] }
+        expect(evalPort(doc, 'lo', 'status')).toBe('')
+        const live = new Map([['lo:status', 'Armed: 6 cubes, 6 connected']])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(doc.nodes[0], 'status', context)).toBe('Armed: 6 cubes, 6 connected')
+    })
+})
+
+describe('laser.shape frame', () => {
+    const frameAt = (values, now = 0) => {
+        const doc = { nodes: [node('ls', 'laser.shape', values)], edges: [] }
+        return evaluateNodeOutput(doc.nodes[0], 'frame', createNodeGraphContext(doc, { now }))
+    }
+    it('is a laser frame with a drawn circle by default', () => {
+        const frame = frameAt({})
+        expect(frame.kind).toBe('laser')
+        expect(frame.points.length).toBe(120)
+        expect(frame.points[0].length).toBe(5)
+    })
+    it('takes colour and level from its ports', () => {
+        const [, , r, g, b] = frameAt({ colour: '#ff0000', level: 0.5 }).points[0]
+        expect([r, g, b]).toEqual([0.5, 0, 0])
+    })
+    it('spins with the document clock', () => {
+        // height 0: the shape at the field's centre, so the turn alone moves the point
+        const still = frameAt({ shape: 'line', size: 1, spin: 0.25, height: 0 }, 0).points[0]
+        const turned = frameAt({ shape: 'line', size: 1, spin: 0.25, height: 0 }, 1000).points[0]
+        expect(still[0]).toBeCloseTo(-1, 6)
+        expect(turned[0]).toBeCloseTo(0, 6)
+        expect(turned[1]).toBeCloseTo(-1, 6)
+    })
+    it('sits up the field by default (height 0.5): nothing in the half the server blanks', () => {
+        const ys = frameAt({ shape: 'circle', size: 0.5 }).points.map((p) => p[1])
+        expect(Math.min(...ys)).toBeGreaterThanOrEqual(-1e-9)
+    })
+})
+
 describe('view.text — what the note says, on a wire', () => {
     it('gives its own content', () => {
         const doc = { nodes: [node('t', 'view.text', { content: 'Bar · 23:00' })], edges: [] }

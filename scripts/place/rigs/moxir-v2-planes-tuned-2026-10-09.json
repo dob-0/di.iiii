@@ -1,0 +1,3395 @@
+{
+ "snapshot": "moxir-v2-planes-tuned-2026-10-09",
+ "version": "MOXIR v2 B tuned \u00b7 one machine",
+ "title": "MOXIR v2 B tuned \u00b7 three planes, one machine",
+ "what": "The hall read in three layers: an ember fan right behind the DJ, ash beams across the dark side spans in the middle, and an ember wall of beams rising from the far end 56 m back. The eye counts the planes into the depth. Tuned for ONE smoke machine: the machine under the plane-1 fan, the fan leaning toward the floor, the two columns that frame the stage lit, pre-haze 40 min.",
+ "written_by": "scripts/place/moxir_v2_true.py tune (from scripts/place/rigs/moxir-v2-planes-2026-10-09.json)",
+ "date": "2026-10-09",
+ "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
+ "frame": "hall frame: metres, Y up, +x house right, +z toward the entry; rotations three.js Euler XYZ radians, a spot's unrotated beam points -Y; angle_rad = half the beam angle; box solids base-anchored; truss origin at the section centre, tower at the base plate (src/rigbuild/pieces.js), a tower's s[1] scales the 6 m catalogue tower.",
+ "base": "MOXIR v1.1 (rigs/moxir-epic-v1-1-2026-10-08.json): the stage, the cut, the cranes, the PA placeholders, FOH, the barrier; the ash wall and cube 6's tower removed (all 6 cubes on the free crane, owner 10-09 N416)",
+ "kit": {
+  "UP-B380F": 18,
+  "UP-PL5403": 50,
+  "EXT-LC-ULTRA-MK2": 6,
+  "UP-YZ31P": 1
+ },
+ "not_hung": [
+  {
+   "code": "UP-PL5403",
+   "ordered": 50,
+   "hung": 50,
+   "not_hung": 0
+  },
+  {
+   "code": "UP-B380F",
+   "ordered": 18,
+   "hung": 18,
+   "not_hung": 0
+  },
+  {
+   "code": "UP-YZ31P",
+   "ordered": 1,
+   "hung": 1,
+   "not_hung": 0
+  },
+  {
+   "code": "EXT-LC-ULTRA-MK2",
+   "ordered": 6,
+   "hung": 0,
+   "not_hung": 6
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "rig-beam-planes-01",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 330/50 deg (az/el), pen 1.6 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -7.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.521601,
+    0.0,
+    -0.32366
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 20.2,
+   "throw_m": 16.653,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 1,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 333/62 deg (az/el), pen 1.0 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.707299,
+    0.0,
+    -0.211196
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 22.8,
+   "throw_m": 14.487,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 17,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 330/72 deg (az/el), pen 0.7 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.867297,
+    0.0,
+    -0.15513
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 23.4,
+   "throw_m": 13.511,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 33,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 20/72 deg (az/el), pen 0.7 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -4.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.845258,
+    0.0,
+    0.105888
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 23.7,
+   "throw_m": 13.511,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 49,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 25/58 deg (az/el), pen 1.2 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -3.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.626303,
+    0.0,
+    0.225869
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 24.1,
+   "throw_m": 8.372,
+   "ends_on": "crane z 0.15 girder",
+   "dmx": {
+    "universe": 1,
+    "address": 65,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 32/49 deg (az/el), pen 1.7 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -2.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.506336,
+    0.0,
+    0.355072
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 24.1,
+   "throw_m": 17.026,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 81,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "type": "up-b380f",
+   "position": "column base (side-span face), base down on the floor (a pen 4.5 m: the beam is below a raised hand that far)",
+   "part": "plane 2 (mid-hall, side spans)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -13.2,
+    0.7,
+    -11.0
+   ],
+   "r": [
+    -2.298389,
+    0.0,
+    -0.912326
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 20.1,
+   "throw_m": 29.324,
+   "ends_on": "side wall",
+   "dmx": {
+    "universe": 1,
+    "address": 434,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "type": "up-b380f",
+   "position": "column base (side-span face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
+   "part": "plane 2 (mid-hall, side spans)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    13.2,
+    0.7,
+    -11.0
+   ],
+   "r": [
+    -1.97297,
+    0.0,
+    1.01048
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 27.7,
+   "throw_m": 55.719,
+   "ends_on": "side wall",
+   "dmx": {
+    "universe": 1,
+    "address": 450,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "type": "up-b380f",
+   "position": "column base (side-span face), base down on the floor (a pen 4.5 m: the beam is below a raised hand that far)",
+   "part": "plane 2 (mid-hall, side spans)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -13.2,
+    0.7,
+    -17.0
+   ],
+   "r": [
+    -2.298389,
+    0.0,
+    -0.912326
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 20.2,
+   "throw_m": 29.324,
+   "ends_on": "side wall",
+   "dmx": {
+    "universe": 1,
+    "address": 402,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "type": "up-b380f",
+   "position": "column base (side-span face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
+   "part": "plane 2 (mid-hall, side spans)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    13.2,
+    0.7,
+    -17.0
+   ],
+   "r": [
+    -1.97297,
+    0.0,
+    1.01048
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 27.8,
+   "throw_m": 55.719,
+   "ends_on": "side wall",
+   "dmx": {
+    "universe": 1,
+    "address": 418,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "type": "up-b380f",
+   "position": "column base (side-span face), base down on the floor (a pen 4.5 m: the beam is below a raised hand that far)",
+   "part": "plane 2 (mid-hall, side spans)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -13.2,
+    0.7,
+    -23.0
+   ],
+   "r": [
+    -2.298389,
+    0.0,
+    -0.912326
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 20.8,
+   "throw_m": 29.324,
+   "ends_on": "side wall",
+   "dmx": {
+    "universe": 1,
+    "address": 370,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "type": "up-b380f",
+   "position": "column base (side-span face), base down on the floor (a pen 9.7 m: the beam is below a raised hand that far)",
+   "part": "plane 2 (mid-hall, side spans)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    13.2,
+    0.7,
+    -23.0
+   ],
+   "r": [
+    -1.97297,
+    0.0,
+    1.01048
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 28.8,
+   "throw_m": 55.719,
+   "ends_on": "side wall",
+   "dmx": {
+    "universe": 1,
+    "address": 386,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "type": "up-b380f",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "part": "plane 3 (the far end)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -10.0,
+    0.7,
+    -52.0
+   ],
+   "r": [
+    -1.847214,
+    0.0,
+    0.319528
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 13.8,
+   "throw_m": 50.257,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 274,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-14",
+   "type": "up-b380f",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "part": "plane 3 (the far end)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -7.5,
+    0.7,
+    -52.0
+   ],
+   "r": [
+    -1.854288,
+    0.0,
+    0.386651
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 15.9,
+   "throw_m": 49.649,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 290,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "type": "up-b380f",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "part": "plane 3 (the far end)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.0,
+    0.7,
+    -52.0
+   ],
+   "r": [
+    -1.854288,
+    0.0,
+    0.386651
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 17.1,
+   "throw_m": 49.649,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 306,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "type": "up-b380f",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "part": "plane 3 (the far end)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    5.0,
+    0.7,
+    -52.0
+   ],
+   "r": [
+    -1.850413,
+    0.0,
+    0.35323
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 17.5,
+   "throw_m": 50.9,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 322,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "type": "up-b380f",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "part": "plane 3 (the far end)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    7.5,
+    0.7,
+    -52.0
+   ],
+   "r": [
+    -1.850413,
+    0.0,
+    0.35323
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 16.8,
+   "throw_m": 50.9,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 338,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "type": "up-b380f",
+   "position": "far end, base down on the floor (a pen 7.6 m: the beam is below a raised hand that far)",
+   "part": "plane 3 (the far end)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    10.0,
+    0.7,
+    -52.0
+   ],
+   "r": [
+    -1.847214,
+    0.0,
+    0.319528
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 16.1,
+   "throw_m": 50.257,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 354,
+    "footprint": 16,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-cut-01",
+   "type": "up-pl5403",
+   "position": "the cut, u -5.5 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -10.316,
+    2.756,
+    0.15
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 121,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-02",
+   "type": "up-pl5403",
+   "position": "the cut, u -4.5 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -9.35,
+    3.735,
+    0.15
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 117.842,
+   "dmx": {
+    "universe": 1,
+    "address": 129,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-03",
+   "type": "up-pl5403",
+   "position": "the cut, u -3.5 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -8.384,
+    3.274,
+    0.15
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 137,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-04",
+   "type": "up-pl5403",
+   "position": "the cut, u -2.0 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.935,
+    4.382,
+    0.15
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 136.188,
+   "dmx": {
+    "universe": 1,
+    "address": 145,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-05",
+   "type": "up-pl5403",
+   "position": "the cut, u -1.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.969,
+    3.921,
+    0.15
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 153,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-06",
+   "type": "up-pl5403",
+   "position": "the cut, u +0.5 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -4.52,
+    5.029,
+    0.15
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 157.344,
+   "dmx": {
+    "universe": 1,
+    "address": 161,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-07",
+   "type": "up-pl5403",
+   "position": "the cut, u +1.5 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -3.554,
+    4.568,
+    0.15
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 169,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-08",
+   "type": "up-pl5403",
+   "position": "the cut, u +2.5 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -2.588,
+    5.547,
+    0.15
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 178.927,
+   "dmx": {
+    "universe": 1,
+    "address": 177,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-09",
+   "type": "up-pl5403",
+   "position": "the cut, u +4.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -1.139,
+    5.215,
+    0.15
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 185,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-cut-10",
+   "type": "up-pl5403",
+   "position": "the cut, u +5.0 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -0.173,
+    6.194,
+    0.15
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 544.267,
+   "dmx": {
+    "universe": 1,
+    "address": 193,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C12"
+  },
+  {
+   "id": "rig-par-planes-01",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z 6 (the left column framing the stage from the floor), 0.44 m off its face, leaned 4 deg onto it; in the public half: a guard cage owed",
+   "part": "stage columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.070686
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 7.022,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 1,
+    "address": 249,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-02",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket (as v1.1)",
+   "part": "halo",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.678,
+    0.3,
+    2.7
+   ],
+   "r": [
+    -2.792651,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 60.357,
+   "dmx": {
+    "universe": 1,
+    "address": 233,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-03",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket (as v1.1)",
+   "part": "halo",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.198,
+    0.3,
+    2.7
+   ],
+   "r": [
+    -2.792651,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 59.355,
+   "dmx": {
+    "universe": 1,
+    "address": 241,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-04",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z 6, 0.44 m off its face, leaned 4 deg onto it; in the public half: a guard cage owed",
+   "part": "stage columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.070686
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 7.022,
+   "lux_on_steel_median": 475.109,
+   "dmx": {
+    "universe": 1,
+    "address": 257,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-05",
+   "type": "up-pl5403",
+   "position": "on the machine line's top (2.4 m) at the nave column x +12 z 0.5 (the right column framing the stage from the floor), leaned 4 deg onto it; out of reach; the venue's OK to stand on the machine owed",
+   "part": "stage columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.71,
+    0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.070686
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.581,
+   "lux_on_steel_median": 685.49,
+   "dmx": {
+    "universe": 1,
+    "address": 201,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-06",
+   "type": "up-pl5403",
+   "position": "floor plate, straight up into the space frame (the roof steel in pieces)",
+   "part": "halo",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.2,
+    0.31,
+    -2.6
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 64.069,
+   "dmx": {
+    "universe": 1,
+    "address": 113,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-07",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -6, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 1,
+    "address": 97,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-08",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -6, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 1,
+    "address": 105,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-09",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -12, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 161,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-10",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -12, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 169,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-11",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -18, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 137,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-12",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -18, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 145,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-13",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -24, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 113,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-14",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -24, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 121,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-15",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -30, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -30.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 240.052,
+   "dmx": {
+    "universe": 2,
+    "address": 89,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-16",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -30, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -30.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 240.052,
+   "dmx": {
+    "universe": 2,
+    "address": 97,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-17",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -36, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 240.052,
+   "dmx": {
+    "universe": 2,
+    "address": 65,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-18",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -36, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 240.052,
+   "dmx": {
+    "universe": 2,
+    "address": 73,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-19",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -42, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -42.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 252.375,
+   "dmx": {
+    "universe": 2,
+    "address": 41,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-20",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -42, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -42.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 252.375,
+   "dmx": {
+    "universe": 2,
+    "address": 49,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-21",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -48, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 17,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-22",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -48, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.142,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 2,
+    "address": 25,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-23",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z -54, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    -54.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 2148.573,
+   "dmx": {
+    "universe": 1,
+    "address": 466,
+    "footprint": 8,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-24",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z -54, 0.44 m off its face, leaned 4 deg onto it",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    -54.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 2148.573,
+   "dmx": {
+    "universe": 1,
+    "address": 474,
+    "footprint": 8,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-25",
+   "type": "up-pl5403",
+   "position": "floor at the far (SE) end wall, 1.2 m off it, grazing up the wall",
+   "part": "far wall",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.0,
+    0.31,
+    -52.6
+   ],
+   "r": [
+    2.897099,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 445.163,
+   "dmx": {
+    "universe": 1,
+    "address": 482,
+    "footprint": 8,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-26",
+   "type": "up-pl5403",
+   "position": "floor at the far (SE) end wall, 1.2 m off it, grazing up the wall",
+   "part": "far wall",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -2.0,
+    0.31,
+    -52.6
+   ],
+   "r": [
+    2.897099,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 632.822,
+   "dmx": {
+    "universe": 1,
+    "address": 490,
+    "footprint": 8,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-27",
+   "type": "up-pl5403",
+   "position": "floor at the far (SE) end wall, 1.2 m off it, grazing up the wall",
+   "part": "far wall",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    2.0,
+    0.31,
+    -52.6
+   ],
+   "r": [
+    2.897099,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 632.822,
+   "dmx": {
+    "universe": 1,
+    "address": 498,
+    "footprint": 8,
+    "branch": "U1-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-28",
+   "type": "up-pl5403",
+   "position": "floor at the far (SE) end wall, 1.2 m off it, grazing up the wall",
+   "part": "far wall",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    6.0,
+    0.31,
+    -52.6
+   ],
+   "r": [
+    2.897099,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 445.163,
+   "dmx": {
+    "universe": 2,
+    "address": 1,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-29",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x -36 z -12, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -34.9,
+    0.31,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 238.733,
+   "dmx": {
+    "universe": 2,
+    "address": 153,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-par-planes-30",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x -36 z -24, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -34.9,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 238.733,
+   "dmx": {
+    "universe": 2,
+    "address": 105,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-31",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x -36 z -36, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -34.9,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 238.733,
+   "dmx": {
+    "universe": 2,
+    "address": 57,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-32",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x -36 z -48, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -34.9,
+    0.31,
+    -48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 238.733,
+   "dmx": {
+    "universe": 2,
+    "address": 9,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-33",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x +36 z -12, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    34.9,
+    0.31,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 237.583,
+   "dmx": {
+    "universe": 2,
+    "address": 177,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-par-planes-34",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x +36 z -24, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    34.9,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 237.583,
+   "dmx": {
+    "universe": 2,
+    "address": 129,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-par-planes-35",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x +36 z -36, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    34.9,
+    0.31,
+    -36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 237.583,
+   "dmx": {
+    "universe": 2,
+    "address": 81,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-par-planes-36",
+   "type": "up-pl5403",
+   "position": "floor plate at the side span's wall column x +36 z -48, leaned 7 deg onto it",
+   "part": "side spans",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    34.9,
+    0.31,
+    -48.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.122247
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 3.729,
+   "lux_on_steel_median": 237.583,
+   "dmx": {
+    "universe": 2,
+    "address": 33,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-par-planes-37",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    0.9,
+    0.3,
+    0.9
+   ],
+   "r": [
+    -2.95437,
+    0.0,
+    0.184025
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 217,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-38",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    2.4,
+    0.3,
+    2.5
+   ],
+   "r": [
+    2.928357,
+    0.0,
+    -0.208546
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 225,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-39",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    6.0,
+    2.45,
+    0.8
+   ],
+   "r": [
+    -1.863189,
+    0.0,
+    1.364687
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 209,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-40",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    5.2,
+    0.2,
+    16.4
+   ],
+   "r": [
+    -2.408703,
+    0.0,
+    -0.074088
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 265,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-smoke-planes",
+   "type": "up-yz31p",
+   "position": "on a 1.0 m flight case 1.2 m behind the middle of the plane-1 row (x -4.75, z -6.2), fan at lowest speed blowing +z through the six heads toward the back of the stage: the only dense air one machine makes (~0.26 /m within ~3 m) is where all six beams start. Refills from behind the stage (crew access along the back wall line). Was (-8.0, -3.0).",
+   "part": "haze",
+   "layer": "air",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -4.75,
+    1.0,
+    -6.2
+   ],
+   "r": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "colour": null,
+   "angle_rad": null,
+   "power_w": 1500,
+   "dmx": {
+    "universe": 1,
+    "address": 273,
+    "footprint": 1,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C14"
+  }
+ ],
+ "solids": [
+  {
+   "id": "rig-crowd-barrier",
+   "name": "crowd barrier 13.6 m at z 8.20 (v1.1: 2.55 m pit to the step)",
+   "kind": "box",
+   "p": [
+    -4.8,
+    0.0,
+    8.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    13.6,
+    1.1,
+    0.08
+   ]
+  },
+  {
+   "id": "rig-pa-l",
+   "name": "speaker L - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
+   "kind": "box",
+   "p": [
+    -8.25,
+    0.0,
+    5.4
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    3.5,
+    2.0,
+    2.6
+   ]
+  },
+  {
+   "id": "rig-pa-r",
+   "name": "speaker R - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
+   "kind": "box",
+   "p": [
+    -1.5,
+    0.0,
+    5.9
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.8,
+    2.0,
+    2.6
+   ]
+  },
+  {
+   "id": "rig-foh-riser",
+   "name": "FOH riser 3 x 2 m, 0.6 m high (ASSUMED): the lighting + laser desk, the laser E-stop",
+   "kind": "box",
+   "p": [
+    -5.2,
+    0.0,
+    29.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    3.0,
+    0.6,
+    2.0
+   ]
+  }
+ ],
+ "looks": [
+  {
+   "id": "dark",
+   "title": "Dark (one colour: ember)",
+   "act": 1,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.8
+    ],
+    "plane 2 (mid-hall, side spans)": [
+     "#ff3a12",
+     0.8
+    ],
+    "plane 3 (the far end)": [
+     "#ff3a12",
+     0.35
+    ],
+    "columns": [
+     "#ff3a12",
+     0.5
+    ],
+    "cut down": [
+     "#ff3a12",
+     0.45
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "peak",
+   "title": "Peak (ash + ember, all on)",
+   "act": 3,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 2 (mid-hall, side spans)": [
+     "#e8e4dc",
+     1.0
+    ],
+    "plane 3 (the far end)": [
+     "#ff3a12",
+     0.7
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     0.9
+    ],
+    "columns": [
+     "#ff3a12",
+     0.8
+    ],
+    "embers": [
+     "#ff3a12",
+     0.6
+    ],
+    "halo": [
+     "#ff3a12",
+     0.5
+    ],
+    "far wall": [
+     "#a3200c",
+     0.7
+    ],
+    "side spans": [
+     "#ff3a12",
+     0.5
+    ],
+    "laser": [
+     "#e8e4dc",
+     1.0
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.8
+    ]
+   }
+  }
+ ],
+ "cues": [
+  {
+   "look": "dark",
+   "name": "B tuned \u00b7 one machine \u00b7 dark (one colour)",
+   "fade": 3,
+   "hold": 40
+  },
+  {
+   "look": "peak",
+   "name": "B tuned \u00b7 one machine \u00b7 peak",
+   "fade": 2,
+   "hold": 20
+  }
+ ],
+ "loop": true,
+ "showSource": "clock",
+ "views": {
+  "fixedCamera": {
+   "projection": "perspective",
+   "position": [
+    -3.75,
+    1.7,
+    18.1
+   ],
+   "target": [
+    -3.75,
+    5.0,
+    -20.0
+   ],
+   "fov": 70,
+   "zoom": 1,
+   "near": 0.05,
+   "far": 400,
+   "locked": false
+  },
+  "viewPresets": [
+   {
+    "id": "floor",
+    "position": [
+     -3.75,
+     1.7,
+     18.1
+    ],
+    "target": [
+     -3.75,
+     5.0,
+     -20.0
+    ],
+    "fov": 70,
+    "label": "Floor 1.7 m"
+   },
+   {
+    "id": "entry",
+    "position": [
+     0.0,
+     1.7,
+     51.5
+    ],
+    "target": [
+     -3.0,
+     5.0,
+     -10.0
+    ],
+    "fov": 60,
+    "label": "Entry 1.7 m"
+   },
+   {
+    "id": "top",
+    "position": [
+     -2.0,
+     85.0,
+     -6.0
+    ],
+    "target": [
+     -2.0,
+     0.0,
+     -7.0
+    ],
+    "fov": 70,
+    "label": "Top plan"
+   },
+   {
+    "id": "side",
+    "position": [
+     30.0,
+     10.0,
+     20.0
+    ],
+    "target": [
+     -2.0,
+     4.0,
+     -18.0
+    ],
+    "fov": 75,
+    "label": "Side"
+   }
+  ]
+ },
+ "stage": {
+  "booth_from": [
+   -5.2,
+   4.65
+  ],
+  "booth_to": [
+   -5.2,
+   4.65
+  ],
+  "deck_h_m": 0.4,
+  "design": "scripts/place/rigs/moxir-stage-v1-1-2026-10-08.json"
+ },
+ "cut": {
+  "pars": 10,
+  "places_u_m": [
+   -5.5,
+   -4.5,
+   -3.5,
+   -2,
+   -1,
+   0.5,
+   1.5,
+   2.5,
+   4,
+   5
+  ],
+  "picks_kg": [
+   35,
+   98.6,
+   38.7
+  ],
+  "source": "scripts/place/cut-count.mjs"
+ },
+ "power": {
+  "circuits": [
+   {
+    "circuit": "C01",
+    "distro": "D-FAR",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-11",
+     "rig-beam-planes-09",
+     "rig-beam-planes-14",
+     "rig-beam-planes-13",
+     "rig-beam-planes-15"
+    ],
+    "load_w": 2500,
+    "amps_230v": 10.9,
+    "cable_m": 67.5,
+    "first_run_m": 8.1,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 3.7,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C02",
+    "distro": "D-FAR",
+    "kind": "beams",
+    "side": "R",
+    "units": [
+     "rig-beam-planes-12",
+     "rig-beam-planes-10",
+     "rig-beam-planes-16",
+     "rig-beam-planes-17",
+     "rig-beam-planes-18"
+    ],
+    "load_w": 2500,
+    "amps_230v": 10.9,
+    "cable_m": 85.1,
+    "first_run_m": 25.7,
+    "cable_mm2": 4.0,
+    "vdrop_pct": 3.1,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C03",
+    "distro": "D-FAR",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-13",
+     "rig-par-planes-11",
+     "rig-par-planes-15",
+     "rig-par-planes-09",
+     "rig-par-planes-17",
+     "rig-par-planes-19",
+     "rig-par-planes-30",
+     "rig-par-planes-21",
+     "rig-par-planes-25",
+     "rig-par-planes-23",
+     "rig-par-planes-26",
+     "rig-par-planes-31",
+     "rig-par-planes-32"
+    ],
+    "load_w": 2600,
+    "amps_230v": 11.3,
+    "cable_m": 153.7,
+    "first_run_m": 4.4,
+    "cable_mm2": 4.0,
+    "vdrop_pct": 3.7,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C04",
+    "distro": "D-FAR",
+    "kind": "pars",
+    "side": "R",
+    "units": [
+     "rig-par-planes-14",
+     "rig-par-planes-12",
+     "rig-par-planes-16",
+     "rig-par-planes-18",
+     "rig-par-planes-20",
+     "rig-par-planes-27",
+     "rig-par-planes-28",
+     "rig-par-planes-22",
+     "rig-par-planes-24"
+    ],
+    "load_w": 1800,
+    "amps_230v": 7.8,
+    "cable_m": 86.9,
+    "first_run_m": 22.0,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 3.5,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C05",
+    "distro": "D-LEFT",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-29"
+    ],
+    "load_w": 200,
+    "amps_230v": 0.9,
+    "cable_m": 20.0,
+    "first_run_m": 20.0,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.1,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C06",
+    "distro": "D-RIGHT",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-08"
+    ],
+    "load_w": 500,
+    "amps_230v": 2.2,
+    "cable_m": 31.4,
+    "first_run_m": 31.4,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.5,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C07",
+    "distro": "D-RIGHT",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-05",
+     "rig-par-planes-08",
+     "rig-par-planes-10"
+    ],
+    "load_w": 600,
+    "amps_230v": 2.6,
+    "cable_m": 39.8,
+    "first_run_m": 24.3,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.7,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C08",
+    "distro": "D-RIGHT",
+    "kind": "pars",
+    "side": "R",
+    "units": [
+     "rig-par-planes-33",
+     "rig-par-planes-34",
+     "rig-par-planes-35",
+     "rig-par-planes-36"
+    ],
+    "load_w": 800,
+    "amps_230v": 3.5,
+    "cable_m": 62.3,
+    "first_run_m": 20.0,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 1.1,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C09",
+    "distro": "D-STAGE",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-01",
+     "rig-beam-planes-02",
+     "rig-beam-planes-03",
+     "rig-beam-planes-04",
+     "rig-beam-planes-05"
+    ],
+    "load_w": 2500,
+    "amps_230v": 10.9,
+    "cable_m": 20.4,
+    "first_run_m": 10.7,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 1.3,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C10",
+    "distro": "D-STAGE",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-06",
+     "rig-beam-planes-07"
+    ],
+    "load_w": 1000,
+    "amps_230v": 4.3,
+    "cable_m": 36.2,
+    "first_run_m": 16.2,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.9,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C11",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-cut-03",
+     "rig-par-cut-02",
+     "rig-par-planes-02",
+     "rig-par-cut-01",
+     "rig-par-cut-04",
+     "rig-par-planes-03",
+     "rig-par-cut-05",
+     "rig-par-cut-06",
+     "rig-par-planes-01",
+     "rig-par-cut-07",
+     "rig-par-cut-08",
+     "rig-par-planes-06",
+     "rig-par-cut-09",
+     "rig-par-planes-07"
+    ],
+    "load_w": 2800,
+    "amps_230v": 12.2,
+    "cable_m": 106.2,
+    "first_run_m": 6.6,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 4.9,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C12",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-cut-10"
+    ],
+    "load_w": 200,
+    "amps_230v": 0.9,
+    "cable_m": 18.9,
+    "first_run_m": 18.9,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.1,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C13",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "R",
+    "units": [
+     "rig-par-planes-37",
+     "rig-par-planes-38",
+     "rig-par-planes-39",
+     "rig-par-planes-04",
+     "rig-par-planes-40"
+    ],
+    "load_w": 1000,
+    "amps_230v": 4.3,
+    "cable_m": 57.2,
+    "first_run_m": 12.8,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 1.0,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C14",
+    "distro": "D-STAGE",
+    "kind": "smoke",
+    "side": "L",
+    "units": [
+     "rig-smoke-planes"
+    ],
+    "load_w": 1500,
+    "amps_230v": 6.5,
+    "cable_m": 15.1,
+    "first_run_m": 15.1,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.8,
+    "ok": true,
+    "phase": "L1"
+   }
+  ],
+  "phases_w": {
+   "L1": 6900,
+   "L2": 6800,
+   "L3": 6800
+  }
+ },
+ "patch": {
+  "branches": [
+   {
+    "branch": "U1-stage",
+    "devices": 29,
+    "ok": true
+   },
+   {
+    "branch": "U1-far",
+    "devices": 17,
+    "ok": true
+   },
+   {
+    "branch": "U2-far",
+    "devices": 23,
+    "ok": true
+   }
+  ],
+  "slots": {
+   "1": 505,
+   "2": 184
+  }
+ },
+ "checks": {
+  "beams": 18,
+  "beams_ok": 18,
+  "beams_into_audience": 0,
+  "mean_sky_clear_pct": 21.2,
+  "min_sky_clear_pct": 13.8,
+  "mean_throw_m": 36.4,
+  "aim_rays_clear_30m_pct": 49.4,
+  "pars": 50,
+  "pars_cut": 10,
+  "pars_ground": 40,
+  "par_column_lit_m_15": 3.68,
+  "par_column_lux_median_15": 239.0,
+  "par_on_steel_pct_15": 81.6,
+  "units_in_or_near_crowd": [
+   "rig-par-planes-40"
+  ],
+  "pens_m": [
+   0.7,
+   1.0,
+   1.1,
+   1.9,
+   4.5,
+   7.6,
+   9.7
+  ],
+  "counts": {
+   "PAR \u00b7 cut down": 5,
+   "PAR \u00b7 cut up": 5,
+   "PAR \u00b7 halo": 6,
+   "PAR \u00b7 columns": 18,
+   "PAR \u00b7 far wall": 4,
+   "PAR \u00b7 side spans": 8,
+   "PAR \u00b7 embers": 4,
+   "B380F \u00b7 plane 1 (behind the DJ)": 6,
+   "B380F \u00b7 plane 2 (mid-hall, side spans)": 6,
+   "B380F \u00b7 plane 3 (the far end)": 6
+  },
+  "circuits": 14,
+  "circuits_ok": true,
+  "phases_w": {
+   "L1": 6900,
+   "L2": 6800,
+   "L3": 6800
+  },
+  "connected_w": 21220,
+  "branches": [
+   {
+    "branch": "U1-stage",
+    "devices": 29,
+    "ok": true
+   },
+   {
+    "branch": "U1-far",
+    "devices": 17,
+    "ok": true
+   },
+   {
+    "branch": "U2-far",
+    "devices": 23,
+    "ok": true
+   }
+  ],
+  "slots": {
+   "1": 505,
+   "2": 184
+  },
+  "plane1_glow": {
+   "t10": {
+    "floor": {
+     "G": 0.03213,
+     "G_near_field": 0.03
+    },
+    "entry": {
+     "G": 0.02175,
+     "G_near_field": 0.019
+    }
+   },
+   "t40": {
+    "floor": {
+     "G": 0.03316,
+     "G_near_field": 0.02666
+    },
+    "entry": {
+     "G": 0.02075,
+     "G_near_field": 0.01392
+    }
+   },
+   "dry": {
+    "floor": {
+     "G": 0.02717,
+     "G_near_field": 0.0269
+    },
+    "entry": {
+     "G": 0.0188,
+     "G_near_field": 0.01842
+    }
+   }
+  }
+ },
+ "atmosphere": {
+  "anisotropy": 0.74,
+  "haze": {
+   "model": "nf-ff",
+   "volume_m3": 186890,
+   "airChangesPerHour": 0.5,
+   "calibrate": false,
+   "kindLevels": {
+    "smoke-machine": 1
+   },
+   "nearField": {
+    "radius_m": 3,
+    "airSpeed_m_s": 0.1
+   },
+   "minutes": 40,
+   "source": "UNVALIDATED estimate: two-zone near-field/far-field model (Nicas 1996, AIHA J 57:542; hazeZones.js), one UP-YZ31P modelled on an Antari Z-1500 III EQUIVALENT at 150 ml/min continuous (upper bound), hall 186,890 m3. Air change and drying ASSUMED per state; the decay test + transmissometer decide (simulation-method 3.4 step 8).",
+   "dries": false
+  },
+  "anisotropyWhy": "HG g 0.74: lasers-exact.md 3.2 (own Mie computation), ASSUMPTION backed by computation"
+ },
+ "haze_plan": {
+  "state": "the tank state at doors: closed hall (doors, roof vents and extraction shut while hazing), 0.5 air changes/h, droplets that do not dry",
+  "pre_haze": "start the machine 40 min before doors at full, continuous; refill the 6 L tank at doors (a second tank keeps the hall rising toward ~0.02 /m at ~2 h)",
+  "why": "the hall's haze builds with the time the ONE machine has run: ~0.0024 /m at 10 min, ~0.0086 /m at 40 min (two-zone model, UNVALIDATED). Pre-hazing is standard practice; it moves the doors moment from the 10-min picture to the 40-min one (3.6x the air).",
+  "owed": "the decay test + transmissometer on site (simulation-method 3.4 step 8); the venue's rule on shutting vents; the machine's real output"
+ },
+ "requires": {
+  "par_lens": "15 deg (the rental's PL5403 lens is UNKNOWN; with 25 deg the columns read about a third as bright: occlusion_sky par_on_steel)",
+  "b380f_optics": "open beam: no gobo, no prism, no frost in the haze looks",
+  "why": "in thin air a beam is seen by its flux per width: the B380F's fixed 1.8 deg beam is already its narrowest; a gobo or prism takes flux out of the shaft (beamOptics.js: a prism of N facets gives N beams of 1/N the candela), so each shaft gets fainter. The room's gobo shapes are ASSUMED (no image of the wheel), so the claim that texture helps the eye in thin haze is not testable here."
+ },
+ "tuned_from": "scripts/place/rigs/moxir-v2-planes-2026-10-09.json",
+ "tunes": [
+  {
+   "id": "T1",
+   "title": "The air: pre-haze 40 min with the hall closed",
+   "change": "rig file: atmosphere = the one machine's two-zone haze (closed hall, no drying, 40 min); haze_plan written",
+   "why": "the hall's haze builds with the time the ONE machine has run: ~0.0024 /m at 10 min, ~0.0086 /m at 40 min (two-zone model, UNVALIDATED). Pre-hazing is standard practice; it moves the doors moment from the 10-min picture to the 40-min one (3.6x the air).",
+   "kind": "operation + data (no lamp changed)"
+  },
+  {
+   "id": "T2",
+   "title": "The machine under the fan",
+   "change": "smoke machine (-8.0, 1.0, -3.0) -> (-4.75, 1.0, -6.2), blowing +z; plane-1 heads 1.5 m -> 1.0 m pitch, centred on it (x -7.25 ... -2.25, z -5 kept)",
+   "why": "one machine thickens the air only near itself (near field ~0.26 /m vs the hall 0.0024-0.0086 /m). Before, 2 of the 6 plane-1 heads stood inside it; now all 6 bases are [2.8, 1.96, 1.36, 1.36, 1.96, 2.8] m from the nozzle (the field fades from 2.4 to 3.6 m).",
+   "kind": "placement (data)"
+  },
+  {
+   "id": "T3",
+   "title": "Plane 1 aimed through the plume, leaning toward the floor",
+   "change": "the six plane-1 aims re-searched inside the fan's sectors (left heads lean -x, right +x, now also toward +z), scored by the metric G",
+   "why": "haze scatters forward (g 0.74): a beam seen at 90 deg sends ~1/14 of what it sends at 30 deg. Leaning the fan toward the audience lowers the angle the floor sees it at; the search keeps every v2 safety rule (no ray into the crowd or glass, >= 3 m over every standing level, the whole beam checked).",
+   "aims": [
+    {
+     "id": "rig-beam-planes-01",
+     "from_dir": [
+      -0.682,
+      0.719,
+      0.133
+     ],
+     "to_dir": [
+      -0.318,
+      0.772,
+      0.551
+     ],
+     "az_el": [
+      330.0,
+      50.5
+     ],
+     "throw_m": 16.653,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": 6.156,
+     "rays_into_audience": 0,
+     "pen_m": 1.617
+    },
+    {
+     "id": "rig-beam-planes-02",
+     "from_dir": [
+      -0.456,
+      0.875,
+      0.166
+     ],
+     "to_dir": [
+      -0.21,
+      0.887,
+      0.411
+     ],
+     "az_el": [
+      333.0,
+      62.5
+     ],
+     "throw_m": 14.487,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": 8.979,
+     "rays_into_audience": 0,
+     "pen_m": 1.027
+    },
+    {
+     "id": "rig-beam-planes-03",
+     "from_dir": [
+      -0.287,
+      0.951,
+      0.116
+     ],
+     "to_dir": [
+      -0.155,
+      0.951,
+      0.268
+     ],
+     "az_el": [
+      330.0,
+      72.0
+     ],
+     "throw_m": 13.511,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": null,
+     "rays_into_audience": 0,
+     "pen_m": 0.651
+    },
+    {
+     "id": "rig-beam-planes-04",
+     "from_dir": [
+      0.282,
+      0.951,
+      -0.126
+     ],
+     "to_dir": [
+      0.106,
+      0.951,
+      0.29
+     ],
+     "az_el": [
+      20.0,
+      72.0
+     ],
+     "throw_m": 13.511,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": null,
+     "rays_into_audience": 0,
+     "pen_m": 0.651
+    },
+    {
+     "id": "rig-beam-planes-05",
+     "from_dir": [
+      0.444,
+      0.887,
+      -0.127
+     ],
+     "to_dir": [
+      0.224,
+      0.848,
+      0.48
+     ],
+     "az_el": [
+      25.0,
+      58.0
+     ],
+     "throw_m": 8.372,
+     "ends_on": "crane z 0.15 girder",
+     "lowest_over_standing_m": 7.395,
+     "rays_into_audience": 0,
+     "pen_m": 1.229
+    },
+    {
+     "id": "rig-beam-planes-06",
+     "from_dir": [
+      0.677,
+      0.719,
+      -0.156
+     ],
+     "to_dir": [
+      0.348,
+      0.755,
+      0.556
+     ],
+     "az_el": [
+      32.0,
+      49.0
+     ],
+     "throw_m": 17.026,
+     "ends_on": "roof deck",
+     "lowest_over_standing_m": 5.986,
+     "rays_into_audience": 0,
+     "pen_m": 1.705
+    }
+   ],
+   "kind": "aim (data)"
+  },
+  {
+   "id": "T4",
+   "title": "Steel that reads without haze: the two columns that frame the stage",
+   "change": "halo PARs 01, 04, 05 (they lit roof steel neither the floor nor the entry view sees) -> grazing the nave columns at x -12 z 6, x +12 z 6 and x +12 z 0.5",
+   "why": "a lit surface needs no air. From the floor these two columns are the largest dark shapes either side of the DJ; lit from the foot they frame the stage in every haze state. The halo's own job (a glow in the air over the DJ) is what thin haze takes away.",
+   "pars": [
+    {
+     "id": "rig-par-planes-01",
+     "from": {
+      "p": [
+       -8.128,
+       0.3,
+       2.7
+      ],
+      "lux_on_steel_median": 57.655,
+      "part": "halo"
+     },
+     "to": {
+      "p": [
+       -11.157,
+       0.31,
+       6.0
+      ],
+      "column_lit_m": [
+       2.478,
+       9.5
+      ],
+      "lux_on_steel": [
+       62.682,
+       239.051,
+       2247.048
+      ],
+      "steel_pct": 100.0
+     }
+    },
+    {
+     "id": "rig-par-planes-04",
+     "from": {
+      "p": [
+       -3.728,
+       0.3,
+       2.7
+      ],
+      "lux_on_steel_median": 51.321,
+      "part": "halo"
+     },
+     "to": {
+      "p": [
+       11.157,
+       0.31,
+       6.0
+      ],
+      "column_lit_m": [
+       2.478,
+       9.5
+      ],
+      "lux_on_steel": [
+       62.682,
+       475.109,
+       2247.048
+      ],
+      "steel_pct": 100.0
+     }
+    },
+    {
+     "id": "rig-par-planes-05",
+     "from": {
+      "p": [
+       -2.278,
+       0.3,
+       2.7
+      ],
+      "lux_on_steel_median": 51.287,
+      "part": "halo"
+     },
+     "to": {
+      "p": [
+       11.157,
+       2.71,
+       0.5
+      ],
+      "column_lit_m": [
+       4.878,
+       9.459
+      ],
+      "lux_on_steel": [
+       93.784,
+       685.49,
+       2247.048
+      ],
+      "steel_pct": 100.0
+     }
+    }
+   ],
+   "kind": "placement + aim (data)"
+  },
+  {
+   "id": "T5",
+   "title": "The looks: steel carries the dark; plane 3 at the old glare budget",
+   "change": "dark: columns 0.25 -> 0.5, stage columns 0.6 (new); peak: stage columns 0.8, plane 3 0.35 -> 0.7",
+   "why": "faders, inside each lamp's real output, never a gain on the room. Plane 3 runs toward the crowd and was capped at 0.35 against white-out at 0.0169 /m; its forward scatter is proportional to the haze, so at the tank state (~0.0086 /m, half) 0.7 gives the air the same luminance the cap allowed. Checked on the frames: white-out of the floor view at the peak.",
+   "kind": "look levels (data)"
+  },
+  {
+   "id": "T6",
+   "title": "Narrow and open",
+   "change": "rig file `requires`: PARs with the 15 deg lens; B380F open (no gobo, prism or frost) in the haze looks",
+   "why": "in thin air a beam is seen by its flux per width: the B380F's fixed 1.8 deg beam is already its narrowest; a gobo or prism takes flux out of the shaft (beamOptics.js: a prism of N facets gives N beams of 1/N the candela), so each shaft gets fainter. The room's gobo shapes are ASSUMED (no image of the wheel), so the claim that texture helps the eye in thin haze is not testable here.",
+   "kind": "spec (data)"
+  }
+ ],
+ "design_metric": {
+  "what": "G = first-order single scattering toward an eye, per unit beam flux (see moxir_v2_true.py)",
+  "plane1": {
+   "before": {
+    "t10": {
+     "floor": {
+      "G": 0.00458,
+      "G_near_field": 0.00372
+     },
+     "entry": {
+      "G": 0.00843,
+      "G_near_field": 0.00741
+     }
+    },
+    "t40": {
+     "floor": {
+      "G": 0.00592,
+      "G_near_field": 0.00334
+     },
+     "entry": {
+      "G": 0.00781,
+      "G_near_field": 0.00534
+     }
+    },
+    "dry": {
+     "floor": {
+      "G": 0.00368,
+      "G_near_field": 0.00357
+     },
+     "entry": {
+      "G": 0.00759,
+      "G_near_field": 0.00746
+     }
+    }
+   },
+   "after_T2": {
+    "t10": {
+     "floor": {
+      "G": 0.01504,
+      "G_near_field": 0.01431
+     },
+     "entry": {
+      "G": 0.01157,
+      "G_near_field": 0.01072
+     }
+    },
+    "t40": {
+     "floor": {
+      "G": 0.01484,
+      "G_near_field": 0.01264
+     },
+     "entry": {
+      "G": 0.00977,
+      "G_near_field": 0.00772
+     }
+    },
+    "dry": {
+     "floor": {
+      "G": 0.0131,
+      "G_near_field": 0.01301
+     },
+     "entry": {
+      "G": 0.01074,
+      "G_near_field": 0.01062
+     }
+    }
+   },
+   "after_T3": {
+    "t10": {
+     "floor": {
+      "G": 0.03213,
+      "G_near_field": 0.03
+     },
+     "entry": {
+      "G": 0.02175,
+      "G_near_field": 0.019
+     }
+    },
+    "t40": {
+     "floor": {
+      "G": 0.03316,
+      "G_near_field": 0.02666
+     },
+     "entry": {
+      "G": 0.02075,
+      "G_near_field": 0.01392
+     }
+    },
+    "dry": {
+     "floor": {
+      "G": 0.02717,
+      "G_near_field": 0.0269
+     },
+     "entry": {
+      "G": 0.0188,
+      "G_near_field": 0.01842
+     }
+    }
+   }
+  }
+ }
+}

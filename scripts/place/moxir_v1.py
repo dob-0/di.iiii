@@ -597,7 +597,7 @@ CONSOLE = {
                ('F2', 'halo', 'ember, 0-40 %'), ('F3', 'curtain', 'ash white, the silhouette; ash grey 20-30 % under the chase'),
                ('F4', 'the X', 'ember'), ('F5', 'ash wall', 'the 4 grazers, ember 5-15 %'), ('F6', 'columns of fire', 'ember; fan effect +-8 deg (pan limits set in the desk: inward only), period 16 bars, BPM-synced'),
                ('F7', 'fan + spine', 'ash; the fan meeting point at 10 m over the DJ is a preset, not an effect'), ('F8', 'far columns + far wall', 'deep ember 15-30 %'),
-               ('F9', 'the roof', 'ash white; PROTECTED: one GO per hour, out of the black, 8 bars, out'), ('F10', 'lasers', 'Art-Net to the 6 cubes: cue select (one line / chase step 1-5 / all 12); the master is the LSO\'s, not the operator\'s')],
+               ('F9', 'the roof', 'ash white; PROTECTED: one GO per hour, out of the black, 8 bars, out'), ('F10', 'lasers', 'the 6 cubes run from di Nodes over the LAN, not from this console (owner N460.2): cue select (one line / chase step 1-5 / all 12) is made there; the master is the LSO\'s, not the operator\'s')],
     'buttons': [('B1', 'THE BLACK', 'everything to 0 in 0 s, haze stays; 3-5 s before a drop'), ('B2', 'THE FIRE', 'GO the peak look on the downbeat; auto-release after 16 bars into the black'),
                 ('B3', 'BLINDER HIT', 'flash 1-2 s, capped at 40 % by a group master the operator cannot raise'), ('B4', 'LIGHTNING', 'the 4 far strobes, rate locked <= 4 Hz (HSE HSG195; Purple Guide)'),
                 ('B5', 'ONE LINE', 'laser 6, beam 6a alone')],
@@ -675,7 +675,8 @@ def cubes_v1(pid, LZ):
         bs = [r for r in run['beams'] if r['cube'] == n]
         out.append({'n': n, 'id': 'rig-lasercube-cut-%02d' % n, 'type': 'ext-lc-ultra-mk2', 'p': [round(float(v), 3) for v in p], 'mount': mount,
                     'colour': CUBE_COLOUR[n], 'hex': HEX[CUBE_COLOUR[n]], 'ip': '192.168.1.%d' % (100 + n),
-                    'artnet': {'universe': 10, 'address': 1 + 16 * (n - 1), 'footprint': 16}, 'beams': bs, 'power_w': 120,
+                    'artnet': {'universe': 10, 'address': 1 + 16 * (n - 1), 'footprint': 16},  # LEGACY (owner N460.2): the cubes are on the LAN, no DMX; kept for the rig files and moxir_v1_1.py
+                    'beams': bs, 'power_w': 120,
                     'd': L.unit(np.mean([np.array(b['to']) - p for b in bs], axis=0))})
     return out
 
@@ -1190,7 +1191,7 @@ p("<b style='color:"+C.fg+"'>Running, worst look + PA ("+S.power.pa_w+" W) + FOH
 note(esc(S.power.watts_basis));
 root.appendChild(table(["circuit","distro","kind","units","load","cable","drop","check"],S.circuits.map(c=>[c.circuit,c.distro,c.kind,c.n,c.load_w+" W",c.cable_m+" m · "+c.cable_mm2+" mm²",c.vdrop_pct+" %",ok(c.ok)])));
 root.appendChild(table(["DMX branch","universe","node","devices (≤ 32)"],S.patch.map(r=>[r.branch,r.universe,r.node,r.devices])));
-note("Slots: "+Object.entries(S.slots).map(([u,n])=>"U"+u+" "+n+"/512").join(", ")+"; the 6 cubes on Art-Net universe 10 (16 ch each). DMX512-A (ANSI E1.11): ≤ 32 unit loads per segment. Network "+esc(S.network.subnet)+".");
+note("Slots: "+Object.entries(S.slots).map(([u,n])=>"U"+u+" "+n+"/512").join(", ")+"; the 6 cubes are on the LAN through di Nodes, not on DMX (owner N460.2). DMX512-A (ANSI E1.11): ≤ 32 unit loads per segment. Network "+esc(S.network.subnet)+".");
 root.appendChild(table(["IP","what"],S.network.ips.map(x=>[x.ip,x.what])));
 root.appendChild(table(["link","length","≤ 100 m (TIA-568)"],S.network.links.map(l=>[l.what,l.length_m+" m",ok(l.ok)])));
 h2("12","The checks");
@@ -1221,7 +1222,7 @@ def schedule_rows(U, cubes):
     for c in cubes:
         rows.append({'id': c['id'], 'model': 'EXT-LC-ULTRA-MK2', 'status': 'used', 'part': 'laser %d' % c['n'], 'p': c['p'], 'mount': c['mount'],
                      'aim': '; '.join('%s → wall (%.2f, %.2f)' % (b['id'], b['to'][0], b['to'][1]) for b in c['beams']), 'colour': c['hex'],
-                     'dmx': 'Art-Net 10 / %d · %s' % (c['artnet']['address'], c['ip']), 'w': 120, 'circuit': c.get('circuit')})
+                     'dmx': 'LAN (no DMX) · %s' % c['ip'], 'w': 120, 'circuit': c.get('circuit')})
     return rows
 
 
@@ -1309,7 +1310,7 @@ SAFETY_V1 = [
 LASER_TEST_V1 = [
     'The LSO present, the permit on site, the keys with the LSO; the six interlocks daisy-chained to the E-stop at FOH and tested (press it: all six stop).',
     'Each cube\'s label read (6 W or 10 W) and its enclosure at ≥ 10 °C before power-on (thermometer in the log).',
-    'Each cube on its fixed IP, Wi-Fi off; one Art-Net test cue each.',
+    'Each cube on its fixed IP, Wi-Fi off; one test frame each from di Nodes over the LAN, output disarmed.',
     'Beam Block set with the power off so the aperture cannot emit below the wall; LaserOS zones limit the scan to the two beam points.',
     'Align at the lowest power, one beam at a time, house lights off: each spot on its mark on the ash wall, ≥ 0.75 m from any edge, a drift goes up, never down.',
     'Walk each beam from the cube to the wall with a card: nothing in its 1 m tube (pendant lamps, cables, hooks, the cranes\' hooks).',

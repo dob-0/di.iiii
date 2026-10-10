@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { RIG_FILE, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views } from './epic-build.mjs'
+import { RIG_FILE, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -57,5 +57,43 @@ describe('epic-build: MOXIR v1.0 as entities, looks and cues', () => {
         expect(d[1]).toBeCloseTo(1, 6)
         const e = dirOfRotation([0, 0, 0])
         expect(e[1]).toBeCloseTo(-1, 6)
+    })
+})
+
+// MOXIR v2 true look (2026-10-09): the rooms epic-build makes follow the physics branch — no cutoff, the smoke machine
+// blows where its rig file turns it, and a rig file's own atmosphere (the one machine's two-zone haze) is what the room draws.
+describe('epic-build: no cutoff, the fan direction and the rig\'s own air', () => {
+    const v2 = {
+        fixtures: [
+            { id: 'rig-beam-x-01', type: 'up-b380f', part: 'plane 1', status: 'used', p: [-8.5, 0.7, -5], r: [-2.9, 0, -0.75], colour: '#ff3a12', angle_rad: 0.0157, throw_m: 17.864 },
+            { id: 'rig-smoke-x', type: 'up-yz31p', position: 'on a 1 m case', p: [-4.75, 1, -6.5], r: [0, Math.PI, 0], angle_rad: null }
+        ],
+        solids: []
+    }
+    const ents = v1Entities(v2)
+    it('a lamp has distance 0 (inverse square only) and its drawn beam its own length, the cast throw', () => {
+        const lamp = ents.find((e) => e.id === 'rig-beam-x-01')
+        expect(lamp.components.light.distance).toBe(0)
+        expect(lamp.components.beam.length).toBe(17.864)
+    })
+    it('the smoke machine keeps the rig file\'s rotation (its fan direction)', () => {
+        expect(ents.find((e) => e.id === 'rig-smoke-x').components.transform.rotation).toEqual([0, Math.PI, 0])
+        const old = v1Entities({ fixtures: [{ ...v2.fixtures[1], r: undefined }], solids: [] })
+        expect(old[0].components.transform.rotation).toEqual([0, 0, 0])
+    })
+    it('draws the rig\'s own atmosphere when it states one, else v1.0\'s uniform sigma', () => {
+        const atmosphere = { anisotropy: 0.74, anisotropyWhy: 'a note', haze: { model: 'nf-ff', volume_m3: 186890, dries: false } }
+        const own = v1RenderOps({ atmosphere })[0].payload.patch.atmosphere
+        expect(own).toEqual({ anisotropy: 0.74, haze: { model: 'nf-ff', volume_m3: 186890, dries: false } })
+        expect(v1RenderOps()[0].payload.patch.atmosphere).toEqual({ scattering: 0.0169, anisotropy: 0.7, haze: null })
+    })
+})
+
+describe('epic-build: a solid an earlier rig file laid is not left behind (MOXIR v2 cranes, 2026-10-10)', () => {
+    it('takes out the #844 laser bar and the far-crane boxes (and every rig lamp), keeps the hall, the truss and the riser', async () => {
+        const { oldEntities } = await import('./epic-build.mjs')
+        const doc = { entities: [{ id: 'place-hall', type: 'model' }, { id: 'rig-line-1', type: 'model' }, { id: 'rig-deck-1', type: 'model' }, { id: 'rig-crowd-barrier', type: 'box' },
+            { id: 'rig-crane-bar', type: 'box' }, { id: 'rig-far-crane-z-12-girder-a', type: 'box' }, { id: 'rig-par-cut-01', type: 'spotLight' }, { id: 'rig-hoist-1', type: 'box' }] }
+        expect(oldEntities(doc).map((e) => e.id).sort()).toEqual(['rig-crane-bar', 'rig-far-crane-z-12-girder-a', 'rig-par-cut-01'])
     })
 })

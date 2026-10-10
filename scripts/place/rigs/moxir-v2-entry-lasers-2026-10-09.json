@@ -1,0 +1,1541 @@
+{
+ "snapshot": "moxir-v2-entry-lasers-2026-10-09",
+ "version": "MOXIR v2 \u00b7 the entry lasers",
+ "date": "2026-10-09",
+ "what": "The two Poligraf UP-LA40WF (40 W full colour) UP at the entry end, house left, aimed back over the audience toward the stage, ending on the far (SE) end wall's matte block; written by scripts/place/moxir_entry_lasers.py. The six LaserCubes sit ON the free crane at z -12 (N464) and are not aimed here.",
+ "owner": {
+  "words": "\"2 lasers from poli goes to the up to the entrance, where audience will enter, so 2 from one side 6 from other\"",
+  "when": "2026-10-09 ~20:30",
+  "ledger": [
+   "N460.2",
+   "N462",
+   "N464 (the cubes on the crane, 21:1x)"
+  ],
+  "note": "~/work/agent-reports-2026-10-09/moxir-lead/dob-09-c3896f.md"
+ },
+ "result": "PASSES THESE CHECKS (not \"safe\"): both beams, worst margin +0.165 m (near crane bridge (safe underside 7.2)) over the cubes' rule set with the 0.8 deg fan; every one of the 2 x 61 rays first-hits the far end wall's hall-block. Only house left has a line (the mount options table); the cubes passed with +0.22 m.",
+ "standards": [
+  "IEC 60825-1:2014 (MPE, NOHD; Table A.1)",
+  "IEC TR 60825-3 (laser shows: 3.0 m above and 2.5 m beside audience-accessible places)",
+  "ILDA audience-scanning / laser show safety guidance (the same separations; dimming is not a control)",
+  "HSE HS(G)95 (>= 3 m and a matte beam stop)",
+  "ANSI E1.21-2013 (temporary ground-supported structures: the tower's stability)",
+  "EN 17206 / DGUV V17 (machinery for stages; the rigging sign-off)"
+ ],
+ "rule": {
+  "person_m": 2.0,
+  "vertical_m": 3.0,
+  "lateral_m": 2.5,
+  "fan_deg": 0.8,
+  "zone_deg": 0.3,
+  "near_crane_underside_used_m": 7.2,
+  "free_crane_underside_used_m": 7.69,
+  "free_crane_z_m": -12.0,
+  "lamp_low_used_m": 9.0,
+  "body_margin_m": 0.25,
+  "lamp_body_r_m": {
+   "up-pl5403": 0.25,
+   "up-b380f": 0.45,
+   "up-yz31p": 0.5,
+   "other": 0.45,
+   "floor": 0.25
+  },
+  "end_z_m": -53.8,
+  "end_rule": "the whole fan on the far end wall's matte block, >= 2.5 m beside the artists' gate opening (x -2.4..2.4) or >= 3.0 m over its 5.4 m top, under the space frame at 10.3 m, and (the floor rule) >= 5.0 m over the floor",
+  "same_as_the_cubes": "moxir_v1_1.py standing_places() / beam_path_checks() / the full cast; the test checks the 13 places are the cubes' 13",
+  "added": [
+   "the free crane's cab at z -12 as a standing place",
+   "the far gate as a place for the end",
+   "lamp bodies max(0.25, v2 radius) with 0.25 m margin (v1.1 used 0.15 m and 0)",
+   "the six cubes on the free crane's bridge (N464) as a keep-out box, 0.25 m margin",
+   "the cut's two tie-offs (strap or steel), 0.25 m margin",
+   "the other unit as a body, 0.25 m margin",
+   "people over the whole floor in the cast (2.4 m)"
+  ],
+  "places": [
+   {
+    "name": "hall floor (dance floor, backstage, everywhere)",
+    "x_m": [
+     -36.4,
+     60.4
+    ],
+    "z_m": [
+     -53.8,
+     53.8
+    ],
+    "surface_m": 0.0,
+    "source": "hall.json walls_x_m / end walls"
+   },
+   {
+    "name": "DJ step",
+    "x_m": [
+     -6.7,
+     -3.7
+    ],
+    "z_m": [
+     3.65,
+     5.65
+    ],
+    "surface_m": 0.4,
+    "source": "stage json booth"
+   },
+   {
+    "name": "FOH riser",
+    "x_m": [
+     -6.7,
+     -3.7
+    ],
+    "z_m": [
+     28.0,
+     30.0
+    ],
+    "surface_m": 0.6,
+    "source": "stage json foh (riser 0.6 m, ASSUMED there)"
+   },
+   {
+    "name": "entry platform",
+    "x_m": [
+     3.6,
+     10.6
+    ],
+    "z_m": [
+     50.8,
+     53.8
+    ],
+    "surface_m": 2.4,
+    "source": "hall.py entry_platform (size a GUESS)"
+   },
+   {
+    "name": "entry stairs",
+    "x_m": [
+     10.6,
+     14.2
+    ],
+    "z_m": [
+     52.6,
+     53.8
+    ],
+    "surface_m": 2.4,
+    "source": "hall.py entry_platform (12 steps of 0.3 m)"
+   },
+   {
+    "name": "gallery 1",
+    "x_m": [
+     10.0,
+     11.6
+    ],
+    "z_m": [
+     6.0,
+     14.5
+    ],
+    "surface_m": 7.4,
+    "source": "hall.json massing pipe-rack-gallery-1 (top)"
+   },
+   {
+    "name": "gallery 2",
+    "x_m": [
+     10.0,
+     11.6
+    ],
+    "z_m": [
+     14.5,
+     23.0
+    ],
+    "surface_m": 6.9,
+    "source": "hall.json massing pipe-rack-gallery-2 (top)"
+   },
+   {
+    "name": "gallery 3",
+    "x_m": [
+     10.0,
+     11.6
+    ],
+    "z_m": [
+     23.0,
+     31.5
+    ],
+    "surface_m": 6.3,
+    "source": "hall.json massing pipe-rack-gallery-3 (top)"
+   },
+   {
+    "name": "gallery 4",
+    "x_m": [
+     10.0,
+     11.6
+    ],
+    "z_m": [
+     31.5,
+     40.0
+    ],
+    "surface_m": 5.8,
+    "source": "hall.json massing pipe-rack-gallery-4 (top)"
+   },
+   {
+    "name": "conveyor gallery (roller conveyor)",
+    "x_m": [
+     3.6,
+     4.6
+    ],
+    "z_m": [
+     16.5,
+     24.0
+    ],
+    "surface_m": 0.85,
+    "source": "hall.json massing roller-conveyor (top)"
+   },
+   {
+    "name": "runway walkway left row (ladders: right)",
+    "x_m": [
+     -12.65,
+     -11.0
+    ],
+    "z_m": [
+     -53.8,
+     53.8
+    ],
+    "surface_m": 7.96,
+    "source": "hall.json runway_top_m 7.96, crane_rail_x_m"
+   },
+   {
+    "name": "runway walkway right row (ladders: right)",
+    "x_m": [
+     11.0,
+     12.65
+    ],
+    "z_m": [
+     -53.8,
+     53.8
+    ],
+    "surface_m": 7.96,
+    "source": "hall.json runway_top_m 7.96, crane_rail_x_m"
+   },
+   {
+    "name": "crane cab (parked z 0.15)",
+    "x_m": [
+     8.35,
+     10.35
+    ],
+    "z_m": [
+     -0.85,
+     1.15
+    ],
+    "surface_m": 5.1,
+    "source": "hall.json cranes[0].cab, floor = safe underside - 2.1"
+   },
+   {
+    "name": "free crane cab (parked z -12) [added for these beams]",
+    "x_m": [
+     8.35,
+     10.35
+    ],
+    "z_m": [
+     -13.0,
+     -11.0
+    ],
+    "surface_m": 5.59,
+    "source": "hall.json cranes[1].cab at the show park z -12, floor = safe underside 7.69 - 2.1"
+   }
+  ]
+ },
+ "unit_kind": {
+  "code": "UP-LA40WF",
+  "source": "scripts/place/fixtures/fixtures.json kinds.laser",
+  "power_w_by_nm": {
+   "638": 10.0,
+   "520": 15.0,
+   "445": 16.0
+  },
+  "total_w": 41.0,
+  "divergence_mrad": 1.3,
+  "divergence_basis": "EQUIVALENT (Blue Sea BLLO-RGB40, \"< 1.3 mrad\"; full angle assumed; 1/e or 1/e2 not stated)",
+  "aperture_m": {
+   "tube (clearance)": 0.01,
+   "nohd": 0.006,
+   "basis": "ASSUMED: the maker prints none; fixtures.json photometry note \"6-10 mm\""
+  },
+  "body_m": [
+   0.42,
+   0.235,
+   0.555
+  ],
+  "weight_kg": 35,
+  "power_draw_w": 1200,
+  "weight_power_basis": "EQUIVALENT",
+  "dmx": "32 ch (TESTED at Sevan): ch 2 mode 25 auto / 75 sound / 250 manual; it scans graphics: a static beam is a chosen graphic, not a guarantee",
+  "scan_angle": "not published (owed): the hard stop (an aperture mask) contains whatever the scanner does"
+ },
+ "world": {
+  "glb": "/mnt/data/footage/place-moxir-hall-v9-show-park-2026-10-08/hall.glb",
+  "glb_sha256": "aac5cf55b4cc2e99e903d267e2152c76090505f15a888963e3950ce6d038bda2",
+  "hall": "scripts/place/rigs/moxir-hall-2026-10-08-v9-show-park.hall.json",
+  "v2_spread_rig": "scripts/place/rigs/moxir-v2-spread-2026-10-09.json at cbfc0c1d (cbfc0c1d72cea990cb04baef4e049c2e3ed52f93)",
+  "changes": [
+   "the free crane moved from z -41 (the GLB) to its show park z -12: girders at the safe underside 7.69, its cab dropped with it; NO laser bar or drop frame under it (N464)",
+   "the six cubes as a keep-out box on the free crane's bridge top (N464)",
+   "the near crane girders at the safe underside 7.2 (the GLB draws 7.6), its cab dropped with it",
+   "the cut's two tie-offs as 0.1 m bars",
+   "pendant lamps from 9.0 (the GLB draws 9.5)",
+   "the v2 spread lamps as 0.5 m boxes",
+   "people over the whole floor (2.4 m)",
+   "the other UP-LA40WF as a box"
+  ]
+ },
+ "mount_options": [
+  {
+   "id": "tower-z48",
+   "what": "a ground-supported truss tower with a T-bar at the column line z 48, house left: both units under the bar, 0.7 m apart",
+   "units": 2,
+   "worst_margin_m": 0.165,
+   "binding": "near crane bridge (safe underside 7.2)",
+   "mount_apertures": [
+    [
+     -8.094,
+     5.944,
+     48.0
+    ],
+    [
+     -7.394,
+     5.944,
+     48.0
+    ]
+   ],
+   "ends": [
+    [
+     -6.794,
+     6.669,
+     -53.8
+    ],
+    [
+     -6.619,
+     6.669,
+     -53.8
+    ]
+   ],
+   "passes": true
+  },
+  {
+   "id": "tower-z50",
+   "what": "the same tower 2 m nearer the door (z 50)",
+   "units": 2,
+   "worst_margin_m": 0.134,
+   "binding": "near crane bridge (safe underside 7.2)",
+   "mount_apertures": [
+    [
+     -7.188,
+     5.925,
+     50.0
+    ],
+    [
+     -6.487,
+     5.925,
+     50.0
+    ]
+   ],
+   "ends": [
+    [
+     -6.688,
+     6.675,
+     -53.8
+    ],
+    [
+     -6.825,
+     6.675,
+     -53.8
+    ]
+   ],
+   "passes": true
+  },
+  {
+   "id": "tower-z46",
+   "what": "the same tower 2 m further in (z 46)",
+   "units": 2,
+   "worst_margin_m": 0.191,
+   "binding": "cut pick 2 (bridle + hoist)",
+   "mount_apertures": [
+    [
+     -7.344,
+     5.969,
+     46.0
+    ],
+    [
+     -6.644,
+     5.969,
+     46.0
+    ]
+   ],
+   "ends": [
+    [
+     -6.844,
+     6.663,
+     -53.8
+    ],
+    [
+     -6.65,
+     6.663,
+     -53.8
+    ]
+   ],
+   "passes": true
+  },
+  {
+   "id": "tower-z44",
+   "what": "the same tower 4 m further in (z 44)",
+   "units": 2,
+   "worst_margin_m": 0.215,
+   "binding": "cut pick 2 (bridle + hoist)",
+   "mount_apertures": [
+    [
+     -7.356,
+     5.987,
+     44.0
+    ],
+    [
+     -6.656,
+     5.987,
+     44.0
+    ]
+   ],
+   "ends": [
+    [
+     -6.844,
+     6.669,
+     -53.8
+    ],
+    [
+     -6.625,
+     6.656,
+     -53.8
+    ]
+   ],
+   "passes": true
+  },
+  {
+   "id": "wall-z53",
+   "what": "a steel bracket on the entry end wall (block, inner face z 53.8), house left: aperture z 53.1 (0.15 m bracket + the 0.555 m body)",
+   "units": 2,
+   "worst_margin_m": 0.089,
+   "binding": "near crane bridge (safe underside 7.2)",
+   "mount_apertures": [
+    [
+     -7.175,
+     5.913,
+     53.1
+    ],
+    [
+     -6.475,
+     5.913,
+     53.1
+    ]
+   ],
+   "ends": [
+    [
+     -6.738,
+     6.662,
+     -53.8
+    ],
+    [
+     -6.838,
+     6.662,
+     -53.8
+    ]
+   ],
+   "passes": true
+  },
+  {
+   "id": "column-x-12-z48",
+   "what": "a bracket on the nave column x -12, z 48 (its inner face x -11.6; under the flared head 6.21 m): aperture x -11.29",
+   "units": 1,
+   "worst_margin_m": -0.888,
+   "binding": "place: runway walkway left row (ladders: right)",
+   "mount_apertures": [
+    [
+     -11.29,
+     4.806,
+     48.0
+    ]
+   ],
+   "ends": [
+    [
+     -5.513,
+     5.65,
+     -53.8
+    ]
+   ],
+   "passes": false,
+   "note": "one unit alone already fails: two cannot pass"
+  },
+  {
+   "id": "column-x-12-z54",
+   "what": "a bracket on the end-wall column x -12, z 54: aperture x -11.29, z 53.1",
+   "units": 1,
+   "worst_margin_m": -0.933,
+   "binding": "place: runway walkway left row (ladders: right)",
+   "mount_apertures": [
+    [
+     -11.29,
+     4.594,
+     53.1
+    ]
+   ],
+   "ends": [
+    [
+     -5.581,
+     5.912,
+     -53.8
+    ]
+   ],
+   "passes": false,
+   "note": "one unit alone already fails: two cannot pass"
+  },
+  {
+   "id": "entry-platform",
+   "what": "a stand on the entry platform (2.4 m, x 3.6..10.6, z 50.8..53.8, house right): people stand on it, so the beam >= 7.4 m there",
+   "units": 1,
+   "worst_margin_m": -0.389,
+   "binding": "cut pick 2 (bridle + hoist)",
+   "mount_apertures": [
+    [
+     -3.706,
+     7.4,
+     52.0
+    ]
+   ],
+   "ends": [
+    [
+     -6.075,
+     6.187,
+     -53.8
+    ]
+   ],
+   "passes": false,
+   "note": "one unit alone already fails: two cannot pass"
+  },
+  {
+   "id": "tower-right-z48",
+   "what": "a tower at z 48 house RIGHT (x 2..7, by the bar): any line on the right side (re-tested after N464 took the hang away)",
+   "units": 1,
+   "worst_margin_m": -0.37,
+   "binding": "cut tie-off hr (2 t ratchet strap or 6 mm steel) (margin 0.25)",
+   "mount_apertures": [
+    [
+     1.275,
+     6.35,
+     48.0
+    ]
+   ],
+   "ends": [
+    [
+     7.362,
+     7.3,
+     -53.8
+    ]
+   ],
+   "passes": false,
+   "note": "one unit alone already fails: two cannot pass"
+  },
+  {
+   "id": "tower-centre-z48",
+   "what": "a tower at z 48 on the nave axis (in the door's flow): a line over the middle of the floor",
+   "units": 1,
+   "worst_margin_m": -0.204,
+   "binding": "cut pick 2 (bridle + hoist)",
+   "mount_apertures": [
+    [
+     -3.438,
+     6.4,
+     48.0
+    ]
+   ],
+   "ends": [
+    [
+     -6.2,
+     6.4,
+     -53.8
+    ]
+   ],
+   "passes": false,
+   "note": "one unit alone already fails: two cannot pass"
+  },
+  {
+   "id": "door-frame",
+   "what": "the steel frame of the entry door (x +-3, to 6.0 m)",
+   "units": 1,
+   "worst_margin_m": -0.108,
+   "binding": "near crane bridge (safe underside 7.2)",
+   "mount_apertures": [
+    [
+     -2.75,
+     5.4,
+     53.1
+    ]
+   ],
+   "ends": [
+    [
+     -6.375,
+     7.525,
+     -53.8
+    ]
+   ],
+   "passes": false,
+   "note": "one unit alone already fails: two cannot pass"
+  }
+ ],
+ "mount": {
+  "chosen": "tower-z48",
+  "what": "a ground-supported truss tower with a T-bar at the column line z 48, house left: both units under the bar, 0.7 m apart",
+  "apertures_m": [
+   [
+    -8.094,
+    5.944,
+    48.0
+   ],
+   [
+    -7.394,
+    5.944,
+    48.0
+   ]
+  ],
+  "load_kg_estimate": {
+   "units": 70,
+   "t_bar_clamps_safeties_cable": 20,
+   "sum_kg": 90,
+   "basis": "2 x 35 kg EQUIVALENT + ~20 kg ESTIMATE (a ~1.5 m truss T-bar, two U-brackets, clamps, two safety steels, cables)"
+  },
+  "owed": [
+   "the rental house's tower + T-bar: model, its load table at this height and this offset (2 x 35 kg on a T-bar), base, outriggers and ballast; a stability check to ANSI E1.21-2013",
+   "the pen around the tower base (a barrier 1 m clear of the outriggers), at the chill zone's edge (x -7.5): the organiser's crowd plan decides it",
+   "a rigger's sign-off of the tower, the T-bar, the U-brackets and the safety steels (EN 17206 / DGUV V17)",
+   "the aim held to 0.5 deg: the tower must not sway more than that (ballast, guys or a tie-off to the column x -12 z 48: the rigger's call)"
+  ]
+ },
+ "margins_by_mount": {
+  "tower-z48": 0.165,
+  "tower-z50": 0.134,
+  "tower-z46": 0.191,
+  "tower-z44": 0.215,
+  "wall-z53": 0.089,
+  "column-x-12-z48": -0.888,
+  "column-x-12-z54": -0.933,
+  "entry-platform": -0.389,
+  "tower-right-z48": -0.37,
+  "tower-centre-z48": -0.204,
+  "door-frame": -0.108
+ },
+ "under_the_beams": [
+  {
+   "z_m": [
+    30.0,
+    48.0
+   ],
+   "what": "the entry end: the chill zone, the bar side, the door's flow",
+   "highest_standing_surface_m": 0.8,
+   "x_strip_m": [
+    -10.64,
+    -4.48
+   ]
+  },
+  {
+   "z_m": [
+    20.0,
+    30.0
+   ],
+   "what": "the back of the floor, FOH",
+   "highest_standing_surface_m": 0.72,
+   "x_strip_m": [
+    -10.66,
+    -4.26
+   ]
+  },
+  {
+   "z_m": [
+    8.2,
+    20.0
+   ],
+   "what": "the dance floor",
+   "highest_standing_surface_m": 0.64,
+   "x_strip_m": [
+    -10.68,
+    -4.0
+   ]
+  },
+  {
+   "z_m": [
+    -31.0,
+    8.2
+   ],
+   "what": "the stage, backstage and the hot zone behind it (to z -31)",
+   "highest_standing_surface_m": 0.34,
+   "x_strip_m": [
+    -10.75,
+    -3.13
+   ]
+  },
+  {
+   "z_m": [
+    -53.8,
+    -31.0
+   ],
+   "what": "the far end",
+   "highest_standing_surface_m": 0.17,
+   "x_strip_m": [
+    -10.79,
+    -2.62
+   ]
+  }
+ ],
+ "ends_apart_tradeoff": {
+  "at": "tower-z48",
+  "forced_apart_m": {
+   "0.00": {
+    "worst_margin_m": 0.165,
+    "ends_apart_m": 0.175
+   },
+   "0.25": {
+    "worst_margin_m": 0.104,
+    "ends_apart_m": 0.358
+   },
+   "0.50": {
+    "worst_margin_m": 0.056,
+    "ends_apart_m": 0.561
+   }
+  },
+  "chosen": "not forced (0.00): safety margin first; the two beams meet near one spot on the far wall"
+ },
+ "what_if": {
+  "near crane underside taped at the model 7.6 (re-aimed)": {
+   "worst_margin_m": 0.207,
+   "binds": "free crane bridge z -12 (safe underside 7.69)"
+  }
+ },
+ "search_limit": "a compass search from 4 starts finds a good layout, not a proven optimum: a relaxed constraint can return a slightly worse number (seen once in a what-if); the layout written here is checked in full either way",
+ "keep_out": {
+  "boxes": [
+   {
+    "id": "KO-1 the two UP-LA40WF + U-brackets + T-bar",
+    "x_m": [
+     -8.654,
+     -6.834
+    ],
+    "y_m": [
+     5.776,
+     6.471
+    ],
+    "z_m": [
+     47.95,
+     48.605
+    ],
+    "note": "the T-bar runs 0.3 m past the outer brackets"
+   },
+   {
+    "id": "KO-2 the tower (mast, base, outriggers) and its pen on the floor",
+    "x_m": [
+     -10.244,
+     -5.244
+    ],
+    "y_m": [
+     0.0,
+     6.471
+    ],
+    "z_m": [
+     45.778,
+     50.778
+    ],
+    "note": "the mast (0.29 m) stands under the T-bar's middle; the footprint is the outriggers (ESTIMATE 3 x 3 m) + a 1 m pen"
+   },
+   {
+    "id": "KO-3 the two beams z 40..48",
+    "x_m": [
+     -8.114,
+     -7.211
+    ],
+    "y_m": [
+     5.879,
+     6.123
+    ],
+    "z_m": [
+     40.0,
+     48.0
+    ]
+   },
+   {
+    "id": "KO-3 the two beams z 20..40",
+    "x_m": [
+     -8.15,
+     -6.766
+    ],
+    "y_m": [
+     5.729,
+     6.557
+    ],
+    "z_m": [
+     20.0,
+     40.0
+    ]
+   },
+   {
+    "id": "KO-3 the two beams z 0..20",
+    "x_m": [
+     -8.187,
+     -6.322
+    ],
+    "y_m": [
+     5.579,
+     6.992
+    ],
+    "z_m": [
+     0.0,
+     20.0
+    ]
+   },
+   {
+    "id": "KO-3 the two beams z -12..0",
+    "x_m": [
+     -8.209,
+     -6.055
+    ],
+    "y_m": [
+     5.489,
+     7.253
+    ],
+    "z_m": [
+     -12.0,
+     0.0
+    ]
+   },
+   {
+    "id": "KO-3 the two beams z -30..-12",
+    "x_m": [
+     -8.243,
+     -5.655
+    ],
+    "y_m": [
+     5.354,
+     7.644
+    ],
+    "z_m": [
+     -30.0,
+     -12.0
+    ]
+   },
+   {
+    "id": "KO-3 the two beams z -53.8..-30",
+    "x_m": [
+     -8.287,
+     -5.126
+    ],
+    "y_m": [
+     5.176,
+     8.162
+    ],
+    "z_m": [
+     -53.8,
+     -30.0
+    ]
+   }
+  ],
+  "rule": "the cube beams' new ends and tubes keep >= 0.25 m clear of every box (lead, N464); the two units leave the upper entry wall (y >= 9, x -6..4) free: they are not on that wall at all",
+  "tubes_highest_y_m": 8.162
+ },
+ "fixtures": [
+  {
+   "id": "rig-la40wf-entry-01",
+   "name": "UP-LA40WF entry laser 01 (Poligraf rental, 40 W full colour)",
+   "type": "up-la40wf",
+   "code": "UP-LA40WF",
+   "part": "entry laser",
+   "layer": "lasers",
+   "status": "used",
+   "p": [
+    -8.094,
+    5.944,
+    48.0
+   ],
+   "r": [
+    1.577918,
+    0.0,
+    0.012769
+   ],
+   "colour": "set by the desk (held at 0)",
+   "position": "aperture (the output window) at x -8.09, y 5.94, z 48.00: under the T-bar of a ground-supported truss tower at the column line z 48, house left (mount option tower-z48)",
+   "laser": {
+    "beams": [
+     {
+      "id": "P1a",
+      "to": [
+       -6.794,
+       6.669,
+       -53.8
+      ],
+      "length_m": 101.8,
+      "r": [
+       1.577918,
+       0.0,
+       0.012769
+      ],
+      "off": false,
+      "pass": true,
+      "ends_on": "the far (SE) end wall, matte block (hall-block), z -53.8",
+      "worst_margin_m": 0.165,
+      "binding": "near crane bridge (safe underside 7.2)",
+      "half_fan_deg": 0.899,
+      "margin_after_zone_deg": 0.099,
+      "worst_place": "FOH riser",
+      "worst_place_margin_m": 0.169,
+      "places": {
+       "hall floor (dance floor, backstage, everywhere)": {
+        "margin_m": 0.176,
+        "at": [
+         -6.794,
+         6.669,
+         -53.789
+        ]
+       },
+       "DJ step": {
+        "margin_m": 0.182,
+        "at": [
+         -7.486,
+         6.283,
+         0.405
+        ]
+       },
+       "FOH riser": {
+        "margin_m": 0.169,
+        "at": [
+         -7.804,
+         6.105,
+         25.302
+        ]
+       },
+       "entry platform": {
+        "margin_m": 9.585,
+        "at": [
+         -8.09,
+         5.946,
+         47.7
+        ]
+       },
+       "entry stairs": {
+        "margin_m": 16.812,
+        "at": [
+         -8.09,
+         5.946,
+         47.7
+        ]
+       },
+       "gallery 1": {
+        "margin_m": 14.432,
+        "at": [
+         -7.551,
+         6.246,
+         5.505
+        ]
+       },
+       "gallery 2": {
+        "margin_m": 14.665,
+        "at": [
+         -7.66,
+         6.186,
+         14.004
+        ]
+       },
+       "gallery 3": {
+        "margin_m": 14.897,
+        "at": [
+         -7.768,
+         6.125,
+         22.503
+        ]
+       },
+       "gallery 4": {
+        "margin_m": 15.13,
+        "at": [
+         -7.877,
+         6.065,
+         31.002
+        ]
+       },
+       "conveyor gallery (roller conveyor)": {
+        "margin_m": 8.322,
+        "at": [
+         -7.688,
+         6.17,
+         16.203
+        ]
+       },
+       "runway walkway left row (ladders: right)": {
+        "margin_m": 0.213,
+        "at": [
+         -6.794,
+         6.669,
+         -53.789
+        ]
+       },
+       "runway walkway right row (ladders: right)": {
+        "margin_m": 13.801,
+        "at": [
+         -6.794,
+         6.669,
+         -53.789
+        ]
+       },
+       "crane cab (parked z 0.15)": {
+        "margin_m": 12.595,
+        "at": [
+         -7.464,
+         6.295,
+         -1.295
+        ]
+       },
+       "free crane cab (parked z -12) [added for these beams]": {
+        "margin_m": 12.262,
+        "at": [
+         -7.31,
+         6.381,
+         -13.393
+        ]
+       }
+      },
+      "near_crane_under_margin_m": 0.165,
+      "free_crane_under_margin_m": 0.387,
+      "cubes_on_the_free_crane_margin_m": 0.765,
+      "cut_truss_margin_m": 1.307,
+      "cut_picks_margin_m": 0.986,
+      "cut_tieoffs_margin_m": 3.811,
+      "pendant_lamp_margin_m": 1.949,
+      "lamp_bodies": {
+       "v2 spread (#864, cbfc0c1d)": {
+        "margin_m": 0.776,
+        "nearest": "rig-par-cut-04"
+       },
+       "v2 B tuned (#853)": {
+        "margin_m": 0.776,
+        "nearest": "rig-par-cut-04"
+       },
+       "v1.1 (#844)": {
+        "margin_m": 0.596,
+        "nearest": "rig-par-cut-bridge-02"
+       }
+      },
+      "other_unit_margin_m": 0.235,
+      "end_gate_margin_m": 0.401,
+      "end_under_roof_frame_margin_m": 2.138,
+      "end_fan_y_m": [
+       5.176,
+       8.162
+      ],
+      "end_fan_x_m": [
+       -8.287,
+       -5.301
+      ],
+      "cast": {
+       "rays": 61,
+       "all_on_matte_block": true,
+       "first_hits": [
+        "end wall z -54 [hall-block]"
+       ],
+       "end_y_m": [
+        5.247,
+        8.091
+       ],
+       "end_x_m": [
+        -8.215,
+        -5.372
+       ]
+      },
+      "cast_bad_rays": [],
+      "seen_share": {
+       "foh": 0.73,
+       "spotter_e_stop_2": 0.98,
+       "either": 1.0,
+       "method": "each beam sampled every 1 m; a sample is seen if the sight line from the eye (FOH riser + 1.6 m; the spotter at x -7.0, z -4.5, 1.7 m) reaches it with nothing in between (hall triangles + rig boxes; people not counted), as moxir_v1_1.seen_whole"
+      },
+      "all_margins_m": {
+       "near crane bridge (safe underside 7.2)": 0.165,
+       "place: FOH riser": 0.169,
+       "place: hall floor (dance floor, backstage, everywhere)": 0.176,
+       "place: DJ step": 0.182,
+       "place: runway walkway left row (ladders: right)": 0.213,
+       "the other UP-LA40WF body (margin 0.25)": 0.235,
+       "free crane bridge z -12 (safe underside 7.69)": 0.387,
+       "end: the far gate opening (2.5 m beside, or 3.0 m over its 5.4 m top)": 0.401,
+       "lamp bodies, v1.1 (#844) (margin 0.25)": 0.596,
+       "the six cubes on the free crane (N464, margin 0.25)": 0.765,
+       "lamp bodies, v2 spread (#864, cbfc0c1d) (margin 0.25)": 0.776,
+       "lamp bodies, v2 B tuned (#853) (margin 0.25)": 0.776,
+       "cut pick 2 (bridle + hoist)": 0.986,
+       "the cut (H30V truss)": 1.307,
+       "pendant lamps (low end 9.0)": 1.949,
+       "end: under the space frame at the end wall (10.3)": 2.138,
+       "cut pick 1 (bridle + hoist)": 2.152,
+       "cut tie-off hl (2 t ratchet strap or 6 mm steel) (margin 0.25)": 3.811,
+       "cut pick 3 (bridle + hoist)": 6.534,
+       "cut tie-off hr (2 t ratchet strap or 6 mm steel) (margin 0.25)": 7.027,
+       "place: conveyor gallery (roller conveyor)": 8.322,
+       "place: entry platform": 9.585,
+       "place: free crane cab (parked z -12) [added for these beams]": 12.262,
+       "place: crane cab (parked z 0.15)": 12.595,
+       "place: runway walkway right row (ladders: right)": 13.801,
+       "place: gallery 1": 14.432,
+       "place: gallery 2": 14.665,
+       "place: gallery 3": 14.897,
+       "place: gallery 4": 15.13,
+       "place: entry stairs": 16.812
+      }
+     }
+    ],
+    "duty": 1.0,
+    "off": false,
+    "signed_off": false,
+    "desk": "held at 0 by deskLookValues.js until the IEC 60825-1 sign-off",
+    "universe": "U1 (owner 2026-10-09, dob-09 note: 2 x UP-LA40WF 32 ch in U1)",
+    "mode_channels": 32
+   }
+  },
+  {
+   "id": "rig-la40wf-entry-02",
+   "name": "UP-LA40WF entry laser 02 (Poligraf rental, 40 W full colour)",
+   "type": "up-la40wf",
+   "code": "UP-LA40WF",
+   "part": "entry laser",
+   "layer": "lasers",
+   "status": "used",
+   "p": [
+    -7.394,
+    5.944,
+    48.0
+   ],
+   "r": [
+    1.577918,
+    0.0,
+    0.007613
+   ],
+   "colour": "set by the desk (held at 0)",
+   "position": "aperture (the output window) at x -7.39, y 5.94, z 48.00: under the T-bar of a ground-supported truss tower at the column line z 48, house left (mount option tower-z48)",
+   "laser": {
+    "beams": [
+     {
+      "id": "P2a",
+      "to": [
+       -6.619,
+       6.669,
+       -53.8
+      ],
+      "length_m": 101.8,
+      "r": [
+       1.577918,
+       0.0,
+       0.007613
+      ],
+      "off": false,
+      "pass": true,
+      "ends_on": "the far (SE) end wall, matte block (hall-block), z -53.8",
+      "worst_margin_m": 0.165,
+      "binding": "near crane bridge (safe underside 7.2)",
+      "half_fan_deg": 0.899,
+      "margin_after_zone_deg": 0.099,
+      "worst_place": "FOH riser",
+      "worst_place_margin_m": 0.167,
+      "places": {
+       "hall floor (dance floor, backstage, everywhere)": {
+        "margin_m": 0.176,
+        "at": [
+         -6.619,
+         6.669,
+         -53.794
+        ]
+       },
+       "DJ step": {
+        "margin_m": 0.181,
+        "at": [
+         -7.031,
+         6.283,
+         0.303
+        ]
+       },
+       "FOH riser": {
+        "margin_m": 0.167,
+        "at": [
+         -7.219,
+         6.107,
+         25.101
+        ]
+       },
+       "entry platform": {
+        "margin_m": 8.911,
+        "at": [
+         -7.391,
+         5.946,
+         47.7
+        ]
+       },
+       "entry stairs": {
+        "margin_m": 16.137,
+        "at": [
+         -7.391,
+         5.946,
+         47.7
+        ]
+       },
+       "gallery 1": {
+        "margin_m": 13.951,
+        "at": [
+         -7.071,
+         6.246,
+         5.602
+        ]
+       },
+       "gallery 2": {
+        "margin_m": 14.14,
+        "at": [
+         -7.136,
+         6.185,
+         14.102
+        ]
+       },
+       "gallery 3": {
+        "margin_m": 14.329,
+        "at": [
+         -7.2,
+         6.125,
+         22.601
+        ]
+       },
+       "gallery 4": {
+        "margin_m": 14.518,
+        "at": [
+         -7.265,
+         6.064,
+         31.101
+        ]
+       },
+       "conveyor gallery (roller conveyor)": {
+        "margin_m": 7.786,
+        "at": [
+         -7.152,
+         6.169,
+         16.302
+        ]
+       },
+       "runway walkway left row (ladders: right)": {
+        "margin_m": 0.389,
+        "at": [
+         -6.619,
+         6.669,
+         -53.794
+        ]
+       },
+       "runway walkway right row (ladders: right)": {
+        "margin_m": 13.626,
+        "at": [
+         -6.619,
+         6.669,
+         -53.794
+        ]
+       },
+       "crane cab (parked z 0.15)": {
+        "margin_m": 12.149,
+        "at": [
+         -7.019,
+         6.294,
+         -1.197
+        ]
+       },
+       "free crane cab (parked z -12) [added for these beams]": {
+        "margin_m": 11.879,
+        "at": [
+         -6.927,
+         6.38,
+         -13.297
+        ]
+       }
+      },
+      "near_crane_under_margin_m": 0.165,
+      "free_crane_under_margin_m": 0.387,
+      "cubes_on_the_free_crane_margin_m": 0.765,
+      "cut_truss_margin_m": 1.19,
+      "cut_picks_margin_m": 0.537,
+      "cut_tieoffs_margin_m": 4.154,
+      "pendant_lamp_margin_m": 1.945,
+      "lamp_bodies": {
+       "v2 spread (#864, cbfc0c1d)": {
+        "margin_m": 0.701,
+        "nearest": "rig-par-cut-04"
+       },
+       "v2 B tuned (#853)": {
+        "margin_m": 0.701,
+        "nearest": "rig-par-cut-04"
+       },
+       "v1.1 (#844)": {
+        "margin_m": 0.546,
+        "nearest": "rig-par-cut-bridge-02"
+       }
+      },
+      "other_unit_margin_m": 0.235,
+      "end_gate_margin_m": 0.226,
+      "end_under_roof_frame_margin_m": 2.139,
+      "end_fan_y_m": [
+       5.176,
+       8.161
+      ],
+      "end_fan_x_m": [
+       -8.111,
+       -5.126
+      ],
+      "cast": {
+       "rays": 61,
+       "all_on_matte_block": true,
+       "first_hits": [
+        "end wall z -54 [hall-block]"
+       ],
+       "end_y_m": [
+        5.247,
+        8.09
+       ],
+       "end_x_m": [
+        -8.04,
+        -5.197
+       ]
+      },
+      "cast_bad_rays": [],
+      "seen_share": {
+       "foh": 0.75,
+       "spotter_e_stop_2": 0.97,
+       "either": 1.0,
+       "method": "each beam sampled every 1 m; a sample is seen if the sight line from the eye (FOH riser + 1.6 m; the spotter at x -7.0, z -4.5, 1.7 m) reaches it with nothing in between (hall triangles + rig boxes; people not counted), as moxir_v1_1.seen_whole"
+      },
+      "all_margins_m": {
+       "near crane bridge (safe underside 7.2)": 0.165,
+       "place: FOH riser": 0.167,
+       "place: hall floor (dance floor, backstage, everywhere)": 0.176,
+       "place: DJ step": 0.181,
+       "end: the far gate opening (2.5 m beside, or 3.0 m over its 5.4 m top)": 0.226,
+       "the other UP-LA40WF body (margin 0.25)": 0.235,
+       "free crane bridge z -12 (safe underside 7.69)": 0.387,
+       "place: runway walkway left row (ladders: right)": 0.389,
+       "cut pick 2 (bridle + hoist)": 0.537,
+       "lamp bodies, v1.1 (#844) (margin 0.25)": 0.546,
+       "lamp bodies, v2 spread (#864, cbfc0c1d) (margin 0.25)": 0.701,
+       "lamp bodies, v2 B tuned (#853) (margin 0.25)": 0.701,
+       "the six cubes on the free crane (N464, margin 0.25)": 0.765,
+       "the cut (H30V truss)": 1.19,
+       "pendant lamps (low end 9.0)": 1.945,
+       "end: under the space frame at the end wall (10.3)": 2.139,
+       "cut pick 1 (bridle + hoist)": 2.601,
+       "cut tie-off hl (2 t ratchet strap or 6 mm steel) (margin 0.25)": 4.154,
+       "cut pick 3 (bridle + hoist)": 6.086,
+       "cut tie-off hr (2 t ratchet strap or 6 mm steel) (margin 0.25)": 6.575,
+       "place: conveyor gallery (roller conveyor)": 7.786,
+       "place: entry platform": 8.911,
+       "place: free crane cab (parked z -12) [added for these beams]": 11.879,
+       "place: crane cab (parked z 0.15)": 12.149,
+       "place: runway walkway right row (ladders: right)": 13.626,
+       "place: gallery 1": 13.951,
+       "place: gallery 2": 14.14,
+       "place: gallery 3": 14.329,
+       "place: gallery 4": 14.518,
+       "place: entry stairs": 16.137
+      }
+     }
+    ],
+    "duty": 1.0,
+    "off": false,
+    "signed_off": false,
+    "desk": "held at 0 by deskLookValues.js until the IEC 60825-1 sign-off",
+    "universe": "U1 (owner 2026-10-09, dob-09 note: 2 x UP-LA40WF 32 ch in U1)",
+    "mode_channels": 32
+   }
+  }
+ ],
+ "setup_sheet": [
+  {
+   "unit": "rig-la40wf-entry-01",
+   "aim": {
+    "end_m": [
+     -6.794,
+     6.669,
+     -53.8
+    ],
+    "pan_deg_from_hall_axis_toward_the_stage_plus_toward_x": 0.73,
+    "tilt_deg_above_level": 0.41,
+    "range_m": 101.8
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -0.19,
+     1.75
+    ],
+    "tilt": [
+     -0.47,
+     1.41
+    ],
+    "half_widths_pan_tilt": [
+     -0.92,
+     1.02,
+     -0.88,
+     1.0
+    ]
+   },
+   "hard_stop_aperture_mask_deg": {
+    "pan": [
+     0.43,
+     1.03
+    ],
+    "tilt": [
+     0.11,
+     0.71
+    ],
+    "why": "the aim +-0.3 deg (the controller zone, made physical: the UP-LA40WF has no software safety zone, it takes DMX); the window minus the 0.5 deg mount tolerance must still contain it: yes"
+   },
+   "beam_block": {
+    "lowest_ray_allowed_tilt_deg": -0.47,
+    "setting": "block everything below -0.47 deg above level (the window floor); set with the unit off, a spirit level on the block edge"
+   },
+   "mount": {
+    "on": "the T-bar of a ground-supported truss tower (mount option tower-z48)",
+    "aperture_m": [
+     -8.094,
+     5.944,
+     48.0
+    ],
+    "unit_body": "x +-0.21, y +-0.117, z 48.00..48.55 (0.42 x 0.235 x 0.555 m EQUIVALENT)",
+    "roll_deg": 0.0,
+    "clamp": "the U-bracket bolted to the T-bar (the rental house's hardware) + a safety steel (secondary suspension)"
+   }
+  },
+  {
+   "unit": "rig-la40wf-entry-02",
+   "aim": {
+    "end_m": [
+     -6.619,
+     6.669,
+     -53.8
+    ],
+    "pan_deg_from_hall_axis_toward_the_stage_plus_toward_x": 0.44,
+    "tilt_deg_above_level": 0.41,
+    "range_m": 101.8
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -0.56,
+     1.36
+    ],
+    "tilt": [
+     -0.47,
+     1.41
+    ],
+    "half_widths_pan_tilt": [
+     -1.0,
+     0.92,
+     -0.88,
+     1.0
+    ]
+   },
+   "hard_stop_aperture_mask_deg": {
+    "pan": [
+     0.14,
+     0.74
+    ],
+    "tilt": [
+     0.11,
+     0.71
+    ],
+    "why": "the aim +-0.3 deg (the controller zone, made physical: the UP-LA40WF has no software safety zone, it takes DMX); the window minus the 0.5 deg mount tolerance must still contain it: yes"
+   },
+   "beam_block": {
+    "lowest_ray_allowed_tilt_deg": -0.47,
+    "setting": "block everything below -0.47 deg above level (the window floor); set with the unit off, a spirit level on the block edge"
+   },
+   "mount": {
+    "on": "the T-bar of a ground-supported truss tower (mount option tower-z48)",
+    "aperture_m": [
+     -7.394,
+     5.944,
+     48.0
+    ],
+    "unit_body": "x +-0.21, y +-0.117, z 48.00..48.55 (0.42 x 0.235 x 0.555 m EQUIVALENT)",
+    "roll_deg": 0.0,
+    "clamp": "the U-bracket bolted to the T-bar (the rental house's hardware) + a safety steel (secondary suspension)"
+   }
+  }
+ ],
+ "nohd": {
+  "mpe_w_m2_0_25s": 25.46,
+  "all_colours_41w_0_25s_m": 1097,
+  "all_colours_41w_10s_m": 1742,
+  "if_10mm_1_3mrad_are_1_e2_values_m": 1553,
+  "per_colour_0_25s_m": {
+   "blue 445 nm 16 W": 684,
+   "green 520 nm 15 W": 662,
+   "red 638 nm 10 W": 539
+  },
+  "dimming_0_25s_m": {
+   "100 %": 1097,
+   "10 %": 344,
+   "1 %": 106,
+   "0.1 %": 30
+  },
+  "eye_safe_power_at_5_m_from_the_aperture_mw": 3.1,
+  "diffuse_hazard_off_the_block_m": {
+   "albedo 0.5": 0.506,
+   "albedo 0.9": 0.679,
+   "both units on one spot, albedo 0.9": 0.961
+  },
+  "basis": "IEC 60825-1:2014 Table A.1 (MPE = 18 t^0.75 J/m2, visible, t 0.25 s blink / 10 s), NOHD = (sqrt(4P/(pi MPE)) - a)/phi with a = 6 mm (ASSUMED, the safe end for NOHD), phi = 1.3 mrad full angle (EQUIVALENT); the 1/e2 line converts both by 1/sqrt(2). Diffuse: sqrt(rho P / (pi MPE)) (ANSI Z136.1 extended-source simplification, as moxir_v1_1.nohd()). The hall is 108 m long: every beam is hazardous wherever it is; separation (3.0 m / 2.5 m) and the hard stop are the control, not distance or dimming."
+ },
+ "cubes": {
+  "n464": "the six cubes sit ON the free crane at z -12 (aperture 8.5-9.0), new aims being designed elsewhere; the old cube tubes (aerial-far-crane.json, hung at 5.2 m) are NOT used here",
+  "keep_out_box_used": {
+   "x_m": [
+    -11.35,
+    11.35
+   ],
+   "y_m": [
+    8.3,
+    9.4
+   ],
+   "z_m": [
+    -13.45,
+    -10.55
+   ],
+   "what": "the six LaserCubes ON the free crane's bridge at z -12 (owner N464, 21:1x): aperture about 8.9 m (8.5-9.0), bodies + clamps 8.3-9.4; their x and aims are being redesigned, so the whole bridge (both girders) is kept out"
+  }
+ },
+ "e_stops": {
+  "e_stop_1": "FOH (Dima): cuts the UP-LA40WF output (its interlock or a contactor on its supply, whichever the bench test shows stops the beam in < 0.5 s)",
+  "e_stop_2": "the spotter (Kira) at x -7.0, z -4.5, as for the cubes",
+  "seen_share": {
+   "rig-la40wf-entry-01": {
+    "foh": 0.73,
+    "spotter_e_stop_2": 0.98,
+    "either": 1.0,
+    "method": "each beam sampled every 1 m; a sample is seen if the sight line from the eye (FOH riser + 1.6 m; the spotter at x -7.0, z -4.5, 1.7 m) reaches it with nothing in between (hall triangles + rig boxes; people not counted), as moxir_v1_1.seen_whole"
+   },
+   "rig-la40wf-entry-02": {
+    "foh": 0.75,
+    "spotter_e_stop_2": 0.97,
+    "either": 1.0,
+    "method": "each beam sampled every 1 m; a sample is seen if the sight line from the eye (FOH riser + 1.6 m; the spotter at x -7.0, z -4.5, 1.7 m) reaches it with nothing in between (hall triangles + rig boxes; people not counted), as moxir_v1_1.seen_whole"
+   }
+  }
+ },
+ "owed": [
+  "THE HARD STOP: an aperture mask on each unit's output (non-combustible, rated for 41 W continuous) that lets out only the aim +-0.3 deg; nothing in this design works without it, because the UP-LA40WF takes DMX and has no software safety zone",
+  "the unit's behaviour when DMX is lost (hold, blackout or auto mode 25 / sound 75): bench test; the mask contains it either way",
+  "the unit's interlock / key switch and how E-stop 1 cuts it (bench test, < 0.5 s)",
+  "the aperture (mm) and the divergence definition from Poligraf or the label; the scan angle",
+  "nothing to stand on under the beams higher than under_the_beams says (tables, benches, crates, cases in the strip it names: 0.80 m at the entry end, 0.17 m at the far end): the crowd plan",
+  "the near crane underside taped (7.2-8.1 m; 7.2 used): it binds",
+  "the far half's pendant lamps (z -42..-5, not seen on 10-08, not in the model): nothing may hang lower than the beams' tube top + 0.25 m over their strip (keep_out KO-3: 8.17 + 0.25 = 8.42 m at the far end)",
+  "the FOH riser height and place (0.6 m ASSUMED at x -6.7..-3.7, z 28-30): it binds",
+  "the free crane seen at z -12 with the cubes on its top (N464)",
+  "the LSO's walk with the beams at alignment power, and the permit's issuer + number"
+ ],
+ "assumed": [
+  "aperture 10 mm (tube) / 6 mm (NOHD)",
+  "divergence 1.3 mrad full angle",
+  "body 0.42 x 0.235 x 0.555 m and 35 kg (EQUIVALENT)",
+  "the entry platform and the FOH riser as in the v1.1 files",
+  "the far wall is block where the model says so (no window, no door other than the gate)",
+  "the T-bar, pen and outrigger sizes in the keep-out boxes (ESTIMATE)"
+ ]
+}

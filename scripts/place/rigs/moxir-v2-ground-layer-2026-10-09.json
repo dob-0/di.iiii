@@ -1,0 +1,8772 @@
+{
+ "what": "MOXIR v2 GROUND LAYER (round 2): ONLY the lamps on the floor (40 UP-PL5403 + 18 UP-B380F), out of the crowd; ids kept from scripts/place/rigs/moxir-v2-spread-2026-10-09.json where a unit just moves",
+ "date": "2026-10-09",
+ "round": "r2-2026-10-10",
+ "owner": "and also other washes and beams what we dont use make on the ground, not on the arcs, and also washs are so close on the ground for now you can use the left places of the area so we need epic thing you know use space right",
+ "ledger": "N465",
+ "written_by": "scripts/place/moxir_v2_ground.py build",
+ "from_rig": "scripts/place/rigs/moxir-v2-spread-2026-10-09.json",
+ "full_rig": "scripts/place/rigs/moxir-v2-ground-2026-10-09.json",
+ "frame": "hall frame: metres, Y up, +x house right, +z toward the entry; rotations three.js Euler XYZ radians, a spot's unrotated beam points -Y; angle_rad = half the beam angle; box solids base-anchored; truss origin at the section centre, tower at the base plate (src/rigbuild/pieces.js), a tower's s[1] scales the 6 m catalogue tower.",
+ "rules": {
+  "round": "r2-2026-10-10",
+  "ground_max_y_m": 1.0,
+  "par_min_spacing_m": 6.0,
+  "crane_park": {
+   "x_m": [
+    -12.0,
+    12.0
+   ],
+   "z_m": [
+    -2.0,
+    7.0
+   ],
+   "y_m": [
+    2.5,
+    10.8
+   ],
+   "why": "the near crane + the cut truss move inside it (another workflow, \"half behind the DJ\"): no unit above 2.5 m there and no beam through it"
+  },
+  "pen_clear_over_m": 3.0,
+  "hand_m": 2.8,
+  "barrier_reach_m": 0.6,
+  "head_reach_m": 1.5,
+  "par_reach_m": 1.0,
+  "glare_deg": 30.0,
+  "glare_rule_status": "ASSUMED: a design heuristic (forward scatter at HG g 0.74, HG(30 deg) ~ 1/5 of HG(15 deg); eyes.py), not a published standard. The eye-safety limit is the B380F's IEC 62471 hazard distance: UNKNOWN until the rental gives its risk group.",
+  "lean_m": 0.5,
+  "par_safety_lenses_deg": [
+   15.0,
+   25.0
+  ],
+  "par_design_lens_deg": 25.0,
+  "peak_cap": 0.85,
+  "beam_min_spacing_m": 4.0,
+  "beam_cover_r_m": 24.0,
+  "door_walk": {
+   "x_m": [
+    -8.0,
+    7.0
+   ],
+   "z_m": [
+    43.5,
+    53.7
+   ],
+   "why": "the unpainted strip between the chill (x <= -8) and the bar (x >= 7) from the hot zone's end (z 43.5) to the door (z 53.8): everyone walks in here, so it is public"
+  },
+  "artists_route": {
+   "x_m": [
+    -4.0,
+    4.0
+   ],
+   "z_m": [
+    -53.8,
+    -31.0
+   ],
+   "why": "ASSUMED: the artists' gate (x -2.4..2.4, MOXIR.md 4.0a) + 1.6 m each side, to the paint's far edge: kept clear of units and low beams"
+  },
+  "pit": {
+   "x_m": [
+    -11.6,
+    2.0
+   ],
+   "z_m": [
+    6.7,
+    8.2
+   ],
+   "why": "MOXIR.md 5.3 \"nothing on the floor between the PA and the barrier\": from the PA boxes' front line (PA L 6.7) to the barrier (z 8.2), the barrier's width"
+  },
+  "dj_rule_deg": 20.0,
+  "min_throw_m": 8.0,
+  "eyes": {
+   "floor centre": [
+    -3.75,
+    1.7,
+    18.1
+   ],
+   "wing L": [
+    -20.0,
+    1.7,
+    8.0
+   ],
+   "wing R": [
+    18.0,
+    1.7,
+    8.0
+   ],
+   "behind the stage": [
+    -4.0,
+    1.7,
+    -22.0
+   ],
+   "mid-hall": [
+    -2.0,
+    1.7,
+    36.0
+   ],
+   "near the entry": [
+    0.0,
+    1.7,
+    51.5
+   ],
+   "FOH": [
+    -5.2,
+    2.3,
+    29.0
+   ],
+   "far corner L": [
+    -24.0,
+    1.7,
+    -24.0
+   ],
+   "far corner R": [
+    18.0,
+    1.7,
+    -22.0
+   ]
+  },
+  "eye_weights": {
+   "floor centre": 1.945,
+   "wing L": 0.963,
+   "wing R": 1.352,
+   "behind the stage": 0.894,
+   "mid-hall": 0.867,
+   "near the entry": 0.698,
+   "FOH": 1.068,
+   "far corner L": 0.599,
+   "far corner R": 0.614
+  },
+  "objective": "sum over eyes (weighted by the people each stands for) and depth bins of sqrt(light): PAR lx from lit surfaces (Lambertian, one bounce, the crowd not see-through), beam G (single scattering, haze t40)",
+  "window": {
+   "pan_deg": 10.0,
+   "tilt_up_deg": 15.0,
+   "aim_tol_deg": 2.0,
+   "aperture_r_m": 0.08
+  },
+  "base": {
+   "plate_m": [
+    0.6,
+    0.6,
+    0.018
+   ],
+   "plate_kg": 4.5,
+   "sandbags_kg": [
+    15.0,
+    15.0
+   ],
+   "head_kg": 23.0,
+   "head_h_m": 0.69,
+   "base_m": [
+    0.46,
+    0.31
+   ],
+   "factor": 1.5,
+   "anchors_alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+   "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+  },
+  "rules": "r2-2026-10-10: out of the crowd (heads 1.5 m from the public floor, low runs 0.6 m from it), window pan +-10 (every 2.5) / tilt +15, aim tol 2 deg, lens 0.08 m, dense glare at 1.5/1.7/1.9 m on a 0.5 m grid + the 0.5 m lean band, #873 strip, artists' route",
+  "par_rules": "r2-2026-10-10: out of the crowd (1.0 m), eye footprints at 25 deg (lean 0.5 m, rings 8/16/24, lens 0.105 m, aim tol 1 deg), crowd-aware scores, the door walkway public"
+ },
+ "islands": [
+  {
+   "island": "the stage pen",
+   "kind": "stage pen",
+   "rect": {
+    "x_m": [
+     -10.5,
+     1.5
+    ],
+    "z_m": [
+     -7.5,
+     8.2
+    ]
+   }
+  },
+  {
+   "island": "the stage pen's bay (A13, #878)",
+   "kind": "stage pen",
+   "rect": {
+    "x_m": [
+     -12.0,
+     -10.5
+    ],
+    "z_m": [
+     1.75,
+     6.5
+    ]
+   }
+  }
+ ],
+ "perimeter_faces": [
+  [
+   -35.7,
+   50.4,
+   "x"
+  ],
+  [
+   -34.7,
+   36.4,
+   "x"
+  ],
+  [
+   -35.2,
+   50.9,
+   "z"
+  ],
+  [
+   -34.7,
+   51.4,
+   "x"
+  ],
+  [
+   -33.7,
+   36.4,
+   "x"
+  ],
+  [
+   -34.2,
+   51.9,
+   "z"
+  ],
+  [
+   -33.7,
+   52.4,
+   "x"
+  ],
+  [
+   -32.7,
+   36.4,
+   "x"
+  ],
+  [
+   -33.2,
+   52.9,
+   "z"
+  ],
+  [
+   -32.2,
+   35.9,
+   "z"
+  ],
+  [
+   -31.7,
+   35.4,
+   "x"
+  ],
+  [
+   -31.2,
+   -15.1,
+   "z"
+  ],
+  [
+   -30.7,
+   -15.6,
+   "x"
+  ],
+  [
+   -31.2,
+   -14.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -13.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -12.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -11.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -10.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -9.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -8.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -7.1,
+   "z"
+  ],
+  [
+   -31.2,
+   -5.1,
+   "z"
+  ],
+  [
+   -30.7,
+   -4.6,
+   "x"
+  ],
+  [
+   -30.7,
+   35.4,
+   "x"
+  ],
+  [
+   -30.2,
+   -21.1,
+   "z"
+  ],
+  [
+   -29.7,
+   -21.6,
+   "x"
+  ],
+  [
+   -30.2,
+   -20.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -19.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -18.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -17.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -16.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -4.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -3.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -2.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -1.1,
+   "z"
+  ],
+  [
+   -30.2,
+   -0.1,
+   "z"
+  ],
+  [
+   -30.2,
+   0.9,
+   "z"
+  ],
+  [
+   -30.2,
+   1.9,
+   "z"
+  ],
+  [
+   -30.2,
+   2.9,
+   "z"
+  ],
+  [
+   -30.2,
+   3.9,
+   "z"
+  ],
+  [
+   -30.2,
+   4.9,
+   "z"
+  ],
+  [
+   -30.2,
+   5.9,
+   "z"
+  ],
+  [
+   -30.2,
+   6.9,
+   "z"
+  ],
+  [
+   -30.2,
+   7.9,
+   "z"
+  ],
+  [
+   -29.7,
+   8.4,
+   "x"
+  ],
+  [
+   -29.7,
+   35.4,
+   "x"
+  ],
+  [
+   -29.2,
+   -23.1,
+   "z"
+  ],
+  [
+   -28.7,
+   -23.6,
+   "x"
+  ],
+  [
+   -29.2,
+   8.9,
+   "z"
+  ],
+  [
+   -29.2,
+   9.9,
+   "z"
+  ],
+  [
+   -29.2,
+   10.9,
+   "z"
+  ],
+  [
+   -29.2,
+   11.9,
+   "z"
+  ],
+  [
+   -28.7,
+   12.4,
+   "x"
+  ],
+  [
+   -28.2,
+   35.9,
+   "z"
+  ],
+  [
+   -28.7,
+   35.4,
+   "x"
+  ],
+  [
+   -28.2,
+   -24.1,
+   "z"
+  ],
+  [
+   -27.7,
+   -24.6,
+   "x"
+  ],
+  [
+   -28.2,
+   12.9,
+   "z"
+  ],
+  [
+   -28.2,
+   13.9,
+   "z"
+  ],
+  [
+   -27.7,
+   14.4,
+   "x"
+  ],
+  [
+   -27.7,
+   36.4,
+   "x"
+  ],
+  [
+   -27.2,
+   -25.1,
+   "z"
+  ],
+  [
+   -26.7,
+   -25.6,
+   "x"
+  ],
+  [
+   -27.2,
+   14.9,
+   "z"
+  ],
+  [
+   -27.2,
+   15.9,
+   "z"
+  ],
+  [
+   -26.7,
+   16.4,
+   "x"
+  ],
+  [
+   -26.7,
+   36.4,
+   "x"
+  ],
+  [
+   -26.2,
+   -26.1,
+   "z"
+  ],
+  [
+   -25.7,
+   -26.6,
+   "x"
+  ],
+  [
+   -26.2,
+   16.9,
+   "z"
+  ],
+  [
+   -26.2,
+   17.9,
+   "z"
+  ],
+  [
+   -25.7,
+   18.4,
+   "x"
+  ],
+  [
+   -25.7,
+   36.4,
+   "x"
+  ],
+  [
+   -25.2,
+   -27.1,
+   "z"
+  ],
+  [
+   -24.7,
+   -27.6,
+   "x"
+  ],
+  [
+   -25.2,
+   18.9,
+   "z"
+  ],
+  [
+   -25.2,
+   19.9,
+   "z"
+  ],
+  [
+   -24.7,
+   20.4,
+   "x"
+  ],
+  [
+   -24.7,
+   36.4,
+   "x"
+  ],
+  [
+   -24.2,
+   -28.1,
+   "z"
+  ],
+  [
+   -23.7,
+   -28.6,
+   "x"
+  ],
+  [
+   -24.2,
+   20.9,
+   "z"
+  ],
+  [
+   -24.2,
+   21.9,
+   "z"
+  ],
+  [
+   -23.7,
+   22.4,
+   "x"
+  ],
+  [
+   -23.7,
+   36.4,
+   "x"
+  ],
+  [
+   -23.2,
+   -29.1,
+   "z"
+  ],
+  [
+   -22.7,
+   -29.6,
+   "x"
+  ],
+  [
+   -23.2,
+   22.9,
+   "z"
+  ],
+  [
+   -23.2,
+   23.9,
+   "z"
+  ],
+  [
+   -22.7,
+   24.4,
+   "x"
+  ],
+  [
+   -22.7,
+   36.4,
+   "x"
+  ],
+  [
+   -21.7,
+   -29.6,
+   "x"
+  ],
+  [
+   -22.2,
+   24.9,
+   "z"
+  ],
+  [
+   -21.7,
+   25.4,
+   "x"
+  ],
+  [
+   -21.2,
+   36.9,
+   "z"
+  ],
+  [
+   -21.7,
+   36.4,
+   "x"
+  ],
+  [
+   -21.2,
+   -30.1,
+   "z"
+  ],
+  [
+   -20.7,
+   -30.6,
+   "x"
+  ],
+  [
+   -21.2,
+   25.9,
+   "z"
+  ],
+  [
+   -21.2,
+   26.9,
+   "z"
+  ],
+  [
+   -20.7,
+   27.4,
+   "x"
+  ],
+  [
+   -20.7,
+   37.4,
+   "x"
+  ],
+  [
+   -19.7,
+   -30.6,
+   "x"
+  ],
+  [
+   -20.2,
+   27.9,
+   "z"
+  ],
+  [
+   -19.7,
+   28.4,
+   "x"
+  ],
+  [
+   -19.7,
+   37.4,
+   "x"
+  ],
+  [
+   -18.7,
+   -30.6,
+   "x"
+  ],
+  [
+   -19.2,
+   28.9,
+   "z"
+  ],
+  [
+   -18.7,
+   29.4,
+   "x"
+  ],
+  [
+   -18.2,
+   37.9,
+   "z"
+  ],
+  [
+   -18.7,
+   37.4,
+   "x"
+  ],
+  [
+   -18.2,
+   -31.1,
+   "z"
+  ],
+  [
+   -17.7,
+   -31.6,
+   "x"
+  ],
+  [
+   -18.2,
+   29.9,
+   "z"
+  ],
+  [
+   -18.2,
+   30.9,
+   "z"
+  ],
+  [
+   -17.7,
+   31.4,
+   "x"
+  ],
+  [
+   -17.7,
+   38.4,
+   "x"
+  ],
+  [
+   -17.2,
+   31.9,
+   "z"
+  ],
+  [
+   -16.7,
+   32.4,
+   "x"
+  ],
+  [
+   -16.2,
+   38.9,
+   "z"
+  ],
+  [
+   -16.7,
+   38.4,
+   "x"
+  ],
+  [
+   -16.2,
+   32.9,
+   "z"
+  ],
+  [
+   -15.7,
+   33.4,
+   "x"
+  ],
+  [
+   -15.2,
+   39.9,
+   "z"
+  ],
+  [
+   -15.7,
+   39.4,
+   "x"
+  ],
+  [
+   -15.2,
+   33.9,
+   "z"
+  ],
+  [
+   -14.7,
+   34.4,
+   "x"
+  ],
+  [
+   -14.7,
+   40.4,
+   "x"
+  ],
+  [
+   -14.2,
+   34.9,
+   "z"
+  ],
+  [
+   -13.7,
+   35.4,
+   "x"
+  ],
+  [
+   -13.2,
+   40.9,
+   "z"
+  ],
+  [
+   -13.7,
+   40.4,
+   "x"
+  ],
+  [
+   -13.2,
+   35.9,
+   "z"
+  ],
+  [
+   -12.7,
+   36.4,
+   "x"
+  ],
+  [
+   -12.2,
+   36.9,
+   "z"
+  ],
+  [
+   -11.7,
+   37.4,
+   "x"
+  ],
+  [
+   5.3,
+   -28.6,
+   "x"
+  ],
+  [
+   6.3,
+   -28.6,
+   "x"
+  ],
+  [
+   7.3,
+   -28.6,
+   "x"
+  ],
+  [
+   7.8,
+   52.9,
+   "z"
+  ],
+  [
+   8.8,
+   -28.1,
+   "z"
+  ],
+  [
+   8.3,
+   -28.6,
+   "x"
+  ],
+  [
+   8.3,
+   52.4,
+   "x"
+  ],
+  [
+   9.3,
+   -27.6,
+   "x"
+  ],
+  [
+   9.3,
+   52.4,
+   "x"
+  ],
+  [
+   10.8,
+   -27.1,
+   "z"
+  ],
+  [
+   10.3,
+   -27.6,
+   "x"
+  ],
+  [
+   10.8,
+   51.9,
+   "z"
+  ],
+  [
+   10.3,
+   52.4,
+   "x"
+  ],
+  [
+   11.3,
+   -26.6,
+   "x"
+  ],
+  [
+   11.8,
+   50.9,
+   "z"
+  ],
+  [
+   11.3,
+   51.4,
+   "x"
+  ],
+  [
+   12.3,
+   -26.6,
+   "x"
+  ],
+  [
+   12.8,
+   46.9,
+   "z"
+  ],
+  [
+   12.8,
+   47.9,
+   "z"
+  ],
+  [
+   12.8,
+   48.9,
+   "z"
+  ],
+  [
+   12.8,
+   49.9,
+   "z"
+  ],
+  [
+   12.3,
+   50.4,
+   "x"
+  ],
+  [
+   13.8,
+   -26.1,
+   "z"
+  ],
+  [
+   13.3,
+   -26.6,
+   "x"
+  ],
+  [
+   13.8,
+   40.9,
+   "z"
+  ],
+  [
+   13.8,
+   41.9,
+   "z"
+  ],
+  [
+   13.8,
+   42.9,
+   "z"
+  ],
+  [
+   13.8,
+   43.9,
+   "z"
+  ],
+  [
+   13.8,
+   44.9,
+   "z"
+  ],
+  [
+   13.8,
+   45.9,
+   "z"
+  ],
+  [
+   13.3,
+   46.4,
+   "x"
+  ],
+  [
+   14.3,
+   -25.6,
+   "x"
+  ],
+  [
+   14.3,
+   40.4,
+   "x"
+  ],
+  [
+   15.3,
+   -25.6,
+   "x"
+  ],
+  [
+   15.8,
+   39.9,
+   "z"
+  ],
+  [
+   15.3,
+   40.4,
+   "x"
+  ],
+  [
+   16.8,
+   -25.1,
+   "z"
+  ],
+  [
+   16.3,
+   -25.6,
+   "x"
+  ],
+  [
+   16.8,
+   38.9,
+   "z"
+  ],
+  [
+   16.3,
+   39.4,
+   "x"
+  ],
+  [
+   17.3,
+   -24.6,
+   "x"
+  ],
+  [
+   17.8,
+   37.9,
+   "z"
+  ],
+  [
+   17.3,
+   38.4,
+   "x"
+  ],
+  [
+   18.8,
+   -24.1,
+   "z"
+  ],
+  [
+   18.3,
+   -24.6,
+   "x"
+  ],
+  [
+   18.8,
+   36.9,
+   "z"
+  ],
+  [
+   18.3,
+   37.4,
+   "x"
+  ],
+  [
+   19.8,
+   35.9,
+   "z"
+  ],
+  [
+   19.3,
+   36.4,
+   "x"
+  ],
+  [
+   20.8,
+   34.9,
+   "z"
+  ],
+  [
+   20.3,
+   35.4,
+   "x"
+  ],
+  [
+   21.8,
+   32.9,
+   "z"
+  ],
+  [
+   21.8,
+   33.9,
+   "z"
+  ],
+  [
+   21.3,
+   34.4,
+   "x"
+  ],
+  [
+   22.8,
+   31.9,
+   "z"
+  ],
+  [
+   22.3,
+   32.4,
+   "x"
+  ],
+  [
+   23.8,
+   28.9,
+   "z"
+  ],
+  [
+   23.8,
+   29.9,
+   "z"
+  ],
+  [
+   23.8,
+   30.9,
+   "z"
+  ],
+  [
+   23.3,
+   31.4,
+   "x"
+  ],
+  [
+   24.8,
+   -18.1,
+   "z"
+  ],
+  [
+   24.8,
+   26.9,
+   "z"
+  ],
+  [
+   24.3,
+   28.4,
+   "x"
+  ],
+  [
+   25.8,
+   -17.1,
+   "z"
+  ],
+  [
+   25.3,
+   -17.6,
+   "x"
+  ],
+  [
+   25.8,
+   -16.1,
+   "z"
+  ],
+  [
+   25.8,
+   20.9,
+   "z"
+  ],
+  [
+   25.8,
+   21.9,
+   "z"
+  ],
+  [
+   25.8,
+   22.9,
+   "z"
+  ],
+  [
+   25.8,
+   23.9,
+   "z"
+  ],
+  [
+   25.8,
+   24.9,
+   "z"
+  ],
+  [
+   25.8,
+   25.9,
+   "z"
+  ],
+  [
+   25.3,
+   26.4,
+   "x"
+  ],
+  [
+   26.8,
+   -15.1,
+   "z"
+  ],
+  [
+   26.3,
+   -15.6,
+   "x"
+  ],
+  [
+   26.8,
+   -14.1,
+   "z"
+  ],
+  [
+   26.8,
+   -13.1,
+   "z"
+  ],
+  [
+   26.8,
+   17.9,
+   "z"
+  ],
+  [
+   26.8,
+   18.9,
+   "z"
+  ],
+  [
+   26.8,
+   19.9,
+   "z"
+  ],
+  [
+   26.3,
+   20.4,
+   "x"
+  ],
+  [
+   27.8,
+   -12.1,
+   "z"
+  ],
+  [
+   27.3,
+   -12.6,
+   "x"
+  ],
+  [
+   27.8,
+   -11.1,
+   "z"
+  ],
+  [
+   27.8,
+   -10.1,
+   "z"
+  ],
+  [
+   27.8,
+   -9.1,
+   "z"
+  ],
+  [
+   27.8,
+   -8.1,
+   "z"
+  ],
+  [
+   27.8,
+   13.9,
+   "z"
+  ],
+  [
+   27.8,
+   14.9,
+   "z"
+  ],
+  [
+   27.8,
+   15.9,
+   "z"
+  ],
+  [
+   27.8,
+   16.9,
+   "z"
+  ],
+  [
+   27.3,
+   17.4,
+   "x"
+  ],
+  [
+   28.8,
+   -7.1,
+   "z"
+  ],
+  [
+   28.3,
+   -7.6,
+   "x"
+  ],
+  [
+   28.8,
+   -6.1,
+   "z"
+  ],
+  [
+   28.8,
+   -5.1,
+   "z"
+  ],
+  [
+   28.8,
+   -4.1,
+   "z"
+  ],
+  [
+   28.8,
+   -3.1,
+   "z"
+  ],
+  [
+   28.8,
+   -2.1,
+   "z"
+  ],
+  [
+   28.8,
+   -1.1,
+   "z"
+  ],
+  [
+   28.8,
+   -0.1,
+   "z"
+  ],
+  [
+   28.8,
+   0.9,
+   "z"
+  ],
+  [
+   28.8,
+   1.9,
+   "z"
+  ],
+  [
+   28.8,
+   2.9,
+   "z"
+  ],
+  [
+   28.8,
+   3.9,
+   "z"
+  ],
+  [
+   28.8,
+   4.9,
+   "z"
+  ],
+  [
+   28.8,
+   5.9,
+   "z"
+  ],
+  [
+   28.8,
+   6.9,
+   "z"
+  ],
+  [
+   28.8,
+   7.9,
+   "z"
+  ],
+  [
+   28.8,
+   8.9,
+   "z"
+  ],
+  [
+   28.8,
+   9.9,
+   "z"
+  ],
+  [
+   28.8,
+   10.9,
+   "z"
+  ],
+  [
+   28.8,
+   11.9,
+   "z"
+  ],
+  [
+   28.8,
+   12.9,
+   "z"
+  ],
+  [
+   28.3,
+   13.4,
+   "x"
+  ]
+ ],
+ "fixtures": [
+  {
+   "id": "rig-par-planes-25",
+   "type": "up-pl5403",
+   "part": "DJ key (ground option)",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "DJ key, a GROUND OPTION (combine with the truss DJ light): the gap between the PA boxes (x -6.5..-2.9), 1.71 m behind the barrier line (z 8.16: out of reach, ISO 13857 1.4 m), behind their front line: the only floor place that sees the DJ past both boxes",
+   "p": [
+    -4.5,
+    0.31,
+    6.45
+   ],
+   "r": [
+    2.281115,
+    0.0,
+    -0.279523
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "stands_in": "stage pen",
+   "region": "stage pen",
+   "place": "stage front key",
+   "pick_phase": null,
+   "guard": "a mesh guard (the pit side of the barrier, security works there)",
+   "from_public_m": null,
+   "throw_m": 1.372,
+   "eye_lux": null,
+   "lit_pct": null,
+   "gain": null,
+   "moved_from": {
+    "p": [
+     0.4,
+     4.5,
+     7.3
+    ],
+    "part": "stage key",
+    "plan_m": 4.973
+   },
+   "power_w": 200,
+   "targets": [
+    "DJ face"
+   ],
+   "combine_with": "the truss DJ light (another workflow): this key is a ground OPTION, one fader",
+   "dmx": {
+    "universe": 2,
+    "address": 293,
+    "footprint": 8,
+    "fixture": 245,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-STAGE-B",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-23",
+   "type": "up-pl5403",
+   "part": "stage front booth (ground)",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "the booth front from the floor: the far corner of the gap between the PA boxes (x -6.5..-2.9), behind the PA boxes' front line (z 6.7: MOXIR.md 5.3, nothing between the PA and the barrier) and 1.61 m behind the barrier (out of reach, ISO 13857 1.4 m); its own lamp: from the floor the DJ face and the booth front are 14.7 deg apart, more than one 15 deg PAR holds",
+   "p": [
+    -3.15,
+    0.31,
+    6.55
+   ],
+   "r": [
+    2.075174,
+    0.0,
+    -0.963004
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "stands_in": "stage pen",
+   "region": "stage pen",
+   "place": "stage front booth",
+   "pick_phase": null,
+   "guard": "a mesh guard (the pit side of the barrier, security works there)",
+   "from_public_m": null,
+   "throw_m": 2.2,
+   "eye_lux": null,
+   "lit_pct": null,
+   "gain": null,
+   "moved_from": {
+    "p": [
+     -11.35,
+     6.0,
+     11.6
+    ],
+    "part": "stage key",
+    "plan_m": 9.63
+   },
+   "power_w": 200,
+   "targets": [
+    "booth front"
+   ],
+   "dmx": {
+    "universe": 2,
+    "address": 277,
+    "footprint": 8,
+    "fixture": 243,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-STAGE-B",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-37",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen's floor (crew only) at x -2 z -0.5, straight up into the roof steel over the stage",
+   "p": [
+    -2.0,
+    0.31,
+    -0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "stage pen",
+   "region": "stage pen",
+   "place": "stage pen x -2 z -0.5",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": null,
+   "throw_m": 13.04,
+   "eye_lux": {
+    "floor centre": 0.043,
+    "wing L": 0.008,
+    "wing R": 0.009,
+    "behind the stage": 0.011,
+    "mid-hall": 0.006,
+    "near the entry": 0.002,
+    "FOH": 0.01,
+    "far corner L": 0.003,
+    "far corner R": 0.005
+   },
+   "lit_pct": 88.5,
+   "gain": 1.012,
+   "moved_from": {
+    "p": [
+     0.9,
+     0.3,
+     0.9
+    ],
+    "part": "embers",
+    "plan_m": 3.22
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 389,
+    "footprint": 8,
+    "fixture": 257,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-STAGE-B",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-29",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z 19.1, aimed at the roof steel 10 m in toward the crowd (house right)",
+   "p": [
+    30.5,
+    0.31,
+    19.1
+   ],
+   "r": [
+    2.625277,
+    0.0,
+    -0.587157
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z 19.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.836,
+   "throw_m": 22.224,
+   "eye_lux": {
+    "floor centre": 0.003,
+    "wing L": 0.002,
+    "wing R": 0.121,
+    "behind the stage": 0.0,
+    "mid-hall": 0.002,
+    "near the entry": 0.0,
+    "FOH": 0.002,
+    "far corner L": 0.0,
+    "far corner R": 0.003
+   },
+   "lit_pct": 70.5,
+   "gain": 0.762,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     18.0
+    ],
+    "part": "columns",
+    "plan_m": 17.691
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 325,
+    "footprint": 8,
+    "fixture": 249,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-26",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -29.5 z 16.1, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -29.5,
+    0.31,
+    16.1
+   ],
+   "r": [
+    2.981376,
+    0.0,
+    0.74764
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -29.5 z 16.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.077,
+   "throw_m": 18.013,
+   "eye_lux": {
+    "floor centre": 0.039,
+    "wing L": 0.206,
+    "wing R": 0.005,
+    "behind the stage": 0.0,
+    "mid-hall": 0.01,
+    "near the entry": 0.003,
+    "FOH": 0.007,
+    "far corner L": 0.003,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.918,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     18.0
+    ],
+    "part": "columns",
+    "plan_m": 16.765
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 301,
+    "footprint": 8,
+    "fixture": 246,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-12",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z -16.9, aimed at the roof steel 10 m in toward the crowd (house right)",
+   "p": [
+    30.5,
+    0.31,
+    -16.9
+   ],
+   "r": [
+    -2.719658,
+    0.0,
+    -0.654538
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z -16.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 4.595,
+   "throw_m": 20.5,
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.0,
+    "wing R": 0.02,
+    "behind the stage": 0.002,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.001,
+    "far corner R": 0.062
+   },
+   "lit_pct": 67.2,
+   "gain": 0.274,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     -12.0
+    ],
+    "part": "columns",
+    "plan_m": 18.324
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 189,
+    "footprint": 8,
+    "fixture": 232,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-09",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -23.5 z -31.9, aimed at the roof steel 10 m in toward the crowd (far end)",
+   "p": [
+    -23.5,
+    0.31,
+    -31.9
+   ],
+   "r": [
+    -2.424722,
+    0.0,
+    0.282727
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "far end",
+   "place": "floor x -23.5 z -31.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.227,
+   "throw_m": 18.013,
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.006,
+    "wing R": 0.002,
+    "behind the stage": 0.023,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.253,
+    "far corner R": 0.006
+   },
+   "lit_pct": 100.0,
+   "gain": 0.612,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -18.0
+    ],
+    "part": "columns",
+    "plan_m": 18.589
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 165,
+    "footprint": 8,
+    "fixture": 229,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-FAR-B",
+    "node": "NODE-FAR"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-32",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 21.5 z 40.1, aimed at the roof steel 10 m in toward the crowd (entry)",
+   "p": [
+    21.5,
+    0.31,
+    40.1
+   ],
+   "r": [
+    2.541889,
+    0.0,
+    -0.501641
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 21.5 z 40.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 4.491,
+   "throw_m": 18.016,
+   "eye_lux": {
+    "floor centre": 0.031,
+    "wing L": 0.004,
+    "wing R": 0.015,
+    "behind the stage": 0.001,
+    "mid-hall": 0.063,
+    "near the entry": 0.02,
+    "FOH": 0.046,
+    "far corner L": 0.0,
+    "far corner R": 0.002
+   },
+   "lit_pct": 100.0,
+   "gain": 0.822,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 19.136
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 349,
+    "footprint": 8,
+    "fixture": 252,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-34",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -20.5 z 31.1, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -20.5,
+    0.31,
+    31.1
+   ],
+   "r": [
+    2.981376,
+    0.0,
+    0.74764
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -20.5 z 31.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.077,
+   "throw_m": 18.013,
+   "eye_lux": {
+    "floor centre": 0.05,
+    "wing L": 0.021,
+    "wing R": 0.0,
+    "behind the stage": 0.001,
+    "mid-hall": 0.064,
+    "near the entry": 0.011,
+    "FOH": 0.155,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.759,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     30.0
+    ],
+    "part": "columns",
+    "plan_m": 7.736
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 365,
+    "footprint": 8,
+    "fixture": 254,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-10",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 9.5 z -31.9, aimed at the roof steel 10 m in toward the crowd (far end)",
+   "p": [
+    9.5,
+    0.31,
+    -31.9
+   ],
+   "r": [
+    -2.40771,
+    0.0,
+    -0.224855
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "far end",
+   "place": "floor x 9.5 z -31.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 4.179,
+   "throw_m": 22.227,
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.001,
+    "wing R": 0.0,
+    "behind the stage": 0.103,
+    "mid-hall": 0.001,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.005,
+    "far corner R": 0.01
+   },
+   "lit_pct": 90.2,
+   "gain": 0.29,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     -18.0
+    ],
+    "part": "columns",
+    "plan_m": 14.296
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 173,
+    "footprint": 8,
+    "fixture": 230,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-FAR-B",
+    "node": "NODE-FAR"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-17",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -35.5 z -1.9, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -35.5,
+    0.31,
+    -1.9
+   ],
+   "r": [
+    -3.083647,
+    0.0,
+    0.759794
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -35.5 z -1.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 6.055,
+   "throw_m": 18.017,
+   "eye_lux": {
+    "floor centre": 0.01,
+    "wing L": 0.114,
+    "wing R": 0.002,
+    "behind the stage": 0.004,
+    "mid-hall": 0.001,
+    "near the entry": 0.001,
+    "FOH": 0.001,
+    "far corner L": 0.015,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.292,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     0.5
+    ],
+    "part": "columns",
+    "plan_m": 22.784
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 229,
+    "footprint": 8,
+    "fixture": 237,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-04",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z 31.1, aimed at the roof steel 10 m in toward the crowd (house right)",
+   "p": [
+    30.5,
+    0.31,
+    31.1
+   ],
+   "r": [
+    2.70936,
+    0.0,
+    -0.648303
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z 31.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 6.922,
+   "throw_m": 20.668,
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.0,
+    "wing R": 0.016,
+    "behind the stage": 0.0,
+    "mid-hall": 0.006,
+    "near the entry": 0.002,
+    "FOH": 0.005,
+    "far corner L": 0.0,
+    "far corner R": 0.001
+   },
+   "lit_pct": 72.1,
+   "gain": 0.093,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     6.0
+    ],
+    "part": "stage columns",
+    "plan_m": 31.689
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 125,
+    "footprint": 8,
+    "fixture": 224,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-07",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -14.5 z -37.9, aimed at the roof steel 10 m in toward the crowd (far end)",
+   "p": [
+    -14.5,
+    0.31,
+    -37.9
+   ],
+   "r": [
+    -2.381685,
+    0.0,
+    -0.047024
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "far end",
+   "place": "floor x -14.5 z -37.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 7.026,
+   "throw_m": 18.009,
+   "eye_lux": {
+    "floor centre": 0.002,
+    "wing L": 0.006,
+    "wing R": 0.0,
+    "behind the stage": 0.054,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.138,
+    "far corner R": 0.008
+   },
+   "lit_pct": 100.0,
+   "gain": 0.232,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -24.0
+    ],
+    "part": "columns",
+    "plan_m": 14.296
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 149,
+    "footprint": 8,
+    "fixture": 227,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-FAR-B",
+    "node": "NODE-FAR"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-18",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 33.5 z -1.9, aimed at the roof steel 10 m in toward the crowd (house right)",
+   "p": [
+    33.5,
+    0.31,
+    -1.9
+   ],
+   "r": [
+    -3.072641,
+    0.0,
+    -0.75872
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 33.5 z -1.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 5.125,
+   "throw_m": 18.011,
+   "eye_lux": {
+    "floor centre": 0.006,
+    "wing L": 0.001,
+    "wing R": 0.137,
+    "behind the stage": 0.0,
+    "mid-hall": 0.001,
+    "near the entry": 0.0,
+    "FOH": 0.003,
+    "far corner L": 0.0,
+    "far corner R": 0.024
+   },
+   "lit_pct": 100.0,
+   "gain": 0.34,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     0.5
+    ],
+    "part": "columns",
+    "plan_m": 20.796
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 237,
+    "footprint": 8,
+    "fixture": 238,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-13",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -35.5 z -10.9, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -35.5,
+    0.31,
+    -10.9
+   ],
+   "r": [
+    -3.072641,
+    0.0,
+    0.75872
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -35.5 z -10.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 5.125,
+   "throw_m": 18.011,
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.03,
+    "wing R": 0.0,
+    "behind the stage": 0.005,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.002,
+    "far corner L": 0.067,
+    "far corner R": 0.002
+   },
+   "lit_pct": 100.0,
+   "gain": 0.121,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     -6.0
+    ],
+    "part": "roof",
+    "plan_m": 23.181
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 197,
+    "footprint": 8,
+    "fixture": 233,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-08",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 15.5 z -28.9, aimed at the roof steel 6 m in toward the crowd (house right)",
+   "p": [
+    15.5,
+    0.31,
+    -28.9
+   ],
+   "r": [
+    -2.70977,
+    0.0,
+    -0.298431
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 15.5 z -28.9, to the hall 6 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.697,
+   "throw_m": 11.632,
+   "eye_lux": {
+    "floor centre": 0.002,
+    "wing L": 0.0,
+    "wing R": 0.007,
+    "behind the stage": 0.046,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.004,
+    "far corner R": 0.331
+   },
+   "lit_pct": 100.0,
+   "gain": 0.498,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     -24.0
+    ],
+    "part": "columns",
+    "plan_m": 6.548
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 157,
+    "footprint": 8,
+    "fixture": 228,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-30",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -26.5 z 22.1, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -26.5,
+    0.31,
+    22.1
+   ],
+   "r": [
+    2.981376,
+    0.0,
+    0.74764
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -26.5 z 22.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.077,
+   "throw_m": 18.013,
+   "eye_lux": {
+    "floor centre": 0.101,
+    "wing L": 0.086,
+    "wing R": 0.006,
+    "behind the stage": 0.0,
+    "mid-hall": 0.021,
+    "near the entry": 0.006,
+    "FOH": 0.063,
+    "far corner L": 0.003,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.455,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 13.789
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 333,
+    "footprint": 8,
+    "fixture": 250,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-33",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 24.5 z 34.1, aimed at the roof steel 10 m in toward the crowd (house right)",
+   "p": [
+    24.5,
+    0.31,
+    34.1
+   ],
+   "r": [
+    2.981376,
+    0.0,
+    -0.74764
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 24.5 z 34.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.077,
+   "throw_m": 18.013,
+   "eye_lux": {
+    "floor centre": 0.03,
+    "wing L": 0.004,
+    "wing R": 0.011,
+    "behind the stage": 0.002,
+    "mid-hall": 0.081,
+    "near the entry": 0.025,
+    "FOH": 0.046,
+    "far corner L": 0.0,
+    "far corner R": 0.002
+   },
+   "lit_pct": 100.0,
+   "gain": 0.364,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 15.424
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 357,
+    "footprint": 8,
+    "fixture": 253,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-36",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -17.5 z 37.1, aimed at the flared head of the column x -12 z 36 (6.6 m)",
+   "p": [
+    -17.5,
+    0.31,
+    37.1
+   ],
+   "r": [
+    2.96877,
+    0.0,
+    0.619012
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x -17.5 z 37.1, to the column head x -12 z 36",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 1.522,
+   "throw_m": 7.956,
+   "eye_lux": {
+    "floor centre": 0.014,
+    "wing L": 0.011,
+    "wing R": 0.0,
+    "behind the stage": 0.0,
+    "mid-hall": 0.078,
+    "near the entry": 0.016,
+    "FOH": 0.08,
+    "far corner L": 0.001,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.419,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     36.0
+    ],
+    "part": "columns",
+    "plan_m": 4.785
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 381,
+    "footprint": 8,
+    "fixture": 256,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-par-planes-21",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -32.5 z 10.1, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -32.5,
+    0.31,
+    10.1
+   ],
+   "r": [
+    2.625277,
+    0.0,
+    0.587157
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -32.5 z 10.1, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 3.836,
+   "throw_m": 18.011,
+   "eye_lux": {
+    "floor centre": 0.004,
+    "wing L": 0.207,
+    "wing R": 0.004,
+    "behind the stage": 0.0,
+    "mid-hall": 0.002,
+    "near the entry": 0.001,
+    "FOH": 0.006,
+    "far corner L": 0.008,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.304,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     12.0
+    ],
+    "part": "columns",
+    "plan_m": 19.749
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 261,
+    "footprint": 8,
+    "fixture": 241,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-35",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 15.5 z 43.1, straight up into the roof steel (out of the crowd, entry)",
+   "p": [
+    15.5,
+    0.31,
+    43.1
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 15.5 z 43.1, up",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 2.125,
+   "throw_m": 13.04,
+   "eye_lux": {
+    "floor centre": 0.008,
+    "wing L": 0.002,
+    "wing R": 0.006,
+    "behind the stage": 0.0,
+    "mid-hall": 0.022,
+    "near the entry": 0.034,
+    "FOH": 0.017,
+    "far corner L": 0.0,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.199,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     30.0
+    ],
+    "part": "roof",
+    "plan_m": 13.801
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 373,
+    "footprint": 8,
+    "fixture": 255,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-15",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6.5 z -37.9, aimed at the roof steel 10 m in toward the crowd (far end)",
+   "p": [
+    6.5,
+    0.31,
+    -37.9
+   ],
+   "r": [
+    -2.380959,
+    0.0,
+    -0.033006
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "far end",
+   "place": "floor x 6.5 z -37.9, to the hall 10 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 10.026,
+   "throw_m": 14.323,
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.0,
+    "wing R": 0.0,
+    "behind the stage": 0.083,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.007,
+    "far corner R": 0.007
+   },
+   "lit_pct": 93.4,
+   "gain": 0.096,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     -6.0
+    ],
+    "part": "columns",
+    "plan_m": 32.238
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 213,
+    "footprint": 8,
+    "fixture": 235,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-FAR-B",
+    "node": "NODE-FAR"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-20",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z 7.1, aimed at the roof steel 6 m in toward the crowd (house right)",
+   "p": [
+    30.5,
+    0.31,
+    7.1
+   ],
+   "r": [
+    -3.051972,
+    0.0,
+    -0.5122
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z 7.1, to the hall 6 m",
+   "pick_phase": "cover",
+   "guard": null,
+   "from_public_m": 2.125,
+   "throw_m": 18.533,
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.001,
+    "wing R": 0.16,
+    "behind the stage": 0.0,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.0,
+    "far corner R": 0.004
+   },
+   "lit_pct": 88.5,
+   "gain": 0.279,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     6.0
+    ],
+    "part": "columns",
+    "plan_m": 17.691
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 253,
+    "footprint": 8,
+    "fixture": 240,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-03",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 12.5 z 52.1, aimed at the flared head of the column x +12 z 54 (6.6 m)",
+   "p": [
+    12.5,
+    0.31,
+    52.1
+   ],
+   "r": [
+    -2.848695,
+    0.0,
+    0.068066
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 12.5 z 52.1, to the column head x 12 z 54",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 1.663,
+   "throw_m": 5.902,
+   "eye_lux": {
+    "floor centre": 0.025,
+    "wing L": 0.001,
+    "wing R": 0.022,
+    "behind the stage": 0.0,
+    "mid-hall": 0.059,
+    "near the entry": 0.0,
+    "FOH": 0.037,
+    "far corner L": 0.001,
+    "far corner R": 0.008
+   },
+   "lit_pct": 100.0,
+   "gain": 0.407,
+   "moved_from": {
+    "p": [
+     -5.198,
+     0.3,
+     2.7
+    ],
+    "part": "halo",
+    "plan_m": 52.475
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 117,
+    "footprint": 8,
+    "fixture": 223,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-31",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -26.5 z 28.1, straight up into the roof steel (out of the crowd, house left)",
+   "p": [
+    -26.5,
+    0.31,
+    28.1
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -26.5 z 28.1, up",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 5.905,
+   "throw_m": 13.04,
+   "eye_lux": {
+    "floor centre": 0.025,
+    "wing L": 0.02,
+    "wing R": 0.001,
+    "behind the stage": 0.001,
+    "mid-hall": 0.012,
+    "near the entry": 0.001,
+    "FOH": 0.034,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.194,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 15.881
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 341,
+    "footprint": 8,
+    "fixture": 251,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-02",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 18.5 z 52.1, aimed at the flared head of the column x +12 z 54 (6.6 m)",
+   "p": [
+    18.5,
+    0.31,
+    52.1
+   ],
+   "r": [
+    -2.848004,
+    0.0,
+    -0.70135
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 18.5 z 52.1, to the column head x 12 z 54",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 6.517,
+   "throw_m": 7.689,
+   "eye_lux": {
+    "floor centre": 0.013,
+    "wing L": 0.001,
+    "wing R": 0.019,
+    "behind the stage": 0.0,
+    "mid-hall": 0.051,
+    "near the entry": 0.0,
+    "FOH": 0.032,
+    "far corner L": 0.001,
+    "far corner R": 0.006
+   },
+   "lit_pct": 100.0,
+   "gain": 0.244,
+   "moved_from": {
+    "p": [
+     -6.678,
+     0.3,
+     2.7
+    ],
+    "part": "halo",
+    "plan_m": 55.446
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 109,
+    "footprint": 8,
+    "fixture": 222,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-28",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -32.5 z 25.1, aimed at the roof steel 6 m in toward the crowd (house left)",
+   "p": [
+    -32.5,
+    0.31,
+    25.1
+   ],
+   "r": [
+    2.94154,
+    0.0,
+    0.482585
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -32.5 z 25.1, to the hall 6 m",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 9.66,
+   "throw_m": 15.021,
+   "eye_lux": {
+    "floor centre": 0.03,
+    "wing L": 0.063,
+    "wing R": 0.002,
+    "behind the stage": 0.001,
+    "mid-hall": 0.004,
+    "near the entry": 0.001,
+    "FOH": 0.03,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.171,
+   "moved_from": {
+    "p": [
+     -11.35,
+     5.55,
+     11.25
+    ],
+    "part": "speaker face R",
+    "plan_m": 25.281
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 317,
+    "footprint": 8,
+    "fixture": 248,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-27",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -26.5 z 34.1, straight up into the roof steel (out of the crowd, house left)",
+   "p": [
+    -26.5,
+    0.31,
+    34.1
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -26.5 z 34.1, up",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 2.935,
+   "throw_m": 13.04,
+   "eye_lux": {
+    "floor centre": 0.003,
+    "wing L": 0.012,
+    "wing R": 0.0,
+    "behind the stage": 0.001,
+    "mid-hall": 0.016,
+    "near the entry": 0.001,
+    "FOH": 0.024,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.104,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     18.0
+    ],
+    "part": "columns",
+    "plan_m": 22.24
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 309,
+    "footprint": 8,
+    "fixture": 247,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-06",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -35.5 z 52.1, aimed at the flared head of the column x -36 z 54 (6.6 m)",
+   "p": [
+    -35.5,
+    0.31,
+    52.1
+   ],
+   "r": [
+    -2.848695,
+    0.0,
+    0.068066
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x -35.5 z 52.1, to the column head x -36 z 54",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 1.663,
+   "throw_m": 5.902,
+   "eye_lux": {
+    "floor centre": 0.005,
+    "wing L": 0.02,
+    "wing R": 0.001,
+    "behind the stage": 0.007,
+    "mid-hall": 0.016,
+    "near the entry": 0.0,
+    "FOH": 0.021,
+    "far corner L": 0.008,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.206,
+   "moved_from": {
+    "p": [
+     -5.2,
+     0.31,
+     -2.6
+    ],
+    "part": "halo",
+    "plan_m": 62.531
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 141,
+    "footprint": 8,
+    "fixture": 226,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-par-planes-01",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -32.5 z 31.1, aimed at the flared head of the column x -36 z 30 (6.6 m)",
+   "p": [
+    -32.5,
+    0.31,
+    31.1
+   ],
+   "r": [
+    2.96848,
+    0.0,
+    -0.379993
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -32.5 z 31.1, to the column head x -36 z 30",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 5.149,
+   "throw_m": 7.0,
+   "eye_lux": {
+    "floor centre": 0.009,
+    "wing L": 0.019,
+    "wing R": 0.002,
+    "behind the stage": 0.002,
+    "mid-hall": 0.015,
+    "near the entry": 0.01,
+    "FOH": 0.02,
+    "far corner L": 0.002,
+    "far corner R": 0.001
+   },
+   "lit_pct": 95.1,
+   "gain": 0.166,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     6.0
+    ],
+    "part": "stage columns",
+    "plan_m": 32.947
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 101,
+    "footprint": 8,
+    "fixture": 221,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-24",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -35.5 z 16.1, aimed at the roof steel 10 m in toward the crowd (house left)",
+   "p": [
+    -35.5,
+    0.31,
+    16.1
+   ],
+   "r": [
+    2.679051,
+    0.0,
+    0.628496
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -35.5 z 16.1, to the hall 10 m",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 8.283,
+   "throw_m": 16.47,
+   "eye_lux": {
+    "floor centre": 0.017,
+    "wing L": 0.215,
+    "wing R": 0.003,
+    "behind the stage": 0.0,
+    "mid-hall": 0.004,
+    "near the entry": 0.001,
+    "FOH": 0.011,
+    "far corner L": 0.001,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.236,
+   "moved_from": {
+    "p": [
+     -11.35,
+     5.1,
+     11.6
+    ],
+    "part": "speaker face L",
+    "plan_m": 24.566
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 285,
+    "footprint": 8,
+    "fixture": 244,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-19",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -32.5 z 4.1, aimed at the roof steel 6 m in toward the crowd (house left)",
+   "p": [
+    -32.5,
+    0.31,
+    4.1
+   ],
+   "r": [
+    -3.077166,
+    0.0,
+    0.515645
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -32.5 z 4.1, to the hall 6 m",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 3.125,
+   "throw_m": 15.02,
+   "eye_lux": {
+    "floor centre": 0.013,
+    "wing L": 0.169,
+    "wing R": 0.002,
+    "behind the stage": 0.0,
+    "mid-hall": 0.001,
+    "near the entry": 0.0,
+    "FOH": 0.01,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.174,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     6.0
+    ],
+    "part": "columns",
+    "plan_m": 19.749
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 245,
+    "footprint": 8,
+    "fixture": 239,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-40",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z 25.1, aimed at the roof steel 10 m in toward the crowd (house right)",
+   "p": [
+    30.5,
+    0.31,
+    25.1
+   ],
+   "r": [
+    -3.072641,
+    0.0,
+    -0.75872
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z 25.1, to the hall 10 m",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 5.125,
+   "throw_m": 18.169,
+   "eye_lux": {
+    "floor centre": 0.005,
+    "wing L": 0.001,
+    "wing R": 0.037,
+    "behind the stage": 0.0,
+    "mid-hall": 0.007,
+    "near the entry": 0.003,
+    "FOH": 0.009,
+    "far corner L": 0.0,
+    "far corner R": 0.002
+   },
+   "lit_pct": 85.2,
+   "gain": 0.078,
+   "moved_from": {
+    "p": [
+     5.2,
+     0.2,
+     16.4
+    ],
+    "part": "embers",
+    "plan_m": 26.754
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 413,
+    "footprint": 8,
+    "fixture": 260,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-39",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 27.5 z 43.1, aimed at the roof steel 10 m in toward the crowd (entry)",
+   "p": [
+    27.5,
+    0.31,
+    43.1
+   ],
+   "r": [
+    2.575579,
+    0.0,
+    -0.53985
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 27.5 z 43.1, to the hall 10 m",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 10.873,
+   "throw_m": 18.288,
+   "eye_lux": {
+    "floor centre": 0.003,
+    "wing L": 0.001,
+    "wing R": 0.004,
+    "behind the stage": 0.0,
+    "mid-hall": 0.008,
+    "near the entry": 0.008,
+    "FOH": 0.006,
+    "far corner L": 0.0,
+    "far corner R": 0.001
+   },
+   "lit_pct": 80.3,
+   "gain": 0.046,
+   "moved_from": {
+    "p": [
+     6.0,
+     2.45,
+     0.8
+    ],
+    "part": "embers",
+    "plan_m": 47.45
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 405,
+    "footprint": 8,
+    "fixture": 259,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-22",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z 13.1, aimed at the flared head of the column x +36 z 12 (6.6 m)",
+   "p": [
+    30.5,
+    0.31,
+    13.1
+   ],
+   "r": [
+    2.96877,
+    0.0,
+    0.619012
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z 13.1, to the column head x 36 z 12",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 2.137,
+   "throw_m": 7.956,
+   "eye_lux": {
+    "floor centre": 0.007,
+    "wing L": 0.004,
+    "wing R": 0.069,
+    "behind the stage": 0.006,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.005,
+    "far corner L": 0.004,
+    "far corner R": 0.008
+   },
+   "lit_pct": 100.0,
+   "gain": 0.185,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     12.0
+    ],
+    "part": "roof",
+    "plan_m": 19.374
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 269,
+    "footprint": 8,
+    "fixture": 242,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-14",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at the entry face of the column x -36 z -30, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket), out of the crowd",
+   "p": [
+    -36.0,
+    0.31,
+    -29.16
+   ],
+   "r": [
+    3.07057,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "col -36 z -30, entry face",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 9.881,
+   "throw_m": 8.314,
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.014,
+    "wing R": 0.001,
+    "behind the stage": 0.001,
+    "mid-hall": 0.004,
+    "near the entry": 0.0,
+    "FOH": 0.005,
+    "far corner L": 0.131,
+    "far corner R": 0.004
+   },
+   "lit_pct": 100.0,
+   "gain": 0.148,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -6.0
+    ],
+    "part": "columns",
+    "plan_m": 33.964
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 205,
+    "footprint": 8,
+    "fixture": 234,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-par-planes-38",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 21.5 z 46.1, straight up into the roof steel (out of the crowd, entry)",
+   "p": [
+    21.5,
+    0.31,
+    46.1
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 21.5 z 46.1, up",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 8.128,
+   "throw_m": 16.09,
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.0,
+    "wing R": 0.004,
+    "behind the stage": 0.0,
+    "mid-hall": 0.006,
+    "near the entry": 0.001,
+    "FOH": 0.005,
+    "far corner L": 0.0,
+    "far corner R": 0.001
+   },
+   "lit_pct": 90.2,
+   "gain": 0.033,
+   "moved_from": {
+    "p": [
+     2.4,
+     0.3,
+     2.5
+    ],
+    "part": "embers",
+    "plan_m": 47.6
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 397,
+    "footprint": 8,
+    "fixture": 258,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-16",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 30.5 z -7.9, aimed at the flared head of the column x +36 z -6 (6.6 m)",
+   "p": [
+    30.5,
+    0.31,
+    -7.9
+   ],
+   "r": [
+    -2.847922,
+    0.0,
+    0.605368
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house right",
+   "place": "floor x 30.5 z -7.9, to the column head x 36 z -6",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 2.359,
+   "throw_m": 8.111,
+   "eye_lux": {
+    "floor centre": 0.009,
+    "wing L": 0.0,
+    "wing R": 0.041,
+    "behind the stage": 0.012,
+    "mid-hall": 0.002,
+    "near the entry": 0.0,
+    "FOH": 0.004,
+    "far corner L": 0.005,
+    "far corner R": 0.034
+   },
+   "lit_pct": 100.0,
+   "gain": 0.193,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     -6.0
+    ],
+    "part": "columns",
+    "plan_m": 17.759
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 221,
+    "footprint": 8,
+    "fixture": 236,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-05",
+   "type": "up-pl5403",
+   "part": "hall steel",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 33.5 z 37.1, aimed at the roof steel 10 m in toward the crowd (entry)",
+   "p": [
+    33.5,
+    0.31,
+    37.1
+   ],
+   "r": [
+    2.672435,
+    0.0,
+    -0.623676
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "entry",
+   "place": "floor x 33.5 z 37.1, to the hall 10 m",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 11.886,
+   "throw_m": 22.223,
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.0,
+    "wing R": 0.013,
+    "behind the stage": 0.0,
+    "mid-hall": 0.003,
+    "near the entry": 0.002,
+    "FOH": 0.003,
+    "far corner L": 0.0,
+    "far corner R": 0.001
+   },
+   "lit_pct": 75.4,
+   "gain": 0.045,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.71,
+     0.5
+    ],
+    "part": "stage columns",
+    "plan_m": 42.881
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 133,
+    "footprint": 8,
+    "fixture": 225,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-RIGHT-B",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-11",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -29.5 z -28.9, aimed at the flared head of the column x -36 z -30 (6.6 m)",
+   "p": [
+    -29.5,
+    0.31,
+    -28.9
+   ],
+   "r": [
+    2.96838,
+    0.0,
+    -0.715818
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "stands_in": "out of the crowd",
+   "region": "house left",
+   "place": "floor x -29.5 z -28.9, to the column head x -36 z -30",
+   "pick_phase": "entry",
+   "guard": null,
+   "from_public_m": 5.096,
+   "throw_m": 8.574,
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.006,
+    "wing R": 0.003,
+    "behind the stage": 0.001,
+    "mid-hall": 0.002,
+    "near the entry": 0.0,
+    "FOH": 0.003,
+    "far corner L": 0.127,
+    "far corner R": 0.008
+   },
+   "lit_pct": 88.5,
+   "gain": 0.106,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -12.0
+    ],
+    "part": "columns",
+    "plan_m": 24.941
+   },
+   "power_w": 200,
+   "dmx": {
+    "universe": 2,
+    "address": 181,
+    "footprint": 8,
+    "fixture": 231,
+    "mode": "8ch",
+    "port": "B",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-01",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor, bolted to a ballasted floor plate, levelled; aim 330/50 deg (az/el), throw 16.7 m to roof deck (B's fan as the owner saw it on 10-09, not re-aimed)",
+   "p": [
+    -7.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.521601,
+    0.0,
+    -0.32366
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 16.653,
+   "ends_on": "roof deck",
+   "region": "stage pen",
+   "island": "the stage pen",
+   "slot": null,
+   "pick_phase": "fixed",
+   "desk_limits": {
+    "base_front_faces_az_deg": 330.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     24.5,
+     39.5
+    ],
+    "world_az_deg": [
+     320.0,
+     340.0
+    ],
+    "world_el_deg": [
+     50.5,
+     65.5
+    ],
+    "tilt_never_below_el_deg": 50.5,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      38714,
+      42355
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       151,
+       58
+      ],
+      [
+       165,
+       115
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.0023,
+    "wing L": 0.00039,
+    "wing R": 0.00037,
+    "behind the stage": 0.00118,
+    "mid-hall": 0.00525,
+    "near the entry": 0.00504,
+    "FOH": 0.00258,
+    "far corner L": 0.00123,
+    "far corner R": 0.00027
+   },
+   "gain": 0.4,
+   "moved_from": {
+    "p": [
+     -7.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "kept_from_spread": true,
+   "dmx": {
+    "universe": 1,
+    "address": 1,
+    "footprint": 16,
+    "fixture": 101,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-STAGE-A",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor, bolted to a ballasted floor plate, levelled; aim 333/62 deg (az/el), throw 14.5 m to roof deck (B's fan as the owner saw it on 10-09, not re-aimed)",
+   "p": [
+    -6.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.707299,
+    0.0,
+    -0.211196
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 14.487,
+   "ends_on": "roof deck",
+   "region": "stage pen",
+   "island": "the stage pen",
+   "slot": null,
+   "pick_phase": "fixed",
+   "desk_limits": {
+    "base_front_faces_az_deg": 333.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     12.5,
+     27.5
+    ],
+    "world_az_deg": [
+     323.0,
+     343.0
+    ],
+    "world_el_deg": [
+     62.5,
+     77.5
+    ],
+    "tilt_never_below_el_deg": 62.5,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      35802,
+      39442
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       139,
+       218
+      ],
+      [
+       154,
+       18
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00091,
+    "wing L": 0.00011,
+    "wing R": 0.0,
+    "behind the stage": 0.00341,
+    "mid-hall": 0.00095,
+    "near the entry": 0.00075,
+    "FOH": 0.00103,
+    "far corner L": 0.00413,
+    "far corner R": 0.0002
+   },
+   "gain": 0.099,
+   "moved_from": {
+    "p": [
+     -6.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "kept_from_spread": true,
+   "dmx": {
+    "universe": 1,
+    "address": 17,
+    "footprint": 16,
+    "fixture": 102,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-STAGE-A",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor, bolted to a ballasted floor plate, levelled; aim 330/72 deg (az/el), throw 13.5 m to roof deck (B's fan as the owner saw it on 10-09, not re-aimed)",
+   "p": [
+    -5.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.867297,
+    0.0,
+    -0.15513
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 13.511,
+   "ends_on": "roof deck",
+   "region": "stage pen",
+   "island": "the stage pen",
+   "slot": null,
+   "pick_phase": "fixed",
+   "desk_limits": {
+    "base_front_faces_az_deg": 330.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     3.0,
+     18.0
+    ],
+    "world_az_deg": [
+     320.0,
+     340.0
+    ],
+    "world_el_deg": [
+     72.0,
+     87.0
+    ],
+    "tilt_never_below_el_deg": 72.0,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      33496,
+      37136
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       130,
+       216
+      ],
+      [
+       145,
+       16
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00197,
+    "wing L": 0.00188,
+    "wing R": 0.00123,
+    "behind the stage": 0.00463,
+    "mid-hall": 0.00182,
+    "near the entry": 0.00164,
+    "FOH": 0.00215,
+    "far corner L": 0.00121,
+    "far corner R": 0.00026
+   },
+   "gain": 0.154,
+   "moved_from": {
+    "p": [
+     -5.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "kept_from_spread": true,
+   "dmx": {
+    "universe": 1,
+    "address": 33,
+    "footprint": 16,
+    "fixture": 103,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-STAGE-A",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor, bolted to a ballasted floor plate, levelled; aim 20/72 deg (az/el), throw 13.5 m to roof deck (B's fan as the owner saw it on 10-09, not re-aimed)",
+   "p": [
+    -4.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.845258,
+    0.0,
+    0.105888
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 13.511,
+   "ends_on": "roof deck",
+   "region": "stage pen",
+   "island": "the stage pen",
+   "slot": null,
+   "pick_phase": "fixed",
+   "desk_limits": {
+    "base_front_faces_az_deg": 20.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     3.0,
+     18.0
+    ],
+    "world_az_deg": [
+     10.0,
+     30.0
+    ],
+    "world_el_deg": [
+     72.0,
+     87.0
+    ],
+    "tilt_never_below_el_deg": 72.0,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      33496,
+      37136
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       130,
+       216
+      ],
+      [
+       145,
+       16
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.01033,
+    "wing L": 0.00157,
+    "wing R": 0.00193,
+    "behind the stage": 0.00457,
+    "mid-hall": 0.00887,
+    "near the entry": 0.00795,
+    "FOH": 0.00206,
+    "far corner L": 0.0,
+    "far corner R": 0.00536
+   },
+   "gain": 0.294,
+   "moved_from": {
+    "p": [
+     -4.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "kept_from_spread": true,
+   "dmx": {
+    "universe": 1,
+    "address": 49,
+    "footprint": 16,
+    "fixture": 104,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-STAGE-A",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor, bolted to a ballasted floor plate, levelled; aim 25/58 deg (az/el), throw 8.4 m to crane z 0.15 girder (B's fan as the owner saw it on 10-09, not re-aimed)",
+   "p": [
+    -3.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.626303,
+    0.0,
+    0.225869
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 8.372,
+   "ends_on": "crane z 0.15 girder",
+   "region": "stage pen",
+   "island": "the stage pen",
+   "slot": null,
+   "pick_phase": "fixed",
+   "desk_limits": {
+    "base_front_faces_az_deg": 25.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     17.0,
+     32.0
+    ],
+    "world_az_deg": [
+     15.0,
+     35.0
+    ],
+    "world_el_deg": [
+     58.0,
+     73.0
+    ],
+    "tilt_never_below_el_deg": 58.0,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      36894,
+      40535
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       144,
+       30
+      ],
+      [
+       158,
+       87
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.0132,
+    "wing L": 0.00014,
+    "wing R": 0.00046,
+    "behind the stage": 0.00312,
+    "mid-hall": 0.00083,
+    "near the entry": 0.00077,
+    "FOH": 0.01219,
+    "far corner L": 0.00261,
+    "far corner R": 0.00424
+   },
+   "gain": 0.202,
+   "moved_from": {
+    "p": [
+     -3.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "kept_from_spread": true,
+   "dmx": {
+    "universe": 1,
+    "address": 65,
+    "footprint": 16,
+    "fixture": 105,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-STAGE-A",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor, bolted to a ballasted floor plate, levelled; aim 32/49 deg (az/el), throw 17.0 m to roof deck (B's fan as the owner saw it on 10-09, not re-aimed)",
+   "p": [
+    -2.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.506336,
+    0.0,
+    0.355072
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 17.026,
+   "ends_on": "roof deck",
+   "region": "stage pen",
+   "island": "the stage pen",
+   "slot": null,
+   "pick_phase": "fixed",
+   "desk_limits": {
+    "base_front_faces_az_deg": 32.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     26.0,
+     41.0
+    ],
+    "world_az_deg": [
+     22.0,
+     42.0
+    ],
+    "world_el_deg": [
+     49.0,
+     64.0
+    ],
+    "tilt_never_below_el_deg": 49.0,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      39078,
+      42719
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       152,
+       166
+      ],
+      [
+       166,
+       223
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00253,
+    "wing L": 0.00031,
+    "wing R": 0.00221,
+    "behind the stage": 0.00102,
+    "mid-hall": 0.00304,
+    "near the entry": 0.00254,
+    "FOH": 0.00256,
+    "far corner L": 0.00082,
+    "far corner R": 0.00156
+   },
+   "gain": 0.107,
+   "moved_from": {
+    "p": [
+     -2.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "kept_from_spread": true,
+   "dmx": {
+    "universe": 1,
+    "address": 81,
+    "footprint": 16,
+    "fixture": 106,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-STAGE-A",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C12"
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house right, out of the crowd (2.1 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 144/42 deg (az/el), throw 19.2 m to roof deck",
+   "p": [
+    27.5,
+    0.7,
+    22.1
+   ],
+   "r": [
+    2.409687,
+    0.0,
+    0.452326
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 19.204,
+   "ends_on": "roof deck",
+   "region": "house right",
+   "slot": "slot x 27.5 z 22.1",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 143.978,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     33.01,
+     48.01
+    ],
+    "world_az_deg": [
+     133.978,
+     153.978
+    ],
+    "world_el_deg": [
+     41.99,
+     56.99
+    ],
+    "tilt_never_below_el_deg": 41.99,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      40780,
+      44421
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       159,
+       76
+      ],
+      [
+       173,
+       133
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00022,
+    "wing L": 0.00039,
+    "wing R": 0.00197,
+    "behind the stage": 0.00129,
+    "mid-hall": 0.00033,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.00046,
+    "far corner R": 0.0035
+   },
+   "gain": 0.151,
+   "moved_from": {
+    "p": [
+     10.857,
+     3.7,
+     18.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 17.141
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 241,
+    "footprint": 16,
+    "fixture": 116,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-RIGHT-A",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (2.5 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 120/65 deg (az/el), throw 14.2 m to roof deck",
+   "p": [
+    -17.5,
+    0.7,
+    34.1
+   ],
+   "r": [
+    2.912779,
+    0.0,
+    0.374842
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 14.178,
+   "ends_on": "roof deck",
+   "region": "house left",
+   "slot": "slot x -17.5 z 34.1",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 119.964,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     10.042,
+     25.042
+    ],
+    "world_az_deg": [
+     109.964,
+     129.964
+    ],
+    "world_el_deg": [
+     64.958,
+     79.958
+    ],
+    "tilt_never_below_el_deg": 64.958,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      35205,
+      38846
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       137,
+       133
+      ],
+      [
+       151,
+       190
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00069,
+    "wing L": 0.00164,
+    "wing R": 0.00026,
+    "behind the stage": 0.00027,
+    "mid-hall": 0.00097,
+    "near the entry": 0.00111,
+    "FOH": 0.0022,
+    "far corner L": 0.00127,
+    "far corner R": 0.0
+   },
+   "gain": 0.2,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     36.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 6.909
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 273,
+    "footprint": 16,
+    "fixture": 118,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house right, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 15/35 deg (az/el), throw 19.7 m to space frame diagonals / top chord",
+   "p": [
+    30.5,
+    0.7,
+    -22.9
+   ],
+   "r": [
+    -2.198539,
+    0.0,
+    0.21361
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 19.706,
+   "ends_on": "space frame diagonals / top chord",
+   "region": "house right",
+   "slot": "slot x 30.5 z -22.9",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 15.004,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     39.97,
+     54.97
+    ],
+    "world_az_deg": [
+     5.004,
+     25.004
+    ],
+    "world_el_deg": [
+     35.03,
+     50.03
+    ],
+    "tilt_never_below_el_deg": 35.03,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      42469,
+      46110
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       165,
+       229
+      ],
+      [
+       180,
+       30
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00137,
+    "wing L": 0.00037,
+    "wing R": 0.00561,
+    "behind the stage": 0.0011,
+    "mid-hall": 0.0004,
+    "near the entry": 0.0,
+    "FOH": 0.00165,
+    "far corner L": 0.00085,
+    "far corner R": 0.00125
+   },
+   "gain": 0.222,
+   "moved_from": {
+    "p": [
+     13.143,
+     3.7,
+     -24.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 17.392
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 129,
+    "footprint": 16,
+    "fixture": 109,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-RIGHT-A",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (2.9 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 3/52 deg (az/el), throw 16.4 m to roof deck",
+   "p": [
+    -32.5,
+    0.7,
+    -16.9
+   ],
+   "r": [
+    -2.470288,
+    0.0,
+    0.032988
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 16.419,
+   "ends_on": "roof deck",
+   "region": "house left",
+   "slot": "slot x -32.5 z -16.9",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 3.037,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     23.464,
+     38.464
+    ],
+    "world_az_deg": [
+     353.037,
+     13.037
+    ],
+    "world_el_deg": [
+     51.536,
+     66.536
+    ],
+    "tilt_never_below_el_deg": 51.536,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      38463,
+      42104
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       150,
+       63
+      ],
+      [
+       164,
+       120
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00297,
+    "wing L": 0.00334,
+    "wing R": 0.0,
+    "behind the stage": 0.00105,
+    "mid-hall": 0.0016,
+    "near the entry": 0.00126,
+    "FOH": 0.00116,
+    "far corner L": 0.00101,
+    "far corner R": 0.00081
+   },
+   "gain": 0.158,
+   "moved_from": {
+    "p": [
+     -13.143,
+     3.7,
+     -18.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 19.388
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 145,
+    "footprint": 16,
+    "fixture": 110,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 96/40 deg (az/el), throw 19.5 m to space frame diagonals / top chord",
+   "p": [
+    -35.5,
+    0.7,
+    16.1
+   ],
+   "r": [
+    3.017812,
+    0.0,
+    0.866106
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 19.489,
+   "ends_on": "space frame diagonals / top chord",
+   "region": "house left",
+   "slot": "slot x -35.5 z 16.1",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 95.993,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     34.984,
+     49.984
+    ],
+    "world_az_deg": [
+     85.993,
+     105.993
+    ],
+    "world_el_deg": [
+     40.016,
+     55.016
+    ],
+    "tilt_never_below_el_deg": 40.016,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41259,
+      44900
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       161,
+       43
+      ],
+      [
+       175,
+       100
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00888,
+    "wing L": 0.00592,
+    "wing R": 0.0087,
+    "behind the stage": 0.00249,
+    "mid-hall": 0.00207,
+    "near the entry": 0.0024,
+    "FOH": 0.0023,
+    "far corner L": 0.00207,
+    "far corner R": 0.0011
+   },
+   "gain": 0.356,
+   "moved_from": {
+    "p": [
+     10.857,
+     3.7,
+     -12.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 54.209
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 193,
+    "footprint": 16,
+    "fixture": 113,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "type": "up-b380f",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "far end, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 9/39 deg (az/el), throw 20.6 m to roof deck",
+   "p": [
+    -26.5,
+    0.7,
+    -37.9
+   ],
+   "r": [
+    -2.249155,
+    0.0,
+    0.122271
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 20.642,
+   "ends_on": "roof deck",
+   "region": "far end",
+   "slot": "slot x -26.5 z -37.9",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 8.969,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     36.464,
+     51.464
+    ],
+    "world_az_deg": [
+     358.969,
+     18.969
+    ],
+    "world_el_deg": [
+     38.536,
+     53.536
+    ],
+    "tilt_never_below_el_deg": 38.536,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41618,
+      45259
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       162,
+       146
+      ],
+      [
+       176,
+       203
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.0,
+    "wing L": 0.01053,
+    "wing R": 0.0,
+    "behind the stage": 0.00331,
+    "mid-hall": 0.0032,
+    "near the entry": 0.00075,
+    "FOH": 0.00875,
+    "far corner L": 0.00785,
+    "far corner R": 0.00109
+   },
+   "gain": 0.23,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     -30.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 17.525
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 97,
+    "footprint": 16,
+    "fixture": 107,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-FAR-A",
+    "node": "NODE-FAR"
+   },
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "type": "up-b380f",
+   "part": "plane 4 (the entry side)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "entry, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 192/42 deg (az/el), throw 19.4 m to roof deck",
+   "p": [
+    18.5,
+    0.7,
+    49.1
+   ],
+   "r": [
+    2.306093,
+    0.0,
+    -0.156546
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 19.393,
+   "ends_on": "roof deck",
+   "region": "entry",
+   "slot": "slot x 18.5 z 49.1",
+   "pick_phase": "cover",
+   "desk_limits": {
+    "base_front_faces_az_deg": 192.015,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     33.471,
+     48.471
+    ],
+    "world_az_deg": [
+     182.015,
+     202.015
+    ],
+    "world_el_deg": [
+     41.529,
+     56.529
+    ],
+    "tilt_never_below_el_deg": 41.529,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      40892,
+      44532
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       159,
+       188
+      ],
+      [
+       173,
+       244
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00304,
+    "wing L": 0.00044,
+    "wing R": 0.00821,
+    "behind the stage": 0.0,
+    "mid-hall": 0.0021,
+    "near the entry": 0.00105,
+    "FOH": 0.00072,
+    "far corner L": 0.0,
+    "far corner R": 0.00679
+   },
+   "gain": 0.145,
+   "moved_from": {
+    "p": [
+     13.143,
+     3.7,
+     12.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 37.485
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 225,
+    "footprint": 16,
+    "fixture": 115,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-RIGHT-A",
+    "node": "NODE-RIGHT"
+   },
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "type": "up-b380f",
+   "part": "plane 2 (wings, facing the entry)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 60/37 deg (az/el), throw 21.4 m to roof deck",
+   "p": [
+    -32.5,
+    0.7,
+    22.1
+   ],
+   "r": [
+    -2.556278,
+    0.0,
+    0.764031
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 21.352,
+   "ends_on": "roof deck",
+   "region": "house left",
+   "slot": "slot x -32.5 z 22.1",
+   "pick_phase": "entry",
+   "desk_limits": {
+    "base_front_faces_az_deg": 60.033,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     37.987,
+     52.987
+    ],
+    "world_az_deg": [
+     50.033,
+     70.033
+    ],
+    "world_el_deg": [
+     37.013,
+     52.013
+    ],
+    "tilt_never_below_el_deg": 37.013,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41988,
+      45629
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       164,
+       4
+      ],
+      [
+       178,
+       61
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00187,
+    "wing L": 0.00188,
+    "wing R": 0.00242,
+    "behind the stage": 0.00116,
+    "mid-hall": 0.01124,
+    "near the entry": 0.00983,
+    "FOH": 0.00457,
+    "far corner L": 0.00106,
+    "far corner R": 0.00085
+   },
+   "gain": 0.187,
+   "moved_from": {
+    "p": [
+     10.857,
+     3.7,
+     -18.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 59.058
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 161,
+    "footprint": 16,
+    "fixture": 111,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (2.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 102/37 deg (az/el), throw 21.4 m to roof deck",
+   "p": [
+    -29.5,
+    0.7,
+    34.1
+   ],
+   "r": [
+    2.872532,
+    0.0,
+    0.896315
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 21.352,
+   "ends_on": "roof deck",
+   "region": "house left",
+   "slot": "slot x -29.5 z 34.1",
+   "pick_phase": "entry",
+   "desk_limits": {
+    "base_front_faces_az_deg": 102.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     37.987,
+     52.987
+    ],
+    "world_az_deg": [
+     92.0,
+     112.0
+    ],
+    "world_el_deg": [
+     37.013,
+     52.013
+    ],
+    "tilt_never_below_el_deg": 37.013,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41988,
+      45629
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       164,
+       4
+      ],
+      [
+       178,
+       61
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00212,
+    "wing L": 0.00303,
+    "wing R": 0.0,
+    "behind the stage": 0.0,
+    "mid-hall": 0.00828,
+    "near the entry": 0.00363,
+    "FOH": 0.01164,
+    "far corner L": 0.00208,
+    "far corner R": 0.00064
+   },
+   "gain": 0.141,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     30.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 19.089
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 257,
+    "footprint": 16,
+    "fixture": 117,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-beam-planes-14",
+   "type": "up-b380f",
+   "part": "plane 2 (wings, facing the entry)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 45/39 deg (az/el), throw 20.6 m to roof deck",
+   "p": [
+    -35.5,
+    0.7,
+    10.1
+   ],
+   "r": [
+    -2.415648,
+    0.0,
+    0.586045
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 20.642,
+   "ends_on": "roof deck",
+   "region": "house left",
+   "slot": "slot x -35.5 z 10.1",
+   "pick_phase": "entry",
+   "desk_limits": {
+    "base_front_faces_az_deg": 45.0,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     36.464,
+     51.464
+    ],
+    "world_az_deg": [
+     35.0,
+     55.0
+    ],
+    "world_el_deg": [
+     38.536,
+     53.536
+    ],
+    "tilt_never_below_el_deg": 38.536,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41618,
+      45259
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       162,
+       146
+      ],
+      [
+       176,
+       203
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.00548,
+    "wing L": 0.00288,
+    "wing R": 0.00342,
+    "behind the stage": 0.00097,
+    "mid-hall": 0.0048,
+    "near the entry": 0.01028,
+    "FOH": 0.00429,
+    "far corner L": 0.00096,
+    "far corner R": 0.0003
+   },
+   "gain": 0.134,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     0.5
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 26.447
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 209,
+    "footprint": 16,
+    "fixture": 114,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "type": "up-b380f",
+   "part": "plane 2 (wings, facing the entry)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "house left, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 30/40 deg (az/el), throw 20.0 m to roof deck",
+   "p": [
+    -35.5,
+    0.7,
+    -1.9
+   ],
+   "r": [
+    -2.340882,
+    0.0,
+    0.393103
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 19.991,
+   "ends_on": "roof deck",
+   "region": "house left",
+   "slot": "slot x -35.5 z -1.9",
+   "pick_phase": "entry",
+   "desk_limits": {
+    "base_front_faces_az_deg": 30.014,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     34.984,
+     49.984
+    ],
+    "world_az_deg": [
+     20.014,
+     40.014
+    ],
+    "world_el_deg": [
+     40.016,
+     55.016
+    ],
+    "tilt_never_below_el_deg": 40.016,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41259,
+      44900
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       161,
+       43
+      ],
+      [
+       175,
+       100
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.0063,
+    "wing L": 0.00528,
+    "wing R": 0.00187,
+    "behind the stage": 0.00119,
+    "mid-hall": 0.00388,
+    "near the entry": 0.00744,
+    "FOH": 0.00373,
+    "far corner L": 0.00105,
+    "far corner R": 0.001
+   },
+   "gain": 0.123,
+   "moved_from": {
+    "p": [
+     -13.143,
+     3.7,
+     -12.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 24.533
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 177,
+    "footprint": 16,
+    "fixture": 112,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-LEFT-A",
+    "node": "NODE-LEFT"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "type": "up-b380f",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "far end, out of the crowd (6.0 m from the public floor): base on the floor, bolted to a ballasted floor plate, levelled; aim 33/39 deg (az/el), throw 20.6 m to roof deck",
+   "p": [
+    -35.5,
+    0.7,
+    -31.9
+   ],
+   "r": [
+    -2.330399,
+    0.0,
+    0.440081
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 20.642,
+   "ends_on": "roof deck",
+   "region": "far end",
+   "slot": "slot x -35.5 z -31.9",
+   "pick_phase": "entry",
+   "desk_limits": {
+    "base_front_faces_az_deg": 32.999,
+    "pan_deg_from_home": [
+     -10.0,
+     10.0
+    ],
+    "tilt_deg_from_home": [
+     36.464,
+     51.464
+    ],
+    "world_az_deg": [
+     22.999,
+     42.999
+    ],
+    "world_el_deg": [
+     38.536,
+     53.536
+    ],
+    "tilt_never_below_el_deg": 38.536,
+    "dmx16": {
+     "pan": [
+      31554,
+      33981
+     ],
+     "tilt": [
+      41618,
+      45259
+     ],
+     "pan_coarse_fine": [
+      [
+       123,
+       66
+      ],
+      [
+       132,
+       189
+      ]
+     ],
+     "tilt_coarse_fine": [
+      [
+       162,
+       146
+      ],
+      [
+       176,
+       203
+      ]
+     ],
+     "basis": "dmxDecode.js: centre 32768 = home, symmetric over the maker's 540 / 270 deg (EXACT range); the B380F's own home and direction are EQUIVALENT until the channel walk (fixtures-exact.md)"
+    },
+    "pens_sized_for": "this whole window: every pan at the tilt limit for the low run, every pan x tilt for the ends and the glare",
+    "on_reset_or_dmx_loss": "owed: the head set to close its shutter on DMX loss and during its pan/tilt reset (the B380F manual is not found)"
+   },
+   "base": {
+    "plate_m": [
+     0.6,
+     0.6,
+     0.018
+    ],
+    "sandbags_kg": [
+     15.0,
+     15.0
+    ],
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK",
+    "push_at_top_n_with_factor": 163.5,
+    "head_alone_push_n": 33.79,
+    "factor": 1.5,
+    "levelled_deg": 1.0,
+    "source": "MOXIR.md 5.2 (base plates, ballast, a stability check; ANSI E1.21 practice, factor 1.5 against overturning); the B380F body: the maker's page (fixtures-exact.md, EXACT); the plate and bags ASSUMED"
+   },
+   "eye_G": {
+    "floor centre": 0.01024,
+    "wing L": 0.01019,
+    "wing R": 0.00238,
+    "behind the stage": 0.00331,
+    "mid-hall": 0.00839,
+    "near the entry": 0.00251,
+    "FOH": 0.00907,
+    "far corner L": 0.0057,
+    "far corner R": 0.00353
+   },
+   "gain": 0.279,
+   "moved_from": {
+    "p": [
+     -13.143,
+     3.7,
+     -24.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 23.712
+   },
+   "power_w": 500,
+   "dmx": {
+    "universe": 1,
+    "address": 113,
+    "footprint": 16,
+    "fixture": 108,
+    "mode": "16ch",
+    "port": "A",
+    "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-B380F beam)",
+    "line": "NODE-FAR-A",
+    "node": "NODE-FAR"
+   },
+   "circuit": "C03"
+  }
+ ],
+ "checks": {
+  "units_on_ground": 58,
+  "units_above_ground": [],
+  "in_the_crane_park_above_2_5m": [],
+  "public_floor": {
+   "units_on_it": [],
+   "barriers_added_on_it_m": 0.0,
+   "islands": 0,
+   "door_walkway": {
+    "x_m": [
+     -8.0,
+     7.0
+    ],
+    "z_m": [
+     43.5,
+     53.7
+    ],
+    "why": "the unpainted strip between the chill (x <= -8) and the bar (x >= 7) from the hot zone's end (z 43.5) to the door (z 53.8): everyone walks in here, so it is public"
+   },
+   "units_by_area": {
+    "stage pen": 9,
+    "house left": 21,
+    "house right": 12,
+    "far end": 6,
+    "entry": 10,
+    "machine": 0
+   },
+   "what": "A2: the public floor = the paint (hot, wings, bar, chill) + the door walkway, less the stage pen and the machines; no unit and no barrier of this layer on it; no island"
+  },
+  "par_spacing": {
+   "rule_m": 6.0,
+   "applies_to": "the hall's 38 washes",
+   "min_m": 6.0,
+   "median_m": 6.505,
+   "pairs_closer": [],
+   "spread_min_m": 0.0,
+   "spread_median_m": 1.686
+  },
+  "par_coverage": {
+   "ground_bases": {
+    "gap_median_m": 11.79,
+    "gap_p90_m": 17.444,
+    "gap_max_m": 23.749,
+    "within_6m_pct": 10.741
+   },
+   "ground_pools": {
+    "gap_median_m": 5.907,
+    "gap_p90_m": 10.551,
+    "gap_max_m": 16.534,
+    "within_6m_pct": 51.197
+   },
+   "spread_bases": {
+    "gap_median_m": 5.727,
+    "gap_p90_m": 12.249,
+    "gap_max_m": 19.008,
+    "within_6m_pct": 52.306
+   },
+   "cells": 3426,
+   "cover_r_m": 10.8,
+   "what": "plan distance from every 1 m cell of the hot zone + wings (not the bar or chill zone) to the nearest hall PAR base, and (ground_pools) to the nearest PAR POOL (where its axis lands on the steel)"
+  },
+  "beam_coverage": {
+   "spread": {
+    "base_gap_median_m": 8.863,
+    "base_gap_max_m": 21.896,
+    "bases_by_z_band": {
+     "z < -18": 3,
+     "-18..-6": 4,
+     "-6..6": 7,
+     "6..18": 1,
+     "18..30": 1,
+     ">= 30": 2
+    },
+    "bases_in_entry_half": 2,
+    "worst_cell": [
+     15.0,
+     39.5
+    ]
+   },
+   "ground": {
+    "base_gap_median_m": 13.868,
+    "base_gap_max_m": 24.638,
+    "bases_by_z_band": {
+     "z < -18": 3,
+     "-18..-6": 1,
+     "-6..6": 7,
+     "6..18": 2,
+     "18..30": 2,
+     ">= 30": 3
+    },
+    "bases_in_entry_half": 3,
+    "worst_cell": [
+     3.0,
+     19.5
+    ]
+   },
+   "rule": {
+    "gap_max_m": 21.9,
+    "every_band_holds_a_base": true,
+    "ok": false
+   }
+  },
+  "par_places": {
+   "refused": {
+    "its guard line would stand in #873's strip (A8)": 22,
+    "its pool lands on the bar or the chill zone (OWNER DECISION: no light there until he says)": 58,
+    "an eye at 1.5-1.9 m within 0.5 m of its 25 deg beam": 66
+   },
+   "stands_in": {
+    "stage pen": 3,
+    "machine": 0,
+    "out of the crowd": 37
+   }
+  },
+  "par_eye_rule": {
+   "15": {
+    "lens_deg": 15.0,
+    "pars": 40,
+    "fail": [],
+    "fail_count": 0,
+    "lean_m": 0.5,
+    "heights_m": [
+     1.5,
+     1.9
+    ],
+    "what": "every floor PAR: its beam (15 deg + 1 deg aim tolerance, from its 0.10 m lens) between 1.5 and 1.9 m up to its first hit, against every public feet point 0.25 m apart; a person leaning 0.5 m"
+   },
+   "25": {
+    "lens_deg": 25.0,
+    "pars": 40,
+    "fail": [],
+    "fail_count": 0,
+    "lean_m": 0.5,
+    "heights_m": [
+     1.5,
+     1.9
+    ],
+    "what": "every floor PAR: its beam (25 deg + 1 deg aim tolerance, from its 0.10 m lens) between 1.5 and 1.9 m up to its first hit, against every public feet point 0.25 m apart; a person leaning 0.5 m"
+   }
+  },
+  "stage_front": {
+   "lamps": {
+    "key": {
+     "id": "rig-par-planes-25",
+     "part": "DJ key (ground option)",
+     "p": [
+      -4.5,
+      0.31,
+      6.45
+     ],
+     "targets": [
+      "DJ face"
+     ],
+     "lx_at_full_room": {
+      "DJ face": 3449.6
+     },
+     "levels": {
+      "dark": 0.053,
+      "peak": 0.017
+     },
+     "why": "the gap between the PA boxes (x -6.5..-2.9), 1.71 m behind the barrier line (z 8.16: out of reach, ISO 13857 1.4 m), behind their front line: the only floor place that sees the DJ past both boxes",
+     "reach": {
+      "id": "rig-par-planes-25",
+      "behind_barrier_m": 1.71,
+      "out_of_reach": true,
+      "rule_m": 1.4,
+      "in_pit": false
+     }
+    },
+    "booth": {
+     "id": "rig-par-planes-23",
+     "part": "stage front booth (ground)",
+     "p": [
+      -3.15,
+      0.31,
+      6.55
+     ],
+     "targets": [
+      "booth front"
+     ],
+     "lx_at_full_room": {
+      "booth front": 2443.457
+     },
+     "levels": {
+      "dark": 0.053,
+      "peak": 0.017
+     },
+     "why": "the far corner of the gap between the PA boxes (x -6.5..-2.9), behind the PA boxes' front line (z 6.7: MOXIR.md 5.3, nothing between the PA and the barrier) and 1.61 m behind the barrier (out of reach, ISO 13857 1.4 m); its own lamp: from the floor the DJ face and the booth front are 14.7 deg apart, more than one 15 deg PAR holds",
+     "reach": {
+      "id": "rig-par-planes-23",
+      "behind_barrier_m": 1.61,
+      "out_of_reach": true,
+      "rule_m": 1.4,
+      "in_pit": false
+     }
+    }
+   },
+   "floors": {
+    "dark": {
+     "DJ face": {
+      "lx": 44.482,
+      "floor": 44.0,
+      "ok": true
+     },
+     "booth front": {
+      "lx": 31.508,
+      "floor": 31.0,
+      "ok": true
+     }
+    },
+    "peak": {
+     "DJ face": {
+      "lx": 45.63,
+      "floor": 44.0,
+      "ok": true
+     },
+     "booth front": {
+      "lx": 32.321,
+      "floor": 31.0,
+      "ok": true
+     }
+    }
+   },
+   "all_floors_met": true,
+   "pa_faces": {
+    "question": "The PA boxes' faces: lit from the truss (another workflow), or the barrier moved 1 m out (z 9.2) so two floor PARs can stand at the pit's ends out of reach?",
+    "a_as_built": {
+     "what": "no floor PAR in the pit (MOXIR.md 5.3 holds); the faces get only what the rest of the rig gives",
+     "lx": {
+      "dark": {
+       "PA L face": 0.0,
+       "PA R face": 0.0
+      },
+      "peak": {
+       "PA L face": 0.0,
+       "PA R face": 0.0
+      }
+     }
+    },
+    "b_barrier_out": {
+     "what": "the barrier at z 9.2 (the pit 1 m deeper: the crowd-safety lead), round 1's pit-end lamps back (x -10.25 z 7.0, x 0.2 z 7.6): each face's lux at full from its own lamp",
+     "lx_at_full": {
+      "PA L": {
+       "PA L face": 788.032,
+       "PA R face": 0.0
+      },
+      "PA R": {
+       "PA L face": 0.0,
+       "PA R face": 489.111
+      }
+     },
+     "cost": "the pit 1 m deeper over 13.6 m (~14 m2 of the dance floor), the barrier moved"
+    },
+    "spread_as_owner_saw_it": {
+     "dark": {
+      "PA L face": 60.119,
+      "PA R face": 19.181
+     },
+     "peak": {
+      "PA L face": 107.54,
+      "PA R face": 46.62
+     }
+    }
+   },
+   "pars_in_the_pit": [],
+   "out_of_reach_rule": "ISO 13857:2019 Table 2 (high risk): a 0.4-0.6 m high hazard behind a 1.0 m barrier, c = 1.4 m (as reproduced in the Troax Safety Guide; EQUIVALENT)"
+  },
+  "fan": {
+   "kept_from_spread": true,
+   "heads": [
+    "rig-beam-planes-01",
+    "rig-beam-planes-02",
+    "rig-beam-planes-03",
+    "rig-beam-planes-04",
+    "rig-beam-planes-05",
+    "rig-beam-planes-06"
+   ],
+   "all_ok": true,
+   "strip": {
+    "x_m": [
+     -9.0,
+     -0.4
+    ],
+    "z_m": [
+     -5.4,
+     -2.5
+    ]
+   },
+   "crew_lanes": {
+    "back lane (to the smoke machine's refill side)": {
+     "x_m": [
+      -10.5,
+      1.5
+     ],
+     "z_m": [
+      -7.5,
+      -6.6
+     ]
+    },
+    "house-right lane (back to the booth)": {
+     "x_m": [
+      0.0,
+      1.5
+     ],
+     "z_m": [
+      -7.5,
+      -2.0
+     ]
+    }
+   },
+   "smoke_service": [
+    -4.75,
+    -6.7
+   ],
+   "smoke_service_gap_m_min": 1.772,
+   "crew_lane_gap_m_min": 0.643,
+   "near_crane": {
+    "rig-beam-planes-01": {
+     "girder": [
+      [
+       1.2,
+       -10.0,
+       0.0
+      ],
+      [
+       1.2,
+       -7.5,
+       0.0
+      ],
+      [
+       1.2,
+       -5.0,
+       0.0
+      ],
+      [
+       1.2,
+       -2.5,
+       0.0
+      ],
+      [
+       2.2,
+       -2.5,
+       0.0
+      ],
+      [
+       0.15,
+       0.0,
+       0.0
+      ],
+      [
+       1.2,
+       0.0,
+       0.0
+      ],
+      [
+       2.2,
+       0.0,
+       0.0
+      ],
+      [
+       0.15,
+       2.5,
+       0.0
+      ],
+      [
+       1.2,
+       2.5,
+       0.0
+      ],
+      [
+       2.2,
+       2.5,
+       0.0
+      ],
+      [
+       0.15,
+       5.0,
+       0.0
+      ],
+      [
+       1.2,
+       5.0,
+       0.0
+      ],
+      [
+       2.2,
+       5.0,
+       0.0
+      ],
+      [
+       0.15,
+       7.5,
+       0.0
+      ],
+      [
+       1.2,
+       7.5,
+       0.0
+      ],
+      [
+       2.2,
+       7.5,
+       0.0
+      ],
+      [
+       0.15,
+       10.0,
+       0.0
+      ],
+      [
+       2.2,
+       10.0,
+       0.0
+      ],
+      [
+       0.15,
+       -10.0,
+       5.0
+      ],
+      [
+       0.15,
+       -7.5,
+       5.0
+      ],
+      [
+       0.15,
+       -5.0,
+       5.0
+      ],
+      [
+       0.15,
+       -2.5,
+       5.0
+      ],
+      [
+       1.2,
+       -2.5,
+       5.0
+      ],
+      [
+       0.15,
+       0.0,
+       5.0
+      ],
+      [
+       1.2,
+       0.0,
+       5.0
+      ],
+      [
+       0.15,
+       2.5,
+       5.0
+      ],
+      [
+       1.2,
+       2.5,
+       5.0
+      ],
+      [
+       1.2,
+       5.0,
+       5.0
+      ],
+      [
+       1.2,
+       7.5,
+       5.0
+      ],
+      [
+       1.2,
+       10.0,
+       5.0
+      ],
+      [
+       0.15,
+       -7.5,
+       10.0
+      ],
+      [
+       0.15,
+       -5.0,
+       10.0
+      ],
+      [
+       0.15,
+       -2.5,
+       10.0
+      ],
+      [
+       0.15,
+       0.0,
+       10.0
+      ],
+      [
+       0.15,
+       2.5,
+       10.0
+      ],
+      [
+       0.15,
+       5.0,
+       10.0
+      ],
+      [
+       0.15,
+       7.5,
+       10.0
+      ],
+      [
+       0.15,
+       10.0,
+       10.0
+      ]
+     ],
+     "cut": []
+    },
+    "rig-beam-planes-02": {
+     "girder": [
+      [
+       0.15,
+       -5.0,
+       0.0
+      ],
+      [
+       0.15,
+       -2.5,
+       0.0
+      ],
+      [
+       0.15,
+       0.0,
+       0.0
+      ],
+      [
+       0.15,
+       2.5,
+       0.0
+      ],
+      [
+       0.15,
+       5.0,
+       0.0
+      ],
+      [
+       0.15,
+       7.5,
+       0.0
+      ],
+      [
+       0.15,
+       10.0,
+       0.0
+      ]
+     ],
+     "cut": []
+    },
+    "rig-beam-planes-03": {
+     "girder": [],
+     "cut": []
+    },
+    "rig-beam-planes-04": {
+     "girder": [],
+     "cut": []
+    },
+    "rig-beam-planes-05": {
+     "girder": [
+      [
+       0.15,
+       -10.0,
+       0.0
+      ],
+      [
+       1.2,
+       -10.0,
+       0.0
+      ],
+      [
+       0.15,
+       -7.5,
+       0.0
+      ],
+      [
+       1.2,
+       -7.5,
+       0.0
+      ],
+      [
+       0.15,
+       -5.0,
+       0.0
+      ],
+      [
+       1.2,
+       -5.0,
+       0.0
+      ],
+      [
+       0.15,
+       -2.5,
+       0.0
+      ],
+      [
+       1.2,
+       -2.5,
+       0.0
+      ],
+      [
+       0.15,
+       0.0,
+       0.0
+      ],
+      [
+       1.2,
+       0.0,
+       0.0
+      ],
+      [
+       0.15,
+       2.5,
+       0.0
+      ],
+      [
+       0.15,
+       5.0,
+       0.0
+      ],
+      [
+       0.15,
+       7.5,
+       0.0
+      ],
+      [
+       0.15,
+       10.0,
+       0.0
+      ],
+      [
+       0.15,
+       -10.0,
+       5.0
+      ],
+      [
+       0.15,
+       -7.5,
+       5.0
+      ],
+      [
+       0.15,
+       -5.0,
+       5.0
+      ],
+      [
+       0.15,
+       -2.5,
+       5.0
+      ],
+      [
+       0.15,
+       0.0,
+       5.0
+      ],
+      [
+       0.15,
+       2.5,
+       5.0
+      ],
+      [
+       0.15,
+       5.0,
+       5.0
+      ]
+     ],
+     "cut": []
+    },
+    "rig-beam-planes-06": {
+     "girder": [
+      [
+       0.15,
+       -10.0,
+       0.0
+      ],
+      [
+       2.2,
+       -10.0,
+       0.0
+      ],
+      [
+       3.2,
+       -10.0,
+       0.0
+      ],
+      [
+       0.15,
+       -7.5,
+       0.0
+      ],
+      [
+       2.2,
+       -7.5,
+       0.0
+      ],
+      [
+       0.15,
+       -5.0,
+       0.0
+      ],
+      [
+       2.2,
+       -5.0,
+       0.0
+      ],
+      [
+       0.15,
+       -2.5,
+       0.0
+      ],
+      [
+       1.2,
+       -2.5,
+       0.0
+      ],
+      [
+       2.2,
+       -2.5,
+       0.0
+      ],
+      [
+       0.15,
+       0.0,
+       0.0
+      ],
+      [
+       1.2,
+       0.0,
+       0.0
+      ],
+      [
+       2.2,
+       0.0,
+       0.0
+      ],
+      [
+       0.15,
+       2.5,
+       0.0
+      ],
+      [
+       1.2,
+       2.5,
+       0.0
+      ],
+      [
+       2.2,
+       2.5,
+       0.0
+      ],
+      [
+       1.2,
+       5.0,
+       0.0
+      ],
+      [
+       2.2,
+       5.0,
+       0.0
+      ],
+      [
+       1.2,
+       7.5,
+       0.0
+      ],
+      [
+       1.2,
+       10.0,
+       0.0
+      ],
+      [
+       1.2,
+       -10.0,
+       5.0
+      ],
+      [
+       1.2,
+       -7.5,
+       5.0
+      ],
+      [
+       1.2,
+       -5.0,
+       5.0
+      ],
+      [
+       1.2,
+       -2.5,
+       5.0
+      ],
+      [
+       0.15,
+       0.0,
+       5.0
+      ],
+      [
+       1.2,
+       0.0,
+       5.0
+      ],
+      [
+       0.15,
+       2.5,
+       5.0
+      ],
+      [
+       1.2,
+       2.5,
+       5.0
+      ],
+      [
+       0.15,
+       5.0,
+       5.0
+      ],
+      [
+       1.2,
+       5.0,
+       5.0
+      ],
+      [
+       0.15,
+       7.5,
+       5.0
+      ],
+      [
+       0.15,
+       10.0,
+       5.0
+      ],
+      [
+       0.15,
+       -10.0,
+       10.0
+      ],
+      [
+       0.15,
+       -7.5,
+       10.0
+      ],
+      [
+       0.15,
+       -5.0,
+       10.0
+      ],
+      [
+       0.15,
+       -2.5,
+       10.0
+      ],
+      [
+       0.15,
+       0.0,
+       10.0
+      ],
+      [
+       0.15,
+       2.5,
+       10.0
+      ],
+      [
+       0.15,
+       5.0,
+       10.0
+      ],
+      [
+       0.15,
+       7.5,
+       10.0
+      ],
+      [
+       0.15,
+       10.0,
+       10.0
+      ],
+      [
+       0.15,
+       -10.0,
+       15.0
+      ],
+      [
+       0.15,
+       -7.5,
+       15.0
+      ]
+     ],
+     "cut": []
+    }
+   }
+  },
+  "beams": 18,
+  "beams_ok": 18,
+  "beams_ending_in_bar_or_chill": [],
+  "beams_into_crane_or_park": [],
+  "beam_glare_min_deg": 32.869,
+  "beam_field_glare": {
+   "points": 18739,
+   "step_m": 0.5,
+   "heights_m": [
+    1.5,
+    1.7,
+    1.9
+   ],
+   "fail_points": 0,
+   "fail_pct": 0.0,
+   "fail_pct_by_height": {
+    "1.5": 0.0,
+    "1.7": 0.0,
+    "1.9": 0.0
+   },
+   "min_deg": 30.009,
+   "exceptions": [],
+   "rule_deg": 30.0,
+   "rule_status": "ASSUMED: a design heuristic (forward scatter at HG g 0.74, HG(30 deg) ~ 1/5 of HG(15 deg); eyes.py), not a published standard. The eye-safety limit is the B380F's IEC 62471 hazard distance: UNKNOWN until the rental gives its risk group.",
+   "what": "every public plan point (painted hot, wings, bar, chill + the door walkway; not the stage pen or a machine) every 0.5 m AND every point of the 0.5 m lean band outside its edge (0.25 m), eyes at 1.5/1.7/1.9 m (+0.6 on the FOH riser), every beam over its whole desk window (9 pans x 4 tilts), the angle at the head"
+  },
+  "beam_windows_ok": true,
+  "entry_lasers": {
+   "source": "scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json @ a30b4757 (PR #873), keep_out.boxes + fixtures",
+   "units_in_tower_pen": [],
+   "beam_aperture_gap_min_m": 16.783,
+   "beam_cubes_box_gap_min_m": 7.456,
+   "beam_far_wall_block_gap_min_m": 36.799,
+   "beams_into_laser_keep_out": [],
+   "rules": {
+    "aperture_pad_m": 1.0,
+    "block_free_m": 3.0,
+    "why": "ASSUMED margins: no B380F ray within 1 m of a laser unit, no B380F end within 3 m of a block"
+   }
+  },
+  "corridor_873": {
+   "source": "scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json under_the_beams (#873)",
+   "bands": [
+    {
+     "z_m": [
+      30.0,
+      48.0
+     ],
+     "what": "the entry end: the chill zone, the bar side, the door's flow",
+     "highest_standing_surface_m": 0.8,
+     "x_strip_m": [
+      -10.64,
+      -4.48
+     ]
+    },
+    {
+     "z_m": [
+      20.0,
+      30.0
+     ],
+     "what": "the back of the floor, FOH",
+     "highest_standing_surface_m": 0.72,
+     "x_strip_m": [
+      -10.66,
+      -4.26
+     ]
+    },
+    {
+     "z_m": [
+      8.2,
+      20.0
+     ],
+     "what": "the dance floor",
+     "highest_standing_surface_m": 0.64,
+     "x_strip_m": [
+      -10.68,
+      -4.0
+     ]
+    },
+    {
+     "z_m": [
+      -31.0,
+      8.2
+     ],
+     "what": "the stage, backstage and the hot zone behind it (to z -31)",
+     "highest_standing_surface_m": 0.34,
+     "x_strip_m": [
+      -10.75,
+      -3.13
+     ]
+    },
+    {
+     "z_m": [
+      -53.8,
+      -31.0
+     ],
+     "what": "the far end",
+     "highest_standing_surface_m": 0.17,
+     "x_strip_m": [
+      -10.79,
+      -2.62
+     ]
+    }
+   ],
+   "this_layer_units_in_strip": [],
+   "this_layer_lines_in_strip_m": 0,
+   "barriers_added_by_this_layer_m": 0.0,
+   "refused_before_the_pick": {
+    "slots": [
+     "slot x -14.5 z -34.9",
+     "slot x -14.5 z 37.1",
+     "slot x -11.5 z -34.9",
+     "slot x -11.5 z 40.1",
+     "slot x 0.5 z -28.9"
+    ],
+    "pars": 22,
+    "edge_faces_in_strip": 55
+   },
+   "line_near_m": 6.0,
+   "flagged_not_this_layer": {
+    "stage pen units (crew only; B's fan and the two stage-front lamps, as the spread had them)": [
+     "rig-smoke-planes",
+     "rig-par-planes-25",
+     "rig-par-planes-23",
+     "rig-beam-planes-01",
+     "rig-beam-planes-02",
+     "rig-beam-planes-03",
+     "rig-beam-planes-04",
+     "rig-beam-planes-05"
+    ],
+    "the stage pen's own barrier (owed since the spread)": "its back (z -7.5) and front (z 8.2, the crowd barrier) cross the strip x -10.75..-3.13 (limit 0.34 m): the laser lead (LSO) and the crowd-safety lead must accept them as unclimbable, or the strip moves"
+   },
+   "ok": true
+  },
+  "dj_glare_ok": {
+   "dark": true,
+   "peak": true
+  },
+  "dj_glare_all_at_full_ok": true,
+  "dj_key": {
+   "deg_from_eye_line": 40.818,
+   "levels": {
+    "dark": 0.053,
+    "peak": 0.017
+   },
+   "face_lx_full_room": 3449.6,
+   "combine_with": "the truss DJ light (another workflow)"
+  },
+  "level_law": "linear: a fader at L draws L (the #868 fix); stage light computed with exponent 1",
+  "eye_weights": {
+   "floor centre": {
+    "cells": 310,
+    "dance_floor_cells": 228,
+    "people": 497.0,
+    "weight": 1.945
+   },
+   "wing L": {
+    "cells": 474,
+    "dance_floor_cells": 6,
+    "people": 246.0,
+    "weight": 0.963
+   },
+   "wing R": {
+    "cells": 691,
+    "dance_floor_cells": 0,
+    "people": 345.5,
+    "weight": 1.352
+   },
+   "behind the stage": {
+    "cells": 457,
+    "dance_floor_cells": 0,
+    "people": 228.5,
+    "weight": 0.894
+   },
+   "mid-hall": {
+    "cells": 443,
+    "dance_floor_cells": 0,
+    "people": 221.5,
+    "weight": 0.867
+   },
+   "near the entry": {
+    "cells": 357,
+    "dance_floor_cells": 0,
+    "people": 178.5,
+    "weight": 0.698
+   },
+   "FOH": {
+    "cells": 348,
+    "dance_floor_cells": 66,
+    "people": 273.0,
+    "weight": 1.068
+   },
+   "far corner L": {
+    "cells": 306,
+    "dance_floor_cells": 0,
+    "people": 153.0,
+    "weight": 0.599
+   },
+   "far corner R": {
+    "cells": 314,
+    "dance_floor_cells": 0,
+    "people": 157.0,
+    "weight": 0.614
+   }
+  },
+  "epic": {
+   "per_eye": {
+    "floor centre": {
+     "weight": 1.945,
+     "beam_G": [
+      0.11631,
+      0.0744
+     ],
+     "par_lx": [
+      1.665,
+      0.513
+     ],
+     "beam_ratio": 0.64,
+     "par_ratio": 0.308
+    },
+    "wing L": {
+     "weight": 0.963,
+     "beam_G": [
+      0.05282,
+      0.05022
+     ],
+     "par_lx": [
+      1.688,
+      1.257
+     ],
+     "beam_ratio": 0.951,
+     "par_ratio": 0.745
+    },
+    "wing R": {
+     "weight": 1.352,
+     "beam_G": [
+      0.05246,
+      0.04103
+     ],
+     "par_lx": [
+      1.753,
+      0.746
+     ],
+     "beam_ratio": 0.782,
+     "par_ratio": 0.426
+    },
+    "behind the stage": {
+     "weight": 0.894,
+     "beam_G": [
+      0.04785,
+      0.03406
+     ],
+     "par_lx": [
+      1.37,
+      0.369
+     ],
+     "beam_ratio": 0.712,
+     "par_ratio": 0.269
+    },
+    "mid-hall": {
+     "weight": 0.867,
+     "beam_G": [
+      0.09782,
+      0.06795
+     ],
+     "par_lx": [
+      0.452,
+      0.569
+     ],
+     "beam_ratio": 0.695,
+     "par_ratio": 1.259
+    },
+    "near the entry": {
+     "weight": 0.698,
+     "beam_G": [
+      0.09092,
+      0.05889
+     ],
+     "par_lx": [
+      0.097,
+      0.147
+     ],
+     "beam_ratio": 0.648,
+     "par_ratio": 1.515
+    },
+    "FOH": {
+     "weight": 1.068,
+     "beam_G": [
+      0.11862,
+      0.07259
+     ],
+     "par_lx": [
+      1.032,
+      0.704
+     ],
+     "beam_ratio": 0.612,
+     "par_ratio": 0.682
+    },
+    "far corner L": {
+     "weight": 0.599,
+     "beam_G": [
+      0.0448,
+      0.03433
+     ],
+     "par_lx": [
+      0.222,
+      0.797
+     ],
+     "beam_ratio": 0.766,
+     "par_ratio": 3.59
+    },
+    "far corner R": {
+     "weight": 0.614,
+     "beam_G": [
+      0.04245,
+      0.03276
+     ],
+     "par_lx": [
+      1.036,
+      0.544
+     ],
+     "beam_ratio": 0.772,
+     "par_ratio": 0.525
+    }
+   },
+   "people_weighted": {
+    "eyes": [
+     "floor centre",
+     "wing L",
+     "wing R",
+     "behind the stage",
+     "mid-hall",
+     "near the entry",
+     "FOH",
+     "far corner L",
+     "far corner R"
+    ],
+    "beam_G": [
+     0.71865,
+     0.49721
+    ],
+    "par_lx": [
+     10.79,
+     5.706
+    ],
+    "beam_ratio": 0.692,
+    "par_ratio": 0.529
+   },
+   "crowd_eyes": {
+    "eyes": [
+     "floor centre",
+     "FOH",
+     "mid-hall",
+     "near the entry",
+     "wing L",
+     "wing R"
+    ],
+    "beam_G": [
+     0.62297,
+     0.42609
+    ],
+    "par_lx": [
+     8.796,
+     4.565
+    ],
+    "beam_ratio": 0.684,
+    "par_ratio": 0.519
+   },
+   "entry_eyes": {
+    "eyes": [
+     "mid-hall",
+     "near the entry",
+     "FOH"
+    ],
+    "beam_G": [
+     0.27496,
+     0.17754
+    ],
+    "par_lx": [
+     1.562,
+     1.348
+    ],
+    "beam_ratio": 0.646,
+    "par_ratio": 0.863
+   },
+   "entry_min_beam_ratio": 0.612,
+   "entry_min_par_ratio": 0.682,
+   "what": "[the spread, the ground] from the same nine eyes in the same hall (the fan's world: the crane park's air open); weights = the people each eye stands for (FIX 1); ratio = ground / spread"
+  },
+  "epic_peak_look": {
+   "per_eye": {
+    "floor centre": {
+     "weight": 1.945,
+     "beam_G": [
+      0.02127,
+      0.02277
+     ],
+     "par_lx": [
+      0.328,
+      0.106
+     ],
+     "beam_ratio": 1.071,
+     "par_ratio": 0.323
+    },
+    "wing L": {
+     "weight": 0.963,
+     "beam_G": [
+      0.00871,
+      0.01706
+     ],
+     "par_lx": [
+      0.343,
+      0.26
+     ],
+     "beam_ratio": 1.959,
+     "par_ratio": 0.758
+    },
+    "wing R": {
+     "weight": 1.352,
+     "beam_G": [
+      0.00924,
+      0.016
+     ],
+     "par_lx": [
+      0.379,
+      0.154
+     ],
+     "beam_ratio": 1.732,
+     "par_ratio": 0.406
+    },
+    "behind the stage": {
+     "weight": 0.894,
+     "beam_G": [
+      0.00927,
+      0.00986
+     ],
+     "par_lx": [
+      0.275,
+      0.076
+     ],
+     "beam_ratio": 1.064,
+     "par_ratio": 0.276
+    },
+    "mid-hall": {
+     "weight": 0.867,
+     "beam_G": [
+      0.01742,
+      0.02025
+     ],
+     "par_lx": [
+      0.1,
+      0.118
+     ],
+     "beam_ratio": 1.162,
+     "par_ratio": 1.18
+    },
+    "near the entry": {
+     "weight": 0.698,
+     "beam_G": [
+      0.01621,
+      0.016
+     ],
+     "par_lx": [
+      0.021,
+      0.03
+     ],
+     "beam_ratio": 0.987,
+     "par_ratio": 1.429
+    },
+    "FOH": {
+     "weight": 1.068,
+     "beam_G": [
+      0.0208,
+      0.02362
+     ],
+     "par_lx": [
+      0.206,
+      0.146
+     ],
+     "beam_ratio": 1.136,
+     "par_ratio": 0.709
+    },
+    "far corner L": {
+     "weight": 0.599,
+     "beam_G": [
+      0.008,
+      0.01062
+     ],
+     "par_lx": [
+      0.049,
+      0.165
+     ],
+     "beam_ratio": 1.327,
+     "par_ratio": 3.367
+    },
+    "far corner R": {
+     "weight": 0.614,
+     "beam_G": [
+      0.0079,
+      0.01009
+     ],
+     "par_lx": [
+      0.202,
+      0.113
+     ],
+     "beam_ratio": 1.277,
+     "par_ratio": 0.559
+    }
+   },
+   "people_weighted": {
+    "eyes": [
+     "floor centre",
+     "wing L",
+     "wing R",
+     "behind the stage",
+     "mid-hall",
+     "near the entry",
+     "FOH",
+     "far corner L",
+     "far corner R"
+    ],
+    "beam_G": [
+     0.12881,
+     0.15767
+    ],
+    "par_lx": [
+     2.201,
+     1.18
+    ],
+    "beam_ratio": 1.224,
+    "par_ratio": 0.536
+   },
+   "crowd_eyes": {
+    "eyes": [
+     "floor centre",
+     "FOH",
+     "mid-hall",
+     "near the entry",
+     "wing L",
+     "wing R"
+    ],
+    "beam_G": [
+     0.11088,
+     0.1363
+    ],
+    "par_lx": [
+     1.802,
+     0.944
+    ],
+    "beam_ratio": 1.229,
+    "par_ratio": 0.524
+   },
+   "entry_eyes": {
+    "eyes": [
+     "mid-hall",
+     "near the entry",
+     "FOH"
+    ],
+    "beam_G": [
+     0.04863,
+     0.05395
+    ],
+    "par_lx": [
+     0.321,
+     0.279
+    ],
+    "beam_ratio": 1.109,
+    "par_ratio": 0.869
+   },
+   "entry_min_beam_ratio": 0.987,
+   "entry_min_par_ratio": 0.709,
+   "what": "[the spread, the ground] from the same nine eyes in the same hall (the fan's world: the crane park's air open); weights = the people each eye stands for (FIX 1); ratio = ground / spread"
+  },
+  "epic_peak_equal_colours": {
+   "per_eye": {
+    "floor centre": {
+     "weight": 1.945,
+     "beam_G": [
+      0.06289,
+      0.06324
+     ],
+     "par_lx": [
+      1.258,
+      0.436
+     ],
+     "beam_ratio": 1.006,
+     "par_ratio": 0.347
+    },
+    "wing L": {
+     "weight": 0.963,
+     "beam_G": [
+      0.01781,
+      0.04269
+     ],
+     "par_lx": [
+      1.321,
+      1.068
+     ],
+     "beam_ratio": 2.397,
+     "par_ratio": 0.808
+    },
+    "wing R": {
+     "weight": 1.352,
+     "beam_G": [
+      0.03365,
+      0.03487
+     ],
+     "par_lx": [
+      1.368,
+      0.634
+     ],
+     "beam_ratio": 1.036,
+     "par_ratio": 0.463
+    },
+    "behind the stage": {
+     "weight": 0.894,
+     "beam_G": [
+      0.03262,
+      0.02895
+     ],
+     "par_lx": [
+      1.087,
+      0.313
+     ],
+     "beam_ratio": 0.887,
+     "par_ratio": 0.288
+    },
+    "mid-hall": {
+     "weight": 0.867,
+     "beam_G": [
+      0.04891,
+      0.05776
+     ],
+     "par_lx": [
+      0.345,
+      0.484
+     ],
+     "beam_ratio": 1.181,
+     "par_ratio": 1.403
+    },
+    "near the entry": {
+     "weight": 0.698,
+     "beam_G": [
+      0.04741,
+      0.05006
+     ],
+     "par_lx": [
+      0.074,
+      0.125
+     ],
+     "beam_ratio": 1.056,
+     "par_ratio": 1.689
+    },
+    "FOH": {
+     "weight": 1.068,
+     "beam_G": [
+      0.05415,
+      0.0617
+     ],
+     "par_lx": [
+      0.804,
+      0.598
+     ],
+     "beam_ratio": 1.139,
+     "par_ratio": 0.744
+    },
+    "far corner L": {
+     "weight": 0.599,
+     "beam_G": [
+      0.02225,
+      0.02918
+     ],
+     "par_lx": [
+      0.168,
+      0.677
+     ],
+     "beam_ratio": 1.311,
+     "par_ratio": 4.03
+    },
+    "far corner R": {
+     "weight": 0.614,
+     "beam_G": [
+      0.02661,
+      0.02784
+     ],
+     "par_lx": [
+      0.825,
+      0.462
+     ],
+     "beam_ratio": 1.046,
+     "par_ratio": 0.56
+    }
+   },
+   "people_weighted": {
+    "eyes": [
+     "floor centre",
+     "wing L",
+     "wing R",
+     "behind the stage",
+     "mid-hall",
+     "near the entry",
+     "FOH",
+     "far corner L",
+     "far corner R"
+    ],
+    "beam_G": [
+     0.37712,
+     0.42263
+    ],
+    "par_lx": [
+     8.357,
+     4.848
+    ],
+    "beam_ratio": 1.121,
+    "par_ratio": 0.58
+   },
+   "crowd_eyes": {
+    "eyes": [
+     "floor centre",
+     "FOH",
+     "mid-hall",
+     "near the entry",
+     "wing L",
+     "wing R"
+    ],
+    "beam_G": [
+     0.3183,
+     0.36217
+    ],
+    "par_lx": [
+     6.778,
+     3.879
+    ],
+    "beam_ratio": 1.138,
+    "par_ratio": 0.572
+   },
+   "entry_eyes": {
+    "eyes": [
+     "mid-hall",
+     "near the entry",
+     "FOH"
+    ],
+    "beam_G": [
+     0.13333,
+     0.15092
+    ],
+    "par_lx": [
+     1.209,
+     1.146
+    ],
+    "beam_ratio": 1.132,
+    "par_ratio": 0.948
+   },
+   "entry_min_beam_ratio": 1.056,
+   "entry_min_par_ratio": 0.744,
+   "what": "[the spread, the ground] from the same nine eyes in the same hall (the fan's world: the crane park's air open); weights = the people each eye stands for (FIX 1); ratio = ground / spread"
+  },
+  "entry_gate": {
+   "eyes": [
+    "mid-hall",
+    "near the entry",
+    "FOH"
+   ],
+   "beam_ratio": {
+    "mid-hall": 1.181,
+    "near the entry": 1.056,
+    "FOH": 1.139
+   },
+   "par_ratio": {
+    "mid-hall": 1.403,
+    "near the entry": 1.689,
+    "FOH": 0.744
+   },
+   "ok_beams": true,
+   "ok_pars": false,
+   "what": "A5: each entry-side eye at the peak, ground / spread, at EQUAL COLOURS (level x light, the colour's luminance left out of both)"
+  },
+  "palette": {
+   "peak": [
+    {
+     "part": "DJ key (ground option)",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.017,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "the spread's stage key was ash: kept (a named few)",
+     "units": 1
+    },
+    {
+     "part": "columns",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": "#ff3a12",
+     "spread_level": 0.8,
+     "changed": false,
+     "why": "the spread's column washes were ember: kept",
+     "units": 9
+    },
+    {
+     "part": "cut down",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.85,
+     "spread_colour": "#e8e4dc",
+     "spread_level": 1.0,
+     "changed": false,
+     "why": "the cut (the truss workflow): ash in the spread, kept",
+     "units": 5
+    },
+    {
+     "part": "cut up",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.85,
+     "spread_colour": "#e8e4dc",
+     "spread_level": 0.9,
+     "changed": false,
+     "why": "the cut (the truss workflow): ash in the spread, kept",
+     "units": 5
+    },
+    {
+     "part": "hall steel",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "replaces the spread's 3 ASH roof PARs and its ember halo / stage columns: the roof and the walls are the hall's steel, so ember (the spread's split: steel in ember, ash only on the cut and a named few)",
+     "units": 29
+    },
+    {
+     "part": "plane 1 (behind the DJ)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": "#ff3a12",
+     "spread_level": 1.0,
+     "changed": false,
+     "why": "B's fan as the owner saw and kept it: ember in the spread too",
+     "units": 6
+    },
+    {
+     "part": "plane 2 (the wings)",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.85,
+     "spread_colour": "#e8e4dc",
+     "spread_level": 0.2,
+     "changed": false,
+     "why": "the spread's wing beams were ash (its one cut-through colour in the hall): kept ash",
+     "units": 6
+    },
+    {
+     "part": "plane 2 (wings, facing the entry)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "NEW part (2026-10-10, M6): the wing heads aimed within 45 deg of the entry eye; in ash they whited out the entry view at the peak (0.94 % of the frame, budget 0.65 %; 0.22 % with these three dark): ember, the hall's colour; the light at equal colours (A5) is unchanged",
+     "units": 3
+    },
+    {
+     "part": "plane 3 (behind the stage)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": "#ff3a12",
+     "spread_level": 0.7,
+     "changed": false,
+     "why": "ember in the spread: kept",
+     "units": 2
+    },
+    {
+     "part": "plane 4 (the entry side)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "NEW part (the spread had no beam at the entry end): ember, the hall's colour, so the ember split holds",
+     "units": 1
+    },
+    {
+     "part": "stage front booth (ground)",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.017,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "the spread's stage key was ash: kept (a named few)",
+     "units": 1
+    }
+   ],
+   "ash_units_at_peak": 18,
+   "ash_parts": [
+    "DJ key (ground option)",
+    "cut down",
+    "cut up",
+    "plane 2 (the wings)",
+    "stage front booth (ground)"
+   ],
+   "changed_vs_spread": [
+    {
+     "part": "DJ key (ground option)",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.017,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "the spread's stage key was ash: kept (a named few)",
+     "units": 1
+    },
+    {
+     "part": "hall steel",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "replaces the spread's 3 ASH roof PARs and its ember halo / stage columns: the roof and the walls are the hall's steel, so ember (the spread's split: steel in ember, ash only on the cut and a named few)",
+     "units": 29
+    },
+    {
+     "part": "plane 2 (wings, facing the entry)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "NEW part (2026-10-10, M6): the wing heads aimed within 45 deg of the entry eye; in ash they whited out the entry view at the peak (0.94 % of the frame, budget 0.65 %; 0.22 % with these three dark): ember, the hall's colour; the light at equal colours (A5) is unchanged",
+     "units": 3
+    },
+    {
+     "part": "plane 4 (the entry side)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "NEW part (the spread had no beam at the entry end): ember, the hall's colour, so the ember split holds",
+     "units": 1
+    },
+    {
+     "part": "stage front booth (ground)",
+     "peak_colour": "#e8e4dc",
+     "peak_level": 0.017,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "the spread's stage key was ash: kept (a named few)",
+     "units": 1
+    }
+   ],
+   "what": "A3: every part of the peak look, its colour and level against the spread's same part (None = the spread has no such part); each change with its reason"
+  },
+  "headroom": {
+   "peak_cap": 0.85,
+   "max_level_by_look": {
+    "dark": 0.8,
+    "peak": 0.85
+   },
+   "ok": true,
+   "glare_rule": "ASSUMED: a design heuristic (forward scatter at HG g 0.74, HG(30 deg) ~ 1/5 of HG(15 deg); eyes.py), not a published standard. The eye-safety limit is the B380F's IEC 62471 hazard distance: UNKNOWN until the rental gives its risk group.",
+   "b380f_iec_62471": "UNKNOWN: the rental (Poligraf) gives the risk group and the hazard distance; until then the 30 deg rule (ASSUMED), the line and the desk windows are the controls",
+   "what": "A4: no beam or PAR part of any look above the cap (the laser part is the desk cap of the cubes, measured)"
+  },
+  "order": {
+   "perimeter_line": {
+    "length_m": 251,
+    "by_area_m": {
+     "entry": 61,
+     "house left": 98,
+     "far end": 6,
+     "house right": 86
+    },
+    "type": "a boundary line (not a crowd-pressure line): pedestrian barrier 1.1 m or fence (ASSUMED; the crowd-safety lead chooses); where a unit stands behind the public floor's edge within 6 m",
+    "measure": "the 1 m faces of the public floor's edge (a staircase: an upper bound, up to 1.41 x the straight line)"
+   },
+   "stage_pen_barrier_m": 46.4,
+   "stage_pen_barrier_note": "the stage pen's back and sides (the front is the existing crowd barrier at z 8.2) + A13's bay x -12..-10.5, z 1.75..6.5 (+3.0 m: its two ends; its outer side replaces the pen's side there): owed since the spread, not this layer's",
+   "floor_plates": {
+    "count": 18,
+    "what": "600 x 600 x 18 mm plywood, one per B380F (B's fan included)"
+   },
+   "sandbags": {
+    "count": 36,
+    "kg_each": 15.0,
+    "kg_total": 540.0,
+    "alternative": "4 x M10 concrete anchors through the plate, with the venue's written OK"
+   },
+   "cable_protectors": {
+    "sections": 54,
+    "public_metres_union": 54,
+    "crossings": 8,
+    "what": "every metre of cable run over public floor (the union of all runs: power, DMX, feeders, network) under a cable protector; 1 m sections ASSUMED; 5-channel protectors carry several runs"
+   },
+   "stewards": {
+    "count": 4,
+    "areas": [
+     "entry",
+     "far end",
+     "house left",
+     "house right"
+    ],
+    "basis": "ASSUMED: one steward per area where the line stands (the Purple Guide is not read); the stage pen is crew (the stage manager)"
+   },
+   "public_floor_lost_m2": 0.0,
+   "public_floor_lost_why": "no unit and no barrier of this layer stands on the public floor (A2)",
+   "par_fixing": "each PAR stands on its own yoke on the floor, outside the line (no plate: no moving part; a cable tie to the line where one is near)"
+  },
+  "smoke_path": {
+   "machine": [
+    -4.75,
+    1.0,
+    -6.2
+   ],
+   "refill_point": [
+    -4.75,
+    -6.7
+   ],
+   "in_stage_pen": true,
+   "refill_from_public_m": 1.43,
+   "plan": "the machine stands on the crew side (the stage pen); both 6 L tanks (running + spare) and the fluid are staged INSIDE the stage pen before doors, so a refill is a crew action from the back lane (x -10.5..1.5, z -7.5..-6.6) with no crossing of the crowd; the crew reach the pen by the artists' route (the crowd plan, owed)",
+   "ok": true
+  },
+  "owner_decisions": {
+   "bar_and_chill": {
+    "question": "Light on the bar and the chill + food zones (they are in your paint, marked bar / chill)?",
+    "a_as_built": {
+     "what": "no PAR pool and no beam end on the bar or the chill + food zone",
+     "par_lx_at_eye_peak_equal": {
+      "mid-hall": 0.484,
+      "near the entry": 0.125,
+      "FOH": 0.598
+     },
+     "pools_on_bar_or_chill": 0
+    },
+    "b_allowed": {
+     "what": "the same pick with PAR pools allowed over the bar and the chill (beams still never end there)",
+     "par_lx_at_eye_peak_equal": {
+      "mid-hall": 0.466,
+      "near the entry": 0.275,
+      "FOH": 0.576
+     },
+     "pools_on_bar_or_chill": 3
+    },
+    "spread": {
+     "mid-hall": 0.345,
+     "near the entry": 0.074,
+     "FOH": 0.804
+    }
+   },
+   "pa_faces": {
+    "question": "The PA boxes' faces: lit from the truss (another workflow), or the barrier moved 1 m out (z 9.2) so two floor PARs can stand at the pit's ends out of reach?",
+    "a_as_built": {
+     "what": "no floor PAR in the pit (MOXIR.md 5.3 holds); the faces get only what the rest of the rig gives",
+     "lx": {
+      "dark": {
+       "PA L face": 0.0,
+       "PA R face": 0.0
+      },
+      "peak": {
+       "PA L face": 0.0,
+       "PA R face": 0.0
+      }
+     }
+    },
+    "b_barrier_out": {
+     "what": "the barrier at z 9.2 (the pit 1 m deeper: the crowd-safety lead), round 1's pit-end lamps back (x -10.25 z 7.0, x 0.2 z 7.6): each face's lux at full from its own lamp",
+     "lx_at_full": {
+      "PA L": {
+       "PA L face": 788.032,
+       "PA R face": 0.0
+      },
+      "PA R": {
+       "PA L face": 0.0,
+       "PA R face": 489.111
+      }
+     },
+     "cost": "the pit 1 m deeper over 13.6 m (~14 m2 of the dance floor), the barrier moved"
+    },
+    "spread_as_owner_saw_it": {
+     "dark": {
+      "PA L face": 60.119,
+      "PA R face": 19.181
+     },
+     "peak": {
+      "PA L face": 107.54,
+      "PA R face": 46.62
+     }
+    }
+   },
+   "a5_island": {
+    "question": "A5: one island in the hall (A2 allows one, justified) so the beams reach the middle?",
+    "a_no_island": {
+     "what": "no island: every unit out of the crowd",
+     "base_gap_max_m": 24.638,
+     "entry_beam_ratio": {
+      "mid-hall": 1.181,
+      "near the entry": 1.056,
+      "FOH": 1.139
+     },
+     "islands": 0,
+     "painted_m2_taken": 0.0,
+     "barrier_m": 0.0,
+     "why_not_met": "no out-of-crowd place stands within 21.9 m of the painted cell x 3 z 19.5 (the nearest is 24.6 m away), so no pick from them meets 21.9 m"
+    },
+    "b_foh_island": {
+     "what": "one B380F on a fenced island beside the FOH riser (east of #873's strip), crew-only",
+     "rect": {
+      "x_m": [
+       -3.6,
+       1.2
+      ],
+      "z_m": [
+       26.6,
+       31.4
+      ]
+     },
+     "base_gap_max_m": 21.882,
+     "entry_beam_ratio": {
+      "mid-hall": 1.189,
+      "near the entry": 1.039,
+      "FOH": 1.076
+     },
+     "islands": 1,
+     "painted_m2_taken": 22.5625,
+     "barrier_m": 19.2,
+     "heads": [
+      {
+       "id": "rig-beam-planes-17",
+       "p": [
+        -1.2,
+        0.7,
+        29.0
+       ],
+       "throw_m": 16.145,
+       "ends_on": "roof deck"
+      }
+     ],
+     "a13_a15_ok": {
+      "a13": true,
+      "a14": true,
+      "a15": true
+     },
+     "field_glare_fail_points": 0,
+     "checks": "/home/dob/Downloads/moxir/v2-ground/foh-island/checks.json"
+    }
+   }
+  },
+  "floor_glare_peak_measured": {
+   "round": "r2-2026-10-10",
+   "dj_white_pct": {
+    "peak": 0.14,
+    "dark": 0.02
+   },
+   "frame": "gr-t40-peak-floor",
+   "white_pct": 0.37,
+   "mean_Y": 0.036,
+   "budget_pct": 0.65,
+   "ok": true,
+   "laser_fader": 0.16,
+   "laser_lines_drawn_scene_intensity": [
+    114984,
+    320881
+   ],
+   "every_view_ok": true,
+   "views_held": [
+    "gr-t40-dark-behind",
+    "gr-t40-dark-entry",
+    "gr-t40-dark-floor",
+    "gr-t40-dark-wingL",
+    "gr-t40-dark-wingR",
+    "gr-t40-peak-behind",
+    "gr-t40-peak-entry",
+    "gr-t40-peak-floor",
+    "gr-t40-peak-wingL",
+    "gr-t40-peak-wingR"
+   ],
+   "views_over_budget": [],
+   "all_frames": {
+    "gr-t40-dark-behind": {
+     "mean_Y": 0.0158,
+     "white_pct": 0.13
+    },
+    "gr-t40-dark-dj": {
+     "mean_Y": 0.0077,
+     "white_pct": 0.02
+    },
+    "gr-t40-dark-entry": {
+     "mean_Y": 0.0166,
+     "white_pct": 0.03
+    },
+    "gr-t40-dark-floor": {
+     "mean_Y": 0.0181,
+     "white_pct": 0.18
+    },
+    "gr-t40-dark-wingL": {
+     "mean_Y": 0.0093,
+     "white_pct": 0.03
+    },
+    "gr-t40-dark-wingR": {
+     "mean_Y": 0.0098,
+     "white_pct": 0.02
+    },
+    "gr-t40-peak-behind": {
+     "mean_Y": 0.0291,
+     "white_pct": 0.22
+    },
+    "gr-t40-peak-dj": {
+     "mean_Y": 0.0166,
+     "white_pct": 0.14
+    },
+    "gr-t40-peak-entry": {
+     "mean_Y": 0.0373,
+     "white_pct": 0.22
+    },
+    "gr-t40-peak-floor": {
+     "mean_Y": 0.036,
+     "white_pct": 0.37
+    },
+    "gr-t40-peak-wingL": {
+     "mean_Y": 0.0186,
+     "white_pct": 0.08
+    },
+    "gr-t40-peak-wingR": {
+     "mean_Y": 0.0196,
+     "white_pct": 0.14
+    }
+   },
+   "spread_drawn_now": {
+    "sl-t40-dark-behind": {
+     "mean_Y": 0.0254,
+     "white_pct": 0.19
+    },
+    "sl-t40-dark-dj": {
+     "mean_Y": 0.091,
+     "white_pct": 0.04
+    },
+    "sl-t40-dark-entry": {
+     "mean_Y": 0.0199,
+     "white_pct": 0.1
+    },
+    "sl-t40-dark-floor": {
+     "mean_Y": 0.0336,
+     "white_pct": 0.18
+    },
+    "sl-t40-dark-wingL": {
+     "mean_Y": 0.0275,
+     "white_pct": 0.04
+    },
+    "sl-t40-dark-wingR": {
+     "mean_Y": 0.0207,
+     "white_pct": 0.02
+    },
+    "sl-t40-peak-behind": {
+     "mean_Y": 0.0367,
+     "white_pct": 0.37
+    },
+    "sl-t40-peak-dj": {
+     "mean_Y": 0.1674,
+     "white_pct": 0.97
+    },
+    "sl-t40-peak-entry": {
+     "mean_Y": 0.031,
+     "white_pct": 0.39
+    },
+    "sl-t40-peak-floor": {
+     "mean_Y": 0.0541,
+     "white_pct": 0.58
+    },
+    "sl-t40-peak-wingL": {
+     "mean_Y": 0.0416,
+     "white_pct": 0.2
+    },
+    "sl-t40-peak-wingR": {
+     "mean_Y": 0.0342,
+     "white_pct": 0.16
+    }
+   },
+   "level_tuning_frames": [
+    {
+     "frame": "tune-b10-floor",
+     "set": {
+      "plane 2 (the wings)": 1.0,
+      "plane 3 (behind the stage)": 1.0,
+      "plane 4 (the entry side)": 1.0
+     },
+     "mean_Y": 0.0441,
+     "white_pct": 0.31
+    },
+    {
+     "frame": "tune-b10p10-floor",
+     "set": {
+      "plane 2 (the wings)": 1.0,
+      "plane 3 (behind the stage)": 1.0,
+      "plane 4 (the entry side)": 1.0,
+      "columns": 1.0,
+      "roof": 1.0,
+      "runway": 1.0
+     },
+     "mean_Y": 0.0473,
+     "white_pct": 0.32
+    },
+    {
+     "frame": "tune-base-floor",
+     "set": {},
+     "mean_Y": 0.0366,
+     "white_pct": 0.31
+    },
+    {
+     "frame": "tune-p10-floor",
+     "set": {
+      "columns": 1.0,
+      "roof": 1.0,
+      "runway": 1.0
+     },
+     "mean_Y": 0.0396,
+     "white_pct": 0.31
+    }
+   ],
+   "drawn_by": {
+    "commit": "8c70dd8a",
+    "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 3080 Laptop GPU (0x0000",
+    "ev100": 2.84,
+    "at": "2026-10-10T14:30:46.986Z"
+   },
+   "method": "moxir-v2-true-frames.cjs, measurement mode EV100 2.84, Full quality, haze t40 (one machine, closed hall), the floor eye 1.7 m z 18.1; frame_luma.py: the share of pixels with every channel >= 240 (the toolbars cut off)"
+  },
+  "near_crane_878": {
+   "source": {
+    "branch": "origin/feat/moxir-cranes-lasers-2026-10-09",
+    "commit": "9c7327128ef3b0fd00a6242d609b36aafaba79b2",
+    "cut": {
+     "file": "scripts/place/rigs/moxir-crane-cut-v2-cranes-2026-10-09.json",
+     "sha256": "84e64c1c72a2ae0d9e98fb0b5166219d68190bbb8c8e3636d2726fe3113c3f25"
+    },
+    "cubes": {
+     "file": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json",
+     "sha256": "7003d8c0c220977c5933cb091fc397fa8e8c00dce7543dda588ee2ace566fa7c"
+    }
+   },
+   "a13": {
+    "with_the_bay": {
+     "gap_m": 0.732,
+     "nearest": "cut tie-off hl (strap)",
+     "at_feet": [
+      -12.125,
+      6.075
+     ]
+    },
+    "bay_outside_the_barrier": {
+     "gap_m": 0.515,
+     "nearest": "cut tie-off hl (strap)",
+     "at_feet": [
+      -11.375,
+      4.825
+     ]
+    },
+    "painted_public_floor_only": {
+     "gap_m": 1.14,
+     "nearest": "cut tie-off hl (strap)",
+     "at_feet": [
+      -12.625,
+      5.875
+     ]
+    },
+    "rule_m": 0.5,
+    "raised_hands_m": 2.5,
+    "bay": {
+     "x_m": [
+      -12.0,
+      -10.5
+     ],
+     "z_m": [
+      1.75,
+      6.5
+     ],
+     "why": "#878: the cut's low end (x -11.04, bottom chord 2.89 m) and its hl strap pass the pen's edge x -10.5 at 0.33 m over raised hands; with the bay fenced, 0.622 m (rule 0.5 m)"
+    },
+    "ok": true,
+    "cross_check": "#878 reports 0.33 m (the truss) before and 0.622 m (the hl strap) after; here the truss is its bottom chord less half its 0.29 m section, the lamp bodies 0.20 m spheres (ASSUMED)",
+    "source": {
+     "branch": "origin/feat/moxir-cranes-lasers-2026-10-09",
+     "commit": "9c7327128ef3b0fd00a6242d609b36aafaba79b2",
+     "cut": {
+      "file": "scripts/place/rigs/moxir-crane-cut-v2-cranes-2026-10-09.json",
+      "sha256": "84e64c1c72a2ae0d9e98fb0b5166219d68190bbb8c8e3636d2726fe3113c3f25"
+     },
+     "cubes": {
+      "file": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json",
+      "sha256": "7003d8c0c220977c5933cb091fc397fa8e8c00dce7543dda588ee2ace566fa7c"
+     }
+    },
+    "what": "A13: raised hands (2.5 m over every floor point outside the stage pen's barrier, 0.25 m grid, painted or not) to every part of the cut at z 3.20 (#878)"
+   },
+   "a14": {
+    "units_min_clearance_m": 9.857,
+    "units_inside": [],
+    "beams_aim_inside": [],
+    "beams_window_inside": [],
+    "beam_aim_min_clearance_m": 10.136,
+    "what": "A14: the 6 cube beams behind the stage (#878), padded by their 1.008 deg tube + 0.25 m + the ground beam's own half width; cable runs lie on the floor (y 0), 8.5 m under the volume"
+   },
+   "a15": {
+    "crane_z_m": 3.2,
+    "beams_aim_meet": [],
+    "beams_window_meet": [
+     "rig-beam-planes-06"
+    ],
+    "what": "A15: no ground beam on the near crane parked at z 3.20 (#878): girders z 3.2 +-1.1 (0.7 wide, 7.6-8.92 m, x +-11.35) or the cut (truss, picks, hl strap, lamps; + 0.3 m)"
+   },
+   "pan_capped": [
+    "rig-beam-planes-06"
+   ],
+   "beams": [
+    {
+     "id": "rig-beam-planes-01",
+     "aim_cube_clearance_m": 11.707,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 11.049,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-02",
+     "aim_cube_clearance_m": 11.049,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 9.757,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-03",
+     "aim_cube_clearance_m": 10.139,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 8.511,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-04",
+     "aim_cube_clearance_m": 10.136,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 8.494,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-05",
+     "aim_cube_clearance_m": 11.04,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 9.852,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-06",
+     "aim_cube_clearance_m": 11.308,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 10.395,
+     "window_meets_crane": [
+      {
+       "pan": -10.0,
+       "tilt": 0.0,
+       "meets": "girder"
+      }
+     ],
+     "pan_cap_deg": [
+      -9.5,
+      10.0
+     ]
+    },
+    {
+     "id": "rig-beam-planes-16",
+     "aim_cube_clearance_m": 43.619,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 41.651,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-18",
+     "aim_cube_clearance_m": 45.088,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 45.088,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-09",
+     "aim_cube_clearance_m": 32.901,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 31.934,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-10",
+     "aim_cube_clearance_m": 27.475,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 26.24,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-13",
+     "aim_cube_clearance_m": 32.185,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 32.138,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-07",
+     "aim_cube_clearance_m": 19.547,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 17.533,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-15",
+     "aim_cube_clearance_m": 50.912,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 50.912,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-11",
+     "aim_cube_clearance_m": 44.522,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 42.624,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-17",
+     "aim_cube_clearance_m": 44.582,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 43.84,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-14",
+     "aim_cube_clearance_m": 38.365,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 36.71,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-12",
+     "aim_cube_clearance_m": 32.399,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 30.811,
+     "window_meets_crane": []
+    },
+    {
+     "id": "rig-beam-planes-08",
+     "aim_cube_clearance_m": 22.223,
+     "aim_meets_crane": [],
+     "window_cube_clearance_m": 21.904,
+     "window_meets_crane": []
+    }
+   ],
+   "ok": {
+    "a13": true,
+    "a14": true,
+    "a15": true
+   }
+  }
+ }
+}
