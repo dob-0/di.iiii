@@ -1977,6 +1977,11 @@ def stock(length_m, sticks):
 
 
 DISTRO_OF = {'stage pen': 'D-STAGE', 'house left': 'D-LEFT', 'house right': 'D-RIGHT', 'far end': 'D-FAR', 'entry': 'D-ENTRY'}
+# The entry end (2026-10-10 fix): DISTRO_OF sent every entry unit to D-ENTRY (house right), so the house-left entry PARs were fed
+# round the whole hall (one leg 213 m, the router keeps cables off the door walkway and #873's strip). Each entry unit now takes
+# the nearer of these by route.
+ENTRY_FEEDS = ('D-ENTRY', 'D-LEFT')
+ENTRY_NODES = ('NODE-RIGHT', 'NODE-LEFT')
 NODE_OF = {'stage pen': 'NODE-STAGE', 'house left': 'NODE-LEFT', 'house right': 'NODE-RIGHT', 'far end': 'NODE-FAR', 'entry': 'NODE-RIGHT'}
 FEEDERS = [('D-LEFT', 'D-STAGE'), ('D-LEFT', 'D-FAR'), ('D-FAR', 'D-RIGHT'), ('D-RIGHT', 'D-ENTRY')]       # the board ASSUMED at D-LEFT (its place owed)
 NETWORK = [('CONTROL', 'NODE-STAGE'), ('NODE-STAGE', 'NODE-LEFT'), ('NODE-LEFT', 'NODE-FAR'), ('NODE-FAR', 'NODE-RIGHT')]
@@ -2001,6 +2006,8 @@ def circuits_r2(units, A, RT, extra=()):
         reg = unit_region(u, A)
         if reg == 'machine':
             dist = min(sites, key=lambda k: RT.route((sites[k][0], sites[k][2]), (u['p'][0], u['p'][2]))['length_m'])
+        elif reg == 'entry':          # the entry end is split by the door walkway: each unit from the nearer of D-ENTRY / D-LEFT by route
+            dist = min(ENTRY_FEEDS, key=lambda k: RT.route((sites[k][0], sites[k][2]), (u['p'][0], u['p'][2]))['length_m'])
         else:
             dist = DISTRO_OF[reg]
         kind = 'smoke' if u['type'] == 'up-yz31p' else ('beams' if u['type'] == 'up-b380f' else ('truss' if u['part'].startswith('cut') else 'pars'))
@@ -2073,7 +2080,10 @@ def lines_r2(units, A, RT, absent=()):
         reg = unit_region(u, A)
         if reg == 'machine':
             reg = min(('house left', 'house right', 'stage pen'), key=lambda r: RT.route((NODES_R2[NODE_OF[r]][0], NODES_R2[NODE_OF[r]][2]), (u['p'][0], u['p'][2]))['length_m'])
-        by.setdefault((NODE_OF[reg], reg, u['dmx']['universe']), []).append(u)
+        node = NODE_OF[reg]
+        if reg == 'entry':            # as the power: the nearer node by route (the door walkway splits the entry end)
+            node = min(ENTRY_NODES, key=lambda k: RT.route((NODES_R2[k][0], NODES_R2[k][2]), (u['p'][0], u['p'][2]))['length_m'])
+        by.setdefault((node, reg, u['dmx']['universe']), []).append(u)
     out = []
     for (node, reg, uni), us in sorted(by.items()):
         s = NODES_R2[node]

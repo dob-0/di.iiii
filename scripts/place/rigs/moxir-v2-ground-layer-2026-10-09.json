@@ -1510,7 +1510,7 @@
     "line": "NODE-STAGE-B",
     "node": "NODE-STAGE"
    },
-   "circuit": "C12"
+   "circuit": "C13"
   },
   {
    "id": "rig-par-planes-23",
@@ -1566,7 +1566,7 @@
     "line": "NODE-STAGE-B",
     "node": "NODE-STAGE"
    },
-   "circuit": "C12"
+   "circuit": "C13"
   },
   {
    "id": "rig-par-planes-37",
@@ -1629,7 +1629,7 @@
     "line": "NODE-STAGE-B",
     "node": "NODE-STAGE"
    },
-   "circuit": "C12"
+   "circuit": "C13"
   },
   {
    "id": "rig-par-planes-29",
@@ -1692,7 +1692,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-26",
@@ -1818,7 +1818,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-09",
@@ -2196,7 +2196,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-07",
@@ -2322,7 +2322,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-13",
@@ -2448,7 +2448,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-30",
@@ -2574,7 +2574,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-36",
@@ -2634,10 +2634,10 @@
     "mode": "8ch",
     "port": "B",
     "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
-    "line": "NODE-RIGHT-B",
-    "node": "NODE-RIGHT"
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
    },
-   "circuit": "C02"
+   "circuit": "C08"
   },
   {
    "id": "rig-par-planes-21",
@@ -2889,7 +2889,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-03",
@@ -3264,10 +3264,10 @@
     "mode": "8ch",
     "port": "B",
     "from": "the v2 patch (moxir-v2-patch-2026-10-09.json, UP-PL5403 wash, the planes)",
-    "line": "NODE-RIGHT-B",
-    "node": "NODE-RIGHT"
+    "line": "NODE-LEFT-B",
+    "node": "NODE-LEFT"
    },
-   "circuit": "C02"
+   "circuit": "C08"
   },
   {
    "id": "rig-par-planes-01",
@@ -3519,7 +3519,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-39",
@@ -3645,7 +3645,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-14",
@@ -3834,7 +3834,7 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C09"
+   "circuit": "C10"
   },
   {
    "id": "rig-par-planes-05",
@@ -4092,7 +4092,7 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C10"
+   "circuit": "C11"
   },
   {
    "id": "rig-beam-planes-02",
@@ -4224,7 +4224,7 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C10"
+   "circuit": "C11"
   },
   {
    "id": "rig-beam-planes-03",
@@ -4356,7 +4356,7 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C10"
+   "circuit": "C11"
   },
   {
    "id": "rig-beam-planes-04",
@@ -4488,7 +4488,7 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C10"
+   "circuit": "C11"
   },
   {
    "id": "rig-beam-planes-05",
@@ -4620,7 +4620,7 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C10"
+   "circuit": "C11"
   },
   {
    "id": "rig-beam-planes-06",
@@ -4752,7 +4752,7 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C11"
+   "circuit": "C12"
   },
   {
    "id": "rig-beam-planes-16",
@@ -4882,7 +4882,7 @@
     "line": "NODE-RIGHT-A",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C08"
+   "circuit": "C09"
   },
   {
    "id": "rig-beam-planes-18",
@@ -5142,7 +5142,7 @@
     "line": "NODE-RIGHT-A",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C08"
+   "circuit": "C09"
   },
   {
    "id": "rig-beam-planes-10",

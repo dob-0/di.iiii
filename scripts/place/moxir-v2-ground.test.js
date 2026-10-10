@@ -749,6 +749,15 @@ describe('MOXIR v2 ground: the rest of the safety and the room', () => {
             }
         }
     })
+
+    it('feeds every unit from its own side: no power or DMX leg runs round the hall (each <= 65 m; c5388f3e fed the house-left entry PARs from D-ENTRY, one leg 213 m)', () => {
+        const legs = [
+            ...N.power.circuits.filter((c) => c.legs).flatMap((c) => c.legs.map((l) => [`power ${c.circuit} -> ${l.to}`, l.run_m])),
+            ...N.patch.lines.flatMap((l) => l.legs.map((g) => [`dmx ${l.line} -> ${g.to}`, g.run_m])),
+        ]
+        expect(legs.length).toBeGreaterThan(50)
+        for (const [id, m] of legs) expect(m, id).toBeLessThanOrEqual(65)
+    })
     it('builds: every look holds only parts the rig has, and the room draws every lamp and the 6 laser lines', () => {
         const parts = new Set(N.fixtures.map((f) => f.part))
         for (const lk of N.looks) for (const p of Object.keys(lk.parts)) expect(parts.has(p) || p === 'laser', p).toBe(true)
