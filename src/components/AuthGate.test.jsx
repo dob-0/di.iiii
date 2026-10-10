@@ -272,6 +272,28 @@ describe('AuthGate on a local install (requireAuth off)', () => {
         expect(mockAppNavigate).toHaveBeenCalledWith('/open')
     })
 
+    // Audit A9 (2026-10-10): "step through one of your own doors" is nobody's
+    // word (vocabulary.md has spaces, not doors) and meant nothing to a visitor
+    // who has no spaces. The visitor's card says what to do; neither card may
+    // call a space a door.
+    it('keeps the visitor card plain: what to check, then sign in', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        const card = await screen.findByTestId('closed-door-uniform')
+        expect(card).toHaveTextContent('it may not exist, or it may be private. Check the spelling, or sign in with an account that has access.')
+        expect(card.textContent).not.toMatch(/door/i)
+    })
+
+    it('names no "doors" on the not-found card', async () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        const card = await screen.findByText(/Nothing lives at/)
+        expect(card).toHaveTextContent('there is no space with that address. Check the spelling.')
+        expect(card.textContent).not.toMatch(/door/i)
+    })
+
     // A bare /make or /light no longer reaches this card at all: those words
     // are reserved, no space can be named one, and RootApp answers them with
     // the card that names what the word IS (ReservedAddressCard) instead of

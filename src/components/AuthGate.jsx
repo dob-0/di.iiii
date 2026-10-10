@@ -235,12 +235,12 @@ const ClosedDoorCard = ({
             ) : exists ? (
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
                     Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
-                    Sign in with an account that has access, or step through one of your own doors.
+                    Sign in with an account that has access.
                 </Typography>
             ) : (
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
                     Nothing lives at &ldquo;{missingAddressFromUrl(requiredSpaceId)}&rdquo; — there is no
-                    space with that address. Check the spelling, or step through one of your own doors.
+                    space with that address. Check the spelling.
                 </Typography>
             )}
             {inviteStatus === 'failed' && (
