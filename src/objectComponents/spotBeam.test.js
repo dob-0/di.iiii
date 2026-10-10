@@ -136,25 +136,34 @@ describe('a rig lamp\'s real light, fitted to its beam angle', async () => {
         const t = Math.min(1, Math.max(0, (Math.cos(theta) - lo) / (hi - lo)))
         return t * t * (3 - 2 * t)
     }
-    it('crosses 50 % at the beam half-angle, for a wash and for a narrow beam', () => {
-        for (const [half, penumbra] of [[0.1309, 0.5], [0.0157, 0.1], [0.218, 0.3]]) {
+    // the light's lumens in its cone, numerically: 2π ∫ falloff(θ) sin θ dθ (per candela of peak)
+    const fluxOf = (f, top) => { const n = 20000; let s = 0; for (let i = 0; i < n; i += 1) { const t = ((i + 0.5) / n) * top; s += f(t) * Math.sin(t) } return 2 * Math.PI * s * top / n }
+    it('keeps the lumens of the equivalents\' measured profile (50 % at the beam angle, 10 % at 1.62× / 2.0×)', async () => {
+        const { WASH_FIELD_RATIO, BEAM_FIELD_RATIO, profileExponentForRatio } = await import('./spotBeam.js')
+        // from the makers' reports: COLORdash Par H18X 23.7° / 38.4°, Proteus Excalibur 0.8° / 1.6°
+        expect(WASH_FIELD_RATIO).toBeCloseTo(1.62, 2)
+        expect(BEAM_FIELD_RATIO).toBe(2)
+        for (const [half, penumbra, ratio] of [[0.1309, 0.5, WASH_FIELD_RATIO], [0.0157, 0.1, BEAM_FIELD_RATIO]]) {
+            const p = profileExponentForRatio(ratio)
+            const real = (t) => Math.exp(-Math.LN2 * (t / half) ** p)
+            // the profile itself: 50 % at the beam half-angle, 10 % at the field half-angle
+            expect(real(half)).toBeCloseTo(0.5, 6)
+            expect(real(half * ratio)).toBeCloseTo(0.1, 6)
             const cone = spotLightCone({ angle: half, penumbra })
-            expect(cone.angle).toBeGreaterThan(half)
-            expect(falloff(half, cone)).toBeCloseTo(0.5, 2)
+            expect(cone.penumbra).toBe(1)
             expect(falloff(0, cone)).toBe(1)
+            const top = Math.min(Math.PI / 2, half * 8)
+            expect(fluxOf((t) => falloff(t, cone), top) / fluxOf(real, top)).toBeCloseTo(1, 2)
         }
     })
-    it('gives a wash a soft, wide field and a beam a hard edge (field = the 10 % point)', () => {
+    it('is wider than the old 50 %-point fit, which left the wash\'s field edge too hard (1.27×) and its lumens short', () => {
         const field = (cone) => { let t = 0; while (falloff(t, cone) > 0.1) t += cone.angle / 2000; return t }
         const wash = spotLightCone({ angle: 0.1309, penumbra: 0.5 })
-        const beam = spotLightCone({ angle: 0.0157, penumbra: 0.1 })
-        // three's falloff is a smoothstep in cos θ (quadratic in θ): at its softest the 10 %
-        // edge is √(0.804/0.5) ≈ 1.27× the 50 % point — short of a real wash's ~1.8, the most
-        // three can give. A beam's edge is harder: ~1.1×.
-        expect(field(wash) / 0.1309).toBeGreaterThan(1.24)
-        expect(field(beam) / 0.0157).toBeGreaterThan(1.05)
-        expect(field(beam) / 0.0157).toBeLessThan(1.15)
-        expect(wash.penumbra).toBeLessThanOrEqual(1)
-        expect(beam.penumbra).toBeGreaterThan(0)
+        // the old fit put three's 50 % point at the beam half-angle; the flux fit's cutoff lies further out
+        const old = { angle: 0.1309 * 1.41, penumbra: 1 }
+        expect(wash.angle).toBeGreaterThan(old.angle * 1.02)
+        // three's shape stays three's: its own 10 %/50 % ratio is still 1.27 (the WebGL ceiling, stated)
+        const half50 = (() => { let t = 0; while (falloff(t, wash) > 0.5) t += wash.angle / 4000; return t })()
+        expect(field(wash) / half50).toBeCloseTo(1.27, 1)
     })
 })
