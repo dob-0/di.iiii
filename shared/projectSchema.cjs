@@ -831,6 +831,28 @@ const RIG_LOOKS_CAP = 50
 const RIG_GROUPS_CAP = 100
 const lookKey = (value) => (typeof value === 'string' && /^[\w:.-]{1,40}\/[\w.-]{1,40}$/.test(value.trim()) ? value.trim() : '')
 const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim().toLowerCase() : '')
+// A look may MOVE (docs/architecture/RIG_BUILD.md §11.4, 2026-10-09): `motion` names an effect of the desk's FX engine
+// (serverXR/src/lighting/fx.js FX_MODES - the same words), its tempo, depth, the way it fans across the rig and the
+// lamp kinds it moves. Level and colour only: nothing here can say pan or tilt. src/rigbuild/lookMotion.js plays it.
+const MOTION_MODES = ['strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar', 'pump', 'breathe', 'pingpong', 'blocks']
+const MOTION_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-']
+const normalizeLookMotion = (value) => {
+  if (!value || typeof value !== 'object' || !MOTION_MODES.includes(value.mode)) return null
+  const bpm = planNum(value.bpm)
+  const depth = planNum(value.depth)
+  const still = planNum(value.still)
+  const kinds = (Array.isArray(value.kinds) ? value.kinds : []).filter((k) => typeof k === 'string' && /^[\w.-]{1,40}$/.test(k)).slice(0, 8)
+  return {
+    mode: value.mode,
+    bpm: Math.max(20, Math.min(300, Math.round(bpm == null ? 120 : bpm))),
+    depth: Math.max(0, Math.min(255, Math.round(depth == null ? 255 : depth))),
+    spatial: MOTION_SPATIAL.includes(value.spatial) ? value.spatial : 'patch',
+    kinds,
+    // A lamp at or under this level in the look holds still: the readable floor of the look does not flicker.
+    still: Math.max(0, Math.min(1, still == null ? 0 : still))
+  }
+}
+
 const normalizeRigLooks = (value) => {
   if (!value || typeof value !== 'object') return null
   const looks = planList(value.looks, (look) => {
@@ -864,7 +886,8 @@ const normalizeRigLooks = (value) => {
       const n = planNum(v)
       if (key && n != null) levels[key] = Math.min(1, Math.max(0, n))
     }
-    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}) }
+    const motion = normalizeLookMotion(look.motion)
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(motion ? { motion } : {}) }
   }).slice(0, RIG_LOOKS_CAP)
   if (!looks.length) return null
   return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
