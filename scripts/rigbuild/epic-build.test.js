@@ -88,3 +88,12 @@ describe('epic-build: no cutoff, the fan direction and the rig\'s own air', () =
         expect(v1RenderOps()[0].payload.patch.atmosphere).toEqual({ scattering: 0.0169, anisotropy: 0.7, haze: null })
     })
 })
+
+describe('epic-build: a solid an earlier rig file laid is not left behind (MOXIR v2 cranes, 2026-10-10)', () => {
+    it('takes out the #844 laser bar and the far-crane boxes (and every rig lamp), keeps the hall, the truss and the riser', async () => {
+        const { oldEntities } = await import('./epic-build.mjs')
+        const doc = { entities: [{ id: 'place-hall', type: 'model' }, { id: 'rig-line-1', type: 'model' }, { id: 'rig-deck-1', type: 'model' }, { id: 'rig-crowd-barrier', type: 'box' },
+            { id: 'rig-crane-bar', type: 'box' }, { id: 'rig-far-crane-z-12-girder-a', type: 'box' }, { id: 'rig-par-cut-01', type: 'spotLight' }, { id: 'rig-hoist-1', type: 'box' }] }
+        expect(oldEntities(doc).map((e) => e.id).sort()).toEqual(['rig-crane-bar', 'rig-far-crane-z-12-girder-a', 'rig-par-cut-01'])
+    })
+})

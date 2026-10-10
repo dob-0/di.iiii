@@ -6,6 +6,7 @@
 #   python3 -I scripts/place/moxir_v2_cranes.py data  --repo .      # write the new labelled data files (no checks)
 #   python3 -I scripts/place/moxir_v2_cranes.py build --repo .      # data + every check, the results written into the files (~3 min)
 #   python3 -I scripts/place/moxir_v2_cranes.py check --repo .      # the checks only, JSON on stdout, exit 1 if a rule fails
+#   python3 -I scripts/place/moxir_v2_cranes.py plan  --repo . [--out ~/Downloads/moxir/v2-cranes]   # the frame + probe plans (the scene)
 #
 # THE OWNER (2026-10-09, ledger N463, N464, verbatim): 20:51 "yes ther no crane one with the 6 lasers , go back one with trus dj 's
 #   back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences"; 21:1x "6 lasers will
@@ -1233,11 +1234,39 @@ def build(repo):
     return R
 
 
+# ====================================================================== 5. the frames and the lux probe (the scene, on a scratch stack)
+FRAME_VIEWS = ('floor', 'dj', 'behind', 'wingR')                       # the floor at 1.7 m, the DJ's eye, behind the stage, one wing (the kicker's side)
+PROJECT = 'moxir-v2-cranes'
+
+
+def plans(repo, out, base):
+    """the frame plan (moxir-v2-true-frames.cjs) and the probe plan (moxir-v2-probe.cjs): 4 views x peak + dark, one smoke machine at 40 min,
+    measurement mode at EV100 2.84 (moxir_v2_true.QUERY), the same cameras as v2 spread (moxir_v2_spread.VIEWS)"""
+    import moxir_v2_true as VT
+    import moxir_v2_spread as V
+    jobs = []
+    for look in ('peak', 'dark'):
+        for view in FRAME_VIEWS:
+            v = V.VIEWS[view]
+            jobs.append({'name': 'vc-t40-%s-%s' % (look, view), 'layout': 'vc', 'state': 't40', 'look': look, 'view': view, 'project': PROJECT, 'path': '/moxir/p/%s' % PROJECT,
+                         'atmosphere': VT.STATES['t40'][2], 'camera': {'position': v['position'], 'target': v['target'], 'fov': v['fov']}})
+    os.makedirs(out, exist_ok=True)
+    frames = {'base': base, 'query': VT.QUERY, 'size': [1440, 900], 'settle_s': 15, 'jobs': jobs}
+    json.dump(frames, open(os.path.join(out, 'plan.json'), 'w'), indent=1)
+    probe = {'base': base, 'query': VT.QUERY, 'settle_s': 15,
+             'points': [{'name': k, 'position': p, 'normal': n} for k, (p, n) in DJ_TARGETS.items()],
+             'jobs': [dict(j, name='vc-probe-%s' % j['look']) for j in jobs if j['view'] == 'floor']}
+    json.dump(probe, open(os.path.join(out, 'probe-plan.json'), 'w'), indent=1)
+    print('%d frame jobs, %d probe jobs -> %s' % (len(jobs), len(probe['jobs']), out))
+
+
 # ====================================================================== main
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('cmd', choices=['data', 'build', 'check'])
+    ap.add_argument('cmd', choices=['data', 'build', 'check', 'plan'])
     ap.add_argument('--repo', default='.')
+    ap.add_argument('--out', default=os.path.expanduser('~/Downloads/moxir/v2-cranes'))
+    ap.add_argument('--base', default='http://moxir-cranes-lasers.diiii.localhost')
     A, _ = ap.parse_known_args()
     repo = os.path.abspath(os.path.expanduser(A.repo))
     os.chdir(repo)
@@ -1245,6 +1274,8 @@ def main():
         ev, cc, lamps, units = data(repo)
         print(json.dumps({'truss': {k: ev['truss'][k] for k in ('ends', 'trim_m', 'clearance')}, 'picks': cc['picks'], 'worst_pick_kg': cc['worst_pick_kg'],
                           'lamps': [(l['id'], l['p'], l['part']) for l in lamps], 'units': [(u['id'], u['p'], u['pan_deg_from_minus_z_plus_toward_plus_x'], u['tilt_deg_above_level']) for u in units]}, indent=1, default=JD))
+    elif A.cmd == 'plan':
+        plans(repo, os.path.abspath(os.path.expanduser(A.out)), A.base)
     elif A.cmd == 'build':
         R = build(repo)
         f = passes(R)
