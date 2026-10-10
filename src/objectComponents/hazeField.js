@@ -44,11 +44,20 @@
 //      modulates the field (hazeNoiseTexture below; the shader samples the same
 //      texture).
 //
+//   6. ONE MACHINE IN A BIG HALL (`haze.model: 'nf-ff'`, 2026-10-09): the well-mixed box above treats the
+//      whole hall as evenly hazed the moment the machine runs. With one machine in 186,890 m³ that is not
+//      so: the two-zone (near-field / far-field) model (Nicas 1996; hazeZones.js) gives the hall's haze
+//      (the fill) and the haze around the machine separately, from clean air at `minutes`. The jet is
+//      drawn as the jet law gives it; the rest of the near field's mass is a soft hemisphere (a "blob").
+//      This model is never calibrated to photographs: an UNVALIDATED estimate, said where it is used.
+//
 // What is ASSUMED (no maker publishes it) is said where it is set, below; every
 // number a show depends on can be overridden from renderSettings.atmosphere.haze.
 // Limits, stated: the jets are straight (no buoyancy, no bending in a draught); the
 // transmittance toward the eye uses the well-mixed σ only (a beam seen through a
 // plume is not dimmed by the plume); a fog's droplets are one size.
+
+import { blobShape, machineZones, nearBlobOf } from './hazeZones.js'
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
 const num = (n, fallback) => (Number.isFinite(Number(n)) ? Number(n) : fallback)
@@ -282,7 +291,11 @@ export const hazeScatteringAt = (field, p, time = 0) => {
     for (const jet of field.jets) {
         const v = [p[0] - jet.position[0], p[1] - jet.position[1], p[2] - jet.position[2]]
         // a jet's eddies are its own: the same noise, but stronger
-        sigma += jetScattering(jet, v, jet.direction) * clamp(1 + 1.6 * field.patchiness * (n - 0.5) * 2, 0, 3)
+        const eddy = clamp(1 + 1.6 * field.patchiness * (n - 0.5) * 2, 0, 3)
+        sigma += jetScattering(jet, v, jet.direction) * eddy
+        // the near field's blob (two-zone model), centred on the same nozzle, its own index
+        const blob = field.blobs?.[field.jets.indexOf(jet)]
+        if (blob && blob.sigma > 0) sigma += blob.sigma * blobShape(Math.hypot(v[0], v[1], v[2]) / blob.radius) * eddy
     }
     return sigma
 }
@@ -294,7 +307,9 @@ export const hazeScatteringAt = (field, p, time = 0) => {
  *     levels: { <entityId>: 0..1 },            each machine's level (run by hand)
  *     kindLevels: { hazer, 'smoke-machine' },  the default level per kind
  *     minutes,                                 minutes since switched on (absent: steady)
- *     patchiness 0..1, drift [x,y,z] m/s }
+ *     patchiness 0..1, drift [x,y,z] m/s,
+ *     model 'nf-ff' | 'well-mixed', nearField { radius_m, airSpeed_m_s }, source (what the numbers rest on),
+ *     dries false: a fog's droplets do not dry out (its kind's dryTau_min is dropped; the closed-hall best case) }
  */
 export const hazeSettingsOf = (atmosphere) => {
     const h = atmosphere?.haze
@@ -306,11 +321,16 @@ export const hazeSettingsOf = (atmosphere) => {
         levels: h.levels && typeof h.levels === 'object' ? h.levels : {},
         kindLevels: h.kindLevels && typeof h.kindLevels === 'object' ? h.kindLevels : {},
         minutes: h.minutes == null ? null : Math.max(num(h.minutes, 0), 0),
+        dries: h.dries !== false,
         // CALIBRATION: the room's hand-set scattering (atmosphere.scattering, chosen against
         // the §20 photographs) is the hall's haze with every machine at its usual level; the
         // machines decide only how it is spread and how it changes when they are turned up or
         // down. `calibrate: false` trusts the physics' absolute number instead.
-        calibrateTo: h.calibrate === false ? null : (num(atmosphere?.scattering, 0) > 0 ? num(atmosphere.scattering, 0) : null),
+        calibrateTo: h.calibrate === false || h.model === 'nf-ff' ? null : (num(atmosphere?.scattering, 0) > 0 ? num(atmosphere.scattering, 0) : null),
+        // 'nf-ff': the two-zone estimate (hazeZones.js), never calibrated; else the well-mixed box
+        model: h.model === 'nf-ff' ? 'nf-ff' : 'well-mixed',
+        nearField: h.nearField && typeof h.nearField === 'object' ? { radius_m: num(h.nearField.radius_m, 3), airSpeed_m_s: num(h.nearField.airSpeed_m_s, 0.1) } : null,
+        source: typeof h.source === 'string' ? h.source : null,
         patchiness: clamp(num(h.patchiness, 0.35), 0, 1),
         drift
     }
@@ -372,8 +392,10 @@ export const buildHazeField = (settings, machines) => {
         if (settings.kindLevels[m.category] != null) return clamp(num(settings.kindLevels[m.category], 0), 0, 1)
         return m.kind.defaultLevel
     }
-    const running = machines.map((m) => ({ ...m, level: levelOf(m) }))
+    // `dries: false` (the closed-hall best case): a fog keeps its droplets; only the air change takes them out
+    const running = machines.map((m) => ({ ...m, level: levelOf(m), ...(settings.dries === false ? { kind: { ...m.kind, dryTau_min: Infinity } } : {}) }))
     const hall = { volume_m3: settings.volume_m3, airChangesPerHour: settings.airChangesPerHour }
+    if (settings.model === 'nf-ff') return buildZoneField(settings, running, { ...hall, nearField: settings.nearField })
     // calibrated: scaled so the machines at their usual levels give the photographed haze
     // (the physics' absolute number rests on assumed droplet sizes, fan flows and hall size;
     // the RATIOS — this hazer up, that fog machine on — are what it gets right)
@@ -387,15 +409,35 @@ export const buildHazeField = (settings, machines) => {
         .filter((m) => m.level > 0)
         .slice(0, MAX_HAZE_SOURCES)
         .map((m) => { const j = jetOf(m); return { ...j, sigma0: j.sigma0 * scale, position: m.position, direction: m.direction, id: m.id } })
-    return { fill, jets, patchiness: settings.patchiness, drift: settings.drift, scale }
+    return { fill, jets, blobs: [], patchiness: settings.patchiness, drift: settings.drift, scale }
 }
 
 /**
- * The room's fog for a haze field: the hall's well-mixed haze dims the SURFACES too, as
- * it dims the beams. The same stand-in for Beer–Lambert that scripts/rigbuild/
- * realism.mjs writes for a uniform haze (linear fog 0 … 1.6/σ, exact at d = 1/σ).
+ * The field from the two-zone estimate (hazeZones.js): the fill = the far field (every machine's, summed —
+ * exact for one machine, superposed for several); per running machine its jet (unscaled) and a blob holding
+ * the rest of its near field's excess mass. `zones` keeps each machine's numbers, for whoever reports them.
  */
-export const hazeFogFar = (fill) => (fill > 0 ? 1.6 / fill : Infinity)
+const buildZoneField = (settings, running, hall) => {
+    let fill = 0
+    const jets = []
+    const blobs = []
+    const zones = []
+    for (const m of running) {
+        if (!(m.level > 0)) continue
+        const z = machineZones(m, hall, settings.minutes)
+        fill += z.far
+        const blob = nearBlobOf(m, z)
+        zones.push({ id: m.id, near: z.near, far: z.far, tauFar_min: z.tauFar_min, G_g_min: z.G_g_min, blobSigma: blob.sigma, radius_m: blob.radius, jetShare: blob.jetShare })
+        if (jets.length < MAX_HAZE_SOURCES) {
+            jets.push({ ...jetOf(m), position: m.position, direction: m.direction, id: m.id })
+            blobs.push({ sigma: blob.sigma, radius: blob.radius })
+        }
+    }
+    return { fill, jets, blobs, patchiness: settings.patchiness, drift: settings.drift, scale: 1, model: 'nf-ff', zones, source: settings.source }
+}
+
+// The surfaces' fog: Beer–Lambert at the fill's σ (beerLambertFog.js, used by atmosphereStore.js
+// hazeFogBase). The linear stand-in 0 … 1.6/σ (realism.mjs) is no longer what the room draws.
 
 /** Two fields the beams would draw the same (so the store does not wake every beam for nothing). */
 export const sameHazeField = (a, b) => {

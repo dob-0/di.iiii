@@ -1058,7 +1058,12 @@ export const normalizeEntity = (entity = {}) => {
             // lamp already that wide (beamAir.js). Stored only when given.
             ...(ensureNumber(sourceComponents.beam.aperture, 0) > 0 ? { aperture: Math.min(2, ensureNumber(sourceComponents.beam.aperture, 0)) } : {}),
             // `optics` (2026-10-01): prism, honeycomb, frost, gobo (beamOptics.js). Stored only when given.
-            ...(normalizeBeamOptics(sourceComponents.beam.optics) ? { optics: normalizeBeamOptics(sourceComponents.beam.optics) } : {})
+            ...(normalizeBeamOptics(sourceComponents.beam.optics) ? { optics: normalizeBeamOptics(sourceComponents.beam.optics) } : {}),
+            // `length` (2026-10-09): how long the drawn beam is, metres — its own field, so a lamp's light can
+            // have no cutoff (light.distance 0) and its beam still end. Stored only when given.
+            ...(ensureNumber(sourceComponents.beam.length, 0) > 0 ? { length: Math.min(1000, ensureNumber(sourceComponents.beam.length, 0)) } : {}),
+            // `laser` (2026-10-09): a laser drawn as a line source (src/objectComponents/laserLine.js). Stored only when valid.
+            ...(normalizeBeamLaser(sourceComponents.beam.laser) ? { laser: normalizeBeamLaser(sourceComponents.beam.laser) } : {})
         }
     }
     // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
@@ -1243,6 +1248,31 @@ const normalizeBeamOptics = (optics) => {
     return Object.keys(out).length ? out : null
 }
 
+// `components.beam.laser` (2026-10-09, src/objectComponents/laserLine.js): a laser's diodes (mW at each
+// wavelength, nm), its beam diameter and divergence, the scene's exposure scale, the cube's field half-angle,
+// a frame it holds ([x, y, r, g, b] points, the Nodes editor's laser frame) and where the numbers come from.
+const LASER_NM = new Set([455, 525, 638])
+const normalizeBeamLaser = (laser) => {
+    if (!laser || typeof laser !== 'object' || !Array.isArray(laser.mW) || !Array.isArray(laser.nm)) return null
+    if (laser.mW.length !== laser.nm.length || laser.mW.length < 1 || laser.mW.length > 3) return null
+    const nm = laser.nm.map(Number)
+    if (!nm.every((x) => LASER_NM.has(x))) return null
+    const mW = laser.mW.map((v) => Math.min(100000, Math.max(0, ensureNumber(v, 0))))
+    const out = { mW, nm }
+    const positive = (key, max) => { const v = ensureNumber(laser[key], 0); if (v > 0) out[key] = Math.min(max, v) }
+    positive('diameter_mm', 100)
+    positive('divergence_mrad', 100)
+    positive('sceneScale', 1)
+    positive('fieldHalfDeg', 60)
+    if (Array.isArray(laser.frame)) {
+        const frame = laser.frame.slice(0, 2000).filter((p) => Array.isArray(p) && p.length >= 5 && p.slice(0, 5).every((v) => Number.isFinite(Number(v))))
+            .map((p) => [0, 1, 2, 3, 4].map((k) => (k < 2 ? Math.min(1, Math.max(-1, Number(p[k]))) : Math.min(1, Math.max(0, Number(p[k]))))))
+        if (frame.length) out.frame = frame
+    }
+    if (typeof laser.source === 'string') out.source = laser.source.slice(0, 500)
+    return out
+}
+
 const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])
 
 // THE ROOM'S AIR (2026-09-29, docs/architecture/RIG_BUILD.md §20): a uniform haze the
@@ -1286,6 +1316,21 @@ const normalizeHaze = (haze) => {
     const minutes = Number(haze.minutes)
     if (haze.minutes != null && Number.isFinite(minutes) && minutes >= 0) out.minutes = minutes
     if (haze.calibrate === false) out.calibrate = false
+    // 2026-10-09: `dries: false` — the fog's droplets do not dry out (hazeField.js dryTau_min dropped): the closed-hall,
+    // best case of one machine (the "tank" state, MOXIR v2 true look); absent = the kind's own drying
+    if (haze.dries === false) out.dries = false
+    // 2026-10-09: the two-zone estimate for one machine in a big hall (hazeZones.js), its near field, and
+    // what the numbers rest on (a sentence, so a reader of the document sees the basis)
+    if (haze.model === 'nf-ff') out.model = 'nf-ff'
+    if (haze.nearField && typeof haze.nearField === 'object' && !Array.isArray(haze.nearField)) {
+        const radius = Number(haze.nearField.radius_m)
+        const speed = Number(haze.nearField.airSpeed_m_s)
+        const nearField = {}
+        if (radius > 0) nearField.radius_m = Math.min(radius, 50)
+        if (speed > 0) nearField.airSpeed_m_s = Math.min(speed, 10)
+        if (Object.keys(nearField).length) out.nearField = nearField
+    }
+    if (typeof haze.source === 'string' && haze.source.trim()) out.source = haze.source.slice(0, 1000)
     const patchiness = unitLevel(haze.patchiness)
     if (patchiness != null) out.patchiness = patchiness
     if (Array.isArray(haze.drift) && haze.drift.length === 3 && haze.drift.every((v) => Number.isFinite(Number(v)))) {

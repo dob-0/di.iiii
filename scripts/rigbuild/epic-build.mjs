@@ -40,6 +40,7 @@ import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
 import { runnerList } from './show-loop.mjs'
+import { atmosphereOfRig } from '../place/rig-lib.mjs'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -60,6 +61,10 @@ export const candelaOf = (f) => {
     }
 }
 const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30, 'ext-blinder': 25, 'ext-strobe': 20 }
+/** How far the room draws a unit's beam: the rig file's own cast throw to the first thing it meets (MOXIR v2, occlusion_sky.py:
+ * `throw_m`, null = open to the far end) when it has one, else the type's reach. The room draws a beam to its light's distance
+ * and does not stop it at the steel (spotBeam.js): without this a beam the cast stops at the roof is drawn through it. Pure. */
+export const reachOf = (f) => (f.throw_m !== undefined ? r3(Math.min(Math.max(f.throw_m ?? 120, 1), 120)) : DIST[f.type] || 24)
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
 // A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
@@ -126,8 +131,11 @@ export const v1Entities = (rig) => {
             continue
         }
         if (f.type === 'up-yz31p') {
-            out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`, parentId: null,
-                components: { transform: { position: f.p, rotation: [0, 0, 0], scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
+            // the machine blows along its model's front (+Z) turned by its rotation (hazeField.js hazeMachinesOf): the rig
+            // file's own `r` (MOXIR v2 true look, 2026-10-09: the fan's direction is part of the design), else +Z as before
+            const r = Array.isArray(f.r) && f.r.length === 3 ? f.r.map(Number) : [0, 0, 0]
+            out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`.slice(0, 200), parentId: null,
+                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
             continue
         }
         if (f.angle_rad == null) continue
@@ -137,8 +145,10 @@ export const v1Entities = (rig) => {
             components: {
                 transform: { position: f.p, rotation: f.r, scale: [1, 1, 1] },
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: DIST[f.type] || 24, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
-                beam: { visible: true, haze: HAZE[f.type] ?? 0.35 },
+                // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
+                // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
+                beam: { visible: true, haze: HAZE[f.type] ?? 0.35, length: reachOf(f) },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
             } })
@@ -196,6 +206,12 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
 }
 
+/** A rig file's OWN cue list (MOXIR v2 layouts, 2026-10-09: rig.cues [{look, name, fade, hold}], one per look it carries), else
+ * v1.0's night. Pure. */
+export const cuesOf = (rig) => (Array.isArray(rig?.cues) && rig.cues.length
+    ? rig.cues.map((c, i) => ({ id: `v2-${String(i + 1).padStart(2, '0')}-${c.look}`, name: String(c.name).slice(0, 80), key: '', fade: c.fade ?? 0, hold: c.hold ?? 20, lightLook: `rig-${c.look}`, surfaces: {} }))
+    : v1Cues())
+
 /** The night as a cue list (holds in seconds, a demo of the arc: the real night is busked by GO). Pure. */
 export const v1Cues = () => [
     ['still-smoking', 'Act 1 · still smoking', 6, 20], ['one-line', 'Act 1 · one line', 4, 20], ['silhouette', 'Act 1 · the silhouette', 3, 16],
@@ -218,10 +234,12 @@ export const V1_HAZE_SIGMA = 0.0169
 // chosen by eye on the real GPU in Lite (0.04 read as black, 0.3 shows columns, roof steel and the truss at a low level
 // while every look keeps its contrast). A measured lux reading on the night replaces it.
 export const V1_AMBIENT = 0.3
-export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT } = {}) => [
+export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null } = {}) => [
     // exposure.auto false: Full's camera adaptation (autoExposure.js, gain up to 3x) opened "the black" into a lit brown
     // hall (seen 10-08, Full, Floor z 38) — the old "flat brown" again. Full now draws at the room's one exposure, as Lite does.
-    { type: 'setRenderSettings', payload: { patch: { atmosphere: { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
+    // A rig file that states its own `atmosphere` (MOXIR v2 B tuned, 2026-10-09: the ONE machine's two-zone haze) is drawn
+    // with it; else v1.0's one uniform sigma.
+    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
     { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
 ]
 
@@ -318,9 +336,9 @@ const main = async () => {
     if (!got.ok) die(`reading ${project}: ${got.status}`)
     const doc = got.body.document
     if (args['render-only']) {
-        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`render ops: ${out.status} ${out.text.slice(0, 300)}`)
-        say(`render: haze sigma ${V1_HAZE_SIGMA}/m uniform, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
+        say(`render: haze ${rig.atmosphere ? `the rig's own (${rig.atmosphere.haze?.model || 'uniform'})` : `sigma ${V1_HAZE_SIGMA}/m uniform`}, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
         return
     }
     if (args['lasers-only']) {
@@ -358,7 +376,7 @@ const main = async () => {
     const old = doc.entities.filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
     const ents = v1Entities(rig)
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
-    const cues = v1Cues()
+    const cues = cuesOf(rig)
     const ops = [...booth.ops]
     for (const e of old) ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
     for (const e of ents) ops.push({ type: 'createEntity', payload: { entity: e } })
@@ -375,14 +393,18 @@ const main = async () => {
         const items = v1RentalItems(rental, rig)
         if (JSON.stringify(items) !== JSON.stringify(rental.items)) ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rentalList', patch: { ...rental, items } } })
     }
-    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.version && rig.version !== V1_TITLE
+    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.title
+        ? { title: String(rig.title).slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
+        : rig.version && rig.version !== V1_TITLE
         ? { title: `${rig.version} — the stage at the press end, the epic lights moved to it`.slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
         : { title: 'MOXIR v1.0 — the epic lights, all wash + all beam hung, used minimally', summary: 'v0.9 + the epic plot (owner 10-08): every wash and beam of the order hung, 6 cubes (12 lines onto one matte ash wall), haze = the 4 smoke machines; looks dark-first, 2 layers (3 at the peak), ash white + ember red. Plan A1.' } } })
     for (const c of doc.mappingState?.cues || []) ops.push({ type: 'deleteMappingCue', payload: { cueId: c.id } })
     for (const c of cues) ops.push({ type: 'createMappingCue', payload: { cue: c } })
-    ops.push({ type: 'setMappingState', payload: { patch: { loop: true, showEpoch: Date.now() } } })
+    // a rig file may say its show plays by its own clock (mappingState.showSource 'clock'): a desk that answers on the stack
+    // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
+    ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
     ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
-    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT) }))
+    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
     say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })

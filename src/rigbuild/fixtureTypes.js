@@ -300,6 +300,8 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             // A hazer's or fog machine's output, what the room's haze is worked out from
             // (src/objectComponents/hazeField.js). Null on every lamp.
             fluid_ml_per_min: sourced(kind.specs?.fluid_ml_per_min),
+            // each emitter's CIE 1931 xy and lumens at full, when a source gives them (dmxDecode.js emitterMix)
+            ...(kind.emitters ? { emitters: kind.emitters } : {}),
             nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
             model3d: {
                 glb: `${glbDir}/${kindKey}.glb`,
