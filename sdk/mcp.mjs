@@ -10,6 +10,10 @@
  * conversation a schema until the agent asks for it. The logic is sdk/door.js;
  * this file is only the wiring.
  *
+ * Plus four read-only rig tools (sdk/rig.js, spec §5.1): di_rig_versions,
+ * di_rig_check, di_rig_truss, di_production_archive_plan. They read the
+ * checkout's rig files (and, for the archive plan, one GET); none writes.
+ *
  * Protocol: the official SDK, @modelcontextprotocol/server (pinned exact in
  * package.json and serverXR/package.json), serving MCP 2026-07-28 and the
  * 2025-era `initialize` handshake from one factory (serveStdio). The earlier
@@ -35,6 +39,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { connect } from './index.js'
 import { buildIndex, callOne, describe, find, gate, pickFrom, runSteps, shape } from './door.js'
+import { archivePlan, rigCheck, rigTruss, rigVersions } from './rig.js'
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -78,7 +83,9 @@ const INSTRUCTIONS =
     'Chain several calls with di_run instead of calling one by one, and use pick to take only the fields you need from a big answer. Names of kind "move" are shortcuts that carry ' +
     'known traps (id from label, read-back after write, 202 = queued); prefer them when one fits. ' +
     'Anything that opens a door — making a space public, minting an invite link, deleting — must be put to the ' +
-    'person in words before you call it.'
+    'person in words before you call it. ' +
+    'For a production\'s rig (MOXIR), use di_rig_versions, di_rig_truss and di_rig_check instead of reading the rig JSON; ' +
+    'di_production_archive_plan shows what an archive would change and changes nothing.'
 
 const ok = (value) => {
     const { text, structured } = shape(value)
@@ -156,6 +163,11 @@ export const createDoor = ({ tier, base, token, env = process.env, connectImpl =
                 return ok(pickFrom(await callOne(await client(), entry, call), call.pick))
             } catch (error) { return failWith(error) }
         },
+        // The rig tools: read-only. Only the archive plan touches the server, with one GET.
+        rigVersions: async (input = {}) => { try { return ok(await rigVersions(input)) } catch (error) { return failWith(error) } },
+        rigCheck: async (input = {}) => { try { return ok(await rigCheck(input)) } catch (error) { return failWith(error) } },
+        rigTruss: async (input = {}) => { try { return ok(await rigTruss(input)) } catch (error) { return failWith(error) } },
+        archivePlan: async (input = {}) => { try { return ok(await archivePlan(await client(), input)) } catch (error) { return failWith(error) } },
         run: async ({ steps, confirm }) => {
             try {
                 const outcome = await runSteps(await client(), await loadIndex(), { steps, confirm, allowPublic: allowPublic() })
@@ -209,6 +221,46 @@ export const createMcpServer = (door, { McpServer, fromJsonSchema }) => {
         }, ['steps']),
         annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
     }, (input) => door.run(input))
+
+    // ── the rig tools: read only, nothing here writes (spec §5.1) ──
+    const LOCAL_READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    const PRODUCTION = { type: 'string', description: 'the production\'s set id or a unique prefix, e.g. "moxir" (default: the only one)' }
+    const RIG_VERSION = { type: 'string', description: 'a version, variant or candidate id from di_rig_versions, e.g. "known-full"' }
+
+    server.registerTool('di_rig_versions', {
+        title: 'List a production\'s rig versions',
+        description: 'Every version, variant and candidate of a production\'s rig: id, title, truss kind, fixture counts by code, lamps, effects, looks. Read from the committed versions and rig files instead of reading them whole.',
+        inputSchema: schema({ production: PRODUCTION }),
+        annotations: LOCAL_READ
+    }, (input) => door.rigVersions(input))
+
+    server.registerTool('di_rig_check', {
+        title: 'Run the rig\'s safety checks',
+        description: 'Run the existing rig checks on the committed files and return pass/fail with numbers: generated files fresh, bridle angles within limit, every look built with nothing refused or clashing, lasers at least 3 m up and rising, the ground-mover policy. Geometry only; a human signs the rigging.',
+        inputSchema: schema({
+            production: PRODUCTION,
+            version: { ...RIG_VERSION, description: 'check only this one (default: all, a few seconds)' },
+            hall: { type: 'string', description: 'check against another committed hall file in scripts/place/rigs (default: the hall each rig names)' }
+        }),
+        annotations: LOCAL_READ
+    }, (input) => door.rigCheck(input))
+
+    server.registerTool('di_rig_truss', {
+        title: 'Show one version\'s truss',
+        description: 'The truss of one version: ends, picks with kg and bridle angles, tie-offs, load and sign-off, plus the bridle check against its hall. detail: true returns the whole truss block with every reason and source.',
+        inputSchema: schema({ production: PRODUCTION, version: RIG_VERSION, detail: { type: 'boolean', description: 'include every why/source/basis/note field' } }, ['version']),
+        annotations: LOCAL_READ
+    }, (input) => door.rigTruss(input))
+
+    server.registerTool('di_production_archive_plan', {
+        title: 'Plan which projects to archive (dry run)',
+        description: 'What scripts/production/archive-versions.mjs would do in a space: keep these projects, archive and hide the rest. Reads the space\'s project list with one GET and changes nothing; applying it is the owner\'s command, given in the answer.',
+        inputSchema: schema({
+            space: { type: 'string', description: 'the space id, e.g. "moxir"' },
+            keep: { type: 'array', items: { type: 'string' }, description: 'project ids to keep' }
+        }, ['space', 'keep']),
+        annotations: { ...LOCAL_READ, openWorldHint: true }
+    }, (input) => door.archivePlan(input))
 
     return server
 }
