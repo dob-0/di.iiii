@@ -89,6 +89,7 @@ export default function MeasurementMode({ renderSettings, request, toneMapping }
         const api = {
             state: () => report('state', null),
             lamps: () => report('lamps', lampList()),
+            beams: () => report('beams', beamsOf(scene, measurement.sceneScale)),
             lux: (points) => report('lux', measureLux(gl, scene, points, { sceneScale: measurement.sceneScale })),
             beamProfile: (spec = {}) => {
                 const lamp = Number.isInteger(spec.lamp) ? lampList()[spec.lamp] : null
@@ -138,6 +139,62 @@ export const lampsOf = (scene, sceneScale) => {
             decay: o.decay,
             castShadow: o.castShadow
         })
+    })
+    return out
+}
+
+/**
+ * Every laser LINE drawn as a ribbon mesh (the beam-only lasers, which have no SpotLight and so are not in
+ * lampsOf): the mesh is found by its laser-line material (uDiam) and aFlux/aDir attributes. The look's level is
+ * already folded into aFlux (SpotLightObject LaserLines: flux = colour x duty x level x sceneScale), so `flux`
+ * is the line's drawn flux in scene units and `level` is not separable from it.
+ */
+export const beamsOf = (scene, sceneScale) => {
+    const out = []
+    const p = new Vector3()
+    const d = new Vector3()
+    const e = new Vector3()
+    scene.updateMatrixWorld()
+    scene.traverse((o) => {
+        const g = o.geometry
+        const u = o.material?.uniforms
+        if (!o.isMesh || !u?.uDiam || !g?.attributes?.aFlux || !g.attributes.aDir) return
+        const name = o.name || o.parent?.name || null
+        const per = g.userData?.vertsPerLine
+        const count = g.attributes.aDir.count
+        if (!Number.isInteger(per) || per < 2 || count % per !== 0) {
+            out.push({ index: out.length, name, error: `aDir.count ${count} is not a multiple of geometry.userData.vertsPerLine ${per}; no lines read` })
+            return
+        }
+        p.setFromMatrixPosition(o.matrixWorld)
+        let visibleEffective = true
+        for (let a = o; a; a = a.parent) if (!a.visible) visibleEffective = false
+        // The vertex shader places a point at modelMatrix * (aDir * aS), so the centreline is exactly the
+        // attributes: first station (aS = 0) is the aperture, last station (aS = length) the far end.
+        const at = (v) => e.set(aDir.getX(v), aDir.getY(v), aDir.getZ(v)).multiplyScalar(aS.getX(v)).applyMatrix4(o.matrixWorld).toArray().map(round)
+        const aDir = g.attributes.aDir
+        const aS = g.attributes.aS
+        for (let i = 0; i < count / per; i += 1) {
+            const v = i * per
+            d.set(aDir.getX(v), aDir.getY(v), aDir.getZ(v)).transformDirection(o.matrixWorld)
+            const flux = [0, 1, 2].map((c) => g.attributes.aFlux.array[v * 3 + c])
+            const sum = flux[0] + flux[1] + flux[2]
+            out.push({
+                index: out.length,
+                name,
+                visible: o.visible,
+                visible_effective: visibleEffective,
+                mesh_position: p.toArray().map(round),
+                start: at(v),
+                end: at(v + per - 1),
+                direction: d.toArray().map(round),
+                flux_scene: flux.map(round),
+                flux: Number(sceneScale) > 0 ? flux.map((c) => round(c / sceneScale)) : null,
+                drawn: visibleEffective && sum > 0,
+                diameter_m: u.uDiam?.value ?? null,
+                divergence_rad: u.uDiv?.value ?? null
+            })
+        }
     })
     return out
 }
