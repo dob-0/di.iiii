@@ -105,6 +105,7 @@ CUBES = [('rig-lasercube-cut-01', 'ash white', ASH, -4.50), ('rig-lasercube-cut-
          ('rig-lasercube-cut-04', 'ember red', EMBER, -3.10), ('rig-lasercube-cut-05', 'ember red', EMBER, -2.40),
          ('rig-lasercube-cut-03', 'ash white', ASH, -1.70), ('rig-lasercube-cut-06', 'ash white', ASH, -1.00)]
 LASER_END = (-4.031, 9.181, -53.8)
+LASER_END_H1_ALL = (-7.825, 6.3, -53.8)       # round 2 item 3: clears G0/G2/G3/G4/G7 (+0.030 m) ONLY without #873's 40 W far keep-out; NOT used
 LASER_END_AFTER_H1 = (-4.162, 9.019, -53.8)                          # the re-aim once H1 confirms photo 007 (design 2.4), NOT used yet
 # the cut's 11 PARs (crane-dj-light design.md 4): u along the line, how it is mounted, its part, where it is aimed
 CUT_LAMPS = [
@@ -458,6 +459,15 @@ def lasers_doc(repo, units, checks=None):
                    'fix': 'the maker\'s tilt-lock screws + the safety eye bolt to a steel strap round the girder\'s top flange (the rigger\'s detail, owed)'},
          'aim': {'end_m': list(LASER_END), 'why': 'the one far-wall point with the largest worst margin over the six beams, the three top heights and both readings of the far gate (compass search, Hooke & Jeeves 1961; laser-margin design.md 10)',
                  'on_site': 'set on a target mark on the far wall at (x -4.03, y 9.18), measured from the x -12 column line and the floor; the six-beam worst stays within 0.05 m of the design for an end in x -4.43..-3.99, y 9.14..9.24',
+                 'h1_all_readings': {'end_m': list(LASER_END_H1_ALL), 'used': False,
+                                     'search': 'scripts/place/moxir_v2_h1_reaim.py (compass, Hooke & Jeeves 1961; 12 starts; 6 beams x 3 tops x 2 near tops x the z -54 roof row off/on)',
+                                     'result': {'design_end_worst_all_readings_m': -1.876, 'with_the_40w_keep_out_best_m': -0.657, 'with_the_40w_keep_out_best_end_m': [-8.55, 8.45, -53.8],
+                                                'with_the_40w_keep_out_binding': 'KO-3 the two 40 W beams z -53.8..-30 (x -8.29..-5.13, y 5.18..8.16)',
+                                                'right_of_the_gate_best_m': -0.891, 'right_of_the_gate_binding': 'the runway walkway right row',
+                                                'without_the_40w_keep_out_m': 0.030, 'without_the_40w_keep_out_binding': 'G7 left jamb x -4.7, cube 06'},
+                                     'cost': 'the end moves 3.79 m left and 2.88 m down (x -4.031 -> -7.825, y 9.181 -> 6.30); pans -4.7..-9.7 deg instead of -0.3..-4.3 (the six lines fan wider); '
+                                             'tilt about -3.4 deg (down) instead of +0.53; and it lands in #873\'s 40 W far patch, so the two 40 W ends must move first (their H8 re-aim)',
+                                     'source': '~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/round2/h1-reaim*.json'},
                  'after_h1': {'end_m': list(LASER_END_AFTER_H1), 'when': 'only once H1 confirms photo 007 (the model\'s centred gate ruled out): worst +0.325 m (laser-margin design 2.4); not used now'}},
          'rule': {'text': 'MOXIR.md 4.0a: a person = surface + 2.0 m; the beam >= 3.0 m above every place a person can stand OR >= 2.5 m beside it (the 0.8 deg fan + 4 mm + 1 mrad); '
                           'every body is its true box + 0.25 m and the 1.008 deg tube keeps >= 0.25 m from it (the laser margin); every ray of the 0.8 and 1.008 deg fans first hits '
@@ -610,7 +620,10 @@ def openings_of(op):
                                                 {'name': 'steel double door (photo 007, jambs at the safe ends)', 'x': (d['x_left_m']['p05'], d['x_right_m']['p95']), 'top': max(d['top_m']['p95'], 2.48)}],
             'the hall model\'s centred gate (G0)': [{'name': 'far gate as the hall model draws it (x -2.4..2.4, 5.4 m)', 'x': tuple(op['model_gate']['x_m']), 'top': op['model_gate']['top_m']}],
             'photo 007, median jambs (G1)': [{'name': 'far gate (photo 007, median jambs)', 'x': (g['x_left_m']['median'], g['x_right_m']['median']), 'top': max(g['top_m']['p95'], 7.47)},
-                                            {'name': 'steel double door (photo 007, median jambs)', 'x': (d['x_left_m']['median'], d['x_right_m']['median']), 'top': max(d['top_m']['p95'], 2.48)}]}
+                                            {'name': 'steel double door (photo 007, median jambs)', 'x': (d['x_left_m']['median'], d['x_right_m']['median']), 'top': max(d['top_m']['p95'], 2.48)}],
+            # round 2 (10-10, the lead's item 3): the laser judge's three readings of the far gate are now part of the rule (judge_ls.py GATES)
+            **{k: [{'name': 'far gate, the judge\'s %s (x %g..%g, top %g)' % (k.split(' ')[0], v['x_m'][0], v['x_m'][1], v['top_m']), 'x': tuple(v['x_m']), 'top': v['top_m']}]
+               for k, v in op['judge_readings'].items() if k != 'source'}}
 
 
 FAR_WALL_OPENINGS = {
@@ -619,7 +632,14 @@ FAR_WALL_OPENINGS = {
                                'top_rule_m': 7.47, 'top_rule_why': 'crane_height.py\'s own p95 gate height (6.90-7.47)'},
                   'steel_door': {'x_left_m': {'p05': -4.31, 'median': -3.46, 'p95': -2.65}, 'x_right_m': {'p05': -2.28, 'median': -1.45, 'p95': -0.64}, 'top_m': {'p05': 2.25, 'median': 2.41, 'p95': 2.58}}},
     'model_gate': {'x_m': [-2.4, 2.4], 'top_m': 5.4, 'basis': 'GUESS: hall json far_gate, "far_gate_w_m: low (photo 004)"'},
+    'judge_readings': {'G3 (photo 007 gate 5.82 wide, centred)': {'x_m': [-2.91, 2.91], 'top_m': 7.47},
+                       'G4 (photo 007 gate, centre +1.4: the photo 032 fit)': {'x_m': [-1.51, 4.31], 'top_m': 7.47},
+                       'G7 (what-if: photo 007 taken from the near cab)': {'x_m': [-4.7, 0.9], 'top_m': 7.47},
+                       'source': REPORTS + 'judge-laser-safety/judge_ls.py GATES (G3, G4, G7)'},
     'rule_set': ['photo 007, safe-end jambs (G2)', 'the hall model\'s centred gate (G0)'],
+    # round 2: the judge's readings are checked on every build; with the 40 W keep-out kept no end clears them (H1 stays the hold, MOXIR.md 4.0a)
+    'h1_hold_set': ['G3 (photo 007 gate 5.82 wide, centred)',
+                 'G4 (photo 007 gate, centre +1.4: the photo 032 fit)', 'G7 (what-if: photo 007 taken from the near cab)'],
     'judge_readings_not_passed': {'G3 (photo 007 centred)': -1.876, 'G4 (photo-032 read, centre +1.4)': -0.566, 'G7 (camera in the cab what-if)': -1.876,
                                   'source': REPORTS + 'judge-laser-safety/verdict.md + match/match.md: B-L fails these; the stop is hold point H1 (tape the gate\'s jambs)'}}
 
@@ -1068,6 +1088,15 @@ def checks(repo):
         raise SystemExit('%s is not the pinned hall v10 GLB' % GLB_V10)
     S.wait_cool()
     # ---- lasers: the analytic margins, every beam x every top x both near tops, the rule's openings (photo 007 safe ends AND the model gate)
+    hold_ops = [o for k in FAR_WALL_OPENINGS['h1_hold_set'] for o in ops[k]]
+    h1 = {}
+    for u in units:                                                  # round 2: the judge's readings G3 / G4 / G7 (H1), reported, not passed
+        for top in TOPS:
+            m = Scene(repo, G, stage, rig, truss, cutj, entry, top=top, openings=hold_ops).margins(u['aperture_m'][top], u['to'], others=[o['aperture_m'][top] for o in units if o['id'] != u['id']])
+            for k, v in m.items():
+                if k.startswith('end: far gate, the judge'):
+                    h1[k] = min(h1.get(k, 99.0), R3(v[0]))
+    log('H1 readings done')
     beams = []
     worst_all = (99.0, None, None)
     for u in units:
@@ -1217,6 +1246,7 @@ def checks(repo):
         'people_public_gap_with_pen_condition_m': people['public_with_the_pen_condition']['gap_m'], 'lowest_lens_m': people['lowest_lens_m'],
         'dj_glare_ok': all(g['ok'] for g in glare.values()) and glare_full['ok'],
         'cut_light_into_people': sum(v['into_people'] for v in cut_light.values()),
+        'h1_judge_readings_worst_m (hold H1, not passed)': h1,
         'b380f_into_people_or_cubes': sum(v['into_people'] + v['into_cubes'] for v in b380),
         'b380f_rays_on_the_cut (a look finding, not a rule)': {v['id']: v['into_the_cut'] for v in b380 if v['into_the_cut']},
         'dj_face_eye_height_lx': {lk: light['room 30 478 cd, linear (the room since 28f4028d)'][lk]['face, eye height (+z)']['lx'] for lk in ('dark', 'peak')},

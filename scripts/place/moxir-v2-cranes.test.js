@@ -147,6 +147,29 @@ describe('MOXIR v2 cranes: the cut at z 3.20 (11 PL5403)', () => {
         for (const k of ['dark', 'peak']) expect(lx[k]).toBeGreaterThan(15)
         for (const k of ['dark', 'peak']) expect(rig.review.summary.dj_head_top_lx[k]).toBeGreaterThan(100)
     })
+    it('ROUND 2: no B380F ray (axis + ring of 8 at 0.9 deg) passes through a pick of the cut; rig-beam-planes-14 re-aimed az 0 -> -2 deg', () => {
+        // the aim as the room stores it: Euler XYZ (three.js order), the beam along -Y
+        const aim = (r) => { const [cx, sx, cy, sy, cz, sz] = [Math.cos(r[0]), Math.sin(r[0]), Math.cos(r[1]), Math.sin(r[1]), Math.cos(r[2]), Math.sin(r[2])]
+            return [cy * sz, -(cx * cz - sx * sy * sz), -(sx * cz + cx * sy * sz)] }
+        const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+        const unit = (a) => mul(a, 1 / norm(a))
+        const cone = (a) => { const u = unit(cross(a, Math.abs(a[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])), w = cross(a, u), th = rad(0.9)
+            return [a, ...[...Array(8).keys()].map((j) => add(mul(a, Math.cos(th)), mul(add(mul(u, Math.cos((2 * Math.PI * j) / 8)), mul(w, Math.sin((2 * Math.PI * j) / 8))), Math.sin(th))))] }
+        const slab = (o, d, lo, hi) => { let t0 = 0.3, t1 = 140
+            for (let i = 0; i < 3; i += 1) { if (Math.abs(d[i]) < 1e-12) { if (o[i] < lo[i] || o[i] > hi[i]) return false; continue }
+                let a = (lo[i] - o[i]) / d[i], b = (hi[i] - o[i]) / d[i]; if (a > b) [a, b] = [b, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, b) }
+            return t0 <= t1 }
+        const picks = C.truss.rigging.picks.map((p) => [[p.x_m - 0.25, p.apex_m - 0.85, 3.2 - 0.8], [p.x_m + 0.25, 7.2, 3.2 + 0.8]])
+        const heads = rig.fixtures.filter((f) => f.type === 'up-b380f')
+        expect(heads.length).toBeGreaterThan(0)
+        for (const f of heads) {
+            const o = [f.p[0], f.p[1] - 0.7 + 0.5, f.p[2]]                       // the tilt axis over the base (occlusion_sky.HEAD_Y, ASSUMED)
+            for (const d of cone(aim(f.r))) for (const [lo, hi] of picks) expect(slab(o, d, lo, hi), `${f.id} through a pick`).toBe(false)
+        }
+        const p14 = rig.fixtures.find((f) => f.id === 'rig-beam-planes-14')
+        expect(p14.re_aimed.to_az_el_deg).toEqual([-2, 24])
+        expect(rig.review.summary['b380f_rays_on_the_cut (a look finding, not a rule)']).toEqual({})
+    })
 })
 
 describe('MOXIR v2 cranes: the six cubes ON the free crane (B-L)', () => {
@@ -271,5 +294,26 @@ describe('MOXIR v2 cranes: the six cubes ON the free crane (B-L)', () => {
             expect(v.their_worst_m).toBeGreaterThanOrEqual(0)
             expect(v.cubes_body_rule_on_the_near_girders_m).toBeLessThan(0)       // the match's finding for the lead: stated in the file
         }
+    })
+    it('ROUND 2, H1: the design end fails the judge\'s gate readings G3 / G4 / G7 (H1 stays the hold); the all-readings end clears all five but sits in the 40 W far patch', () => {
+        const J = ops.judge_readings
+        const reads = { G0: { x: ops.model_gate.x_m, top: ops.model_gate.top_m }, G2: openings[0], G2door: openings[1],
+            G3: { x: J['G3 (photo 007 gate 5.82 wide, centred)'].x_m, top: 7.47 }, G4: { x: J['G4 (photo 007 gate, centre +1.4: the photo 032 fit)'].x_m, top: 7.47 },
+            G7: { x: J['G7 (what-if: photo 007 taken from the near cab)'].x_m, top: 7.47 } }
+        // at the end: 2.5 m beside OR 3.0 m over the opening's top, less the levels' tube at the cube's range (every cube, every top)
+        const at = (T, o) => Math.min(...units.flatMap((u) => TOPS.map((k) => { const s = norm(sub(T, u.aperture_m[k]))
+            return Math.max(Math.max(o.x[0] - T[0], T[0] - o.x[1], 0) - 2.5, T[1] - o.top - 3.0) - rPlace(s) })))
+        const H = rig.review.summary['h1_judge_readings_worst_m (hold H1, not passed)']
+        for (const g of ['G3', 'G4', 'G7']) {
+            expect(at(end, reads[g]), `design end at ${g}`).toBeLessThan(0)
+            const k = Object.keys(H).find((q) => q.includes(`judge's ${g} `))
+            expect(Math.abs(H[k] - at(end, reads[g])), `the build's ${g} number`).toBeLessThan(0.02)
+        }
+        const T = L.aim.h1_all_readings.end_m
+        expect(L.aim.h1_all_readings.used).toBe(false)
+        for (const g of Object.keys(reads)) expect(at(T, reads[g]), `all-readings end at ${g}`).toBeGreaterThanOrEqual(0)
+        const ko = entry.keep_out.boxes.find((b) => b.id === 'KO-3 the two beams z -53.8..-30')
+        const s = Math.min(...units.map((u) => norm(sub(T, u.aperture_m.p50))))
+        expect(boxDist(T, [ko.x_m[0], ko.y_m[0], ko.z_m[0]], [ko.x_m[1], ko.y_m[1], ko.z_m[1]]) - rBody(s) - 0.25, 'the 40 W far patch').toBeLessThan(0)
     })
 })

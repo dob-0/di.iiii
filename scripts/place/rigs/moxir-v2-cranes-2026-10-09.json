@@ -5760,6 +5760,11 @@
    "lowest_lens_m": 3.145,
    "dj_glare_ok": true,
    "cut_light_into_people": 0,
+   "h1_judge_readings_worst_m (hold H1, not passed)": {
+    "end: far gate, the judge's G3 (x -2.91..2.91, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876,
+    "end: far gate, the judge's G4 (x -1.51..4.31, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -0.566,
+    "end: far gate, the judge's G7 (x -4.7..0.9, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876
+   },
    "b380f_into_people_or_cubes": 0,
    "b380f_rays_on_the_cut (a look finding, not a rule)": {},
    "dj_face_eye_height_lx": {
@@ -5770,7 +5775,7 @@
     "dark": 184.6,
     "peak": 186.8
    },
-   "runtime_s": 37
+   "runtime_s": 38
   }
  },
  "atmosphere": {
@@ -6172,6 +6177,11 @@
    "lowest_lens_m": 3.145,
    "dj_glare_ok": true,
    "cut_light_into_people": 0,
+   "h1_judge_readings_worst_m (hold H1, not passed)": {
+    "end: far gate, the judge's G3 (x -2.91..2.91, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876,
+    "end: far gate, the judge's G4 (x -1.51..4.31, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -0.566,
+    "end: far gate, the judge's G7 (x -4.7..0.9, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876
+   },
    "b380f_into_people_or_cubes": 0,
    "b380f_rays_on_the_cut (a look finding, not a rule)": {},
    "dj_face_eye_height_lx": {
@@ -6182,7 +6192,7 @@
     "dark": 184.6,
     "peak": 186.8
    },
-   "runtime_s": 37
+   "runtime_s": 38
   },
   "rigging": {
    "source": "node scripts/place/cut-count.mjs --n 11 --places -5,-4,-3,-2,-1.5,0,1,2,3,3.5,4.5 --design scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json",
