@@ -1,0 +1,5 @@
+## 2026-10-10 — repo hygiene (A8): the sitemap, project-pull's silent production source, three contract-test fixtures
+
+- Found by the 2026-10-09 sweep (item A8, `agent-reports-2026-10-09/merged.md`); each claim was re-checked live on 2026-10-10 before any change, and all three were still true.
+- **Sitemap.** `public/sitemap.xml` named `/cascade` and `/the-light-put-back`; production answers an anonymous `GET /api/spaces/<id>` for both with 401, and the visitor list (`GET /api/spaces`, 12 spaces) holds neither. The two lines came in with 783a76c7 (2026-09-11). Removed; `scripts/sitemap-public.test.js` is a ledger (every space the sitemap names must be in a list of spaces checked public on production, platform addresses come from `shared/reservedSegments.cjs`). Seen failing on the old file (2 of 3 red), passing on the new one (3 of 3, 13 addresses, XML still well-formed). Not done: a check against the live visitor list, because nothing fetches it by itself; production's sitemap changes only when this reaches a deploy.
+- Items 2 and 3 of A8 follow on this branch, each its own commit; this note is extended as they land.
