@@ -9,3 +9,12 @@ node "$repo/node_modules/vite/bin/vite.js" build "$here" --config "$here/vite.co
 sed -i 's#<script type="module" crossorigin src="./app.js"></script>#<script defer src="./app.js"></script>#' "$here/dist/index.html"
 grep -q '<script defer src="./app.js">' "$here/dist/index.html" || { echo "build.sh: dist/index.html still has a module script" >&2; exit 1; }
 echo "built: $here/dist/index.html"
+# --single: one self-contained HTML (script inlined, no photos) for pushing into a space as a project page.
+if [ "${1:-}" = "--single" ]; then
+  VITE_MEDIA=0 node "$repo/node_modules/vite/bin/vite.js" build "$here" --config "$here/vite.config.js" --outDir "$here/dist-single" >/dev/null
+  node -e '
+    const fs=require("fs"); const d=process.argv[1];
+    let html=fs.readFileSync(d+"/index.html","utf8"); const js=fs.readFileSync(d+"/app.js","utf8").replace(/<\/script/gi,"<\\/script");
+    html=html.replace(/<script[^>]*src="\.\/app\.js"[^>]*><\/script>/,"").replace("</body>",()=>"<script>"+js+"</script></body>");
+    fs.writeFileSync(d+"/overview-single.html",html); console.log("single file:",d+"/overview-single.html",(html.length/1e6).toFixed(1)+" MB")' "$here/dist-single"
+fi
