@@ -599,7 +599,7 @@
   {
    "id": "rig-beam-planes-14",
    "type": "up-b380f",
-   "position": "col -12 z 0.5 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 0/24 deg (az/el), throw 20.283 m to space frame diagonals / top chord; no eye within 31 deg of looking down it",
+   "position": "col -12 z 0.5 nave: column bracket, base at 3.0 m (out of reach, no pen); aim -2/24 deg (az/el; was 0/24, re-aimed off the cut pick 1), throw 20.283 m to space frame diagonals / top chord; no eye within 31 deg of looking down it",
    "part": "plane 2 (the wings)",
    "layer": "beams",
    "status": "used",
@@ -610,9 +610,9 @@
     0.5
    ],
    "r": [
-    -1.989731,
+    -1.99,
     0.0,
-    0.0
+    -0.032
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
@@ -645,6 +645,17 @@
      -52.0
     ],
     "part": "plane 3 (the far end)"
+   },
+   "re_aimed": {
+    "from_az_el_deg": [
+     0.0,
+     24.0
+    ],
+    "to_az_el_deg": [
+     -2.0,
+     24.0
+    ],
+    "why": "v2 spread aim put 3 of 9 rays on the cut pick 1 (round 2, 10-10)"
    }
   },
   {
@@ -5750,9 +5761,7 @@
    "dj_glare_ok": true,
    "cut_light_into_people": 0,
    "b380f_into_people_or_cubes": 0,
-   "b380f_rays_on_the_cut (a look finding, not a rule)": {
-    "rig-beam-planes-14": 3
-   },
+   "b380f_rays_on_the_cut (a look finding, not a rule)": {},
    "dj_face_eye_height_lx": {
     "dark": 20.0,
     "peak": 19.9
@@ -6164,9 +6173,7 @@
    "dj_glare_ok": true,
    "cut_light_into_people": 0,
    "b380f_into_people_or_cubes": 0,
-   "b380f_rays_on_the_cut (a look finding, not a rule)": {
-    "rig-beam-planes-14": 3
-   },
+   "b380f_rays_on_the_cut (a look finding, not a rule)": {},
    "dj_face_eye_height_lx": {
     "dark": 20.0,
     "peak": 19.9
@@ -6835,11 +6842,11 @@
     "part": "plane 2 (the wings)",
     "into_people": 0,
     "into_cubes": 0,
-    "into_the_cut": 3,
+    "into_the_cut": 0,
     "ends": [
-     "cut pick 1 (bridle + hoist + safety steel)",
      "hall-deck",
      "hall-frame",
+     "hall-girder",
      "hall-steel"
     ]
    },

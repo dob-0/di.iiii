@@ -341,6 +341,12 @@ def rig_doc(repo, lamps, units, cc, ev):
             f['was'] = q['was']
         rec['to'] = {'p': f['p'], 'part': f['part']}
         moves.append(rec)
+    for fid, ov in B380F_AIM.items():                                    # round 2 item 2: the B380F re-aims (none into the cut's picks)
+        if ov['az_el_deg'] and fid in by:
+            f = by[fid]
+            f['r'] = [R3(v) for v in rot_for_dir(b380f_dir(*ov['az_el_deg']))]
+            f['re_aimed'] = {'from_az_el_deg': ov['was_az_el_deg'], 'to_az_el_deg': ov['az_el_deg'], 'why': 'v2 spread aim put 3 of 9 rays on the cut pick 1 (round 2, 10-10)'}
+            f['position'] = f['position'].replace('aim 0/24 deg (az/el)', 'aim %g/%g deg (az/el; was 0/24, re-aimed off the cut pick 1)' % tuple(ov['az_el_deg']))
     # the six cubes: sitting on the far-side girder, one static beam each to the one end point (B-L)
     cubes = {f['id']: f for f in T['fixtures'] if f['type'] == 'ext-lc-ultra-mk2'}
     for u in units:
@@ -489,6 +495,19 @@ PERSON, VERT, LAT = 2.0, 3.0, 2.5
 FAN, FAN_BODY = 0.8, 1.008
 PAD = 0.25                                  # a body is its true box + 0.25 m
 APERTURE_M, DIVERGENCE = 0.004, 0.001       # the cube: 4 mm, 1 mrad (lasers-exact.json specs; 1/e or 1/e2 unknown)
+# Round 2 (10-10, the lead's item 2): rig-beam-planes-14 (col x -12 z 0.5, v2 spread aim az 0 / el 24) put 3 of its 9 rays (axis + ring of 8 at 0.9 deg)
+# on the cut's pick 1. Re-aimed to the smallest change (max |d az|, |d el| on a 1 deg grid, `check --search-b380f rig-beam-planes-14`) with 0 rays on the cut,
+# people or cubes. az from +z toward +x, el over level.
+SEARCH_B380F = ''
+B380F_AIM = {'rig-beam-planes-14': {'was_az_el_deg': [0.0, 24.0], 'az_el_deg': [-2.0, 24.0]}}   # robust: every aim within +-1 deg also 0 (round2/b380f-search.json)
+
+
+def b380f_dir(az, el):
+    import numpy as np
+    a, e = math.radians(az), math.radians(el)
+    return np.array([math.sin(a) * math.cos(e), math.sin(e), math.cos(a) * math.cos(e)])
+
+
 BODY_R = {'up-pl5403': 0.25, 'up-b380f': 0.45, 'up-yz31p': 0.5}      # moxir_v2_spread.BODY_R (ASSUMED from maker sizes)
 LAMP_LOW, LAMP_TOP, LAMP_HALF = 9.0, 10.6, 0.3                      # pendant lamps: lowest 9.0 (9.0-10.0, safe end), 0.6 m boxes
 LAMP_X = [-11.2, -6.0, 0.0, 6.0, 11.2]
@@ -1163,6 +1182,23 @@ def checks(repo):
         b380.append({'id': f['id'], 'part': f['part'], 'into_people': int(sum(c == 'people' for c in cls)), 'into_cubes': int(sum(c == 'laser' for c in cls)),
                      'into_the_cut': int(sum(c in ('truss', 'rigging') for c in cls)), 'ends': sorted(set(n for n in names if n))})
     log('B380F done')
+    if SEARCH_B380F:                                                     # the item-2 search: smallest re-aim with 0 rays on the cut / people / cubes
+        f = next(x for x in rig['fixtures'] if x['id'] == SEARCH_B380F)
+        head = np.array([f['p'][0], f['p'][1] - 0.7 + S.HEAD_Y, f['p'][2]])
+        az0, el0 = B380F_AIM[SEARCH_B380F]['was_az_el_deg']
+        found = []
+        for daz in range(-12, 13):
+            for de in range(-8, 13):
+                dirs, _ = O.cone_rays(b380f_dir(az0 + daz, el0 + de), 0.9, O.SPEC_RINGS)
+                t, names, cls, mesh = Cb.cast(head, dirs, reach=140.0, tmin=0.3, extra=ppl)
+                bad = sum(c in ('truss', 'rigging', 'people', 'laser') for c in cls)
+                if bad == 0:
+                    found.append((max(abs(daz), abs(de)), abs(daz) + abs(de), az0 + daz, el0 + de, sorted(set(n for n in names if n))))
+        found.sort(key=lambda r: (r[0], r[1]))
+        zero = {(r[2], r[3]) for r in found}                             # robust: every aim within +-1 deg (the mount tolerance, rounded up) is also 0
+        robust = [r for r in found if all((r[2] + i, r[3] + j) in zero for i in (-1, 0, 1) for j in (-1, 0, 1))]
+        print(json.dumps({'id': SEARCH_B380F, 'zero_aims': len(found), 'best': found[:3], 'robust_pm1deg': robust[:4]}, default=JD))
+        sys.exit(0)
     summary = {
         'lasers_worst_margin_m': R3(worst_all[0]), 'lasers_worst_at': [worst_all[1], worst_all[2]],
         'lasers_min_body_gap_m': R3(min(g['margin_m'] for bm in beams for t in TOPS for k, g in bm['tops'][t]['by_group'].items()
@@ -1210,6 +1246,8 @@ def passes(R):
         fails.append('a lens the DJ sees lit within 20 deg')
     if s['cut_light_into_people'] or s['b380f_into_people_or_cubes']:
         fails.append('a beam into people or the cubes')
+    if s['b380f_rays_on_the_cut (a look finding, not a rule)']:      # round 2 (the lead, 10-10): 0 B380F rays on the cut is now a rule
+        fails.append('a B380F ray on the cut: %s' % s['b380f_rays_on_the_cut (a look finding, not a rule)'])
     if s['forty_watt_their_worst_m'] < 0:
         fails.append('the 40 W beams fail their own terms at the new park')
     return fails
@@ -1272,7 +1310,10 @@ def main():
     ap.add_argument('--repo', default='.')
     ap.add_argument('--out', default=os.path.expanduser('~/Downloads/moxir/v2-cranes'))
     ap.add_argument('--base', default='http://moxir-cranes-lasers.diiii.localhost')
+    ap.add_argument('--search-b380f', default='', help='check only: search the smallest re-aim of this B380F with 0 rays on the cut, people or cubes')
     A, _ = ap.parse_known_args()
+    global SEARCH_B380F
+    SEARCH_B380F = A.search_b380f
     repo = os.path.abspath(os.path.expanduser(A.repo))
     os.chdir(repo)
     if A.cmd == 'data':

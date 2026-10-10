@@ -689,9 +689,7 @@
    "dj_glare_ok": true,
    "cut_light_into_people": 0,
    "b380f_into_people_or_cubes": 0,
-   "b380f_rays_on_the_cut (a look finding, not a rule)": {
-    "rig-beam-planes-14": 3
-   },
+   "b380f_rays_on_the_cut (a look finding, not a rule)": {},
    "dj_face_eye_height_lx": {
     "dark": 20.0,
     "peak": 19.9
