@@ -138,9 +138,11 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
             expect(cap.fader).toBeLessThanOrEqual(1)
             expect(cap.drawn_fraction_measured).toBeGreaterThan(0)
             expect(cap.white_pct_floor_total).toBeLessThanOrEqual(0.65)
-            // the cap is the highest TESTED fader under the budget
-            const pass = cap.tested.filter((t) => t.white_pct <= 0.65).map((t) => t.fader)
-            expect(cap.fader).toBe(Math.max(...pass))
+            // the cap is the highest TESTED drawn fraction under the budget (the tested faders were read while the room
+            // drew a level squared, before 28f4028d); since the fix a fader draws itself, so the cap fader = that fraction
+            const pass = cap.tested.filter((t) => t.white_pct <= 0.65).map((t) => t.drawn)
+            expect(cap.drawn_fraction_measured).toBe(Math.max(...pass))
+            expect(cap.fader).toBeCloseTo(cap.drawn_fraction_measured, 9)
         }
         const peak = N.looks.find((l) => l.id === 'peak')
         expect(peak.parts.laser[1]).toBe(peak.desk_caps.laser.fader)

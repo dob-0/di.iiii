@@ -3857,7 +3857,7 @@
     ],
     "plane 2 (the wings)": [
      "#ff3a12",
-     0.8
+     0.64
     ],
     "plane 3 (behind the stage)": [
      "#ff3a12",
@@ -3909,7 +3909,7 @@
       }
      ],
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader^2 in today's room)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   },
@@ -3944,7 +3944,7 @@
     ],
     "laser": [
      "#e8e4dc",
-     0.4
+     0.16
     ],
     "stage columns": [
      "#ff3a12",
@@ -3952,7 +3952,7 @@
     ],
     "plane 2 (the wings)": [
      "#e8e4dc",
-     0.45
+     0.2
     ],
     "plane 3 (behind the stage)": [
      "#ff3a12",
@@ -3977,9 +3977,10 @@
    },
    "desk_caps": {
     "laser": {
-     "fader": 0.4,
+     "fader": 0.16,
      "drawn_fraction_measured": 0.16,
      "white_pct_floor_total": 0.57,
+     "fader_before_level_fix": 0.4,
      "tested": [
       {
        "fader": 1.0,
@@ -4007,7 +4008,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader^2 in today's room)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   }

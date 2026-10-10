@@ -81,7 +81,9 @@ ROOM_LEVEL_EXP = 2
 # share of the lines' full intensity the room drew at it, measured: fader^2 today). If the room's level law is fixed to linear, the
 # same light is a fader equal to the drawn fraction. The owner: "I will not use full brightness".
 LASER_CAPS = {
-    'peak': {'fader': 0.40, 'drawn_fraction_measured': 0.16, 'white_pct_floor_total': 0.57,
+    # 2026-10-10: the room drew a look's level squared until 28f4028d (#868/#869). The cap is the DRAWN fraction that
+    # measured <= 0.65 % (0.16), so with the fix the fader is 0.16 (it was 0.40 only because 0.40² = 0.16).
+    'peak': {'fader': 0.16, 'drawn_fraction_measured': 0.16, 'white_pct_floor_total': 0.57, 'fader_before_level_fix': 0.40,
              'tested': [{'fader': 1.0, 'drawn': 1.0, 'white_pct': 0.88}, {'fader': 0.4, 'drawn': 0.16, 'white_pct': 0.57}, {'fader': 0.25, 'drawn': 0.0625, 'white_pct': 0.54},
                         {'fader': 0.15, 'drawn': 0.0225, 'white_pct': 0.53}, {'fader': 0.0, 'drawn': 0.0, 'white_pct': 0.53}]},
     'dark': {'fader': 1.0, 'drawn_fraction_measured': 1.0, 'white_pct_floor_total': 0.49,
@@ -91,8 +93,10 @@ LASER_CAPS = {
 }
 LASER_CAP_METHOD = ('the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, '
                     'measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); '
-                    'drawn fraction = the renderer\'s own laser intensity / its intensity at 100 % (fader^2 in today\'s room)')
-PLANE2_PEAK = 0.45                   # the wings' peak fader under the white-out budget (see the looks)
+                    'drawn fraction = the renderer\'s own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; '
+                    'the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)')
+PLANE2_PEAK = 0.20                   # the wings' peak fader under the white-out budget: 0.45 measured under the level² bug drew 0.2025;
+                                     # 0.20 draws the same light now that the room draws a level once (28f4028d, 2026-10-10)
 B380_CD_ROOM = 1004000 / 0.02
 DJ_EYE = (-5.2, 2.03, 4.3)
 DJ_RULE_DEG = 20.0
@@ -420,7 +424,7 @@ def build(repo, out, table_path, placement_file=None):
         for gone in ('plane 2 (mid-hall, side spans)', 'plane 3 (the far end)', 'side spans', 'far wall'):
             p.pop(gone, None)
         if lk['id'] == 'dark':
-            p['plane 2 (the wings)'] = [EMBER, 0.8]
+            p['plane 2 (the wings)'] = [EMBER, 0.64]   # 0.8 under the level² bug drew 0.64 (measured dark glare 0.49 %); since 28f4028d a fader draws itself
             p['plane 3 (behind the stage)'] = [EMBER, 0.35]
             p['stage key'] = [EMBER, 0.63]
             p['speaker face L'] = [EMBER, 0.59]
