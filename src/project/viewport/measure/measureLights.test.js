@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AmbientLight, DirectionalLight, HemisphereLight, Mesh, PointLight, Scene, SpotLight, Texture } from 'three'
+import { AmbientLight, DirectionalLight, Group, HemisphereLight, Mesh, PointLight, Scene, SpotLight, Texture } from 'three'
 import { RIG_BOUNCE_NAME, holdViewingAids, isViewingAid, releaseViewingAids } from './measureLights.js'
 
 const makeScene = () => {
@@ -76,12 +76,80 @@ describe('beamsOf reads the beam-only lasers that lampsOf cannot see', () => {
         scene.add(mesh)
         const b = beamsOf(scene, 0.5)
         expect(b).toHaveLength(2)
-        expect(b[0].position).toEqual([1, 2, 3])
+        expect(b[0].mesh_position).toEqual([1, 2, 3])
         expect(b[0].direction[0]).toBeCloseTo(1, 5)
         expect(b[0].direction[2]).toBeCloseTo(0, 5)
         expect(b[0].flux_scene).toEqual([0.5, 0, 0])
         expect(b[0].flux).toEqual([1, 0, 0])
         expect(b[1].drawn).toBe(true)
         expect(b[0].name).toBe('cube')
+    })
+    const make = async (lines, len = 10) => {
+        const { laserLineGeometry, createLaserLineMaterial } = await import('../../../objectComponents/laserLineMaterial.js')
+        return new Mesh(laserLineGeometry(lines, len), createLaserLineMaterial())
+    }
+    const L = [{ dir: [0, 0, 1], flux: [0.5, 0, 0] }, { dir: [1, 0, 0], flux: [0, 0.25, 0] }]
+
+    it('a: vertices per line come from the geometry; a mismatch is one error entry, no NaN lines', async () => {
+        const { beamsOf } = await import('./MeasurementMode.jsx')
+        const { laserLineGeometry } = await import('../../../objectComponents/laserLineMaterial.js')
+        expect(laserLineGeometry(L, 10, 10).userData.vertsPerLine).toBe(22)
+        const scene = new Scene()
+        const m = await make(L)
+        m.name = 'bad'
+        m.geometry.userData = {}
+        scene.add(m)
+        const b = beamsOf(scene, 1)
+        expect(b).toHaveLength(1)
+        expect(b[0].error).toMatch(/vertsPerLine/)
+        expect(b[0].name).toBe('bad')
+        const m2 = await make(L)
+        m2.geometry.userData.vertsPerLine = 100 // 196 is not a multiple
+        const s2 = new Scene()
+        s2.add(m2)
+        const b2 = beamsOf(s2, 1)
+        expect(b2).toHaveLength(1)
+        expect(b2[0].error).toBeTruthy()
+    })
+
+    it('b: each line has world start and end from its centreline (aDir x aS, first and last station)', async () => {
+        const { beamsOf } = await import('./MeasurementMode.jsx')
+        const scene = new Scene()
+        const m = await make(L, 10)
+        m.position.set(1, 2, 3)
+        m.rotation.y = Math.PI / 2
+        scene.add(m)
+        const b = beamsOf(scene, 1)
+        ;[1, 2, 3].forEach((x, k) => expect(b[0].start[k]).toBeCloseTo(x, 4))
+        expect(b[0].end[0]).toBeCloseTo(11, 4) // local +z, rotated 90 deg about y, length 10
+        expect(b[0].end[1]).toBeCloseTo(2, 4)
+        expect(b[0].end[2]).toBeCloseTo(3, 4)
+        expect(b[0].mesh_position).toEqual([1, 2, 3])
+        expect(b[0].position).toBeUndefined()
+    })
+
+    it('c: drawn needs every ancestor visible; visible_effective says so', async () => {
+        const { beamsOf } = await import('./MeasurementMode.jsx')
+        const scene = new Scene()
+        const parent = new Group()
+        const m = await make(L)
+        parent.add(m)
+        scene.add(parent)
+        parent.visible = false
+        const b = beamsOf(scene, 1)
+        expect(b[0].visible).toBe(true)
+        expect(b[0].visible_effective).toBe(false)
+        expect(b[0].drawn).toBe(false)
+    })
+
+    it('d: a material without uDiv does not throw; divergence_rad is null', async () => {
+        const { beamsOf } = await import('./MeasurementMode.jsx')
+        const scene = new Scene()
+        const m = await make(L)
+        delete m.material.uniforms.uDiv
+        scene.add(m)
+        const b = beamsOf(scene, 1)
+        expect(b[0].divergence_rad).toBeNull()
+        expect(b[0].diameter_m).toBeTypeOf('number')
     })
 })
