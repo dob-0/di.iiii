@@ -14,6 +14,8 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { theCut, cutCount, clampPoints, PICK_CAP_KG } from './cut-count.mjs'
+import { planPatch } from '../../src/rigbuild/patchPlan.js'
+import moxirLibrary from '../../src/rigbuild/types/moxir.json'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const RIGS = join(here, 'rigs')
@@ -315,5 +317,73 @@ describe('MOXIR v2 cranes: the six cubes ON the free crane (B-L)', () => {
         const ko = entry.keep_out.boxes.find((b) => b.id === 'KO-3 the two beams z -53.8..-30')
         const s = Math.min(...units.map((u) => norm(sub(T, u.aperture_m.p50))))
         expect(boxDist(T, [ko.x_m[0], ko.y_m[0], ko.z_m[0]], [ko.x_m[1], ko.y_m[1], ko.z_m[1]]) - rBody(s) - 0.25, 'the 40 W far patch').toBeLessThan(0)
+    })
+})
+
+describe('MOXIR v2 cranes: the 40 W route kept for later (round 3, NOT live)', () => {
+    const R = L.forty_watt_route_r3
+    it('is stored but not used: H8 stays, the 40 W pair stays dark at #873\'s aim', () => {
+        expect(R.used).toBe(false)
+        expect(entry.fixtures.map((f) => f.p)).not.toEqual(R.apertures_m)
+    })
+    it('passes the near girder z +2.10 body rule with the cubes\' 1.008 deg body fan (recomputed here, 2 cm steps)', () => {
+        // the 40 W tube: aperture 10 mm (ASSUMED) / 2 + 1.3 mrad x s / 2 + s tan(1.008 deg); body = true box + 0.25 pad; rule gap >= 0.25
+        const r40 = (s) => 0.005 + 0.00065 * s + s * Math.tan(rad(1.008))
+        const zc = R.near_crane_z_m - GIRDER.dz                            // the stage-side girder, z 2.10
+        const lo = [-11.35, R.near_crane_underside_m, zc - GIRDER.w / 2]
+        const hi = [11.35, R.near_crane_top_m, zc + GIRDER.w / 2]
+        const gaps = R.apertures_m.map((p, i) => Math.min(...samples(p, R.ends_m[i], 0.02).map(([q, s]) => boxDist(q, lo, hi) - r40(s) - 0.25)) - 0.25)
+        expect(Math.min(...gaps)).toBeGreaterThanOrEqual(0)
+        expect(Math.abs(Math.min(...gaps) - R.near_girder_margin_m)).toBeLessThan(0.01)
+    })
+    it('carries its precondition: a physical aperture mask at 0.4 deg, measured at O2; a software zone never counts; not met', () => {
+        expect(R.precondition.physical_limit).toMatch(/aperture mask/)
+        expect(R.precondition.measured_at).toMatch(/O2/)
+        expect(R.precondition.software_zone_counts).toBe(false)
+        expect(R.precondition.met).toBe(false)
+        expect(R.owner_decision).toMatch(/owner/)
+    })
+    it('the moved FOH riser stays on the floor, left of the roller conveyor (x 3.6)', () => {
+        expect(R.foh_riser_x_m[1]).toBeLessThanOrEqual(3.6)
+        expect(R.worst_m).toBeGreaterThanOrEqual(0)
+    })
+})
+
+// The DMX patch (N460.2, #880 skeptic S4 3.11): the rig's own `patch` block was the v2 spread's, written with ok:false (U1 512 slots, 53 devices on a
+// "stage" branch) and no test failed. It must be the owner's patch: U1 = 18 UP-B380F + 2 UP-LA40WF + smoke = 353/512, U2 = the 50 PL5403 washes = 400/512,
+// laid by the official plan (src/rigbuild/patchPlan.js); the plan follows the rig (cut 11 / planes 39: N463, 9cfc8ee7).
+describe('v2 cranes: the DMX patch is the official plan, laid without a refusal', () => {
+    const plan = read('moxir-v2-patch-2026-10-09.json')
+    const anyFalse = (o) => (o && typeof o === 'object') && Object.entries(o).some(([k, v]) => (k === 'ok' && v === false) || anyFalse(v))
+    // the rig's lamps as a project document; the two Poligraf lasers live in the entry-laser rig (#873), not in this one: stand-ins, as expectedRoom does
+    const room = () => {
+        const ent = (id, type, n) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [n, 0, 0], rotation: [0, 0, 0] }, fixture: { type } } })
+        const lamps = rig.fixtures.filter((f) => ['up-b380f', 'up-pl5403', 'up-yz31p'].includes(f.type)).map((f) => ent(f.id, f.type, f.p[0]))
+        return [...lamps, ent('rig-la40wf-entry-01', 'up-la40wf', 0), ent('rig-la40wf-entry-02', 'up-la40wf', 1)]
+    }
+    it('no branch or slot of the rig\'s patch block says ok:false', () => {
+        expect(anyFalse(rig.patch)).toBe(false)
+        for (const b of rig.patch.branches || []) expect(b.ok, b.branch).toBe(true)
+    })
+    it('the rig\'s patch block holds the owner\'s slots: U1 353 of 512, U2 400 of 512 (N460.2)', () => {
+        expect(rig.patch.slots).toEqual({ 1: 353, 2: 400 })
+        expect(rig.patch.from).toBe('scripts/place/rigs/moxir-v2-patch-2026-10-09.json')
+    })
+    it('patchPlan.js lays the official plan onto this rig with no refusal, and every block\'s units equal the rig\'s count (cut 11 / planes 39)', () => {
+        const r = planPatch({ entities: room(), library: moxirLibrary, plan })
+        expect(r.errors).toEqual([])
+        const cut = rig.fixtures.filter((f) => /^rig-par-cut-\d+$/.test(f.id)).length
+        const planes = rig.fixtures.filter((f) => /^rig-par-planes-\d+$/.test(f.id)).length
+        expect([cut, planes]).toEqual([11, 39])
+        const units = Object.fromEntries(plan.universes.flatMap((u) => u.blocks).map((b) => [b.select.group || b.select.type, b.units]))
+        expect(units['rig-par-cut']).toBe(cut)
+        expect(units['rig-par-planes']).toBe(planes)
+        const used = (u) => r.assignments.filter((a) => a.universe === u).reduce((s, a) => s + a.footprint, 0)
+        expect([used(1), used(2)]).toEqual([353, 400])
+    })
+    it('each unit of the rig carries the address the plan lays (dmx.universe / dmx.address)', () => {
+        const r = planPatch({ entities: room(), library: moxirLibrary, plan })
+        const want = Object.fromEntries(r.assignments.map((a) => [a.entityId, `U${a.universe}.${a.address}`]))
+        for (const f of rig.fixtures.filter((x) => want[x.id])) expect(`U${f.dmx.universe}.${f.dmx.address}`, f.id).toBe(want[f.id])
     })
 })
