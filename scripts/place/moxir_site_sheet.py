@@ -42,31 +42,31 @@ PTS = {
 }
 
 def plan(ax, fs=5.0):
-    ax.set_aspect('equal'); ax.set_xlim(-15.5, 15.5); ax.set_ylim(-58, 58)
+    ax.set_aspect('equal'); ax.set_xlim(-38, 38); ax.set_ylim(-61, 59)
     ax.add_patch(Rectangle((-12, -ZW), 24, 2 * ZW, fc='#f4f1ea', ec='#333', lw=0.8))
-    ax.text(0, -57.2, 'FAR WALL (matte block); blue = gate', ha='center', fontsize=fs, weight='bold')
-    ax.text(0, 56.2, 'ENTRY WALL', ha='center', fontsize=fs, weight='bold')
+    ax.text(0, -59.6, 'FAR WALL (matte block); blue = gate', ha='center', fontsize=fs, weight='bold')
+    ax.text(0, 57.0, 'ENTRY WALL', ha='center', fontsize=fs, weight='bold')
     ax.annotate('', xy=(13.2, -45), xytext=(13.2, -30), arrowprops=dict(arrowstyle='->', lw=0.5))
-    ax.text(13.6, -37, 'beams', fontsize=fs - 0.6, rotation=90, va='center')
+    ax.text(14.0, -37, 'beams', fontsize=fs, rotation=90, va='center')
     gw = G['far_gate']['w_m']
     ax.add_patch(Rectangle((-gw / 2, -ZW - 0.6), gw, 1.2, fc='#fff', ec='#06c', lw=0.8))
     dw = H['geometry']['door']['w_m']
     ax.add_patch(Rectangle((-dw / 2, ZW - 0.6), dw, 1.2, fc='#fff', ec='#06c', lw=0.8))
-    ax.text(3.6, ZW + 0.4, 'door (blue)', fontsize=fs - 0.6, color='#06c')
+    ax.text(6, ZW + 1.0, 'door (blue)', fontsize=fs, color='#06c')
     # stage, barrier, dance floor, FOH
     ax.add_patch(Rectangle((booth['drawn_x_m'][0], booth['front_z_m'] - booth['depth_m']), 2.2, booth['depth_m'], fc='#999', ec='#333', lw=0.5))
-    ax.text(-4.0, 1.4, 'STAGE / DJ box', fontsize=fs, weight='bold', ha='center')
+    ax.text(-13, -3.2, 'STAGE / DJ box', fontsize=fs, weight='bold', ha='right')
     ax.plot([bar['x_m'][0], bar['x_m'][1]], [bar['z_m']] * 2, color='#c00', lw=1.2)
-    ax.text(2.4, bar['z_m'] + 0.5, 'barrier z 8.2', fontsize=fs - 0.6, color='#c00')
+    ax.text(12.6, bar['z_m'] + 0.3, 'barrier z 8.2', fontsize=fs, color='#c00')
     ax.add_patch(Rectangle((fl['x_m'][0], fl['z_m'][0]), fl['x_m'][1] - fl['x_m'][0], fl['z_m'][1] - fl['z_m'][0], fc='none', ec='#888', ls=':', lw=0.6))
-    ax.text(1.0, 12, 'dance floor', fontsize=fs, color='#666', ha='center')
+    ax.text(12.6, 12, 'dance floor', fontsize=fs, color='#666', ha='left')
     ax.add_patch(Rectangle((FOHX - foh_w / 2, FOHZ - 1), foh_w, foh_d, fc='#ccc', ec='#333', lw=0.5))
     ax.add_patch(Rectangle((FOHX + 2.0 - foh_w / 2, FOHZ - 1), foh_w, foh_d, fc='none', ec='#333', ls='--', lw=0.5))
-    ax.text(-5.2, 31.2, 'FOH now / +2.0 m (dashed)', fontsize=fs - 0.6, ha='center')
+    ax.text(-13, 34.5,  'FOH now, +2.0 m dashed', fontsize=fs, ha='right')
     # cranes: bands across the hall at their parks
-    for z, name in ((crane_near, 'NEAR CRANE park z %.2f' % crane_near), (crane_far, 'FREE CRANE park z -12')):
+    for z, name in ((crane_near, 'NEAR CRANE z %.2f' % crane_near), (crane_far, 'FREE CRANE z -12')):
         ax.add_patch(Rectangle((-12, z - 1.1), 24, 2.2, fc='#e8c27a', ec='#a0701a', lw=0.5, alpha=0.7))
-        ax.text(-11.8, z + (1.6 if z > 0 else -2.6), name, fontsize=fs - 0.4, color='#6b4a10')
+        ax.text(12.6, z + (3.2 if z > 0 else -4.2), name, ha='left', fontsize=fs, color='#6b4a10')
     # cubes + their beams to the ends
     for p in cubes:
         ax.plot(p[0], p[2], 's', ms=2.2, color='#c00')
@@ -76,7 +76,7 @@ def plan(ax, fs=5.0):
         ax.plot(e[0], e[2], 'x', color='#c00', ms=3)
     # 40 W tower and beams (route r3 ends; not live)
     ax.add_patch(Rectangle((-10.25, 45.77), 5.01, 5.01, fc='none', ec='#7a2', lw=0.8))
-    ax.text(-9.9, 52.2, 'entry tower (40 W)', fontsize=fs - 0.6, color='#4a7a10')
+    ax.text(12.6, 49, 'entry tower (40 W)', fontsize=fs, color='#4a7a10')
     for x0, e in zip(towerx, r3['ends_m']):
         ax.plot([x0, e[0]], [48, e[2]], color='#4a7a10', lw=0.5, ls='--')
     ax.add_patch(Rectangle((-8.29, -ZW), 3.17, 1.0, fc='#9c6', ec='none', alpha=0.7))   # KO-3 span on the wall
@@ -84,13 +84,13 @@ def plan(ax, fs=5.0):
     for k, (x, z, lab) in PTS.items():
         ax.text(x, z, k, fontsize=fs, ha='center', va='center', weight='bold',
                 bbox=dict(boxstyle='circle,pad=0.18', fc='#fff', ec='#000', lw=0.6), zorder=5)
-        left = k in ('H2', 'H6', 'O5')
-        ax.text(x + (-1.5 if left else 1.5), z - 0.1, lab, fontsize=fs - 1.0, va='center', ha='right' if left else 'left', zorder=5, bbox=dict(fc='white', ec='none', alpha=0.7, pad=0.2))
-    ax.text(0, -59.2, 'O2 O3 O7: bench, datasheet, paper - no spot', fontsize=fs - 0.6, ha='center')
-    ax.set_xticks([-12, -6, 0, 6, 12]); ax.set_yticks(range(-50, 51, 10))
+        left = k in ('H6', 'O5', 'H9', 'O8', 'H2')
+        ax.text(x + (-2.2 if left else 2.2), z - 0.1, lab, fontsize=fs, va='center', ha='right' if left else 'left', zorder=5, bbox=dict(fc='white', ec='none', alpha=0.7, pad=0.2))
+    ax.text(12.6, -56.5, 'O2 O3 O7: no spot', fontsize=fs, ha='center')
+    ax.set_xticks([-12, 0, 12]); ax.set_yticks(range(-50, 51, 10))
     ax.tick_params(labelsize=fs - 0.8, length=2, width=0.4)
-    ax.set_xlabel('x (m): left <-  house  -> right (looking at the far wall)', fontsize=fs - 0.6, labelpad=1)
-    ax.set_ylabel('z (m)  far wall -54 ... entry +54', fontsize=fs - 0.6, labelpad=1)
+    ax.set_xlabel('x (m): left <- house -> right', fontsize=fs, labelpad=1)
+    ax.set_ylabel('z (m): far wall -54, entry +54', fontsize=fs, labelpad=1)
     for s in ax.spines.values(): s.set_linewidth(0.4)
 
 def parse_md():
@@ -114,48 +114,60 @@ def wrap(fig, text, width_in, fs):
         else: cur = (cur + ' ' + w).strip()
     out.append(cur); t.remove(); return out
 
+FS = 10.0   # floor for every text on the sheet, pt (the footer says where it comes from)
+FOOT = ('Type: nothing under 10 pt. Source: no published minimum for site checklists found (searched 2026-10-10: NASA Ames checklist design, '
+        'Transport Malta SIAN 01/23, FAA); 10 pt is the minimum in the Tasmanian Government style guide (communications.tas.gov.au/styleguide/font/size) '
+        'and our own floor for this sheet, unvalidated for checklists.')
+
 def sheet(pdf):
+    from matplotlib.backends.backend_pdf import PdfPages
     W, Hh = 11.69, 8.27
     title, rows, intro, notes = parse_md()
-    cw = [0.38, 2.75, 1.2, 2.85, 1.9]; x0 = 2.5
-    for fs in [8.0, 7.6, 7.2, 6.8, 6.6, 6.4, 6.2, 6.0, 5.8, 5.6, 5.4, 5.2, 5.0, 4.8]:
-        fig = plt.figure(figsize=(W, Hh), dpi=100)
-        lh = fs / 72 * 1.22
-        top = Hh - 0.28
-        wi = wrap(fig, ' '.join(intro), W - x0 - 0.2, fs)
-        wn = wrap(fig, ' '.join(notes), W - x0 - 0.2, fs - 0.4)
-        y = top - 0.22 - len(wi) * lh - 0.06
-        hdr = y; y -= lh + 0.05
-        cells = []
-        for r in rows[1:]:
-            cl = [wrap(fig, c, cw[i] - 0.15, fs) for i, c in enumerate(r)]
-            cells.append(cl); y -= max(len(c) for c in cl) * lh + 0.05
-        y -= len(wn) * lh
-        if y > 0.12 or fs == 4.8: break
-        plt.close(fig)
-    fig.text(x0 / W, top / Hh, title, fontsize=11, weight='bold', va='top')
-    yy = top - 0.22
-    for l in wi:
-        fig.text(x0 / W, yy / Hh, l, fontsize=fs, va='top'); yy -= lh
-    yy -= 0.06
-    xs = [x0]; [xs.append(xs[-1] + w) for w in cw]
-    fig.add_artist(plt.Rectangle((x0 / W, (yy - lh - 0.02) / Hh), sum(cw) / W, (lh + 0.04) / Hh, fc='#ddd', ec='none'))
-    for i, h in enumerate(rows[0]):
-        fig.text((xs[i] + 0.03) / W, yy / Hh, h, fontsize=fs, weight='bold', va='top')
-    yy -= lh + 0.05
-    for r, cl in zip(rows[1:], cells):
+    cw = [0.5, 3.9, 1.3, 3.4, 1.8]; x0 = 0.4; fs = FS; lh = fs / 72 * 1.25
+    os.makedirs(os.path.dirname(pdf), exist_ok=True)
+    def foot(fig, n, tot):
+        for j, l in enumerate(wrap(fig, FOOT, W - 0.8, fs)):
+            fig.text(x0 / W, (0.55 - j * lh) / Hh, l, fontsize=fs, va='top', color='#333')
+        fig.text((W - 0.4) / W, 0.2 / Hh, 'page %d of %d' % (n, tot), fontsize=fs, ha='right', va='top')
+    # page 1: plan left, title + intro right
+    pages = []
+    fig = plt.figure(figsize=(W, Hh), dpi=100)
+    ax = fig.add_axes([0.04, 0.12, 0.52, 0.85]); plan(ax, fs)
+    xr = 6.7
+    fig.text(xr / W, (Hh - 0.3) / Hh, title, fontsize=12, weight='bold', va='top')
+    yy = Hh - 0.62
+    for l in wrap(fig, ' '.join(intro), W - xr - 0.4, fs):
+        fig.text(xr / W, yy / Hh, l, fontsize=fs, va='top'); yy -= lh
+    pages.append(fig)
+    # table pages: paginate rows
+    def cellsof(r): return [wrap(fig, c, cw[i] - 0.15, fs) for i, c in enumerate(r)]
+    limit = 0.95
+    cur = None; yy = 0; allrows = [(r, cellsof(r)) for r in rows[1:]]
+    def newpage():
+        f = plt.figure(figsize=(W, Hh), dpi=100); y = Hh - 0.35
+        xs = [x0]; [xs.append(xs[-1] + w) for w in cw]
+        f.add_artist(plt.Rectangle((x0 / W, (y - lh - 0.02) / Hh), sum(cw) / W, (lh + 0.04) / Hh, fc='#ddd', ec='none'))
+        for i, h in enumerate(rows[0]): f.text((xs[i] + 0.03) / W, y / Hh, h, fontsize=fs, weight='bold', va='top')
+        return f, y - lh - 0.08, xs
+    cur, yy, xs = newpage(); pages.append(cur)
+    for r, cl in allrows:
         n = max(len(c) for c in cl)
+        if yy - n * lh < limit:
+            cur, yy, xs = newpage(); pages.append(cur)
         for i, c in enumerate(cl):
             for j, l in enumerate(c):
-                fig.text((xs[i] + 0.03) / W, (yy - j * lh) / Hh, l, fontsize=fs, va='top', weight='bold' if i == 0 else 'normal')
-        yy -= n * lh + 0.05
-        fig.add_artist(plt.Line2D([x0 / W, xs[-1] / W], [(yy + 0.025) / Hh] * 2, color='#aaa', lw=0.3))
-    for l in wn:
-        fig.text(x0 / W, yy / Hh, l, fontsize=fs - 0.4, va='top', color='#333'); yy -= lh
-    ax = fig.add_axes([0.03, 0.035, 2.3 / W, 7.6 / Hh * 0.97]); plan(ax)
-    os.makedirs(os.path.dirname(pdf), exist_ok=True)
-    fig.savefig(pdf, format='pdf'); plt.close(fig)
-    print('pdf', pdf, 'font', fs, 'bottom margin in', round(yy, 2), file=sys.stderr)
+                cur.text((xs[i] + 0.03) / W, (yy - j * lh) / Hh, l, fontsize=fs, va='top', weight='bold' if i == 0 else 'normal')
+        yy -= n * lh + 0.06
+        cur.add_artist(plt.Line2D([x0 / W, xs[-1] / W], [(yy + 0.03) / Hh] * 2, color='#aaa', lw=0.3))
+    for l in wrap(fig, ' '.join(notes), W - 0.8, fs):
+        if yy - lh < limit:
+            cur, yy, xs = newpage(); pages.append(cur)
+        cur.text(x0 / W, yy / Hh, l, fontsize=fs, va='top', color='#333'); yy -= lh
+    with PdfPages(pdf) as pp:
+        for k, f in enumerate(pages, 1):
+            foot(f, k, len(pages)); pp.savefig(f)
+    for f in pages: plt.close(f)
+    print('pdf', pdf, 'pages', len(pages), 'font', fs, file=sys.stderr)
 
 def svg():
     fig = plt.figure(figsize=(4.2, 9.2)); ax = fig.add_axes([0.1, 0.04, 0.88, 0.94]); plan(ax, 6.5)
