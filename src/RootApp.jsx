@@ -38,6 +38,7 @@ import TouchForward from './rigbuild/TouchForward.jsx'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
 import { getScenesLocationState, isScenesLocation } from './rigbuild/scenesRouting.js'
+import { getShowLocationState, isShowLocation } from './rigbuild/showRouting.js'
 import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
 import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
@@ -74,6 +75,8 @@ const VisualiserSurface = lazy(() => import('./rigbuild/VisualiserSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
 const ScenesSurface = lazy(() => import('./rigbuild/ScenesSurface.jsx'))
+// The show page: its own small chunk, no WebGL — a phone in a dark hall opens it.
+const ShowSurface = lazy(() => import('./rigbuild/ShowSurface.jsx'))
 const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
 const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -410,6 +413,7 @@ function AppRouter() {
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
     const scenesState = getScenesLocationState(location)
+    const showState = getShowLocationState(location)
     const equipmentState = getEquipmentLocationState(location)
     const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
@@ -651,6 +655,20 @@ function AppRouter() {
     // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
     if (isScenesLocation(scenesState)) {
         return <RigToolRoute spaceId={scenesState.spaceId} surface={(readOnly) => <ScenesSurface spaceId={scenesState.spaceId} projectId={scenesState.projectId} readOnly={readOnly} />} />
+    }
+
+    // `/{space}/show/{project}` — the show page (src/rigbuild/ShowSurface.jsx, RIG_BUILD.md §24):
+    // the live cue and the cue list as cards, for everyone in the space; who may CHOOSE is
+    // the server's answer (serverXR/src/routes/showRoutes.js), never this route's. No gate
+    // here: the page asks the server, and a private show answers 401/403 there, which the page
+    // says in one sentence. (RigToolRoute is not used on purpose: on a `di up --guests`
+    // install it reads `session.local` as "everyone edits" and handed a guest the sign-in card.)
+    if (isShowLocation(showState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading the show" detail="" />}>
+                <ShowSurface spaceId={showState.spaceId} projectId={showState.projectId} />
+            </Suspense>
+        )
     }
 
     // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the
