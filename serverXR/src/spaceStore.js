@@ -111,6 +111,10 @@ function createSpaceStore({
   defaultTtlMs = 0,
   sandboxTtlMs = 0,
   accountSandboxTtlMs = 0,
+  // Spaces the sweep must never remove however long they sit idle — the ones
+  // this machine follows. A follow says "keep this here in step with the hub";
+  // a quiet hub month is not the owner letting the space go.
+  keptSpaceIds = () => [],
   blankScene
 } = {}) {
   const safeSlug = (value = '') => String(value)
@@ -475,8 +479,10 @@ function createSpaceStore({
     const stale = []
     if (defaultTtlMs) stale.push(...s().selectStale.all(Date.now() - defaultTtlMs))
     if (sandboxTtlMs) stale.push(...s().selectStaleSandbox.all(Date.now() - sandboxTtlMs))
-    const ids = [...new Set(stale.map(row => row.id))]
+    const kept = new Set(keptSpaceIds())
+    const ids = [...new Set(stale.map(row => row.id))].filter(id => !kept.has(id))
     await Promise.all(ids.map(id => deleteSpace(id)))
+    return ids
   }
 
   // Re-home a space under a new id — row, children (ops, projects), and the
