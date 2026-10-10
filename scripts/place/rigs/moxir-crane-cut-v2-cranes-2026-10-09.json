@@ -352,5 +352,156 @@
    "was": "rig-par-planes-25"
   }
  ],
- "pars_why": "crane-dj-light design.md 4: #864's 10 plus #864's pit-stand key PAR (the kit stays at 50 PL5403). Three light the DJ: a crossed back pair (u -1.5 / +1.0, hung, aimed at his head and shoulders, 47 / 57 deg up) and a kicker (u +4.5, hung, from house right, 35 deg up). The other eight keep the cut's look: 4 hung straight down, 4 standing straight up (through the 1.5 m gap between the girders, PLACEHOLDER). Every u is a clamp point (cut-count.mjs). Nothing hangs over the transformer (u <= -4.66) or over the step (front z 3.36 < 3.65)."
+ "pars_why": "crane-dj-light design.md 4: #864's 10 plus #864's pit-stand key PAR (the kit stays at 50 PL5403). Three light the DJ: a crossed back pair (u -1.5 / +1.0, hung, aimed at his head and shoulders, 47 / 57 deg up) and a kicker (u +4.5, hung, from house right, 35 deg up). The other eight keep the cut's look: 4 hung straight down, 4 standing straight up (through the 1.5 m gap between the girders, PLACEHOLDER). Every u is a clamp point (cut-count.mjs). Nothing hangs over the transformer (u <= -4.66) or over the step (front z 3.36 < 3.65).",
+ "derived_at_z_3_20": {
+  "truss": {
+   "ends": [
+    {
+     "u_m": -6.25,
+     "x_m": -11.04,
+     "bottom_chord_m": 2.89
+    },
+    {
+     "u_m": 5.75,
+     "x_m": 0.55,
+     "bottom_chord_m": 6
+    }
+   ],
+   "trim_m": 4.51,
+   "clearance": {
+    "lowest_m": 2.89,
+    "low_end": {
+     "u_m": -6.25,
+     "side": "house-left",
+     "bottom_chord_m": 2.89,
+     "over_raised_hands_m": 0.39
+    },
+    "over_raised_hands_m": 0.39,
+    "over_dj_raised_hands_m": 1.61,
+    "raised_hands_m": 2.5,
+    "note": "the line hangs in the bridge's plane (z 3.2), behind the crowd barrier: no audience stands under it; the low end is over the back of house-left"
+   }
+  },
+  "rigging": {
+   "source": "node scripts/place/cut-count.mjs --n 11 --places -5,-4,-3,-2,-1.5,0,1,2,3,3.5,4.5 --design scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json",
+   "picks": [
+    {
+     "u_m": -5.75,
+     "bridle_included_deg": 26,
+     "line_kg": 31.7,
+     "on_bridge_kg": 64.7,
+     "leg_kg": 30.1,
+     "ok": true
+    },
+    {
+     "u_m": -0.5,
+     "bridle_included_deg": 42,
+     "line_kg": 111.1,
+     "on_bridge_kg": 144.2,
+     "leg_kg": 74,
+     "ok": true
+    },
+    {
+     "u_m": 5.25,
+     "bridle_included_deg": 119,
+     "line_kg": 38.8,
+     "on_bridge_kg": 71.9,
+     "leg_kg": 64.9,
+     "ok": true
+    }
+   ],
+   "worst_line_kg": 111.1,
+   "worst_on_bridge_kg": 144.2,
+   "headroom_kg": 34.9,
+   "cap_kg": 146.0,
+   "cap_basis": "a DESIGN cap (v1.0's middle pick, MOXIR.md 5.2), not a rating: the crane's SWL, the runway and the hoists' WLL are unknown",
+   "bridles_deg": [
+    26,
+    42,
+    119
+   ],
+   "weight": {
+    "per_lamp_kg": 9.25,
+    "lamps_kg": 101.8,
+    "truss_kg": 75.6,
+    "loom_kg": 4.2,
+    "total_on_line_kg": 181.6
+   },
+   "power": {
+    "w": 2200,
+    "circuits_16a": 1
+   },
+   "dmx": {
+    "channels": 88,
+    "branches": 1
+   },
+   "tieoffs": [
+    {
+     "id": "hl",
+     "grid_z_m": 6,
+     "from_m": [
+      -11.04,
+      3.04,
+      3.2
+     ],
+     "to_m": [
+      -11.6,
+      3.04,
+      6
+     ],
+     "length_m": 2.86
+    },
+    {
+     "id": "hr",
+     "grid_z_m": -6,
+     "from_m": [
+      0.55,
+      6.15,
+      3.2
+     ],
+     "to_m": [
+      11.6,
+      6.15,
+      -6
+     ],
+     "length_m": 14.38
+    }
+   ],
+   "passes": true
+  },
+  "people": {
+   "rule": "raised hands 2.5 m over the standing surface; every part of the cut >= 0.5 m from them (stage json truss.clear_gap_m: \"the same 0.5 m the cut keeps over raised hands\"); the lowest lens >= 2.7 m (ISO 13857:2019 Table 2)",
+   "dj_on_his_step": {
+    "gap_m": 0.665,
+    "nearest": "lamp body rig-par-cut-04",
+    "passes": true
+   },
+   "public_outside_the_pen_today": {
+    "gap_m": 0.33,
+    "nearest": "the cut (H30V truss)",
+    "passes": false,
+    "why": "the cut's LOW end passes the pen's edge x -10.5 at 0.39-0.54 m over raised hands (unchanged by the park; v1.1 had no public there)"
+   },
+   "public_with_the_pen_condition": {
+    "gap_m": 0.622,
+    "nearest": "cut tie-off hl (strap)",
+    "passes": true,
+    "condition": {
+     "x_m": [
+      -12.0,
+      -10.5
+     ],
+     "z_m": [
+      1.75,
+      6.5
+     ],
+     "why": "the cut's LOW end (x -11.04, bottom chord 2.89 m) passes the stage pen's edge (x -10.5) 0.39-0.54 m over raised hands, and its hl strap runs at 3.04 m to the column x -12 at grid z 6 (0.49 m over raised hands): under the 0.5 m rule. Unchanged in kind from v2 spread (the low end was over the painted hot zone at z 0.15 too; v1.1 had no public there). The transformer (x -11..-9.5, z -4..4, z LOW) and the column-foot cabinets stand in this bay. CONDITION: the pen's barrier (owed, moxir_v2_eyes STAGE_PEN) takes in the bay from the pen's edge to the nave column row x -12, from the bridge's back girder (z 1.75) to past the hl strap's column (z 6.5), so no one of the public stands under the low end or the strap"
+    }
+   },
+   "lowest_lens_m": 3.145,
+   "lowest_lens_passes": true,
+   "low_end_over_raised_hands_m": 0.39,
+   "over_dj_raised_hands_m": 1.61
+  }
+ }
 }

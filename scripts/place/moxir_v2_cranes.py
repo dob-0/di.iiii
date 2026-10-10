@@ -127,10 +127,12 @@ LEVELS = {'peak': {'stage key': 0.132, 'dj back': 0.026, 'dj kicker': 0.044},
 LEVELS_WHY = ('crane-dj-light design.md 5: the DJ\'s face (eye-height plane facing the crowd) 20 lx, his head top 160 lx, his house-right cheek '
               '25 lx, in both looks, as the room draws them (30 478 cd, a look level drawn once since 28f4028d). At the EQUIVALENT spec 11 000 cd the '
               'same faders give 2.77x less; set them on site with a lux meter (owed).')
-PEN_STRIP = {'x_m': [-11.6, -10.5], 'z_m': [1.75, 4.65],
-             'why': 'the cut\'s LOW end (x -11.04, bottom chord 2.89 m) is 0.39 m over raised hands where it passes the stage pen\'s edge (x -10.5): under the 0.5 m '
-                    'rule for 0.54 m of the line (u -6.25..-5.69). The transformer (x -11..-9.5, z -4..4, z LOW) and the column-foot cabinets stand there; the pen\'s '
-                    'barrier (owed, MOXIR v2 eyes) takes in this bay, from the column face to the pen, for the bridge\'s width, so no one of the public stands under it'}
+PEN_STRIP = {'x_m': [-12.0, -10.5], 'z_m': [1.75, 6.5],
+             'why': 'the cut\'s LOW end (x -11.04, bottom chord 2.89 m) passes the stage pen\'s edge (x -10.5) 0.39-0.54 m over raised hands, and its hl strap runs at '
+                    '3.04 m to the column x -12 at grid z 6 (0.49 m over raised hands): under the 0.5 m rule. Unchanged in kind from v2 spread (the low end was over the '
+                    'painted hot zone at z 0.15 too; v1.1 had no public there). The transformer (x -11..-9.5, z -4..4, z LOW) and the column-foot cabinets stand in this '
+                    'bay. CONDITION: the pen\'s barrier (owed, moxir_v2_eyes STAGE_PEN) takes in the bay from the pen\'s edge to the nave column row x -12, from the '
+                    'bridge\'s back girder (z 1.75) to past the hl strap\'s column (z 6.5), so no one of the public stands under the low end or the strap'}
 PEOPLE_RULE = {'raised_hands_m': 2.5, 'clear_m': 0.5, 'reach_m': 2.7}
 PICK_CAP_KG = 146.0
 LASER_GAP_MIN = 0.25
@@ -397,6 +399,20 @@ def rig_doc(repo, lamps, units, cc, ev):
               'written_by': 'scripts/place/moxir_v2_cranes.py build (from %s)' % RIG_SP, 'date': DATE, 'built': BUILT, 'from_rig': RIG_SP, 'owner': OWNER,
               'hall': {'json': HALL_V10, 'glb': GLB_V10, 'glb_sha256': GLB_V10_SHA, 'show_glb': GLB_V10.replace('hall.glb', 'hall-show.glb'),
                        'why': 'the room must draw hall v10 (both cranes moved); a project still on v9 draws the free crane at z -41 and the near crane at 0.15'}})
+    # power: moxir_v2.circuits re-run on the moved units (16 A radials <= 2 944 W, BS 7671 4D2B volt drop); the cubes keep their own radial.
+    # DMX: every unit keeps its address (the owner's v2 patch layer, rigs/moxir-v2-patch-2026-10-09.json, is laid on top); cut-11 takes the pit key's.
+    import moxir_v2 as M
+    units_p = [dict(f) for f in T['fixtures'] if f['type'] in ('up-b380f', 'up-pl5403', 'up-yz31p')]
+    circ, ph = M.circuits(units_p)
+    cid = {u: c['circuit'] for c in circ for u in c['units']}
+    for f in T['fixtures']:
+        if f['id'] in cid:
+            f['circuit'] = cid[f['id']]
+    las = next((c for c in SP['power']['circuits'] if c['circuit'] == 'C-LASER'), None)
+    if las:
+        las = dict(las, note='6 x 120 W (the adapters), one 16 A radial up the free crane\'s festoon to the six cubes on its far-side girder; the run along the crane is the rigger\'s')
+    T['power'] = {'circuits': circ + ([las] if las else []), 'phases_w': ph, 'method': 'moxir_v2.circuits on the v2 cranes units (re-run: the cut moved, the pit stand gone)'}
+    T['patch_note'] = 'DMX addresses kept from v2 spread (#864); rig-par-cut-11 holds rig-par-planes-25\'s address (the pit key\'s slot). The owner\'s v2 patch layer (N460.2) is laid on top by its own builder.'
     T['review'] = {'from': RIG_SP, 'moves': moves}
     return T
 
@@ -466,6 +482,757 @@ def lasers_doc(repo, units, checks=None):
     return D
 
 
+# ====================================================================== 4. the checks
+# ---------------------------------------------------------------- the rule's numbers (moxir_v1_1 / MOXIR.md 4.0a, unchanged)
+PERSON, VERT, LAT = 2.0, 3.0, 2.5
+FAN, FAN_BODY = 0.8, 1.008
+PAD = 0.25                                  # a body is its true box + 0.25 m
+APERTURE_M, DIVERGENCE = 0.004, 0.001       # the cube: 4 mm, 1 mrad (lasers-exact.json specs; 1/e or 1/e2 unknown)
+BODY_R = {'up-pl5403': 0.25, 'up-b380f': 0.45, 'up-yz31p': 0.5}      # moxir_v2_spread.BODY_R (ASSUMED from maker sizes)
+LAMP_LOW, LAMP_TOP, LAMP_HALF = 9.0, 10.6, 0.3                      # pendant lamps: lowest 9.0 (9.0-10.0, safe end), 0.6 m boxes
+LAMP_X = [-11.2, -6.0, 0.0, 6.0, 11.2]
+LAMP_Z_MODEL = [0.0, 6.0, 12.0, 18.0, 24.0]                          # modelled (hall json, SUSPECTED at every node)
+LAMP_Z_ASSUMED = [-48.0, -42.0, -36.0, -30.0, -24.0, -18.0, -12.0, -6.0, 30.0, 36.0, 42.0, 48.0]   # NOT SEEN / no record: ASSUMED rows
+TRUSS_BOTTOM_LOW = 10.6                     # the space frame's bottom chord: 10.8 nominal, 10.6-11.2 (never taped): the LOW end
+CHORD_T, GUSSET_DROP, GUSSET_HALF = 0.24, 0.25, 0.45                 # hall.py: chord 0.24 (GUESS), node gussets 0.9 m hanging 0.25 under it
+WALL_TOP_LOW = 10.79                        # the far wall's plaster ends 11.26 (10.79-11.73), photo 007 (crane_height.py)
+TOPS = ('p05', 'p50', 'p95')
+
+
+def r_place(s, half=FAN):
+    return s * math.tan(math.radians(half)) + (APERTURE_M + DIVERGENCE * s) / 2
+
+
+def r_body(s, half=FAN_BODY):
+    return 0.002 + s * math.tan(math.radians(half))
+
+
+def box(name, x, y, z, group, pad=PAD, gap=LASER_GAP_MIN):
+    import numpy as np
+    return {'name': name, 'lo': np.array([x[0], y[0], z[0]], float), 'hi': np.array([x[1], y[1], z[1]], float), 'pad': pad, 'gap': gap, 'group': group}
+
+
+def roof_members(z54=False):
+    """the space frame's bottom layer over the nave (hall.py: chords on the 6 m grid, node gussets), at the LOW end of the truss-bottom range;
+    the z +-54 chord rows stand IN the end walls (faces at +-53.8): only their gussets reach out, unless z54 (the laser judge's count)"""
+    c = TRUSS_BOTTOM_LOW
+    out = []
+    for k in range(-9, 10):
+        z = 6.0 * k
+        if abs(k) < 9 or z54:
+            out.append(box('roof bottom chord along x at z %g' % z, (-12.0, 12.0), (c - CHORD_T / 2, c + CHORD_T / 2), (z - CHORD_T / 2, z + CHORD_T / 2), 'roof'))
+        for x in (-12.0, -6.0, 0.0, 6.0, 12.0):
+            out.append(box('roof node gusset x %g z %g' % (x, z), (x - GUSSET_HALF, x + GUSSET_HALF), (c - GUSSET_DROP, c + CHORD_T / 2), (z - GUSSET_HALF, z + GUSSET_HALF), 'roof'))
+    for x in (-12.0, -6.0, 0.0, 6.0, 12.0):
+        out.append(box('roof bottom chord along z at x %g' % x, (x - CHORD_T / 2, x + CHORD_T / 2), (c - CHORD_T / 2, c + CHORD_T / 2), (-54.0, 54.0), 'roof'))
+    for sx in (-1, 1):
+        out.append(box('roof strut along the column row x %+g' % (sx * 12), sorted((sx * 11.92, sx * 12.08)), (10.30 - 0.2, 10.45 - 0.2), (-54.0, 54.0), 'roof'))
+    return out
+
+
+def pendant_lamps():
+    return ([box('pendant lamp x %g z %g (modelled, from 9.0)' % (x, z), (x - LAMP_HALF, x + LAMP_HALF), (LAMP_LOW, LAMP_TOP), (z - LAMP_HALF, z + LAMP_HALF), 'pendant lamps, modelled rows')
+             for x in LAMP_X for z in LAMP_Z_MODEL] +
+            [box('pendant lamp x %g z %g (ASSUMED row, never seen)' % (x, z), (x - LAMP_HALF, x + LAMP_HALF), (LAMP_LOW, LAMP_TOP), (z - LAMP_HALF, z + LAMP_HALF), 'pendant lamps, ASSUMED rows')
+             for x in LAMP_X for z in LAMP_Z_ASSUMED])
+
+
+def free_crane_bodies(top):
+    """the free crane at z -12, its tops at the case: the stage-side girder (the cubes' own far-side girder is their mount: the cast checks it),
+    the parked trolley, end trucks, cab, and the hook if it were NOT wound up (H3 asks it wound up; checked anyway)"""
+    hx = sum(FREE_TROLLEY_X) / 2
+    return [box('free crane stage-side girder', (-11.35, 11.35), (FREE_UNDER, top), STAGE_GIRDER, 'free crane'),
+            box('free crane trolley (parked x 7.6..10.2, locked out)', FREE_TROLLEY_X, (top, top + 1.0), (FREE_Z - 1.6, FREE_Z + 1.6), 'free crane'),
+            box('free crane end truck x -11.35', (-11.75, -10.95), (8.1, max(8.9, top)), (FREE_Z - 2.6, FREE_Z + 2.6), 'free crane'),
+            box('free crane end truck x +11.35', (10.95, 11.75), (8.1, max(8.9, top)), (FREE_Z - 2.6, FREE_Z + 2.6), 'free crane'),
+            box('free crane cab', (8.35, 10.35), (5.56, 8.24), (FREE_Z - 1.0, FREE_Z + 1.0), 'free crane'),
+            box('free crane hook + chain if NOT wound up (hung to 3.45 in August)', (hx - 0.2, hx + 0.2), (3.45, top), (FREE_Z - 0.2, FREE_Z + 0.2), 'free crane')]
+
+
+def near_crane_bodies(top):
+    out = [box('near crane girder z %+.2f' % (NEAR_Z + s * GIRDER_DZ), (-11.35, 11.35), (NEAR_UNDER, top), (NEAR_Z + s * GIRDER_DZ - GIRDER_W / 2, NEAR_Z + s * GIRDER_DZ + GIRDER_W / 2), 'near crane (z 3.20)')
+           for s in (-1, 1)]
+    out.append(box('near crane trolley', NEAR_TROLLEY[0], (top, NEAR_TROLLEY[1]), (NEAR_Z - 1.6, NEAR_Z + 1.6), 'near crane (z 3.20)'))
+    for sx in (-1, 1):
+        out.append(box('near crane end truck x %+g' % (sx * 11.35), sorted((sx * 10.95, sx * 11.75)), (8.1, top), (NEAR_Z - 2.6, NEAR_Z + 2.6), 'near crane (z 3.20)'))
+    out.append(box('near crane cab', (8.35, 10.35), NEAR_CAB_Y, (NEAR_Z - 1.0, NEAR_Z + 1.0), 'near crane (z 3.20)'))
+    return out
+
+
+def cut_parts(truss, cutj):
+    """the cut at z 3.20 (stage-line.mjs's own derivation): the truss as a segment (its 0.29 m box's half diagonal), the picks (bridle + hoist +
+    safety steel, a box from 0.85 m under the apex to the girder's safe underside, +-0.8 m), the two straps (r 0.05)"""
+    import numpy as np
+    e0, e1 = truss['ends']
+    s = cutj['truss']['section_m']
+    segs = [{'name': 'the cut (H30V truss)', 'a': np.array([e0['x_m'], e0['bottom_chord_m'] + s / 2, NEAR_Z]), 'b': np.array([e1['x_m'], e1['bottom_chord_m'] + s / 2, NEAR_Z]),
+             'r': s / 2 * math.sqrt(2), 'group': 'the cut (z 3.20)'}]
+    for t in truss['tieoffs']:
+        segs.append({'name': 'cut tie-off %s (strap)' % t['id'], 'a': np.array(t['from_m'], float), 'b': np.array(t['to_m'], float), 'r': 0.05, 'group': 'the cut (z 3.20)'})
+    picks = [box('cut pick %d (bridle + hoist + safety steel)' % (i + 1), (p['x_m'] - 0.25, p['x_m'] + 0.25), (p['apex_m'] - 0.85, NEAR_UNDER), (NEAR_Z - 0.8, NEAR_Z + 0.8), 'the cut (z 3.20)')
+             for i, p in enumerate(truss['picks'])]
+    return segs, picks
+
+
+def ko_boxes(entry):
+    return [box(b['id'], b['x_m'], b['y_m'], b['z_m'], 'the 40 W lasers (#873 keep-out)', pad=0.0, gap=KO_GAP_MIN) for b in entry['keep_out']['boxes']]
+
+
+def cube_box(p, name):
+    """a cube's body behind its aperture p (its front face; it runs +z, away from its beam)"""
+    return box(name, (p[0] - CUBE[0] / 2, p[0] + CUBE[0] / 2), (p[1] - AP_UP, p[1] - AP_UP + CUBE[1]), (p[2], p[2] + CUBE[2]), 'the other cubes', pad=0.0, gap=LASER_GAP_MIN)
+
+
+def openings_of(op):
+    """the far wall's openings, each reading (EQUIVALENT, photo 007 far_wall_openings.py; GUESS, the hall model)"""
+    g, d = op['photo_007']['far_gate'], op['photo_007']['steel_door']
+    return {'photo 007, safe-end jambs (G2)': [{'name': 'far gate (photo 007, jambs at the safe ends)', 'x': (g['x_left_m']['p05'], g['x_right_m']['p95']), 'top': max(g['top_m']['p95'], 7.47)},
+                                                {'name': 'steel double door (photo 007, jambs at the safe ends)', 'x': (d['x_left_m']['p05'], d['x_right_m']['p95']), 'top': max(d['top_m']['p95'], 2.48)}],
+            'the hall model\'s centred gate (G0)': [{'name': 'far gate as the hall model draws it (x -2.4..2.4, 5.4 m)', 'x': tuple(op['model_gate']['x_m']), 'top': op['model_gate']['top_m']}],
+            'photo 007, median jambs (G1)': [{'name': 'far gate (photo 007, median jambs)', 'x': (g['x_left_m']['median'], g['x_right_m']['median']), 'top': max(g['top_m']['p95'], 7.47)},
+                                            {'name': 'steel double door (photo 007, median jambs)', 'x': (d['x_left_m']['median'], d['x_right_m']['median']), 'top': max(d['top_m']['p95'], 2.48)}]}
+
+
+FAR_WALL_OPENINGS = {
+    'source': REPORTS + 'laser-margin/far_wall_openings.json (far_wall_openings.py: photo 007, single-view metrology as crane_height.py - Criminisi, Reid & Zisserman, IJCV 40(2) 2000; Monte Carlo n 20 000, seed 1; the camera x uniform -2.7..1.0)',
+    'photo_007': {'far_gate': {'x_left_m': {'p05': -0.75, 'median': 0.06, 'p95': 0.89}, 'x_right_m': {'p05': 4.83, 'median': 5.65, 'p95': 6.55}, 'top_m': {'p05': 6.75, 'median': 7.06, 'p95': 7.38},
+                               'top_rule_m': 7.47, 'top_rule_why': 'crane_height.py\'s own p95 gate height (6.90-7.47)'},
+                  'steel_door': {'x_left_m': {'p05': -4.31, 'median': -3.46, 'p95': -2.65}, 'x_right_m': {'p05': -2.28, 'median': -1.45, 'p95': -0.64}, 'top_m': {'p05': 2.25, 'median': 2.41, 'p95': 2.58}}},
+    'model_gate': {'x_m': [-2.4, 2.4], 'top_m': 5.4, 'basis': 'GUESS: hall json far_gate, "far_gate_w_m: low (photo 004)"'},
+    'rule_set': ['photo 007, safe-end jambs (G2)', 'the hall model\'s centred gate (G0)'],
+    'judge_readings_not_passed': {'G3 (photo 007 centred)': -1.876, 'G4 (photo-032 read, centre +1.4)': -0.566, 'G7 (camera in the cab what-if)': -1.876,
+                                  'source': REPORTS + 'judge-laser-safety/verdict.md + match/match.md: B-L fails these; the stop is hold point H1 (tape the gate\'s jambs)'}}
+
+
+def standing_places(G, stage):
+    """moxir_v1_1.standing_places on hall v10 (both cranes at their show park), with BOTH cabs as standing levels at their HIGH floors"""
+    E = G['end_wall_inner_y_m']
+    b = stage['booth']
+    bz = b['front_z_m'] - b['depth_m'] / 2
+    f = stage['foh']
+    rail = G['crane_rail_x_m']
+    mass = {m['id']: m for m in G['massing']}
+    DW = G['door']['w_m']
+    out = [('hall floor (dance floor, backstage, everywhere)', G['walls_x_m'][0], G['walls_x_m'][1], -E, E, 0.0),
+           ('DJ step', b['centre_x_m'] - b['width_m'] / 2, b['centre_x_m'] + b['width_m'] / 2, bz - b['depth_m'] / 2, bz + b['depth_m'] / 2, b['deck_h_m']),
+           ('FOH riser', f['p'][0] - f['size_m'][0] / 2, f['p'][0] + f['size_m'][0] / 2, f['p'][2] - f['size_m'][1] / 2, f['p'][2] + f['size_m'][1] / 2, f['riser_m']),
+           ('entry platform', DW / 2 + 0.6, DW / 2 + 7.6, E - 3.0, E, 2.4),
+           ('entry stairs', DW / 2 + 7.6, DW / 2 + 7.6 + 3.6, E - 1.2, E, 2.4)]
+    for k in (1, 2, 3, 4):
+        m = mass['pipe-rack-gallery-%d' % k]
+        out.append(('gallery %d' % k, m['x_m'][0], m['x_m'][1], m['z_m'][0], m['z_m'][1], m['y_m'][1]))
+    m = mass['roller-conveyor']
+    out.append(('conveyor gallery (roller conveyor)', m['x_m'][0], m['x_m'][1], m['z_m'][0], m['z_m'][1], m['y_m'][1]))
+    for sgn, row in ((-1, 'left'), (1, 'right')):
+        xa, xb = sorted((sgn * (rail - 0.35), sgn * (rail + 1.3)))
+        out.append(('runway walkway %s row' % row, xa, xb, -E, E, G['runway_top_m']))
+    out.append(('near crane cab (z %.2f, floor 6.7: the high end of 4.6-6.7)' % NEAR_Z, 8.35, 10.35, NEAR_Z - 1.0, NEAR_Z + 1.0, 6.7))
+    out.append(('free crane cab (z -12, floor 6.15: photo 007 p95)', 8.35, 10.35, FREE_Z - 1.0, FREE_Z + 1.0, 6.15))
+    return out
+
+
+class Scene:
+    """everything a cube's tube is checked against (one free-crane top case, one near-crane top)"""
+
+    def __init__(self, repo, G, stage, rig, truss, cutj, entry, top='p50', near_top=NEAR_TOP[0], openings=None, z54=False):
+        import numpy as np
+        self.top = FREE_TOP[top]
+        self.places = standing_places(G, stage)
+        self.parr = np.array([p[1:6] for p in self.places], float)
+        segs, picks = cut_parts(truss, cutj)
+        self.segs = segs
+        self.boxes = pendant_lamps() + near_crane_bodies(near_top) + picks + ko_boxes(entry) + roof_members(z54) + free_crane_bodies(self.top)
+        self.spheres = [(f['id'], np.array(f['p'], float), max(0.25, BODY_R[f['type']])) for f in rig['fixtures'] if f['type'] in BODY_R]
+        self.lanterns = [(l['x_m'], l['z_m']) for l in G['lanterns']]
+        self.lantern_low = G['deck_m']
+        self.openings = openings
+        zf = [6.0 * k + dz for k in range(-9, 10) for dz in (-GUSSET_HALF, -LAMP_HALF, -CHORD_T / 2, 0.0, CHORD_T / 2, LAMP_HALF, GUSSET_HALF)]
+        zf += [v for b in entry['keep_out']['boxes'] for v in b['z_m']] + list(FAR_GIRDER) + list(STAGE_GIRDER) + [FREE_Z - 2.6, FREE_Z + 2.6, FREE_Z - 1.6, FREE_Z + 1.6]
+        self.zfaces = np.unique(np.array(zf, float))
+
+    def margins(self, p, T, others=(), step=0.25, alone=False):
+        """every margin of the tube p -> T (m; >= 0 passes): name -> (margin, at, group). A body's gap to the tube = margin + its gap rule (0.25).
+        alone: the beam alone (no fan: 4 mm + 1 mrad for the levels and the openings, 2 mm for the bodies), the v1.1 setup-sheet window's test"""
+        import numpy as np
+        p, T = np.asarray(p, float), np.asarray(T, float)
+        Lb = float(np.linalg.norm(T - p))
+        d = (T - p) / Lb
+        s = np.arange(0.05, Lb, step)
+        sz = (self.zfaces - p[2]) / d[2]
+        s = np.unique(np.concatenate([s, sz[(sz > 0.05) & (sz < Lb)], [Lb]]))   # exact samples on every member's face: a thin member is never stepped over
+        Q = p + s[:, None] * d
+        rp = r_place(s, 0.0 if alone else FAN)
+        rb = r_body(s, 0.0 if alone else FAN_BODY)
+        rbf = (lambda v: r_body(v, 0.0)) if alone else r_body
+        m = {}
+        for k, (x0, x1, z0, z1, h) in enumerate(self.parr):
+            hg = np.hypot(np.maximum(np.maximum(x0 - Q[:, 0], Q[:, 0] - x1), 0), np.maximum(np.maximum(z0 - Q[:, 2], Q[:, 2] - z1), 0)) - rp
+            topp = h + PERSON
+            vg = np.where(Q[:, 1] > topp, Q[:, 1] - topp, np.where(Q[:, 1] < h, h - Q[:, 1], 0.0)) - rp
+            c = np.maximum(hg - LAT, vg - VERT)
+            j = int(c.argmin())
+            m['level: ' + self.places[k][0]] = (float(c[j]), Q[j], 'standing levels (3.0 m over / 2.5 m beside)')
+        for b in self.boxes + [cube_box(o, 'cube at x %.2f' % o[0]) for o in others]:
+            g = np.linalg.norm(np.maximum(np.maximum(b['lo'] - Q, Q - b['hi']), 0), axis=1) - rb - b['pad'] - b['gap']
+            j = int(g.argmin())
+            key = 'body: ' + b['name']
+            if key not in m or g[j] < m[key][0]:
+                m[key] = (float(g[j]), Q[j], b['group'])
+        for sg in self.segs:
+            ab = sg['b'] - sg['a']
+            t = np.clip(((Q - sg['a']) @ ab) / (ab @ ab), 0, 1)
+            g = np.linalg.norm(Q - (sg['a'] + t[:, None] * ab), axis=1) - sg['r'] - rb - PAD - LASER_GAP_MIN
+            j = int(g.argmin())
+            m['body: ' + sg['name']] = (float(g[j]), Q[j], sg['group'])
+        for fid, c, rr in self.spheres:
+            t = float(np.clip((c - p) @ d, 0.0, Lb))
+            g = float(np.linalg.norm(c - (p + t * d)) - rbf(t) - rr - LASER_GAP_MIN)
+            m['body: lamp ' + fid] = (g, p + t * d, 'lamp bodies (v2 cranes rig, spheres)')
+        best = (99.0, None)
+        for (xr, zr) in self.lanterns:
+            sel = (Q[:, 0] >= xr[0] - rb) & (Q[:, 0] <= xr[1] + rb) & (Q[:, 2] >= zr[0] - rb) & (Q[:, 2] <= zr[1] + rb)
+            if sel.any():
+                gg = self.lantern_low - (Q[sel, 1] + rb[sel]) - PAD - LASER_GAP_MIN
+                jj = int(gg.argmin())
+                if gg[jj] < best[0]:
+                    best = (float(gg[jj]), Q[sel][jj])
+        m['body: lantern glazing (from the deck %.2f)' % self.lantern_low] = (best[0], best[1], 'lanterns')
+        rpe, rbe = r_place(Lb, 0.0 if alone else FAN), rbf(Lb)
+        m['end: under the far wall\'s plaster top (%.2f, body rule)' % WALL_TOP_LOW] = (WALL_TOP_LOW - PAD - LASER_GAP_MIN - (T[1] + rbe), T, 'end: far wall')
+        for op in self.openings:
+            lat = max(op['x'][0] - T[0], T[0] - op['x'][1], 0.0) - rpe
+            m['end: %s (2.5 m beside or 3.0 m over its %.2f top)' % (op['name'], op['top'])] = (max(lat - LAT, (T[1] - rpe) - (op['top'] + VERT)), T, 'end: far wall openings')
+        return m
+
+
+def worst(m):
+    k = min(m, key=lambda k: m[k][0])
+    return m[k][0], k
+
+
+def by_group(m):
+    out = {}
+    for k, (v, at, g) in m.items():
+        if g not in out or v < out[g]['margin_m']:
+            out[g] = {'margin_m': R3(v), 'item': k, 'at': None if at is None else [R3(q) for q in at]}
+    return dict(sorted(out.items(), key=lambda kv: kv[1]['margin_m']))
+
+
+# ---------------------------------------------------------------- the cast (hall v10 triangles + boxes)
+class Cast:
+    """Moller & Trumbore (1997) over the hall v10 GLB's triangles, each keeping its mesh name, + occlusion_sky.OBox boxes (slab method)"""
+
+    def __init__(self, glb, boxes=()):
+        import numpy as np
+        import occlusion_lib as O
+        tris, names = [], []
+        for k, t in O.read_glb(glb).items():
+            if k.startswith('hall-zone'):
+                continue                                               # floor tape: drawn, not solid
+            tris.append(t)
+            names += [k] * len(t)
+        Tt = np.concatenate(tris).astype(float)
+        self.V0, self.E1, self.E2 = Tt[:, 0], Tt[:, 1] - Tt[:, 0], Tt[:, 2] - Tt[:, 0]
+        self.C = Tt.mean(1)
+        self.R = np.linalg.norm(Tt - self.C[:, None, :], axis=2).max(1)
+        self.mesh = np.array(names)
+        self.n = len(Tt)
+        self.boxes = list(boxes)
+
+    def cast(self, o, D, reach=140.0, tmin=0.3, skip=(), extra=()):
+        """first hit of every ray: (t array, names, cls, mesh) - a box hit has mesh None, a triangle hit has name/cls = its mesh"""
+        import numpy as np
+        o = np.asarray(o, float)
+        D = np.atleast_2d(np.asarray(D, float))
+        n = len(D)
+        best = np.full(n, np.inf)
+        who = np.full(n, -1, dtype=np.int64)
+        near = np.nonzero(np.linalg.norm(self.C - o, axis=1) - self.R <= reach)[0]
+        for k in range(0, len(near), 4000):
+            idx = near[k:k + 4000]
+            sv = o - self.V0[idx]
+            Bm, Qm = np.cross(self.E2[idx], sv), np.cross(sv, self.E1[idx])
+            tn = np.einsum('ij,ij->i', self.E2[idx], Qm)
+            det = D @ np.cross(self.E2[idx], self.E1[idx]).T
+            ok = np.abs(det) > 1e-12
+            inv = np.where(ok, 1.0 / np.where(ok, det, 1.0), 0.0)
+            u = (D @ Bm.T) * inv
+            v = (D @ Qm.T) * inv
+            t = tn[None, :] * inv
+            hit = ok & (u >= -1e-9) & (v >= -1e-9) & (u + v <= 1 + 1e-9) & (t > tmin) & (t < reach)
+            t = np.where(hit, t, np.inf)
+            j = np.argmin(t, axis=1)
+            tj = t[np.arange(n), j]
+            better = tj < best
+            best[better] = tj[better]
+            who[better] = idx[j[better]]
+        names = [str(self.mesh[w]) if w >= 0 else None for w in who]
+        cls = list(names)
+        mesh = list(names)
+        for b in list(self.boxes) + list(extra):
+            if b.name in skip or b.cls in skip:
+                continue
+            tb = b.hits(o, D, tmin)
+            for i in np.nonzero((tb < best) & (tb < reach))[0]:
+                best[i], names[i], cls[i], mesh[i] = tb[i], b.name, b.cls, None
+        return best, names, cls, mesh
+
+
+def obox(name, cls, x, y, z):
+    import occlusion_sky as S
+    return S.OBox.aabb(name, cls, tuple(x), tuple(y), tuple(z))
+
+
+def far_wall_hit(at, mesh, G):
+    return mesh == 'hall-block' and at is not None and abs(at[2] + G['end_wall_inner_y_m']) < 0.06
+
+
+def fan_cast(C, G, p, T, half, openings, extra=()):
+    """the axis + 60 rays (occlusion_lib.AREA_RINGS) over the fan: each must first hit the far wall's matte block, its hit point clear of every opening"""
+    import numpy as np
+    import occlusion_lib as O
+    p, T = np.asarray(p, float), np.asarray(T, float)
+    d = (T - p) / np.linalg.norm(T - p)
+    dirs, _ = O.cone_rays(d, half, O.AREA_RINGS)
+    t, names, cls, mesh = C.cast(p, dirs, reach=140.0, tmin=0.05, extra=extra)
+    rows, on_block, clear = [], [], []
+    for q, tt, nm, me in zip(dirs, t, names, mesh):
+        at = (p + tt * q) if np.isfinite(tt) else None
+        ok = far_wall_hit(at, me, G)
+        cl = ok and all(max(op['x'][0] - at[0], at[0] - op['x'][1], 0.0) >= LAT or at[1] >= op['top'] + VERT for op in openings)
+        rows.append({'name': nm, 'at': None if at is None else [R3(v) for v in at]})
+        on_block.append(ok)
+        clear.append(cl)
+    ys = [r['at'][1] for r in rows if r['at']]
+    xs = [r['at'][0] for r in rows if r['at']]
+    return {'rays': len(rows), 'half_fan_deg': half, 'all_first_hit_far_wall_block': bool(all(on_block)), 'all_clear_of_openings': bool(all(clear)),
+            'first_hits': sorted(set('%s' % r['name'] for r in rows)), 'end_x_m': [R3(min(xs)), R3(max(xs))] if xs else None, 'end_y_m': [R3(min(ys)), R3(max(ys))] if ys else None,
+            'bad': [r for r, g in zip(rows, on_block) if not g][:5]}
+
+
+def mount_cast(C, p, T, top, extra=()):
+    """the mount: no ray of the 1.008 deg fan meets anything (its own girder at this top, a neighbour, the trolley) in the first 2 m"""
+    import numpy as np
+    import occlusion_lib as O
+    p, T = np.asarray(p, float), np.asarray(T, float)
+    d = (T - p) / np.linalg.norm(T - p)
+    dirs, _ = O.cone_rays(d, FAN_BODY, O.AREA_RINGS)
+    own = obox('the cubes\' own far-side girder (top %.2f)' % top, 'crane', (-11.35, 11.35), (FREE_UNDER, top), (FAR_GIRDER[0] + 1e-4, FAR_GIRDER[1]))
+    t, names, cls, mesh = C.cast(p, dirs, reach=2.0, tmin=0.001, extra=list(extra) + [own])
+    hits = sorted(set(n for n, tt in zip(names, t) if np.isfinite(tt)))
+    return {'rays': len(dirs), 'clear_first_2_m': not hits, 'hits': hits}
+
+
+def single_ok(SC, C, G, p, T, others, cube_boxes):
+    """one ray p -> T: the rule with no fan, its first hit the far wall's block, clear of the openings (the v1.1 setup-sheet test)"""
+    import numpy as np
+    m = SC.margins(p, T, others=others, step=0.5, alone=True)
+    if worst(m)[0] < -1e-9:
+        return False
+    d = np.asarray(T, float) - np.asarray(p, float)
+    d /= np.linalg.norm(d)
+    t, names, cls, mesh = C.cast(p, d[None, :], reach=140.0, tmin=0.05, extra=cube_boxes)
+    at = np.asarray(p, float) + t[0] * d if np.isfinite(t[0]) else None
+    return far_wall_hit(at, mesh[0], G)
+
+
+def setup_row(SC, C, G, u, others, cube_boxes):
+    """the v1.1 setup sheet: the window where the rule still holds for the beam alone (stepped 0.02 deg, the fan's full rule kept on the beam
+    itself: the conservative form), the LaserOS Safety Zone keep-in = aim +-0.3 deg, which must sit inside the window shrunk by the 0.5 deg mount tolerance"""
+    import numpy as np
+    p = np.asarray(u['p'], float)
+    pan, tilt = u['pan_deg_from_minus_z_plus_toward_plus_x'], u['tilt_deg_above_level']
+
+    def at(dp, dt):
+        pa, ti = math.radians(pan + dp), math.radians(tilt + dt)
+        dd = np.array([math.cos(ti) * math.sin(pa), math.sin(ti), -math.cos(ti) * math.cos(pa)])
+        return p + dd * (-G['end_wall_inner_y_m'] - p[2]) / dd[2]
+
+    def edge(axis, sign):
+        last = 0.0
+        for k in range(1, 151):
+            dv = sign * 0.02 * k
+            q = at(dv, 0.0) if axis == 'pan' else at(0.0, dv)
+            if not single_ok(SC, C, G, p, q, others, cube_boxes):
+                return round(last, 2)
+            last = dv
+        return round(last, 2)
+    lp, hp, lt, ht = edge('pan', -1), edge('pan', 1), edge('tilt', -1), edge('tilt', 1)
+    zone = 0.3
+    inside = min(-lp, hp, -lt, ht) >= zone + 0.5
+    return {'cube': u['id'], 'colour': u['colour'], 'aim': {'end_m': u['to'], 'pan_deg_from_minus_z_plus_toward_plus_x': round(pan, 3), 'tilt_deg_above_level': round(tilt, 3), 'range_m': round(u['range_m'], 2)},
+            'window_rule_holds_deg': {'pan': [round(pan + lp, 2), round(pan + hp, 2)], 'tilt': [round(tilt + lt, 2), round(tilt + ht, 2)], 'half_widths_pan_tilt': [lp, hp, lt, ht],
+                                      'method': 'the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall\'s block (moxir_v1_1 / moxir_entry_lasers setup_row)'},
+            'laseros_safety_zone_keep_in_deg': {'pan': [round(pan - zone, 2), round(pan + zone, 2)], 'tilt': [round(tilt - zone, 2), round(tilt + zone, 2)], 'inside_window_less_0_5_mount': bool(inside)},
+            'beam_block': {'below_tilt_deg': round(tilt + lt, 2), 'setting': 'block everything below %.2f deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)' % (tilt + lt)}}
+
+
+# ---------------------------------------------------------------- the 40 W beams (#873) against the near crane at its new park
+def forty_watt(entry, truss, rig, near_top=NEAR_TOP[0]):
+    """#873's own terms (moxir_entry_lasers.margins: their tube s tan 0.8 + (10 mm + 1.3 mrad s)/2; the near crane's safe underside 7.2 with no pad;
+    the cut and its picks with no pad; the straps r 0.05 + 0.25; lamp bodies + 0.25) at z 3.20, and - for the lead - the cubes' body rule on the girders"""
+    import numpy as np
+    out = {}
+    segs, picks = cut_parts(truss, {'truss': {'section_m': 0.29}})
+    lamps = [(f['id'], np.array(f['p'], float), max(0.25, BODY_R[f['type']])) for f in rig['fixtures'] if f['type'] in BODY_R]
+    for f in entry['fixtures']:
+        p = np.array(f['p'], float)
+        T = np.array(f['laser']['beams'][0]['to'], float)
+        L = float(np.linalg.norm(T - p))
+        d = (T - p) / L
+        s = np.arange(0.3, L, 0.05)
+        Q = p + s[:, None] * d
+        R = s * math.tan(math.radians(0.8)) + (0.010 + 0.0013 * s) / 2
+        m = {}
+        zc = np.zeros(len(Q), bool)
+        for sgn in (-1, 1):
+            zc |= (Q[:, 2] >= NEAR_Z + sgn * GIRDER_DZ - 0.35 - R) & (Q[:, 2] <= NEAR_Z + sgn * GIRDER_DZ + 0.35 + R)
+        zc &= np.abs(Q[:, 0]) <= 11.35 + R
+        m['near crane bridge at z 3.20 (#873\'s term: safe underside 7.2, no pad)'] = float(np.min(NEAR_UNDER - (Q[zc, 1] + R[zc]))) if zc.any() else 99.0
+        cut = segs[0]
+        ab = cut['b'] - cut['a']
+        t = np.clip(((Q - cut['a']) @ ab) / (ab @ ab), 0, 1)
+        m['the cut at z 3.20 (#873\'s term)'] = float(np.min(np.linalg.norm(Q - (cut['a'] + t[:, None] * ab), axis=1) - cut['r'] - R))
+        for b in picks:
+            m[b['name'] + ' (#873\'s term)'] = float(np.min(np.linalg.norm(np.maximum(np.maximum(b['lo'] - Q, Q - b['hi']), 0), axis=1) - R))
+        for sg in segs[1:]:
+            ab = sg['b'] - sg['a']
+            t = np.clip(((Q - sg['a']) @ ab) / (ab @ ab), 0, 1)
+            m[sg['name'] + ' (r 0.05, margin 0.25)'] = float(np.min(np.linalg.norm(Q - (sg['a'] + t[:, None] * ab), axis=1) - 0.05 - R - 0.25))
+        best = (99.0, None)
+        for fid, c, rr in lamps:
+            v = c - p
+            tt = float(v @ d)
+            if 0 <= tt <= L:
+                g = float(np.linalg.norm(v - tt * d) - (tt * math.tan(math.radians(0.8)) + (0.010 + 0.0013 * tt) / 2) - rr - 0.25)
+                if g < best[0]:
+                    best = (g, fid)
+        m['lamp bodies of the v2 cranes rig (sphere, margin 0.25)'] = best[0]
+        # the cubes' body rule on the near crane's girders (true box + 0.25, 1.008 deg + 2 mm, gap 0.25): reported for the lead (match.md)
+        rb = 0.002 + s * math.tan(math.radians(FAN_BODY))
+        gb = 99.0
+        for b in near_crane_bodies(near_top)[:2]:
+            g = np.linalg.norm(np.maximum(np.maximum(b['lo'] - Q, Q - b['hi']), 0), axis=1) - rb - PAD - LASER_GAP_MIN
+            gb = min(gb, float(g.min()))
+        out[f['id']] = {'their_terms': {k: R3(v) for k, v in m.items()}, 'their_worst_m': R3(min(m.values())), 'nearest_lamp': best[1],
+                        'cubes_body_rule_on_the_near_girders_m': R3(gb)}
+    return out
+
+
+# ---------------------------------------------------------------- people under the cut, the DJ's eyes and light
+def seg_box_gap(a, b, lo, hi, n=400):
+    import numpy as np
+    t = np.linspace(0, 1, n)[:, None]
+    Q = a + t * (b - a)
+    return float(np.min(np.linalg.norm(np.maximum(np.maximum(lo - Q, Q - hi), 0), axis=1)))
+
+
+def people_clearances(stage, truss, cutj, rig, pen, strip):
+    """the cut's parts (truss box, lamp bodies 0.25 spheres, picks, straps) against raised hands: the DJ on his step (0.4 + 2.5), the public
+    (2.5 m) everywhere outside the stage pen, and the same with the pen's owed barrier taking in the column bay under the low end (PEN_STRIP)"""
+    import numpy as np
+    segs, picks = cut_parts(truss, cutj)
+    lamps = [(f['id'], np.array(f['p'], float)) for f in rig['fixtures'] if f.get('layer') == 'the cut']
+    H, CL = PEOPLE_RULE['raised_hands_m'], PEOPLE_RULE['clear_m']
+    b = stage['booth']
+    bz0, bz1 = b['front_z_m'] - b['depth_m'], b['front_z_m']
+    step = (np.array([b['centre_x_m'] - b['width_m'] / 2, 0.0, bz0]), np.array([b['centre_x_m'] + b['width_m'] / 2, b['deck_h_m'] + H, bz1]))
+
+    def gap_to(lo, hi):
+        rows = []
+        for sg in segs:
+            rows.append((seg_box_gap(sg['a'], sg['b'], lo, hi) - sg['r'], sg['name']))
+        for bx in picks:
+            q = np.maximum(np.maximum(lo - bx['hi'], bx['lo'] - hi), 0)
+            rows.append((float(np.linalg.norm(q)), bx['name']))
+        for fid, c in lamps:
+            rows.append((float(np.linalg.norm(np.maximum(np.maximum(lo - c, c - hi), 0))) - 0.25, 'lamp body ' + fid))
+        return min(rows)
+
+    def public(pen_x0):
+        """the public's hands volume outside the pen: four slabs round it (the hall floor everywhere else, up to 2.5 m)"""
+        (x0, x1), (z0, z1) = pen['x_m'], pen['z_m']
+        slabs = [(np.array([-36.4, 0, -53.8]), np.array([pen_x0, H, 53.8])), (np.array([x1, 0, -53.8]), np.array([60.4, H, 53.8])),
+                 (np.array([-36.4, 0, -53.8]), np.array([60.4, H, z0])), (np.array([-36.4, 0, z1]), np.array([60.4, H, 53.8]))]
+        return min(gap_to(lo, hi) for lo, hi in slabs)
+
+    dj = gap_to(*step)
+    pub_today = public(pen['x_m'][0])
+    # with the owed barrier taking in the bay (x -11.6..-10.5) for the bridge's width: the public's slab stops at the column face there
+    (x0, x1), (z0, z1) = pen['x_m'], pen['z_m']
+    sx, sz = strip['x_m'], strip['z_m']
+    slabs = [(np.array([-36.4, 0, -53.8]), np.array([sx[0], H, 53.8])), (np.array([sx[0], 0, -53.8]), np.array([x0, H, sz[0]])), (np.array([sx[0], 0, sz[1]]), np.array([x0, H, 53.8])),
+             (np.array([x1, 0, -53.8]), np.array([60.4, H, 53.8])), (np.array([-36.4, 0, -53.8]), np.array([60.4, H, z0])), (np.array([-36.4, 0, z1]), np.array([60.4, H, 53.8]))]
+    pub_strip = min(gap_to(lo, hi) for lo, hi in slabs)
+    lowest_lens = min(c[1] for _, c in lamps)
+    return {'rule': 'raised hands %.1f m over the standing surface; every part of the cut >= %.1f m from them (stage json truss.clear_gap_m: "the same 0.5 m the cut keeps over raised hands"); '
+                    'the lowest lens >= %.1f m (ISO 13857:2019 Table 2)' % (H, CL, PEOPLE_RULE['reach_m']),
+            'dj_on_his_step': {'gap_m': R3(dj[0]), 'nearest': dj[1], 'passes': dj[0] >= CL},
+            'public_outside_the_pen_today': {'gap_m': R3(pub_today[0]), 'nearest': pub_today[1], 'passes': pub_today[0] >= CL,
+                                             'why': 'the cut\'s LOW end passes the pen\'s edge x -10.5 at 0.39-0.54 m over raised hands (unchanged by the park; v1.1 had no public there)'},
+            'public_with_the_pen_condition': {'gap_m': R3(pub_strip[0]), 'nearest': pub_strip[1], 'passes': pub_strip[0] >= CL, 'condition': strip},
+            'lowest_lens_m': R3(lowest_lens), 'lowest_lens_passes': lowest_lens >= PEOPLE_RULE['reach_m'],
+            'low_end_over_raised_hands_m': truss['clearance']['low_end']['over_raised_hands_m'], 'over_dj_raised_hands_m': truss['clearance']['over_dj_raised_hands_m']}
+
+
+class LuxWorld:
+    """the adapter moxir_v2_spread.e_on needs (W.cast(o, D, reach, tmin, skip) -> t, names, cls) over hall v10 + the rig's solids, the step,
+    the DJ, the cut and its picks at z 3.20"""
+
+    def __init__(self, C):
+        self.C = C
+
+    def cast(self, o, D, reach=30.0, tmin=0.3, skip=()):
+        t, names, cls, _ = self.C.cast(o, D, reach=reach, tmin=tmin, skip=skip)
+        return t, names, cls
+
+
+DJ_TARGETS = {'face, eye height (+z)': ([-5.2, 2.03, 4.30], [0, 0, 1]), 'face, #864 target (+z)': ([-5.2, 1.9, 4.6], [0, 0, 1]),
+              'head top (up)': ([-5.2, 2.2, 4.1], [0, 1, 0]), 'back of head (-z)': ([-5.2, 2.06, 4.12], [0, 0, -1]),
+              'booth front (+z)': ([-5.2, 1.0, 5.3], [0, 0, 1]), 'PA L face (+z)': ([-8.25, 1.0, 6.75], [0, 0, 1]), 'PA R face (+z)': ([-1.5, 1.0, 7.25], [0, 0, 1])}
+
+
+def dj_light(W, rig, cd, exp=1):
+    """lx on each DJ target per look, per part (E = I cos i / d^2, the spot cone, the hall's shadow), the room's level law since 28f4028d (linear)"""
+    import moxir_v2_spread as V
+    out = {}
+    for lk in rig['looks']:
+        res = {}
+        for tn, (tp, n) in DJ_TARGETS.items():
+            tot, byp = 0.0, {}
+            for f in rig['fixtures']:
+                if f['type'] not in ('up-pl5403', 'up-b380f') or f['part'] not in lk['parts']:
+                    continue
+                col, lev = lk['parts'][f['part']]
+                c = cd if f['type'] == 'up-pl5403' else V.B380_CD_ROOM
+                e = V.e_on(W, f, tp, n, c) * lev ** exp * V.lum_factor(col or f.get('colour') or ASH)
+                if e > 0.05:
+                    byp[f['part']] = byp.get(f['part'], 0.0) + e
+                    tot += e
+            res[tn] = {'lx': round(tot, 1), 'by_part': {k: round(v, 1) for k, v in sorted(byp.items(), key=lambda kv: -kv[1])}}
+        out[lk['id']] = res
+    return out
+
+
+def lens_rays(C, p, d, people):
+    """where a lamp's light goes: the axis + 24 rays at the cone's edge (7.5 deg); none may meet the public (the hot zone's people outside the pen)"""
+    import numpy as np
+    import occlusion_lib as O
+    dirs, _ = O.cone_rays(d, 7.5, [(1.0, 24)])
+    t, names, cls, _ = C.cast(p, dirs, reach=60.0, tmin=0.3, extra=people)
+    return {'into_people': int(sum(c == 'people' for c in cls)), 'ends': sorted(set(n for n in names if n))}
+
+
+def checks(repo):
+    """every check of the pair, the results as dicts (written into the files by build)"""
+    import numpy as np
+    import occlusion_sky as S
+    import moxir_v2_spread as V
+    import moxir_v2_eyes as EY
+    t0 = time.time()
+    log = lambda *a: print('[%4.0f s]' % (time.time() - t0), *a, file=sys.stderr, flush=True)
+    G = rd(repo, HALL_V10)['geometry']
+    stage, cutj, rig, entry = rd(repo, STAGE_V2C), rd(repo, CUT_V2C), rd(repo, RIG_V2C), rd(repo, ENTRY)
+    L = rd(repo, LASERS)
+    ev, cc = derive(repo)
+    truss = ev['truss']
+    units = L['units']
+    ops = openings_of(FAR_WALL_OPENINGS)
+    rule_ops = [o for k in FAR_WALL_OPENINGS['rule_set'] for o in ops[k]]
+    if sha256(GLB_V10) != GLB_V10_SHA:
+        raise SystemExit('%s is not the pinned hall v10 GLB' % GLB_V10)
+    S.wait_cool()
+    # ---- lasers: the analytic margins, every beam x every top x both near tops, the rule's openings (photo 007 safe ends AND the model gate)
+    beams = []
+    worst_all = (99.0, None, None)
+    for u in units:
+        others = [o['aperture_m'] for o in units if o['id'] != u['id']]
+        per = {}
+        for top in TOPS:
+            p = u['aperture_m'][top]
+            oth = [o[top] for o in others]
+            mm = {}
+            for nt in NEAR_TOP:
+                m = Scene(repo, G, stage, rig, truss, cutj, entry, top=top, near_top=nt, openings=rule_ops).margins(p, u['to'], others=oth)
+                for k, v in m.items():
+                    if k not in mm or v[0] < mm[k][0]:
+                        mm[k] = v
+            w = worst(mm)
+            per[top] = {'aperture_m': p, 'worst_margin_m': R3(w[0]), 'binding': w[1], 'by_group': by_group(mm)}
+            if w[0] < worst_all[0]:
+                worst_all = (w[0], u['id'], w[1])
+        # variants: photo 007's MEDIAN jambs; the z -54 roof row counted (the judge)
+        p50 = u['aperture_m']['p50']
+        oth50 = [o['p50'] for o in others]
+        med = worst(Scene(repo, G, stage, rig, truss, cutj, entry, top='p50', openings=ops['photo 007, median jambs (G1)']).margins(p50, u['to'], others=oth50))
+        z54 = min(worst(Scene(repo, G, stage, rig, truss, cutj, entry, top=tp, openings=rule_ops, z54=True).margins(u['aperture_m'][tp], u['to'], others=[o[tp] for o in others])) for tp in TOPS)
+        beams.append({'cube': u['id'], 'colour': u['colour'], 'to': u['to'], 'tops': per,
+                      'worst_margin_m': min(per[t]['worst_margin_m'] for t in TOPS),
+                      'variants': {'photo 007 median jambs (G1), top p50': {'margin_m': R3(med[0]), 'binding': med[1]},
+                                   'the z -54 roof row counted (the laser judge)': {'margin_m': R3(z54[0]), 'binding': z54[1]}}})
+        log('beam', u['id'], 'worst', beams[-1]['worst_margin_m'])
+    # ---- the cast on hall v10 (+ the lamps, the other cubes, the 40 W units and tower, people over the whole floor, the cut)
+    seg0 = cut_parts(truss, cutj)
+    cast_boxes = [obox(b['name'], 'lamp', (b['lo'][0], b['hi'][0]), (b['lo'][1], b['hi'][1]), (b['lo'][2], b['hi'][2])) for b in pendant_lamps()]
+    cast_boxes += [obox('40 W ' + b['id'][:4], 'laser', b['x_m'], b['y_m'], b['z_m']) for b in entry['keep_out']['boxes'][:2]]
+    cast_boxes += [obox('people (the whole floor, 2.4 m)', 'people', G['walls_x_m'], (0.0, 2.4), (-53.8, 53.8))]
+    cast_boxes += [obox(b['name'], 'rigging', (b['lo'][0], b['hi'][0]), (b['lo'][1], b['hi'][1]), (b['lo'][2], b['hi'][2])) for b in seg0[1]]
+    cast_boxes += [obox(f['id'], 'lamp', (f['p'][0] - 0.25, f['p'][0] + 0.25), (f['p'][1] - 0.25, f['p'][1] + 0.25), (f['p'][2] - 0.25, f['p'][2] + 0.25))
+                   for f in rig['fixtures'] if f['type'] in BODY_R]
+    C = Cast(GLB_V10, cast_boxes)
+    log('cast world: %d triangles + %d boxes' % (C.n, len(cast_boxes)))
+    casts = []
+    for u in units:
+        row = {'cube': u['id']}
+        for top in TOPS:
+            cb = [obox('cube ' + o['id'], 'laser', (o['aperture_m'][top][0] - CUBE[0] / 2, o['aperture_m'][top][0] + CUBE[0] / 2), (o['aperture_m'][top][1] - AP_UP, o['aperture_m'][top][1] - AP_UP + CUBE[1]),
+                       (FAR_GIRDER[0], FAR_GIRDER[0] + CUBE[2])) for o in units if o['id'] != u['id']]
+            row[top] = {'fan_0_8': fan_cast(C, G, u['aperture_m'][top], u['to'], FAN, rule_ops, extra=cb),
+                        'fan_1_008': fan_cast(C, G, u['aperture_m'][top], u['to'], FAN_BODY, rule_ops, extra=cb),
+                        'mount': mount_cast(C, u['aperture_m'][top], u['to'], FREE_TOP[top], extra=cb)}
+        casts.append(row)
+    log('casts done')
+    # ---- the setup sheet (top p50, the rule's openings), the window method of v1.1
+    S.wait_cool()
+    SC = Scene(repo, G, stage, rig, truss, cutj, entry, top='p50', openings=rule_ops)
+    sheet = []
+    for u in units:
+        cb = [obox('cube ' + o['id'], 'laser', (o['p'][0] - CUBE[0] / 2, o['p'][0] + CUBE[0] / 2), (o['p'][1] - AP_UP, o['p'][1] - AP_UP + CUBE[1]), (FAR_GIRDER[0], FAR_GIRDER[0] + CUBE[2]))
+              for o in units if o['id'] != u['id']]
+        sheet.append(setup_row(SC, C, G, u, [o['p'] for o in units if o['id'] != u['id']], cb))
+    log('setup sheet done')
+    # ---- lamp bodies vs the cube tubes (the v2 convention: moxir_v2_spread.tube_clearance, rule >= 0.25 m)
+    tubes = [{'beam': u['id'], 'cube': u['id'], 'from': u['p'], 'to': u['to'], 'half_fan_deg': FAN_BODY} for u in units]
+    lampclear = sorted(({'id': f['id'], 'part': f['part'], 'gap_m': R3(V.tube_clearance(tubes, f['p'], BODY_R[f['type']])[0]), 'nearest_cube': V.tube_clearance(tubes, f['p'], BODY_R[f['type']])[1]}
+                        for f in rig['fixtures'] if f['type'] in BODY_R), key=lambda r: r['gap_m'])
+    # ---- the 40 W beams at the new park
+    fw = forty_watt(entry, truss, rig)
+    # ---- rigging (cut-count.mjs on this stage)
+    rigging = {'source': 'node scripts/place/cut-count.mjs --n %d --places %s --design %s' % (len(CUT_PLACES), ','.join('%g' % u for u in CUT_PLACES), STAGE_V2C),
+               'picks': cc['picks'], 'worst_line_kg': cc['worst_pick_kg'], 'worst_on_bridge_kg': max(p['on_bridge_kg'] for p in cc['picks']), 'headroom_kg': cc['headroom_kg'],
+               'cap_kg': PICK_CAP_KG, 'cap_basis': 'a DESIGN cap (v1.0\'s middle pick, MOXIR.md 5.2), not a rating: the crane\'s SWL, the runway and the hoists\' WLL are unknown',
+               'bridles_deg': [p['bridle_included_deg'] for p in cc['picks']], 'weight': cc['weight'], 'power': cc['power'], 'dmx': cc['dmx'],
+               'tieoffs': [{k: t[k] for k in ('id', 'grid_z_m', 'from_m', 'to_m', 'length_m')} for t in truss['tieoffs']],
+               'passes': all(p['line_kg'] <= PICK_CAP_KG and p['on_bridge_kg'] <= PICK_CAP_KG and p['bridle_included_deg'] <= 120 for p in cc['picks'])}
+    # ---- people, the DJ's eyes and light; where the cut's lamps' light goes
+    people = people_clearances(stage, truss, cutj, rig, EY.STAGE_PEN, PEN_STRIP)
+    S.wait_cool()
+    b = stage['booth']
+    lux_boxes = [obox(s['id'].replace('rig-', ''), 'pa' if s['id'].startswith('rig-pa-') else 'stage', (s['p'][0] - s['s'][0] / 2, s['p'][0] + s['s'][0] / 2), (s['p'][1], s['p'][1] + s['s'][1]),
+                      (s['p'][2] - s['s'][2] / 2, s['p'][2] + s['s'][2] / 2)) for s in rig['solids']]
+    lux_boxes += [obox('the DJ step', 'booth', (b['centre_x_m'] - b['width_m'] / 2, b['centre_x_m'] + b['width_m'] / 2), (0, b['deck_h_m']), (b['front_z_m'] - b['depth_m'], b['front_z_m'])),
+                  obox('the DJ', 'dj', (b['centre_x_m'] - 0.9, b['centre_x_m'] + 0.9), (b['deck_h_m'], b['deck_h_m'] + 2.0), (b['front_z_m'] - b['depth_m'] + 0.1, b['front_z_m'] - 0.2))]
+    a, bb = seg0[0][0]['a'], seg0[0][0]['b']
+    uu = (bb - a) / np.linalg.norm(bb - a)
+    lux_boxes += [S.OBox('the cut (H30V truss)', 'truss', (a + bb) / 2, [np.linalg.norm(bb - a) / 2, 0.145, 0.145], np.column_stack([uu, np.cross([0, 0, 1.0], uu), [0, 0, 1.0]]))]
+    lux_boxes += [obox(x['name'], 'rigging', (x['lo'][0], x['hi'][0]), (x['lo'][1], x['hi'][1]), (x['lo'][2], x['hi'][2])) for x in seg0[1]]
+    W = LuxWorld(Cast(GLB_V10, lux_boxes))
+    light = {'room 30 478 cd, linear (the room since 28f4028d)': dj_light(W, rig, V.PAR_CD_ROOM), 'spec 11 000 cd (EQUIVALENT), linear': dj_light(W, rig, V.PAR_CD_SPEC)}
+    glare = {lk: V.dj_glare(rig, lk) for lk in ('dark', 'peak')}
+    glare_full = V.dj_glare(dict(rig, looks=[{'id': 'full', 'parts': {p: [ASH, 1.0] for p in set(f['part'] for f in rig['fixtures'])}}]), 'full')
+    log('DJ light done')
+    pen = EY.STAGE_PEN
+    ppl = [obox('people (outside the stage pen, 2.4 m)', 'people', *xyz) for xyz in (
+        ((-36.4, pen['x_m'][0]), (0, 2.4), (-53.8, 53.8)), ((pen['x_m'][1], 60.4), (0, 2.4), (-53.8, 53.8)),
+        ((-36.4, 60.4), (0, 2.4), (-53.8, pen['z_m'][0])), ((-36.4, 60.4), (0, 2.4), (pen['z_m'][1], 53.8)))]
+    Cl = Cast(GLB_V10, lux_boxes)
+    cut_light = {}
+    for f in rig['fixtures']:
+        if f.get('layer') != 'the cut' or f['type'] != 'up-pl5403':
+            continue
+        import lights_beta_options as LB
+        cut_light[f['id']] = dict(lens_rays(Cl, f['p'], LB.aim_dir(f['r']), ppl), part=f['part'])
+    log('cut light done')
+    # ---- the B380F beams: none into the cubes, the free crane, the near crane at 3.20, the cut, or people (axis + ring of 8 at 0.9 deg)
+    import lights_beta_options as LB
+    b380 = []
+    Cb = Cast(GLB_V10, lux_boxes + [obox('cube ' + u['id'], 'laser', (u['p'][0] - 0.1, u['p'][0] + 0.1), (u['p'][1] - AP_UP, u['p'][1] + 0.1), (FAR_GIRDER[0], FAR_GIRDER[0] + 0.16)) for u in units])
+    for f in rig['fixtures']:
+        if f['type'] != 'up-b380f':
+            continue
+        head = np.array([f['p'][0], f['p'][1] - 0.7 + S.HEAD_Y, f['p'][2]])
+        import occlusion_lib as O
+        dirs, _ = O.cone_rays(LB.aim_dir(f['r']), 0.9, O.SPEC_RINGS)
+        t, names, cls, mesh = Cb.cast(head, dirs, reach=140.0, tmin=0.3, extra=ppl)
+        b380.append({'id': f['id'], 'part': f['part'], 'into_people': int(sum(c == 'people' for c in cls)), 'into_cubes': int(sum(c == 'laser' for c in cls)),
+                     'into_the_cut': int(sum(c in ('truss', 'rigging') for c in cls)), 'ends': sorted(set(n for n in names if n))})
+    log('B380F done')
+    summary = {
+        'lasers_worst_margin_m': R3(worst_all[0]), 'lasers_worst_at': [worst_all[1], worst_all[2]],
+        'lasers_min_body_gap_m': R3(min(g['margin_m'] for bm in beams for t in TOPS for k, g in bm['tops'][t]['by_group'].items()
+                                        if not k.startswith('end') and not k.startswith('standing')) + LASER_GAP_MIN),
+        'lasers_min_level_margin_m': R3(min(bm['tops'][t]['by_group']['standing levels (3.0 m over / 2.5 m beside)']['margin_m'] for bm in beams for t in TOPS)),
+        'lasers_min_opening_margin_m': R3(min(bm['tops'][t]['by_group']['end: far wall openings']['margin_m'] for bm in beams for t in TOPS)),
+        'casts_all_on_far_wall_block': all(c[t][k]['all_first_hit_far_wall_block'] for c in casts for t in TOPS for k in ('fan_0_8', 'fan_1_008')),
+        'casts_all_clear_of_openings': all(c[t][k]['all_clear_of_openings'] for c in casts for t in TOPS for k in ('fan_0_8', 'fan_1_008')),
+        'mounts_clear_first_2_m': all(c[t]['mount']['clear_first_2_m'] for c in casts for t in TOPS),
+        'setup_sheet_zone_inside_window': all(s['laseros_safety_zone_keep_in_deg']['inside_window_less_0_5_mount'] for s in sheet),
+        'lamp_bodies_min_gap_to_a_cube_tube_m': lampclear[0]['gap_m'],
+        'forty_watt_their_worst_m': min(v['their_worst_m'] for v in fw.values()),
+        'forty_watt_body_rule_on_near_girders_m': min(v['cubes_body_rule_on_the_near_girders_m'] for v in fw.values()),
+        'picks_worst_line_kg': rigging['worst_line_kg'], 'picks_worst_on_bridge_kg': rigging['worst_on_bridge_kg'], 'picks_pass': rigging['passes'],
+        'people_dj_gap_m': people['dj_on_his_step']['gap_m'], 'people_public_gap_today_m': people['public_outside_the_pen_today']['gap_m'],
+        'people_public_gap_with_pen_condition_m': people['public_with_the_pen_condition']['gap_m'], 'lowest_lens_m': people['lowest_lens_m'],
+        'dj_glare_ok': all(g['ok'] for g in glare.values()) and glare_full['ok'],
+        'cut_light_into_people': sum(v['into_people'] for v in cut_light.values()),
+        'b380f_into_people_or_cubes': sum(v['into_people'] + v['into_cubes'] for v in b380),
+        'b380f_rays_on_the_cut (a look finding, not a rule)': {v['id']: v['into_the_cut'] for v in b380 if v['into_the_cut']},
+        'dj_face_eye_height_lx': {lk: light['room 30 478 cd, linear (the room since 28f4028d)'][lk]['face, eye height (+z)']['lx'] for lk in ('dark', 'peak')},
+        'dj_head_top_lx': {lk: light['room 30 478 cd, linear (the room since 28f4028d)'][lk]['head top (up)']['lx'] for lk in ('dark', 'peak')},
+        'runtime_s': round(time.time() - t0)}
+    return {'summary': summary, 'beams': beams, 'casts': casts, 'setup_sheet': sheet, 'lamp_clearance': lampclear[:12], 'forty_watt': fw, 'rigging': rigging,
+            'people': people, 'dj_light': light, 'dj_glare': glare, 'dj_glare_all_at_full': glare_full, 'cut_light': cut_light, 'b380f': b380,
+            'truss': {k: truss[k] for k in ('ends', 'trim_m', 'clearance')}, 'far_wall_openings': FAR_WALL_OPENINGS}
+
+
+def passes(R):
+    s = R['summary']
+    fails = []
+    if s['lasers_worst_margin_m'] < 0:
+        fails.append('a laser margin is under the rule: %s' % s['lasers_worst_at'])
+    if not (s['casts_all_on_far_wall_block'] and s['casts_all_clear_of_openings'] and s['mounts_clear_first_2_m']):
+        fails.append('a cast ray does not end on the far wall\'s block clear of the openings, or a mount is not clear')
+    if not s['setup_sheet_zone_inside_window']:
+        fails.append('a Safety Zone does not fit the window less the mount tolerance')
+    if s['lamp_bodies_min_gap_to_a_cube_tube_m'] < LASER_GAP_MIN:
+        fails.append('a lamp body is under 0.25 m from a cube tube')
+    if not s['picks_pass']:
+        fails.append('a pick over 146 kg or a bridle over 120 deg')
+    if s['people_dj_gap_m'] < PEOPLE_RULE['clear_m'] or s['people_public_gap_with_pen_condition_m'] < PEOPLE_RULE['clear_m'] or s['lowest_lens_m'] < PEOPLE_RULE['reach_m']:
+        fails.append('a person clearance under the rule')
+    if not s['dj_glare_ok']:
+        fails.append('a lens the DJ sees lit within 20 deg')
+    if s['cut_light_into_people'] or s['b380f_into_people_or_cubes']:
+        fails.append('a beam into people or the cubes')
+    if s['forty_watt_their_worst_m'] < 0:
+        fails.append('the 40 W beams fail their own terms at the new park')
+    return fails
+
+
+def build(repo):
+    ev, cc, lamps, units = data(repo)
+    R = checks(repo)
+    L = rd(repo, LASERS)
+    L['setup_sheet'] = R['setup_sheet']
+    L['far_wall_openings'] = R['far_wall_openings']
+    L['checks'] = {k: R[k] for k in ('summary', 'beams', 'casts', 'lamp_clearance', 'forty_watt')}
+    L['checks']['world'] = {'glb': GLB_V10, 'glb_sha256': GLB_V10_SHA, 'hall': HALL_V10, 'near_crane_z_m': NEAR_Z, 'free_crane_z_m': FREE_Z, 'near_top_m': list(NEAR_TOP),
+                            'roof_truss_bottom_m': TRUSS_BOTTOM_LOW, 'pendant_lamps': 'modelled rows z 0..24 + ASSUMED rows z -48..-6, 30..48, from 9.0 m'}
+    L['checks']['passes'] = not passes(R)
+    wr(repo, LASERS, L)
+    T = rd(repo, RIG_V2C)
+    T['review'].update({k: R[k] for k in ('summary', 'rigging', 'people', 'dj_light', 'dj_glare', 'dj_glare_all_at_full', 'cut_light', 'b380f', 'truss')})
+    T['review']['laser_clearance'] = R['lamp_clearance']
+    T['review']['lasers'] = LASERS + ' checks'
+    T['review']['fails'] = passes(R)
+    T['checks'] = dict(T['checks'], v2_cranes=R['summary'])
+    wr(repo, RIG_V2C, T)
+    C = rd(repo, CUT_V2C)
+    C['derived_at_z_3_20'] = {'truss': R['truss'], 'rigging': R['rigging'], 'people': R['people']}
+    wr(repo, CUT_V2C, C)
+    return R
+
+
 # ====================================================================== main
 def main():
     ap = argparse.ArgumentParser()
@@ -478,8 +1245,16 @@ def main():
         ev, cc, lamps, units = data(repo)
         print(json.dumps({'truss': {k: ev['truss'][k] for k in ('ends', 'trim_m', 'clearance')}, 'picks': cc['picks'], 'worst_pick_kg': cc['worst_pick_kg'],
                           'lamps': [(l['id'], l['p'], l['part']) for l in lamps], 'units': [(u['id'], u['p'], u['pan_deg_from_minus_z_plus_toward_plus_x'], u['tilt_deg_above_level']) for u in units]}, indent=1, default=JD))
+    elif A.cmd == 'build':
+        R = build(repo)
+        f = passes(R)
+        print(json.dumps({'summary': R['summary'], 'fails': f}, indent=1, default=JD))
+        sys.exit(1 if f else 0)
     else:
-        raise SystemExit('the checks are not written yet')
+        R = checks(repo)
+        f = passes(R)
+        print(json.dumps({'summary': R['summary'], 'fails': f, 'beams': [(b['cube'], b['worst_margin_m'], b['variants']) for b in R['beams']]}, indent=1, default=JD))
+        sys.exit(1 if f else 0)
 
 
 if __name__ == '__main__':
