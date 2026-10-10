@@ -130,6 +130,7 @@ const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
 const { createSpaceStore } = require('./spaceStore')
+const { createSceneWriter } = require('./sceneWrite')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultScene: BLANK_SCENE,
@@ -226,8 +227,10 @@ const ALLOWED_EXTENSIONS = new Set([
 const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
-  appendOpsHistory,
   archiveIdleAccountSandboxes,
+  commitSceneOps,
+  healOrphanSpaceOps,
+  readSceneVersion,
   buildMeta,
   collectSceneAssetRefs,
   countSpacesOwnedBy,
@@ -1993,6 +1996,16 @@ registerShootRoutes(router, {
 // spaceRoutes registers after it -- reordering either would change who needs
 // auth for what.
 const sharedSpaceOpsLock = createKeyedLock()
+// Every scene write — POST /ops, whole-scene replaces, inscriptions — goes
+// through this: the shared lock above plus the data folder's cross-process
+// lock, and one write that a crash at any point leaves whole (sceneWrite.js).
+const sceneWriter = createSceneWriter({
+  getSpacePaths,
+  commitSceneOps,
+  readSceneVersion,
+  inProcessLock: sharedSpaceOpsLock,
+  log: logger
+})
 
 // Public, unauthenticated, append-only: space inscriptions (the br_id_ge
 // portal write path). Registered before the gates like open-call submissions;
@@ -2029,7 +2042,6 @@ registerOgRoutes(router, {
 })
 
 registerInscriptionRoutes(router, {
-  appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
@@ -2042,9 +2054,8 @@ registerInscriptionRoutes(router, {
   maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeSpaceId,
   readJson,
-  withSpaceOpsLock: sharedSpaceOpsLock,
-  upsertSpaceMeta,
-  writeJson,
+  withSpaceOpsLock: sceneWriter.withSceneWriteLock,
+  commitSceneWrite: sceneWriter.commitSceneWrite,
   // Shared with di.bo. Unset on both sides = the tunnel does not exist; unset
   // here alone = the mint 404s and no link is ever handed out, which is the
   // safe direction to fail in.
@@ -2215,7 +2226,6 @@ registerDomainRoutes(router, {
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
   findPrimaryHostForSpace: domainStore.findPrimaryActiveHostForSpace,
   mapPrimaryHosts: domainStore.mapPrimaryActiveHosts,
-  appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
@@ -2224,7 +2234,8 @@ const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceR
   collectSceneAssetRefs,
   config,
   countSpacesOwnedBy,
-  withSpaceOpsLock: sharedSpaceOpsLock,
+  withSpaceOpsLock: sceneWriter.withSceneWriteLock,
+  commitSceneWrite: sceneWriter.commitSceneWrite,
   spaceLimit: config.freeSpaceLimit,
   grantSpaceToSessionUser,
   deleteSpace,
@@ -2923,6 +2934,16 @@ initStorage()
       if (recovered) logger.warn(`[projects] finished ${recovered} write(s) a stopped server left half done`)
     } catch (error) {
       logger.error(`[projects] startup heal failed — the server starts anyway, writes heal each project as they come: ${error?.message || error}`)
+    }
+    try {
+      // The same for scenes: ops above a space's scene version, then any scene
+      // a stopped write committed but never put in place (sceneWrite.js).
+      const healedSpaces = healOrphanSpaceOps({ log: logger })
+      if (healedSpaces.length) logger.warn(`[spaces] healed ${healedSpaces.length} space(s) at startup — their stray ops are in space_ops_quarantine`)
+      const recoveredScenes = await sceneWriter.recoverAllStagedScenes(getDb().prepare('SELECT id FROM spaces').all().map(row => row.id))
+      if (recoveredScenes) logger.warn(`[spaces] finished ${recoveredScenes} scene write(s) a stopped server left half done`)
+    } catch (error) {
+      logger.error(`[spaces] startup heal failed — the server starts anyway, writes heal each space as they come: ${error?.message || error}`)
     }
     await ensureDefaultSpace()
     await ensureOpenSpace()
