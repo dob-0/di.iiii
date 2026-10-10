@@ -1,5 +1,0 @@
-## 2026-10-07 — batch land: four independent fixes from the bug sweep, one CI run
-
-- Four green PRs, each BEHIND `dev` after #805 landed, merged into one branch so a single CI run and a single merge land them (GitHub marks each original PR merged because its head is then reachable from `dev`): #804 (root lockfile: 8 advisories in dev-only tools), #813 (the install's state files written atomically), #809 (Raw Keeper takes a `…/v1` base URL), #817 (a test server that never became ready is stopped).
-- The four touch disjoint code. The only shared file is `docs/ai/known-fixes.md`, where two rows were inserted at the same anchor: both kept, nothing else conflicted. Each PR's own session note is left in place; the fold into `CURRENT.md` happens on `dev` at landing, never on this branch.
-- Not in the batch on purpose: #718 #726 #737 #728 #732 (older fixes made current by the sweep — the owner's decisions, and #726 carries a risk he should read) and #814 (stacked on #793, no CI until retargeted). The register of the whole sweep is #818.
