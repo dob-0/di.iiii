@@ -1480,3 +1480,95 @@ describe('a follow whose other side stops answering waits as one, and carries on
         }
     }, 60_000)
 })
+
+describe('a follow whose other side answers 502 waits between asks, on both sides', () => {
+    let following = null
+    let edge = null
+    let counter = null
+    const WINDOW_MS = 8000
+
+    /**
+     * Answers 502 to everything, as a proxy does while the server behind it
+     * restarts — after a quarter of a second, the time a proxy spends trying
+     * the server that is not there. A pass that takes longer than 200 ms used
+     * to count as a park, and the follow went round with no pause at all.
+     */
+    const badGateway = () => new Promise((resolve, reject) => {
+        const asks = []
+        const server = http.createServer((req, res) => {
+            asks.push(req.url)
+            req.resume()
+            setTimeout(() => {
+                res.writeHead(502, { 'Content-Type': 'text/html' })
+                res.end('<html><body>502 Bad Gateway</body></html>')
+            }, 250)
+        })
+        server.on('error', reject)
+        server.listen(0, '127.0.0.1', () => resolve({ server, asks, port: server.address().port }))
+    })
+
+    /** Passes every ask through to this install, counting them. */
+    const counting = (target) => new Promise((resolve, reject) => {
+        const asks = []
+        const to = new URL(target)
+        const server = http.createServer((req, res) => {
+            asks.push(req.url)
+            const upstream = http.request({ host: to.hostname, port: to.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                res.writeHead(answer.statusCode, answer.headers)
+                answer.pipe(res)
+            })
+            upstream.on('error', () => { res.writeHead(502); res.end() })
+            req.pipe(upstream)
+        })
+        server.on('error', reject)
+        server.listen(0, '127.0.0.1', () => resolve({ server, asks, port: server.address().port }))
+    })
+
+    const close = async (stand) => {
+        if (!stand) return
+        stand.server.closeAllConnections()
+        await new Promise(resolve => stand.server.close(resolve))
+    }
+
+    beforeAll(async () => {
+        following = await startServer()
+        await createSpace(following, SPACE)
+        for (const slug of ['one', 'two', 'three']) {
+            const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title: slug })
+            })
+            expect(made.status).toBe(201)
+        }
+        edge = await badGateway()
+        counter = await counting(following.baseUrl)
+    })
+
+    afterAll(async () => {
+        await close(edge)
+        await close(counter)
+        await following?.stop()
+    })
+
+    it('goes round about once per failure delay, not as fast as the 502s come back', async () => {
+        const lines = { warn: [], info: [] }
+        const follower = startFollowing({
+            local: side({ base: `http://127.0.0.1:${counter.port}/serverXR`, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: `http://127.0.0.1:${edge.port}/serverXR`, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: (line) => lines.warn.push(line), info: (line) => lines.info.push(line) }
+        })
+        // The room's own log is read once per pass on each side: one ask there = one pass.
+        const passes = (asks) => asks.filter(url => url.startsWith(`/serverXR/api/spaces/${SPACE}/ops`)).length
+        try {
+            await wait(WINDOW_MS)
+            const counts = { remotePasses: passes(edge.asks), remoteAsks: edge.asks.length, localAsks: counter.asks.length }
+            console.log(`[502 for ${WINDOW_MS} ms] ${JSON.stringify(counts)}`)
+            // Passes at 0 s and 5 s (failureDelay: 5 s, then 10 s): two in eight seconds, three at most.
+            expect(counts.remotePasses).toBeGreaterThanOrEqual(1)
+            expect(counts.remotePasses).toBeLessThanOrEqual(3)
+            expect(counts.localAsks).toBeLessThanOrEqual(60)
+            expect(counts.remoteAsks).toBeLessThanOrEqual(60)
+        } finally {
+            follower.stop()
+        }
+    }, 30_000)
+})

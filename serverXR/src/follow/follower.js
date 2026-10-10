@@ -33,6 +33,11 @@ const FLOOR_MS = 700
 // wakes the loop immediately (see wake()); only the OTHER side's edits ever
 // wait this long.
 const CEILING_MS = 5000
+// The longest a follow waits between asks while one side is not answering:
+// 5 s, then doubling, up to a minute. A minute, not followPlan's five: once the
+// other side is back, the follow notices within a minute, and a pass a minute
+// costs a few small asks.
+const UNREACHABLE_CEILING_MS = 60 * 1000
 const TIMEOUT_MS = 8000
 // How long the other side may hold our read open. Long enough that a quiet room
 // costs almost nothing, short enough that a dropped wifi is noticed and said
@@ -589,7 +594,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             ])
             if (!mine.reachable || !theirsNow.reachable) {
                 const status = !mine.reachable ? mine.status : theirsNow.status
-                return status === 404 ? { moved: false, skipped: true } : { moved: false, failed: `could not read where the logs are now (${status || 'no route'})` }
+                return status === 404 ? { moved: false, skipped: true } : { moved: false, failed: `could not read where the logs are now (${status || 'no route'})`, unreachable: true }
             }
             if (Number.isFinite(mine.latestVersion) && Number.isFinite(theirsNow.latestVersion)) {
                 cursors.set(stream.key, { localVersion: mine.latestVersion, remoteVersion: theirsNow.latestVersion })
@@ -632,11 +637,11 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // failure of the follow: it will exist on the next pass.
         if (!theirs.reachable) {
             if (theirs.status === 404) return { moved: false, skipped: true }
-            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})` }
+            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})`, unreachable: true }
         }
         if (!ours.reachable) {
             if (ours.status === 404) return { moved: false, skipped: true }
-            return { moved: false, failed: 'this install is not answering its own op log' }
+            return { moved: false, failed: 'this install is not answering its own op log', unreachable: true }
         }
 
         // A saved cursor past the end of a log means that log started again
@@ -732,6 +737,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         chase.run()
 
         let parked = false
+        let unreachable = false
         let changedThere = false
         let moved = false
         let more = false
@@ -780,7 +786,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             const willPark = index === ordered.length - 1
             if (willPark) report()
             const result = await runStream(stream, { wait: willPark })
-            if (willPark) parked = true
+            // A read that could not reach a side did no waiting there: it is
+            // not a park, and the loop must not go round at once as if it were.
+            if (willPark) {
+                unreachable = Boolean(result.unreachable)
+                parked = !unreachable
+            }
             if (result.skipped) continue
             changedThere = changedThere || result.changedThere
             moved = moved || result.moved
@@ -814,17 +825,24 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // Woken while this tick ran, or told the other side changed after its
         // projects were read: go round again at once, never into a sleep.
         if (woken || changedThere) settingsForce = true
-        return { moved, parked: parked && !more, more, again: woken || changedThere }
+        return { moved, parked: parked && !more, more, again: woken || changedThere, unreachable }
     }
 
+    // Passes in a row whose room log could not be read on one side. Each one
+    // waits longer (followPlan.js failureDelay, at most a minute here), so a
+    // di.iiii that answers 502 is asked about once a delay instead of as fast
+    // as its errors come back — measured 2026-10-10: 12.6x the usual load on
+    // this install, and the same flood on the other, for as long as it lasted.
+    let failures = 0
     const loop = async () => {
         while (!stopped) {
             let moved = false
             let parked = false
             let again = false
+            let unreachable = false
             const startedAt = Date.now()
             try {
-                ({ moved, parked, again } = await tick())
+                ({ moved, parked, again, unreachable } = await tick())
             } catch (error) {
                 // A follower must never take the server down with it.
                 state = { ...state, status: 'waiting', lastError: String(error?.message || error) }
@@ -837,9 +855,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // woken for. The elapsed check keeps a server that answers a park
             // instantly (an old one that ignores `wait`) from becoming a spin.
             const elapsed = Date.now() - startedAt
-            interval = again || (parked && elapsed > 200)
-                ? 0
-                : nextInterval({ moved, current: interval, floor: FLOOR_MS, ceiling: CEILING_MS })
+            failures = unreachable ? failures + 1 : 0
+            interval = failures
+                ? failureDelay(failures, { ceiling: UNREACHABLE_CEILING_MS })
+                : again || (parked && elapsed > 200)
+                    ? 0
+                    : nextInterval({ moved, current: interval, floor: FLOOR_MS, ceiling: CEILING_MS })
             if (interval > 0) await sleep(interval)
         }
     }
