@@ -18,7 +18,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 - a follow carries project short names both ways
 - MOXIR hall measured from above: the grid holds (4 × 24 m, 6 m, 18 bays); lanterns 2.8 m short, end walls 0.7 m out
 - Asked
-- …and 40 more notes, each in full in PROGRESS.md
+- …and 41 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 
