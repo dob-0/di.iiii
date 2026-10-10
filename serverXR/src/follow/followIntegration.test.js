@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import http from 'node:http'
 import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
@@ -1367,4 +1368,115 @@ describe('an interrupted file transfer is resumed after a restart, and says what
             second.stop()
         }
     })
+})
+
+// 2026-10-09, aylmo: the other di.iiii sat behind a Cloudflare tunnel that was
+// down, and every request was answered 530 for hours; the files went on being
+// asked about one by one, thousands of times a minute. Here a small server
+// stands where the tunnel's edge would, on the host's own port, and answers 530
+// to everything; then the host comes back on that port with its disk. The
+// chase's own first wait is set to a minute, so files crossing within seconds
+// of the host's return can only be the op loop telling it (noteAnswered).
+describe('a follow whose other side stops answering waits as one, and carries once it is back', () => {
+    let hosting = null
+    let following = null
+    let edge = null
+    let port = null
+    let dataRoot = null
+    const PIECE = 'hall'
+    const COUNT = 3
+    const bytesOf = (seed) => Buffer.from(Array.from({ length: 40_000 }, (_, i) => (i * seed + 11) % 256))
+    const files = []
+
+    const holds = async (server, id) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/assets/${id}/meta`, { headers: authHeaders })).status === 200
+    const heldCount = async (server) => (await Promise.all(files.map(file => holds(server, file.id)))).filter(Boolean).length
+
+    /** Answers 530 to everything, as Cloudflare does for a tunnel with nothing behind it (error 1033). */
+    const standInEdge = (onPort) => new Promise((resolve, reject) => {
+        const asks = []
+        const server = http.createServer((req, res) => {
+            asks.push(req.url)
+            req.resume()
+            res.writeHead(530, { 'Content-Type': 'text/html' })
+            res.end('<html><body>error code: 1033</body></html>')
+        })
+        server.on('error', reject)
+        server.listen(onPort, '127.0.0.1', () => resolve({ server, asks }))
+    })
+    const closeEdge = async () => {
+        if (!edge) return
+        edge.server.closeAllConnections()
+        await new Promise(resolve => edge.server.close(resolve))
+        edge = null
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        // The project and its files exist on the follower only, named in its document.
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        for (let n = 1; n <= COUNT; n += 1) {
+            const form = new FormData()
+            form.append('asset', new Blob([bytesOf(n * 13)], { type: 'video/mp4' }), `hall-${n}.mp4`)
+            const uploaded = await fetch(`${following.baseUrl}/api/projects/${PIECE}/assets`, { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form })
+            expect(uploaded.status).toBe(200)
+            files.push((await uploaded.json()).asset)
+        }
+        const document = { entities: [], nodes: [], assets: files.map(file => ({ ...file, url: '' })) }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { method: 'PUT', headers: authHeaders, body: JSON.stringify(document) })
+        expect(put.status).toBe(200)
+
+        // The host goes away, and something answers 530 in its place.
+        port = hosting.port
+        dataRoot = hosting.dataRoot
+        await hosting.stop({ keepData: true })
+        hosting = null
+        edge = await standInEdge(port)
+    })
+
+    afterAll(async () => {
+        await closeEdge()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('says so once, asks nothing more while it waits, downloads nothing — and carries every file on the op loop\'s first answer', async () => {
+        const lines = { warn: [], info: [] }
+        let downloads = 0
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: `http://127.0.0.1:${port}/serverXR`, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: (line) => lines.warn.push(line), info: (line) => lines.info.push(line) },
+            files: {
+                backoffMs: [200, 200, 200],
+                waitFirstMs: 60_000,
+                io: { request: httpRequest, upload: httpUploadFile, download: async (...args) => { downloads += 1; return httpDownloadToFile(...args) } }
+            }
+        })
+        // The chase's own asks: documents, files, and its one small question.
+        const chaseAsks = () => edge.asks.filter(url => /\/document$|\/assets\/|\/api\/health$/.test(url)).length
+        try {
+            await settle('the follower saying, once, that the other side is not answering', () => lines.warn.some(line => /not answering \(530\)/.test(line)), { timeout: 15_000 })
+            const askedWhenItSaidSo = chaseAsks()
+            await wait(4000)
+            expect(chaseAsks()).toBe(askedWhenItSaidSo)
+            expect(askedWhenItSaidSo).toBeLessThanOrEqual(3)
+            expect(downloads).toBe(0)
+
+            // Same port, same disk: the host is back.
+            await closeEdge()
+            hosting = await startServer({ port, dataRoot })
+            // The chase's own next ask is still most of a minute away.
+            await settle('every file on the host, well before the chase\'s own minute is up', async () => (await heldCount(hosting)) === COUNT, { timeout: 25_000 })
+            expect(lines.warn.filter(line => /not answering \(530\)/.test(line))).toHaveLength(1)
+            expect(lines.warn.filter(line => /could not be carried/.test(line))).toEqual([])
+            expect(lines.info.filter(line => /answers again/.test(line))).toHaveLength(1)
+        } finally {
+            follower.stop()
+        }
+    }, 60_000)
 })

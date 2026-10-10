@@ -360,6 +360,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address }),
             request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
+        // The other side answered: files waiting out its silence (assets.js)
+        // go on this tick, not at the end of a wait of up to five minutes.
+        if (there.ok) chase.noteAnswered()
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
         if (fromNow && fromNowPending === null && here.ok && there.ok) {
