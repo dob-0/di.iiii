@@ -8610,7 +8610,7 @@
     "units_inside": [],
     "beams_aim_inside": [],
     "beams_window_inside": [],
-    "beam_aim_min_clearance_m": 10.136,
+    "beam_aim_min_clearance_m": 10.094,
     "what": "A14: the 6 cube beams behind the stage (#878), padded by their 1.008 deg tube + 0.25 m + the ground beam's own half width; cable runs lie on the floor (y 0), 8.5 m under the volume"
    },
    "a15": {
@@ -8627,44 +8627,44 @@
    "beams": [
     {
      "id": "rig-beam-planes-01",
-     "aim_cube_clearance_m": 11.707,
+     "aim_cube_clearance_m": 11.701,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 11.049,
+     "window_cube_clearance_m": 11.017,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-02",
-     "aim_cube_clearance_m": 11.049,
+     "aim_cube_clearance_m": 11.022,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 9.757,
+     "window_cube_clearance_m": 9.707,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-03",
-     "aim_cube_clearance_m": 10.139,
+     "aim_cube_clearance_m": 10.097,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 8.511,
+     "window_cube_clearance_m": 8.45,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-04",
-     "aim_cube_clearance_m": 10.136,
+     "aim_cube_clearance_m": 10.094,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 8.494,
+     "window_cube_clearance_m": 8.433,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-05",
-     "aim_cube_clearance_m": 11.04,
+     "aim_cube_clearance_m": 11.016,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 9.852,
+     "window_cube_clearance_m": 9.805,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-06",
-     "aim_cube_clearance_m": 11.308,
+     "aim_cube_clearance_m": 11.294,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 10.395,
+     "window_cube_clearance_m": 10.356,
      "window_meets_crane": [
       {
        "pan": -10.0,
@@ -8679,86 +8679,86 @@
     },
     {
      "id": "rig-beam-planes-16",
-     "aim_cube_clearance_m": 43.619,
+     "aim_cube_clearance_m": 43.5,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 41.651,
+     "window_cube_clearance_m": 41.53,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-18",
-     "aim_cube_clearance_m": 45.088,
+     "aim_cube_clearance_m": 44.978,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 45.088,
+     "window_cube_clearance_m": 44.978,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-09",
-     "aim_cube_clearance_m": 32.901,
+     "aim_cube_clearance_m": 32.898,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 31.934,
+     "window_cube_clearance_m": 31.851,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-10",
-     "aim_cube_clearance_m": 27.475,
+     "aim_cube_clearance_m": 27.399,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 26.24,
+     "window_cube_clearance_m": 26.138,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-13",
-     "aim_cube_clearance_m": 32.185,
+     "aim_cube_clearance_m": 32.033,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 32.138,
+     "window_cube_clearance_m": 32.012,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-07",
-     "aim_cube_clearance_m": 19.547,
+     "aim_cube_clearance_m": 19.386,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 17.533,
+     "window_cube_clearance_m": 17.404,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-15",
-     "aim_cube_clearance_m": 50.912,
+     "aim_cube_clearance_m": 50.76,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 50.912,
+     "window_cube_clearance_m": 50.76,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-11",
-     "aim_cube_clearance_m": 44.522,
+     "aim_cube_clearance_m": 44.439,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 42.624,
+     "window_cube_clearance_m": 42.491,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-17",
-     "aim_cube_clearance_m": 44.582,
+     "aim_cube_clearance_m": 44.415,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 43.84,
+     "window_cube_clearance_m": 43.705,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-14",
-     "aim_cube_clearance_m": 38.365,
+     "aim_cube_clearance_m": 38.29,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 36.71,
+     "window_cube_clearance_m": 36.592,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-12",
-     "aim_cube_clearance_m": 32.399,
+     "aim_cube_clearance_m": 32.322,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 30.811,
+     "window_cube_clearance_m": 30.698,
      "window_meets_crane": []
     },
     {
      "id": "rig-beam-planes-08",
-     "aim_cube_clearance_m": 22.223,
+     "aim_cube_clearance_m": 22.061,
      "aim_meets_crane": [],
-     "window_cube_clearance_m": 21.904,
+     "window_cube_clearance_m": 21.775,
      "window_meets_crane": []
     }
    ],
