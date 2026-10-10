@@ -262,47 +262,52 @@ describe('the check is not decoration: it fails on a plan that is wrong', () => 
     })
 })
 
-describe('against the v2 rigs the plan is applied to (runs where #864 and #873 are in the tree)', () => {
-    const rigFile = path.join(repo, 'scripts/place/rigs/moxir-v2-spread-2026-10-09.json')
-    const entryFile = path.join(repo, 'scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json')
+describe('against the v2 rigs the plan is applied to (every v2 rig in the tree: the spread of #864, the ground layout when it lands)', () => {
+    const rigsDir = path.join(repo, 'scripts/place/rigs')
+    const rigFiles = fs.readdirSync(rigsDir).filter((f) => /^moxir-v2-(spread|ground)-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort()
+    const entryFile = path.join(rigsDir, 'moxir-v2-entry-lasers-2026-10-09.json')
     const laserLamp = (id, p) => ({ id, type: 'spotLight', name: id, components: { transform: { position: p, rotation: [0, 0, 0] }, fixture: { type: 'up-la40wf' } } })
-    // The document epic-build makes from #864's rig, plus the two Poligraf lasers: from #873's rig where it is in the tree,
+    // The document epic-build makes from a v2 rig, plus the two Poligraf lasers: from #873's rig where it is in the tree,
     // else two lamps with the unit ids that rig gives them (rig-la40wf-entry-01 / -02).
-    const documentOfRigs = async () => {
+    const documentOf = async (rigFile) => {
         const { v1Entities } = await import('../../scripts/rigbuild/epic-build.mjs')
         const lasers = fs.existsSync(entryFile)
             ? readJson(entryFile).fixtures.filter((f) => f.type === 'up-la40wf').map((f) => laserLamp(f.id, f.p))
             : ['rig-la40wf-entry-01', 'rig-la40wf-entry-02'].map((id, i) => laserLamp(id, [-8 + i, 5.9, 48]))
-        return [...v1Entities(readJson(rigFile)), ...lasers]
+        return [...v1Entities(readJson(path.join(rigsDir, rigFile))), ...lasers]
     }
-    it.skipIf(!fs.existsSync(rigFile))('lays 71 lamps on the document the rigs build, leaves the 6 cubes off DMX and flips the smoke on', async () => {
-        const entities = await documentOfRigs()
-        const r = planPatch({ entities, library, plan })
-        expect(r.errors).toEqual([])
-        expect(r.assignments).toHaveLength(71)
-        expect(r.offDmx).toHaveLength(6)
-        expect(r.offDmx.every((id) => /^rig-laser-\d[a-z]$/.test(id))).toBe(true)
-        // the smoke is dmx:false in the rig's document; the plan puts it on U1.501 and says so
-        expect(r.warnings.join('\n')).toMatch(/rig-smoke-planes .*off DMX in the document.*U1\.501/)
-        expect(r.assignments.find((a) => a.entityId === 'rig-smoke-planes')).toMatchObject({ universe: 1, address: 501 })
-        expect(Object.fromEntries(r.universes.map((u) => [u.universe, u.used]))).toEqual({ 1: 353, 2: 400 })
+    const idToAddress = (list) => Object.fromEntries(planPatch({ entities: list, library, plan }).assignments.map((a) => [a.entityId, `#${a.index} U${a.universe}.${a.address}`]))
+
+    it.skipIf(!rigFiles.length)('lays 71 lamps on the document each rig builds, leaves the 6 cubes off DMX and flips the smoke on', async () => {
+        for (const file of rigFiles) {
+            const r = planPatch({ entities: await documentOf(file), library, plan })
+            expect(r.errors, file).toEqual([])
+            expect(r.assignments, file).toHaveLength(71)
+            expect(r.offDmx, file).toHaveLength(6)
+            expect(r.offDmx.every((id) => /^rig-laser-\d[a-z]$/.test(id)), file).toBe(true)
+            // the smoke is dmx:false in the rig's document; the plan puts it on U1.501 and says so
+            expect(r.warnings.join('\n'), file).toMatch(/rig-smoke-planes .*off DMX in the document.*U1\.501/)
+            expect(r.assignments.find((a) => a.entityId === 'rig-smoke-planes'), file).toMatchObject({ universe: 1, address: 501 })
+            expect(Object.fromEntries(r.universes.map((u) => [u.universe, u.used])), file).toEqual({ 1: 353, 2: 400 })
+        }
     })
-    it.skipIf(!fs.existsSync(rigFile))('gives the units of the rigs the addresses printed on the sheet, by unit id, and keeps them when every unit moves', async () => {
-        const entities = await documentOfRigs()
-        const idToAddress = (list) => Object.fromEntries(planPatch({ entities: list, library, plan }).assignments.map((a) => [a.entityId, `#${a.index} U${a.universe}.${a.address}`]))
-        const at = idToAddress(entities)
-        expect(at['rig-beam-planes-01']).toBe('#101 U1.1')
-        expect(at['rig-beam-planes-18']).toBe('#118 U1.273')
-        expect(at['rig-la40wf-entry-01']).toBe('#131 U1.401')
-        expect(at['rig-la40wf-entry-02']).toBe('#132 U1.433')
-        expect(at['rig-smoke-planes']).toBe('#141 U1.501')
-        expect(at['rig-par-cut-01']).toBe('#201 U2.1')
-        expect(at['rig-par-cut-10']).toBe('#210 U2.73')
-        expect(at['rig-par-planes-01']).toBe('#221 U2.101')
-        expect(at['rig-par-planes-40']).toBe('#260 U2.413')
-        // a new layout puts every unit somewhere else: no address changes
-        const moved = entities.map((e, i) => ({ ...e, components: { ...e.components, transform: { ...e.components.transform, position: [(i * 5) % 17 - 8, 0, (i * 13) % 29 - 14] } } }))
-        expect(idToAddress(moved)).toEqual(at)
+    it.skipIf(!rigFiles.length)('gives the units of every rig the addresses printed on the sheet, by unit id, and keeps them when every unit moves', async () => {
+        for (const file of rigFiles) {
+            const entities = await documentOf(file)
+            const at = idToAddress(entities)
+            expect(at['rig-beam-planes-01'], file).toBe('#101 U1.1')
+            expect(at['rig-beam-planes-18'], file).toBe('#118 U1.273')
+            expect(at['rig-la40wf-entry-01'], file).toBe('#131 U1.401')
+            expect(at['rig-la40wf-entry-02'], file).toBe('#132 U1.433')
+            expect(at['rig-smoke-planes'], file).toBe('#141 U1.501')
+            expect(at['rig-par-cut-01'], file).toBe('#201 U2.1')
+            expect(at['rig-par-cut-10'], file).toBe('#210 U2.73')
+            expect(at['rig-par-planes-01'], file).toBe('#221 U2.101')
+            expect(at['rig-par-planes-40'], file).toBe('#260 U2.413')
+            // a new layout puts every unit somewhere else: no address changes
+            const moved = entities.map((e, i) => ({ ...e, components: { ...e.components, transform: { ...e.components.transform, position: [(i * 5) % 17 - 8, 0, (i * 13) % 29 - 14] } } }))
+            expect(idToAddress(moved), file).toEqual(at)
+        }
     })
     it.skipIf(!fs.existsSync(entryFile))("takes the two entry lasers' ids from #873's rig: rig-la40wf-entry-01 and -02, at the tower z 48, on U1.401 and U1.433", () => {
         const lasers = readJson(entryFile).fixtures.filter((f) => f.type === 'up-la40wf')
