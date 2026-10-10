@@ -3,10 +3,11 @@
   "title": "MOXIR v2 — the show patch (two universes; the six LaserCubes on the LAN)",
   "writtenAt": "2026-10-09",
   "owner": "2026-10-09 20:32 (ledger N460.2, N462), his words: \"laser cubes will work with the lan and no dmx, so 2 lasers of the poli and beams one univers, and the wash other ones right also smoke goes with the beams\"",
-  "howToRead": "The same format as moxir-2026-10-17-minimal.patch.json (docs/architecture/RIG_BUILD.md §19; this plan is §19.5). It is the LD's patch as data: which universe each group of lamps runs on, where each block starts, the fixture numbers and the DMX mode per type. Apply it: node scripts/rigbuild/patch-plan.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json --project <the v2 project> --keep-circuits [--dry-run] (the project id is not fixed here, so it is passed; --keep-circuits because the v2 rig carries its own power plan), then node scripts/rigbuild/patch.mjs --project <id> --exact. The crew's short table comes from the plan alone: node scripts/rigbuild/patch-table.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json. Never edit addresses in the project or on the console by hand — change this file and run them again.",
+  "project": "moxir-v2-stage-lasers",
+  "howToRead": "The same format as moxir-2026-10-17-minimal.patch.json (docs/architecture/RIG_BUILD.md §19; this plan is §19.5). It is the LD's patch as data: which universe each group of lamps runs on, where each block starts, the fixture numbers and the DMX mode per type. Apply it: node scripts/rigbuild/patch-plan.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json --keep-circuits [--project <id>] [--api <base>] [--dry-run] (the v2 rig carries its own power plan, so --keep-circuits), then node scripts/rigbuild/patch.mjs --project <id> --exact. `project` is the scratch copy of the v2 rig (B spread, slug v2-0, the MOXIR one integrator's note of 2026-10-09): the id of a copy on dev or on an install differs, so pass --project there. The crew's short table comes from the plan alone: node scripts/rigbuild/patch-table.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json. Never edit addresses in the project or on the console by hand — change this file and run them again.",
   "method": [
     "Two universes, by the owner's decision (N460.2): U1 holds the 18 UP-B380F beams, the 2 Poligraf UP-LA40WF lasers and the one UP-YZ31P smoke machine (353 of 512 channels); U2 holds the 50 UP-PL5403 washes (400 of 512). The six LaserCubes are on no universe at all (offDmx, below).",
-    "Blocks select lamps from the PROJECT by type or by unit-id group — never by the name of a truss — and walk them in unit-id order (order id-asc), so an address belongs to its unit and moves only if the unit's number does. The two lasers are addressed by unit id and their places come from the entry-laser rig. Each block also states how many lamps it expects (units): a project with another count is refused before anything is written.",
+    "Blocks select lamps from the PROJECT by type or by unit-id group — never by the name of a truss — and walk them in unit-id order (order id-asc), so an address belongs to its unit and moves only if the unit's number does. Every unit keeps its address when its place changes (a new ground layout moves units, not their ids): the beams by type, the PARs by the id groups rig-par-cut and rig-par-planes, the two lasers by rig-la40wf-entry-01 and -02 (the entry-laser rig, #873). Each block also states how many lamps it expects (units): a project with another count is refused before anything is written.",
     "Blocks start on round numbers (001, 101, 401, 501) and a fixture sits whole inside one universe: every block is checked against 512 (ANSI E1.11 DMX512-A: 512 slots per universe).",
     "Room to grow: every block is followed by free addresses up to the next block, so a lamp added on the night takes the next address of its own block and nothing moves — beams 289–400 (7 more heads), lasers 465–500 (1 more), smoke 502–512, cut 081–100 (2 more PARs), planes 421–512 (11 more). The lasers start 112 channels after the last beam, so a beam set seven units too high still lands on free slots and never on a laser's channels.",
     "Fixture numbers: the hundred is the universe; a block's numbers leave the same room to grow as its addresses (beams 101–125, lasers 131–133, smoke 141, cut 201–212, planes 221–271). A crew reads U2.101 and fixture 221 as the same lamp.",
@@ -45,7 +46,7 @@
       "universe": 1,
       "port": "A",
       "label": "Beams, Poligraf lasers, smoke",
-      "run": "node output A → one DMX line of 21 devices (≤ 32): the 18 UP-B380F, the 2 UP-LA40WF at the entry end, the smoke machine",
+      "run": "node output A → one DMX line of 21 devices (≤ 32): the 18 UP-B380F, the 2 UP-LA40WF at the entry end (the tower at z 48, house left), the smoke machine",
       "blocks": [
         {
           "select": {
@@ -60,6 +61,7 @@
         },
         {
           "select": {
+            "group": "rig-la40wf-entry",
             "type": "up-la40wf"
           },
           "start": 401,
@@ -67,7 +69,7 @@
           "order": "id-asc",
           "units": 2,
           "name": "UP-LA40WF laser (Poligraf 40 W)",
-          "what": "the 2 Poligraf UP-LA40WF lasers (40 W), 32 ch each: 401 and 433 (last channel 464); room for 1 more before 501. Addressed by unit id; their places come from the entry-laser rig"
+          "what": "the 2 Poligraf UP-LA40WF lasers (40 W), 32 ch each: rig-la40wf-entry-01 at 401 and rig-la40wf-entry-02 at 433 (last channel 464); room for 1 more before 501. Addressed by those unit ids (the entry-laser rig, #873: the truss tower at z 48, house left); the address stays with the unit if its place changes"
         },
         {
           "select": {
@@ -116,6 +118,7 @@
     }
   ],
   "crewNotes": [
+    "The two Poligraf lasers are rig-la40wf-entry-01 (U1.401) and rig-la40wf-entry-02 (U1.433), on the truss tower at the entry end (z 48, house left). Every unit keeps its address if its place changes.",
     "UP-B380F: channels 1–10 of the 16-channel map were tested at the Sevan festival; channels 11–16 disagree with the equivalent chart and with the studio console's own profile, and channel 13 may have to rest at 145 for the head to emit light. Step one unit through channels 13, 7–8, 11–12 and 14–15 first (docs/moxir/b380f-16ch-map-check-2026-10-09.md).",
     "UP-LA40WF (40 W lasers): the console holds them dark until the laser safety sign-off (IEC 60825-1). The patch only gives them addresses.",
     "How the UP-LA40WF and the UP-YZ31P are addressed on the unit (display or DIP) is read on the unit; the LaserCubes need no address — each sits on the show network at its own IP."

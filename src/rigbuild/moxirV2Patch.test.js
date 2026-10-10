@@ -171,11 +171,21 @@ describe(`the MOXIR v2 patch (${path.relative(repo, PATCH_FILE)})`, () => {
         const r = planned()
         const at = (id) => r.assignments.find((a) => a.entityId === id)
         expect([at('up-b380f-01').address, at('up-b380f-02').address, at('up-b380f-18').address]).toEqual([1, 17, 273])
-        expect([at('up-la40wf-01').address, at('up-la40wf-02').address]).toEqual([401, 433])
+        expect([at('rig-la40wf-entry-01').address, at('rig-la40wf-entry-02').address]).toEqual([401, 433])
         expect(at('up-yz31p-01')).toMatchObject({ universe: 1, address: 501, mode: '1ch-assumed', assumed: true })
         expect([at('rig-par-cut-01').address, at('rig-par-cut-10').address, at('rig-par-planes-01').address, at('rig-par-planes-40').address]).toEqual([1, 73, 101, 413])
         // fixture numbers: hundreds = universe, no number twice
         expect(new Set(r.assignments.map((a) => a.index)).size).toBe(71)
+    })
+
+    it('keeps every address with its unit id when the units move (a new ground layout moves units, not their ids)', () => {
+        const idToAddress = (entities) => Object.fromEntries(planPatch({ entities, library, plan }).assignments.map((a) => [a.entityId, `U${a.universe}.${a.address} #${a.index}`]))
+        const room = expectedRoom(plan)
+        const before = idToAddress(room)
+        // every unit to somewhere else: reversed along x, lifted to the floor, pushed along z — nothing about its id changes
+        const moved = room.map((e, i) => ({ ...e, components: { ...e.components, transform: { ...e.components.transform, position: [100 - i * 3, 0, (i * 7) % 11] } } }))
+        expect(idToAddress(moved)).toEqual(before)
+        expect(Object.keys(before)).toHaveLength(71)
     })
 
     it('runs the modes the owner and the Sevan test settled: 16 / 32 / 1 (assumed) / 8', () => {
@@ -212,7 +222,7 @@ describe('the check is not decoration: it fails on a plan that is wrong', () => 
         lasers(c).start = 281 // the last beam holds 273–288
         const problems = checkPlan(c)
         expect(problems.some((p) => /^planner: .*overlaps/.test(p)), problems.join('\n')).toBe(true)
-        expect(problems.some((p) => /^U1: up-la40wf-01 at 281 overlaps up-b380f-18/.test(p)), problems.join('\n')).toBe(true)
+        expect(problems.some((p) => /^U1: rig-la40wf-entry-01 at 281 overlaps up-b380f-18/.test(p)), problems.join('\n')).toBe(true)
         expect(problems.some((p) => /not on a round number/.test(p))).toBe(true)
     })
 
@@ -252,15 +262,22 @@ describe('the check is not decoration: it fails on a plan that is wrong', () => 
     })
 })
 
-describe('against the v2 spread rig (runs where #864 has landed: scripts/place/rigs/moxir-v2-spread-2026-10-09.json)', () => {
+describe('against the v2 rigs the plan is applied to (runs where #864 and #873 are in the tree)', () => {
     const rigFile = path.join(repo, 'scripts/place/rigs/moxir-v2-spread-2026-10-09.json')
-    it.skipIf(!fs.existsSync(rigFile))('lays 71 lamps on the document the rig builds, leaves the 6 cubes off DMX and flips the smoke on', async () => {
+    const entryFile = path.join(repo, 'scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json')
+    const laserLamp = (id, p) => ({ id, type: 'spotLight', name: id, components: { transform: { position: p, rotation: [0, 0, 0] }, fixture: { type: 'up-la40wf' } } })
+    // The document epic-build makes from #864's rig, plus the two Poligraf lasers: from #873's rig where it is in the tree,
+    // else two lamps with the unit ids that rig gives them (rig-la40wf-entry-01 / -02).
+    const documentOfRigs = async () => {
         const { v1Entities } = await import('../../scripts/rigbuild/epic-build.mjs')
-        const rig = readJson(rigFile)
-        const entities = v1Entities(rig)
-        // the two Poligraf lasers have no place in the rig yet (the entry-laser builder's): two lamps by type
-        const lasers = [1, 2].map((n) => ({ id: `rig-laser40-entry-0${n}`, type: 'spotLight', name: `UP-LA40WF ${n}`, components: { transform: { position: [n, 6, 53], rotation: [0, 0, 0] }, fixture: { type: 'up-la40wf' } } }))
-        const r = planPatch({ entities: [...entities, ...lasers], library, plan })
+        const lasers = fs.existsSync(entryFile)
+            ? readJson(entryFile).fixtures.filter((f) => f.type === 'up-la40wf').map((f) => laserLamp(f.id, f.p))
+            : ['rig-la40wf-entry-01', 'rig-la40wf-entry-02'].map((id, i) => laserLamp(id, [-8 + i, 5.9, 48]))
+        return [...v1Entities(readJson(rigFile)), ...lasers]
+    }
+    it.skipIf(!fs.existsSync(rigFile))('lays 71 lamps on the document the rigs build, leaves the 6 cubes off DMX and flips the smoke on', async () => {
+        const entities = await documentOfRigs()
+        const r = planPatch({ entities, library, plan })
         expect(r.errors).toEqual([])
         expect(r.assignments).toHaveLength(71)
         expect(r.offDmx).toHaveLength(6)
@@ -268,8 +285,33 @@ describe('against the v2 spread rig (runs where #864 has landed: scripts/place/r
         // the smoke is dmx:false in the rig's document; the plan puts it on U1.501 and says so
         expect(r.warnings.join('\n')).toMatch(/rig-smoke-planes .*off DMX in the document.*U1\.501/)
         expect(r.assignments.find((a) => a.entityId === 'rig-smoke-planes')).toMatchObject({ universe: 1, address: 501 })
-        const used = Object.fromEntries(r.universes.map((u) => [u.universe, u.used]))
-        expect(used).toEqual({ 1: 353, 2: 400 })
+        expect(Object.fromEntries(r.universes.map((u) => [u.universe, u.used]))).toEqual({ 1: 353, 2: 400 })
+    })
+    it.skipIf(!fs.existsSync(rigFile))('gives the units of the rigs the addresses printed on the sheet, by unit id, and keeps them when every unit moves', async () => {
+        const entities = await documentOfRigs()
+        const idToAddress = (list) => Object.fromEntries(planPatch({ entities: list, library, plan }).assignments.map((a) => [a.entityId, `#${a.index} U${a.universe}.${a.address}`]))
+        const at = idToAddress(entities)
+        expect(at['rig-beam-planes-01']).toBe('#101 U1.1')
+        expect(at['rig-beam-planes-18']).toBe('#118 U1.273')
+        expect(at['rig-la40wf-entry-01']).toBe('#131 U1.401')
+        expect(at['rig-la40wf-entry-02']).toBe('#132 U1.433')
+        expect(at['rig-smoke-planes']).toBe('#141 U1.501')
+        expect(at['rig-par-cut-01']).toBe('#201 U2.1')
+        expect(at['rig-par-cut-10']).toBe('#210 U2.73')
+        expect(at['rig-par-planes-01']).toBe('#221 U2.101')
+        expect(at['rig-par-planes-40']).toBe('#260 U2.413')
+        // a new layout puts every unit somewhere else: no address changes
+        const moved = entities.map((e, i) => ({ ...e, components: { ...e.components, transform: { ...e.components.transform, position: [(i * 5) % 17 - 8, 0, (i * 13) % 29 - 14] } } }))
+        expect(idToAddress(moved)).toEqual(at)
+    })
+    it.skipIf(!fs.existsSync(entryFile))("takes the two entry lasers' ids from #873's rig: rig-la40wf-entry-01 and -02, at the tower z 48, on U1.401 and U1.433", () => {
+        const lasers = readJson(entryFile).fixtures.filter((f) => f.type === 'up-la40wf')
+        expect(lasers.map((f) => f.id)).toEqual(['rig-la40wf-entry-01', 'rig-la40wf-entry-02'])
+        expect(lasers.map((f) => f.p[2])).toEqual([48, 48])
+        const room = expectedRoom(plan).filter((e) => e.components.fixture.type !== 'up-la40wf').concat(lasers.map((f) => laserLamp(f.id, f.p)))
+        const r = planPatch({ entities: room, library, plan })
+        expect(r.errors).toEqual([])
+        expect(r.assignments.filter((a) => a.type === 'up-la40wf').map((a) => `${a.entityId} U1.${a.address}`)).toEqual(['rig-la40wf-entry-01 U1.401', 'rig-la40wf-entry-02 U1.433'])
     })
 })
 
