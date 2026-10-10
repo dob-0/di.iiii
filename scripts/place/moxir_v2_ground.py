@@ -2426,7 +2426,7 @@ def operator_sheet(T, out_paths):
             '- Power trip / reset / DMX loss behaviour of the B380F is UNKNOWN (no manual). Crew line: restore a tripped B380F circuit only with the lamp channel off and the shutter closed on the desk; nobody stands in front of a floor head during its reset sweep.\n\n'
             '| head | fix # | address | DMX line | where | base front faces (az) | pan from home (deg) | tilt from home (deg) | world az | world el | pan 16-bit (coarse/fine) | tilt 16-bit (coarse/fine) |\n'
             '|---|---|---|---|---|---|---|---|---|---|---|---|\n') % (RIG_GR, T.get('date'))
-    md = head + ''.join('| %s | %s | %s (ch %s) | %s | %s | %.1f | %+.0f..%+.0f | %.1f..%.1f | %.1f..%.1f | %.1f..%.1f | %d..%d (%d/%d..%d/%d) | %d..%d (%d/%d..%d/%d) |\n' % (
+    md = head + ''.join('| %s | %s | %s (ch %s) | %s | %s | %.1f | %+.1f..%+.1f | %.1f..%.1f | %.1f..%.1f | %.1f..%.1f | %d..%d (%d/%d..%d/%d) | %d..%d (%d/%d..%d/%d) |\n' % (
         r['id'], r['fixture'], r['address'], '-'.join(str(c) for c in (r['ch'][0], r['ch'][3])), r['line'], r['where'], r['base_front_az'], r['pan_deg'][0], r['pan_deg'][1],
         r['tilt_deg'][0], r['tilt_deg'][1], r['world_az'][0], r['world_az'][1], r['world_el'][0], r['world_el'][1], r['pan16'][0], r['pan16'][1], r['pan_cf'][0][0], r['pan_cf'][0][1],
         r['pan_cf'][1][0], r['pan_cf'][1][1], r['tilt16'][0], r['tilt16'][1], r['tilt_cf'][0][0], r['tilt_cf'][0][1], r['tilt_cf'][1][0], r['tilt_cf'][1][1]) for r in rows)
@@ -2436,7 +2436,7 @@ def operator_sheet(T, out_paths):
         r['pan16'][0], r['pan16'][1], r['tilt16'][0], r['tilt16'][1], r['pan_cf'][0][0], r['pan_cf'][0][1], r['pan_cf'][1][0], r['pan_cf'][1][1],
         r['tilt_cf'][0][0], r['tilt_cf'][0][1], r['tilt_cf'][1][0], r['tilt_cf'][1][1]) for r in rows)
     E = html.escape
-    tbl = ''.join('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%.1f°</td><td>%+.0f…%+.0f°</td><td>%.1f…%.1f°</td><td>%d…%d<br><small>%d/%d…%d/%d</small></td><td>%d…%d<br><small>%d/%d…%d/%d</small></td></tr>' % (
+    tbl = ''.join('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%.1f°</td><td>%+.1f…%+.1f°</td><td>%.1f…%.1f°</td><td>%d…%d<br><small>%d/%d…%d/%d</small></td><td>%d…%d<br><small>%d/%d…%d/%d</small></td></tr>' % (
         E(r['id']), r['fixture'], E(r['address']), E(r['line'] or ''), E(r['where']), r['base_front_az'], r['pan_deg'][0], r['pan_deg'][1], r['tilt_deg'][0], r['tilt_deg'][1],
         r['pan16'][0], r['pan16'][1], r['pan_cf'][0][0], r['pan_cf'][0][1], r['pan_cf'][1][0], r['pan_cf'][1][1], r['tilt16'][0], r['tilt16'][1],
         r['tilt_cf'][0][0], r['tilt_cf'][0][1], r['tilt_cf'][1][0], r['tilt_cf'][1][1]) for r in rows)

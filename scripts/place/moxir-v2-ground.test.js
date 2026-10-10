@@ -598,6 +598,9 @@ describe('MOXIR v2 ground, round 2: the acceptance tests (the lead\'s brief, 202
             expect(row, f.id).toBeTruthy()
             expect(row).toContain(`U${f.dmx.universe}.${String(f.dmx.address).padStart(3, '0')}`)
             expect(row).toContain(`${lim.dmx16.pan[0]}..${lim.dmx16.pan[1]}`)
+            // the pan window in degrees exactly as limited (never rounded outward: a -9.5 deg cap must not read -10)
+            const sg = (v) => `${v >= 0 ? '+' : '-'}${Math.abs(v).toFixed(1)}`
+            expect(row, f.id).toContain(`| ${sg(lim.pan_deg_from_home[0])}..${sg(lim.pan_deg_from_home[1])} |`)
             expect(row).toContain(`${lim.dmx16.tilt[0]}..${lim.dmx16.tilt[1]}`)
         }
         expect(N.owed.join(' ')).toMatch(/OWED code/)
