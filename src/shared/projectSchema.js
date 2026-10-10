@@ -925,6 +925,22 @@ export const normalizeRigLooks = (value) => {
   return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
 }
 
+// Fields this build does not know ride through normalisation untouched.
+//
+// A document or an object written by another build — a newer one, before a
+// `di update --rollback`; an older follower reading a newer host — can hold a
+// top-level section or an object field this build has never heard of. Dropping
+// it here meant the next save on this build deleted it for everyone (audit
+// 2026-10-09, F3). Only the keys this build rebuilds are normalised; the rest
+// is carried as it came. Mirror of shared/projectSchema.cjs.
+const passUnknownFields = (source, knownKeys) => Object.fromEntries(
+    Object.entries(source && typeof source === 'object' && !Array.isArray(source) ? source : {})
+        .filter(([key, value]) => !knownKeys.has(key) && key !== '__proto__' && value !== undefined)
+        .map(([key, value]) => [key, cloneValue(value)])
+)
+
+const ENTITY_KEYS = new Set(['id', 'type', 'name', 'parentId', 'createdBy', 'components'])
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -1139,7 +1155,8 @@ export const normalizeEntity = (entity = {}) => {
         name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
         parentId: ensureString(entity.parentId, '') || null,
         createdBy: normalizeAuthor(entity.createdBy),
-        components: nextComponents
+        components: nextComponents,
+        ...passUnknownFields(entity, ENTITY_KEYS)
     }
 }
 
@@ -1959,6 +1976,8 @@ const normalizeEdgesList = (list = [], typeIdByNodeId = new Map()) => {
     return out
 }
 
+const PROJECT_DOCUMENT_KEYS = new Set(Object.keys(defaultProjectDocument))
+
 export const normalizeProjectDocument = (document = {}) => {
     const source = document && typeof document === 'object' ? document : {}
     const worldState = normalizeWorldState(source.worldState)
@@ -1988,7 +2007,8 @@ export const normalizeProjectDocument = (document = {}) => {
         performState: normalizePerformState(source.performState),
         mappingState: normalizeMappingState(source.mappingState),
         windowLayout: normalizeWindowLayout(source.windowLayout),
-        assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
+        assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : [],
+        ...passUnknownFields(source, PROJECT_DOCUMENT_KEYS)
     }
 }
 

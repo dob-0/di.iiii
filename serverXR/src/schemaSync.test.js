@@ -1066,3 +1066,43 @@ describe('the ai camera effect on the CJS twin — the server keeps what the des
     expect(read.mappingState.surfaces[0].effect.strength).toBe(1)
   })
 })
+
+describe('fields this build does not know ride through the CJS twin (audit 2026-10-09 F3)', () => {
+  // A newer build's section or object field must survive every save here,
+  // or a rollback (or an older follower) deletes it for everyone. The ESM
+  // twin has the same case in src/shared/projectSchema.test.js.
+  const newer = () => ({
+    timelineState: { cues: [{ id: 'c1', at: 3 }] },
+    entities: [{ id: 'e1', type: 'box', futureField: { keep: 'me' }, components: { futureComponent: { a: 1 } } }]
+  })
+
+  it('keeps an unknown top-level section and an unknown object field through normalize', () => {
+    const read = normalizeProjectDocument(newer())
+    expect(read.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+    expect(read.entities[0].futureField).toEqual({ keep: 'me' })
+    expect(read.entities[0].components.futureComponent).toEqual({ a: 1 })
+  })
+
+  it('keeps them through an edit to the same object and a whole-document replace', () => {
+    const edited = applyProjectOps(normalizeProjectDocument(newer()), [
+      { type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }
+    ])
+    expect(edited.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+    expect(edited.entities[0]).toMatchObject({ name: 'Renamed', futureField: { keep: 'me' } })
+    const replaced = applyProjectOps(normalizeProjectDocument({}), [{ type: 'replaceDocument', payload: { document: newer() } }])
+    expect(replaced.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+  })
+
+  it('never lets a known key be overridden or the prototype be set by the carried fields', () => {
+    const read = normalizeProjectDocument(JSON.parse('{"version":99,"__proto__":{"polluted":true},"entities":[{"id":"e1","type":"nope"}]}'))
+    expect(read.version).toBe(PROJECT_DOCUMENT_VERSION)
+    expect(read.entities[0].type).toBe('box')
+    expect(({}).polluted).toBeUndefined()
+    expect(Object.getPrototypeOf(read)).toBe(Object.prototype)
+  })
+
+  it('is idempotent with carried fields', () => {
+    const once = normalizeProjectDocument(newer())
+    expect(normalizeProjectDocument(JSON.parse(JSON.stringify(once)))).toEqual(once)
+  })
+})

@@ -1208,6 +1208,13 @@ describe('server write contracts', () => {
             body: JSON.stringify({ objects: [{ id: 'kept-cube' }], assets: [] })
         })
         expect(write.status).toBe(200)
+        // …and a project in it.
+        const made = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ title: 'Kept Project', slug: 'kept-project' })
+        })
+        expect(made.status).toBe(201)
 
         // …then signs in. Token session mint is the same upgrade moment as an
         // OAuth callback: the old guest cookie still rides on the request.
@@ -1229,6 +1236,10 @@ describe('server write contracts', () => {
         expect(meta.space).toMatchObject({ kind: 'sandbox', label: 'Sandbox', permanent: true })
         const gone = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}`, { headers: withAuth(server.apiToken) })
         expect(gone.status).toBe(404)
+        // The moved project's document on disk names its new home: reading it
+        // never writes, so the promote rewrites it itself, under the write lock.
+        const keptDocument = JSON.parse(fs.readFileSync(path.join(server.dataRoot, 'spaces', session.sandboxSpaceId, 'projects', 'kept-project', 'document.json'), 'utf8'))
+        expect(keptDocument.projectMeta.spaceId).toBe(session.sandboxSpaceId)
 
         // A second guest signing in to the SAME identity never clobbers the
         // account sandbox that now has real work in it.

@@ -650,9 +650,8 @@ function createSpaceStore({
     return manifests
   }
 
-  // Read the documents RAW, never through readProjectDocument: that one
-  // normalizes and writes the normalized form back, and a backup path must
-  // not write to the thing it is backing up.
+  // Read the documents RAW, not through readProjectDocument: a backup keeps
+  // the file exactly as it is on disk, not this build's normalised view of it.
   const readSpaceProjectDocuments = async (spaceId) => {
     const entries = []
     for (const meta of await listProjectsInSpace(spacesDir, spaceId)) {

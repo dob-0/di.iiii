@@ -44,6 +44,7 @@ const {
 const { config, buildCorsOriginHandler } = require('./config')
 const { createDiskWriteGuard } = require('./diskGuard')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
+const { withProjectWriteLock } = require('./projectWrite')
 const { initializeSocket } = require('./socketHandlers')
 const { initializeMesh } = require('./meshHub')
 const { attachLiveAiRelay } = require('./liveAi/relay')
@@ -1082,13 +1083,17 @@ const promoteGuestSandbox = async (priorState, userId) => {
     await moveSpace(fromId, toId, { label: 'Sandbox', permanent: true })
     // Project documents carry their spaceId in projectMeta — repoint them so
     // clients loading the moved projects see a consistent home.
+    // A read answers with the right spaceId already (it is filled in from the
+    // database) but never writes, so the file on disk is checked as it is and
+    // rewritten under the project's write lock, like any save.
     for (const project of fromProjects) {
       try {
-        const doc = await readProjectDocument(SPACES_DIR, toId, project.id)
-        if (doc?.projectMeta?.spaceId && doc.projectMeta.spaceId !== toId) {
-          await writeProjectDocument(SPACES_DIR, toId, project.id, {
-            ...doc,
-            projectMeta: { ...doc.projectMeta, spaceId: toId }
+        const { documentPath } = getProjectPaths(SPACES_DIR, toId, project.id)
+        const onDisk = await readJson(documentPath, null)
+        if (onDisk?.projectMeta?.spaceId && onDisk.projectMeta.spaceId !== toId) {
+          await withProjectWriteLock({ spacesDir: SPACES_DIR, spaceId: toId, projectId: project.id, log: logger }, async () => {
+            const doc = await readProjectDocument(SPACES_DIR, toId, project.id)
+            await writeProjectDocument(SPACES_DIR, toId, project.id, doc)
           })
         }
       } catch { /* best-effort — a stale embedded spaceId is cosmetic */ }

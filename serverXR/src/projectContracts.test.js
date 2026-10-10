@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -654,7 +654,7 @@ describe('project contracts', () => {
         expect(payload.error).not.toContain(server.dataRoot)
     })
 
-    it('repairs non-main project documents whose embedded space drifts back to main', async () => {
+    it('repairs non-main project documents whose embedded space drifts back to main (answer at once, disk on the next save)', async () => {
         const server = await startServer()
 
         const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
@@ -692,8 +692,56 @@ describe('project contracts', () => {
         expect(payload.document.projectMeta.id).toBe('gallery-project')
         expect(payload.document.projectMeta.spaceId).toBe('gallery')
 
+        // The GET answers with the repair but writes nothing (a read that wrote
+        // back raced saves -- audit 2026-10-09 F3); the next save, under the
+        // project's write lock, puts the repair on disk.
+        expect(JSON.parse(await readFile(documentPath, 'utf8')).projectMeta.spaceId).toBe('main')
+        const saveResponse = await fetch(`${server.baseUrl}/api/projects/gallery-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'e1', type: 'box' } } }] })
+        })
+        expect(saveResponse.status).toBe(200)
+
         const repaired = JSON.parse(await readFile(documentPath, 'utf8'))
         expect(repaired.projectMeta.spaceId).toBe('gallery')
+    })
+
+    // Audit 2026-10-09 F3, through the wire: GET /document is a read. It leaves
+    // document.json byte-for-byte, and a section this build does not know
+    // survives the GET and the next save (serverXR/src/projectRead.test.js
+    // holds the store half, with the read-vs-save race).
+    it('GET /document writes nothing, and a field this build does not know survives the next save', async () => {
+        const server = await startServer()
+        expect((await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Newer Data', slug: 'newer-data' })
+        })).status).toBe(201)
+        const documentPath = path.join(server.dataRoot, 'spaces', 'main', 'projects', 'newer-data', 'document.json')
+        const onDisk = JSON.parse(await readFile(documentPath, 'utf8'))
+        onDisk.timelineState = { cues: [{ id: 'cue-1', at: 12.5 }] }
+        onDisk.entities.push({ id: 'from-newer', type: 'box', futureField: { keep: true } })
+        delete onDisk.showState
+        await writeFile(documentPath, JSON.stringify(onDisk))
+        const bytesBefore = await readFile(documentPath)
+        const mtimeBefore = (await stat(documentPath)).mtimeMs
+
+        const read = await (await fetch(`${server.baseUrl}/api/projects/newer-data/document`)).json()
+        expect(read.document.timelineState).toEqual({ cues: [{ id: 'cue-1', at: 12.5 }] })
+        expect((await readFile(documentPath)).equals(bytesBefore)).toBe(true)
+        expect((await stat(documentPath)).mtimeMs).toBe(mtimeBefore)
+
+        const saved = await fetch(`${server.baseUrl}/api/projects/newer-data/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'added', type: 'sphere' } } }] })
+        })
+        expect(saved.status).toBe(200)
+        const after = JSON.parse(await readFile(documentPath, 'utf8'))
+        expect(after.timelineState).toEqual({ cues: [{ id: 'cue-1', at: 12.5 }] })
+        expect(after.entities.find(e => e.id === 'from-newer').futureField).toEqual({ keep: true })
+        expect(after.entities.some(e => e.id === 'added')).toBe(true)
     })
 
     // Regression test for audit finding #16: a client retry (e.g. the
