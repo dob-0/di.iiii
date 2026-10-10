@@ -2124,6 +2124,35 @@ the press PARs (#401–403) are on no look position, so every look leaves them d
 not the patch); the node and cable lengths from the rental house (it lists splitters, no node);
 the electrician's distribution; GDTF Share with the owner's login.
 
+### 19.5 MOXIR v2 — two universes, the cubes on the LAN (2026-10-09)
+
+Owner, 2026-10-09 20:32 (ledger N460.2, N462): *"laser cubes will work with the lan and no dmx, so 2 lasers of the poli and beams one univers, and the wash other ones right also smoke goes with the beams"*. The plan is `scripts/place/rigs/moxir-v2-patch-2026-10-09.json`, the format of §19.1, applied with `patch-plan.mjs --keep-circuits` (the v2 rig carries its own power plan).
+
+| port | universe | Art-Net | run | blocks (fixture # · first address) | used / free |
+|---|---|---|---|---|---|
+| A | U1 | 0.0.0 | one DMX line, 21 devices | 18 × UP-B380F 16ch #101–118 @001 · 2 × UP-LA40WF 32ch #131–132 @401 · 1 × UP-YZ31P 1ch #141 @501 | 353 / 159 |
+| B | U2 | 0.0.1 | at least two DMX lines (50 devices > 32) | 10 × UP-PL5403 8ch, the cut, #201–210 @001 · 40 × UP-PL5403 8ch, the planes, #221–260 @101 | 400 / 112 |
+| — | — | — | the show network | 6 × LaserCube Ultra MK2: the cube's UDP protocol on 45456 / 45457 / 45458, through di Nodes. **No DMX, no Art-Net, no address.** | — |
+
+Rules, and why: blocks start on 001, 401, 501 (U1) and 001, 101 (U2), so a fixture sits whole inside one universe and each block is
+followed by room for more of its own kind (beams 7, lasers 1, cut 2, planes 11); the lasers start 112 channels after the last beam, so
+a beam set wrong by up to seven units lands on free slots, never on a laser's channels. 50 washes cannot share one DMX line
+(ANSI E1.11: 32 devices), so U2 leaves its node on two lines or more; which unit sits on which line is the cabling plan, not the
+patch. The Minimal plan's half-spare rule (256) cannot hold with the owner's split, so `minSpare` is 100.
+
+Four additions to the planner, each with a test in `src/rigbuild/patchPlan.test.js`, none changing a plan that does not use them:
+
+- `order: "id-asc" | "id-desc"` walks a block by unit id (numbers inside ids count as numbers: `rig-par-2` before `rig-par-10`), so an address belongs to its unit and survives a change of its place (a new ground layout moves units, not their ids). The two Poligraf lasers are addressed this way, by the ids the entry-laser rig gives them (`rig-la40wf-entry-01` → U1.401, `rig-la40wf-entry-02` → U1.433, #873: the truss tower at z 48, house left); the beams by type, the PARs by the id groups `rig-par-cut` and `rig-par-planes`.
+- `units: N` on a block: the number of lamps it expects. A project with another count is an error before anything is written (a missing or extra unit is said once, not once per lamp).
+- A lamp the project keeps off DMX (`fixture.dmx === false`, as `epic-build.mjs` writes the cubes) takes no address and is no longer "in no block of the plan"; `planPatch` returns their ids as `offDmx`. A block that names such a lamp puts it on DMX and clears the flag in the same op (`dmx: null`; the schema keeps `dmx` only when false) with a warning saying so — this is how the smoke machine, written `dmx: false` by `epic-build.mjs`, goes onto U1.501 by the owner's decision.
+- `expectedRoom(plan)` makes one stand-in lamp per `units`, and the plan's `offDmx` devices, so the crew table and the checks work from the plan alone.
+
+Also fixed on the way: a lamp with no position name never converged (the planner wanted `position: ""`, the schema stores none), so a re-run wrote it again.
+
+Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 353 / 400, no LaserCube on any universe, the controls that make it fail on a wrong plan; `MOXIR_PATCH_FILE=` points it at any candidate). The crew's short table is `node scripts/rigbuild/patch-table.mjs --plan <plan> --out <dir> --pdf` (universe, start address, fixture, mode; Markdown, a page, CSV, a PDF through LibreOffice). The B380F's 16-channel map against the equivalent chart, and what is walked on the unit: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
+
+Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
+
 ## 20. The room as a camera sees it — beams in haze, exposure, the dark (2026-09-29)
 
 Owner: MOXIR "maximum close" to how the real night will look. Measured problem (dev visitor,
