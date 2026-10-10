@@ -457,7 +457,20 @@ describe('MOXIR v2 ground, round 2: the acceptance tests (the lead\'s brief, 202
     it('A1 PATCH: no patch of its own: every address is the official v2 patch\'s for the same unit id (patchPlan.js on the room\'s document), the cubes on the LAN', () => {
         const lasers = LASERS873.fixtures.filter((f) => f.type === 'up-la40wf').map((f) => ({ id: f.id, type: 'spotLight', name: f.id, components: { transform: { position: f.p, rotation: [0, 0, 0] }, fixture: { type: 'up-la40wf' } } }))
         const ents = v1Entities(N)
-        const r = planPatch({ entities: [...ents, ...lasers], library, plan: PATCH })
+        // the official plan's block counts are the show rig's (cut 11 / planes 39 after 9cfc8ee7); this layer lays the same plan
+        // with its own counts (planes-25 is still a PL5403 here), as moxir_v2_compose.py does for the composed rig, and says so
+        const counts = {
+            cut: N.fixtures.filter((f) => f.type === 'up-b380f' && /^rig-par-cut-\d+$/.test(f.id)).length,
+            planes: N.fixtures.filter((f) => f.type === 'up-pl5403' && /^rig-par-planes-\d+$/.test(f.id)).length,
+        }
+        expect(N.patch.counts).toEqual(counts)
+        expect(N.patch.layer_note).toMatch(/own counts/)
+        const plan = JSON.parse(JSON.stringify(PATCH))
+        for (const u of plan.universes) for (const b of u.blocks) {
+            if (b.select.group === 'rig-par-cut') b.units = counts.cut
+            else if (b.select.group === 'rig-par-planes') b.units = counts.planes
+        }
+        const r = planPatch({ entities: [...ents, ...lasers], library, plan })
         expect(r.errors).toEqual([])
         const want = Object.fromEntries(r.assignments.map((a) => [a.entityId, `U${a.universe}.${a.address}`]))
         for (const f of N.fixtures.filter((u) => ['up-b380f', 'up-pl5403', 'up-yz31p'].includes(u.type))) {
