@@ -2136,8 +2136,16 @@ def trunk_runs(RT, pairs, sites):
 RIG11 = 'scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json'
 GONE_PARTS = ('halo', 'stage columns', 'speaker face L', 'speaker face R', 'stage key', 'roof', 'embers', 'columns', 'runway',
               'plane 2 (the wings)', 'plane 3 (behind the stage)', 'plane 4 (the entry side)', 'DJ key (ground option)',
-              'stage front booth (ground)', 'stage front PA L (ground)', 'stage front PA R (ground)', 'hall steel', 'entry wall')
+              'stage front booth (ground)', 'stage front PA L (ground)', 'plane 2 (wings, facing the entry)', 'stage front PA R (ground)', 'hall steel', 'entry wall')
 FAN_PART = 'plane 1 (behind the DJ)'
+# M6 (2026-10-10): the entry view at the peak whited out 0.94 % (budget 0.65 %). Measured on the real GPU (scratchpad tune2, one
+# frame each): the three house-left wing heads aimed within 40 deg of the entry eye (planes-11 / -14 / -12, 37-39 deg; forward
+# scatter in the haze, HG g 0.74) held at 0 -> 0.22 %; the three next (-17 / -18 / -13) at 0 -> 0.71 %; all of plane 2 at 0.6 ->
+# 0.55 % but the near-the-entry eye's beam light (equal colours) would fall under x1.0 (those three give 0.49 of its 1.056).
+# So a wing head whose aim comes within WING_ENTRY_DEG of the entry eye is its own part, ember at the peak (A3: a colour change
+# with its reason): the equal-colour light (A5) is unchanged, the white (all channels >= 240) is what goes.
+WING_ENTRY_PART = 'plane 2 (wings, facing the entry)'
+WING_ENTRY_DEG = 45.0
 KEY_PART = 'DJ key (ground option)'
 # R2.7: the stage front from the ground keeps only the two lamps that stand behind the PA boxes' front line (the gap between the
 # boxes, out of reach); the PA faces' two pit lamps are gone from the pit (an OWNER DECISION, checks.stage_front.pa_faces)
@@ -2152,6 +2160,7 @@ PA_FACE_OLD = {'PA L': {'p': [-10.25, 0.31, 7.0], 'aim': [-8.25, 1.0, 6.75]}, 'P
 PART_COLOUR_PEAK = {
     FAN_PART: (EMBER, 'B\'s fan as the owner saw and kept it: ember in the spread too'),
     'plane 2 (the wings)': (ASH, 'the spread\'s wing beams were ash (its one cut-through colour in the hall): kept ash'),
+    WING_ENTRY_PART: (EMBER, 'NEW part (2026-10-10, M6): the wing heads aimed within 45 deg of the entry eye; in ash they whited out the entry view at the peak (0.94 % of the frame, budget 0.65 %; 0.22 % with these three dark): ember, the hall\'s colour; the light at equal colours (A5) is unchanged'),
     'plane 3 (behind the stage)': (EMBER, 'ember in the spread: kept'),
     'plane 4 (the entry side)': (EMBER, 'NEW part (the spread had no beam at the entry end): ember, the hall\'s colour, so the ember split holds'),
     'columns': (EMBER, 'the spread\'s column washes were ember: kept'),
@@ -2166,7 +2175,7 @@ PART_COLOUR_PEAK = {
 LOOK_LEVELS = {
     # dark: one colour (ember), the spread's design faders for the beams; the PAR washes at 0.6 (2026-10-10 round 1 minor 1: at 0.5
     # the dark frames read half as bright as the spread's, and these lamps now stand at the hall's edges, farther from the eyes)
-    'dark': {FAN_PART: [EMBER, 0.8], 'plane 2 (the wings)': [EMBER, 0.64], 'plane 3 (behind the stage)': [EMBER, 0.35], 'plane 4 (the entry side)': [EMBER, 0.64],
+    'dark': {FAN_PART: [EMBER, 0.8], 'plane 2 (the wings)': [EMBER, 0.64], WING_ENTRY_PART: [EMBER, 0.64], 'plane 3 (behind the stage)': [EMBER, 0.35], 'plane 4 (the entry side)': [EMBER, 0.64],
              'columns': [EMBER, 0.6], 'hall steel': [EMBER, 0.6], 'entry wall': [EMBER, 0.6], 'embers': [EMBER, 0.6]},
     # peak (R2.8 / A4): every beam and PAR part at most PEAK_CAP (15 % left on the desk), the colours of PART_COLOUR_PEAK
     'peak': {p: [c, PEAK_CAP] for p, (c, _) in PART_COLOUR_PEAK.items() if p not in (KEY_PART, 'stage front booth (ground)')},
@@ -2554,6 +2563,10 @@ def build(repo, out):
             r_ = rot_for_dir(d)
             region, island = h['region'], None
             part = region_part(region)
+            if part == 'plane 2 (the wings)':
+                to_eye = np.asarray(EYES['near the entry'], float) - np.array([p_[0], p_[1] - 0.7 + HEAD_Y, p_[2]])
+                if math.degrees(math.acos(max(-1.0, min(1.0, float(d @ to_eye) / float(np.linalg.norm(to_eye) * np.linalg.norm(d)))))) < WING_ENTRY_DEG:
+                    part = WING_ENTRY_PART
         az, el = az_el(d)
         head = np.array([p_[0], p_[1] - 0.7 + HEAD_Y, p_[2]])
         beams.append({'id': fid, 'type': 'up-b380f', 'part': part, 'layer': 'beams', 'status': 'used', 'moments': [],

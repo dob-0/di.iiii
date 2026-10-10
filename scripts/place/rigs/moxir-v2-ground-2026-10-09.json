@@ -5290,7 +5290,7 @@
   {
    "id": "rig-beam-planes-11",
    "type": "up-b380f",
-   "part": "plane 2 (the wings)",
+   "part": "plane 2 (wings, facing the entry)",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -5305,7 +5305,7 @@
     0.0,
     0.764031
    ],
-   "colour": "#e8e4dc",
+   "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "throw_m": 21.352,
    "ends_on": "roof deck",
@@ -5550,7 +5550,7 @@
   {
    "id": "rig-beam-planes-14",
    "type": "up-b380f",
-   "part": "plane 2 (the wings)",
+   "part": "plane 2 (wings, facing the entry)",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -5565,7 +5565,7 @@
     0.0,
     0.586045
    ],
-   "colour": "#e8e4dc",
+   "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "throw_m": 20.642,
    "ends_on": "roof deck",
@@ -5680,7 +5680,7 @@
   {
    "id": "rig-beam-planes-12",
    "type": "up-b380f",
-   "part": "plane 2 (the wings)",
+   "part": "plane 2 (wings, facing the entry)",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -5695,7 +5695,7 @@
     0.0,
     0.393103
    ],
-   "colour": "#e8e4dc",
+   "colour": "#ff3a12",
    "angle_rad": 0.0157,
    "throw_m": 19.991,
    "ends_on": "roof deck",
@@ -6099,6 +6099,10 @@
      "#ff3a12",
      0.64
     ],
+    "plane 2 (wings, facing the entry)": [
+     "#ff3a12",
+     0.64
+    ],
     "plane 3 (behind the stage)": [
      "#ff3a12",
      0.35
@@ -6184,6 +6188,10 @@
     ],
     "plane 2 (the wings)": [
      "#e8e4dc",
+     0.85
+    ],
+    "plane 2 (wings, facing the entry)": [
+     "#ff3a12",
      0.85
     ],
     "plane 3 (behind the stage)": [
@@ -12990,7 +12998,17 @@
      "spread_level": 0.2,
      "changed": false,
      "why": "the spread's wing beams were ash (its one cut-through colour in the hall): kept ash",
-     "units": 9
+     "units": 6
+    },
+    {
+     "part": "plane 2 (wings, facing the entry)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "NEW part (2026-10-10, M6): the wing heads aimed within 45 deg of the entry eye; in ash they whited out the entry view at the peak (0.94 % of the frame, budget 0.65 %; 0.22 % with these three dark): ember, the hall's colour; the light at equal colours (A5) is unchanged",
+     "units": 3
     },
     {
      "part": "plane 3 (behind the stage)",
@@ -13023,7 +13041,7 @@
      "units": 1
     }
    ],
-   "ash_units_at_peak": 21,
+   "ash_units_at_peak": 18,
    "ash_parts": [
     "DJ key (ground option)",
     "cut down",
@@ -13051,6 +13069,16 @@
      "changed": true,
      "why": "replaces the spread's 3 ASH roof PARs and its ember halo / stage columns: the roof and the walls are the hall's steel, so ember (the spread's split: steel in ember, ash only on the cut and a named few)",
      "units": 29
+    },
+    {
+     "part": "plane 2 (wings, facing the entry)",
+     "peak_colour": "#ff3a12",
+     "peak_level": 0.85,
+     "spread_colour": null,
+     "spread_level": null,
+     "changed": true,
+     "why": "NEW part (2026-10-10, M6): the wing heads aimed within 45 deg of the entry eye; in ash they whited out the entry view at the peak (0.94 % of the frame, budget 0.65 %; 0.22 % with these three dark): ember, the hall's colour; the light at equal colours (A5) is unchanged",
+     "units": 3
     },
     {
      "part": "plane 4 (the entry side)",
@@ -13090,7 +13118,47 @@
   "level_tuning": {
    "budget_white_pct": 0.65,
    "method": "moxir-v2-true-frames.cjs, EV100 2.84, Full, haze t40, real GPU; frame_luma.py white-out",
-   "measured": []
+   "measured": [
+    {
+     "frame": "tune-b10-floor",
+     "set": {
+      "plane 2 (the wings)": 1.0,
+      "plane 3 (behind the stage)": 1.0,
+      "plane 4 (the entry side)": 1.0
+     },
+     "mean_Y": 0.0441,
+     "white_pct": 0.31
+    },
+    {
+     "frame": "tune-b10p10-floor",
+     "set": {
+      "plane 2 (the wings)": 1.0,
+      "plane 3 (behind the stage)": 1.0,
+      "plane 4 (the entry side)": 1.0,
+      "columns": 1.0,
+      "roof": 1.0,
+      "runway": 1.0
+     },
+     "mean_Y": 0.0473,
+     "white_pct": 0.32
+    },
+    {
+     "frame": "tune-base-floor",
+     "set": {},
+     "mean_Y": 0.0366,
+     "white_pct": 0.31
+    },
+    {
+     "frame": "tune-p10-floor",
+     "set": {
+      "columns": 1.0,
+      "roof": 1.0,
+      "runway": 1.0
+     },
+     "mean_Y": 0.0396,
+     "white_pct": 0.31
+    }
+   ]
   },
   "laser_cap": {
    "peak_fader": [
@@ -15152,117 +15220,117 @@
      "weight": 1.945,
      "beam_G": [
       0.02127,
-      0.02897
+      0.02277
      ],
      "par_lx": [
       0.328,
       0.106
      ],
-     "beam_ratio": 1.362,
+     "beam_ratio": 1.071,
      "par_ratio": 0.323
     },
     "wing L": {
      "weight": 0.963,
      "beam_G": [
       0.00871,
-      0.02162
+      0.01706
      ],
      "par_lx": [
       0.343,
       0.26
      ],
-     "beam_ratio": 2.482,
+     "beam_ratio": 1.959,
      "par_ratio": 0.758
     },
     "wing R": {
      "weight": 1.352,
      "beam_G": [
       0.00924,
-      0.0195
+      0.016
      ],
      "par_lx": [
       0.379,
       0.154
      ],
-     "beam_ratio": 2.11,
+     "beam_ratio": 1.732,
      "par_ratio": 0.406
     },
     "behind the stage": {
      "weight": 0.894,
      "beam_G": [
       0.00927,
-      0.01137
+      0.00986
      ],
      "par_lx": [
       0.275,
       0.076
      ],
-     "beam_ratio": 1.227,
+     "beam_ratio": 1.064,
      "par_ratio": 0.276
     },
     "mid-hall": {
      "weight": 0.867,
      "beam_G": [
       0.01742,
-      0.0293
+      0.02025
      ],
      "par_lx": [
       0.1,
       0.118
      ],
-     "beam_ratio": 1.682,
+     "beam_ratio": 1.162,
      "par_ratio": 1.18
     },
     "near the entry": {
      "weight": 0.698,
      "beam_G": [
       0.01621,
-      0.0285
+      0.016
      ],
      "par_lx": [
       0.021,
       0.03
      ],
-     "beam_ratio": 1.758,
+     "beam_ratio": 0.987,
      "par_ratio": 1.429
     },
     "FOH": {
      "weight": 1.068,
      "beam_G": [
       0.0208,
-      0.02934
+      0.02362
      ],
      "par_lx": [
       0.206,
       0.146
      ],
-     "beam_ratio": 1.411,
+     "beam_ratio": 1.136,
      "par_ratio": 0.709
     },
     "far corner L": {
      "weight": 0.599,
      "beam_G": [
       0.008,
-      0.01201
+      0.01062
      ],
      "par_lx": [
       0.049,
       0.165
      ],
-     "beam_ratio": 1.501,
+     "beam_ratio": 1.327,
      "par_ratio": 3.367
     },
     "far corner R": {
      "weight": 0.614,
      "beam_G": [
       0.0079,
-      0.01107
+      0.01009
      ],
      "par_lx": [
       0.202,
       0.113
      ],
-     "beam_ratio": 1.401,
+     "beam_ratio": 1.277,
      "par_ratio": 0.559
     }
    },
@@ -15280,13 +15348,13 @@
     ],
     "beam_G": [
      0.12881,
-     0.20432
+     0.15767
     ],
     "par_lx": [
      2.201,
      1.18
     ],
-    "beam_ratio": 1.586,
+    "beam_ratio": 1.224,
     "par_ratio": 0.536
    },
    "crowd_eyes": {
@@ -15300,13 +15368,13 @@
     ],
     "beam_G": [
      0.11088,
-     0.18016
+     0.1363
     ],
     "par_lx": [
      1.802,
      0.944
     ],
-    "beam_ratio": 1.625,
+    "beam_ratio": 1.229,
     "par_ratio": 0.524
    },
    "entry_eyes": {
@@ -15317,16 +15385,16 @@
     ],
     "beam_G": [
      0.04863,
-     0.07663
+     0.05395
     ],
     "par_lx": [
      0.321,
      0.279
     ],
-    "beam_ratio": 1.576,
+    "beam_ratio": 1.109,
     "par_ratio": 0.869
    },
-   "entry_min_beam_ratio": 1.411,
+   "entry_min_beam_ratio": 0.987,
    "entry_min_par_ratio": 0.709,
    "what": "[the spread, the ground] from the same nine eyes in the same hall (the fan's world: the crane park's air open); weights = the people each eye stands for (FIX 1); ratio = ground / spread"
   },
@@ -15659,7 +15727,185 @@
     }
    }
   },
-  "floor_glare_peak_measured": null,
+  "floor_glare_peak_measured": {
+   "round": "r2-2026-10-10",
+   "dj_white_pct": {
+    "peak": 0.14,
+    "dark": 0.02
+   },
+   "frame": "gr-t40-peak-floor",
+   "white_pct": 0.37,
+   "mean_Y": 0.036,
+   "budget_pct": 0.65,
+   "ok": true,
+   "laser_fader": 0.16,
+   "laser_lines_drawn_scene_intensity": [
+    114984,
+    320881
+   ],
+   "every_view_ok": true,
+   "views_held": [
+    "gr-t40-dark-behind",
+    "gr-t40-dark-entry",
+    "gr-t40-dark-floor",
+    "gr-t40-dark-wingL",
+    "gr-t40-dark-wingR",
+    "gr-t40-peak-behind",
+    "gr-t40-peak-entry",
+    "gr-t40-peak-floor",
+    "gr-t40-peak-wingL",
+    "gr-t40-peak-wingR"
+   ],
+   "views_over_budget": [],
+   "all_frames": {
+    "gr-t40-dark-behind": {
+     "mean_Y": 0.0158,
+     "white_pct": 0.13
+    },
+    "gr-t40-dark-dj": {
+     "mean_Y": 0.0077,
+     "white_pct": 0.02
+    },
+    "gr-t40-dark-entry": {
+     "mean_Y": 0.0166,
+     "white_pct": 0.03
+    },
+    "gr-t40-dark-floor": {
+     "mean_Y": 0.0181,
+     "white_pct": 0.18
+    },
+    "gr-t40-dark-wingL": {
+     "mean_Y": 0.0093,
+     "white_pct": 0.03
+    },
+    "gr-t40-dark-wingR": {
+     "mean_Y": 0.0098,
+     "white_pct": 0.02
+    },
+    "gr-t40-peak-behind": {
+     "mean_Y": 0.0291,
+     "white_pct": 0.22
+    },
+    "gr-t40-peak-dj": {
+     "mean_Y": 0.0166,
+     "white_pct": 0.14
+    },
+    "gr-t40-peak-entry": {
+     "mean_Y": 0.0373,
+     "white_pct": 0.22
+    },
+    "gr-t40-peak-floor": {
+     "mean_Y": 0.036,
+     "white_pct": 0.37
+    },
+    "gr-t40-peak-wingL": {
+     "mean_Y": 0.0186,
+     "white_pct": 0.08
+    },
+    "gr-t40-peak-wingR": {
+     "mean_Y": 0.0196,
+     "white_pct": 0.14
+    }
+   },
+   "spread_drawn_now": {
+    "sl-t40-dark-behind": {
+     "mean_Y": 0.0254,
+     "white_pct": 0.19
+    },
+    "sl-t40-dark-dj": {
+     "mean_Y": 0.091,
+     "white_pct": 0.04
+    },
+    "sl-t40-dark-entry": {
+     "mean_Y": 0.0199,
+     "white_pct": 0.1
+    },
+    "sl-t40-dark-floor": {
+     "mean_Y": 0.0336,
+     "white_pct": 0.18
+    },
+    "sl-t40-dark-wingL": {
+     "mean_Y": 0.0275,
+     "white_pct": 0.04
+    },
+    "sl-t40-dark-wingR": {
+     "mean_Y": 0.0207,
+     "white_pct": 0.02
+    },
+    "sl-t40-peak-behind": {
+     "mean_Y": 0.0367,
+     "white_pct": 0.37
+    },
+    "sl-t40-peak-dj": {
+     "mean_Y": 0.1674,
+     "white_pct": 0.97
+    },
+    "sl-t40-peak-entry": {
+     "mean_Y": 0.031,
+     "white_pct": 0.39
+    },
+    "sl-t40-peak-floor": {
+     "mean_Y": 0.0541,
+     "white_pct": 0.58
+    },
+    "sl-t40-peak-wingL": {
+     "mean_Y": 0.0416,
+     "white_pct": 0.2
+    },
+    "sl-t40-peak-wingR": {
+     "mean_Y": 0.0342,
+     "white_pct": 0.16
+    }
+   },
+   "level_tuning_frames": [
+    {
+     "frame": "tune-b10-floor",
+     "set": {
+      "plane 2 (the wings)": 1.0,
+      "plane 3 (behind the stage)": 1.0,
+      "plane 4 (the entry side)": 1.0
+     },
+     "mean_Y": 0.0441,
+     "white_pct": 0.31
+    },
+    {
+     "frame": "tune-b10p10-floor",
+     "set": {
+      "plane 2 (the wings)": 1.0,
+      "plane 3 (behind the stage)": 1.0,
+      "plane 4 (the entry side)": 1.0,
+      "columns": 1.0,
+      "roof": 1.0,
+      "runway": 1.0
+     },
+     "mean_Y": 0.0473,
+     "white_pct": 0.32
+    },
+    {
+     "frame": "tune-base-floor",
+     "set": {},
+     "mean_Y": 0.0366,
+     "white_pct": 0.31
+    },
+    {
+     "frame": "tune-p10-floor",
+     "set": {
+      "columns": 1.0,
+      "roof": 1.0,
+      "runway": 1.0
+     },
+     "mean_Y": 0.0396,
+     "white_pct": 0.31
+    }
+   ],
+   "drawn_by": {
+    "commit": "8c70dd8a",
+    "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 3080 Laptop GPU (0x0000",
+    "ev100": 2.84,
+    "at": "2026-10-10T14:30:46.986Z"
+   },
+   "method": "moxir-v2-true-frames.cjs, measurement mode EV100 2.84, Full quality, haze t40 (one machine, closed hall), the floor eye 1.7 m z 18.1; frame_luma.py: the share of pixels with every channel >= 240 (the toolbars cut off)"
+  },
   "near_crane_878": {
    "source": {
     "branch": "origin/feat/moxir-cranes-lasers-2026-10-09",
@@ -16609,117 +16855,117 @@
      "weight": 1.945,
      "beam_G": [
       0.02127,
-      0.02897
+      0.02277
      ],
      "par_lx": [
       0.328,
       0.106
      ],
-     "beam_ratio": 1.362,
+     "beam_ratio": 1.071,
      "par_ratio": 0.323
     },
     "wing L": {
      "weight": 0.963,
      "beam_G": [
       0.00871,
-      0.02162
+      0.01706
      ],
      "par_lx": [
       0.343,
       0.26
      ],
-     "beam_ratio": 2.482,
+     "beam_ratio": 1.959,
      "par_ratio": 0.758
     },
     "wing R": {
      "weight": 1.352,
      "beam_G": [
       0.00924,
-      0.0195
+      0.016
      ],
      "par_lx": [
       0.379,
       0.154
      ],
-     "beam_ratio": 2.11,
+     "beam_ratio": 1.732,
      "par_ratio": 0.406
     },
     "behind the stage": {
      "weight": 0.894,
      "beam_G": [
       0.00927,
-      0.01137
+      0.00986
      ],
      "par_lx": [
       0.275,
       0.076
      ],
-     "beam_ratio": 1.227,
+     "beam_ratio": 1.064,
      "par_ratio": 0.276
     },
     "mid-hall": {
      "weight": 0.867,
      "beam_G": [
       0.01742,
-      0.0293
+      0.02025
      ],
      "par_lx": [
       0.1,
       0.118
      ],
-     "beam_ratio": 1.682,
+     "beam_ratio": 1.162,
      "par_ratio": 1.18
     },
     "near the entry": {
      "weight": 0.698,
      "beam_G": [
       0.01621,
-      0.0285
+      0.016
      ],
      "par_lx": [
       0.021,
       0.03
      ],
-     "beam_ratio": 1.758,
+     "beam_ratio": 0.987,
      "par_ratio": 1.429
     },
     "FOH": {
      "weight": 1.068,
      "beam_G": [
       0.0208,
-      0.02934
+      0.02362
      ],
      "par_lx": [
       0.206,
       0.146
      ],
-     "beam_ratio": 1.411,
+     "beam_ratio": 1.136,
      "par_ratio": 0.709
     },
     "far corner L": {
      "weight": 0.599,
      "beam_G": [
       0.008,
-      0.01201
+      0.01062
      ],
      "par_lx": [
       0.049,
       0.165
      ],
-     "beam_ratio": 1.501,
+     "beam_ratio": 1.327,
      "par_ratio": 3.367
     },
     "far corner R": {
      "weight": 0.614,
      "beam_G": [
       0.0079,
-      0.01107
+      0.01009
      ],
      "par_lx": [
       0.202,
       0.113
      ],
-     "beam_ratio": 1.401,
+     "beam_ratio": 1.277,
      "par_ratio": 0.559
     }
    },
@@ -16737,13 +16983,13 @@
     ],
     "beam_G": [
      0.12881,
-     0.20432
+     0.15767
     ],
     "par_lx": [
      2.201,
      1.18
     ],
-    "beam_ratio": 1.586,
+    "beam_ratio": 1.224,
     "par_ratio": 0.536
    },
    "crowd_eyes": {
@@ -16757,13 +17003,13 @@
     ],
     "beam_G": [
      0.11088,
-     0.18016
+     0.1363
     ],
     "par_lx": [
      1.802,
      0.944
     ],
-    "beam_ratio": 1.625,
+    "beam_ratio": 1.229,
     "par_ratio": 0.524
    },
    "entry_eyes": {
@@ -16774,16 +17020,16 @@
     ],
     "beam_G": [
      0.04863,
-     0.07663
+     0.05395
     ],
     "par_lx": [
      0.321,
      0.279
     ],
-    "beam_ratio": 1.576,
+    "beam_ratio": 1.109,
     "par_ratio": 0.869
    },
-   "entry_min_beam_ratio": 1.411,
+   "entry_min_beam_ratio": 0.987,
    "entry_min_par_ratio": 0.709,
    "what": "[the spread, the ground] from the same nine eyes in the same hall (the fan's world: the crane park's air open); weights = the people each eye stands for (FIX 1); ratio = ground / spread"
   },
@@ -18386,7 +18632,7 @@
    },
    {
     "id": "rig-beam-planes-11",
-    "part": "plane 2 (the wings)",
+    "part": "plane 2 (wings, facing the entry)",
     "island": null,
     "region": "house left",
     "throw_m": 21.351,
@@ -18514,7 +18760,7 @@
    },
    {
     "id": "rig-beam-planes-14",
-    "part": "plane 2 (the wings)",
+    "part": "plane 2 (wings, facing the entry)",
     "island": null,
     "region": "house left",
     "throw_m": 20.624,
@@ -18579,7 +18825,7 @@
    },
    {
     "id": "rig-beam-planes-12",
-    "part": "plane 2 (the wings)",
+    "part": "plane 2 (wings, facing the entry)",
     "island": null,
     "region": "house left",
     "throw_m": 19.981,
