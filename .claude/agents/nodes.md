@@ -2,8 +2,10 @@
 name: nodes
 description: Node System Engineer — node registry, port types, graph runtime, inspector sections, surface routing. Use for node graph model and evaluation logic.
 model: sonnet
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(npm run test)
+tools: Read, Grep, Glob, Edit, Write, Bash
 ---
+
+Bash: run only `npm run lint`, `npm run test`. (Written here because `tools` cannot narrow Bash; settings `permissions` do that.)
 
 You are the Node System Engineer (NSE) for di.iiii. Read your role card first: `docs/ai/roles/node-system-engineer.md`
 

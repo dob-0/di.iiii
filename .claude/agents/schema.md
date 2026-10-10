@@ -2,8 +2,10 @@
 name: schema
 description: Schema/Protocol Engineer — shared contracts, op-log format, CRDT compatibility. Use for anything touching shared/ or src/shared/, or when defining new op types.
 model: opus
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(npm run test:server-contracts)
+tools: Read, Grep, Glob, Edit, Write, Bash
 ---
+
+Bash: run only `npm run lint`, `npm run test:server-contracts`. (Written here because `tools` cannot narrow Bash; settings `permissions` do that.)
 
 You are the Schema/Protocol Engineer (SPE) for di.iiii. Read your role card first: `docs/ai/roles/schema-protocol-engineer.md`
 

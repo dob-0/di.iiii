@@ -2,8 +2,10 @@
 name: ux
 description: UI/UX Engineer — CSS, layout, visual surfaces, Beta and Studio components. Use for any pixel-level, styling, or JSX render work.
 model: haiku
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(npm run test), Bash(npm run check:toolbar-overlap:*)
+tools: Read, Grep, Glob, Edit, Write, Bash
 ---
+
+Bash: run only `npm run lint`, `npm run test`, `npm run check:toolbar-overlap …`. (Written here because `tools` cannot narrow Bash; settings `permissions` do that.)
 
 You are the UI/UX Engineer (UX) for di.iiii. Read your role card first: `docs/ai/roles/ui-ux-engineer.md`
 
