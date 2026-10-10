@@ -17,8 +17,15 @@ describe('rigChromeTops', () => {
     // 390x844: the row ran under Walk / Fly and only "ly" showed.
     it('gives the row its own line under Walk / Fly on a portrait phone', () => {
         const { rowTop, chipTop } = rigChromeTops(top, { rowShown: true, compact: true, rightControls: true })
-        expect(rowTop).toBe(`calc(${top} + ${CONTROL_LINE})`)
+        expect(rowTop).toBe(`calc(${top} + 1 * ${CONTROL_LINE})`)
         expect(chipTop).toBe(`calc(${rowTop} + ${CONTROL_LINE})`)
+    })
+
+    // MOXIR v1.1 at 390x844: Walk / Fly + Inside + Lite are three lines; the show chip sat on Lite.
+    it('puts the show chip under the whole right-hand stack on a portrait phone', () => {
+        expect(rigChromeTops(top, { rowShown: false, compact: true, rightLines: 3 }).chipTop).toBe(`calc(${top} + 3 * ${CONTROL_LINE})`)
+        expect(rigChromeTops(top, { rowShown: true, compact: true, rightLines: 3 }).rowTop).toBe(`calc(${top} + 3 * ${CONTROL_LINE})`)
+        expect(rigChromeTops(top, { rowShown: false, compact: false, rightLines: 3 }).chipTop).toBe(top)
     })
 
     it('keeps the top line on a phone when nothing sits on the right', () => {
