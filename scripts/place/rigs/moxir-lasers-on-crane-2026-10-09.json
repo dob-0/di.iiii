@@ -718,6 +718,14 @@
  },
  "forty_watt_route_r3": {
   "used": false,
+  "owner_decision": "The route (FOH riser +2.0 m house right) is one of the owner's decisions; it is not taken until he says so.",
+  "precondition": {
+   "text": "The 40 W body tube may follow the fan ONLY when a physical limit enforces that fan: an aperture mask on each 40 W output cut to 0.4 deg, with the masked fan measured at the bench test (O2). A software zone alone never counts (IEC TR 60825-3 guidance; ILDA practice relies on masking and scan-fail safety, not show files). H8 stays; the 40 W stay at 0 on the desk.",
+   "physical_limit": "aperture mask on each 40 W output, cut to 0.4 deg",
+   "measured_at": "bench test O2 (site sheet): masked fan <= 0.4 deg",
+   "software_zone_counts": false,
+   "met": false
+  },
   "route": "a + b: the FOH riser 2.0 m house right AND the 40 W rule fan 0.8 -> 0.4 deg (zone 0 = a static beam, mount tolerance 0.5 -> 0.4)",
   "foh_dx_m": 2.0,
   "foh_riser_x_m": [

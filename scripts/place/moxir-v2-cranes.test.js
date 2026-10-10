@@ -334,6 +334,13 @@ describe('MOXIR v2 cranes: the 40 W route kept for later (round 3, NOT live)', (
         expect(Math.min(...gaps)).toBeGreaterThanOrEqual(0)
         expect(Math.abs(Math.min(...gaps) - R.near_girder_margin_m)).toBeLessThan(0.01)
     })
+    it('carries its precondition: a physical aperture mask at 0.4 deg, measured at O2; a software zone never counts; not met', () => {
+        expect(R.precondition.physical_limit).toMatch(/aperture mask/)
+        expect(R.precondition.measured_at).toMatch(/O2/)
+        expect(R.precondition.software_zone_counts).toBe(false)
+        expect(R.precondition.met).toBe(false)
+        expect(R.owner_decision).toMatch(/owner/)
+    })
     it('the moved FOH riser stays on the floor, left of the roller conveyor (x 3.6)', () => {
         expect(R.foh_riser_x_m[1]).toBeLessThanOrEqual(3.6)
         expect(R.worst_m).toBeGreaterThanOrEqual(0)

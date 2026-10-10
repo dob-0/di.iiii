@@ -37,7 +37,7 @@ PTS = {
     'H4': (-6.0, -30.0, 'lamps'), 'H5': (4.0, -48.0, 'roof bar'), 'H6': (-6.7, -ZW, '40 W ends'),
     'H7': (1.0, -22.0, 'floor things'), 'H8': (6.0, crane_near, 'near crane underside'),
     'H9': (-11.25, 4.1, 'bay'), 'C1': (-1.0, -10.2, 'cubes aim'), 'O1': (-7.7, 45.0, 'masks'),
-    'O4': (FOHX + 2.0, FOHZ, 'FOH riser'), 'O5': (-9.0, -12.0, 'lamps+crane'), 'O6': (-4.0, 18.0, 'crowd limits'),
+    'O4': (FOHX + 2.0, FOHZ, 'FOH riser'), 'O9': (FOHX + 2.0, FOHZ + 4.0, 'riser edge'), 'O10': (-7.7, 41.0, 'aperture'), 'O5': (-9.0, -12.0, 'lamps+crane'), 'O6': (-4.0, 18.0, 'crowd limits'),
     'O8': (-10.25, 48.3, 'tower'),
 }
 

@@ -8,6 +8,7 @@
 #
 #   python3 -B scripts/place/moxir_v2_forty_routes.py --repo . bound            # the analytic bound, itemized (the 5.86 etc.)
 #   python3 -B scripts/place/moxir_v2_forty_routes.py --repo . run a2.5,b0.15  # searches; JSON on stdout, progress on stderr
+#   python3 -B scripts/place/moxir_v2_forty_routes.py --repo . sweep           # round 4: the stored route's worst margin when the two ASSUMED values differ (riser, aperture), stored aim, 2 cm steps
 #   python3 -B scripts/place/moxir_v2_forty_routes.py --repo . diag <variant> <y> <xa> <ya> <xb> <yb>   # the 12 worst rows of one layout
 #
 # METHOD, unchanged from round 2 (moxir_v2_forty_reaim.py): #873's search (two units 0.7 m apart on one T-bar, one height, both far-wall
@@ -25,7 +26,7 @@ sys.path.insert(0, HERE)
 sys.dont_write_bytecode = True
 ap = argparse.ArgumentParser()
 ap.add_argument('--repo', default='.')
-ap.add_argument('cmd', choices=['bound', 'run', 'diag', 'sight'])
+ap.add_argument('cmd', choices=['bound', 'run', 'diag', 'sight', 'sweep'])
 ap.add_argument('rest', nargs='*')
 A = ap.parse_args()
 sys.argv = [sys.argv[0], '--repo', A.repo]
@@ -212,9 +213,61 @@ def sight(dxs):
     return out
 
 
+def sweep():
+    """The stored route (FOH +2.0, fan 0.4, body tube held 1.008, the json's apertures and ends) with the two ASSUMED values varied one at a time:
+    the FOH riser height (stage json foh.riser_m 0.6) and the 40 W aperture (E.APERTURE_TUBE 0.010). The aim is NOT re-searched: the sheet asks
+    what the stored lines do if the measured value differs. Zero crossings are found by bisection."""
+    r3 = json.load(open(os.path.join(REPO, 'scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json')))['forty_watt_route_r3']
+    SC, extra, fan, fanb, x0 = world([('a', r3['foh_dx_m']), ('B', r3['fan_deg'])])
+    fi = foh_index()
+    v = [r3['apertures_m'][0][1], r3['ends_m'][0][0], r3['ends_m'][0][1], r3['ends_m'][1][0], r3['ends_m'][1][1]]
+    STEP[0] = 0.02
+
+    def worst(riser, ap):
+        E.APERTURE_TUBE, FR.OPT = ap, (ap, E.PHI)
+        for S in SC:
+            S.parr[fi, 4] = riser
+        E.PLACE_ARR[fi, 4] = riser
+        w, keys, ra, rb = worst2(SC, extra, fan, fanb, x0, v)
+        both = {k: min(ra.get(k, 99), rb.get(k, 99)) for k in set(ra) | set(rb)}
+        return w, min(both, key=both.get)
+
+    def root(f, lo, hi):                                   # f(lo) and f(hi) of opposite sign (>= 0 on one side)
+        pos_lo = f(lo) >= 0
+        for _ in range(30):
+            mid = (lo + hi) / 2
+            if (f(mid) >= 0) == pos_lo:
+                lo = mid
+            else:
+                hi = mid
+        return round((lo + hi) / 2, 4)
+    ap0, r0 = 0.010, float(SC[0].parr[fi, 4])
+    out = {'stored': [round(worst(r0, ap0)[0], 4), worst(r0, ap0)[1]]}
+    out['riser_m'] = {str(r): [round(worst(r, ap0)[0], 4), worst(r, ap0)[1][:40]] for r in (0.6, 0.62, 0.64, 0.66, 0.7)}
+    out['aperture_m'] = {str(a): [round(worst(r0, a)[0], 4), worst(r0, a)[1][:40]] for a in (0.010, 0.02, 0.04, 0.06)}
+    out['aperture_pass_m (margin 0)'] = root(lambda a: worst(r0, a)[0], 0.010, 0.3)
+    # at the stored route the FOH row is the LATERAL one (2.5 m beside): it does not move with the riser's height (h >= 0.3), only with its x
+    out['riser_height_note'] = 'FOH row is lateral at dx 2.0: same margin for any riser height >= 0.3 m (height 0 would pass the vertical rule instead)'
+
+    def worst_dx(dx):
+        SC2, extra2, fan2, fanb2, x02 = world([('a', dx), ('B', r3['fan_deg'])])
+        E.APERTURE_TUBE, FR.OPT = ap0, (ap0, E.PHI)
+        w, keys, ra, rb = worst2(SC2, extra2, fan2, fanb2, x02, v)
+        both = {k: min(ra.get(k, 99), rb.get(k, 99)) for k in set(ra) | set(rb)}
+        return w, min(both, key=both.get)
+    out['riser_dx_m'] = {str(d): [round(worst_dx(d)[0], 4), worst_dx(d)[1][:40]] for d in (2.0, 1.95, 1.9, 1.8)}
+    dxr = root(lambda d: worst_dx(d)[0], 1.5, 2.0)
+    out['riser_dx_pass_m (margin 0, stored aim)'] = dxr
+    out['riser_left_edge_x_pass_m'] = round(-4.7 - (2.0 - dxr), 4) if False else round(r3['foh_riser_x_m'][0] - (r3['foh_dx_m'] - dxr), 4)
+    print(json.dumps(out, indent=1))
+
+
 def main():
     if A.cmd == 'sight':
         print(json.dumps(sight([float(q) for q in A.rest] or [0.0]), indent=1, default=str))
+        return
+    if A.cmd == 'sweep':
+        sweep()
         return
     if A.cmd == 'bound':
         print(json.dumps(bound(), indent=1))
