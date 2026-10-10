@@ -1078,14 +1078,14 @@
   {
    "id": "rig-par-cut-08",
    "type": "up-pl5403",
-   "position": "the cut, u +2.5 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)",
+   "position": "the cut, u +2.0 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m); moved one clamp point toward house left (was u +2.5): laser 4a's tube was 0.11 m away (rule >= 0.25 m, the laser session 48bf1d)",
    "part": "cut up",
    "layer": "the cut",
    "status": "used",
    "moments": [],
    "p": [
-    -2.588,
-    5.547,
+    -3.071,
+    5.418,
     0.15
    ],
    "r": [
@@ -1105,7 +1105,15 @@
     "node": "NODE-STAGE"
    },
    "power_w": 200,
-   "circuit": "C10"
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -2.588,
+     5.547,
+     0.15
+    ],
+    "part": "cut up"
+   }
   },
   {
    "id": "rig-par-cut-09",
@@ -3867,6 +3875,42 @@
      "#ff3a12",
      1.0
     ]
+   },
+   "desk_caps": {
+    "laser": {
+     "fader": 1.0,
+     "drawn_fraction_measured": 1.0,
+     "white_pct_floor_total": 0.49,
+     "tested": [
+      {
+       "fader": 1.0,
+       "drawn": 1.0,
+       "white_pct": 0.49
+      },
+      {
+       "fader": 0.4,
+       "drawn": 0.16,
+       "white_pct": 0.19
+      },
+      {
+       "fader": 0.25,
+       "drawn": 0.0625,
+       "white_pct": 0.16
+      },
+      {
+       "fader": 0.15,
+       "drawn": 0.0225,
+       "white_pct": 0.16
+      },
+      {
+       "fader": 0.0,
+       "drawn": 0.0,
+       "white_pct": 0.16
+      }
+     ],
+     "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader^2 in today's room)"
+    }
    }
   },
   {
@@ -3900,7 +3944,7 @@
     ],
     "laser": [
      "#e8e4dc",
-     1.0
+     0.4
     ],
     "stage columns": [
      "#ff3a12",
@@ -3930,6 +3974,41 @@
      "#e8e4dc",
      0.76
     ]
+   },
+   "desk_caps": {
+    "laser": {
+     "fader": 0.4,
+     "drawn_fraction_measured": 0.16,
+     "white_pct_floor_total": 0.57,
+     "tested": [
+      {
+       "fader": 1.0,
+       "drawn": 1.0,
+       "white_pct": 0.88
+      },
+      {
+       "fader": 0.4,
+       "drawn": 0.16,
+       "white_pct": 0.57
+      },
+      {
+       "fader": 0.25,
+       "drawn": 0.0625,
+       "white_pct": 0.54
+      },
+      {
+       "fader": 0.15,
+       "drawn": 0.0225,
+       "white_pct": 0.53
+      },
+      {
+       "fader": 0.0,
+       "drawn": 0.0,
+       "white_pct": 0.53
+      }
+     ],
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader^2 in today's room)"
+    }
    }
   }
  ],
@@ -4053,16 +4132,18 @@
    -1,
    0.5,
    1.5,
-   2.5,
+   2,
    4,
    5
   ],
   "picks_kg": [
    35,
-   98.6,
-   38.7
+   99.5,
+   37.8
   ],
-  "source": "scripts/place/cut-count.mjs"
+  "headroom_kg": 46.5,
+  "source": "scripts/place/cut-count.mjs --n 10 --places -5.5,-4.5,-3.5,-2,-1,0.5,1.5,2,4,5",
+  "why": "the even spread, except PAR 08 one clamp point toward house left (u +2.5 -> +2.0): clear of laser 4a (rule >= 0.25 m, the laser session 48bf1d)"
  },
  "power": {
   "circuits": [
@@ -4258,13 +4339,13 @@
      "rig-par-cut-06",
      "rig-par-planes-01",
      "rig-par-cut-07",
-     "rig-par-planes-19",
      "rig-par-cut-08",
+     "rig-par-planes-19",
      "rig-par-planes-06"
     ],
     "load_w": 2800,
     "amps_230v": 12.2,
-    "cable_m": 93.0,
+    "cable_m": 91.8,
     "first_run_m": 6.6,
     "cable_mm2": 2.5,
     "vdrop_pct": 4.6,
@@ -5796,7 +5877,9 @@
     "wing R back": 0.04599
    }
   },
-  "laser_tubes_entered": []
+  "laser_tubes_entered": [],
+  "laser_body_rule_m": 0.25,
+  "laser_body_min_margin_m": 0.381
  },
  "atmosphere": {
   "anisotropy": 0.74,
@@ -6030,6 +6113,27 @@
      ],
      "part": "speaker face R",
      "position": "the same column bracket: across to the PA R face (the pit stand stands in its plane and cannot light it)"
+    }
+   },
+   {
+    "id": "rig-par-cut-08",
+    "from": {
+     "p": [
+      -2.588,
+      5.547,
+      0.15
+     ],
+     "part": "cut up",
+     "position": "the cut, u +2.5 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m)"
+    },
+    "to": {
+     "p": [
+      -3.071,
+      5.418,
+      0.15
+     ],
+     "part": "cut up",
+     "position": "the cut, u +2.0 m: standing on the top chords, half coupler + safety, straight up into the crane bridge's girders (7.6 m); moved one clamp point toward house left (was u +2.5): laser 4a's tube was 0.11 m away (rule >= 0.25 m, the laser session 48bf1d)"
     }
    },
    {
@@ -6857,14 +6961,14 @@
    },
    "after": {
     "par_steel_lux_at_eye": {
-     "dance floor": 3.868,
-     "mid": 2.391,
-     "front edge": 1.376,
+     "dance floor": 3.872,
+     "mid": 2.387,
+     "front edge": 1.375,
      "behind the stage": 2.449,
-     "wing L front": 3.117,
-     "wing L back": 1.682,
-     "wing R front": 3.088,
-     "wing R back": 3.143
+     "wing L front": 3.118,
+     "wing L back": 1.683,
+     "wing R front": 3.092,
+     "wing R back": 3.13
     },
     "beam_G": {
      "dance floor": 0.1162,
@@ -7350,10 +7454,10 @@
    {
     "id": "rig-par-cut-08",
     "part": "cut up",
-    "margin_m": 0.109,
+    "margin_m": 0.381,
     "nearest_beam": "4a",
     "enters": false,
-    "under_the_laser_sessions_tightest": true
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-06",
@@ -7361,7 +7465,7 @@
     "margin_m": 0.744,
     "nearest_beam": "2a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-10",
@@ -7369,7 +7473,7 @@
     "margin_m": 0.808,
     "nearest_beam": "5a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-07",
@@ -7377,7 +7481,7 @@
     "margin_m": 1.149,
     "nearest_beam": "2a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-09",
@@ -7385,7 +7489,7 @@
     "margin_m": 1.254,
     "nearest_beam": "4a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-25",
@@ -7393,7 +7497,7 @@
     "margin_m": 1.681,
     "nearest_beam": "5a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-05",
@@ -7401,7 +7505,7 @@
     "margin_m": 1.819,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "pit stand (pole + T-bar)",
@@ -7409,7 +7513,7 @@
     "margin_m": 1.831,
     "nearest_beam": "5a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-04",
@@ -7417,7 +7521,7 @@
     "margin_m": 1.89,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-03",
@@ -7425,7 +7529,7 @@
     "margin_m": 3.697,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-39",
@@ -7433,7 +7537,7 @@
     "margin_m": 3.792,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-smoke-planes",
@@ -7441,7 +7545,7 @@
     "margin_m": 4.071,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-02",
@@ -7449,7 +7553,7 @@
     "margin_m": 4.196,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-03",
@@ -7457,7 +7561,7 @@
     "margin_m": 4.45,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-04",
@@ -7465,7 +7569,7 @@
     "margin_m": 4.455,
     "nearest_beam": "2a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-06",
@@ -7473,7 +7577,7 @@
     "margin_m": 4.461,
     "nearest_beam": "4a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-05",
@@ -7481,7 +7585,7 @@
     "margin_m": 4.491,
     "nearest_beam": "4a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-02",
@@ -7489,7 +7593,7 @@
     "margin_m": 4.525,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-01",
@@ -7497,7 +7601,7 @@
     "margin_m": 4.789,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-06",
@@ -7505,7 +7609,7 @@
     "margin_m": 5.18,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-14",
@@ -7513,7 +7617,7 @@
     "margin_m": 5.361,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-37",
@@ -7521,7 +7625,7 @@
     "margin_m": 5.395,
     "nearest_beam": "5a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-23",
@@ -7529,7 +7633,7 @@
     "margin_m": 5.471,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-38",
@@ -7537,7 +7641,7 @@
     "margin_m": 5.486,
     "nearest_beam": "3a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-03",
@@ -7545,7 +7649,7 @@
     "margin_m": 5.498,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-cut-01",
@@ -7553,7 +7657,7 @@
     "margin_m": 5.536,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-28",
@@ -7561,7 +7665,7 @@
     "margin_m": 5.558,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-02",
@@ -7569,7 +7673,7 @@
     "margin_m": 5.645,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-24",
@@ -7577,7 +7681,7 @@
     "margin_m": 5.679,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-11",
@@ -7585,7 +7689,7 @@
     "margin_m": 5.985,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-14",
@@ -7593,7 +7697,7 @@
     "margin_m": 6.093,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-17",
@@ -7601,7 +7705,7 @@
     "margin_m": 6.146,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-18",
@@ -7609,7 +7713,7 @@
     "margin_m": 6.359,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-40",
@@ -7617,7 +7721,7 @@
     "margin_m": 6.511,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-13",
@@ -7625,7 +7729,7 @@
     "margin_m": 6.665,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-27",
@@ -7633,7 +7737,7 @@
     "margin_m": 6.741,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-16",
@@ -7641,7 +7745,7 @@
     "margin_m": 6.936,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-31",
@@ -7649,7 +7753,7 @@
     "margin_m": 6.947,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-12",
@@ -7657,7 +7761,7 @@
     "margin_m": 7.435,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-15",
@@ -7665,7 +7769,7 @@
     "margin_m": 7.442,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-05",
@@ -7673,7 +7777,7 @@
     "margin_m": 7.559,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-13",
@@ -7681,7 +7785,7 @@
     "margin_m": 7.64,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-22",
@@ -7689,7 +7793,7 @@
     "margin_m": 7.721,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-17",
@@ -7697,7 +7801,7 @@
     "margin_m": 7.742,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-19",
@@ -7705,7 +7809,7 @@
     "margin_m": 7.846,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-21",
@@ -7713,7 +7817,7 @@
     "margin_m": 7.977,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-01",
@@ -7721,7 +7825,7 @@
     "margin_m": 7.983,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-32",
@@ -7729,7 +7833,7 @@
     "margin_m": 8.001,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-26",
@@ -7737,7 +7841,7 @@
     "margin_m": 8.125,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-35",
@@ -7745,7 +7849,7 @@
     "margin_m": 8.166,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-30",
@@ -7753,7 +7857,7 @@
     "margin_m": 8.289,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-09",
@@ -7761,7 +7865,7 @@
     "margin_m": 8.403,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-34",
@@ -7769,7 +7873,7 @@
     "margin_m": 8.467,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-36",
@@ -7777,7 +7881,7 @@
     "margin_m": 8.658,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-11",
@@ -7785,7 +7889,7 @@
     "margin_m": 8.857,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-15",
@@ -7793,7 +7897,7 @@
     "margin_m": 8.948,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-12",
@@ -7801,7 +7905,7 @@
     "margin_m": 9.007,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-04",
@@ -7809,7 +7913,7 @@
     "margin_m": 9.009,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-16",
@@ -7817,7 +7921,7 @@
     "margin_m": 9.031,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-18",
@@ -7825,7 +7929,7 @@
     "margin_m": 9.078,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-20",
@@ -7833,7 +7937,7 @@
     "margin_m": 9.136,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-29",
@@ -7841,7 +7945,7 @@
     "margin_m": 9.312,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-33",
@@ -7849,7 +7953,7 @@
     "margin_m": 9.425,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-10",
@@ -7857,7 +7961,7 @@
     "margin_m": 9.458,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-10",
@@ -7865,7 +7969,7 @@
     "margin_m": 10.781,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-07",
@@ -7873,7 +7977,7 @@
     "margin_m": 13.272,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-08",
@@ -7881,7 +7985,7 @@
     "margin_m": 13.908,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-par-planes-08",
@@ -7889,7 +7993,7 @@
     "margin_m": 13.976,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-09",
@@ -7897,7 +8001,7 @@
     "margin_m": 14.769,
     "nearest_beam": "6a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    },
    {
     "id": "rig-beam-planes-07",
@@ -7905,7 +8009,7 @@
     "margin_m": 18.417,
     "nearest_beam": "1a",
     "enters": false,
-    "under_the_laser_sessions_tightest": false
+    "below_the_rule": false
    }
   ],
   "crane_and_smoke": {
@@ -8470,6 +8574,23 @@
   ],
   "cut": {
    "10": {
+    "places_u_m": [
+     -5.5,
+     -4.5,
+     -3.5,
+     -2,
+     -1,
+     0.5,
+     1.5,
+     2.5,
+     4,
+     5
+    ],
+    "picks_kg": [
+     35,
+     98.6,
+     38.7
+    ],
     "worst_pick_kg": 98.6,
     "headroom_kg": 47.4,
     "shafts_separate_pct_15": 100,
@@ -8605,6 +8726,25 @@
     ]
    },
    "12": {
+    "places_u_m": [
+     -6,
+     -5,
+     -4,
+     -3,
+     -2,
+     -1,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "picks_kg": [
+     41.2,
+     108.4,
+     41.1
+    ],
     "worst_pick_kg": 108.4,
     "headroom_kg": 37.6,
     "shafts_separate_pct_15": 100,
@@ -8735,6 +8875,158 @@
        0.15
       ],
       "margin_m": 0.2,
+      "beam": "4a"
+     },
+     {
+      "u_m": "+4.0",
+      "p": [
+       -1.139,
+       5.215,
+       0.15
+      ],
+      "margin_m": 1.254,
+      "beam": "4a"
+     },
+     {
+      "u_m": "+5.0",
+      "p": [
+       -0.173,
+       6.194,
+       0.15
+      ],
+      "margin_m": 0.808,
+      "beam": "5a"
+     }
+    ]
+   },
+   "10 as hung": {
+    "places_u_m": [
+     -5.5,
+     -4.5,
+     -3.5,
+     -2,
+     -1,
+     0.5,
+     1.5,
+     2,
+     4,
+     5
+    ],
+    "picks_kg": [
+     35,
+     99.5,
+     37.8
+    ],
+    "worst_pick_kg": 99.5,
+    "headroom_kg": 46.5,
+    "shafts_separate_pct_15": 100,
+    "shafts_separate_pct_25": 100,
+    "reads_as_25": "pieces (every shaft its own)",
+    "power_w": 2000,
+    "dj_face_lx_full": 0.0,
+    "dj_head_top_lx_full": 0.0,
+    "laser_min_margin_m": 0.381,
+    "laser_tightest": [
+     {
+      "u_m": "+2.0",
+      "p": [
+       -3.071,
+       5.418,
+       0.15
+      ],
+      "margin_m": 0.381,
+      "beam": "4a"
+     },
+     {
+      "u_m": "+0.5",
+      "p": [
+       -4.52,
+       5.029,
+       0.15
+      ],
+      "margin_m": 0.744,
+      "beam": "2a"
+     }
+    ],
+    "places": [
+     {
+      "u_m": "-5.5",
+      "p": [
+       -10.316,
+       2.756,
+       0.15
+      ],
+      "margin_m": 5.536,
+      "beam": "1a"
+     },
+     {
+      "u_m": "-4.5",
+      "p": [
+       -9.35,
+       3.735,
+       0.15
+      ],
+      "margin_m": 4.196,
+      "beam": "1a"
+     },
+     {
+      "u_m": "-3.5",
+      "p": [
+       -8.384,
+       3.274,
+       0.15
+      ],
+      "margin_m": 3.697,
+      "beam": "1a"
+     },
+     {
+      "u_m": "-2.0",
+      "p": [
+       -6.935,
+       4.382,
+       0.15
+      ],
+      "margin_m": 1.89,
+      "beam": "1a"
+     },
+     {
+      "u_m": "-1.0",
+      "p": [
+       -5.969,
+       3.921,
+       0.15
+      ],
+      "margin_m": 1.819,
+      "beam": "1a"
+     },
+     {
+      "u_m": "+0.5",
+      "p": [
+       -4.52,
+       5.029,
+       0.15
+      ],
+      "margin_m": 0.744,
+      "beam": "2a"
+     },
+     {
+      "u_m": "+1.5",
+      "p": [
+       -3.554,
+       4.568,
+       0.15
+      ],
+      "margin_m": 1.149,
+      "beam": "2a"
+     },
+     {
+      "u_m": "+2.0",
+      "p": [
+       -3.071,
+       5.418,
+       0.15
+      ],
+      "margin_m": 0.381,
       "beam": "4a"
      },
      {

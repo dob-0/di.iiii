@@ -58,6 +58,7 @@ const SmartView = lazy(() => import('../../project/viewport/smartView/SmartView.
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
+const NO_SCENE_ENTITIES = Object.freeze([])
 
 
 // True when this viewport is showing a finished piece rather than hosting an
@@ -657,6 +658,7 @@ function StudioSceneContent({
     screens = null,
     followLinks = false,
     rigLook = undefined,
+    lookDrawn = false,
     smartView = null,
     graphRoom = null
 }) {
@@ -667,8 +669,12 @@ function StudioSceneContent({
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     // A room with designed looks draws its lamps posed by the look the desk is playing
     // (src/rigbuild/useRigLook.js — a view, the document is untouched); any other room
-    // is exactly its document.
-    const { entities: sceneEntities } = useRigLookEntities(document, { explicit: rigLook })
+    // is exactly its document. A room handed here ALREADY drawn in its look (`lookDrawn`:
+    // the public page, where RoomLookFollower posed, faded, desk-drove and pooled it) is
+    // drawn as handed: posed a second time, every look level was drawn squared (MOXIR
+    // 2026-10-09, docs/ai/known-fixes.md; src/rigbuild/lookLevel.test.jsx).
+    const look = useRigLookEntities(lookDrawn ? null : document, { explicit: rigLook })
+    const sceneEntities = lookDrawn ? (document.entities || NO_SCENE_ENTITIES) : look.entities
     const childMap = useMemo(() => {
         const map = new Map()
         for (const entity of sceneEntities) {
@@ -1097,6 +1103,9 @@ export default function StudioViewport({
     // A designed look to pose the room by ('' none), overriding the desk's (view C's GO
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
+    // The document's entities are the room ALREADY drawn in its look (the public page:
+    // RoomLookFollower drew them): draw them as handed, never pose them again.
+    lookDrawn = false,
     // The smart view (docs/architecture/SMART_VIEW.md): occlusion fade, cutaway from
     // outside, the six view presets, x-ray. Off unless the surface asks:
     //   { bar: 'visitor' | 'studio' | false, constraints: bool, deepLink: bool }
@@ -1269,6 +1278,7 @@ export default function StudioViewport({
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
                         rigLook={rigLook}
+                        lookDrawn={lookDrawn}
                         screens={screens}
                         followLinks={followLinks}
                         smartView={smartViewProps}

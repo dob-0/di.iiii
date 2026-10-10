@@ -36,6 +36,13 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
         expect(c['10'].worst_pick_kg).toBeLessThanOrEqual(146)
         expect(c['12'].shafts_separate_pct_25).toBeLessThan(100)
         expect(c['10'].dj_face_lx_full).toBe(0) // it hangs behind the DJ: it cannot light his face
+        // as hung: PAR 08 at u +2.0 (was +2.5), toward house left where the cut descends away from laser 4a
+        expect(N.cut.places_u_m).toEqual([-5.5, -4.5, -3.5, -2, -1, 0.5, 1.5, 2, 4, 5])
+        expect(Math.max(...N.cut.picks_kg)).toBeLessThanOrEqual(146)
+        const p08 = N.fixtures.find((f) => f.id === 'rig-par-cut-08')
+        const was = T.fixtures.find((f) => f.id === 'rig-par-cut-08')
+        expect(p08.p[0]).toBeLessThan(was.p[0])
+        expect(p08.p[1]).toBeLessThan(was.p[1])
     })
     it('lights the DJ from the audience side, never inside 20 deg of his eye line toward the crowd', () => {
         const keys = N.fixtures.filter((f) => f.part === 'stage key')
@@ -58,7 +65,7 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
     })
     it('keeps the stage (the cut, plane 1, the machine, the stage columns, the halo, the embers) where B tuned had it', () => {
         const moved = new Set(N.review.moves.map((m) => m.id))
-        expect(moved.size).toBe(4 + 26 + 12)
+        expect(moved.size).toBe(4 + 26 + 12 + 1) // + cut PAR 08, one clamp point toward house left (laser 4a)
         for (const f of T.fixtures) {
             if (moved.has(f.id)) continue
             expect(N.fixtures.find((g) => g.id === f.id).p).toEqual(f.p)
@@ -101,7 +108,8 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
     })
     it('enters no laser tube with any unit body, stand or the smoke machine', () => {
         expect(N.checks.laser_tubes_entered).toEqual([])
-        for (const c of N.review.laser_clearance) expect(c.margin_m).toBeGreaterThan(0)
+        // the laser session's rule for a hung lamp (48bf1d): every body >= 0.25 m outside every tube
+        for (const c of N.review.laser_clearance) expect(c.margin_m).toBeGreaterThanOrEqual(0.25)
     })
     it('builds: the room draws the 6 laser lines, and every look holds only parts the rig has', () => {
         const ents = v1Entities(N)
@@ -122,5 +130,25 @@ describe('MOXIR v2 B tuned + the stage + the lasers', () => {
         const cube = N.fixtures.find((f) => f.type === 'ext-lc-ultra-mk2' && f.colour === '#e8e4dc')
         const e = ents.find((x) => x.id === `rig-laser-${cube.laser.beams[0].id}`)
         expect(e.components.light.intensity).toBeGreaterThan(1.9e6) // ~1260 lm into the 2 mrad cone, x 0.02
+    })
+    it('holds the lasers at each look\'s measured desk cap, kept as the fader AND the drawn fraction', () => {
+        for (const id of ['peak', 'dark']) {
+            const cap = N.looks.find((l) => l.id === id).desk_caps.laser
+            expect(cap.fader).toBeGreaterThan(0)
+            expect(cap.fader).toBeLessThanOrEqual(1)
+            expect(cap.drawn_fraction_measured).toBeGreaterThan(0)
+            expect(cap.white_pct_floor_total).toBeLessThanOrEqual(0.65)
+            // the cap is the highest TESTED fader under the budget
+            const pass = cap.tested.filter((t) => t.white_pct <= 0.65).map((t) => t.fader)
+            expect(cap.fader).toBe(Math.max(...pass))
+        }
+        const peak = N.looks.find((l) => l.id === 'peak')
+        expect(peak.parts.laser[1]).toBe(peak.desk_caps.laser.fader)
+        // the room takes the part's level (epic-build v1Looks; it held every laser at 1 before)
+        const ents = v1Entities(N)
+        const rl = v1Looks(N, ents, { axis: 0.13, stage: { front: 5.65, into: 1 } }, 'x.json')
+        const lv = (look) => Object.entries(rl.looks.find((l) => l.id === look).levels).filter(([k]) => k.includes('laser-')).map(([, v]) => v)
+        expect(new Set(lv('peak'))).toEqual(new Set([peak.desk_caps.laser.fader]))
+        expect(new Set(lv('dark'))).toEqual(new Set([0]))
     })
 })
