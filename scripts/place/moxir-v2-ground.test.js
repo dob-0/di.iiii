@@ -460,7 +460,7 @@ describe('MOXIR v2 ground, round 2: the acceptance tests (the lead\'s brief, 202
         // the official plan's block counts are the show rig's (cut 11 / planes 39 after 9cfc8ee7); this layer lays the same plan
         // with its own counts (planes-25 is still a PL5403 here), as moxir_v2_compose.py does for the composed rig, and says so
         const counts = {
-            cut: N.fixtures.filter((f) => f.type === 'up-b380f' && /^rig-par-cut-\d+$/.test(f.id)).length,
+            cut: N.fixtures.filter((f) => f.type === 'up-pl5403' && /^rig-par-cut-\d+$/.test(f.id)).length,
             planes: N.fixtures.filter((f) => f.type === 'up-pl5403' && /^rig-par-planes-\d+$/.test(f.id)).length,
         }
         expect(N.patch.counts).toEqual(counts)
