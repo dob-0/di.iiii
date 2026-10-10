@@ -166,6 +166,33 @@ const CUT_878 = {
     lampR: 0.2, girder: { dz: 1.1, halfW: 0.35, y: [7.6, 8.92], xAbs: 11.35 },
 }
 const CUBES_878 = { z0: -13.45, x: [-4.5, -1.0], y: [8.54, 9.09], end: [-4.031, 9.181, -53.8], fanDeg: 1.008, waist: 0.004, margin: 0.25 }
+// B3 (v2.1 integration): with #878 IN the tree, read its geometry from the in-tree files (not the copied numbers above, which stay as
+// the fallback for a tree without #878). `SRC_878_IN_TREE` says which one the run used; a number that differs from the copy is a finding.
+const SRC_878_IN_TREE = (() => {
+    try {
+        const C = read(process.env.B3_FORCE_COPY ? 'nonexistent.json' : 'moxir-crane-cut-v2-cranes-2026-10-09.json')
+        const Ls = read('moxir-lasers-on-crane-2026-10-09.json')
+        const dz = C.derived_at_z_3_20
+        const ends = dz.truss.ends
+        const hl = dz.rigging.tieoffs.find((t) => t.id === 'hl')
+        CUT_878.z = C.crane_z_m
+        CUT_878.section = C.truss.section_m
+        CUT_878.chord = ends.map((e) => [e.x_m, e.bottom_chord_m])
+        CUT_878.uEnds = ends.map((e) => e.u_m)
+        CUT_878.picksU = dz.rigging.picks.map((q) => q.u_m)
+        CUT_878.strap = [hl.from_m, hl.to_m]
+        CUT_878.lamps = C.pars.map((q) => [q.p[0], q.p[1]])
+        const xs = Ls.units.map((u) => u.x_m)
+        CUBES_878.z0 = Ls.units[0].aperture_m.p05[2]
+        CUBES_878.x = [Math.min(...xs), Math.max(...xs)]
+        CUBES_878.y = [Math.min(...Ls.units.map((u) => u.aperture_m.p05[1])), Math.max(...Ls.units.map((u) => u.aperture_m.p95[1]))]
+        CUBES_878.end = Ls.aim.end_m
+        return true
+    } catch (e) {
+        return false
+    }
+})()
+const b3log = (line) => { if (process.env.MOXIR_B3_OUT) fs.appendFileSync(process.env.MOXIR_B3_OUT, line + '\n') } // numbers for the integration report, only when asked
 const B380F_HALF_DEG = (0.0157 / 2) / D2R
 const segPts = (a, b, step = 0.1) => {
     const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / step))
@@ -643,6 +670,7 @@ describe('MOXIR v2 ground, round 2: the acceptance tests (the lead\'s brief, 202
                 }
             }
         }
+        b3log('B3 A13 in_tree=' + SRC_878_IN_TREE + ' raised_hands_gap_m=' + worst.d.toFixed(4) + ' at ' + worst.at + ' ' + worst.name)
         expect(worst.d, `raised hands at ${worst.at} are ${worst.d.toFixed(3)} m from ${worst.name}`).toBeGreaterThanOrEqual(0.5)
         expect(N.checks.near_crane_878?.a13?.with_the_bay?.gap_m).toBeCloseTo(worst.d, 2)
     })
@@ -657,6 +685,7 @@ describe('MOXIR v2 ground, round 2: the acceptance tests (the lead\'s brief, 202
             const dirs = [[aimDir(f.r), f.throw_m], ...windowOf(f).map((d) => [d, null])]
             for (const [d, tMax] of dirs) for (const [q, tt] of rayPts(h, d, tMax)) { const c = cubeClearance(q, tt); if (c < near.d) near = { d: c, id: f.id } }
         }
+        b3log('B3 A14 in_tree=' + SRC_878_IN_TREE + ' cube_beam_clearance_m=' + near.d.toFixed(4) + ' ' + near.id)
         expect(near.d, `${near.id} comes ${near.d.toFixed(2)} m from the cube beams`).toBeGreaterThan(0)
         expect(N.checks.near_crane_878?.source?.commit).toBe(SRC_878_COMMIT)
     })
@@ -678,6 +707,7 @@ describe('MOXIR v2 ground, round 2: the acceptance tests (the lead\'s brief, 202
                 if (what) { hits.push(`${f.id} meets ${what}`); break }
             }
         }
+        b3log('B3 A15 in_tree=' + SRC_878_IN_TREE + ' hits=' + hits.length)
         expect(hits).toEqual([])
         expect(N.checks.near_crane_878?.ok?.a15).toBe(true)
     })
