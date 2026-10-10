@@ -6,6 +6,7 @@
  *
  *   node scripts/place/cut-count.mjs                 # the table for 6..24 PARs, JSON
  *   node scripts/place/cut-count.mjs --n 12          # one count, JSON
+ *   node scripts/place/cut-count.mjs --n 11 --places -5,-4,... --design scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json   # at another park
  *
  * What it weighs, and from where (nothing typed twice):
  *   GEOMETRY + RIGGING: the cut at v1.1 exactly as stage-line.mjs derives it (stageLineRig on
@@ -151,6 +152,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const i = process.argv.indexOf('--n')
     const j = process.argv.indexOf('--places')
     const places = j > 0 ? process.argv[j + 1].split(',').map(Number) : null
-    const out = i > 0 ? cutCount(Number(process.argv[i + 1]), theCut(), { places }) : { cut: { ends: theCut().truss.ends, trim_m: theCut().truss.trim_m, picks: theCut().rigging.picks.map((p) => ({ u_m: p.u_m, bridle_included_deg: p.bridle_included_deg })) }, cap_kg: PICK_CAP_KG, rows: table() }
+    // `--design <stage json>`: the cut as THAT stage derives it (MOXIR v2 cranes, 2026-10-10: the near crane parked at z 3.20,
+    // rigs/moxir-stage-v2-cranes-2026-10-09.json); the loads do not depend on the park, the picks' geometry is re-derived
+    const k = process.argv.indexOf('--design')
+    const cut = theCut(k > 0 ? process.argv[k + 1] : DESIGN)
+    const out = i > 0 ? cutCount(Number(process.argv[i + 1]), cut, { places }) : { cut: { ends: cut.truss.ends, trim_m: cut.truss.trim_m, picks: cut.rigging.picks.map((p) => ({ u_m: p.u_m, bridle_included_deg: p.bridle_included_deg })) }, cap_kg: PICK_CAP_KG, rows: table() }
     process.stdout.write(JSON.stringify(out, null, 1) + '\n')
 }

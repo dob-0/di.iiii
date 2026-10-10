@@ -196,11 +196,19 @@ export const stageFrame = (rig, hall) => {
         // stage line finishes, the crane line there"): the bridge nearest a point that far behind the riser's back edge,
         // and refused unless the line's plane stands at least that far behind it — nothing hung over the performer
         const behind = s.truss_behind_m
-        crane = behind !== undefined
-            ? craneNearestStage(hall, { front: back - into * behind })
-            : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        // `truss_crane_z_m` (MOXIR v2 cranes, owner N463 2026-10-09: "light the dj not the full back half back"): the park is
+        // the design's own z, neither a backdrop `truss_behind_m` behind the riser nor over the DJ within 1 m. The hall
+        // record must hold a bridge there (within 5 cm): the design is checked by its own builder (moxir_v2_cranes.py)
+        const parked = s.truss_crane_z_m
+        crane = parked !== undefined
+            ? craneNearestStage(hall, { front: parked })
+            : behind !== undefined
+                ? craneNearestStage(hall, { front: back - into * behind })
+                : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
         const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
-        if (behind !== undefined) {
+        if (parked !== undefined) {
+            if (!crane || Math.abs(crane.z_m - parked) > 0.05) throw new Error(`truss "crane-hung" at the design's park z ${parked}: the hall record's nearest bridge is at z ${crane?.z_m} — build the hall with that park (cranes_from_door_m)`)
+        } else if (behind !== undefined) {
             if (!crane || into * (back - crane.z_m) < behind - 1e-6) throw new Error(`truss "crane-hung" behind the DJ: the nearest bridge (z ${crane?.z_m}) is not ${behind} m behind the riser's back edge (z ${back.toFixed(2)}) — park it further back`)
         } else if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m

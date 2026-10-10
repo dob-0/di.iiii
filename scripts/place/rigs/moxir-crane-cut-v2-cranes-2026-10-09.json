@@ -1,0 +1,356 @@
+{
+ "cut": "moxir-crane-cut-v2-cranes-2026-10-09",
+ "title": "The cut for MOXIR v2 cranes - the same 12 m line (LOW house left, HIGH house right, not flipped) at the near crane's park z 3.20, half behind the DJ, 11 PL5403 that light him",
+ "writtenAt": "2026-10-10",
+ "owner": "The owner's pick, 2026-09-29: option 4 of ~/Downloads/moxir-crane-rig/ten-truss.html (also https://dev.diiii.xyz/moxir/p/moxir-truss) — 'the cut': ONE straight 12 m truss in the vertical plane right under the yellow crane bridge, LOW house left (−x), HIGH house right (+x, over the forging press and the machine line). Chosen for being epic AND easy: a plain straight truss, 3 hanging points, nothing on the floor. It replaces Minimal's 8 m flat line (x −4.25…3.75, bottom chord 6.0 m, 2 hoists).",
+ "howToRead": "An OVERLAY on scripts/place/rigs/moxir-versions-2026-10-17.json: the version 'minimal' names `truss: \"crane-cut\"`, and scripts/rigbuild/versions.mjs derives from this file the trim, the pick geometry, the load per point, the bridle angles and leg tensions, the sway periods and the motion limits (never typed by hand). docs/architecture/RIG_BUILD.md §15.8. Hall frame: metres, Y up, +x = house right (the audience's right facing the DJ), the crane bridge's centre line at z 21.0 (moxir-hall-crane-behind-dj-2026-10-07.json).",
+ "status": "PROPOSAL drawn for the owner's look. NOT an engineered rigging design: every load is static and ESTIMATED where marked, the crane's rated load and condition are unknown. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels). Scratch-only plan for the owner's look (2026-10-10, v2 cranes): built on no live server.",
+ "truss": {
+  "kind": "crane-hung",
+  "shape": "slope",
+  "width_m": 12,
+  "pieces_m": [
+   3,
+   3,
+   3,
+   3
+  ],
+  "section_m": 0.29,
+  "section_class": "290 mm square box truss, planned on the Prolyte H30V (4 × H30V-L300; the rental house's own truss and its load table owed)",
+  "slope_deg": 15,
+  "slope_why": "the steepest slope the brief's two ends allow together: the high end is capped by the bridle at the high pick (below), the low end kept ≈ 3.5 m; 15° is the brief's floor for reading as a deliberate slash, not a sag",
+  "x_offset_m": -0.25,
+  "x_offset_why": "the line runs u −6.25…+5.75 along itself (x −6.04…+5.55): a clamp point every 0.5 m, 0.25 m in from each end (src/rigbuild/pieces.js), then falls on the DJ's axis, so every lamp stands on a clamp point and the centre beam sits over the DJ",
+  "trim_at": "trim_m (derived) is the bottom chord at u = 0, over the DJ's axis, measured vertically; the high pick sets it (versions.mjs craneCut)"
+ },
+ "rigging": {
+  "picks_u_m": [
+   -5.75,
+   -0.5,
+   5.25
+  ],
+  "picks_why": "3 picks: 0.5 m in from each end and one near the middle (u −0.5: between the centre beam and its neighbour, so no beam rises through a bridle or a chain); spans 5.25 and 5.75 m — well inside the H30V's table (Prolyte: 6 m span, uniformly distributed 321.6 kg/m allowable)",
+  "hoist": "chain hoist 500 kg, D8 Plus (planned on the CHAINMASTER D8Plus Ultra 500 kg SK030/76U; the rental house's hoists owed)",
+  "hoist_kg": 20,
+  "hoist_kg_source": "CHAINMASTER product data sheet DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf rev 1.1 (18.10.2024) §2.2: 'Weight (without chain): approx. 20 kg' incl. suspension plate, hook tackle, direct control — https://chainmaster.de/wp-content/uploads/2024/10/DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf",
+  "chain_kg_per_m": 0.59,
+  "chain_kg_per_m_source": "same data sheet §2.2: 'Weight of the chain: approx. 0.59 kg/m' (P5.4 × 15 mm, EN 818-7)",
+  "chain_carried_m": 12,
+  "chain_carried_why": "ESTIMATE: a hoist carries its whole chain (in the bag) whatever the drop; 12 m assumed until the rental house's hoists are known",
+  "drop": {
+   "why": "the SHORTEST drop the hoist allows: the hoist hangs straight from the bridle apex and is run up to its top at trim, so what swings under the apex is only the hoist itself",
+   "stack_m": [
+    {
+     "what": "apex shackle / bridle ring",
+     "m": 0.06,
+     "basis": "ESTIMATE (a 3.25 t bow shackle's inside length is ~60 mm)"
+    },
+    {
+     "what": "hoist, suspension plate hole to hook bottom at the shortest chain",
+     "m": 0.544,
+     "basis": "CHAINMASTER SK030/76U dimension sheet (same PDF, §3.1/§3.2): suspension plate 97 + body 192 + chain exit 28 + hook tackle 227 mm — summed from the drawing (the maker states no single headroom figure)"
+    },
+    {
+     "what": "round sling, basket hitch over both top chords, on the hook",
+     "m": 0.2,
+     "basis": "ESTIMATE"
+    },
+    {
+     "what": "margin",
+     "m": 0.05,
+     "basis": "so the hoist never runs onto its upper limit at trim"
+    }
+   ]
+  },
+  "bridle": {
+   "what": "each pick a two-leg bridle (a V) from the TWO girders of the bridge, apex over the line, the hoist under the apex — not one vertical chain: the V fixes the pick across the bridge (z)",
+   "attach": "a girder beam clamp on the INNER edge of each girder's bottom flange (the girders' inner faces are 1.5 m apart: hall.json cranes girders_dz ±1.1, girder_w 0.7), a shackle, a steel leg to the apex",
+   "clamp_drop_m": 0.15,
+   "clamp_drop_basis": "ESTIMATE: girder clamp jaw + shackle under the flange",
+   "max_included_deg": 120,
+   "max_included_why": "the entertainment-rigging limit on a two-leg bridle (at 120° each leg carries the whole load; beyond, more than it): H. Donovan, Entertainment Rigging (2002), bridle tension tables — the high pick is designed AT it, the others far inside",
+   "hardware_kg": 6,
+   "hardware_basis": "ESTIMATE: two girder clamps, two steels, shackles and ring per pick"
+  },
+  "safety": "a secondary safety steel at every pick from the top chords to its OWN clamp on the back girder, independent of bridle and hoist (DGUV Vorschrift 17/18, BGV C1 practice: a secondary suspension for every load over people)",
+  "tieoffs": [
+   {
+    "id": "hl",
+    "u_m": -6.25,
+    "side": -1,
+    "y_m": "end",
+    "grid_z_m": 6,
+    "what": "house-left (LOW) end, level at its own height (3.04 m), to the nave column at x -11.6 (inner face) on grid line z 6 - 79 deg off the bridge's plane, 2.86 m long, 0.54 m over the transformer (its z LOW), 0.97 m from the nearest lamp (rig-par-planes-19); a 2 t LC ratchet strap (EN 12195-2) or a 6 mm steel with a turnbuckle",
+    "y_why": "crane-dj-light design.md 8 (ties.mjs over stage-line.mjs anchorWindows, 4 grid lines, at z 3.20): every house-left option toward -z (z -6, -0.5, 0.5) crosses the v2 wing head rig-beam-planes-14 (its bracket on column x -12 z 0.5 at 3.0-3.7 m: gap -0.06 m). The cost: the strap now pulls toward +z, the audience side; the rigger decides."
+   },
+   {
+    "id": "hr",
+    "u_m": 5.75,
+    "side": 1,
+    "y_m": "end",
+    "grid_z_m": -6,
+    "what": "house-right (HIGH) end, level at its own height (6.15 m), to the nave column at x +11.6 on grid line z -6 - 40 deg off the bridge's plane, 14.38 m long, 0.55 m from the press crown, >= 1.0 m from the crane cab (z 2.2-4.2; the strap passes it at z <= -2.9); same strap or steel",
+    "y_why": "stage-line.mjs anchorWindows at the v1.1 park (z 0.15): z -6 window 2.50-6.96 m, its own height passes, nearest fixed thing the press crown 0.85 m. The paired joint columns z +-0.5 lie IN the bridge's plane (2-3 deg off: no hold against sway); z +6 has only 4.57-4.99 m, 0.11 m from the new +x gallery (LOW)."
+   }
+  ],
+  "tieoffs_why": "v2 cranes park z 3.20 (crane-dj-light design.md 8, tieoff_check.py against the rig's units): hl moved to grid z 6 (the -z anchors cross a v2 wing head), hr as committed",
+  "truss_kg_per_m": 6.3,
+  "truss_kg_per_m_source": "Prolyte H30V standard lengths table: H30V-L300 3.00 m 18.90 kg (https://www.prolyte.com/products/aluminium-truss/square-truss/h30v-l100-square-30-length-100-cm, read 2026-09-29) → 6.3 kg/m",
+  "extras_fraction": 0.1,
+  "extras_basis": "clamps, safety bonds and the cable loom along the line: +10 % of the lamps — ESTIMATE",
+  "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ (bridge centre line z 21.0 (moved from 4.8 for the stage line, then behind the DJ, 2026-10-07), girder bottom 8.15 m — ESTIMATED; rail 7.6 m, range 6.6–8.4)",
+  "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load, a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; bridle, tie-offs and safety steels to a rigger's plan with point loads, signed by a structural or rigging engineer; load cells on the three hoists at trim (a 3-point line is statically indeterminate: the middle pick's share moves with the chains' lengths). This file draws it; they approve it."
+ },
+ "clearance": {
+  "raised_hands_m": 2.5,
+  "raised_hands_basis": "the brief's figure: a tall adult's raised hands (~2.2–2.3 m) plus a jump",
+  "dj_deck_m": 0.4,
+  "dj_deck_why": "the one-step booth, 0.4 m (owner 2026-10-07: 'two decks low'), moxir-stage-line-2026-10-07.json booth.deck_h_m"
+ },
+ "motion": {
+  "min_move_s": 4,
+  "min_move_why": "the owner's rule (2026-09-29): moving heads on a chain-hung line must not swing it — no full-range pan/tilt faster than 4 s, i.e. a cue that moves a head on the line fades in 4 s or more",
+  "resonance_margin": 0.25,
+  "resonance_why": "no periodic pan/tilt effect whose period lies within ±25 % of any natural period of the hang (method written down here, unvalidated: a common resonance-avoidance margin — machine foundations are kept ±20 % away; we take 25 %). Periods: T = 2π√(L/g), L the pendulum length (versions.mjs craneCut)",
+  "g": 9.81
+ },
+ "basedOn": "scripts/place/rigs/moxir-crane-cut-v1-1-2026-10-08.json - truss, picks, hoist, drop stack, bridle, safety, clearance and motion copied unchanged (the owner's shape). What differs: the crane z (3.20), the hl tie-off (grid z 6) and the lamp list (11, three of them on the DJ).",
+ "owner_2026_10_08": "his new marks (paint-stage-v1-1.png): DJ x -6.3..-4.1, z 3.7..5.6; his rule kept: the truss behind the DJ, not flipped, LOW house left (moxir-stage-v1-1-2026-10-08.json crane.decision)",
+ "owner_2026_10_09": "2026-10-09 20:51: \"yes ther no crane one with the 6 lasers , go back one with trus dj 's back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences\"",
+ "crane_z_m": 3.2,
+ "pars": [
+  {
+   "id": "rig-par-cut-01",
+   "u_m": -5.0,
+   "mount": "up",
+   "part": "cut up",
+   "p": [
+    -9.83,
+    3.606,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u -5.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "was": "rig-par-cut-01"
+  },
+  {
+   "id": "rig-par-cut-02",
+   "u_m": -4.0,
+   "mount": "down",
+   "part": "cut down",
+   "p": [
+    -8.864,
+    3.145,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u -4.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "was": "rig-par-cut-02"
+  },
+  {
+   "id": "rig-par-cut-03",
+   "u_m": -3.0,
+   "mount": "up",
+   "part": "cut up",
+   "p": [
+    -7.898,
+    4.124,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u -3.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "was": "rig-par-cut-03"
+  },
+  {
+   "id": "rig-par-cut-04",
+   "u_m": -2.0,
+   "mount": "down",
+   "part": "cut down",
+   "p": [
+    -6.932,
+    3.662,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u -2.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "was": "rig-par-cut-04"
+  },
+  {
+   "id": "rig-par-cut-05",
+   "u_m": -1.5,
+   "mount": "aim",
+   "part": "dj back",
+   "p": [
+    -6.449,
+    3.792,
+    3.2
+   ],
+   "dir": [
+    0.508,
+    -0.749,
+    0.427
+   ],
+   "aim_at": [
+    -5.2,
+    1.95,
+    4.25
+   ],
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u -1.5 m: hung under the bottom chords, half coupler + safety, aimed at the DJ (his head and shoulders, from behind)",
+   "was": "rig-par-cut-05"
+  },
+  {
+   "id": "rig-par-cut-06",
+   "u_m": 0.0,
+   "mount": "up",
+   "part": "cut up",
+   "p": [
+    -5.0,
+    4.9,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u +0.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "was": "rig-par-cut-06"
+  },
+  {
+   "id": "rig-par-cut-07",
+   "u_m": 1.0,
+   "mount": "aim",
+   "part": "dj back",
+   "p": [
+    -4.034,
+    4.439,
+    3.2
+   ],
+   "dir": [
+    -0.396,
+    -0.846,
+    0.357
+   ],
+   "aim_at": [
+    -5.2,
+    1.95,
+    4.25
+   ],
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u +1.0 m: hung under the bottom chords, half coupler + safety, aimed at the DJ (his head and shoulders, from behind)",
+   "was": "rig-par-cut-07"
+  },
+  {
+   "id": "rig-par-cut-08",
+   "u_m": 2.0,
+   "mount": "down",
+   "part": "cut down",
+   "p": [
+    -3.068,
+    4.698,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u +2.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "was": "rig-par-cut-08"
+  },
+  {
+   "id": "rig-par-cut-09",
+   "u_m": 3.0,
+   "mount": "up",
+   "part": "cut up",
+   "p": [
+    -2.102,
+    5.676,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u +3.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "was": "rig-par-cut-09"
+  },
+  {
+   "id": "rig-par-cut-10",
+   "u_m": 3.5,
+   "mount": "down",
+   "part": "cut down",
+   "p": [
+    -1.619,
+    5.086,
+    3.2
+   ],
+   "dir": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "aim_at": null,
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u +3.5 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "was": "rig-par-cut-10"
+  },
+  {
+   "id": "rig-par-cut-11",
+   "u_m": 4.5,
+   "mount": "aim",
+   "part": "dj kicker",
+   "p": [
+    -0.653,
+    5.345,
+    3.2
+   ],
+   "dir": [
+    -0.791,
+    -0.582,
+    0.191
+   ],
+   "aim_at": [
+    -5.2,
+    2.0,
+    4.3
+   ],
+   "lens_deg": 15,
+   "position": "the cut at z 3.20, u +4.5 m: hung under the bottom chords, half coupler + safety, aimed at the DJ (his head, from house right and behind)",
+   "was": "rig-par-planes-25"
+  }
+ ],
+ "pars_why": "crane-dj-light design.md 4: #864's 10 plus #864's pit-stand key PAR (the kit stays at 50 PL5403). Three light the DJ: a crossed back pair (u -1.5 / +1.0, hung, aimed at his head and shoulders, 47 / 57 deg up) and a kicker (u +4.5, hung, from house right, 35 deg up). The other eight keep the cut's look: 4 hung straight down, 4 standing straight up (through the 1.5 m gap between the girders, PLACEHOLDER). Every u is a clamp point (cut-count.mjs). Nothing hangs over the transformer (u <= -4.66) or over the step (front z 3.36 < 3.65)."
+}

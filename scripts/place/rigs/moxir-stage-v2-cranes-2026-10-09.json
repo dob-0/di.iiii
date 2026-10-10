@@ -1,0 +1,351 @@
+{
+ "stage": "moxir-stage-v1-1-2026-10-08",
+ "title": "MOXIR v2 cranes - the stage of v1.1 with the near crane parked at z 3.20, the cut half behind the DJ, lighting him (owner N463, 2026-10-09)",
+ "writtenAt": "2026-10-10",
+ "status": "PLAN for the owner's look, built on a scratch stack only. Not on dev, not on the installed di. Every crane height is from PHOTOS; nothing is taped. Passes the checks written in rigs/moxir-v2-cranes-2026-10-09.json review (not \"safe\"): the rigger, the crane's owner and the site checks decide.",
+ "owner": "2026-10-08 night, his paint on ~/Downloads/moxir/stage/paint-stage-v1-1.png (exported as 'update dj and speaker place, paint-stage-v1-1.png'): a green DJ box and two blue speaker boxes at the press end, house left of the press; read into hall metres by the main session from the picture's own mapping (its PNG text chunk, y_offset 150): DJ x -6.3..-4.1, z 3.7..5.6; speakers L x -10.0..-6.5, R x -2.9..-0.1, both z 3.7..6.3. His rules carried: one low step (0.4 m, 10-07), the cut behind the DJ, not flipped, LOW house left (10-07), the audience faces the stage from the entry side (+z).",
+ "source": {
+  "marks": "~/Downloads/moxir/stage/update dj and speaker place, paint-stage-v1-1.png (the plan from above, grid 6 m; mapping in its text chunk)",
+  "accuracy": "a hand stroke on a 1:~65 plan: about +-0.3 m"
+ },
+ "stage_line": {
+  "z_m": 5.65,
+  "faces": "entry",
+  "why": "the front edge of his green DJ box (z 5.6), the 2 m deep step behind it: z 3.65-5.65"
+ },
+ "booth": {
+  "drawn_x_m": [
+   -6.3,
+   -4.1
+  ],
+  "centre_x_m": -5.2,
+  "front_z_m": 5.65,
+  "depth_m": 2.0,
+  "width_m": 3.0,
+  "deck_h_m": 0.4,
+  "stairs": false,
+  "clear_of_fixed_m": 0.1,
+  "why": "his green box, centred (x -5.2), the 3 x 2 m one-step booth of 10-07 (0.4 m, no stair) with its front on the box's front edge. It stands 3.0 m clear of the press pedestal (x -1..0.5) and 4.3 m of the transformer (x -11..-9.5, z -4..4, z LOW +-3 m); the five loose pressure vessels (x -6..0, z -2..+8) stand where it goes: they MUST be cleared (owner: loose items go).",
+  "deck": {
+   "what": "one step: 3 × StageDex Topline deck 2 × 1 m on 40 cm standard legs, as one 3 × 2 m level, 0.4 m high",
+   "deck_code": "Prolyte StageDex Topline deck SM-D-T-200100, 2 × 1 m, 35.6 kg self weight, 750 kg/m² UDL",
+   "deck_source": "https://www.prolyte.com/products/portable-stages/stagedex/topline-deck/sm-d-t-200100-topline-deck-200x100cm (read 2026-10-07)",
+   "leg_code": "StageDex standard leg SM-L-40A (round aluminium 48.3 × 3 mm; the leg itself 37.5 cm)",
+   "leg_source": "https://www.bax-shop.co.uk/stage-components-accessories/stagedex-sm-l-40a-stage-leg-37-5-cm-high (\"stage leg 37.5 cm high\", 48.3 × 3 mm, read 2026-10-07); https://prolyte.com/products/portable-stages/stagedex/stagedex-legs (\"lengths ranging from 20-100cm\", read 2026-10-07)",
+   "height_basis": "0.40 m finished height: the leg codes name the stage height and the leg is 25 mm shorter (SM-L-20A 175 mm → 20 cm, SM-L-40A 375 mm → 40 cm: two listings agree; the deck frame carries the rest). The maker's own height table not opened — the rental house's decks owed.",
+   "why_three": "\"one step\" read as one LEVEL, not one 2 × 1 m deck: a single deck leaves 0.2 m behind the 0.8 m deep DJ table for the DJ to stand — the 3 × 2 m base footprint is kept (owner to confirm)"
+  },
+  "table_note": "the DJ table stays 0.95 m high on the step (top 1.15 m from the floor) — moxir-2026-10-17.json stage.table",
+  "drawn_z_m": [
+   3.7,
+   5.6
+  ]
+ },
+ "pa": {
+  "placeholder": true,
+  "owner_2026_10_08": "NO SOUND design by us (owner, 10-08 night, via the coordinator): the sound is the organiser's (MOXIR / Poligraf). The two speaker boxes are the organiser's PLACEHOLDERS at his marks, kept for sightlines and blocking only - no class, model or count.",
+  "boxes": [
+   {
+    "id": "L",
+    "drawn_x_m": [
+     -10.0,
+     -6.5
+    ],
+    "drawn_z_m": [
+     3.7,
+     6.3
+    ],
+    "x_m": [
+     -10.0,
+     -6.8
+    ],
+    "z_m": [
+     4.1,
+     6.7
+    ],
+    "h_m": 2.0,
+    "moved": {
+     "by_m": [
+      0,
+      0,
+      0.4
+     ],
+     "why": "his box reaches the transformer (x -11..-9.5, z -4..4, y 0-2.5; its z is LOW, +-3 m) over x -10..-9.5, z 3.7..4.0. Least move that clears it by 0.1 m: +0.4 m toward the audience (+z). Moving it +x instead (0.6 m) would put it on the DJ step (x -6.7). FLAG: tape the transformer's z; inside its +-3 m the overlap may be larger or none.",
+     "trimmed_x_m": 0.3,
+     "trimmed_why": "bug fix 2026-10-09: his box's +x edge (x -6.5) stands 0.2 m inside the 3 x 2 m step (x -6.7..-3.7, z 3.65..5.65): the box and the step were one solid. The placeholder's +x edge is trimmed to x -6.8 (0.1 m clear of the step, as the other clearances); its left edge, z and height are unchanged. The organiser's real box size is theirs (no sound design by di)."
+    }
+   },
+   {
+    "id": "R",
+    "drawn_x_m": [
+     -2.9,
+     -0.1
+    ],
+    "drawn_z_m": [
+     3.7,
+     6.3
+    ],
+    "x_m": [
+     -2.9,
+     -0.1
+    ],
+    "z_m": [
+     4.6,
+     7.2
+    ],
+    "h_m": 2.0,
+    "moved": {
+     "by_m": [
+      0,
+      0,
+      0.9
+     ],
+     "why": "his box reaches the press pedestal (x -1..0.5, z 3..4.5, y 0-1.2) over x -1.0..-0.1, z 3.7..4.5. Least move that clears it by 0.1 m: +0.9 m toward the audience (+z). Moving it -x instead (1.0 m) would put it on the DJ step (x -3.7). FLAG: the pedestal is 'medium-low' and may be bolted (tape it); a narrower box (x -2.9..-1.1) would need no move."
+    }
+   }
+  ],
+  "h_basis": "2.0 m high ASSUMED (the order of a ground-stacked PA), for the sightline and blocking checks only",
+  "vessels": "the five loose pressure vessels (x -6..0, z -2..+8) stand under both boxes and the step: they must be cleared or the stage cannot go here (owner: loose items go)."
+ },
+ "barrier": {
+  "z_m": 8.2,
+  "pit_m": 2.55,
+  "x_m": [
+   -11.6,
+   2.0
+  ],
+  "h_m": 1.1,
+  "why": "1.0 m in front of the moved R speaker box (front z 7.2) and 2.55 m in front of the step (v1.0's pit was 2.0 m). It runs from the left column row's face (x -11.6) to x 2.0, where the press-side cabinets begin (x 2-5, z 3-8, LOW), so no one walks round either end onto the stage or behind the boxes. The crowd-safety plan (the organiser's) sets the final line; a return along the press face is its call."
+ },
+ "foh": {
+  "p": [
+   -5.2,
+   0.0,
+   29.0
+  ],
+  "riser_m": 0.6,
+  "eye_m": 2.2,
+  "size_m": [
+   3.0,
+   2.0
+  ],
+  "why": "at the back of the floor, on the stage's axis (x -5.2): v1.0's FOH stood 22.5 m from its stage front (z 47 for 24.5); kept: 5.65 + 23.35 = z 29.0 (3 x 2 m riser z 28-30, 0.6 m high, ASSUMED). It is the lighting/laser desk position (di's visuals); the organiser's sound desk may share it."
+ },
+ "floor": {
+  "x_m": [
+   -11.0,
+   3.5
+  ],
+  "z_m": [
+   8.2,
+   28.0
+  ],
+  "why": "from the barrier (z 8.2) to the FOH riser; x from 0.6 m inside the left column face to 0.1 m short of the roller conveyor (x 3.6, its x +-1 m: tape). The bags (z 19-23) and the cabin are cleared (owner). About 14.5 x 19.8 m = 287 m2."
+ },
+ "crane": {
+  "z_m": 3.2,
+  "candidates_m": [
+   0.15,
+   2.65,
+   2.9,
+   3.15,
+   3.2,
+   3.4,
+   3.65,
+   4.25
+  ],
+  "hall_overlay": "scripts/place/rigs/moxir-hall-crane-park-v2-cranes-2026-10-09.json",
+  "hall_record": "scripts/place/rigs/moxir-hall-2026-10-09-v10-show-park.hall.json",
+  "as_found_z_m": 42.5,
+  "z_m_v1_1": 0.15,
+  "decision_v1_1": {
+   "date": "2026-10-08",
+   "by": "design (agent), owner to look",
+   "rule": "the owner's: the cut behind the DJ, not flipped, LOW house left (10-07); the cranes move (owner 10-08 night: plan A crane-hung is fine; plan B a fallback note)",
+   "chose": "near crane z 0.15, the cut axis x -5.0 (the line centred 0.2 m house right of the DJ), tie-offs hl -> column x -11.6 z -0.5 (3.04 m, 49 deg off the plane), hr -> column x +11.6 z -6 (6.15 m, 29 deg)",
+   "why": "the v1.0 relation (bridge 1.5 m behind the step, z 2.15) hangs the cut's high end 0.27 m over the press crown and its hr tie-off 0.13 m from it; the least change that clears the crown by >= 0.5 m: the crane 2.0 m further back (z 0.15: line 0.57 m, hr tie-off 0.85 m). The axis can go no further house left: at -5.0 the low end (x -11.04) stands 0.56 m from the column face (-11.6).",
+   "table": [
+    {
+     "z_m": 2.15,
+     "gap_behind_step_m": 0.68,
+     "line_to_crown_m": 0.27,
+     "hr_tie_to_crown_m": 0.14
+    },
+    {
+     "z_m": 1.15,
+     "gap_behind_step_m": 1.68,
+     "line_to_crown_m": 0.27,
+     "hr_tie_to_crown_m": 0.13
+    },
+    {
+     "z_m": 0.65,
+     "gap_behind_step_m": 2.18,
+     "line_to_crown_m": 0.31,
+     "hr_tie_to_crown_m": 0.24
+    },
+    {
+     "z_m": 0.4,
+     "gap_behind_step_m": 2.43,
+     "line_to_crown_m": ">0.4 (transformer nearest)",
+     "hr_tie_to_crown_m": 0.39
+    },
+    {
+     "z_m": 0.15,
+     "gap_behind_step_m": 2.68,
+     "line_to_crown_m": 0.57,
+     "hr_tie_to_crown_m": 0.85
+    }
+   ],
+   "travel": "from z 42.5 (as found) to 0.15: 42.4 m along the runway, under the pendant lamps (lowest 9.0-10.0 m over z -5..25) - the trolley's top is ~9.4 m (girder 7.6 + 0.8 + trolley 1.0 ASSUMED): park the trolley at the +x end (x 7.6-10.2, as in the model) and look at the lamps along the path before it moves.",
+   "joint": "the bridge parks over the expansion joint (z 0): its end trucks span z -2.45..2.75. A question for the crane owner (rail joint, brakes)."
+  },
+  "decision": {
+   "date": "2026-10-09",
+   "by": "the owner (N463), the design chosen by the MOXIR lead's match (crane-dj-light + B-L, 2026-10-10); owner to look",
+   "rule": "the owner's: \"go back one with trus dj 's back but also light the dj not the full back half back\". Read (crane-dj-light 3): the cut stays behind his eye, not flipped, LOW house left (10-07), but no longer a backdrop 4.15 m behind it: 1.10 m behind, the bridge straddling the step's back edge, nothing hung over the step, and three of its lamps light him from behind and above. The literal \"half the bridge over the step\" (z 3.65) is the alternative: its hung lamps would hang over the step.",
+   "chose": "near crane z 3.20 (from 0.15, +3.05 m); the cut axis x -5.0 unchanged; tie-offs hl -> column x -11.6 grid z 6 at 3.04 m (79 deg off the plane), hr -> column x +11.6 grid z -6 at 6.15 m (40 deg) as committed",
+   "why": "the smallest move forward that keeps the cut >= 0.5 m from the press crown on BOTH measures: the tool's bottom-chord line passes from z 3.02, the 290 mm truss box from 3.16; 3.20 is the first 0.05 m rail mark past both (crown EQUIVALENT +-20 %: tape it). Past z 3.49 the hung lamps hang over the step; past 4.25 the front girder runs under the z 6 pendant-lamp row; past 5.0 the cab meets gallery 1.",
+   "table": [
+    {
+     "z_m": 0.15,
+     "riser_gap_m": 2.68,
+     "crown_line_box_m": [
+      0.7,
+      0.58
+     ],
+     "hung_front_z_m": 0.31,
+     "over_step": false,
+     "eye_in_front_m": 4.15
+    },
+    {
+     "z_m": 2.65,
+     "riser_gap_m": 0.18,
+     "crown_line_box_m": [
+      0.27,
+      0.27
+     ],
+     "hung_front_z_m": 2.81,
+     "over_step": false,
+     "eye_in_front_m": 1.65
+    },
+    {
+     "z_m": 2.9,
+     "riser_gap_m": -0.07,
+     "crown_line_box_m": [
+      0.4,
+      0.31
+     ],
+     "hung_front_z_m": 3.06,
+     "over_step": false,
+     "eye_in_front_m": 1.4
+    },
+    {
+     "z_m": 3.15,
+     "riser_gap_m": -0.32,
+     "crown_line_box_m": [
+      0.61,
+      0.49
+     ],
+     "hung_front_z_m": 3.31,
+     "over_step": false,
+     "eye_in_front_m": 1.15
+    },
+    {
+     "z_m": 3.2,
+     "riser_gap_m": -0.37,
+     "crown_line_box_m": [
+      0.66,
+      0.53
+     ],
+     "hung_front_z_m": 3.36,
+     "over_step": false,
+     "eye_in_front_m": 1.1
+    },
+    {
+     "z_m": 3.4,
+     "riser_gap_m": -0.57,
+     "crown_line_box_m": [
+      0.84,
+      0.71
+     ],
+     "hung_front_z_m": 3.56,
+     "over_step": false,
+     "eye_in_front_m": 0.9
+    },
+    {
+     "z_m": 3.65,
+     "riser_gap_m": -0.82,
+     "crown_line_box_m": [
+      1.08,
+      0.94
+     ],
+     "hung_front_z_m": 3.81,
+     "over_step": true,
+     "eye_in_front_m": 0.65
+    },
+    {
+     "z_m": 4.25,
+     "riser_gap_m": -1.42,
+     "crown_line_box_m": [
+      1.67,
+      1.53
+     ],
+     "hung_front_z_m": 4.41,
+     "over_step": true,
+     "eye_in_front_m": 0.05
+    }
+   ],
+   "table_source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/crane-dj-light/design.md 1 (stage-line.mjs --evaluate + crown.mjs, segmentBoxGap)",
+   "travel": "from z 42.5 (as found) to 3.20: 39.3 m along the runway under the pendant lamps (lowest 9.0-10.0 m over z -5..25): park the trolley at the +x end (x 7.6-10.2) and look at the lamps along the path before it moves. It parks between the z 0 and z 6 lamp rows (front girder 1.05 m short of z 6).",
+   "joint": "the bridge stops 0.60 m short of the expansion joint at z 0 (end trucks z 0.60..5.80, ASSUMED +-2.6 m): it neither crosses the rail break nor parks on it.",
+   "riser_rule": "the old \"behind the riser\" rule (truss.behind_m 1.32) is retired by N463 on purpose: the bridle clamps (z 4.02, 7.45 m up) now sit 0.37 m over the step's back edge; nothing HANGS over the step (the hung lamps' front z 3.36 < the step's back edge 3.65)"
+  }
+ },
+ "truss": {
+  "cut": "scripts/place/rigs/moxir-crane-cut-v2-cranes-2026-10-09.json",
+  "axis_x_m": -5.0,
+  "clear_gap_m": 0.5,
+  "clear_gap_why": "design choice, the same 0.5 m the cut keeps over raised hands: plan distance from the riser's back edge to the front-most hung part (the bridle clamps on the front girder's inner flange)",
+  "crane_z_m": 3.2,
+  "crane_z_why": "the park is the design's own z (N463 \"half back\"), not \"behind_m behind the riser\" (the backdrop rule of v1.1) and not \"over the DJ within 1 m\": rig-lib stageFrame truss_crane_z_m. The hall record must hold a bridge there (hall v10, cranes_from_door_m 50.8)",
+  "behind_m_v1_1": 1.32,
+  "behind_why_v1_1": "the bridge's plane at least 0.5 m clear + 0.82 m reach of the bridle clamps (leg spread 1.5 / 2 + the clamp's half depth) behind the riser's back edge (rig-lib stageFrame truss_behind_m)",
+  "half_back": "the cut's plane z 3.20 is 1.10 m behind the DJ's eye (z 4.30, the step 0.4 + 1.63 m, Pheasant & Haslegrave, Bodyspace 3rd ed.); 4.15 m before",
+  "pen_condition": {
+   "x_m": [
+    -11.6,
+    -10.5
+   ],
+   "z_m": [
+    1.75,
+    4.65
+   ],
+   "why": "the cut's LOW end (x -11.04, bottom chord 2.89 m) is 0.39 m over raised hands where it passes the stage pen's edge (x -10.5): under the 0.5 m rule for 0.54 m of the line (u -6.25..-5.69). The transformer (x -11..-9.5, z -4..4, z LOW) and the column-foot cabinets stand there; the pen's barrier (owed, MOXIR v2 eyes) takes in this bay, from the column face to the pen, for the bridge's width, so no one of the public stands under it"
+  }
+ },
+ "lights": {
+  "note": "the lights and lasers are re-aimed by scripts/place/moxir_v1_1.py into scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json"
+ },
+ "views": {
+  "why": "the room's entry camera and buttons, derived by aim-views.mjs from this file and the stage frame",
+  "entry": {
+   "from_z_m": 21.0,
+   "eye_m": 1.65,
+   "fov": 55,
+   "aim": "between the DJ's head and the crane girder behind him"
+  },
+  "floor": {
+   "from_z_m": 21.0,
+   "eye_m": 1.7,
+   "fov": 60,
+   "aim": "the DJ's head"
+  },
+  "dj": {
+   "fov": 75,
+   "aim": "from the DJ's eye on the step, out to the middle of the dance floor at a standing eye"
+  }
+ },
+ "owner_2026_10_09": "2026-10-09 20:51: \"yes ther no crane one with the 6 lasers , go back one with trus dj 's back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences\"",
+ "basedOn": "scripts/place/rigs/moxir-stage-v1-1-2026-10-08.json (v1.1, 2026-10-08): everything kept except the crane park, its hall record and the cut file",
+ "source_design": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/crane-dj-light/design.md (the park, the half-back reading, the 11 PARs); ~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/match/match.md (the pair with B-L fits)"
+}

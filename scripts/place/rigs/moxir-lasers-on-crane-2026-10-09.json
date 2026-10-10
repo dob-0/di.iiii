@@ -1,0 +1,329 @@
+{
+ "what": "MOXIR v2 cranes: the six LaserCube Ultra Mk2 (7.5 W) SIT on the free crane's far-side girder at z -12 and fire one static beam each -z over the crowd behind the stage to ONE point on the far (SE) wall's block (design B-L)",
+ "owner": {
+  "N463": "2026-10-09 20:51: \"yes ther no crane one with the 6 lasers , go back one with trus dj 's back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences\"",
+  "N464": "2026-10-09 21:1x: \"6 lasers will go on the laser not like the trus\"; asked how: \"we dont need to hange laser put on the crane\"",
+  "N464.4": "2026-10-10 16:14: \"2 big ones goes to the up where audience enter, 6 on the crane not like trus we can go and put on the crane\" (no direction picked: the lead's default is B-L, the option that passes today)"
+ },
+ "date": "2026-10-09",
+ "built": "2026-10-10",
+ "written_by": "scripts/place/moxir_v2_cranes.py",
+ "design": {
+  "source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/laser-margin/design.md (B-L), judged 7/10 (judge-laser-safety/verdict.md: the only design consistent with the record), matched with the near crane at z 3.20 (match/match.md: fits, margin to that system +13.4 m)",
+  "name": "B-L"
+ },
+ "previous": {
+  "file": "scripts/place/rigs/moxir-aerial-far-crane-2026-10-09.json",
+  "sha256": "56826b0dea8b8e03b9ea704434e4eb34a58052db62b6e819210dbd5d90c8fefa",
+  "what": "v1.1 aerial (#844, the laser session's aerial-far-crane.json, byte copy): the cubes on a bar 2.49 m under the free crane (y 5.2), aimed +z over the audience to the entry wall. Superseded by N464 (\"put on the crane\", no hang): kept as the previous version."
+ },
+ "units": [
+  {
+   "id": "rig-lasercube-cut-01",
+   "colour": "ash white",
+   "x_m": -4.5,
+   "aperture_m": {
+    "p05": [
+     -4.5,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -4.5,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -4.5,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -4.5,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": 0.666,
+   "tilt_deg_above_level": 0.527,
+   "range_m": 40.354
+  },
+  {
+   "id": "rig-lasercube-cut-02",
+   "colour": "ash white",
+   "x_m": -3.8,
+   "aperture_m": {
+    "p05": [
+     -3.8,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -3.8,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -3.8,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -3.8,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -0.328,
+   "tilt_deg_above_level": 0.527,
+   "range_m": 40.352
+  },
+  {
+   "id": "rig-lasercube-cut-04",
+   "colour": "ember red",
+   "x_m": -3.1,
+   "aperture_m": {
+    "p05": [
+     -3.1,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -3.1,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -3.1,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -3.1,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -1.322,
+   "tilt_deg_above_level": 0.527,
+   "range_m": 40.362
+  },
+  {
+   "id": "rig-lasercube-cut-05",
+   "colour": "ember red",
+   "x_m": -2.4,
+   "aperture_m": {
+    "p05": [
+     -2.4,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -2.4,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -2.4,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -2.4,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -2.315,
+   "tilt_deg_above_level": 0.526,
+   "range_m": 40.385
+  },
+  {
+   "id": "rig-lasercube-cut-03",
+   "colour": "ash white",
+   "x_m": -1.7,
+   "aperture_m": {
+    "p05": [
+     -1.7,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -1.7,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -1.7,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -1.7,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -3.306,
+   "tilt_deg_above_level": 0.526,
+   "range_m": 40.419
+  },
+  {
+   "id": "rig-lasercube-cut-06",
+   "colour": "ash white",
+   "x_m": -1.0,
+   "aperture_m": {
+    "p05": [
+     -1.0,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -1.0,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -1.0,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -1.0,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -4.296,
+   "tilt_deg_above_level": 0.525,
+   "range_m": 40.465
+  }
+ ],
+ "mount": {
+  "on": "the free crane's FAR-side girder top (z -13.45..-12.75, PLACEHOLDER), outboard of the trolley rail, front faces flush with the girder's outer (far-wall) edge, facing -z",
+  "spacing_m": 0.7,
+  "spacing_why": "each beam's tube passes the next cube's body >= 0.25 m (laser margin)",
+  "aperture_over_base_m": 0.08,
+  "aperture_basis": "ASSUMED (not in our files; the maker's output window is 30 x 18 mm on the front face)",
+  "free_crane_top_m": {
+   "p05": 8.46,
+   "p50": 8.73,
+   "p95": 9.01
+  },
+  "top_basis": "photo 007, crane_height.py (Criminisi, Reid & Zisserman 2000), EQUIVALENT; the design is checked at p05, p50 and p95",
+  "fix": "the maker's tilt-lock screws + the safety eye bolt to a steel strap round the girder's top flange (the rigger's detail, owed)"
+ },
+ "aim": {
+  "end_m": [
+   -4.031,
+   9.181,
+   -53.8
+  ],
+  "why": "the one far-wall point with the largest worst margin over the six beams, the three top heights and both readings of the far gate (compass search, Hooke & Jeeves 1961; laser-margin design.md 10)",
+  "on_site": "set on a target mark on the far wall at (x -4.03, y 9.18), measured from the x -12 column line and the floor; the six-beam worst stays within 0.05 m of the design for an end in x -4.43..-3.99, y 9.14..9.24",
+  "after_h1": {
+   "end_m": [
+    -4.162,
+    9.019,
+    -53.8
+   ],
+   "when": "only once H1 confirms photo 007 (the model's centred gate ruled out): worst +0.325 m (laser-margin design 2.4); not used now"
+  }
+ },
+ "rule": {
+  "text": "MOXIR.md 4.0a: a person = surface + 2.0 m; the beam >= 3.0 m above every place a person can stand OR >= 2.5 m beside it (the 0.8 deg fan + 4 mm + 1 mrad); every body is its true box + 0.25 m and the 1.008 deg tube keeps >= 0.25 m from it (the laser margin); every ray of the 0.8 and 1.008 deg fans first hits the far wall's matte block; an opening in that wall is a standing level for the end (2.5 m beside or 3.0 m over its top)",
+  "standards": [
+   "IEC 60825-1:2014 (MPE, NOHD)",
+   "IEC TR 60825-3 (laser shows: 3.0 m over, 2.5 m beside audience places)",
+   "ILDA audience-safety guidance",
+   "HSE HS(G)95"
+  ],
+  "person_m": 2.0,
+  "vertical_m": 3.0,
+  "lateral_m": 2.5,
+  "fan_deg": 0.8,
+  "body_fan_deg": 1.008,
+  "body_pad_m": 0.25,
+  "laser_gap_min_m": 0.25,
+  "free_crane_bridge_top": "NOT a standing level: closed and locked out whenever a cube can emit (lead's addendum 3); the cubes are focused before doors by the operator only, beam block engaged, alignment power"
+ },
+ "hold_points": [
+  {
+   "id": "H1",
+   "what": "the far (SE) wall: the big gate's jambs and top, the steel door's jambs and top, the wall surface over x -5.5..-2.5, y 8.0..10.5 (photo 007 never saw that strip; a line at y ~10.0 above it)",
+   "stop_if": "the gate's left jamb is further left than x -1.1 (the judge's readings G3 / G4 / G7 fail by 0.57-1.88 m): use the fallback B-R or re-aim; something mounted in the end zone: move the end"
+  },
+  {
+   "id": "H2",
+   "what": "the free crane's top over x -5..-0.5: the far girder's top plate and outer edge, the trolley rail and clips, the festoon track on posts (photo 007), any walkway or conductor rail; the real top height; a strap point per cube",
+   "stop_if": "anything on the plate in front of a cube (the beam fires nearly level 0.08 m over it): a riser <= 0.28 m or a bracket off the outer face, then re-run"
+  },
+  {
+   "id": "H3",
+   "what": "the free crane seen at z -12; its trolley driven to the +x end (x 7.6-10.2) and locked; its hook wound up; the lock-out (MOXIR.md 5.2)",
+   "stop_if": "the trolley cannot move: its August place (x -2.3..+0.1) is where cubes 03, 05, 06 sit"
+  },
+  {
+   "id": "H4",
+   "what": "the pendant lamps over the far half (z -42..-5 never seen) along the strip x -6..0, z -13..-54",
+   "stop_if": "anything hanging below 9.43 m at z -18, 9.76 at z -30, 10.24 at z -48 within 0.58-1.11 m of a beam axis (the judge: off-node lamps from 9.5 m would take B-L to -0.18..-0.43)"
+  },
+  {
+   "id": "H5",
+   "what": "the space frame's bottom chord at z -48 (10.6-11.2; one reading straight up)",
+   "stop_if": "below 10.6 m"
+  },
+  {
+   "id": "H6",
+   "what": "#873's final far-wall ends (its steel-door fix raises them 0.40 m)",
+   "stop_if": "their keep-out moves: re-run this check"
+  },
+  {
+   "id": "H7",
+   "what": "the far half's floor under the beams' strip (the horizontal tank, the gas cylinders, the stair at a column)",
+   "stop_if": "anything higher than 3.71 m (z -31..-13) / 3.59 m (z -54..-31) in the strip x -7.1..1.5: fence or move it"
+  }
+ ],
+ "controls": [
+  "one static beam per cube (the owner, 2026-10-09); no effect leaves the +-0.3 deg zone",
+  "each cube's LaserOS Safety Zone keep-in = its aim +-0.3 deg; the lockable mechanical beam block set at the setup sheet's tilt (the judge's graft: a passive aperture mask, an 8 mm hole 0.25 m in front, aim +-0.4 deg, covers the unknown scan-fail behaviour: owed)",
+  "the free crane parked at z -12, locked out, its trolley at the +x end, its hook wound up (H3)",
+  "E-stop 1 at FOH, E-stop 2 (spotter): recommended at x -2.0, z -7.0 (the judge's graft: 97.6 % of each beam seen at either park, match.md)",
+  "dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld); `laserSignedOff` is never written by this tool"
+ ],
+ "nohd_m": {
+  "7.5 W, 4 mm, 1 mrad, 0.25 s": 608,
+  "basis": "moxir_v1_1.nohd (IEC 60825-1:2014 Table A.1); every beam is hazardous wherever it is: separation and the hard stop are the control"
+ },
+ "setup_sheet": null
+}
