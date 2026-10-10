@@ -126,6 +126,19 @@ const parseConfiguredAuthIdentities = (value) => {
   return Array.isArray(parsed) ? parsed : []
 }
 
+// Where editing lives for a space on its own domain. The public platform is
+// only a default in production: a dev or local server that answered
+// https://diiii.xyz would send people from a test space to the live one. There
+// it answers '' (the client then keeps the path on the domain) and says so.
+const resolvePlatformOrigin = ({ env = '', hubUrl = '', isProduction: prod = false, warn = console.warn } = {}) => {
+  const configured = String(env || '').trim().replace(/\/+$/, '')
+  if (configured) return configured
+  if (hubUrl) return new URL(hubUrl).origin
+  if (prod) return 'https://diiii.xyz'
+  warn('[config] PLATFORM_ORIGIN is unset and this is not production; a space on its own domain gets no editor address. Set PLATFORM_ORIGIN (dev: https://dev.diiii.xyz).')
+  return ''
+}
+
 const ROOT_DIR = path.resolve(__dirname, '..')
 const DEFAULT_DATA_DIR = path.join(ROOT_DIR, 'data')
 const isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production'
@@ -438,8 +451,11 @@ const config = {
     // domainService.chooseDomainProvider() decides, and says why when it can't.
     provider: (process.env.DOMAINS_PROVIDER || '').trim().toLowerCase(),
     // Where editing lives. An editor path opened on a space's domain goes here.
-    platformOrigin: (process.env.PLATFORM_ORIGIN || '').trim().replace(/\/+$/, '') ||
-      (authHubConfig.url ? new URL(authHubConfig.url).origin : 'https://diiii.xyz'),
+    platformOrigin: resolvePlatformOrigin({
+      env: process.env.PLATFORM_ORIGIN,
+      hubUrl: authHubConfig.url,
+      isProduction
+    }),
     cloudflare: {
       zoneId: (process.env.CLOUDFLARE_SAAS_ZONE_ID || '').trim(),
       // SSL and Certificates: Edit on the platform zone, nothing else.
@@ -467,4 +483,4 @@ const config = {
   }
 }
 
-module.exports = { config, normalizeBasePath, isCorsOriginAllowed, buildCorsOriginHandler }
+module.exports = { config, resolvePlatformOrigin, normalizeBasePath, isCorsOriginAllowed, buildCorsOriginHandler }

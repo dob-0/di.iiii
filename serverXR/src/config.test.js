@@ -1,10 +1,10 @@
 // @vitest-environment node
 
 import { createRequire } from 'node:module'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { isCorsOriginAllowed } = require('./config.js')
+const { isCorsOriginAllowed, resolvePlatformOrigin } = require('./config.js')
 
 describe('isCorsOriginAllowed', () => {
     it('allows any origin when wildcard is configured', () => {
@@ -270,5 +270,26 @@ describe('config: hard-fails in production when AUTH_SESSION_SECRET falls back t
             expect(() => require('./config.js')).not.toThrow()
             expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/AUTH_SESSION_SECRET is not set/))
         })
+    })
+})
+
+describe('resolvePlatformOrigin', () => {
+    it('prefers PLATFORM_ORIGIN, trimmed of trailing slashes', () => {
+        expect(resolvePlatformOrigin({ env: ' https://dev.diiii.xyz/ ', hubUrl: 'https://hub.example/serverXR', isProduction: true })).toBe('https://dev.diiii.xyz')
+    })
+
+    it('then the auth hub origin', () => {
+        expect(resolvePlatformOrigin({ env: '', hubUrl: 'https://hub.example/serverXR', isProduction: false })).toBe('https://hub.example')
+    })
+
+    it('falls back to the public platform only in production', () => {
+        expect(resolvePlatformOrigin({ env: '', hubUrl: '', isProduction: true })).toBe('https://diiii.xyz')
+    })
+
+    it('never points a dev or local server at production by default: empty, and it says so', () => {
+        const warn = vi.fn()
+        expect(resolvePlatformOrigin({ env: '', hubUrl: '', isProduction: false, warn })).toBe('')
+        expect(warn).toHaveBeenCalledTimes(1)
+        expect(warn.mock.calls[0][0]).toMatch(/PLATFORM_ORIGIN/)
     })
 })
