@@ -81,7 +81,7 @@ def compose(repo, gpath, cpath):
         raise SystemExit('composed ids are not unique or cut-11 is missing')
     T = copy.deepcopy(g)
     T['fixtures'] = fx
-    # --- looks: a part's [colour, level] from the owner of its units; a part with no unit is dropped
+    # --- looks: a part's [colour, level] from the owner of its units; a ground part with no unit is dropped, a cranes hall part with no unit is carried
     owner = {f['id']: ('c' if f['id'] in cr else 'g') for f in fx}
     parts_c = {f['part'] for f in fx if owner[f['id']] == 'c'}
     parts_g = {f['part'] for f in fx if owner[f['id']] == 'g'}
@@ -104,6 +104,13 @@ def compose(repo, gpath, cpath):
             if p not in src['parts']:
                 continue          # the owner's build does not light this part in this look (off there, off here)
             parts[p] = copy.deepcopy(src['parts'][p])
+        # the hall structure is the cranes rig's (rule): a part of ITS look that no unit carries (speaker faces, stage columns,
+        # roof, halo, embers: the lit surfaces of the hall block, not fixtures) and that the ground look does not list is carried
+        # whole, so the composed rig does not drop the lit hall it takes from the cranes
+        fx_parts = {f['part'] for f in fx}
+        for p, v in lc_['parts'].items():
+            if p not in parts and p not in fx_parts and p not in lg_['parts']:
+                parts[p] = copy.deepcopy(v)
         L = copy.deepcopy(lg_)
         L['parts'] = parts
         looks.append(L)

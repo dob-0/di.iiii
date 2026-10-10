@@ -1,0 +1,58 @@
+{
+ "v21-t40-dark-behind": {
+  "mean_Y": 0.017,
+  "white_pct": 0.15
+ },
+ "v21-t40-dark-dj": {
+  "mean_Y": 0.0348,
+  "white_pct": 0.04
+ },
+ "v21-t40-dark-djc": {
+  "mean_Y": 0.0358,
+  "white_pct": 0.03
+ },
+ "v21-t40-dark-entry": {
+  "mean_Y": 0.0167,
+  "white_pct": 0.03
+ },
+ "v21-t40-dark-floor": {
+  "mean_Y": 0.0187,
+  "white_pct": 0.19
+ },
+ "v21-t40-dark-wingL": {
+  "mean_Y": 0.0098,
+  "white_pct": 0.04
+ },
+ "v21-t40-dark-wingR": {
+  "mean_Y": 0.0101,
+  "white_pct": 0.02
+ },
+ "v21-t40-peak-behind": {
+  "mean_Y": 0.0296,
+  "white_pct": 0.19
+ },
+ "v21-t40-peak-dj": {
+  "mean_Y": 0.0483,
+  "white_pct": 0.24
+ },
+ "v21-t40-peak-djc": {
+  "mean_Y": 0.0495,
+  "white_pct": 0.24
+ },
+ "v21-t40-peak-entry": {
+  "mean_Y": 0.0329,
+  "white_pct": 0.18
+ },
+ "v21-t40-peak-floor": {
+  "mean_Y": 0.03,
+  "white_pct": 0.28
+ },
+ "v21-t40-peak-wingL": {
+  "mean_Y": 0.0177,
+  "white_pct": 0.06
+ },
+ "v21-t40-peak-wingR": {
+  "mean_Y": 0.0192,
+  "white_pct": 0.15
+ }
+}

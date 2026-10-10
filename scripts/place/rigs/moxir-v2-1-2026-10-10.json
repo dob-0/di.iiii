@@ -5939,6 +5939,18 @@
     "plane 2 (wings, facing the entry)": [
      "#ff3a12",
      0.64
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.6
+    ],
+    "speaker face L": [
+     "#ff3a12",
+     0.59
+    ],
+    "speaker face R": [
+     "#ff3a12",
+     1.0
     ]
    },
    "desk_caps": {
@@ -6034,6 +6046,30 @@
     "plane 2 (wings, facing the entry)": [
      "#ff3a12",
      0.85
+    ],
+    "embers": [
+     "#ff3a12",
+     0.6
+    ],
+    "halo": [
+     "#ff3a12",
+     0.5
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.8
+    ],
+    "roof": [
+     "#e8e4dc",
+     0.6
+    ],
+    "speaker face L": [
+     "#e8e4dc",
+     0.33
+    ],
+    "speaker face R": [
+     "#e8e4dc",
+     0.76
     ]
    },
    "desk_caps": {
