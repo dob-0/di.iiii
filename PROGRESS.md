@@ -1544,6 +1544,13 @@ Source: static WCAG 2.2 AA audit of 2026-10-01. Its findings were hypotheses; ea
 - Added `scripts/rigbuild/bridle-limit.test.js` (10 tests): the four bridled rigs are found; each is within the limit against the hall it points at; against the measured hall the violations equal the recorded list (a stale list fails either way); the guard can fail (hall 0.2 m lower). Proven by hand: pointing `minimal-ground` at the measured hall without re-deriving its trim makes the guard fail with 144.4°. `docs/architecture/RIG_BUILD.md` §15.13 says what is owed.
 - NOT done, and not mine to do: measuring the girder underside on site, repointing the versions file to the measured hall, re-deriving the trims and bridles, re-checking the crane-clash rule for the lasers, and the rigging sign-off itself (geometry only here; no hardware rating). The 3/s strobe cap on raw DMX values 4–254 of the PL5403 / B380F has no known rate map until a real unit is read (also from the audit; not changed here).
 
+## 2026-09-30 — main gets dev's CURRENT.md so the hotfix deploy can pass the docs freshness check
+
+- Hotfix #657 (bundle symlink read) merged to main on 2026-09-29, but its deploy stopped at "Check AI docs": main's CURRENT.md was last recapped 2026-09-24 while code changed 2026-09-29 (grace 2 days). Every other step, lint, build, tests and audits, passed.
+- This branch changes one file: CURRENT.md, copied unchanged from dev (the `npm run land` output of 2026-09-29), not hand-edited. The next promotion carries the same content.
+- The docs freshness check has no path for a hotfix that goes straight to main; still owed: exempt hotfix branches, or let the deploy read the recap date from dev.
+- The re-run (after #668) failed at the same step for a second reason: `docs/ai/sessions/` must be empty on main, and it held this note and the hotfix's. CI folds notes in place only for dev deploys (`land_in_place`), never for main, and every PR branch must carry a note, so a hotfix merged straight to main always fails its own deploy. Both notes are folded here by `foldNotesIntoProgress` (not `npm run land`: it refuses off dev and sweeps worktrees). Still owed: give main's deploy `land_in_place` (deploy-vps.yml), or exempt hotfix branches. diiii.xyz stays on the 2026-09-24 version until a main deploy passes.
+
 ## 2026-09-30 — docs gate lets a fold branch write CURRENT.md
 
 - `scripts/check-agent-docs.mjs` refused any branch whose `CURRENT.md` differed from `origin/dev`, which blocked the hand fold `chore/fold-notes-after-670` in the pre-push hook. CI's `land` job cannot push to protected `dev` (GH006), so since 2026-09-29 the fold PR is the only route.
