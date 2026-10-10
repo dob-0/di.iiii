@@ -651,7 +651,7 @@ class Scene:
         zf += [v for b in entry['keep_out']['boxes'] for v in b['z_m']] + list(FAR_GIRDER) + list(STAGE_GIRDER) + [FREE_Z - 2.6, FREE_Z + 2.6, FREE_Z - 1.6, FREE_Z + 1.6]
         self.zfaces = np.unique(np.array(zf, float))
 
-    def margins(self, p, T, others=(), step=0.25, alone=False):
+    def margins(self, p, T, others=(), step=0.25, alone=False, optics=None, skip_groups=(), extra_boxes=()):
         """every margin of the tube p -> T (m; >= 0 passes): name -> (margin, at, group). A body's gap to the tube = margin + its gap rule (0.25).
         alone: the beam alone (no fan: 4 mm + 1 mrad for the levels and the openings, 2 mm for the bodies), the v1.1 setup-sheet window's test"""
         import numpy as np
@@ -662,9 +662,14 @@ class Scene:
         sz = (self.zfaces - p[2]) / d[2]
         s = np.unique(np.concatenate([s, sz[(sz > 0.05) & (sz < Lb)], [Lb]]))   # exact samples on every member's face: a thin member is never stepped over
         Q = p + s[:, None] * d
-        rp = r_place(s, 0.0 if alone else FAN)
-        rb = r_body(s, 0.0 if alone else FAN_BODY)
-        rbf = (lambda v: r_body(v, 0.0)) if alone else r_body
+        # optics (aperture m, divergence rad): another unit's tube (the 40 W: 10 mm + 1.3 mrad, #873); its body tube then also carries the
+        # divergence (aperture/2 + div s/2 + s tan 1.008), the safe side of the cubes' 2 mm + s tan 1.008
+        ap, dv = optics if optics else (APERTURE_M, DIVERGENCE)
+        rpf = lambda v, h: v * math.tan(math.radians(h)) + (ap + dv * v) / 2
+        rbo = (lambda v, h: ap / 2 + dv * v / 2 + v * math.tan(math.radians(h))) if optics else r_body
+        rp = rpf(s, 0.0 if alone else FAN)
+        rb = rbo(s, 0.0 if alone else FAN_BODY)
+        rbf = (lambda v: rbo(v, 0.0)) if alone else (lambda v: rbo(v, FAN_BODY))
         m = {}
         for k, (x0, x1, z0, z1, h) in enumerate(self.parr):
             hg = np.hypot(np.maximum(np.maximum(x0 - Q[:, 0], Q[:, 0] - x1), 0), np.maximum(np.maximum(z0 - Q[:, 2], Q[:, 2] - z1), 0)) - rp
@@ -673,7 +678,7 @@ class Scene:
             c = np.maximum(hg - LAT, vg - VERT)
             j = int(c.argmin())
             m['level: ' + self.places[k][0]] = (float(c[j]), Q[j], 'standing levels (3.0 m over / 2.5 m beside)')
-        for b in self.boxes + [cube_box(o, 'cube at x %.2f' % o[0]) for o in others]:
+        for b in [b for b in self.boxes if b['group'] not in skip_groups] + list(extra_boxes) + [cube_box(o, 'cube at x %.2f' % o[0]) for o in others]:
             g = np.linalg.norm(np.maximum(np.maximum(b['lo'] - Q, Q - b['hi']), 0), axis=1) - rb - b['pad'] - b['gap']
             j = int(g.argmin())
             key = 'body: ' + b['name']
@@ -698,7 +703,7 @@ class Scene:
                 if gg[jj] < best[0]:
                     best = (float(gg[jj]), Q[sel][jj])
         m['body: lantern glazing (from the deck %.2f)' % self.lantern_low] = (best[0], best[1], 'lanterns')
-        rpe, rbe = r_place(Lb, 0.0 if alone else FAN), rbf(Lb)
+        rpe, rbe = rpf(Lb, 0.0 if alone else FAN), rbf(Lb)
         m['end: under the far wall\'s plaster top (%.2f, body rule)' % WALL_TOP_LOW] = (WALL_TOP_LOW - PAD - LASER_GAP_MIN - (T[1] + rbe), T, 'end: far wall')
         for op in self.openings:
             lat = max(op['x'][0] - T[0], T[0] - op['x'][1], 0.0) - rpe
