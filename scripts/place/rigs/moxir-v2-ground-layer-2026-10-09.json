@@ -1,0 +1,4117 @@
+{
+ "what": "MOXIR v2 GROUND LAYER: ONLY the lamps on the floor (38 UP-PL5403 + 18 UP-B380F); ids kept from scripts/place/rigs/moxir-v2-spread-2026-10-09.json where a unit just moves",
+ "date": "2026-10-09",
+ "owner": "and also other washes and beams what we dont use make on the ground, not on the arcs, and also washs are so close on the ground for now you can use the left places of the area so we need epic thing you know use space right",
+ "ledger": "N465",
+ "written_by": "scripts/place/moxir_v2_ground.py build",
+ "from_rig": "scripts/place/rigs/moxir-v2-spread-2026-10-09.json",
+ "full_rig": "scripts/place/rigs/moxir-v2-ground-2026-10-09.json",
+ "frame": "hall frame: metres, Y up, +x house right, +z toward the entry; rotations three.js Euler XYZ radians, a spot's unrotated beam points -Y; angle_rad = half the beam angle; box solids base-anchored; truss origin at the section centre, tower at the base plate (src/rigbuild/pieces.js), a tower's s[1] scales the 6 m catalogue tower.",
+ "rules": {
+  "ground_max_y_m": 1.0,
+  "par_min_spacing_m": 6.0,
+  "par_spacing_why": "the structure: the column pitch along a row is 6 m, so at most one PAR per column foot (the joint pair z +-0.5 is one foot), and a 15 deg pool on the space frame at 10.8 m is 2.85 m across, so pools keep a dark gap >= 3.1 m (steel lit in pieces). The scores: the greedy loses 6.2 % of its objective at 6 m against no rule, 18.6 % at 7 m (par_spacing.curve).",
+  "crane_park": {
+   "x_m": [
+    -12.0,
+    12.0
+   ],
+   "z_m": [
+    -2.0,
+    7.0
+   ],
+   "y_m": [
+    2.5,
+    10.8
+   ],
+   "why": "the near crane + the cut truss move inside it (another workflow, \"half behind the DJ\"): no unit above 2.5 m there and no beam through it"
+  },
+  "pen_clear_over_m": 3.0,
+  "hand_m": 2.8,
+  "barrier_reach_m": 0.6,
+  "glare_deg": 30.0,
+  "dj_rule_deg": 20.0,
+  "min_throw_m": 8.0,
+  "islands": "6 heads in the stage pen + 3 fenced islands x 4 heads, >= 15 m apart",
+  "eyes": {
+   "floor centre": [
+    -3.75,
+    1.7,
+    18.1
+   ],
+   "wing L": [
+    -20.0,
+    1.7,
+    8.0
+   ],
+   "wing R": [
+    18.0,
+    1.7,
+    8.0
+   ],
+   "behind the stage": [
+    -4.0,
+    1.7,
+    -22.0
+   ],
+   "mid-hall": [
+    -2.0,
+    1.7,
+    36.0
+   ],
+   "near the entry": [
+    0.0,
+    1.7,
+    51.5
+   ],
+   "FOH": [
+    -5.2,
+    2.3,
+    29.0
+   ],
+   "far corner L": [
+    -24.0,
+    1.7,
+    -24.0
+   ],
+   "far corner R": [
+    18.0,
+    1.7,
+    -22.0
+   ]
+  },
+  "depth_bins": [
+   "0-12 m",
+   "12-25 m",
+   "25-40 m",
+   ">= 40 m"
+  ],
+  "objective": "sum over eyes and depth bins of sqrt(light): PAR lx from lit surfaces (Lambertian, one bounce), beam G (single scattering, haze t40)"
+ },
+ "islands": [
+  {
+   "island": "the stage pen",
+   "kind": "stage pen",
+   "rect": {
+    "x_m": [
+     -10.5,
+     1.5
+    ],
+    "z_m": [
+     -7.5,
+     8.2
+    ]
+   },
+   "size_m": [
+    12.0,
+    15.7
+   ],
+   "area_m2": 188.4,
+   "barrier_m": 0.0,
+   "barrier": "the stage pen's own barrier (crew only; owed since the spread)",
+   "heads": [
+    "rig-beam-planes-06",
+    "rig-beam-planes-04",
+    "rig-beam-planes-03",
+    "rig-beam-planes-05",
+    "rig-beam-planes-02",
+    "rig-beam-planes-01"
+   ],
+   "pen_m_max": 4.028,
+   "pen_hand_m_max": 3.816,
+   "pars_inside": [
+    "rig-par-planes-25",
+    "rig-par-planes-06"
+   ],
+   "why": "crew only (the DJ, the pit, backstage): the six plane-1 heads stay where B tuned put them, 1 m apart around the smoke machine"
+  },
+  {
+   "island": "col -12, span side, z 12..18",
+   "kind": "column line",
+   "rect": {
+    "x_m": [
+     -16.4,
+     -11.4
+    ],
+    "z_m": [
+     12.0,
+     18.0
+    ]
+   },
+   "size_m": [
+    5.0,
+    6.0
+   ],
+   "area_m2": 30.0,
+   "barrier_m": 22.0,
+   "barrier": "crowd barrier (1.1 m) round the island, tied to its two columns",
+   "heads": [
+    "rig-beam-planes-09",
+    "rig-beam-planes-18",
+    "rig-beam-planes-17",
+    "rig-beam-planes-14"
+   ],
+   "pen_m_max": 4.028,
+   "pen_hand_m_max": 3.816,
+   "pars_inside": [],
+   "why": "between two columns of the x -12 row (the columns anchor its barrier), on the span side"
+  },
+  {
+   "island": "col -12, nave side, z -30..-24",
+   "kind": "column line",
+   "rect": {
+    "x_m": [
+     -12.6,
+     -7.6
+    ],
+    "z_m": [
+     -30.0,
+     -24.0
+    ]
+   },
+   "size_m": [
+    5.0,
+    6.0
+   ],
+   "area_m2": 30.0,
+   "barrier_m": 22.0,
+   "barrier": "crowd barrier (1.1 m) round the island, tied to its two columns",
+   "heads": [
+    "rig-beam-planes-07",
+    "rig-beam-planes-12",
+    "rig-beam-planes-10",
+    "rig-beam-planes-08"
+   ],
+   "pen_m_max": 3.394,
+   "pen_hand_m_max": 2.995,
+   "pars_inside": [
+    "rig-par-planes-07"
+   ],
+   "why": "between two columns of the x -12 row (the columns anchor its barrier), on the nave side"
+  },
+  {
+   "island": "square x 18 z -3",
+   "kind": "free square",
+   "rect": {
+    "x_m": [
+     15.5,
+     20.5
+    ],
+    "z_m": [
+     -5.5,
+     -0.5
+    ]
+   },
+   "size_m": [
+    5.0,
+    5.0
+   ],
+   "area_m2": 25.0,
+   "barrier_m": 20.0,
+   "barrier": "crowd barrier (1.1 m) round the island",
+   "heads": [
+    "rig-beam-planes-11",
+    "rig-beam-planes-15",
+    "rig-beam-planes-13",
+    "rig-beam-planes-16"
+   ],
+   "pen_m_max": 4.028,
+   "pen_hand_m_max": 3.816,
+   "pars_inside": [
+    "rig-par-planes-16"
+   ],
+   "why": "a fenced 5 x 5 m square in the painted area, off the dance floor and the entry corridor"
+  }
+ ],
+ "reserved_for_truss": {
+  "pars": 12,
+  "hung_on_the_cut_now": 10,
+  "held_back": 2,
+  "held_back_ids": [
+   "rig-par-planes-24",
+   "rig-par-planes-28"
+  ],
+  "owner": "the truss workflow (the cut and the near crane, \"half behind the DJ\"): it decides 10 or 12",
+  "why_these_ids": "the spread's two speaker-face PARs (5.1 / 5.55 m on a column bracket): their job, the stage front, belongs with the truss now"
+ },
+ "fixtures": [
+  {
+   "id": "rig-par-planes-25",
+   "type": "up-pl5403",
+   "part": "DJ key (ground option)",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "DJ key, a GROUND OPTION (combine with the truss DJ light): floor of the pit, the only floor gap in the pit that sees the DJ past the two PA boxes (x -6.5..-2.9, z 5.65..8.2); aimed between his face (1.9 m) and the booth front (1.0 m) as the spread's keys; inside the fenced pen of the stage pen",
+   "p": [
+    -4.0,
+    0.31,
+    7.8
+   ],
+   "r": [
+    1.960646,
+    0.0,
+    -0.365994
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": null,
+   "inside": "the stage pen",
+   "place": "DJ key",
+   "eye_lux": null,
+   "lit_pct": null,
+   "gain": null,
+   "moved_from": {
+    "p": [
+     0.4,
+     4.5,
+     7.3
+    ],
+    "part": "stage key",
+    "plan_m": 4.428
+   },
+   "power_w": 200,
+   "combine_with": "the truss DJ light (another workflow): this key is a ground OPTION, one fader",
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 257,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-par-planes-18",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 18 z 3, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    18.0,
+    0.31,
+    3.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 18 z 3",
+   "eye_lux": {
+    "floor centre": 0.007,
+    "wing L": 0.007,
+    "wing R": 0.326,
+    "behind the stage": 0.004,
+    "mid-hall": 0.003,
+    "near the entry": 0.002,
+    "FOH": 0.003,
+    "far corner L": 0.0,
+    "far corner R": 0.022
+   },
+   "lit_pct": 100.0,
+   "gain": 1.366,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     0.5
+    ],
+    "part": "columns",
+    "plan_m": 5.731
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 81,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-12",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z -15, aimed at the crane runway girder x +11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    -15.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.607695
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z -15, to the runway",
+   "eye_lux": {
+    "floor centre": 0.002,
+    "wing L": 0.003,
+    "wing R": 0.011,
+    "behind the stage": 0.06,
+    "mid-hall": 0.001,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.011,
+    "far corner R": 0.131
+   },
+   "lit_pct": 100.0,
+   "gain": 1.016,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     -12.0
+    ],
+    "part": "columns",
+    "plan_m": 7.472
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 145,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-11",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -15 z -18, aimed at the crane runway girder x -11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    -15.0,
+    0.31,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.430103
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -15 z -18, to the runway",
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.011,
+    "wing R": 0.001,
+    "behind the stage": 0.118,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.12,
+    "far corner R": 0.007
+   },
+   "lit_pct": 100.0,
+   "gain": 0.818,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -12.0
+    ],
+    "part": "columns",
+    "plan_m": 7.125
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 113,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-32",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the entry face of the column x +12 z 24, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    12.0,
+    0.31,
+    24.84
+   ],
+   "r": [
+    3.07057,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col +12 z 24, entry face",
+   "eye_lux": {
+    "floor centre": 0.01,
+    "wing L": 0.0,
+    "wing R": 0.009,
+    "behind the stage": 0.0,
+    "mid-hall": 0.016,
+    "near the entry": 0.004,
+    "FOH": 0.019,
+    "far corner L": 0.0,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.482,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 1.19
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 113,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-17",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -21 z 3, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -21.0,
+    0.31,
+    3.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -21 z 3",
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.255,
+    "wing R": 0.003,
+    "behind the stage": 0.0,
+    "mid-hall": 0.0,
+    "near the entry": 0.001,
+    "FOH": 0.0,
+    "far corner L": 0.004,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.661,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     0.5
+    ],
+    "part": "columns",
+    "plan_m": 8.532
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-LEFT",
+    "line": "NODE-LEFT-1",
+    "address": 17,
+    "footprint": 8,
+    "universe": 4,
+    "branch": "NODE-LEFT-1"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-31",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the nave face of the column x -12 z 24, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    -11.157,
+    0.31,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col -12 z 24, nave face",
+   "eye_lux": {
+    "floor centre": 0.272,
+    "wing L": 0.02,
+    "wing R": 0.015,
+    "behind the stage": 0.002,
+    "mid-hall": 0.096,
+    "near the entry": 0.016,
+    "FOH": 0.391,
+    "far corner L": 0.001,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 1.731,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 0.0
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 305,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-26",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z 36, aimed at the flared head of the column x +12 z 36 (6.6 m); in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.676302
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z 36, to the column head",
+   "eye_lux": {
+    "floor centre": 0.056,
+    "wing L": 0.02,
+    "wing R": 0.0,
+    "behind the stage": 0.0,
+    "mid-hall": 0.279,
+    "near the entry": 0.075,
+    "FOH": 0.143,
+    "far corner L": 0.003,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.997,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     18.0
+    ],
+    "part": "columns",
+    "plan_m": 26.059
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-2",
+    "address": 9,
+    "footprint": 8,
+    "universe": 2,
+    "branch": "NODE-STAGE-2"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-15",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 21 z -15, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    21.0,
+    0.31,
+    -15.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 21 z -15",
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.0,
+    "wing R": 0.018,
+    "behind the stage": 0.006,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.001,
+    "far corner R": 0.12
+   },
+   "lit_pct": 83.6,
+   "gain": 0.255,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     -6.0
+    ],
+    "part": "columns",
+    "plan_m": 13.337
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 65,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-06",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -3 z -3, straight up into the roof steel; inside the fenced pen of the stage pen",
+   "p": [
+    -3.0,
+    0.31,
+    -3.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": null,
+   "inside": "the stage pen",
+   "place": "floor x -3 z -3",
+   "eye_lux": {
+    "floor centre": 0.036,
+    "wing L": 0.0,
+    "wing R": 0.005,
+    "behind the stage": 0.0,
+    "mid-hall": 0.004,
+    "near the entry": 0.003,
+    "FOH": 0.011,
+    "far corner L": 0.004,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.204,
+   "moved_from": {
+    "p": [
+     -5.2,
+     0.31,
+     -2.6
+    ],
+    "part": "halo",
+    "plan_m": 2.236
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 161,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-par-planes-02",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -24 z -15, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -24.0,
+    0.31,
+    -15.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -24 z -15",
+   "eye_lux": {
+    "floor centre": 0.002,
+    "wing L": 0.003,
+    "wing R": 0.002,
+    "behind the stage": 0.024,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.158,
+    "far corner R": 0.003
+   },
+   "lit_pct": 100.0,
+   "gain": 0.41,
+   "moved_from": {
+    "p": [
+     -6.678,
+     0.3,
+     2.7
+    ],
+    "part": "halo",
+    "plan_m": 24.766
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-LEFT",
+    "line": "NODE-LEFT-1",
+    "address": 1,
+    "footprint": 8,
+    "universe": 4,
+    "branch": "NODE-LEFT-1"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-29",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 18 z 15, aimed at the crane runway girder x +11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    18.0,
+    0.31,
+    15.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.719583
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 18 z 15, to the runway",
+   "eye_lux": {
+    "floor centre": 0.005,
+    "wing L": 0.001,
+    "wing R": 0.258,
+    "behind the stage": 0.0,
+    "mid-hall": 0.001,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.0,
+    "far corner R": 0.002
+   },
+   "lit_pct": 100.0,
+   "gain": 0.334,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     18.0
+    ],
+    "part": "columns",
+    "plan_m": 5.966
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 105,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-07",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the stage face of the column x -12 z -24, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); inside the fenced pen of col -12, nave side, z -30..-24",
+   "p": [
+    -12.0,
+    0.31,
+    -24.84
+   ],
+   "r": [
+    -3.07057,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": null,
+   "inside": "col -12, nave side, z -30..-24",
+   "place": "col -12 z -24, stage face",
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.002,
+    "wing R": 0.0,
+    "behind the stage": 0.128,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.079,
+    "far corner R": 0.007
+   },
+   "lit_pct": 100.0,
+   "gain": 0.295,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -24.0
+    ],
+    "part": "columns",
+    "plan_m": 1.19
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 65,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-21",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -18 z 15, aimed at the crane runway girder x -11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    -18.0,
+    0.31,
+    15.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.719583
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -18 z 15, to the runway",
+   "eye_lux": {
+    "floor centre": 0.116,
+    "wing L": 0.133,
+    "wing R": 0.002,
+    "behind the stage": 0.001,
+    "mid-hall": 0.007,
+    "near the entry": 0.001,
+    "FOH": 0.024,
+    "far corner L": 0.002,
+    "far corner R": 0.001
+   },
+   "lit_pct": 93.4,
+   "gain": 0.452,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     12.0
+    ],
+    "part": "columns",
+    "plan_m": 5.966
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 281,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-40",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z 15, aimed at the crane runway girder x +11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    15.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.607695
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z 15, to the runway",
+   "eye_lux": {
+    "floor centre": 0.167,
+    "wing L": 0.034,
+    "wing R": 0.035,
+    "behind the stage": 0.007,
+    "mid-hall": 0.015,
+    "near the entry": 0.003,
+    "FOH": 0.058,
+    "far corner L": 0.007,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.481,
+   "moved_from": {
+    "p": [
+     5.2,
+     0.2,
+     16.4
+    ],
+    "part": "embers",
+    "plan_m": 1.612
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 289,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-36",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -6 z 33, aimed at the flared head of the column x -12 z 36 (6.6 m); in the public area: guard cage",
+   "p": [
+    -6.0,
+    0.31,
+    33.0
+   ],
+   "r": [
+    -2.696165,
+    0.0,
+    -0.627083
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -6 z 33, to the column head",
+   "eye_lux": {
+    "floor centre": 0.037,
+    "wing L": 0.008,
+    "wing R": 0.001,
+    "behind the stage": 0.002,
+    "mid-hall": 0.211,
+    "near the entry": 0.04,
+    "FOH": 0.191,
+    "far corner L": 0.002,
+    "far corner R": 0.003
+   },
+   "lit_pct": 100.0,
+   "gain": 0.755,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     36.0
+    ],
+    "part": "columns",
+    "plan_m": 7.472
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-2",
+    "address": 1,
+    "footprint": 8,
+    "universe": 2,
+    "branch": "NODE-STAGE-2"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-05",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 18 z 30, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    18.0,
+    0.31,
+    30.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 18 z 30",
+   "eye_lux": {
+    "floor centre": 0.004,
+    "wing L": 0.002,
+    "wing R": 0.019,
+    "behind the stage": 0.0,
+    "mid-hall": 0.016,
+    "near the entry": 0.004,
+    "FOH": 0.008,
+    "far corner L": 0.0,
+    "far corner R": 0.002
+   },
+   "lit_pct": 93.4,
+   "gain": 0.096,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.71,
+     0.5
+    ],
+    "part": "stage columns",
+    "plan_m": 30.283
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 121,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-39",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z -21, aimed at the crane runway girder x +11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    -21.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.607695
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z -21, to the runway",
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.0,
+    "wing R": 0.007,
+    "behind the stage": 0.077,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.012,
+    "far corner R": 0.26
+   },
+   "lit_pct": 100.0,
+   "gain": 0.49,
+   "moved_from": {
+    "p": [
+     6.0,
+     2.45,
+     0.8
+    ],
+    "part": "embers",
+    "plan_m": 21.8
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 105,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-16",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 18 z -3, straight up into the roof steel; inside the fenced pen of square x 18 z -3",
+   "p": [
+    18.0,
+    0.31,
+    -3.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": null,
+   "inside": "square x 18 z -3",
+   "place": "floor x 18 z -3",
+   "eye_lux": {
+    "floor centre": 0.006,
+    "wing L": 0.0,
+    "wing R": 0.111,
+    "behind the stage": 0.0,
+    "mid-hall": 0.002,
+    "near the entry": 0.001,
+    "FOH": 0.002,
+    "far corner L": 0.0,
+    "far corner R": 0.039
+   },
+   "lit_pct": 100.0,
+   "gain": 0.177,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     -6.0
+    ],
+    "part": "columns",
+    "plan_m": 5.966
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 73,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-13",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -24 z -6, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -24.0,
+    0.31,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -24 z -6",
+   "eye_lux": {
+    "floor centre": 0.008,
+    "wing L": 0.085,
+    "wing R": 0.0,
+    "behind the stage": 0.017,
+    "mid-hall": 0.001,
+    "near the entry": 0.0,
+    "FOH": 0.004,
+    "far corner L": 0.056,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.221,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     -6.0
+    ],
+    "part": "roof",
+    "plan_m": 11.157
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-LEFT",
+    "line": "NODE-LEFT-1",
+    "address": 9,
+    "footprint": 8,
+    "universe": 4,
+    "branch": "NODE-LEFT-1"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-22",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z 9, aimed at the crane runway girder x +11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    9.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.607695
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z 9, to the runway",
+   "eye_lux": {
+    "floor centre": 0.122,
+    "wing L": 0.045,
+    "wing R": 0.067,
+    "behind the stage": 0.014,
+    "mid-hall": 0.021,
+    "near the entry": 0.005,
+    "FOH": 0.041,
+    "far corner L": 0.001,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.462,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     12.0
+    ],
+    "part": "roof",
+    "plan_m": 5.966
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 265,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-20",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 18 z 9, aimed at the crane runway girder x +11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    18.0,
+    0.31,
+    9.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.719583
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 18 z 9, to the runway",
+   "eye_lux": {
+    "floor centre": 0.003,
+    "wing L": 0.001,
+    "wing R": 0.578,
+    "behind the stage": 0.0,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.0,
+    "far corner R": 0.003
+   },
+   "lit_pct": 100.0,
+   "gain": 0.382,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     6.0
+    ],
+    "part": "columns",
+    "plan_m": 5.966
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 97,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-38",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -24 z -24, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -24.0,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -24 z -24",
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.009,
+    "wing R": 0.0,
+    "behind the stage": 0.03,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.45,
+    "far corner R": 0.003
+   },
+   "lit_pct": 100.0,
+   "gain": 0.667,
+   "moved_from": {
+    "p": [
+     2.4,
+     0.3,
+     2.5
+    ],
+    "part": "embers",
+    "plan_m": 37.406
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 73,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-27",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the nave face of the column x -12 z 18, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    -11.157,
+    0.31,
+    18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col -12 z 18, nave face",
+   "eye_lux": {
+    "floor centre": 0.484,
+    "wing L": 0.043,
+    "wing R": 0.019,
+    "behind the stage": 0.004,
+    "mid-hall": 0.043,
+    "near the entry": 0.01,
+    "FOH": 0.121,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.598,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     18.0
+    ],
+    "part": "columns",
+    "plan_m": 0.0
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 297,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-08",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the span face of the column x +12 z -24, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    12.843,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col +12 z -24, span face",
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.0,
+    "wing R": 0.009,
+    "behind the stage": 0.032,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.002,
+    "far corner R": 0.688
+   },
+   "lit_pct": 100.0,
+   "gain": 0.55,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     -24.0
+    ],
+    "part": "columns",
+    "plan_m": 1.686
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 97,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-19",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the span face of the column x -12 z 6, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    -12.843,
+    0.31,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col -12 z 6, span face",
+   "eye_lux": {
+    "floor centre": 0.033,
+    "wing L": 0.455,
+    "wing R": 0.005,
+    "behind the stage": 0.002,
+    "mid-hall": 0.003,
+    "near the entry": 0.001,
+    "FOH": 0.006,
+    "far corner L": 0.01,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.526,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     6.0
+    ],
+    "part": "columns",
+    "plan_m": 0.0
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 249,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-par-planes-35",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z 30, aimed at the flared head of the column x +12 z 30 (6.6 m); in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    30.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.676302
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z 30, to the column head",
+   "eye_lux": {
+    "floor centre": 0.108,
+    "wing L": 0.028,
+    "wing R": 0.003,
+    "behind the stage": 0.0,
+    "mid-hall": 0.219,
+    "near the entry": 0.038,
+    "FOH": 0.199,
+    "far corner L": 0.004,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.46,
+   "moved_from": {
+    "p": [
+     11.157,
+     2.8,
+     30.0
+    ],
+    "part": "roof",
+    "plan_m": 5.157
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 321,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-37",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -3 z -24, aimed at the crane runway girder x -11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    -3.0,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.839171
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -3 z -24, to the runway",
+   "eye_lux": {
+    "floor centre": 0.002,
+    "wing L": 0.003,
+    "wing R": 0.001,
+    "behind the stage": 0.298,
+    "mid-hall": 0.001,
+    "near the entry": 0.001,
+    "FOH": 0.001,
+    "far corner L": 0.054,
+    "far corner R": 0.032
+   },
+   "lit_pct": 100.0,
+   "gain": 0.418,
+   "moved_from": {
+    "p": [
+     0.9,
+     0.3,
+     0.9
+    ],
+    "part": "embers",
+    "plan_m": 25.204
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 89,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-23",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the nave face of the column x -12 z 12, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    -11.157,
+    0.31,
+    12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col -12 z 12, nave face",
+   "eye_lux": {
+    "floor centre": 0.264,
+    "wing L": 0.069,
+    "wing R": 0.03,
+    "behind the stage": 0.005,
+    "mid-hall": 0.021,
+    "near the entry": 0.006,
+    "FOH": 0.049,
+    "far corner L": 0.002,
+    "far corner R": 0.007
+   },
+   "lit_pct": 100.0,
+   "gain": 0.381,
+   "moved_from": {
+    "p": [
+     -11.35,
+     6.0,
+     11.6
+    ],
+    "part": "stage key",
+    "plan_m": 0.444
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 273,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C09"
+  },
+  {
+   "id": "rig-par-planes-34",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -12 z 33, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -12.0,
+    0.31,
+    33.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -12 z 33",
+   "eye_lux": {
+    "floor centre": 0.046,
+    "wing L": 0.013,
+    "wing R": 0.0,
+    "behind the stage": 0.002,
+    "mid-hall": 0.145,
+    "near the entry": 0.024,
+    "FOH": 0.246,
+    "far corner L": 0.002,
+    "far corner R": 0.001
+   },
+   "lit_pct": 100.0,
+   "gain": 0.364,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     30.0
+    ],
+    "part": "columns",
+    "plan_m": 3.116
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 329,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-10",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor bracket at the span face of the column x +12 z -18, 0.44 m off it, leaned 4 deg onto it (v1.1 vista bracket); in the public area: guard cage",
+   "p": [
+    12.843,
+    0.31,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "col +12 z -18, span face",
+   "eye_lux": {
+    "floor centre": 0.0,
+    "wing L": 0.0,
+    "wing R": 0.014,
+    "behind the stage": 0.028,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.001,
+    "far corner L": 0.003,
+    "far corner R": 0.504
+   },
+   "lit_pct": 100.0,
+   "gain": 0.316,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     -18.0
+    ],
+    "part": "columns",
+    "plan_m": 0.0
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 137,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C03"
+  },
+  {
+   "id": "rig-par-planes-30",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -6 z 39, aimed at the crane runway girder x -11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    -6.0,
+    0.31,
+    39.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.607695
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -6 z 39, to the runway",
+   "eye_lux": {
+    "floor centre": 0.022,
+    "wing L": 0.004,
+    "wing R": 0.002,
+    "behind the stage": 0.001,
+    "mid-hall": 0.175,
+    "near the entry": 0.056,
+    "FOH": 0.104,
+    "far corner L": 0.0,
+    "far corner R": 0.002
+   },
+   "lit_pct": 100.0,
+   "gain": 0.307,
+   "moved_from": {
+    "p": [
+     -12.843,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 16.487
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-2",
+    "address": 17,
+    "footprint": 8,
+    "universe": 2,
+    "branch": "NODE-STAGE-2"
+   },
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-04",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 12 z 9, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    12.0,
+    0.31,
+    9.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 12 z 9",
+   "eye_lux": {
+    "floor centre": 0.028,
+    "wing L": 0.007,
+    "wing R": 0.444,
+    "behind the stage": 0.001,
+    "mid-hall": 0.007,
+    "near the entry": 0.001,
+    "FOH": 0.009,
+    "far corner L": 0.001,
+    "far corner R": 0.008
+   },
+   "lit_pct": 100.0,
+   "gain": 0.305,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     6.0
+    ],
+    "part": "stage columns",
+    "plan_m": 3.116
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 89,
+    "footprint": 8,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-01",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -24 z 9, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -24.0,
+    0.31,
+    9.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -24 z 9",
+   "eye_lux": {
+    "floor centre": 0.02,
+    "wing L": 0.319,
+    "wing R": 0.004,
+    "behind the stage": 0.0,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.014,
+    "far corner L": 0.002,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.288,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     6.0
+    ],
+    "part": "stage columns",
+    "plan_m": 13.189
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-LEFT",
+    "line": "NODE-LEFT-1",
+    "address": 25,
+    "footprint": 8,
+    "universe": 4,
+    "branch": "NODE-LEFT-1"
+   },
+   "circuit": "C04"
+  },
+  {
+   "id": "rig-par-planes-14",
+   "type": "up-pl5403",
+   "part": "runway",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -3 z -18, aimed at the crane runway girder x -11.35 (7.5 m) beside it; in the public area: guard cage",
+   "p": [
+    -3.0,
+    0.31,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.839171
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -3 z -18, to the runway",
+   "eye_lux": {
+    "floor centre": 0.003,
+    "wing L": 0.001,
+    "wing R": 0.001,
+    "behind the stage": 0.253,
+    "mid-hall": 0.001,
+    "near the entry": 0.001,
+    "FOH": 0.001,
+    "far corner L": 0.037,
+    "far corner R": 0.031
+   },
+   "lit_pct": 100.0,
+   "gain": 0.275,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -6.0
+    ],
+    "part": "columns",
+    "plan_m": 14.51
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 129,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-33",
+   "type": "up-pl5403",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x 6 z 24, aimed at the flared head of the column x +12 z 24 (6.6 m); in the public area: guard cage",
+   "p": [
+    6.0,
+    0.31,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.676302
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x 6 z 24, to the column head",
+   "eye_lux": {
+    "floor centre": 0.146,
+    "wing L": 0.017,
+    "wing R": 0.008,
+    "behind the stage": 0.0,
+    "mid-hall": 0.081,
+    "near the entry": 0.012,
+    "FOH": 0.134,
+    "far corner L": 0.001,
+    "far corner R": 0.0
+   },
+   "lit_pct": 100.0,
+   "gain": 0.246,
+   "moved_from": {
+    "p": [
+     12.843,
+     2.8,
+     24.0
+    ],
+    "part": "columns",
+    "plan_m": 6.843
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 313,
+    "footprint": 8,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-09",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -9 z -18, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -9.0,
+    0.31,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -9 z -18",
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.0,
+    "wing R": 0.001,
+    "behind the stage": 0.232,
+    "mid-hall": 0.001,
+    "near the entry": 0.001,
+    "FOH": 0.002,
+    "far corner L": 0.045,
+    "far corner R": 0.016
+   },
+   "lit_pct": 100.0,
+   "gain": 0.238,
+   "moved_from": {
+    "p": [
+     -11.157,
+     2.8,
+     -18.0
+    ],
+    "part": "columns",
+    "plan_m": 2.157
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 121,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-par-planes-03",
+   "type": "up-pl5403",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "position": "floor plate at x -18 z -24, straight up into the roof steel; in the public area: guard cage",
+   "p": [
+    -18.0,
+    0.31,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "guard": "a mesh guard cage over the lamp (public area: hot lens, kick, trip), weighted, cable under a ramp",
+   "inside": null,
+   "place": "floor x -18 z -24",
+   "eye_lux": {
+    "floor centre": 0.001,
+    "wing L": 0.008,
+    "wing R": 0.0,
+    "behind the stage": 0.015,
+    "mid-hall": 0.0,
+    "near the entry": 0.0,
+    "FOH": 0.0,
+    "far corner L": 0.268,
+    "far corner R": 0.006
+   },
+   "lit_pct": 100.0,
+   "gain": 0.212,
+   "moved_from": {
+    "p": [
+     -5.198,
+     0.3,
+     2.7
+    ],
+    "part": "halo",
+    "plan_m": 29.61
+   },
+   "power_w": 200,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 81,
+    "footprint": 8,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C02"
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor; aim 249/32 deg (az/el), throw 13.1 m to runway girder x -12.65; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -2.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    2.620823,
+    0.0,
+    -0.913702
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 13.111,
+   "ends_on": "runway girder x -12.65",
+   "island": "the stage pen",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -2.25,
+     -5.0
+    ],
+    [
+     -6.011,
+     -6.444
+    ]
+   ],
+   "glare_min_deg": 35.743,
+   "sky_clear_pct": 19.2,
+   "sky_open_pct": 39.9,
+   "sky_blocked_pct": 59.6,
+   "eye_G": {
+    "floor centre": 0.00631,
+    "wing L": 0.00013,
+    "wing R": 0.00064,
+    "behind the stage": 0.01667,
+    "mid-hall": 0.00245,
+    "near the entry": 0.00213,
+    "FOH": 0.00427,
+    "far corner L": 0.06361,
+    "far corner R": 0.00287
+   },
+   "gain": 0.74,
+   "moved_from": {
+    "p": [
+     -2.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 81,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor; aim 105/32 deg (az/el), throw 24.2 m to roof deck; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -4.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    2.749753,
+    0.0,
+    0.959936
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 24.249,
+   "ends_on": "roof deck",
+   "island": "the stage pen",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -4.25,
+     -5.0
+    ],
+    [
+     -0.359,
+     -6.043
+    ]
+   ],
+   "glare_min_deg": 36.894,
+   "sky_clear_pct": 19.2,
+   "sky_open_pct": 40.3,
+   "sky_blocked_pct": 59.4,
+   "eye_G": {
+    "floor centre": 0.00384,
+    "wing L": 0.0001,
+    "wing R": 0.00069,
+    "behind the stage": 0.00909,
+    "mid-hall": 0.00344,
+    "near the entry": 0.00093,
+    "FOH": 0.00425,
+    "far corner L": 0.00364,
+    "far corner R": 0.05094
+   },
+   "gain": 0.403,
+   "moved_from": {
+    "p": [
+     -4.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 49,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor; aim 84/32 deg (az/el), throw 23.8 m to space frame diagonals / top chord; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -5.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.97522,
+    0.0,
+    1.003252
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 23.751,
+   "ends_on": "space frame diagonals / top chord",
+   "island": "the stage pen",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -5.25,
+     -5.0
+    ],
+    [
+     -1.244,
+     -4.579
+    ]
+   ],
+   "glare_min_deg": 37.285,
+   "sky_clear_pct": 18.8,
+   "sky_open_pct": 40.6,
+   "sky_blocked_pct": 59.3,
+   "eye_G": {
+    "floor centre": 0.00893,
+    "wing L": 0.00011,
+    "wing R": 0.00068,
+    "behind the stage": 0.00728,
+    "mid-hall": 0.00565,
+    "near the entry": 0.00736,
+    "FOH": 0.00245,
+    "far corner L": 0.00122,
+    "far corner R": 0.02834
+   },
+   "gain": 0.228,
+   "moved_from": {
+    "p": [
+     -5.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 33,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor; aim 243/32 deg (az/el), throw 12.4 m to runway girder x -12.65; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -3.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    2.513358,
+    0.0,
+    -0.856799
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 12.379,
+   "ends_on": "runway girder x -12.65",
+   "island": "the stage pen",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -3.25,
+     -5.0
+    ],
+    [
+     -6.839,
+     -6.829
+    ]
+   ],
+   "glare_min_deg": 33.514,
+   "sky_clear_pct": 18.3,
+   "sky_open_pct": 39.5,
+   "sky_blocked_pct": 60.2,
+   "eye_G": {
+    "floor centre": 0.00357,
+    "wing L": 0.00014,
+    "wing R": 0.00036,
+    "behind the stage": 0.01695,
+    "mid-hall": 0.00298,
+    "near the entry": 0.00254,
+    "FOH": 0.00049,
+    "far corner L": 0.04978,
+    "far corner R": 7e-05
+   },
+   "gain": 0.197,
+   "moved_from": {
+    "p": [
+     -3.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 65,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor; aim 99/32 deg (az/el), throw 24.2 m to roof deck; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -6.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    2.895726,
+    0.0,
+    0.992969
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 24.249,
+   "ends_on": "roof deck",
+   "island": "the stage pen",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -6.25,
+     -5.0
+    ],
+    [
+     -2.271,
+     -5.63
+    ]
+   ],
+   "glare_min_deg": 39.088,
+   "sky_clear_pct": 17.8,
+   "sky_open_pct": 39.4,
+   "sky_blocked_pct": 60.5,
+   "eye_G": {
+    "floor centre": 0.00259,
+    "wing L": 7e-05,
+    "wing R": 0.00055,
+    "behind the stage": 0.01118,
+    "mid-hall": 0.00243,
+    "near the entry": 0.00208,
+    "FOH": 0.00249,
+    "far corner L": 0.00165,
+    "far corner R": 0.01928
+   },
+   "gain": 0.116,
+   "moved_from": {
+    "p": [
+     -6.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 17,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-01",
+   "type": "up-b380f",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "the stage pen: base on the floor; aim 84/32 deg (az/el), throw 24.2 m to roof deck; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -7.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.97522,
+    0.0,
+    1.003252
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 24.249,
+   "ends_on": "roof deck",
+   "island": "the stage pen",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -7.25,
+     -5.0
+    ],
+    [
+     -3.244,
+     -4.579
+    ]
+   ],
+   "glare_min_deg": 36.295,
+   "sky_clear_pct": 16.9,
+   "sky_open_pct": 38.7,
+   "sky_blocked_pct": 60.4,
+   "eye_G": {
+    "floor centre": 0.00109,
+    "wing L": 8e-05,
+    "wing R": 0.00062,
+    "behind the stage": 0.00899,
+    "mid-hall": 0.0041,
+    "near the entry": 0.00372,
+    "FOH": 0.00101,
+    "far corner L": 0.00284,
+    "far corner R": 0.01329
+   },
+   "gain": 0.092,
+   "moved_from": {
+    "p": [
+     -7.25,
+     0.7,
+     -5.0
+    ],
+    "part": "plane 1 (behind the DJ)",
+    "plan_m": 0.0
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 1,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, span side, z 12..18: base on the floor; aim 48/32 deg (az/el), throw 24.0 m to space frame diagonals / top chord; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    -15.2,
+    0.7,
+    14.0
+   ],
+   "r": [
+    -2.322479,
+    0.0,
+    0.681842
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 24.041,
+   "ends_on": "space frame diagonals / top chord",
+   "island": "col -12, span side, z 12..18",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     -15.2,
+     14.0
+    ],
+    [
+     -12.206,
+     16.695
+    ]
+   ],
+   "glare_min_deg": 30.302,
+   "sky_clear_pct": 15.2,
+   "sky_open_pct": 61.5,
+   "sky_blocked_pct": 34.2,
+   "eye_G": {
+    "floor centre": 0.00725,
+    "wing L": 0.00106,
+    "wing R": 0.00237,
+    "behind the stage": 0.00082,
+    "mid-hall": 0.00751,
+    "near the entry": 0.0062,
+    "FOH": 0.00639,
+    "far corner L": 0.00055,
+    "far corner R": 0.00025
+   },
+   "gain": 0.493,
+   "moved_from": {
+    "p": [
+     13.143,
+     3.7,
+     -24.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 47.406
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 97,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, span side, z 12..18: base on the floor; aim 120/40 deg (az/el), throw 24.7 m to roof deck; below 3.0 m for its first 3.1 m (2.8 m: 2.7 m), inside its fenced pen",
+   "p": [
+    -15.2,
+    0.7,
+    16.0
+   ],
+   "r": [
+    2.604381,
+    0.0,
+    0.724949
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 24.736,
+   "ends_on": "roof deck",
+   "island": "col -12, span side, z 12..18",
+   "pen_m": 3.064,
+   "pen_hand_m": 2.681,
+   "pen_segment": [
+    [
+     -15.2,
+     16.0
+    ],
+    [
+     -12.546,
+     14.468
+    ]
+   ],
+   "glare_min_deg": 39.718,
+   "sky_clear_pct": 13.5,
+   "sky_open_pct": 60.0,
+   "sky_blocked_pct": 35.4,
+   "eye_G": {
+    "floor centre": 0.00348,
+    "wing L": 0.00124,
+    "wing R": 0.00764,
+    "behind the stage": 0.00138,
+    "mid-hall": 0.00139,
+    "near the entry": 0.00104,
+    "FOH": 0.00144,
+    "far corner L": 0.00132,
+    "far corner R": 0.00338
+   },
+   "gain": 0.224,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     36.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 20.466
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 129,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, span side, z 12..18: base on the floor; aim 207/34 deg (az/el), throw 23.3 m to roof deck; below 3.0 m for its first 3.8 m (2.8 m: 3.5 m), inside its fenced pen",
+   "p": [
+    -13.2,
+    0.7,
+    16.0
+   ],
+   "r": [
+    2.20976,
+    0.0,
+    -0.388635
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 23.282,
+   "ends_on": "roof deck",
+   "island": "col -12, span side, z 12..18",
+   "pen_m": 3.752,
+   "pen_hand_m": 3.544,
+   "pen_segment": [
+    [
+     -13.2,
+     16.0
+    ],
+    [
+     -14.904,
+     12.657
+    ]
+   ],
+   "glare_min_deg": 31.089,
+   "sky_clear_pct": 14.8,
+   "sky_open_pct": 59.7,
+   "sky_blocked_pct": 36.5,
+   "eye_G": {
+    "floor centre": 0.00088,
+    "wing L": 0.00815,
+    "wing R": 0.00097,
+    "behind the stage": 0.00214,
+    "mid-hall": 0.0,
+    "near the entry": 0.00039,
+    "FOH": 0.00032,
+    "far corner L": 0.01308,
+    "far corner R": 0.00082
+   },
+   "gain": 0.142,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     30.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 14.195
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 145,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-14",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, span side, z 12..18: base on the floor; aim 30/47 deg (az/el), throw 17.6 m to roof deck; below 3.0 m for its first 2.4 m (2.8 m: 2.2 m), inside its fenced pen",
+   "p": [
+    -13.2,
+    0.7,
+    14.0
+   ],
+   "r": [
+    -2.461701,
+    0.0,
+    0.347994
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 17.57,
+   "ends_on": "roof deck",
+   "island": "col -12, span side, z 12..18",
+   "pen_m": 2.387,
+   "pen_hand_m": 2.216,
+   "pen_segment": [
+    [
+     -13.2,
+     14.0
+    ],
+    [
+     -12.007,
+     16.067
+    ]
+   ],
+   "glare_min_deg": 42.113,
+   "sky_clear_pct": 17.3,
+   "sky_open_pct": 61.9,
+   "sky_blocked_pct": 34.3,
+   "eye_G": {
+    "floor centre": 0.00274,
+    "wing L": 0.0005,
+    "wing R": 0.00129,
+    "behind the stage": 0.00049,
+    "mid-hall": 0.00543,
+    "near the entry": 0.00473,
+    "FOH": 0.00567,
+    "far corner L": 0.0004,
+    "far corner R": 0.00015
+   },
+   "gain": 0.123,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     0.5
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 13.702
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-STAGE",
+    "line": "NODE-STAGE-1",
+    "address": 113,
+    "footprint": 16,
+    "universe": 1,
+    "branch": "NODE-STAGE-1"
+   },
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "type": "up-b380f",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, nave side, z -30..-24: base on the floor; aim 9/37 deg (az/el), throw 21.4 m to roof deck; below 3.0 m for its first 3.4 m (2.8 m: 3.0 m), inside its fenced pen",
+   "p": [
+    -10.8,
+    0.7,
+    -28.0
+   ],
+   "r": [
+    -2.22256,
+    0.0,
+    0.125293
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 21.352,
+   "ends_on": "roof deck",
+   "island": "col -12, nave side, z -30..-24",
+   "pen_m": 3.394,
+   "pen_hand_m": 2.995,
+   "pen_segment": [
+    [
+     -10.8,
+     -28.0
+    ],
+    [
+     -10.269,
+     -24.648
+    ]
+   ],
+   "glare_min_deg": 34.835,
+   "sky_clear_pct": 16.8,
+   "sky_open_pct": 62.5,
+   "sky_blocked_pct": 33.9,
+   "eye_G": {
+    "floor centre": 0.00444,
+    "wing L": 0.00457,
+    "wing R": 0.00198,
+    "behind the stage": 0.00319,
+    "mid-hall": 0.00899,
+    "near the entry": 0.00823,
+    "FOH": 0.00783,
+    "far corner L": 0.00124,
+    "far corner R": 0.00237
+   },
+   "gain": 0.366,
+   "moved_from": {
+    "p": [
+     -10.857,
+     3.7,
+     -30.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 2.001
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 1,
+    "footprint": 16,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "type": "up-b380f",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, nave side, z -30..-24: base on the floor; aim 354/37 deg (az/el), throw 21.4 m to roof deck; below 3.0 m for its first 3.4 m (2.8 m: 3.0 m), inside its fenced pen",
+   "p": [
+    -8.8,
+    0.7,
+    -28.0
+   ],
+   "r": [
+    -2.219516,
+    0.0,
+    -0.083107
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 21.352,
+   "ends_on": "roof deck",
+   "island": "col -12, nave side, z -30..-24",
+   "pen_m": 3.394,
+   "pen_hand_m": 2.995,
+   "pen_segment": [
+    [
+     -8.8,
+     -28.0
+    ],
+    [
+     -9.155,
+     -24.624
+    ]
+   ],
+   "glare_min_deg": 36.593,
+   "sky_clear_pct": 18.3,
+   "sky_open_pct": 63.7,
+   "sky_blocked_pct": 33.1,
+   "eye_G": {
+    "floor centre": 0.00396,
+    "wing L": 0.0039,
+    "wing R": 0.00162,
+    "behind the stage": 0.00265,
+    "mid-hall": 0.00523,
+    "near the entry": 0.00489,
+    "FOH": 0.00735,
+    "far corner L": 0.00146,
+    "far corner R": 0.0018
+   },
+   "gain": 0.169,
+   "moved_from": {
+    "p": [
+     -13.143,
+     3.7,
+     -12.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 16.579
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 17,
+    "footprint": 16,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "type": "up-b380f",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, nave side, z -30..-24: base on the floor; aim 291/37 deg (az/el), throw 21.4 m to roof deck; below 3.0 m for its first 3.4 m (2.8 m: 3.0 m), inside its fenced pen",
+   "p": [
+    -8.8,
+    0.7,
+    -26.0
+   ],
+   "r": [
+    -2.698077,
+    0.0,
+    -0.841634
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 21.352,
+   "ends_on": "roof deck",
+   "island": "col -12, nave side, z -30..-24",
+   "pen_m": 3.394,
+   "pen_hand_m": 2.995,
+   "pen_segment": [
+    [
+     -8.8,
+     -26.0
+    ],
+    [
+     -11.969,
+     -24.784
+    ]
+   ],
+   "glare_min_deg": 35.892,
+   "sky_clear_pct": 19.0,
+   "sky_open_pct": 64.2,
+   "sky_blocked_pct": 32.8,
+   "eye_G": {
+    "floor centre": 0.00023,
+    "wing L": 0.00316,
+    "wing R": 0.00025,
+    "behind the stage": 0.00114,
+    "mid-hall": 0.00056,
+    "near the entry": 0.00021,
+    "FOH": 0.00042,
+    "far corner L": 0.00778,
+    "far corner R": 0.00059
+   },
+   "gain": 0.118,
+   "moved_from": {
+    "p": [
+     -13.143,
+     3.7,
+     -18.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 9.103
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 49,
+    "footprint": 16,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "type": "up-b380f",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "col -12, nave side, z -30..-24: base on the floor; aim 39/55 deg (az/el), throw 19.4 m to roof deck; below 3.0 m for its first 1.7 m (2.8 m: 1.6 m), inside its fenced pen",
+   "p": [
+    -10.8,
+    0.7,
+    -26.0
+   ],
+   "r": [
+    -2.642931,
+    0.0,
+    0.36934
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "throw_m": 19.41,
+   "ends_on": "roof deck",
+   "island": "col -12, nave side, z -30..-24",
+   "pen_m": 1.721,
+   "pen_hand_m": 1.577,
+   "pen_segment": [
+    [
+     -10.8,
+     -26.0
+    ],
+    [
+     -9.717,
+     -24.663
+    ]
+   ],
+   "glare_min_deg": 51.969,
+   "sky_clear_pct": 18.4,
+   "sky_open_pct": 63.7,
+   "sky_blocked_pct": 32.7,
+   "eye_G": {
+    "floor centre": 0.00117,
+    "wing L": 0.00075,
+    "wing R": 0.0,
+    "behind the stage": 0.00249,
+    "mid-hall": 0.00116,
+    "near the entry": 0.00119,
+    "FOH": 0.00193,
+    "far corner L": 0.00071,
+    "far corner R": 0.00292
+   },
+   "gain": 0.049,
+   "moved_from": {
+    "p": [
+     -13.143,
+     3.7,
+     -24.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 3.081
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-FAR",
+    "line": "NODE-FAR-1",
+    "address": 33,
+    "footprint": 16,
+    "universe": 3,
+    "branch": "NODE-FAR-1"
+   },
+   "circuit": "C01"
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "square x 18 z -3: base on the floor; aim 339/39 deg (az/el), throw 20.6 m to roof deck; below 3.0 m for its first 3.1 m (2.8 m: 2.9 m), inside its fenced pen",
+   "p": [
+    19.25,
+    0.7,
+    -4.25
+   ],
+   "r": [
+    -2.276599,
+    0.0,
+    -0.283664
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 20.642,
+   "ends_on": "roof deck",
+   "island": "square x 18 z -3",
+   "pen_m": 3.13,
+   "pen_hand_m": 2.935,
+   "pen_segment": [
+    [
+     19.25,
+     -4.25
+    ],
+    [
+     18.128,
+     -1.327
+    ]
+   ],
+   "glare_min_deg": 37.091,
+   "sky_clear_pct": 25.8,
+   "sky_open_pct": 73.8,
+   "sky_blocked_pct": 25.5,
+   "eye_G": {
+    "floor centre": 0.00553,
+    "wing L": 0.00157,
+    "wing R": 0.00632,
+    "behind the stage": 0.00074,
+    "mid-hall": 0.00235,
+    "near the entry": 0.00198,
+    "FOH": 0.00313,
+    "far corner L": 0.00043,
+    "far corner R": 0.00098
+   },
+   "gain": 0.162,
+   "moved_from": {
+    "p": [
+     10.857,
+     3.7,
+     -18.0
+    ],
+    "part": "plane 3 (behind the stage)",
+    "plan_m": 16.109
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 17,
+    "footprint": 16,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "square x 18 z -3: base on the floor; aim 186/39 deg (az/el), throw 20.4 m to space frame diagonals / top chord; below 3.0 m for its first 3.1 m (2.8 m: 2.9 m), inside its fenced pen",
+   "p": [
+    16.75,
+    0.7,
+    -1.75
+   ],
+   "r": [
+    2.246007,
+    0.0,
+    -0.082087
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 20.401,
+   "ends_on": "space frame diagonals / top chord",
+   "island": "square x 18 z -3",
+   "pen_m": 3.13,
+   "pen_hand_m": 2.935,
+   "pen_segment": [
+    [
+     16.75,
+     -1.75
+    ],
+    [
+     16.423,
+     -4.863
+    ]
+   ],
+   "glare_min_deg": 37.024,
+   "sky_clear_pct": 25.4,
+   "sky_open_pct": 69.6,
+   "sky_blocked_pct": 29.8,
+   "eye_G": {
+    "floor centre": 0.00041,
+    "wing L": 0.00079,
+    "wing R": 0.00099,
+    "behind the stage": 0.0038,
+    "mid-hall": 0.0001,
+    "near the entry": 8e-05,
+    "FOH": 0.00032,
+    "far corner L": 0.00134,
+    "far corner R": 0.00864
+   },
+   "gain": 0.107,
+   "moved_from": {
+    "p": [
+     13.143,
+     3.7,
+     12.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 14.215
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 33,
+    "footprint": 16,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "square x 18 z -3: base on the floor; aim 354/39 deg (az/el), throw 20.4 m to space frame diagonals / top chord; below 3.0 m for its first 3.1 m (2.8 m: 2.9 m), inside its fenced pen",
+   "p": [
+    16.75,
+    0.7,
+    -4.25
+   ],
+   "r": [
+    -2.246007,
+    0.0,
+    -0.082087
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 20.401,
+   "ends_on": "space frame diagonals / top chord",
+   "island": "square x 18 z -3",
+   "pen_m": 3.13,
+   "pen_hand_m": 2.935,
+   "pen_segment": [
+    [
+     16.75,
+     -4.25
+    ],
+    [
+     16.423,
+     -1.137
+    ]
+   ],
+   "glare_min_deg": 35.999,
+   "sky_clear_pct": 26.1,
+   "sky_open_pct": 70.3,
+   "sky_blocked_pct": 28.9,
+   "eye_G": {
+    "floor centre": 0.00245,
+    "wing L": 0.0013,
+    "wing R": 0.00671,
+    "behind the stage": 0.0005,
+    "mid-hall": 0.00245,
+    "near the entry": 0.00177,
+    "FOH": 0.00283,
+    "far corner L": 0.0004,
+    "far corner R": 0.00087
+   },
+   "gain": 0.095,
+   "moved_from": {
+    "p": [
+     10.857,
+     3.7,
+     -12.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 9.736
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 1,
+    "footprint": 16,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C05"
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "type": "up-b380f",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "position": "square x 18 z -3: base on the floor; aim 228/32 deg (az/el), throw 12.4 m to runway girder x +11.35; below 3.0 m for its first 4.0 m (2.8 m: 3.8 m), inside its fenced pen",
+   "p": [
+    19.25,
+    0.7,
+    -1.75
+   ],
+   "r": [
+    2.322479,
+    0.0,
+    -0.681842
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "throw_m": 12.379,
+   "ends_on": "runway girder x +11.35",
+   "island": "square x 18 z -3",
+   "pen_m": 4.028,
+   "pen_hand_m": 3.816,
+   "pen_segment": [
+    [
+     19.25,
+     -1.75
+    ],
+    [
+     16.256,
+     -4.445
+    ]
+   ],
+   "glare_min_deg": 30.252,
+   "sky_clear_pct": 25.7,
+   "sky_open_pct": 73.4,
+   "sky_blocked_pct": 25.8,
+   "eye_G": {
+    "floor centre": 0.00083,
+    "wing L": 0.00031,
+    "wing R": 0.00075,
+    "behind the stage": 0.01344,
+    "mid-hall": 0.00027,
+    "near the entry": 0.0,
+    "FOH": 0.00034,
+    "far corner L": 0.00145,
+    "far corner R": 0.00351
+   },
+   "gain": 0.086,
+   "moved_from": {
+    "p": [
+     10.857,
+     3.7,
+     18.0
+    ],
+    "part": "plane 2 (the wings)",
+    "plan_m": 21.459
+   },
+   "power_w": 500,
+   "dmx": {
+    "node": "NODE-RIGHT",
+    "line": "NODE-RIGHT-1",
+    "address": 49,
+    "footprint": 16,
+    "universe": 5,
+    "branch": "NODE-RIGHT-1"
+   },
+   "circuit": "C05"
+  }
+ ],
+ "checks": {
+  "units_on_ground": 56,
+  "units_above_ground": [],
+  "units_above_3m_not_truss": [],
+  "in_the_crane_park_above_2_5m": [],
+  "par_spacing": {
+   "rule_m": 6.0,
+   "min_m": 6.0,
+   "median_m": 6.0,
+   "pairs_closer": [],
+   "without_the_rule": {
+    "pairs_closer_than_rule": 16,
+    "pairs_under_2m": 4,
+    "same_column_foot": 4
+   },
+   "curve": [
+    {
+     "spacing_m": 0.0,
+     "placed": 37,
+     "objective": 19.443,
+     "nn_min_m": 1.19,
+     "nn_median_m": 5.966,
+     "kinds": {
+      "column foot": 14,
+      "floor to column head": 4,
+      "floor to runway": 7,
+      "floor uplight": 12
+     },
+     "gap_median_m": 4.597,
+     "gap_p90_m": 8.078,
+     "gap_max_m": 10.689,
+     "within_6m_pct": 69.702,
+     "objective_vs_no_rule_pct": 0.0
+    },
+    {
+     "spacing_m": 3.0,
+     "placed": 37,
+     "objective": 19.248,
+     "nn_min_m": 3.0,
+     "nn_median_m": 5.966,
+     "kinds": {
+      "column foot": 14,
+      "floor to column head": 4,
+      "floor to runway": 7,
+      "floor uplight": 12
+     },
+     "gap_median_m": 4.272,
+     "gap_p90_m": 7.826,
+     "gap_max_m": 10.689,
+     "within_6m_pct": 71.454,
+     "objective_vs_no_rule_pct": -1.003
+    },
+    {
+     "spacing_m": 5.0,
+     "placed": 37,
+     "objective": 18.891,
+     "nn_min_m": 5.228,
+     "nn_median_m": 6.0,
+     "kinds": {
+      "column foot": 12,
+      "floor to column head": 3,
+      "floor to runway": 10,
+      "floor uplight": 12
+     },
+     "gap_median_m": 4.031,
+     "gap_p90_m": 7.5,
+     "gap_max_m": 10.689,
+     "within_6m_pct": 75.248,
+     "objective_vs_no_rule_pct": -2.839
+    },
+    {
+     "spacing_m": 6.0,
+     "placed": 37,
+     "objective": 18.239,
+     "nn_min_m": 6.0,
+     "nn_median_m": 6.0,
+     "kinds": {
+      "column foot": 8,
+      "floor to column head": 4,
+      "floor to runway": 11,
+      "floor uplight": 14
+     },
+     "gap_median_m": 4.031,
+     "gap_p90_m": 7.433,
+     "gap_max_m": 10.689,
+     "within_6m_pct": 76.562,
+     "objective_vs_no_rule_pct": -6.192
+    },
+    {
+     "spacing_m": 7.0,
+     "placed": 37,
+     "objective": 15.834,
+     "nn_min_m": 7.469,
+     "nn_median_m": 9.0,
+     "kinds": {
+      "column foot": 8,
+      "floor to column head": 5,
+      "floor to runway": 9,
+      "floor uplight": 15
+     },
+     "gap_median_m": 4.031,
+     "gap_p90_m": 6.34,
+     "gap_max_m": 10.735,
+     "within_6m_pct": 84.851,
+     "objective_vs_no_rule_pct": -18.562
+    },
+    {
+     "spacing_m": 8.0,
+     "placed": 36,
+     "objective": 15.493,
+     "nn_min_m": 8.485,
+     "nn_median_m": 9.0,
+     "kinds": {
+      "column foot": 4,
+      "floor to column head": 6,
+      "floor to runway": 8,
+      "floor uplight": 18
+     },
+     "gap_median_m": 4.031,
+     "gap_p90_m": 6.265,
+     "gap_max_m": 10.735,
+     "within_6m_pct": 85.201,
+     "objective_vs_no_rule_pct": -20.316
+    }
+   ],
+   "spread_min_m": 0.0,
+   "spread_median_m": 1.686
+  },
+  "par_coverage": {
+   "ground": {
+    "gap_median_m": 4.031,
+    "gap_p90_m": 7.433,
+    "gap_max_m": 10.689,
+    "within_6m_pct": 76.562
+   },
+   "spread": {
+    "gap_median_m": 5.727,
+    "gap_p90_m": 12.249,
+    "gap_max_m": 19.008,
+    "within_6m_pct": 52.306
+   },
+   "cells": 3426,
+   "cover_r_m": 10.8,
+   "plain_greedy_6m": {
+    "objective": 19.652,
+    "objective_cover": 18.239,
+    "cost_pct": -7.189,
+    "coverage_plain": {
+     "gap_median_m": 4.187,
+     "gap_p90_m": 9.014,
+     "gap_max_m": 15.207,
+     "within_6m_pct": 68.914
+    },
+    "cover_picks": 22,
+    "what": "the same 6 m rule with the eye objective alone (no coverage phase): what the coverage phase costs and gives"
+   },
+   "what": "plan distance from every 1 m cell of the hot zone + wings (not the bar or chill zone) to the nearest non-truss PAR"
+  },
+  "pens": {
+   "count": 4,
+   "fenced_islands": 3,
+   "radius_m_max": 4.028,
+   "radius_hand_m_max": 3.816,
+   "barrier_m": 64.0,
+   "islands": [
+    {
+     "island": "the stage pen",
+     "kind": "stage pen",
+     "rect": {
+      "x_m": [
+       -10.5,
+       1.5
+      ],
+      "z_m": [
+       -7.5,
+       8.2
+      ]
+     },
+     "size_m": [
+      12.0,
+      15.7
+     ],
+     "area_m2": 188.4,
+     "barrier_m": 0.0,
+     "barrier": "the stage pen's own barrier (crew only; owed since the spread)",
+     "heads": [
+      "rig-beam-planes-06",
+      "rig-beam-planes-04",
+      "rig-beam-planes-03",
+      "rig-beam-planes-05",
+      "rig-beam-planes-02",
+      "rig-beam-planes-01"
+     ],
+     "pen_m_max": 4.028,
+     "pen_hand_m_max": 3.816,
+     "pars_inside": [
+      "rig-par-planes-25",
+      "rig-par-planes-06"
+     ],
+     "why": "crew only (the DJ, the pit, backstage): the six plane-1 heads stay where B tuned put them, 1 m apart around the smoke machine"
+    },
+    {
+     "island": "col -12, span side, z 12..18",
+     "kind": "column line",
+     "rect": {
+      "x_m": [
+       -16.4,
+       -11.4
+      ],
+      "z_m": [
+       12.0,
+       18.0
+      ]
+     },
+     "size_m": [
+      5.0,
+      6.0
+     ],
+     "area_m2": 30.0,
+     "barrier_m": 22.0,
+     "barrier": "crowd barrier (1.1 m) round the island, tied to its two columns",
+     "heads": [
+      "rig-beam-planes-09",
+      "rig-beam-planes-18",
+      "rig-beam-planes-17",
+      "rig-beam-planes-14"
+     ],
+     "pen_m_max": 4.028,
+     "pen_hand_m_max": 3.816,
+     "pars_inside": [],
+     "why": "between two columns of the x -12 row (the columns anchor its barrier), on the span side"
+    },
+    {
+     "island": "col -12, nave side, z -30..-24",
+     "kind": "column line",
+     "rect": {
+      "x_m": [
+       -12.6,
+       -7.6
+      ],
+      "z_m": [
+       -30.0,
+       -24.0
+      ]
+     },
+     "size_m": [
+      5.0,
+      6.0
+     ],
+     "area_m2": 30.0,
+     "barrier_m": 22.0,
+     "barrier": "crowd barrier (1.1 m) round the island, tied to its two columns",
+     "heads": [
+      "rig-beam-planes-07",
+      "rig-beam-planes-12",
+      "rig-beam-planes-10",
+      "rig-beam-planes-08"
+     ],
+     "pen_m_max": 3.394,
+     "pen_hand_m_max": 2.995,
+     "pars_inside": [
+      "rig-par-planes-07"
+     ],
+     "why": "between two columns of the x -12 row (the columns anchor its barrier), on the nave side"
+    },
+    {
+     "island": "square x 18 z -3",
+     "kind": "free square",
+     "rect": {
+      "x_m": [
+       15.5,
+       20.5
+      ],
+      "z_m": [
+       -5.5,
+       -0.5
+      ]
+     },
+     "size_m": [
+      5.0,
+      5.0
+     ],
+     "area_m2": 25.0,
+     "barrier_m": 20.0,
+     "barrier": "crowd barrier (1.1 m) round the island",
+     "heads": [
+      "rig-beam-planes-11",
+      "rig-beam-planes-15",
+      "rig-beam-planes-13",
+      "rig-beam-planes-16"
+     ],
+     "pen_m_max": 4.028,
+     "pen_hand_m_max": 3.816,
+     "pars_inside": [
+      "rig-par-planes-16"
+     ],
+     "why": "a fenced 5 x 5 m square in the painted area, off the dance floor and the entry corridor"
+    }
+   ]
+  },
+  "guards": {
+   "count": 34,
+   "pars": [
+    "rig-par-planes-18",
+    "rig-par-planes-12",
+    "rig-par-planes-11",
+    "rig-par-planes-32",
+    "rig-par-planes-17",
+    "rig-par-planes-31",
+    "rig-par-planes-26",
+    "rig-par-planes-15",
+    "rig-par-planes-02",
+    "rig-par-planes-29",
+    "rig-par-planes-21",
+    "rig-par-planes-40",
+    "rig-par-planes-36",
+    "rig-par-planes-05",
+    "rig-par-planes-39",
+    "rig-par-planes-13",
+    "rig-par-planes-22",
+    "rig-par-planes-20",
+    "rig-par-planes-38",
+    "rig-par-planes-27",
+    "rig-par-planes-08",
+    "rig-par-planes-19",
+    "rig-par-planes-35",
+    "rig-par-planes-37",
+    "rig-par-planes-23",
+    "rig-par-planes-34",
+    "rig-par-planes-10",
+    "rig-par-planes-30",
+    "rig-par-planes-04",
+    "rig-par-planes-01",
+    "rig-par-planes-14",
+    "rig-par-planes-33",
+    "rig-par-planes-09",
+    "rig-par-planes-03"
+   ]
+  },
+  "beams": 18,
+  "beams_ok": 18,
+  "beams_ending_in_bar_or_chill": [],
+  "beams_into_crane_or_park": [],
+  "beam_glare_min_deg": 30.27,
+  "entry_lasers": {
+   "source": "scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json @ a30b4757 (PR #873), keep_out.boxes + fixtures",
+   "units_in_tower_pen": [],
+   "pens_overlapping_tower_pen": [],
+   "beam_aperture_gap_min_m": 22.848,
+   "beam_cubes_box_gap_min_m": 1.699,
+   "beam_far_wall_block_gap_min_m": 37.841,
+   "beams_into_laser_keep_out": [],
+   "rules": {
+    "aperture_pad_m": 1.0,
+    "block_free_m": 3.0,
+    "why": "ASSUMED margins: no B380F ray within 1 m of a laser unit, no B380F end within 3 m of a block"
+   },
+   "par_pools_on_the_far_wall": "none can reach it: every PAR stands at z >= -31 and its throw is 30 m (the far wall is z -53.8)"
+  },
+  "dj_glare_ok": {
+   "dark": true,
+   "peak": true
+  },
+  "dj_glare_all_at_full_ok": true,
+  "dj_key": {
+   "deg_from_eye_line": 30.93,
+   "lx_at_eye_full_room": 1424.456,
+   "levels": {
+    "dark": 0.109,
+    "peak": 0.034
+   },
+   "face_lx_full_room": 1704.452,
+   "combine_with": "the truss DJ light (another workflow)"
+  },
+  "level_law": "linear: a fader at L draws L (the #868 fix, cherry-picked 5716104d); stage light computed with exponent 1",
+  "floor_glare_peak_measured": {
+   "frame": "gr-t40-peak-floor",
+   "white_pct": 0.37,
+   "mean_Y": 0.0327,
+   "budget_pct": 0.65,
+   "ok": true,
+   "laser_fader": 0.4,
+   "laser_lines_drawn_scene_intensity": [
+    287460,
+    802204
+   ],
+   "every_view_ok": true,
+   "views_over_budget": [],
+   "all_frames": {
+    "gr-t40-dark-behind": {
+     "mean_Y": 0.0297,
+     "white_pct": 0.52
+    },
+    "gr-t40-dark-entry": {
+     "mean_Y": 0.0172,
+     "white_pct": 0.03
+    },
+    "gr-t40-dark-floor": {
+     "mean_Y": 0.0184,
+     "white_pct": 0.11
+    },
+    "gr-t40-dark-wingL": {
+     "mean_Y": 0.0161,
+     "white_pct": 0.06
+    },
+    "gr-t40-dark-wingR": {
+     "mean_Y": 0.016,
+     "white_pct": 0.06
+    },
+    "gr-t40-peak-behind": {
+     "mean_Y": 0.0373,
+     "white_pct": 0.58
+    },
+    "gr-t40-peak-entry": {
+     "mean_Y": 0.0357,
+     "white_pct": 0.23
+    },
+    "gr-t40-peak-floor": {
+     "mean_Y": 0.0327,
+     "white_pct": 0.37
+    },
+    "gr-t40-peak-wingL": {
+     "mean_Y": 0.0331,
+     "white_pct": 0.15
+    },
+    "gr-t40-peak-wingR": {
+     "mean_Y": 0.0292,
+     "white_pct": 0.12
+    }
+   },
+   "spread_drawn_now": {
+    "sl-t40-dark-behind": {
+     "mean_Y": 0.0268,
+     "white_pct": 0.2
+    },
+    "sl-t40-dark-entry": {
+     "mean_Y": 0.0218,
+     "white_pct": 0.13
+    },
+    "sl-t40-dark-floor": {
+     "mean_Y": 0.0353,
+     "white_pct": 0.18
+    },
+    "sl-t40-dark-wingL": {
+     "mean_Y": 0.0294,
+     "white_pct": 0.04
+    },
+    "sl-t40-dark-wingR": {
+     "mean_Y": 0.0217,
+     "white_pct": 0.04
+    },
+    "sl-t40-peak-behind": {
+     "mean_Y": 0.0442,
+     "white_pct": 0.4
+    },
+    "sl-t40-peak-entry": {
+     "mean_Y": 0.0437,
+     "white_pct": 0.75
+    },
+    "sl-t40-peak-floor": {
+     "mean_Y": 0.0638,
+     "white_pct": 1.05
+    },
+    "sl-t40-peak-wingL": {
+     "mean_Y": 0.0509,
+     "white_pct": 0.54
+    },
+    "sl-t40-peak-wingR": {
+     "mean_Y": 0.0398,
+     "white_pct": 0.22
+    }
+   },
+   "drawn_by": {
+    "commit": "0f48b5b9",
+    "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 3080 Laptop GPU (0x0000",
+    "ev100": 2.84,
+    "at": "2026-10-10T02:55:09.339Z"
+   },
+   "method": "moxir-v2-true-frames.cjs, measurement mode EV100 2.84, Full quality, haze t40 (one machine, closed hall), the floor eye 1.7 m z 18.1; frame_luma.py: the share of pixels with every channel >= 240 (the toolbars cut off)"
+  }
+ }
+}
