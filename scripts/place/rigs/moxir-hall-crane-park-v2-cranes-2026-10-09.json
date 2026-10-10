@@ -1,0 +1,15 @@
+{
+  "_what": "MOXIR v2 cranes (2026-10-09 owner N463 / N464, built 2026-10-10): the SHOW park of both cranes. Layered LAST, after moxir-hall-crane-park-v1-1-2026-10-08.json, on the v9-show-park chain (hall.py --dims ... --dims moxir-hall-crane-park-v1-1-2026-10-08.json --dims this file): later files win, so only the two keys below change; the v1.1 zones stay. The SAME two cranes moved, not new ones. Built into hall v10-show-park (rigs/moxir-hall-2026-10-09-v10-show-park.hall.json, GLB /mnt/data/footage/place-moxir-hall-v10-show-park-2026-10-09/hall.glb).",
+  "_owner": "2026-10-09 20:51 (N463): \"yes ther no crane one with the 6 lasers , go back one with trus dj 's back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences\"; 21:1x (N464): \"6 lasers will go on the laser not like the trus\" / \"we dont need to hange laser put on the crane\"",
+  "_source": "a PLAN, not a survey. The near crane's park z 3.20 is the crane-dj-light design (the smallest move forward that keeps the cut >= 0.5 m from the press crown on both the tool's line and the 290 mm truss box: line from z 3.02, box from 3.16, the first 0.05 m rail mark past both), checked again by scripts/place/moxir_v2_cranes.py on rigs/moxir-stage-v2-cranes-2026-10-09.json. The free crane's park z -12 is the owner's (\"yes the crane can move\", 2026-10-09 17:3x; v2 rig far_crane). Nothing here is taped; the cranes' travel, brakes, rated load, lock-out and operator are unchecked (MOXIR.md 6 #1).",
+  "cranes_from_door_m": [
+    50.8,
+    66.0
+  ],
+  "_cranes_from_door_why": "from the entry grid line z 54 (hall.py): the near crane 54 - 50.8 = z 3.20 (was 53.85 = z 0.15, v1.1); the free crane 54 - 66.0 = z -12.0 (was 95.0 = z -41, v1.0 plan A1). The 3D scene drew the free crane at z -41 until this file (MOXIR v2 lead's addendum 5, 2026-10-10).",
+  "crane_trolley_x_m": [
+    7.6,
+    7.6
+  ],
+  "_crane_trolley_why": "both trolleys parked at the +x (cab) end, x 7.6..10.2, and locked out. The near crane's is the v1.1 plan (stage json crane.decision.travel). The free crane's is the laser design's hold point H3 (rigs/moxir-lasers-on-crane-2026-10-09.json): in photo 007 (2026-08-24) its trolley stood at x -2.3..+0.1, where cubes 03, 05, 06 sit; it must be driven to the +x end, its hook wound up, and both locked out before any cube is rigged. NOT SEEN: a site check."
+}

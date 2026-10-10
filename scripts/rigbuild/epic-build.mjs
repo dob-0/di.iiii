@@ -181,6 +181,15 @@ export const v1Entities = (rig) => {
     return out
 }
 
+/** What a build takes out of the copy before it lays the rig file's units: every rig lamp, hazer and smoke machine, the PA
+ * placeholders, FOH, the ash wall and cube 6's tower (all re-created from the file), and every solid an EARLIER rig file laid that
+ * this one no longer lists (MOXIR v2 cranes, 2026-10-10: the #844 laser bar and v2 spread's two far-crane boxes stayed in a copy
+ * of v2.0 once the cubes sat on the crane and hall v10 drew the free crane itself). Pure. */
+export const RIG_FILE_SOLIDS = /^rig-(crane-bar|far-crane-|ash-wall$|tower-)/
+export const oldEntities = (doc) => (Array.isArray(doc.entities) ? doc.entities : []).filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) ||
+    /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6' ||
+    (e.type === 'box' && RIG_FILE_SOLIDS.test(e.id)))    // laid by a rig file: taken out, and laid again only if this file still lists it
+
 /** The looks as rig looks: every unit its own named group, aimed at its own target. Pure. */
 export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const units = ents.filter((e) => e.type === 'spotLight')
@@ -392,7 +401,7 @@ const main = async () => {
     try { booth = boothMoveOps(doc, rig) } catch (e) { die(`${project}: ${e.message}`) }
     const ctx = lookFrame(booth.entities)
     if (!ctx) die(`${project}: no stage frame (riser + venue plan) to aim looks in`)
-    const old = doc.entities.filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) || /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6')
+    const old = oldEntities(doc)
     const ents = v1Entities(rig)
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
     const cues = cuesOf(rig)

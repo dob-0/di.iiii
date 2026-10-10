@@ -1,0 +1,7035 @@
+{
+ "snapshot": "moxir-v2-cranes-2026-10-09",
+ "version": "MOXIR v2 cranes",
+ "title": "MOXIR v2 cranes - the cut half behind the DJ and lighting him, the six cubes on the free crane",
+ "what": "v2 spread (#864) with the owner's cranes (N463, N464): the near crane parked at z 3.20 so the cut hangs 1.10 m behind the DJ's eye and three of its 11 PARs light him (back pair + kicker; the pit stand gone, its PAR is the kicker); the six LaserCubes SIT on the free crane's far-side girder at z -12 and fire one static beam each -z over the crowd behind the stage to one point on the far (SE) wall's block (B-L). Everything else of v2 spread kept.",
+ "written_by": "scripts/place/moxir_v2_cranes.py build (from scripts/place/rigs/moxir-v2-spread-2026-10-09.json)",
+ "date": "2026-10-09",
+ "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
+ "frame": "hall frame: metres, Y up, +x house right, +z toward the entry; rotations three.js Euler XYZ radians, a spot's unrotated beam points -Y; angle_rad = half the beam angle; box solids base-anchored; truss origin at the section centre, tower at the base plate (src/rigbuild/pieces.js), a tower's s[1] scales the 6 m catalogue tower.",
+ "base": "MOXIR v1.1 (rigs/moxir-epic-v1-1-2026-10-08.json): the stage, the cut, the cranes, the PA placeholders, FOH, the barrier; the ash wall and cube 6's tower removed (all 6 cubes on the free crane, owner 10-09 N416)",
+ "kit": {
+  "UP-B380F": 18,
+  "UP-PL5403": 50,
+  "EXT-LC-ULTRA-MK2": 6,
+  "UP-YZ31P": 1
+ },
+ "not_hung": [
+  {
+   "code": "UP-PL5403",
+   "ordered": 50,
+   "hung": 50,
+   "not_hung": 0
+  },
+  {
+   "code": "UP-B380F",
+   "ordered": 18,
+   "hung": 18,
+   "not_hung": 0
+  },
+  {
+   "code": "UP-YZ31P",
+   "ordered": 1,
+   "hung": 1,
+   "not_hung": 0
+  },
+  {
+   "code": "EXT-LC-ULTRA-MK2",
+   "ordered": 6,
+   "hung": 6,
+   "not_hung": 0
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "rig-beam-planes-01",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 330/50 deg (az/el), pen 1.6 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -7.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.521601,
+    0.0,
+    -0.32366
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 20.2,
+   "throw_m": 16.653,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 1,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 333/62 deg (az/el), pen 1.0 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.707299,
+    0.0,
+    -0.211196
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 22.8,
+   "throw_m": 14.487,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 17,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 330/72 deg (az/el), pen 0.7 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.867297,
+    0.0,
+    -0.15513
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 23.4,
+   "throw_m": 13.511,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 33,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 20/72 deg (az/el), pen 0.7 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -4.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.845258,
+    0.0,
+    0.105888
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 23.7,
+   "throw_m": 13.511,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 49,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C07"
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 25/58 deg (az/el), pen 1.2 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -3.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.626303,
+    0.0,
+    0.225869
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 24.1,
+   "throw_m": 8.372,
+   "ends_on": "crane z 0.15 girder",
+   "dmx": {
+    "universe": 1,
+    "address": 65,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "type": "up-b380f",
+   "position": "behind the DJ, base down on the floor, 1.0 m pitch (was 1.5 m), the row centred on the smoke machine; aim 32/49 deg (az/el), pen 1.7 m",
+   "part": "plane 1 (behind the DJ)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -2.25,
+    0.7,
+    -5.0
+   ],
+   "r": [
+    -2.506336,
+    0.0,
+    0.355072
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": 24.1,
+   "throw_m": 17.026,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 81,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C08"
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "type": "up-b380f",
+   "position": "col -12 z -30 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 10/30 deg (az/el), throw 19.7 m to roof deck; no eye within 32 deg of looking down it",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -10.857,
+    3.7,
+    -30.0
+   ],
+   "r": [
+    -2.100982,
+    0.0,
+    0.15056
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 19.7,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 2,
+    "address": 18,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01",
+   "eye_G": {
+    "dance floor": 0.009155108001544988,
+    "mid": 0.008557342665468065,
+    "front edge": 0.009627022403594143,
+    "behind the stage": 0.004013978784101694,
+    "wing L front": 0.0018732100026257721,
+    "wing L back": 0.0022936503605587156,
+    "wing R front": 0.0021896802881254175,
+    "wing R back": 0.003472303229604349
+   },
+   "moved_from": {
+    "p": [
+     -13.2,
+     0.7,
+     -11.0
+    ],
+    "part": "plane 2 (mid-hall, side spans)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "type": "up-b380f",
+   "position": "col -12 z -24 span: column bracket, base at 3.0 m (out of reach, no pen); aim 60/24 deg (az/el), throw 24.12 m to space frame diagonals / top chord; no eye within 30 deg of looking down it",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -13.143,
+    3.7,
+    -24.0
+   ],
+   "r": [
+    -2.298389,
+    0.0,
+    0.912326
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 24.12,
+   "ends_on": "space frame diagonals / top chord",
+   "dmx": {
+    "universe": 2,
+    "address": 34,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01",
+   "eye_G": {
+    "dance floor": 0.0031518099284534268,
+    "mid": 0.002194617864326908,
+    "front edge": 0.001757441659309545,
+    "behind the stage": 0.005981516741658758,
+    "wing L front": 0.0010813782210436034,
+    "wing L back": 0.0013538743150548129,
+    "wing R front": 0.0,
+    "wing R back": 0.017617149377047402
+   },
+   "moved_from": {
+    "p": [
+     13.2,
+     0.7,
+     -11.0
+    ],
+    "part": "plane 2 (mid-hall, side spans)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "type": "up-b380f",
+   "position": "col +12 z -24 span: column bracket, base at 3.0 m (out of reach, no pen); aim 300/24 deg (az/el), throw 24.12 m to space frame diagonals / top chord; no eye within 30 deg of looking down it",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    13.143,
+    3.7,
+    -24.0
+   ],
+   "r": [
+    -2.298389,
+    0.0,
+    -0.912326
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 24.12,
+   "ends_on": "space frame diagonals / top chord",
+   "dmx": {
+    "universe": 2,
+    "address": 50,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02",
+   "eye_G": {
+    "dance floor": 0.0008239080008581155,
+    "mid": 0.0019000308708837892,
+    "front edge": 0.0024463097609925873,
+    "behind the stage": 0.009269146473195017,
+    "wing L front": 0.004240192863374725,
+    "wing L back": 0.017675259430345123,
+    "wing R front": 0.0007075247295760559,
+    "wing R back": 0.00139957369677858
+   },
+   "moved_from": {
+    "p": [
+     -13.2,
+     0.7,
+     -17.0
+    ],
+    "part": "plane 2 (mid-hall, side spans)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "type": "up-b380f",
+   "position": "col -12 z -18 span: column bracket, base at 3.0 m (out of reach, no pen); aim 30/24 deg (az/el), throw 24.217 m to roof deck; no eye within 30 deg of looking down it",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -13.143,
+    3.7,
+    -18.0
+   ],
+   "r": [
+    -2.046007,
+    0.0,
+    0.474573
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 24.217,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 2,
+    "address": 66,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01",
+   "eye_G": {
+    "dance floor": 0.014535786721201885,
+    "mid": 0.013966311598755393,
+    "front edge": 0.013690760890343306,
+    "behind the stage": 0.0010542973239057907,
+    "wing L front": 0.003011603270104495,
+    "wing L back": 0.0011279680183792645,
+    "wing R front": 0.012374567551823925,
+    "wing R back": 0.0029094840461351195
+   },
+   "moved_from": {
+    "p": [
+     13.2,
+     0.7,
+     -17.0
+    ],
+    "part": "plane 2 (mid-hall, side spans)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "type": "up-b380f",
+   "position": "col +12 z -18 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 40/12 deg (az/el), throw 47.376 m to roof deck; no eye within 32 deg of looking down it",
+   "part": "plane 3 (behind the stage)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    10.857,
+    3.7,
+    -18.0
+   ],
+   "r": [
+    -1.841674,
+    0.0,
+    0.680304
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 47.376,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 2,
+    "address": 82,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C02",
+   "eye_G": {
+    "dance floor": 0.0011618514640501173,
+    "mid": 0.001886859740764551,
+    "front edge": 0.000666190542367852,
+    "behind the stage": 0.0016221291575479581,
+    "wing L front": 0.0008569683170830093,
+    "wing L back": 0.0010908819151274206,
+    "wing R front": 0.01650987458773755,
+    "wing R back": 0.006818485166669583
+   },
+   "moved_from": {
+    "p": [
+     -13.2,
+     0.7,
+     -23.0
+    ],
+    "part": "plane 2 (mid-hall, side spans)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "type": "up-b380f",
+   "position": "col -12 z -12 span: column bracket, base at 3.0 m (out of reach, no pen); aim 30/24 deg (az/el), throw 14.981 m to steel (bracing, mullions); no eye within 30 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -13.143,
+    3.7,
+    -12.0
+   ],
+   "r": [
+    -2.046007,
+    0.0,
+    0.474573
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 14.981,
+   "ends_on": "steel (bracing, mullions)",
+   "dmx": {
+    "universe": 2,
+    "address": 98,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C01",
+   "eye_G": {
+    "dance floor": 0.011320288580940262,
+    "mid": 0.011175045388395108,
+    "front edge": 0.0116107537113921,
+    "behind the stage": 0.000701635485394175,
+    "wing L front": 0.002480563864390161,
+    "wing L back": 0.0006478008922099829,
+    "wing R front": 0.0013298289110614198,
+    "wing R back": 0.001673630519181841
+   },
+   "moved_from": {
+    "p": [
+     13.2,
+     0.7,
+     -23.0
+    ],
+    "part": "plane 2 (mid-hall, side spans)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "type": "up-b380f",
+   "position": "col +12 z -12 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 330/30 deg (az/el), throw 19.7 m to roof deck; no eye within 34 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    10.857,
+    3.7,
+    -12.0
+   ],
+   "r": [
+    -2.158799,
+    0.0,
+    -0.447821
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 19.7,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 2,
+    "address": 114,
+    "footprint": 16,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 500,
+   "circuit": "C05",
+   "eye_G": {
+    "dance floor": 0.005893879783207937,
+    "mid": 0.01052393291469382,
+    "front edge": 0.008506987932340025,
+    "behind the stage": 0.0005415765561233097,
+    "wing L front": 0.0072585959889967045,
+    "wing L back": 0.0019149355727817762,
+    "wing R front": 0.0008698868727162572,
+    "wing R back": 0.0008278539530782973
+   },
+   "moved_from": {
+    "p": [
+     -10.0,
+     0.7,
+     -52.0
+    ],
+    "part": "plane 3 (the far end)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-14",
+   "type": "up-b380f",
+   "position": "col -12 z 0.5 nave: column bracket, base at 3.0 m (out of reach, no pen); aim -2/24 deg (az/el; was 0/24, re-aimed off the cut pick 1), throw 20.283 m to space frame diagonals / top chord; no eye within 31 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -10.857,
+    3.7,
+    0.5
+   ],
+   "r": [
+    -1.99,
+    0.0,
+    -0.032
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 20.283,
+   "ends_on": "space frame diagonals / top chord",
+   "dmx": {
+    "universe": 1,
+    "address": 97,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C07",
+   "eye_G": {
+    "dance floor": 0.008244986879862783,
+    "mid": 0.014437069110345565,
+    "front edge": 0.01702770472847619,
+    "behind the stage": 0.0007569117066828368,
+    "wing L front": 0.0033095461592503625,
+    "wing L back": 0.0002744646360115931,
+    "wing R front": 0.0009645730683076387,
+    "wing R back": 0.0007705303308009346
+   },
+   "moved_from": {
+    "p": [
+     -7.5,
+     0.7,
+     -52.0
+    ],
+    "part": "plane 3 (the far end)"
+   },
+   "re_aimed": {
+    "from_az_el_deg": [
+     0.0,
+     24.0
+    ],
+    "to_az_el_deg": [
+     -2.0,
+     24.0
+    ],
+    "why": "v2 spread aim put 3 of 9 rays on the cut pick 1 (round 2, 10-10)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "type": "up-b380f",
+   "position": "col +12 z 12 span: column bracket, base at 3.0 m (out of reach, no pen); aim 290/24 deg (az/el), throw 24.217 m to roof deck; no eye within 31 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    13.143,
+    3.7,
+    12.0
+   ],
+   "r": [
+    -2.487562,
+    0.0,
+    -1.032068
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 24.217,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 113,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C05",
+   "eye_G": {
+    "dance floor": 0.010531373227881545,
+    "mid": 0.0066241612763405355,
+    "front edge": 0.004633321637194005,
+    "behind the stage": 0.001011054109327618,
+    "wing L front": 0.013723094923088285,
+    "wing L back": 0.0010942662315345398,
+    "wing R front": 0.00034703687372307284,
+    "wing R back": 0.00033631355007851234
+   },
+   "moved_from": {
+    "p": [
+     -5.0,
+     0.7,
+     -52.0
+    ],
+    "part": "plane 3 (the far end)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "type": "up-b380f",
+   "position": "col +12 z 18 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 290/18 deg (az/el), throw 29.661 m to space frame diagonals / top chord; no eye within 33 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    10.857,
+    3.7,
+    18.0
+   ],
+   "r": [
+    -2.330963,
+    0.0,
+    -1.105853
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 29.661,
+   "ends_on": "space frame diagonals / top chord",
+   "dmx": {
+    "universe": 1,
+    "address": 129,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C09",
+   "eye_G": {
+    "dance floor": 0.009577079604527493,
+    "mid": 0.010079613102651088,
+    "front edge": 0.005616459184038761,
+    "behind the stage": 0.001068830415868588,
+    "wing L front": 0.01162967714178171,
+    "wing L back": 0.001278513117214897,
+    "wing R front": 0.0009982952347987123,
+    "wing R back": 0.0005204867309754265
+   },
+   "moved_from": {
+    "p": [
+     5.0,
+     0.7,
+     -52.0
+    ],
+    "part": "plane 3 (the far end)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "type": "up-b380f",
+   "position": "col -12 z 30 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 210/24 deg (az/el), throw 24.217 m to roof deck; no eye within 30 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -10.857,
+    3.7,
+    30.0
+   ],
+   "r": [
+    2.046007,
+    0.0,
+    -0.474573
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 24.217,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 145,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C08",
+   "eye_G": {
+    "dance floor": 0.0018713451436653194,
+    "mid": 0.0006528638732836748,
+    "front edge": 0.0006209814207364147,
+    "behind the stage": 0.0022915810346910183,
+    "wing L front": 0.012754724593589933,
+    "wing L back": 0.015844207278505777,
+    "wing R front": 0.00019949772223139007,
+    "wing R back": 0.00045561160693954043
+   },
+   "moved_from": {
+    "p": [
+     7.5,
+     0.7,
+     -52.0
+    ],
+    "part": "plane 3 (the far end)"
+   }
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "type": "up-b380f",
+   "position": "col -12 z 36 nave: column bracket, base at 3.0 m (out of reach, no pen); aim 150/30 deg (az/el), throw 25.8 m to roof deck; no eye within 32 deg of looking down it",
+   "part": "plane 2 (the wings)",
+   "layer": "beams",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -10.857,
+    3.7,
+    36.0
+   ],
+   "r": [
+    2.158799,
+    0.0,
+    0.447821
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0157,
+   "sky_clear_pct": null,
+   "throw_m": 25.8,
+   "ends_on": "roof deck",
+   "dmx": {
+    "universe": 1,
+    "address": 161,
+    "footprint": 16,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 500,
+   "circuit": "C08",
+   "eye_G": {
+    "dance floor": 0.008541844775182512,
+    "mid": 0.0035655970836191353,
+    "front edge": 0.0016740241367353146,
+    "behind the stage": 0.009368957361023484,
+    "wing L front": 0.0017852329171516134,
+    "wing L back": 0.0014606327977393695,
+    "wing R front": 0.0011626495586667886,
+    "wing R back": 0.009184830864946179
+   },
+   "moved_from": {
+    "p": [
+     10.0,
+     0.7,
+     -52.0
+    ],
+    "part": "plane 3 (the far end)"
+   }
+  },
+  {
+   "id": "rig-par-cut-01",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u -5.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -9.83,
+    3.606,
+    3.2
+   ],
+   "r": [
+    -3.142,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 217,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -10.316,
+     2.756,
+     0.15
+    ],
+    "part": "cut down"
+   }
+  },
+  {
+   "id": "rig-par-cut-02",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u -4.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -8.864,
+    3.145,
+    3.2
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 225,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -9.35,
+     3.735,
+     0.15
+    ],
+    "part": "cut up"
+   }
+  },
+  {
+   "id": "rig-par-cut-03",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u -3.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -7.898,
+    4.124,
+    3.2
+   ],
+   "r": [
+    -3.142,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 233,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -8.384,
+     3.274,
+     0.15
+    ],
+    "part": "cut down"
+   }
+  },
+  {
+   "id": "rig-par-cut-04",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u -2.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.932,
+    3.662,
+    3.2
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 241,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -6.935,
+     4.382,
+     0.15
+    ],
+    "part": "cut up"
+   }
+  },
+  {
+   "id": "rig-par-cut-05",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u -1.5 m: hung under the bottom chords, half coupler + safety, aimed at the DJ (his head and shoulders, from behind)",
+   "part": "dj back",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.449,
+    3.792,
+    3.2
+   ],
+   "r": [
+    -0.518,
+    0.0,
+    0.532
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 249,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "aim_at": [
+    -5.2,
+    1.95,
+    4.25
+   ],
+   "moved_from": {
+    "p": [
+     -5.969,
+     3.921,
+     0.15
+    ],
+    "part": "cut down"
+   }
+  },
+  {
+   "id": "rig-par-cut-06",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u +0.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.0,
+    4.9,
+    3.2
+   ],
+   "r": [
+    -3.142,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 257,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -4.52,
+     5.029,
+     0.15
+    ],
+    "part": "cut up"
+   }
+  },
+  {
+   "id": "rig-par-cut-07",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u +1.0 m: hung under the bottom chords, half coupler + safety, aimed at the DJ (his head and shoulders, from behind)",
+   "part": "dj back",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -4.034,
+    4.439,
+    3.2
+   ],
+   "r": [
+    -0.399,
+    0.0,
+    -0.407
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 265,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "aim_at": [
+    -5.2,
+    1.95,
+    4.25
+   ],
+   "moved_from": {
+    "p": [
+     -3.554,
+     4.568,
+     0.15
+    ],
+    "part": "cut down"
+   }
+  },
+  {
+   "id": "rig-par-cut-08",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u +2.0 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -3.068,
+    4.698,
+    3.2
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 273,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -3.071,
+     5.418,
+     0.15
+    ],
+    "part": "cut up"
+   }
+  },
+  {
+   "id": "rig-par-cut-09",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u +3.0 m: standing on the top chords, half coupler + safety, straight up between the bridge's girders",
+   "part": "cut up",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -2.102,
+    5.676,
+    3.2
+   ],
+   "r": [
+    -3.142,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 281,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "moved_from": {
+    "p": [
+     -1.139,
+     5.215,
+     0.15
+    ],
+    "part": "cut down"
+   }
+  },
+  {
+   "id": "rig-par-cut-10",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u +3.5 m: hung under the bottom chords, half coupler + safety, a shaft straight down",
+   "part": "cut down",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -1.619,
+    5.086,
+    3.2
+   ],
+   "r": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 289,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "moved_from": {
+    "p": [
+     -0.173,
+     6.194,
+     0.15
+    ],
+    "part": "cut up"
+   }
+  },
+  {
+   "id": "rig-par-planes-01",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x -12 z 6 (the left column framing the stage from the floor), 0.44 m off its face, leaned 4 deg onto it; in the public half: a guard cage owed",
+   "part": "stage columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    0.31,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.070686
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 7.022,
+   "lux_on_steel_median": 239.051,
+   "dmx": {
+    "universe": 1,
+    "address": 369,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-02",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket (as v1.1)",
+   "part": "halo",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -6.678,
+    0.3,
+    2.7
+   ],
+   "r": [
+    -2.792651,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 60.357,
+   "dmx": {
+    "universe": 1,
+    "address": 345,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-03",
+   "type": "up-pl5403",
+   "position": "floor behind the step, on its bracket (as v1.1)",
+   "part": "halo",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.198,
+    0.3,
+    2.7
+   ],
+   "r": [
+    -2.792651,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 59.355,
+   "dmx": {
+    "universe": 1,
+    "address": 353,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10"
+  },
+  {
+   "id": "rig-par-planes-04",
+   "type": "up-pl5403",
+   "position": "floor bracket at the nave column x +12 z 6, 0.44 m off its face, leaned 4 deg onto it; in the public half: a guard cage owed",
+   "part": "stage columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    0.31,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.070686
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 7.022,
+   "lux_on_steel_median": 475.109,
+   "dmx": {
+    "universe": 1,
+    "address": 377,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-05",
+   "type": "up-pl5403",
+   "position": "on the machine line's top (2.4 m) at the nave column x +12 z 0.5 (the right column framing the stage from the floor), leaned 4 deg onto it; out of reach; the venue's OK to stand on the machine owed",
+   "part": "stage columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.71,
+    0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.070686
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 4.581,
+   "lux_on_steel_median": 685.49,
+   "dmx": {
+    "universe": 1,
+    "address": 305,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06"
+  },
+  {
+   "id": "rig-par-planes-06",
+   "type": "up-pl5403",
+   "position": "floor plate, straight up into the space frame (the roof steel in pieces)",
+   "part": "halo",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -5.2,
+    0.31,
+    -2.6
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.0
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": 64.069,
+   "dmx": {
+    "universe": 1,
+    "address": 209,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11"
+  },
+  {
+   "id": "rig-par-planes-07",
+   "type": "up-pl5403",
+   "position": "col -12 z -24 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: behind the stage 0.49, wing L back 0.15, wing R back 0.05",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    2.8,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 130,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03",
+   "eye_lux": {
+    "dance floor": 0.019892774155534466,
+    "mid": 0.010549528615502497,
+    "front edge": 0.009355048854056306,
+    "behind the stage": 0.4925683889667803,
+    "wing L front": 0.015631905598697846,
+    "wing L back": 0.15231260804408822,
+    "wing R front": 0.0,
+    "wing R back": 0.04887827665625832
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -6.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-08",
+   "type": "up-pl5403",
+   "position": "col +12 z -24 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R back 0.18, behind the stage 0.18, wing L back 0.04",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.8,
+    -24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 138,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04",
+   "eye_lux": {
+    "dance floor": 0.002089292350307822,
+    "mid": 0.007662661047278935,
+    "front edge": 0.004992795149167427,
+    "behind the stage": 0.17504843015191007,
+    "wing L front": 0.00534796098949451,
+    "wing L back": 0.044873330512232024,
+    "wing R front": 0.013315387429291156,
+    "wing R back": 0.17571145510447572
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -6.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-09",
+   "type": "up-pl5403",
+   "position": "col -12 z -18 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: behind the stage 0.58, wing L back 0.15, wing R back 0.05",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    2.8,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 146,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03",
+   "eye_lux": {
+    "dance floor": 0.012849959641902164,
+    "mid": 0.014966664026689596,
+    "front edge": 0.010082661409199722,
+    "behind the stage": 0.5800109146763907,
+    "wing L front": 0.02391427734796688,
+    "wing L back": 0.1542897845406904,
+    "wing R front": 0.0013450251241385362,
+    "wing R back": 0.05431281600224577
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -12.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-10",
+   "type": "up-pl5403",
+   "position": "col +12 z -18 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R back 0.65, behind the stage 0.06, wing R front 0.04",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    -18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 154,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C04",
+   "eye_lux": {
+    "dance floor": 0.0,
+    "mid": 0.01256167195659035,
+    "front edge": 0.0065042908607398035,
+    "behind the stage": 0.05964162798020972,
+    "wing L front": 0.0,
+    "wing L back": 0.01274302988669911,
+    "wing R front": 0.03925929649292934,
+    "wing R back": 0.6544217977724112
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -12.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-11",
+   "type": "up-pl5403",
+   "position": "col -12 z -12 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: behind the stage 0.31, wing L back 0.15, wing L front 0.04",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    2.8,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 162,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C03",
+   "eye_lux": {
+    "dance floor": 0.03495123928063488,
+    "mid": 0.021151464687337668,
+    "front edge": 0.013294157880814774,
+    "behind the stage": 0.30988439370955,
+    "wing L front": 0.03980671651882582,
+    "wing L back": 0.15420084129055853,
+    "wing R front": 0.0027096234605969174,
+    "wing R back": 0.02681160399501378
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -18.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-12",
+   "type": "up-pl5403",
+   "position": "col +12 z -12 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R back 0.82, behind the stage 0.06, wing R front 0.06",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    -12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 170,
+    "footprint": 8,
+    "branch": "U2-far",
+    "node": "NODE-FAR"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.022309690754248022,
+    "mid": 0.012744019021791893,
+    "front edge": 0.0057701704981652285,
+    "behind the stage": 0.06276575807728235,
+    "wing L front": 0.012608673461858512,
+    "wing L back": 0.0,
+    "wing R front": 0.05552309793060487,
+    "wing R back": 0.8157700980365867
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -18.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-13",
+   "type": "up-pl5403",
+   "position": "col -12 z -6 span: column bracket, body at 2.8 m (out of reach), leaned 25 deg out into the roof steel; seen from the eyes: wing L back 0.47, behind the stage 0.17, wing L front 0.12",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.436808
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 177,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.002500418415524201,
+    "mid": 0.0006028103669168515,
+    "front edge": 0.0045357164128081665,
+    "behind the stage": 0.16932813566611601,
+    "wing L front": 0.11993868099298413,
+    "wing L back": 0.4736801891424079,
+    "wing R front": 0.0,
+    "wing R back": 0.037823510950894285
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -24.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-14",
+   "type": "up-pl5403",
+   "position": "col -12 z -6 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L back 0.15, behind the stage 0.15, wing L front 0.07",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    2.8,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 185,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.060749268453998834,
+    "mid": 0.030626742878171066,
+    "front edge": 0.01937653642586125,
+    "behind the stage": 0.15044025244519477,
+    "wing L front": 0.06897511082205202,
+    "wing L back": 0.15046889944112965,
+    "wing R front": 0.0020228779022743865,
+    "wing R back": 0.027846077871853163
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -24.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-15",
+   "type": "up-pl5403",
+   "position": "col +12 z -6 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R back 0.21, behind the stage 0.09, wing R front 0.07",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.8,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 193,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.046964930456070246,
+    "mid": 0.012580383694076788,
+    "front edge": 0.00646010821442333,
+    "behind the stage": 0.08538770634677802,
+    "wing L front": 0.005425272510129714,
+    "wing L back": 0.000710577403223014,
+    "wing R front": 0.07096673087799778,
+    "wing R back": 0.21193097767998983
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -30.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-16",
+   "type": "up-pl5403",
+   "position": "col +12 z -6 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R back 0.39, wing R front 0.10, behind the stage 0.04",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    -6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 201,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.019670114153047168,
+    "mid": 0.008446091818473925,
+    "front edge": 0.013782991207833495,
+    "behind the stage": 0.039460351646960386,
+    "wing L front": 0.0011670420226603316,
+    "wing L back": 0.0,
+    "wing R front": 0.10012026189621274,
+    "wing R back": 0.3860813092367304
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -30.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-17",
+   "type": "up-pl5403",
+   "position": "col -12 z 0.5 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L front 0.18, wing L back 0.12, dance floor 0.08",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 297,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "eye_lux": {
+    "dance floor": 0.07845371716030629,
+    "mid": 0.03251204712102168,
+    "front edge": 0.02073138381398196,
+    "behind the stage": 0.01404022139741809,
+    "wing L front": 0.1803350386739977,
+    "wing L back": 0.11996222964685316,
+    "wing R front": 0.006584381132311352,
+    "wing R back": 0.007117316120448149
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -36.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-18",
+   "type": "up-pl5403",
+   "position": "col +12 z 0.5 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R front 0.19, wing R back 0.15, dance floor 0.05",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    0.5
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 313,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.05274740983496496,
+    "mid": 0.019757558443939147,
+    "front edge": 0.009455983127470168,
+    "behind the stage": 0.0,
+    "wing L front": 0.011914676683815711,
+    "wing L back": 0.004071573899293601,
+    "wing R front": 0.18929905621206417,
+    "wing R back": 0.1515648569721037
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -36.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-19",
+   "type": "up-pl5403",
+   "position": "col -12 z 6 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L front 0.32, dance floor 0.13, wing L back 0.10",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 361,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C10",
+   "eye_lux": {
+    "dance floor": 0.1255159691112599,
+    "mid": 0.045179064143401386,
+    "front edge": 0.02625327613162972,
+    "behind the stage": 0.004074448816006148,
+    "wing L front": 0.31618961872147383,
+    "wing L back": 0.09641723427962443,
+    "wing R front": 0.005669348427203821,
+    "wing R back": 0.006276728282231184
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -42.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-20",
+   "type": "up-pl5403",
+   "position": "col +12 z 6 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R front 0.39, wing R back 0.10, dance floor 0.02",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    6.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 385,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.024648706044560875,
+    "mid": 0.012078602465799154,
+    "front edge": 0.008921766784391246,
+    "behind the stage": 0.009248216869259545,
+    "wing L front": 0.0,
+    "wing L back": 0.011364690893300639,
+    "wing R front": 0.38608130923673034,
+    "wing R back": 0.10012026189621274
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -42.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-21",
+   "type": "up-pl5403",
+   "position": "col -12 z 12 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L front 0.57, dance floor 0.16, mid 0.07",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 425,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.16304064895151288,
+    "mid": 0.07197522955198724,
+    "front edge": 0.03366232242086706,
+    "behind the stage": 0.02391427734796688,
+    "wing L front": 0.5715913957268014,
+    "wing L back": 0.05564557392896574,
+    "wing R front": 0.006940620993566406,
+    "wing R back": 0.0
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -48.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-22",
+   "type": "up-pl5403",
+   "position": "col +12 z 12 nave: column bracket, body at 2.8 m (out of reach), leaned 25 deg out into the roof steel; seen from the eyes: wing R front 0.29, dance floor 0.16, mid 0.08",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.8,
+    12.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.436808
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 433,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13",
+   "eye_lux": {
+    "dance floor": 0.1597481225696301,
+    "mid": 0.0831786381588296,
+    "front edge": 0.0430493218997077,
+    "behind the stage": 0.027180620748829917,
+    "wing L front": 0.039717854734425156,
+    "wing L back": 0.0,
+    "wing R front": 0.29153019741374747,
+    "wing R back": 0.0
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -48.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-23",
+   "type": "up-pl5403",
+   "position": "key, house left: column bracket on the nave column x -12 z 12 at 6.0 m (under the flared head at 6.21 m), out of reach; aimed between the DJ's face and the booth's front",
+   "part": "stage key",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.35,
+    6.0,
+    11.6
+   ],
+   "r": [
+    0.979357,
+    0.0,
+    0.651133
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 409,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "aim_at": [
+    -5.2,
+    1.5,
+    4.9
+   ],
+   "moved_from": {
+    "p": [
+     -11.157,
+     0.31,
+     -54.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-24",
+   "type": "up-pl5403",
+   "position": "the same column bracket, 0.9 m lower: the PA L face",
+   "part": "speaker face L",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.35,
+    5.1,
+    11.6
+   ],
+   "r": [
+    0.869002,
+    0.0,
+    0.454105
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 417,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "aim_at": [
+    -8.25,
+    1.0,
+    6.75
+   ],
+   "moved_from": {
+    "p": [
+     11.157,
+     0.31,
+     -54.0
+    ],
+    "part": "columns"
+   }
+  },
+  {
+   "id": "rig-par-planes-26",
+   "type": "up-pl5403",
+   "position": "col -12 z 18 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L front 0.48, dance floor 0.15, mid 0.11",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 449,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.14851445699110463,
+    "mid": 0.10894146444128416,
+    "front edge": 0.04906374222280097,
+    "behind the stage": 0.015055629226522167,
+    "wing L front": 0.48125523809711757,
+    "wing L back": 0.03918094193455574,
+    "wing R front": 0.0035598375203286484,
+    "wing R back": 0.0030137860157107106
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -2.0,
+     0.31,
+     -52.6
+    ],
+    "part": "far wall"
+   }
+  },
+  {
+   "id": "rig-par-planes-27",
+   "type": "up-pl5403",
+   "position": "col -12 z 18 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: dance floor 0.59, mid 0.18, wing L front 0.15",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    2.8,
+    18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 457,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.5861510226376806,
+    "mid": 0.18133490416893788,
+    "front edge": 0.07222346754045353,
+    "behind the stage": 0.0233286979595647,
+    "wing L front": 0.14946819222774432,
+    "wing L back": 0.026249869157965178,
+    "wing R front": 0.004546323690412816,
+    "wing R back": 0.0027149000376879423
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     2.0,
+     0.31,
+     -52.6
+    ],
+    "part": "far wall"
+   }
+  },
+  {
+   "id": "rig-par-planes-28",
+   "type": "up-pl5403",
+   "position": "the same column bracket: across to the PA R face (the pit stand stands in its plane and cannot light it)",
+   "part": "speaker face R",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.35,
+    5.55,
+    11.25
+   ],
+   "r": [
+    0.721159,
+    0.0,
+    1.019383
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 401,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "aim_at": [
+    -1.5,
+    1.0,
+    7.25
+   ],
+   "moved_from": {
+    "p": [
+     6.0,
+     0.31,
+     -52.6
+    ],
+    "part": "far wall"
+   }
+  },
+  {
+   "id": "rig-par-planes-29",
+   "type": "up-pl5403",
+   "position": "col +12 z 18 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R front 0.65, wing R back 0.04, dance floor 0.03",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    18.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 465,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.0331459462244943,
+    "mid": 0.0224552662840201,
+    "front edge": 0.014004713625197562,
+    "behind the stage": 0.001995655174547304,
+    "wing L front": 0.003947787218629902,
+    "wing L back": 0.0,
+    "wing R front": 0.6544217977724112,
+    "wing R back": 0.039259296492929335
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -34.9,
+     0.31,
+     -12.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-30",
+   "type": "up-pl5403",
+   "position": "col -12 z 24 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L front 0.26, dance floor 0.17, mid 0.13",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 473,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.1655348956306199,
+    "mid": 0.1281839885676351,
+    "front edge": 0.07324148261266335,
+    "behind the stage": 0.00768532307152503,
+    "wing L front": 0.2576422278114095,
+    "wing L back": 0.02941958724607413,
+    "wing R front": 0.002472911036786703,
+    "wing R back": 0.0003481728081832385
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -34.9,
+     0.31,
+     -24.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-31",
+   "type": "up-pl5403",
+   "position": "col -12 z 24 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: dance floor 0.40, mid 0.32, wing L front 0.15",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -11.157,
+    2.8,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 481,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.3961575531241329,
+    "mid": 0.3215771527996346,
+    "front edge": 0.11351347066579683,
+    "behind the stage": 0.013509150811642584,
+    "wing L front": 0.14900527469269154,
+    "wing L back": 0.02057578627171662,
+    "wing R front": 0.0041853931015525024,
+    "wing R back": 0.0
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -34.9,
+     0.31,
+     -36.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-32",
+   "type": "up-pl5403",
+   "position": "col +12 z 24 nave: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R front 0.36, mid 0.25, dance floor 0.20",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.8,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 489,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13",
+   "eye_lux": {
+    "dance floor": 0.20474121015173713,
+    "mid": 0.2505318777736049,
+    "front edge": 0.1396239158735226,
+    "behind the stage": 0.02158341997440021,
+    "wing L front": 0.04998216650461746,
+    "wing L back": 0.0,
+    "wing R front": 0.3591214995635038,
+    "wing R back": 0.0
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     -34.9,
+     0.31,
+     -48.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-33",
+   "type": "up-pl5403",
+   "position": "col +12 z 24 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing R front 0.29, wing R back 0.03, mid 0.02",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    12.843,
+    2.8,
+    24.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 497,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C06",
+   "eye_lux": {
+    "dance floor": 0.016820376321053352,
+    "mid": 0.021361143042855694,
+    "front edge": 0.014771125564313385,
+    "behind the stage": 0.0026292947471377092,
+    "wing L front": 0.0029171412752533737,
+    "wing L back": 0.0010523899040956832,
+    "wing R front": 0.2895380727104321,
+    "wing R back": 0.028205373442688184
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     34.9,
+     0.31,
+     -12.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-34",
+   "type": "up-pl5403",
+   "position": "col -12 z 30 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: wing L front 0.14, dance floor 0.13, mid 0.12",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    30.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 505,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "eye_lux": {
+    "dance floor": 0.133629672260122,
+    "mid": 0.11690050332877423,
+    "front edge": 0.10077263837657026,
+    "behind the stage": 0.005462595552480379,
+    "wing L front": 0.13871872538029034,
+    "wing L back": 0.02186023297013893,
+    "wing R front": 0.002868725244673374,
+    "wing R back": 0.0005923319824468387
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     34.9,
+     0.31,
+     -24.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-35",
+   "type": "up-pl5403",
+   "position": "col +12 z 30 nave: column bracket, body at 2.8 m (out of reach), leaned 25 deg out into the roof steel; seen from the eyes: mid 0.33, front edge 0.25, wing R front 0.17",
+   "part": "roof",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    11.157,
+    2.8,
+    30.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    -0.436808
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 1,
+    "footprint": 8,
+    "branch": "U2-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13",
+   "eye_lux": {
+    "dance floor": 0.15223707692543723,
+    "mid": 0.3263018404497977,
+    "front edge": 0.2468215895923428,
+    "behind the stage": 0.0,
+    "wing L front": 0.0,
+    "wing L back": 0.0,
+    "wing R front": 0.1719215444087638,
+    "wing R back": 0.0017740530421560883
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     34.9,
+     0.31,
+     -36.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-36",
+   "type": "up-pl5403",
+   "position": "col -12 z 36 span: column bracket, body at 2.8 m (out of reach), leaned 4 deg onto its own face; seen from the eyes: mid 0.13, front edge 0.09, wing L front 0.08",
+   "part": "columns",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -12.843,
+    2.8,
+    36.0
+   ],
+   "r": [
+    -3.141593,
+    0.0,
+    0.071023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 2,
+    "address": 9,
+    "footprint": 8,
+    "branch": "U2-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C12",
+   "eye_lux": {
+    "dance floor": 0.0777353566890176,
+    "mid": 0.13220546341571413,
+    "front edge": 0.0920752319721961,
+    "behind the stage": 0.0041259415296890966,
+    "wing L front": 0.07966667267334142,
+    "wing L back": 0.01608122551170891,
+    "wing R front": 0.0005880390487235666,
+    "wing R back": 0.0033394902166426137
+   },
+   "steel_pct": 100.0,
+   "moved_from": {
+    "p": [
+     34.9,
+     0.31,
+     -48.0
+    ],
+    "part": "side spans"
+   }
+  },
+  {
+   "id": "rig-par-planes-37",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    0.9,
+    0.3,
+    0.9
+   ],
+   "r": [
+    -2.95437,
+    0.0,
+    0.184025
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 329,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-38",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    2.4,
+    0.3,
+    2.5
+   ],
+   "r": [
+    2.928357,
+    0.0,
+    -0.208546
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 337,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-39",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    6.0,
+    2.45,
+    0.8
+   ],
+   "r": [
+    -1.863189,
+    0.0,
+    1.364687
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 321,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-par-planes-40",
+   "type": "up-pl5403",
+   "position": "inside the machine, on its own bracket (out of reach) (as v1.1)",
+   "part": "embers",
+   "layer": "pars",
+   "status": "used",
+   "moments": [],
+   "p": [
+    5.2,
+    0.2,
+    16.4
+   ],
+   "r": [
+    -2.408703,
+    0.0,
+    -0.074088
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.1309,
+   "lit_column_m": 0.0,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 441,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C13"
+  },
+  {
+   "id": "rig-smoke-planes",
+   "type": "up-yz31p",
+   "position": "on a 1.0 m flight case 1.2 m behind the middle of the plane-1 row (x -4.75, z -6.2), fan at lowest speed blowing +z through the six heads toward the back of the stage: the only dense air one machine makes (~0.26 /m within ~3 m) is where all six beams start. Refills from behind the stage (crew access along the back wall line). Was (-8.0, -3.0).",
+   "part": "haze",
+   "layer": "air",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -4.75,
+    1.0,
+    -6.2
+   ],
+   "r": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "colour": null,
+   "angle_rad": null,
+   "power_w": 1500,
+   "dmx": {
+    "universe": 2,
+    "address": 17,
+    "footprint": 1,
+    "branch": "U2-stage",
+    "node": "NODE-STAGE"
+   },
+   "circuit": "C14"
+  },
+  {
+   "id": "rig-lasercube-cut-01",
+   "type": "ext-lc-ultra-mk2",
+   "position": "SITS on the free crane's far-side girder top at z -12 (owner N464: \"put on the crane\"), x -4.50, front face flush with the girder's outer edge (z -13.45), aperture 8.81 m (top p50 8.73 + 0.08 ASSUMED; checked over 8.54-9.09); one static beam -z over the crowd behind the stage to the far (SE) wall's block at (-4.031, 9.181): B-L, rigs/moxir-lasers-on-crane-2026-10-09.json",
+   "part": "laser",
+   "layer": "lines",
+   "status": "used",
+   "p": [
+    -4.5,
+    8.81,
+    -13.45
+   ],
+   "r": [
+    1.58,
+    0.0,
+    0.012
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0105,
+   "laser": {
+    "colour": "ash white",
+    "ip": "192.168.1.101",
+    "artnet": {
+     "universe": 10,
+     "address": 1,
+     "footprint": 16
+    },
+    "beams": [
+     {
+      "id": "1a",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -4.031,
+       9.181,
+       -53.8
+      ],
+      "length_m": 40.354,
+      "r": [
+       1.58,
+       0.0,
+       0.012
+      ],
+      "pan_deg": 0.666,
+      "tilt_deg": 0.527,
+      "ends_on": "far (SE) end wall (block)",
+      "end_height_m": 9.181,
+      "checks": "rigs/moxir-lasers-on-crane-2026-10-09.json beams[rig-lasercube-cut-01]"
+     }
+    ],
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": {
+     "p": [
+      -5.4,
+      5.2,
+      -12.0
+     ],
+     "to": [
+      -5.1,
+      10.2,
+      53.8
+     ]
+    },
+    "signed_off": false,
+    "note_v2_cranes": "B-L (laser-margin design, 2026-10-10). Dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld)."
+   },
+   "power_w": 120,
+   "circuit": "C-LASER",
+   "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json (B-L: laser-margin design.md, checked by scripts/place/moxir_v2_cranes.py)"
+  },
+  {
+   "id": "rig-lasercube-cut-02",
+   "type": "ext-lc-ultra-mk2",
+   "position": "SITS on the free crane's far-side girder top at z -12 (owner N464: \"put on the crane\"), x -3.80, front face flush with the girder's outer edge (z -13.45), aperture 8.81 m (top p50 8.73 + 0.08 ASSUMED; checked over 8.54-9.09); one static beam -z over the crowd behind the stage to the far (SE) wall's block at (-4.031, 9.181): B-L, rigs/moxir-lasers-on-crane-2026-10-09.json",
+   "part": "laser",
+   "layer": "lines",
+   "status": "used",
+   "p": [
+    -3.8,
+    8.81,
+    -13.45
+   ],
+   "r": [
+    1.58,
+    0.0,
+    -0.006
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0105,
+   "laser": {
+    "colour": "ash white",
+    "ip": "192.168.1.102",
+    "artnet": {
+     "universe": 10,
+     "address": 17,
+     "footprint": 16
+    },
+    "beams": [
+     {
+      "id": "2a",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -4.031,
+       9.181,
+       -53.8
+      ],
+      "length_m": 40.352,
+      "r": [
+       1.58,
+       0.0,
+       -0.006
+      ],
+      "pan_deg": -0.328,
+      "tilt_deg": 0.527,
+      "ends_on": "far (SE) end wall (block)",
+      "end_height_m": 9.181,
+      "checks": "rigs/moxir-lasers-on-crane-2026-10-09.json beams[rig-lasercube-cut-02]"
+     }
+    ],
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": {
+     "p": [
+      -4.0,
+      5.2,
+      -12.0
+     ],
+     "to": [
+      -4.0,
+      10.2,
+      53.8
+     ]
+    },
+    "signed_off": false,
+    "note_v2_cranes": "B-L (laser-margin design, 2026-10-10). Dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld)."
+   },
+   "power_w": 120,
+   "circuit": "C-LASER",
+   "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json (B-L: laser-margin design.md, checked by scripts/place/moxir_v2_cranes.py)"
+  },
+  {
+   "id": "rig-lasercube-cut-03",
+   "type": "ext-lc-ultra-mk2",
+   "position": "SITS on the free crane's far-side girder top at z -12 (owner N464: \"put on the crane\"), x -1.70, front face flush with the girder's outer edge (z -13.45), aperture 8.81 m (top p50 8.73 + 0.08 ASSUMED; checked over 8.54-9.09); one static beam -z over the crowd behind the stage to the far (SE) wall's block at (-4.031, 9.181): B-L, rigs/moxir-lasers-on-crane-2026-10-09.json",
+   "part": "laser",
+   "layer": "lines",
+   "status": "used",
+   "p": [
+    -1.7,
+    8.81,
+    -13.45
+   ],
+   "r": [
+    1.58,
+    0.0,
+    -0.058
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0105,
+   "laser": {
+    "colour": "ash white",
+    "ip": "192.168.1.103",
+    "artnet": {
+     "universe": 10,
+     "address": 33,
+     "footprint": 16
+    },
+    "beams": [
+     {
+      "id": "3a",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -4.031,
+       9.181,
+       -53.8
+      ],
+      "length_m": 40.419,
+      "r": [
+       1.58,
+       0.0,
+       -0.058
+      ],
+      "pan_deg": -3.306,
+      "tilt_deg": 0.526,
+      "ends_on": "far (SE) end wall (block)",
+      "end_height_m": 9.181,
+      "checks": "rigs/moxir-lasers-on-crane-2026-10-09.json beams[rig-lasercube-cut-03]"
+     }
+    ],
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": {
+     "p": [
+      2.5,
+      5.2,
+      -12.0
+     ],
+     "to": [
+      2.5,
+      10.2,
+      53.8
+     ]
+    },
+    "signed_off": false,
+    "note_v2_cranes": "B-L (laser-margin design, 2026-10-10). Dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld)."
+   },
+   "power_w": 120,
+   "circuit": "C-LASER",
+   "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json (B-L: laser-margin design.md, checked by scripts/place/moxir_v2_cranes.py)"
+  },
+  {
+   "id": "rig-lasercube-cut-04",
+   "type": "ext-lc-ultra-mk2",
+   "position": "SITS on the free crane's far-side girder top at z -12 (owner N464: \"put on the crane\"), x -3.10, front face flush with the girder's outer edge (z -13.45), aperture 8.81 m (top p50 8.73 + 0.08 ASSUMED; checked over 8.54-9.09); one static beam -z over the crowd behind the stage to the far (SE) wall's block at (-4.031, 9.181): B-L, rigs/moxir-lasers-on-crane-2026-10-09.json",
+   "part": "laser",
+   "layer": "lines",
+   "status": "used",
+   "p": [
+    -3.1,
+    8.81,
+    -13.45
+   ],
+   "r": [
+    1.58,
+    0.0,
+    -0.023
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0105,
+   "laser": {
+    "colour": "ember red",
+    "ip": "192.168.1.104",
+    "artnet": {
+     "universe": 10,
+     "address": 49,
+     "footprint": 16
+    },
+    "beams": [
+     {
+      "id": "4a",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -4.031,
+       9.181,
+       -53.8
+      ],
+      "length_m": 40.362,
+      "r": [
+       1.58,
+       0.0,
+       -0.023
+      ],
+      "pan_deg": -1.322,
+      "tilt_deg": 0.527,
+      "ends_on": "far (SE) end wall (block)",
+      "end_height_m": 9.181,
+      "checks": "rigs/moxir-lasers-on-crane-2026-10-09.json beams[rig-lasercube-cut-04]"
+     }
+    ],
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": {
+     "p": [
+      -2.6,
+      5.2,
+      -12.0
+     ],
+     "to": [
+      -2.6,
+      10.2,
+      53.8
+     ]
+    },
+    "signed_off": false,
+    "note_v2_cranes": "B-L (laser-margin design, 2026-10-10). Dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld)."
+   },
+   "power_w": 120,
+   "circuit": "C-LASER",
+   "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json (B-L: laser-margin design.md, checked by scripts/place/moxir_v2_cranes.py)"
+  },
+  {
+   "id": "rig-lasercube-cut-05",
+   "type": "ext-lc-ultra-mk2",
+   "position": "SITS on the free crane's far-side girder top at z -12 (owner N464: \"put on the crane\"), x -2.40, front face flush with the girder's outer edge (z -13.45), aperture 8.81 m (top p50 8.73 + 0.08 ASSUMED; checked over 8.54-9.09); one static beam -z over the crowd behind the stage to the far (SE) wall's block at (-4.031, 9.181): B-L, rigs/moxir-lasers-on-crane-2026-10-09.json",
+   "part": "laser",
+   "layer": "lines",
+   "status": "used",
+   "p": [
+    -2.4,
+    8.81,
+    -13.45
+   ],
+   "r": [
+    1.58,
+    0.0,
+    -0.04
+   ],
+   "colour": "#ff3a12",
+   "angle_rad": 0.0105,
+   "laser": {
+    "colour": "ember red",
+    "ip": "192.168.1.105",
+    "artnet": {
+     "universe": 10,
+     "address": 65,
+     "footprint": 16
+    },
+    "beams": [
+     {
+      "id": "5a",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -4.031,
+       9.181,
+       -53.8
+      ],
+      "length_m": 40.385,
+      "r": [
+       1.58,
+       0.0,
+       -0.04
+      ],
+      "pan_deg": -2.315,
+      "tilt_deg": 0.526,
+      "ends_on": "far (SE) end wall (block)",
+      "end_height_m": 9.181,
+      "checks": "rigs/moxir-lasers-on-crane-2026-10-09.json beams[rig-lasercube-cut-05]"
+     }
+    ],
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": {
+     "p": [
+      1.1,
+      5.2,
+      -12.0
+     ],
+     "to": [
+      1.1,
+      10.2,
+      53.8
+     ]
+    },
+    "signed_off": false,
+    "note_v2_cranes": "B-L (laser-margin design, 2026-10-10). Dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld)."
+   },
+   "power_w": 120,
+   "circuit": "C-LASER",
+   "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json (B-L: laser-margin design.md, checked by scripts/place/moxir_v2_cranes.py)"
+  },
+  {
+   "id": "rig-lasercube-cut-06",
+   "type": "ext-lc-ultra-mk2",
+   "position": "SITS on the free crane's far-side girder top at z -12 (owner N464: \"put on the crane\"), x -1.00, front face flush with the girder's outer edge (z -13.45), aperture 8.81 m (top p50 8.73 + 0.08 ASSUMED; checked over 8.54-9.09); one static beam -z over the crowd behind the stage to the far (SE) wall's block at (-4.031, 9.181): B-L, rigs/moxir-lasers-on-crane-2026-10-09.json",
+   "part": "laser",
+   "layer": "lines",
+   "status": "used",
+   "p": [
+    -1.0,
+    8.81,
+    -13.45
+   ],
+   "r": [
+    1.58,
+    0.0,
+    -0.075
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.0105,
+   "laser": {
+    "colour": "ash white",
+    "ip": "192.168.1.106",
+    "artnet": {
+     "universe": 10,
+     "address": 81,
+     "footprint": 16
+    },
+    "beams": [
+     {
+      "id": "6a",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -4.031,
+       9.181,
+       -53.8
+      ],
+      "length_m": 40.465,
+      "r": [
+       1.58,
+       0.0,
+       -0.075
+      ],
+      "pan_deg": -4.296,
+      "tilt_deg": 0.525,
+      "ends_on": "far (SE) end wall (block)",
+      "end_height_m": 9.181,
+      "checks": "rigs/moxir-lasers-on-crane-2026-10-09.json beams[rig-lasercube-cut-06]"
+     }
+    ],
+    "duty": 1.0,
+    "room_flux_share": 1.0,
+    "off": false,
+    "moved_from": {
+     "p": [
+      3.9,
+      5.2,
+      -12.0
+     ],
+     "to": [
+      3.9,
+      10.2,
+      53.8
+     ]
+    },
+    "signed_off": false,
+    "note_v2_cranes": "B-L (laser-margin design, 2026-10-10). Dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld)."
+   },
+   "power_w": 120,
+   "circuit": "C-LASER",
+   "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json (B-L: laser-margin design.md, checked by scripts/place/moxir_v2_cranes.py)"
+  },
+  {
+   "id": "rig-par-cut-11",
+   "type": "up-pl5403",
+   "position": "the cut at z 3.20, u +4.5 m: hung under the bottom chords, half coupler + safety, aimed at the DJ (his head, from house right and behind)",
+   "part": "dj kicker",
+   "layer": "the cut",
+   "status": "used",
+   "moments": [],
+   "p": [
+    -0.653,
+    5.345,
+    3.2
+   ],
+   "r": [
+    -0.317,
+    0.0,
+    -0.912
+   ],
+   "colour": "#e8e4dc",
+   "angle_rad": 0.1309,
+   "lit_column_m": null,
+   "lux_on_steel_median": null,
+   "dmx": {
+    "universe": 1,
+    "address": 393,
+    "footprint": 8,
+    "branch": "U1-stage",
+    "node": "NODE-STAGE"
+   },
+   "power_w": 200,
+   "circuit": "C11",
+   "aim_at": [
+    -5.2,
+    2.0,
+    4.3
+   ],
+   "moved_from": {
+    "p": [
+     0.4,
+     4.5,
+     7.3
+    ],
+    "part": "stage key"
+   },
+   "was": "rig-par-planes-25"
+  }
+ ],
+ "solids": [
+  {
+   "id": "rig-crowd-barrier",
+   "name": "crowd barrier 13.6 m at z 8.20 (v1.1: 2.55 m pit to the step)",
+   "kind": "box",
+   "p": [
+    -4.8,
+    0.0,
+    8.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    13.6,
+    1.1,
+    0.08
+   ]
+  },
+  {
+   "id": "rig-pa-l",
+   "name": "speaker L - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
+   "kind": "box",
+   "p": [
+    -8.25,
+    0.0,
+    5.4
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    3.5,
+    2.0,
+    2.6
+   ]
+  },
+  {
+   "id": "rig-pa-r",
+   "name": "speaker R - the ORGANISER'S PLACEHOLDER at his mark (2.0 m high ASSUMED, blocking and sightlines only; no sound design by di)",
+   "kind": "box",
+   "p": [
+    -1.5,
+    0.0,
+    5.9
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.8,
+    2.0,
+    2.6
+   ]
+  },
+  {
+   "id": "rig-foh-riser",
+   "name": "FOH riser 3 x 2 m, 0.6 m high (ASSUMED): the lighting + laser desk, the laser E-stop",
+   "kind": "box",
+   "p": [
+    -5.2,
+    0.0,
+    29.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    3.0,
+    0.6,
+    2.0
+   ]
+  }
+ ],
+ "looks": [
+  {
+   "id": "dark",
+   "title": "Dark (one colour: ember)",
+   "act": 1,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.8
+    ],
+    "columns": [
+     "#ff3a12",
+     0.5
+    ],
+    "cut down": [
+     "#ff3a12",
+     0.45
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.6
+    ],
+    "plane 2 (the wings)": [
+     "#ff3a12",
+     0.64
+    ],
+    "plane 3 (behind the stage)": [
+     "#ff3a12",
+     0.35
+    ],
+    "stage key": [
+     "#ff3a12",
+     0.423
+    ],
+    "speaker face L": [
+     "#ff3a12",
+     0.59
+    ],
+    "speaker face R": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.082
+    ],
+    "dj kicker": [
+     "#ff3a12",
+     0.141
+    ]
+   },
+   "desk_caps": {
+    "laser": {
+     "fader": 1.0,
+     "drawn_fraction_measured": 1.0,
+     "white_pct_floor_total": 0.49,
+     "tested": [
+      {
+       "fader": 1.0,
+       "drawn": 1.0,
+       "white_pct": 0.49
+      },
+      {
+       "fader": 0.4,
+       "drawn": 0.16,
+       "white_pct": 0.19
+      },
+      {
+       "fader": 0.25,
+       "drawn": 0.0625,
+       "white_pct": 0.16
+      },
+      {
+       "fader": 0.15,
+       "drawn": 0.0225,
+       "white_pct": 0.16
+      },
+      {
+       "fader": 0.0,
+       "drawn": 0.0,
+       "white_pct": 0.16
+      }
+     ],
+     "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+    }
+   }
+  },
+  {
+   "id": "peak",
+   "title": "Peak (ash + ember, all on)",
+   "act": 3,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     0.9
+    ],
+    "columns": [
+     "#ff3a12",
+     0.8
+    ],
+    "embers": [
+     "#ff3a12",
+     0.6
+    ],
+    "halo": [
+     "#ff3a12",
+     0.5
+    ],
+    "laser": [
+     "#e8e4dc",
+     0.16
+    ],
+    "stage columns": [
+     "#ff3a12",
+     0.8
+    ],
+    "plane 2 (the wings)": [
+     "#e8e4dc",
+     0.2
+    ],
+    "plane 3 (behind the stage)": [
+     "#ff3a12",
+     0.7
+    ],
+    "roof": [
+     "#e8e4dc",
+     0.6
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.132
+    ],
+    "speaker face L": [
+     "#e8e4dc",
+     0.33
+    ],
+    "speaker face R": [
+     "#e8e4dc",
+     0.76
+    ],
+    "dj back": [
+     "#e8e4dc",
+     0.026
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     0.044
+    ]
+   },
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "drawn_fraction_measured": 0.16,
+     "white_pct_floor_total": 0.57,
+     "fader_before_level_fix": 0.4,
+     "tested": [
+      {
+       "fader": 1.0,
+       "drawn": 1.0,
+       "white_pct": 0.88
+      },
+      {
+       "fader": 0.4,
+       "drawn": 0.16,
+       "white_pct": 0.57
+      },
+      {
+       "fader": 0.25,
+       "drawn": 0.0625,
+       "white_pct": 0.54
+      },
+      {
+       "fader": 0.15,
+       "drawn": 0.0225,
+       "white_pct": 0.53
+      },
+      {
+       "fader": 0.0,
+       "drawn": 0.0,
+       "white_pct": 0.53
+      }
+     ],
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+    }
+   }
+  }
+ ],
+ "cues": [
+  {
+   "look": "dark",
+   "name": "v2 cranes: the cut on the DJ + lasers on the crane · dark (one colour)",
+   "fade": 3,
+   "hold": 40
+  },
+  {
+   "look": "peak",
+   "name": "v2 cranes: the cut on the DJ + lasers on the crane · peak",
+   "fade": 2,
+   "hold": 20
+  }
+ ],
+ "loop": true,
+ "showSource": "clock",
+ "views": {
+  "fixedCamera": {
+   "projection": "perspective",
+   "position": [
+    -3.75,
+    1.7,
+    18.1
+   ],
+   "target": [
+    -3.75,
+    5.0,
+    -20.0
+   ],
+   "fov": 70,
+   "zoom": 1,
+   "near": 0.05,
+   "far": 400,
+   "locked": false
+  },
+  "viewPresets": [
+   {
+    "id": "floor",
+    "position": [
+     -3.75,
+     1.7,
+     18.1
+    ],
+    "target": [
+     -3.75,
+     5.0,
+     -20.0
+    ],
+    "fov": 70,
+    "label": "Floor 1.7 m"
+   },
+   {
+    "id": "entry",
+    "position": [
+     0.0,
+     1.7,
+     51.5
+    ],
+    "target": [
+     -3.0,
+     5.0,
+     -10.0
+    ],
+    "fov": 60,
+    "label": "Entry 1.7 m"
+   },
+   {
+    "id": "top",
+    "position": [
+     -2.0,
+     85.0,
+     -6.0
+    ],
+    "target": [
+     -2.0,
+     0.0,
+     -7.0
+    ],
+    "fov": 70,
+    "label": "Top plan"
+   },
+   {
+    "id": "side",
+    "position": [
+     30.0,
+     10.0,
+     20.0
+    ],
+    "target": [
+     -2.0,
+     4.0,
+     -18.0
+    ],
+    "fov": 75,
+    "label": "Side"
+   }
+  ]
+ },
+ "stage": {
+  "booth_from": [
+   -5.2,
+   4.65
+  ],
+  "booth_to": [
+   -5.2,
+   4.65
+  ],
+  "deck_h_m": 0.4,
+  "design": "scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json"
+ },
+ "cut": {
+  "pars": 11,
+  "places_u_m": [
+   -5.0,
+   -4.0,
+   -3.0,
+   -2.0,
+   -1.5,
+   0.0,
+   1.0,
+   2.0,
+   3.0,
+   3.5,
+   4.5
+  ],
+  "crane_z_m": 3.2,
+  "file": "scripts/place/rigs/moxir-crane-cut-v2-cranes-2026-10-09.json",
+  "stage": "scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json",
+  "picks_kg": [
+   31.7,
+   111.1,
+   38.8
+  ],
+  "on_bridge_kg": [
+   64.7,
+   144.2,
+   71.9
+  ],
+  "worst_pick_kg": 111.1,
+  "headroom_kg": 34.9,
+  "source": "node scripts/place/cut-count.mjs --n 11 --places -5,-4,-3,-2,-1.5,0,1,2,3,3.5,4.5 --design scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json",
+  "why": "crane-dj-light design.md 4: #864's 10 + the pit-stand key PAR; three light the DJ (dj back x 2, dj kicker)"
+ },
+ "power": {
+  "circuits": [
+   {
+    "circuit": "C01",
+    "distro": "D-FAR",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-08",
+     "rig-beam-planes-07",
+     "rig-beam-planes-10",
+     "rig-beam-planes-12"
+    ],
+    "load_w": 2000,
+    "amps_230v": 8.7,
+    "cable_m": 59.7,
+    "first_run_m": 10.3,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 2.1,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C02",
+    "distro": "D-FAR",
+    "kind": "beams",
+    "side": "R",
+    "units": [
+     "rig-beam-planes-09",
+     "rig-beam-planes-11"
+    ],
+    "load_w": 1000,
+    "amps_230v": 4.3,
+    "cable_m": 41.6,
+    "first_run_m": 27.9,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 1.2,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C03",
+    "distro": "D-FAR",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-07",
+     "rig-par-planes-09",
+     "rig-par-planes-11"
+    ],
+    "load_w": 600,
+    "amps_230v": 2.6,
+    "cable_m": 27.6,
+    "first_run_m": 7.1,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.4,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C04",
+    "distro": "D-FAR",
+    "kind": "pars",
+    "side": "R",
+    "units": [
+     "rig-par-planes-08",
+     "rig-par-planes-10"
+    ],
+    "load_w": 400,
+    "amps_230v": 1.7,
+    "cable_m": 36.8,
+    "first_run_m": 24.7,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.4,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C05",
+    "distro": "D-RIGHT",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-15",
+     "rig-beam-planes-13"
+    ],
+    "load_w": 1000,
+    "amps_230v": 4.3,
+    "cable_m": 69.3,
+    "first_run_m": 35.8,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 1.8,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C06",
+    "distro": "D-RIGHT",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-18",
+     "rig-par-planes-05",
+     "rig-par-planes-16",
+     "rig-par-planes-20",
+     "rig-par-planes-15",
+     "rig-par-planes-12",
+     "rig-par-planes-29",
+     "rig-par-planes-33"
+    ],
+    "load_w": 1600,
+    "amps_230v": 7.0,
+    "cable_m": 104.9,
+    "first_run_m": 22.5,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 3.2,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C07",
+    "distro": "D-STAGE",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-14",
+     "rig-beam-planes-01",
+     "rig-beam-planes-02",
+     "rig-beam-planes-03",
+     "rig-beam-planes-04"
+    ],
+    "load_w": 2500,
+    "amps_230v": 10.9,
+    "cable_m": 27.1,
+    "first_run_m": 8.5,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 1.7,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C08",
+    "distro": "D-STAGE",
+    "kind": "beams",
+    "side": "L",
+    "units": [
+     "rig-beam-planes-05",
+     "rig-beam-planes-06",
+     "rig-beam-planes-17",
+     "rig-beam-planes-18"
+    ],
+    "load_w": 2000,
+    "amps_230v": 8.7,
+    "cable_m": 81.4,
+    "first_run_m": 15.1,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 3.1,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C09",
+    "distro": "D-STAGE",
+    "kind": "beams",
+    "side": "R",
+    "units": [
+     "rig-beam-planes-16"
+    ],
+    "load_w": 500,
+    "amps_230v": 2.2,
+    "cable_m": 43.8,
+    "first_run_m": 43.8,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.7,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C10",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-cut-02",
+     "rig-par-cut-03",
+     "rig-par-cut-01",
+     "rig-par-planes-02",
+     "rig-par-cut-04",
+     "rig-par-cut-05",
+     "rig-par-planes-03",
+     "rig-par-cut-06",
+     "rig-par-planes-17",
+     "rig-par-cut-07",
+     "rig-par-planes-01",
+     "rig-par-cut-08",
+     "rig-par-cut-09",
+     "rig-par-planes-19"
+    ],
+    "load_w": 2800,
+    "amps_230v": 12.2,
+    "cable_m": 90.2,
+    "first_run_m": 5.4,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 4.1,
+    "ok": true,
+    "phase": "L1"
+   },
+   {
+    "circuit": "C11",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-06",
+     "rig-par-cut-10",
+     "rig-par-cut-11",
+     "rig-par-planes-14",
+     "rig-par-planes-28",
+     "rig-par-planes-13",
+     "rig-par-planes-23",
+     "rig-par-planes-24",
+     "rig-par-planes-21",
+     "rig-par-planes-27",
+     "rig-par-planes-26",
+     "rig-par-planes-31",
+     "rig-par-planes-30",
+     "rig-par-planes-34"
+    ],
+    "load_w": 2800,
+    "amps_230v": 12.2,
+    "cable_m": 175.2,
+    "first_run_m": 9.9,
+    "cable_mm2": 4.0,
+    "vdrop_pct": 4.9,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C12",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "L",
+    "units": [
+     "rig-par-planes-36"
+    ],
+    "load_w": 200,
+    "amps_230v": 0.9,
+    "cable_m": 45.5,
+    "first_run_m": 45.5,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.3,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C13",
+    "distro": "D-STAGE",
+    "kind": "pars",
+    "side": "R",
+    "units": [
+     "rig-par-planes-37",
+     "rig-par-planes-38",
+     "rig-par-planes-39",
+     "rig-par-planes-04",
+     "rig-par-planes-40",
+     "rig-par-planes-22",
+     "rig-par-planes-32",
+     "rig-par-planes-35"
+    ],
+    "load_w": 1600,
+    "amps_230v": 7.0,
+    "cable_m": 89.6,
+    "first_run_m": 12.8,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 2.5,
+    "ok": true,
+    "phase": "L2"
+   },
+   {
+    "circuit": "C14",
+    "distro": "D-STAGE",
+    "kind": "smoke",
+    "side": "L",
+    "units": [
+     "rig-smoke-planes"
+    ],
+    "load_w": 1500,
+    "amps_230v": 6.5,
+    "cable_m": 15.1,
+    "first_run_m": 15.1,
+    "cable_mm2": 2.5,
+    "vdrop_pct": 0.8,
+    "ok": true,
+    "phase": "L3"
+   },
+   {
+    "circuit": "C-LASER",
+    "distro": "D-FAR",
+    "units": [
+     "rig-lasercube-cut-01",
+     "rig-lasercube-cut-02",
+     "rig-lasercube-cut-03",
+     "rig-lasercube-cut-04",
+     "rig-lasercube-cut-05",
+     "rig-lasercube-cut-06"
+    ],
+    "load_w": 720,
+    "amps_230v": 3.1,
+    "note": "6 x 120 W (the adapters), one 16 A radial up the free crane's festoon to the six cubes on its far-side girder; the run along the crane is the rigger's"
+   }
+  ],
+  "phases_w": {
+   "L1": 6800,
+   "L2": 6800,
+   "L3": 6900
+  },
+  "method": "moxir_v2.circuits on the v2 cranes units (re-run: the cut moved, the pit stand gone)"
+ },
+ "patch": {
+  "branches": [
+   {
+    "branch": "U1-stage",
+    "devices": 53,
+    "ok": false
+   },
+   {
+    "branch": "U2-stage",
+    "devices": 3,
+    "ok": true
+   },
+   {
+    "branch": "U2-far",
+    "devices": 13,
+    "ok": true
+   }
+  ],
+  "slots": {
+   "1": 512,
+   "2": 177
+  }
+ },
+ "checks": {
+  "beams": 18,
+  "beams_ok": 18,
+  "beams_into_audience": 0,
+  "mean_sky_clear_pct": 21.2,
+  "min_sky_clear_pct": 13.8,
+  "mean_throw_m": 36.4,
+  "aim_rays_clear_30m_pct": 49.4,
+  "pars": 50,
+  "pars_cut": 10,
+  "pars_ground": 40,
+  "par_column_lit_m_15": 3.68,
+  "par_column_lux_median_15": 239.0,
+  "par_on_steel_pct_15": 81.6,
+  "units_in_or_near_crowd": [
+   "rig-par-planes-40"
+  ],
+  "pens_m": [
+   0.7,
+   1.0,
+   1.1,
+   1.9,
+   4.5,
+   7.6,
+   9.7
+  ],
+  "counts": {
+   "B380F · plane 1 (behind the DJ)": 6,
+   "B380F · plane 3 (behind the stage)": 5,
+   "B380F · plane 2 (the wings)": 7,
+   "PAR · cut down": 5,
+   "PAR · cut up": 5,
+   "PAR · stage columns": 3,
+   "PAR · halo": 3,
+   "PAR · columns": 23,
+   "PAR · roof": 3,
+   "PAR · stage key": 2,
+   "PAR · speaker face L": 1,
+   "PAR · speaker face R": 1,
+   "PAR · embers": 4
+  },
+  "circuits": 14,
+  "circuits_ok": false,
+  "phases_w": {
+   "L1": 6800,
+   "L2": 6700,
+   "L3": 7000
+  },
+  "connected_w": 21220,
+  "branches": [
+   {
+    "branch": "U1-stage",
+    "devices": 53,
+    "ok": false
+   },
+   {
+    "branch": "U2-stage",
+    "devices": 3,
+    "ok": true
+   },
+   {
+    "branch": "U2-far",
+    "devices": 13,
+    "ok": true
+   }
+  ],
+  "slots": {
+   "1": 512,
+   "2": 177
+  },
+  "plane1_glow": {
+   "t10": {
+    "floor": {
+     "G": 0.03213,
+     "G_near_field": 0.03
+    },
+    "entry": {
+     "G": 0.02175,
+     "G_near_field": 0.019
+    }
+   },
+   "t40": {
+    "floor": {
+     "G": 0.03316,
+     "G_near_field": 0.02666
+    },
+    "entry": {
+     "G": 0.02075,
+     "G_near_field": 0.01392
+    }
+   },
+   "dry": {
+    "floor": {
+     "G": 0.02717,
+     "G_near_field": 0.0269
+    },
+    "entry": {
+     "G": 0.0188,
+     "G_near_field": 0.01842
+    }
+   }
+  },
+  "beams_into_people": 0,
+  "units_outside_the_hot_zone": [],
+  "units_within_reach_outside_the_stage_pen": [
+   "rig-par-planes-01",
+   "rig-par-planes-04",
+   "rig-par-planes-38",
+   "rig-par-planes-39",
+   "rig-par-planes-40"
+  ],
+  "stage_pen": {
+   "x_m": [
+    -10.5,
+    1.5
+   ],
+   "z_m": [
+    -7.5,
+    8.2
+   ]
+  },
+  "placement": {
+   "eyes": {
+    "dance floor": [
+     -3.75,
+     1.7,
+     18.1
+    ],
+    "mid": [
+     -2.0,
+     1.7,
+     30.0
+    ],
+    "front edge": [
+     0.0,
+     1.7,
+     40.0
+    ],
+    "behind the stage": [
+     -4.0,
+     1.7,
+     -20.0
+    ],
+    "wing L front": [
+     -20.0,
+     1.7,
+     14.0
+    ],
+    "wing L back": [
+     -20.0,
+     1.7,
+     -14.0
+    ],
+    "wing R front": [
+     18.0,
+     1.7,
+     14.0
+    ],
+    "wing R back": [
+     18.0,
+     1.7,
+     -14.0
+    ]
+   },
+   "pars": [
+    {
+     "place": "col +12 z 24 nave",
+     "kind": "graze",
+     "p": [
+      11.157,
+      2.8,
+      24.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.20474121015173713,
+      "mid": 0.2505318777736049,
+      "front edge": 0.1396239158735226,
+      "behind the stage": 0.02158341997440021,
+      "wing L front": 0.04998216650461746,
+      "wing L back": 0.0,
+      "wing R front": 0.3591214995635038,
+      "wing R back": 0.0
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "runway girder x +11.35"
+     ],
+     "gain": 2.296
+    },
+    {
+     "place": "col -12 z -6 span",
+     "kind": "roof",
+     "p": [
+      -12.843,
+      2.8,
+      -6.0
+     ],
+     "dir": [
+      -0.423,
+      0.906,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.002500418415524201,
+      "mid": 0.0006028103669168515,
+      "front edge": 0.0045357164128081665,
+      "behind the stage": 0.16932813566611601,
+      "wing L front": 0.11993868099298413,
+      "wing L back": 0.4736801891424079,
+      "wing R front": 0.0,
+      "wing R back": 0.037823510950894285
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "crane z 0.15 (bridge)"
+     ],
+     "gain": 1.371
+    },
+    {
+     "place": "col +12 z -12 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      -12.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.022309690754248022,
+      "mid": 0.012744019021791893,
+      "front edge": 0.0057701704981652285,
+      "behind the stage": 0.06276575807728235,
+      "wing L front": 0.012608673461858512,
+      "wing L back": 0.0,
+      "wing R front": 0.05552309793060487,
+      "wing R back": 0.8157700980365867
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z -12 (head)",
+      "column x 12 z -12 (shaft)",
+      "roof deck",
+      "runway girder x +12.65"
+     ],
+     "gain": 0.9
+    },
+    {
+     "place": "col -12 z 24 nave",
+     "kind": "graze",
+     "p": [
+      -11.157,
+      2.8,
+      24.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.3961575531241329,
+      "mid": 0.3215771527996346,
+      "front edge": 0.11351347066579683,
+      "behind the stage": 0.013509150811642584,
+      "wing L front": 0.14900527469269154,
+      "wing L back": 0.02057578627171662,
+      "wing R front": 0.0041853931015525024,
+      "wing R back": 0.0
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 24 (head)",
+      "column x -12 z 24 (shaft)",
+      "roof deck",
+      "runway girder x -11.35"
+     ],
+     "gain": 0.869
+    },
+    {
+     "place": "col -12 z 18 nave",
+     "kind": "graze",
+     "p": [
+      -11.157,
+      2.8,
+      18.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.5861510226376806,
+      "mid": 0.18133490416893788,
+      "front edge": 0.07222346754045353,
+      "behind the stage": 0.0233286979595647,
+      "wing L front": 0.14946819222774432,
+      "wing L back": 0.026249869157965178,
+      "wing R front": 0.004546323690412816,
+      "wing R back": 0.0027149000376879423
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 18 (head)",
+      "column x -12 z 18 (shaft)",
+      "roof deck",
+      "runway girder x -11.35"
+     ],
+     "gain": 0.65
+    },
+    {
+     "place": "col -12 z -18 nave",
+     "kind": "graze",
+     "p": [
+      -11.157,
+      2.8,
+      -18.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.012849959641902164,
+      "mid": 0.014966664026689596,
+      "front edge": 0.010082661409199722,
+      "behind the stage": 0.5800109146763907,
+      "wing L front": 0.02391427734796688,
+      "wing L back": 0.1542897845406904,
+      "wing R front": 0.0013450251241385362,
+      "wing R back": 0.05431281600224577
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z -18 (head)",
+      "column x -12 z -18 (shaft)",
+      "roof deck",
+      "runway girder x -11.35"
+     ],
+     "gain": 0.564
+    },
+    {
+     "place": "col +12 z 30 nave",
+     "kind": "roof",
+     "p": [
+      11.157,
+      2.8,
+      30.0
+     ],
+     "dir": [
+      -0.423,
+      0.906,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.15223707692543723,
+      "mid": 0.3263018404497977,
+      "front edge": 0.2468215895923428,
+      "behind the stage": 0.0,
+      "wing L front": 0.0,
+      "wing L back": 0.0,
+      "wing R front": 0.1719215444087638,
+      "wing R back": 0.0017740530421560883
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "runway girder x +11.35"
+     ],
+     "gain": 0.539
+    },
+    {
+     "place": "col -12 z 12 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      12.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.16304064895151288,
+      "mid": 0.07197522955198724,
+      "front edge": 0.03366232242086706,
+      "behind the stage": 0.02391427734796688,
+      "wing L front": 0.5715913957268014,
+      "wing L back": 0.05564557392896574,
+      "wing R front": 0.006940620993566406,
+      "wing R back": 0.0
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 12 (head)",
+      "column x -12 z 12 (shaft)",
+      "roof deck",
+      "runway girder x -12.65"
+     ],
+     "gain": 0.5
+    },
+    {
+     "place": "col +12 z 18 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      18.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.0331459462244943,
+      "mid": 0.0224552662840201,
+      "front edge": 0.014004713625197562,
+      "behind the stage": 0.001995655174547304,
+      "wing L front": 0.003947787218629902,
+      "wing L back": 0.0,
+      "wing R front": 0.6544217977724112,
+      "wing R back": 0.039259296492929335
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z 18 (head)",
+      "column x 12 z 18 (shaft)",
+      "roof deck",
+      "runway girder x +12.65"
+     ],
+     "gain": 0.4
+    },
+    {
+     "place": "col -12 z 18 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      18.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.14851445699110463,
+      "mid": 0.10894146444128416,
+      "front edge": 0.04906374222280097,
+      "behind the stage": 0.015055629226522167,
+      "wing L front": 0.48125523809711757,
+      "wing L back": 0.03918094193455574,
+      "wing R front": 0.0035598375203286484,
+      "wing R back": 0.0030137860157107106
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 18 (head)",
+      "column x -12 z 18 (shaft)",
+      "roof deck",
+      "runway girder x -12.65"
+     ],
+     "gain": 0.38
+    },
+    {
+     "place": "col -12 z -24 nave",
+     "kind": "graze",
+     "p": [
+      -11.157,
+      2.8,
+      -24.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.019892774155534466,
+      "mid": 0.010549528615502497,
+      "front edge": 0.009355048854056306,
+      "behind the stage": 0.4925683889667803,
+      "wing L front": 0.015631905598697846,
+      "wing L back": 0.15231260804408822,
+      "wing R front": 0.0,
+      "wing R back": 0.04887827665625832
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z -24 (head)",
+      "column x -12 z -24 (shaft)",
+      "roof deck",
+      "runway girder x -11.35"
+     ],
+     "gain": 0.362
+    },
+    {
+     "place": "col +12 z -18 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      -18.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.0,
+      "mid": 0.01256167195659035,
+      "front edge": 0.0065042908607398035,
+      "behind the stage": 0.05964162798020972,
+      "wing L front": 0.0,
+      "wing L back": 0.01274302988669911,
+      "wing R front": 0.03925929649292934,
+      "wing R back": 0.6544217977724112
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z -18 (head)",
+      "column x 12 z -18 (shaft)",
+      "roof deck",
+      "runway girder x +12.65"
+     ],
+     "gain": 0.344
+    },
+    {
+     "place": "col -12 z 24 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      24.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.1655348956306199,
+      "mid": 0.1281839885676351,
+      "front edge": 0.07324148261266335,
+      "behind the stage": 0.00768532307152503,
+      "wing L front": 0.2576422278114095,
+      "wing L back": 0.02941958724607413,
+      "wing R front": 0.002472911036786703,
+      "wing R back": 0.0003481728081832385
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 24 (head)",
+      "column x -12 z 24 (shaft)",
+      "roof deck",
+      "runway girder x -12.65"
+     ],
+     "gain": 0.276
+    },
+    {
+     "place": "col +12 z 12 nave",
+     "kind": "roof",
+     "p": [
+      11.157,
+      2.8,
+      12.0
+     ],
+     "dir": [
+      -0.423,
+      0.906,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.1597481225696301,
+      "mid": 0.0831786381588296,
+      "front edge": 0.0430493218997077,
+      "behind the stage": 0.027180620748829917,
+      "wing L front": 0.039717854734425156,
+      "wing L back": 0.0,
+      "wing R front": 0.29153019741374747,
+      "wing R back": 0.0
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "lantern frame (in the glazed opening)",
+      "roof deck",
+      "runway girder x +11.35",
+      "space frame bottom chord"
+     ],
+     "gain": 0.262
+    },
+    {
+     "place": "col -12 z -12 nave",
+     "kind": "graze",
+     "p": [
+      -11.157,
+      2.8,
+      -12.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.03495123928063488,
+      "mid": 0.021151464687337668,
+      "front edge": 0.013294157880814774,
+      "behind the stage": 0.30988439370955,
+      "wing L front": 0.03980671651882582,
+      "wing L back": 0.15420084129055853,
+      "wing R front": 0.0027096234605969174,
+      "wing R back": 0.02681160399501378
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z -12 (head)",
+      "column x -12 z -12 (shaft)",
+      "roof deck",
+      "runway girder x -11.35"
+     ],
+     "gain": 0.25
+    },
+    {
+     "place": "col -12 z 6 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      6.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.1255159691112599,
+      "mid": 0.045179064143401386,
+      "front edge": 0.02625327613162972,
+      "behind the stage": 0.004074448816006148,
+      "wing L front": 0.31618961872147383,
+      "wing L back": 0.09641723427962443,
+      "wing R front": 0.005669348427203821,
+      "wing R back": 0.006276728282231184
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 6 (head)",
+      "column x -12 z 6 (shaft)",
+      "roof deck",
+      "runway girder x -12.65"
+     ],
+     "gain": 0.236
+    },
+    {
+     "place": "col +12 z -6 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      -6.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.019670114153047168,
+      "mid": 0.008446091818473925,
+      "front edge": 0.013782991207833495,
+      "behind the stage": 0.039460351646960386,
+      "wing L front": 0.0011670420226603316,
+      "wing L back": 0.0,
+      "wing R front": 0.10012026189621274,
+      "wing R back": 0.3860813092367304
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z -6 (head)",
+      "column x 12 z -6 (shaft)",
+      "roof deck",
+      "runway girder x +12.65"
+     ],
+     "gain": 0.212
+    },
+    {
+     "place": "col +12 z 6 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      6.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.024648706044560875,
+      "mid": 0.012078602465799154,
+      "front edge": 0.008921766784391246,
+      "behind the stage": 0.009248216869259545,
+      "wing L front": 0.0,
+      "wing L back": 0.011364690893300639,
+      "wing R front": 0.38608130923673034,
+      "wing R back": 0.10012026189621274
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z 6 (head)",
+      "column x 12 z 6 (shaft)",
+      "roof deck",
+      "runway girder x +12.65"
+     ],
+     "gain": 0.201
+    },
+    {
+     "place": "col -12 z 30 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      30.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.133629672260122,
+      "mid": 0.11690050332877423,
+      "front edge": 0.10077263837657026,
+      "behind the stage": 0.005462595552480379,
+      "wing L front": 0.13871872538029034,
+      "wing L back": 0.02186023297013893,
+      "wing R front": 0.002868725244673374,
+      "wing R back": 0.0005923319824468387
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 30 (head)",
+      "column x -12 z 30 (shaft)",
+      "roof deck",
+      "runway girder x -12.65"
+     ],
+     "gain": 0.2
+    },
+    {
+     "place": "col -12 z -6 nave",
+     "kind": "graze",
+     "p": [
+      -11.157,
+      2.8,
+      -6.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.060749268453998834,
+      "mid": 0.030626742878171066,
+      "front edge": 0.01937653642586125,
+      "behind the stage": 0.15044025244519477,
+      "wing L front": 0.06897511082205202,
+      "wing L back": 0.15046889944112965,
+      "wing R front": 0.0020228779022743865,
+      "wing R back": 0.027846077871853163
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z -6 (head)",
+      "column x -12 z -6 (shaft)",
+      "roof deck",
+      "runway girder x -11.35"
+     ],
+     "gain": 0.192
+    },
+    {
+     "place": "col -12 z 0.5 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      0.5
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.07845371716030629,
+      "mid": 0.03251204712102168,
+      "front edge": 0.02073138381398196,
+      "behind the stage": 0.01404022139741809,
+      "wing L front": 0.1803350386739977,
+      "wing L back": 0.11996222964685316,
+      "wing R front": 0.006584381132311352,
+      "wing R back": 0.007117316120448149
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z -0.5 (upper column)",
+      "column x -12 z 0.5 (head)",
+      "column x -12 z 0.5 (shaft)",
+      "roof deck"
+     ],
+     "gain": 0.163
+    },
+    {
+     "place": "col -12 z 36 span",
+     "kind": "graze",
+     "p": [
+      -12.843,
+      2.8,
+      36.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.0777353566890176,
+      "mid": 0.13220546341571413,
+      "front edge": 0.0920752319721961,
+      "behind the stage": 0.0041259415296890966,
+      "wing L front": 0.07966667267334142,
+      "wing L back": 0.01608122551170891,
+      "wing R front": 0.0005880390487235666,
+      "wing R back": 0.0033394902166426137
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x -12 z 36 (head)",
+      "column x -12 z 36 (shaft)",
+      "roof deck",
+      "runway girder x -12.65"
+     ],
+     "gain": 0.151
+    },
+    {
+     "place": "col +12 z -24 nave",
+     "kind": "graze",
+     "p": [
+      11.157,
+      2.8,
+      -24.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.002089292350307822,
+      "mid": 0.007662661047278935,
+      "front edge": 0.004992795149167427,
+      "behind the stage": 0.17504843015191007,
+      "wing L front": 0.00534796098949451,
+      "wing L back": 0.044873330512232024,
+      "wing R front": 0.013315387429291156,
+      "wing R back": 0.17571145510447572
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z -24 (head)",
+      "column x 12 z -24 (shaft)",
+      "roof deck",
+      "runway girder x +11.35"
+     ],
+     "gain": 0.148
+    },
+    {
+     "place": "col +12 z 0.5 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      0.5
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.05274740983496496,
+      "mid": 0.019757558443939147,
+      "front edge": 0.009455983127470168,
+      "behind the stage": 0.0,
+      "wing L front": 0.011914676683815711,
+      "wing L back": 0.004071573899293601,
+      "wing R front": 0.18929905621206417,
+      "wing R back": 0.1515648569721037
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z -0.5 (upper column)",
+      "column x 12 z 0.5 (head)",
+      "column x 12 z 0.5 (shaft)",
+      "roof deck"
+     ],
+     "gain": 0.145
+    },
+    {
+     "place": "col +12 z -6 nave",
+     "kind": "graze",
+     "p": [
+      11.157,
+      2.8,
+      -6.0
+     ],
+     "dir": [
+      0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.046964930456070246,
+      "mid": 0.012580383694076788,
+      "front edge": 0.00646010821442333,
+      "behind the stage": 0.08538770634677802,
+      "wing L front": 0.005425272510129714,
+      "wing L back": 0.000710577403223014,
+      "wing R front": 0.07096673087799778,
+      "wing R back": 0.21193097767998983
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z -6 (head)",
+      "column x 12 z -6 (shaft)",
+      "roof deck",
+      "runway girder x +11.35"
+     ],
+     "gain": 0.14
+    },
+    {
+     "place": "col +12 z 24 span",
+     "kind": "graze",
+     "p": [
+      12.843,
+      2.8,
+      24.0
+     ],
+     "dir": [
+      -0.071,
+      0.998,
+      0.0
+     ],
+     "eyes": {
+      "dance floor": 0.016820376321053352,
+      "mid": 0.021361143042855694,
+      "front edge": 0.014771125564313385,
+      "behind the stage": 0.0026292947471377092,
+      "wing L front": 0.0029171412752533737,
+      "wing L back": 0.0010523899040956832,
+      "wing R front": 0.2895380727104321,
+      "wing R back": 0.028205373442688184
+     },
+     "steel_pct": 100.0,
+     "ends": [
+      "column x 12 z 24 (head)",
+      "column x 12 z 24 (shaft)",
+      "crane z 0.15 (bridge)",
+      "roof deck"
+     ],
+     "gain": 0.121
+    }
+   ],
+   "beams": [
+    {
+     "place": "col -12 z -18 span",
+     "p": [
+      -13.143,
+      3.5,
+      -18.0
+     ],
+     "dir": [
+      0.457,
+      0.407,
+      0.791
+     ],
+     "az_el": [
+      30.0,
+      24.0
+     ],
+     "throw_m": 24.217,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.014535786721201885,
+      "mid": 0.013966311598755393,
+      "front edge": 0.013690760890343306,
+      "behind the stage": 0.0010542973239057907,
+      "wing L front": 0.003011603270104495,
+      "wing L back": 0.0011279680183792645,
+      "wing R front": 0.012374567551823925,
+      "wing R back": 0.0029094840461351195
+     },
+     "glare_min_deg": 30.043,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.693,
+     "gain": 0.642
+    },
+    {
+     "place": "col +12 z -24 span",
+     "p": [
+      13.143,
+      3.5,
+      -24.0
+     ],
+     "dir": [
+      -0.791,
+      0.407,
+      0.457
+     ],
+     "az_el": [
+      300.0,
+      24.0
+     ],
+     "throw_m": 24.12,
+     "ends_on": "space frame diagonals / top chord",
+     "eyes": {
+      "dance floor": 0.0008239080008581155,
+      "mid": 0.0019000308708837892,
+      "front edge": 0.0024463097609925873,
+      "behind the stage": 0.009269146473195017,
+      "wing L front": 0.004240192863374725,
+      "wing L back": 0.017675259430345123,
+      "wing R front": 0.0007075247295760559,
+      "wing R back": 0.00139957369677858
+     },
+     "glare_min_deg": 30.299,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.692,
+     "gain": 0.239
+    },
+    {
+     "place": "col -12 z 0.5 nave",
+     "p": [
+      -10.857,
+      3.5,
+      0.5
+     ],
+     "dir": [
+      0.0,
+      0.407,
+      0.914
+     ],
+     "az_el": [
+      0.0,
+      24.0
+     ],
+     "throw_m": 20.283,
+     "ends_on": "space frame diagonals / top chord",
+     "eyes": {
+      "dance floor": 0.008244986879862783,
+      "mid": 0.014437069110345565,
+      "front edge": 0.01702770472847619,
+      "behind the stage": 0.0007569117066828368,
+      "wing L front": 0.0033095461592503625,
+      "wing L back": 0.0002744646360115931,
+      "wing R front": 0.0009645730683076387,
+      "wing R back": 0.0007705303308009346
+     },
+     "glare_min_deg": 30.796,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.694,
+     "gain": 0.165
+    },
+    {
+     "place": "col -12 z 36 nave",
+     "p": [
+      -10.857,
+      3.5,
+      36.0
+     ],
+     "dir": [
+      0.433,
+      0.5,
+      -0.75
+     ],
+     "az_el": [
+      150.0,
+      30.0
+     ],
+     "throw_m": 25.8,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.008541844775182512,
+      "mid": 0.0035655970836191353,
+      "front edge": 0.0016740241367353146,
+      "behind the stage": 0.009368957361023484,
+      "wing L front": 0.0017852329171516134,
+      "wing L back": 0.0014606327977393695,
+      "wing R front": 0.0011626495586667886,
+      "wing R back": 0.009184830864946179
+     },
+     "glare_min_deg": 32.049,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.741,
+     "gain": 0.144
+    },
+    {
+     "place": "col +12 z 18 nave",
+     "p": [
+      10.857,
+      3.5,
+      18.0
+     ],
+     "dir": [
+      -0.894,
+      0.309,
+      0.325
+     ],
+     "az_el": [
+      290.0,
+      18.0
+     ],
+     "throw_m": 29.661,
+     "ends_on": "space frame diagonals / top chord",
+     "eyes": {
+      "dance floor": 0.009577079604527493,
+      "mid": 0.010079613102651088,
+      "front edge": 0.005616459184038761,
+      "behind the stage": 0.001068830415868588,
+      "wing L front": 0.01162967714178171,
+      "wing L back": 0.001278513117214897,
+      "wing R front": 0.0009982952347987123,
+      "wing R back": 0.0005204867309754265
+     },
+     "glare_min_deg": 32.688,
+     "rays_clear_30m_pct": 55.6,
+     "lowest_over_floor_m": 3.643,
+     "gain": 0.123
+    },
+    {
+     "place": "col -12 z -30 nave",
+     "p": [
+      -10.857,
+      3.5,
+      -30.0
+     ],
+     "dir": [
+      0.15,
+      0.5,
+      0.853
+     ],
+     "az_el": [
+      10.0,
+      30.0
+     ],
+     "throw_m": 19.7,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.009155108001544988,
+      "mid": 0.008557342665468065,
+      "front edge": 0.009627022403594143,
+      "behind the stage": 0.004013978784101694,
+      "wing L front": 0.0018732100026257721,
+      "wing L back": 0.0022936503605587156,
+      "wing R front": 0.0021896802881254175,
+      "wing R back": 0.003472303229604349
+     },
+     "glare_min_deg": 31.688,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.74,
+     "gain": 0.112
+    },
+    {
+     "place": "col -12 z 30 nave",
+     "p": [
+      -10.857,
+      3.5,
+      30.0
+     ],
+     "dir": [
+      -0.457,
+      0.407,
+      -0.791
+     ],
+     "az_el": [
+      210.0,
+      24.0
+     ],
+     "throw_m": 24.217,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.0018713451436653194,
+      "mid": 0.0006528638732836748,
+      "front edge": 0.0006209814207364147,
+      "behind the stage": 0.0022915810346910183,
+      "wing L front": 0.012754724593589933,
+      "wing L back": 0.015844207278505777,
+      "wing R front": 0.00019949772223139007,
+      "wing R back": 0.00045561160693954043
+     },
+     "glare_min_deg": 30.362,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.693,
+     "gain": 0.097
+    },
+    {
+     "place": "col -12 z -24 span",
+     "p": [
+      -13.143,
+      3.5,
+      -24.0
+     ],
+     "dir": [
+      0.791,
+      0.407,
+      0.457
+     ],
+     "az_el": [
+      60.0,
+      24.0
+     ],
+     "throw_m": 24.12,
+     "ends_on": "space frame diagonals / top chord",
+     "eyes": {
+      "dance floor": 0.0031518099284534268,
+      "mid": 0.002194617864326908,
+      "front edge": 0.001757441659309545,
+      "behind the stage": 0.005981516741658758,
+      "wing L front": 0.0010813782210436034,
+      "wing L back": 0.0013538743150548129,
+      "wing R front": 0.0,
+      "wing R back": 0.017617149377047402
+     },
+     "glare_min_deg": 30.07,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.692,
+     "gain": 0.092
+    },
+    {
+     "place": "col -12 z -12 span",
+     "p": [
+      -13.143,
+      3.5,
+      -12.0
+     ],
+     "dir": [
+      0.457,
+      0.407,
+      0.791
+     ],
+     "az_el": [
+      30.0,
+      24.0
+     ],
+     "throw_m": 14.981,
+     "ends_on": "steel (bracing, mullions)",
+     "eyes": {
+      "dance floor": 0.011320288580940262,
+      "mid": 0.011175045388395108,
+      "front edge": 0.0116107537113921,
+      "behind the stage": 0.000701635485394175,
+      "wing L front": 0.002480563864390161,
+      "wing L back": 0.0006478008922099829,
+      "wing R front": 0.0013298289110614198,
+      "wing R back": 0.001673630519181841
+     },
+     "glare_min_deg": 30.384,
+     "rays_clear_30m_pct": 11.1,
+     "lowest_over_floor_m": 3.697,
+     "gain": 0.088
+    },
+    {
+     "place": "col +12 z -18 nave",
+     "p": [
+      10.857,
+      3.5,
+      -18.0
+     ],
+     "dir": [
+      0.629,
+      0.208,
+      0.749
+     ],
+     "az_el": [
+      40.0,
+      12.0
+     ],
+     "throw_m": 47.376,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.0011618514640501173,
+      "mid": 0.001886859740764551,
+      "front edge": 0.000666190542367852,
+      "behind the stage": 0.0016221291575479581,
+      "wing L front": 0.0008569683170830093,
+      "wing L back": 0.0010908819151274206,
+      "wing R front": 0.01650987458773755,
+      "wing R back": 0.006818485166669583
+     },
+     "glare_min_deg": 31.634,
+     "rays_clear_30m_pct": 100.0,
+     "lowest_over_floor_m": 3.592,
+     "gain": 0.083
+    },
+    {
+     "place": "col +12 z 12 span",
+     "p": [
+      13.143,
+      3.5,
+      12.0
+     ],
+     "dir": [
+      -0.858,
+      0.407,
+      0.312
+     ],
+     "az_el": [
+      290.0,
+      24.0
+     ],
+     "throw_m": 24.217,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.010531373227881545,
+      "mid": 0.0066241612763405355,
+      "front edge": 0.004633321637194005,
+      "behind the stage": 0.001011054109327618,
+      "wing L front": 0.013723094923088285,
+      "wing L back": 0.0010942662315345398,
+      "wing R front": 0.00034703687372307284,
+      "wing R back": 0.00033631355007851234
+     },
+     "glare_min_deg": 30.53,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.693,
+     "gain": 0.078
+    },
+    {
+     "place": "col +12 z -12 nave",
+     "p": [
+      10.857,
+      3.5,
+      -12.0
+     ],
+     "dir": [
+      -0.433,
+      0.5,
+      0.75
+     ],
+     "az_el": [
+      330.0,
+      30.0
+     ],
+     "throw_m": 19.7,
+     "ends_on": "roof deck",
+     "eyes": {
+      "dance floor": 0.005893879783207937,
+      "mid": 0.01052393291469382,
+      "front edge": 0.008506987932340025,
+      "behind the stage": 0.0005415765561233097,
+      "wing L front": 0.0072585959889967045,
+      "wing L back": 0.0019149355727817762,
+      "wing R front": 0.0008698868727162572,
+      "wing R back": 0.0008278539530782973
+     },
+     "glare_min_deg": 33.788,
+     "rays_clear_30m_pct": 0.0,
+     "lowest_over_floor_m": 3.74,
+     "gain": 0.069
+    }
+   ],
+   "per_eye_par_lux": {
+    "dance floor": 2.741,
+    "mid": 2.006,
+    "front edge": 1.152,
+    "behind the stage": 2.298,
+    "wing L front": 2.725,
+    "wing L back": 1.585,
+    "wing R front": 2.665,
+    "wing R back": 2.784
+   },
+   "per_eye_beam_G": {
+    "dance floor": 0.08481,
+    "mid": 0.08556,
+    "front edge": 0.07788,
+    "behind the stage": 0.03768,
+    "wing L front": 0.064,
+    "wing L back": 0.04606,
+    "wing R front": 0.03765,
+    "wing R back": 0.04599
+   }
+  },
+  "laser_tubes_entered": [],
+  "laser_body_rule_m": 0.25,
+  "laser_body_min_margin_m": 0.381,
+  "v2_cranes": {
+   "lasers_worst_margin_m": 0.194,
+   "lasers_worst_at": [
+    "rig-lasercube-cut-06",
+    "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)"
+   ],
+   "lasers_min_body_gap_m": 0.448,
+   "lasers_min_level_margin_m": 3.538,
+   "lasers_min_opening_margin_m": 0.194,
+   "casts_all_on_far_wall_block": true,
+   "casts_all_clear_of_openings": true,
+   "mounts_clear_first_2_m": true,
+   "setup_sheet_zone_inside_window": true,
+   "lamp_bodies_min_gap_to_a_cube_tube_m": 7.66,
+   "forty_watt_their_worst_m": 0.232,
+   "forty_watt_body_rule_on_near_girders_m": -0.389,
+   "picks_worst_line_kg": 111.1,
+   "picks_worst_on_bridge_kg": 144.2,
+   "picks_pass": true,
+   "people_dj_gap_m": 0.665,
+   "people_public_gap_today_m": 0.33,
+   "people_public_gap_with_pen_condition_m": 0.622,
+   "lowest_lens_m": 3.145,
+   "dj_glare_ok": true,
+   "cut_light_into_people": 0,
+   "h1_judge_readings_worst_m (hold H1, not passed)": {
+    "end: far gate, the judge's G3 (x -2.91..2.91, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876,
+    "end: far gate, the judge's G4 (x -1.51..4.31, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -0.566,
+    "end: far gate, the judge's G7 (x -4.7..0.9, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876
+   },
+   "b380f_into_people_or_cubes": 0,
+   "b380f_rays_on_the_cut (a look finding, not a rule)": {},
+   "dj_face_eye_height_lx": {
+    "dark": 20.0,
+    "peak": 19.9
+   },
+   "dj_head_top_lx": {
+    "dark": 184.6,
+    "peak": 186.8
+   },
+   "runtime_s": 38
+  }
+ },
+ "atmosphere": {
+  "anisotropy": 0.74,
+  "haze": {
+   "model": "nf-ff",
+   "volume_m3": 186890,
+   "airChangesPerHour": 0.5,
+   "calibrate": false,
+   "kindLevels": {
+    "smoke-machine": 1
+   },
+   "nearField": {
+    "radius_m": 3,
+    "airSpeed_m_s": 0.1
+   },
+   "minutes": 40,
+   "source": "UNVALIDATED estimate: two-zone near-field/far-field model (Nicas 1996, AIHA J 57:542; hazeZones.js), one UP-YZ31P modelled on an Antari Z-1500 III EQUIVALENT at 150 ml/min continuous (upper bound), hall 186,890 m3. Air change and drying ASSUMED per state; the decay test + transmissometer decide (simulation-method 3.4 step 8).",
+   "dries": false
+  },
+  "anisotropyWhy": "HG g 0.74: lasers-exact.md 3.2 (own Mie computation), ASSUMPTION backed by computation"
+ },
+ "haze_plan": {
+  "state": "the tank state at doors: closed hall (doors, roof vents and extraction shut while hazing), 0.5 air changes/h, droplets that do not dry",
+  "pre_haze": "start the machine 40 min before doors at full, continuous; refill the 6 L tank at doors (a second tank keeps the hall rising toward ~0.02 /m at ~2 h)",
+  "why": "the hall's haze builds with the time the ONE machine has run: ~0.0024 /m at 10 min, ~0.0086 /m at 40 min (two-zone model, UNVALIDATED). Pre-hazing is standard practice; it moves the doors moment from the 10-min picture to the 40-min one (3.6x the air).",
+  "owed": "the decay test + transmissometer on site (simulation-method 3.4 step 8); the venue's rule on shutting vents; the machine's real output"
+ },
+ "requires": {
+  "par_lens": "15 deg (the rental's PL5403 lens is UNKNOWN; with 25 deg the columns read about a third as bright: occlusion_sky par_on_steel)",
+  "b380f_optics": "open beam: no gobo, no prism, no frost in the haze looks",
+  "why": "in thin air a beam is seen by its flux per width: the B380F's fixed 1.8 deg beam is already its narrowest; a gobo or prism takes flux out of the shaft (beamOptics.js: a prism of N facets gives N beams of 1/N the candela), so each shaft gets fainter. The room's gobo shapes are ASSUMED (no image of the wheel), so the claim that texture helps the eye in thin haze is not testable here.",
+  "stage_front": "a column bracket (3 PARs, 5.1-6.0 m) on the nave column x -12 z 12 (the venue's OK, the rigger's check owed); the pit stand is gone (its PAR is the cut's kicker). Levels are set for the room's PAR (30 478 cd, drawn linear since 28f4028d): with the spec 11 000 cd the same lx needs the fader x 2.77; the back pair runs at 2.6-8.2 %: fade-test the PL5403 low on the fixture test day (crane-dj-light 5)"
+ },
+ "far_crane": {
+  "show_z_m": -12.0,
+  "was_z_m": -41.0,
+  "top_m": {
+   "p05": 8.46,
+   "p50": 8.73,
+   "p95": 9.01
+  },
+  "underside_used_m": 7.69,
+  "drawn_by": "scripts/place/rigs/moxir-hall-2026-10-09-v10-show-park.hall.json (hall v10: cranes_from_door_m 66.0)",
+  "decision": "owner 2026-10-09, crane travel confirmed (\"yes the crane can move\", to the coordinator, 17:3x): the free crane parks at z -12 for the show and carries the six cubes",
+  "carries": "the six LaserCubes SITTING on its far-side girder top (N464), no bar, no hang",
+  "trolley": "driven to the +x end (x 7.6-10.2) and locked out, the hook wound up and locked (hold point H3)",
+  "owed": [
+   "the crane seen moving to z -12, its end trucks clear (H3)",
+   "its inspection and lock-out in the show position (MOXIR.md 5.2)",
+   "its top over x -5..-0.5 seen: the girder's top plate, the trolley rail and clips, the festoon track on posts (photo 007), a strap point for each cube (H2)"
+  ]
+ },
+ "lasers": {
+  "source": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json",
+  "design": "B-L (laser-margin design.md, 2026-10-10; the lead's default, N464.4)",
+  "previous": "scripts/place/rigs/moxir-aerial-far-crane-2026-10-09.json (v1.1 aerial, #844: the cubes on a bar 2.49 m under the bridge, aimed +z to the entry wall; superseded by N464)",
+  "tubes": [
+   {
+    "beam": "1a",
+    "cube": "rig-lasercube-cut-01",
+    "from": [
+     -4.5,
+     8.81,
+     -13.45
+    ],
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "half_fan_deg": 1.008
+   },
+   {
+    "beam": "2a",
+    "cube": "rig-lasercube-cut-02",
+    "from": [
+     -3.8,
+     8.81,
+     -13.45
+    ],
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "half_fan_deg": 1.008
+   },
+   {
+    "beam": "4a",
+    "cube": "rig-lasercube-cut-04",
+    "from": [
+     -3.1,
+     8.81,
+     -13.45
+    ],
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "half_fan_deg": 1.008
+   },
+   {
+    "beam": "5a",
+    "cube": "rig-lasercube-cut-05",
+    "from": [
+     -2.4,
+     8.81,
+     -13.45
+    ],
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "half_fan_deg": 1.008
+   },
+   {
+    "beam": "3a",
+    "cube": "rig-lasercube-cut-03",
+    "from": [
+     -1.7,
+     8.81,
+     -13.45
+    ],
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "half_fan_deg": 1.008
+   },
+   {
+    "beam": "6a",
+    "cube": "rig-lasercube-cut-06",
+    "from": [
+     -1.0,
+     8.81,
+     -13.45
+    ],
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "half_fan_deg": 1.008
+   }
+  ],
+  "signed_off": false,
+  "desk": "the desk writes 0 to every laser channel until the IEC 60825-1 sign-off (deskLookValues.js laserHeld)"
+ },
+ "review": {
+  "from": "scripts/place/rigs/moxir-v2-spread-2026-10-09.json",
+  "moves": [
+   {
+    "id": "rig-par-cut-01",
+    "was": "rig-par-cut-01",
+    "from": {
+     "p": [
+      -10.316,
+      2.756,
+      0.15
+     ],
+     "part": "cut down"
+    },
+    "to": {
+     "p": [
+      -9.83,
+      3.606,
+      3.2
+     ],
+     "part": "cut up"
+    }
+   },
+   {
+    "id": "rig-par-cut-02",
+    "was": "rig-par-cut-02",
+    "from": {
+     "p": [
+      -9.35,
+      3.735,
+      0.15
+     ],
+     "part": "cut up"
+    },
+    "to": {
+     "p": [
+      -8.864,
+      3.145,
+      3.2
+     ],
+     "part": "cut down"
+    }
+   },
+   {
+    "id": "rig-par-cut-03",
+    "was": "rig-par-cut-03",
+    "from": {
+     "p": [
+      -8.384,
+      3.274,
+      0.15
+     ],
+     "part": "cut down"
+    },
+    "to": {
+     "p": [
+      -7.898,
+      4.124,
+      3.2
+     ],
+     "part": "cut up"
+    }
+   },
+   {
+    "id": "rig-par-cut-04",
+    "was": "rig-par-cut-04",
+    "from": {
+     "p": [
+      -6.935,
+      4.382,
+      0.15
+     ],
+     "part": "cut up"
+    },
+    "to": {
+     "p": [
+      -6.932,
+      3.662,
+      3.2
+     ],
+     "part": "cut down"
+    }
+   },
+   {
+    "id": "rig-par-cut-05",
+    "was": "rig-par-cut-05",
+    "from": {
+     "p": [
+      -5.969,
+      3.921,
+      0.15
+     ],
+     "part": "cut down"
+    },
+    "to": {
+     "p": [
+      -6.449,
+      3.792,
+      3.2
+     ],
+     "part": "dj back"
+    }
+   },
+   {
+    "id": "rig-par-cut-06",
+    "was": "rig-par-cut-06",
+    "from": {
+     "p": [
+      -4.52,
+      5.029,
+      0.15
+     ],
+     "part": "cut up"
+    },
+    "to": {
+     "p": [
+      -5.0,
+      4.9,
+      3.2
+     ],
+     "part": "cut up"
+    }
+   },
+   {
+    "id": "rig-par-cut-07",
+    "was": "rig-par-cut-07",
+    "from": {
+     "p": [
+      -3.554,
+      4.568,
+      0.15
+     ],
+     "part": "cut down"
+    },
+    "to": {
+     "p": [
+      -4.034,
+      4.439,
+      3.2
+     ],
+     "part": "dj back"
+    }
+   },
+   {
+    "id": "rig-par-cut-08",
+    "was": "rig-par-cut-08",
+    "from": {
+     "p": [
+      -3.071,
+      5.418,
+      0.15
+     ],
+     "part": "cut up"
+    },
+    "to": {
+     "p": [
+      -3.068,
+      4.698,
+      3.2
+     ],
+     "part": "cut down"
+    }
+   },
+   {
+    "id": "rig-par-cut-09",
+    "was": "rig-par-cut-09",
+    "from": {
+     "p": [
+      -1.139,
+      5.215,
+      0.15
+     ],
+     "part": "cut down"
+    },
+    "to": {
+     "p": [
+      -2.102,
+      5.676,
+      3.2
+     ],
+     "part": "cut up"
+    }
+   },
+   {
+    "id": "rig-par-cut-10",
+    "was": "rig-par-cut-10",
+    "from": {
+     "p": [
+      -0.173,
+      6.194,
+      0.15
+     ],
+     "part": "cut up"
+    },
+    "to": {
+     "p": [
+      -1.619,
+      5.086,
+      3.2
+     ],
+     "part": "cut down"
+    }
+   },
+   {
+    "id": "rig-par-cut-11",
+    "was": "rig-par-planes-25",
+    "from": {
+     "p": [
+      0.4,
+      4.5,
+      7.3
+     ],
+     "part": "stage key"
+    },
+    "to": {
+     "p": [
+      -0.653,
+      5.345,
+      3.2
+     ],
+     "part": "dj kicker"
+    }
+   }
+  ],
+  "summary": {
+   "lasers_worst_margin_m": 0.194,
+   "lasers_worst_at": [
+    "rig-lasercube-cut-06",
+    "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)"
+   ],
+   "lasers_min_body_gap_m": 0.448,
+   "lasers_min_level_margin_m": 3.538,
+   "lasers_min_opening_margin_m": 0.194,
+   "casts_all_on_far_wall_block": true,
+   "casts_all_clear_of_openings": true,
+   "mounts_clear_first_2_m": true,
+   "setup_sheet_zone_inside_window": true,
+   "lamp_bodies_min_gap_to_a_cube_tube_m": 7.66,
+   "forty_watt_their_worst_m": 0.232,
+   "forty_watt_body_rule_on_near_girders_m": -0.389,
+   "picks_worst_line_kg": 111.1,
+   "picks_worst_on_bridge_kg": 144.2,
+   "picks_pass": true,
+   "people_dj_gap_m": 0.665,
+   "people_public_gap_today_m": 0.33,
+   "people_public_gap_with_pen_condition_m": 0.622,
+   "lowest_lens_m": 3.145,
+   "dj_glare_ok": true,
+   "cut_light_into_people": 0,
+   "h1_judge_readings_worst_m (hold H1, not passed)": {
+    "end: far gate, the judge's G3 (x -2.91..2.91, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876,
+    "end: far gate, the judge's G4 (x -1.51..4.31, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -0.566,
+    "end: far gate, the judge's G7 (x -4.7..0.9, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876
+   },
+   "b380f_into_people_or_cubes": 0,
+   "b380f_rays_on_the_cut (a look finding, not a rule)": {},
+   "dj_face_eye_height_lx": {
+    "dark": 20.0,
+    "peak": 19.9
+   },
+   "dj_head_top_lx": {
+    "dark": 184.6,
+    "peak": 186.8
+   },
+   "runtime_s": 38
+  },
+  "rigging": {
+   "source": "node scripts/place/cut-count.mjs --n 11 --places -5,-4,-3,-2,-1.5,0,1,2,3,3.5,4.5 --design scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json",
+   "picks": [
+    {
+     "u_m": -5.75,
+     "bridle_included_deg": 26,
+     "line_kg": 31.7,
+     "on_bridge_kg": 64.7,
+     "leg_kg": 30.1,
+     "ok": true
+    },
+    {
+     "u_m": -0.5,
+     "bridle_included_deg": 42,
+     "line_kg": 111.1,
+     "on_bridge_kg": 144.2,
+     "leg_kg": 74,
+     "ok": true
+    },
+    {
+     "u_m": 5.25,
+     "bridle_included_deg": 119,
+     "line_kg": 38.8,
+     "on_bridge_kg": 71.9,
+     "leg_kg": 64.9,
+     "ok": true
+    }
+   ],
+   "worst_line_kg": 111.1,
+   "worst_on_bridge_kg": 144.2,
+   "headroom_kg": 34.9,
+   "cap_kg": 146.0,
+   "cap_basis": "a DESIGN cap (v1.0's middle pick, MOXIR.md 5.2), not a rating: the crane's SWL, the runway and the hoists' WLL are unknown",
+   "bridles_deg": [
+    26,
+    42,
+    119
+   ],
+   "weight": {
+    "per_lamp_kg": 9.25,
+    "lamps_kg": 101.8,
+    "truss_kg": 75.6,
+    "loom_kg": 4.2,
+    "total_on_line_kg": 181.6
+   },
+   "power": {
+    "w": 2200,
+    "circuits_16a": 1
+   },
+   "dmx": {
+    "channels": 88,
+    "branches": 1
+   },
+   "tieoffs": [
+    {
+     "id": "hl",
+     "grid_z_m": 6,
+     "from_m": [
+      -11.04,
+      3.04,
+      3.2
+     ],
+     "to_m": [
+      -11.6,
+      3.04,
+      6
+     ],
+     "length_m": 2.86
+    },
+    {
+     "id": "hr",
+     "grid_z_m": -6,
+     "from_m": [
+      0.55,
+      6.15,
+      3.2
+     ],
+     "to_m": [
+      11.6,
+      6.15,
+      -6
+     ],
+     "length_m": 14.38
+    }
+   ],
+   "passes": true
+  },
+  "people": {
+   "rule": "raised hands 2.5 m over the standing surface; every part of the cut >= 0.5 m from them (stage json truss.clear_gap_m: \"the same 0.5 m the cut keeps over raised hands\"); the lowest lens >= 2.7 m (ISO 13857:2019 Table 2)",
+   "dj_on_his_step": {
+    "gap_m": 0.665,
+    "nearest": "lamp body rig-par-cut-04",
+    "passes": true
+   },
+   "public_outside_the_pen_today": {
+    "gap_m": 0.33,
+    "nearest": "the cut (H30V truss)",
+    "passes": false,
+    "why": "the cut's LOW end passes the pen's edge x -10.5 at 0.39-0.54 m over raised hands (unchanged by the park; v1.1 had no public there)"
+   },
+   "public_with_the_pen_condition": {
+    "gap_m": 0.622,
+    "nearest": "cut tie-off hl (strap)",
+    "passes": true,
+    "condition": {
+     "x_m": [
+      -12.0,
+      -10.5
+     ],
+     "z_m": [
+      1.75,
+      6.5
+     ],
+     "why": "the cut's LOW end (x -11.04, bottom chord 2.89 m) passes the stage pen's edge (x -10.5) 0.39-0.54 m over raised hands, and its hl strap runs at 3.04 m to the column x -12 at grid z 6 (0.49 m over raised hands): under the 0.5 m rule. Unchanged in kind from v2 spread (the low end was over the painted hot zone at z 0.15 too; v1.1 had no public there). The transformer (x -11..-9.5, z -4..4, z LOW) and the column-foot cabinets stand in this bay. CONDITION: the pen's barrier (owed, moxir_v2_eyes STAGE_PEN) takes in the bay from the pen's edge to the nave column row x -12, from the bridge's back girder (z 1.75) to past the hl strap's column (z 6.5), so no one of the public stands under the low end or the strap"
+    }
+   },
+   "lowest_lens_m": 3.145,
+   "lowest_lens_passes": true,
+   "low_end_over_raised_hands_m": 0.39,
+   "over_dj_raised_hands_m": 1.61
+  },
+  "dj_light": {
+   "room 30 478 cd, linear (the room since 28f4028d)": {
+    "dark": {
+     "face, eye height (+z)": {
+      "lx": 20.0,
+      "by_part": {
+       "stage key": 20.0
+      }
+     },
+     "face, #864 target (+z)": {
+      "lx": 20.8,
+      "by_part": {
+       "stage key": 20.8
+      }
+     },
+     "head top (up)": {
+      "lx": 184.6,
+      "by_part": {
+       "dj back": 159.8,
+       "dj kicker": 18.7,
+       "stage key": 6.1
+      }
+     },
+     "back of head (-z)": {
+      "lx": 75.1,
+      "by_part": {
+       "dj back": 69.9,
+       "dj kicker": 5.2
+      }
+     },
+     "booth front (+z)": {
+      "lx": 19.0,
+      "by_part": {
+       "stage key": 19.0
+      }
+     },
+     "PA L face (+z)": {
+      "lx": 60.1,
+      "by_part": {
+       "speaker face L": 60.1
+      }
+     },
+     "PA R face (+z)": {
+      "lx": 19.2,
+      "by_part": {
+       "speaker face R": 19.2
+      }
+     }
+    },
+    "peak": {
+     "face, eye height (+z)": {
+      "lx": 19.9,
+      "by_part": {
+       "stage key": 19.9
+      }
+     },
+     "face, #864 target (+z)": {
+      "lx": 20.8,
+      "by_part": {
+       "stage key": 20.8
+      }
+     },
+     "head top (up)": {
+      "lx": 186.8,
+      "by_part": {
+       "dj back": 162.0,
+       "dj kicker": 18.7,
+       "stage key": 6.1
+      }
+     },
+     "back of head (-z)": {
+      "lx": 76.1,
+      "by_part": {
+       "dj back": 70.8,
+       "dj kicker": 5.2
+      }
+     },
+     "booth front (+z)": {
+      "lx": 19.0,
+      "by_part": {
+       "stage key": 19.0
+      }
+     },
+     "PA L face (+z)": {
+      "lx": 107.5,
+      "by_part": {
+       "speaker face L": 107.5
+      }
+     },
+     "PA R face (+z)": {
+      "lx": 46.6,
+      "by_part": {
+       "speaker face R": 46.6
+      }
+     }
+    }
+   },
+   "spec 11 000 cd (EQUIVALENT), linear": {
+    "dark": {
+     "face, eye height (+z)": {
+      "lx": 7.2,
+      "by_part": {
+       "stage key": 7.2
+      }
+     },
+     "face, #864 target (+z)": {
+      "lx": 7.5,
+      "by_part": {
+       "stage key": 7.5
+      }
+     },
+     "head top (up)": {
+      "lx": 66.6,
+      "by_part": {
+       "dj back": 57.7,
+       "dj kicker": 6.8,
+       "stage key": 2.2
+      }
+     },
+     "back of head (-z)": {
+      "lx": 27.1,
+      "by_part": {
+       "dj back": 25.2,
+       "dj kicker": 1.9
+      }
+     },
+     "booth front (+z)": {
+      "lx": 6.9,
+      "by_part": {
+       "stage key": 6.9
+      }
+     },
+     "PA L face (+z)": {
+      "lx": 21.7,
+      "by_part": {
+       "speaker face L": 21.7
+      }
+     },
+     "PA R face (+z)": {
+      "lx": 6.9,
+      "by_part": {
+       "speaker face R": 6.9
+      }
+     }
+    },
+    "peak": {
+     "face, eye height (+z)": {
+      "lx": 7.2,
+      "by_part": {
+       "stage key": 7.2
+      }
+     },
+     "face, #864 target (+z)": {
+      "lx": 7.5,
+      "by_part": {
+       "stage key": 7.5
+      }
+     },
+     "head top (up)": {
+      "lx": 67.4,
+      "by_part": {
+       "dj back": 58.5,
+       "dj kicker": 6.7,
+       "stage key": 2.2
+      }
+     },
+     "back of head (-z)": {
+      "lx": 27.5,
+      "by_part": {
+       "dj back": 25.6,
+       "dj kicker": 1.9
+      }
+     },
+     "booth front (+z)": {
+      "lx": 6.9,
+      "by_part": {
+       "stage key": 6.9
+      }
+     },
+     "PA L face (+z)": {
+      "lx": 38.8,
+      "by_part": {
+       "speaker face L": 38.8
+      }
+     },
+     "PA R face (+z)": {
+      "lx": 16.8,
+      "by_part": {
+       "speaker face R": 16.8
+      }
+     }
+    }
+   }
+  },
+  "dj_glare": {
+   "dark": {
+    "lenses_seen": [
+     {
+      "id": "rig-par-planes-23",
+      "part": "stage key",
+      "deg_from_eye_line": 45.079,
+      "lx_at_eye_room": 29.349,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     },
+     {
+      "id": "rig-par-cut-11",
+      "part": "dj kicker",
+      "deg_from_eye_line": 101.061,
+      "lx_at_eye_room": 31.804,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     },
+     {
+      "id": "rig-par-cut-07",
+      "part": "dj back",
+      "deg_from_eye_line": 112.343,
+      "lx_at_eye_room": 72.622,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     },
+     {
+      "id": "rig-par-cut-05",
+      "part": "dj back",
+      "deg_from_eye_line": 116.99,
+      "lx_at_eye_room": 103.504,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     }
+    ],
+    "ok": true
+   },
+   "peak": {
+    "lenses_seen": [
+     {
+      "id": "rig-par-planes-23",
+      "part": "stage key",
+      "deg_from_eye_line": 45.079,
+      "lx_at_eye_room": 29.29,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     },
+     {
+      "id": "rig-par-cut-11",
+      "part": "dj kicker",
+      "deg_from_eye_line": 101.061,
+      "lx_at_eye_room": 31.741,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     },
+     {
+      "id": "rig-par-cut-07",
+      "part": "dj back",
+      "deg_from_eye_line": 112.343,
+      "lx_at_eye_room": 73.641,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     },
+     {
+      "id": "rig-par-cut-05",
+      "part": "dj back",
+      "deg_from_eye_line": 116.99,
+      "lx_at_eye_room": 104.957,
+      "veil_cd_m2": null,
+      "inside_20deg_at_full": false
+     }
+    ],
+    "ok": true
+   }
+  },
+  "dj_glare_all_at_full": {
+   "lenses_seen": [
+    {
+     "id": "rig-par-planes-23",
+     "part": "stage key",
+     "deg_from_eye_line": 45.079,
+     "lx_at_eye_room": 221.897,
+     "veil_cd_m2": null,
+     "inside_20deg_at_full": false
+    },
+    {
+     "id": "rig-par-cut-11",
+     "part": "dj kicker",
+     "deg_from_eye_line": 101.061,
+     "lx_at_eye_room": 721.378,
+     "veil_cd_m2": null,
+     "inside_20deg_at_full": false
+    },
+    {
+     "id": "rig-par-cut-07",
+     "part": "dj back",
+     "deg_from_eye_line": 112.343,
+     "lx_at_eye_room": 2832.362,
+     "veil_cd_m2": null,
+     "inside_20deg_at_full": false
+    },
+    {
+     "id": "rig-par-cut-05",
+     "part": "dj back",
+     "deg_from_eye_line": 116.99,
+     "lx_at_eye_room": 4036.824,
+     "veil_cd_m2": null,
+     "inside_20deg_at_full": false
+    }
+   ],
+   "ok": true
+  },
+  "cut_light": {
+   "rig-par-cut-01": {
+    "into_people": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ],
+    "part": "cut up"
+   },
+   "rig-par-cut-02": {
+    "into_people": 0,
+    "ends": [
+     "hall-floor"
+    ],
+    "part": "cut down"
+   },
+   "rig-par-cut-03": {
+    "into_people": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ],
+    "part": "cut up"
+   },
+   "rig-par-cut-04": {
+    "into_people": 0,
+    "ends": [
+     "hall-floor"
+    ],
+    "part": "cut down"
+   },
+   "rig-par-cut-05": {
+    "into_people": 0,
+    "ends": [
+     "the DJ"
+    ],
+    "part": "dj back"
+   },
+   "rig-par-cut-06": {
+    "into_people": 0,
+    "ends": [
+     "cut pick 2 (bridle + hoist + safety steel)",
+     "hall-deck",
+     "hall-frame"
+    ],
+    "part": "cut up"
+   },
+   "rig-par-cut-07": {
+    "into_people": 0,
+    "ends": [
+     "the DJ"
+    ],
+    "part": "dj back"
+   },
+   "rig-par-cut-08": {
+    "into_people": 0,
+    "ends": [
+     "hall-floor"
+    ],
+    "part": "cut down"
+   },
+   "rig-par-cut-09": {
+    "into_people": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ],
+    "part": "cut up"
+   },
+   "rig-par-cut-10": {
+    "into_people": 0,
+    "ends": [
+     "hall-floor",
+     "hall-machine"
+    ],
+    "part": "cut down"
+   },
+   "rig-par-cut-11": {
+    "into_people": 0,
+    "ends": [
+     "hall-floor",
+     "the DJ"
+    ],
+    "part": "dj kicker"
+   }
+  },
+  "b380f": [
+   {
+    "id": "rig-beam-planes-01",
+    "part": "plane 1 (behind the DJ)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-02",
+    "part": "plane 1 (behind the DJ)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-03",
+    "part": "plane 1 (behind the DJ)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-04",
+    "part": "plane 1 (behind the DJ)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-05",
+    "part": "plane 1 (behind the DJ)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-06",
+    "part": "plane 1 (behind the DJ)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-07",
+    "part": "plane 3 (behind the stage)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-08",
+    "part": "plane 3 (behind the stage)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-09",
+    "part": "plane 3 (behind the stage)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-10",
+    "part": "plane 3 (behind the stage)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-11",
+    "part": "plane 3 (behind the stage)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-12",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-steel"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-13",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-14",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame",
+     "hall-girder",
+     "hall-steel"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-15",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-16",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame",
+     "hall-steel"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-17",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck"
+    ]
+   },
+   {
+    "id": "rig-beam-planes-18",
+    "part": "plane 2 (the wings)",
+    "into_people": 0,
+    "into_cubes": 0,
+    "into_the_cut": 0,
+    "ends": [
+     "hall-deck",
+     "hall-frame"
+    ]
+   }
+  ],
+  "truss": {
+   "ends": [
+    {
+     "u_m": -6.25,
+     "x_m": -11.04,
+     "bottom_chord_m": 2.89
+    },
+    {
+     "u_m": 5.75,
+     "x_m": 0.55,
+     "bottom_chord_m": 6
+    }
+   ],
+   "trim_m": 4.51,
+   "clearance": {
+    "lowest_m": 2.89,
+    "low_end": {
+     "u_m": -6.25,
+     "side": "house-left",
+     "bottom_chord_m": 2.89,
+     "over_raised_hands_m": 0.39
+    },
+    "over_raised_hands_m": 0.39,
+    "over_dj_raised_hands_m": 1.61,
+    "raised_hands_m": 2.5,
+    "note": "the line hangs in the bridge's plane (z 3.2), behind the crowd barrier: no audience stands under it; the low end is over the back of house-left"
+   }
+  },
+  "laser_clearance": [
+   {
+    "id": "rig-beam-planes-07",
+    "part": "plane 3 (behind the stage)",
+    "gap_m": 7.66,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-par-planes-07",
+    "part": "columns",
+    "gap_m": 8.688,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-par-planes-09",
+    "part": "columns",
+    "gap_m": 8.705,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-par-planes-11",
+    "part": "columns",
+    "gap_m": 8.833,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-08",
+    "part": "plane 3 (behind the stage)",
+    "gap_m": 9.559,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-10",
+    "part": "plane 3 (behind the stage)",
+    "gap_m": 9.577,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-12",
+    "part": "plane 2 (the wings)",
+    "gap_m": 9.693,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-smoke-planes",
+    "part": "haze",
+    "gap_m": 10.157,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-05",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.261,
+    "nearest_cube": "rig-lasercube-cut-04"
+   },
+   {
+    "id": "rig-beam-planes-06",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.261,
+    "nearest_cube": "rig-lasercube-cut-05"
+   },
+   {
+    "id": "rig-beam-planes-04",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.263,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-03",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.284,
+    "nearest_cube": "rig-lasercube-cut-01"
+   }
+  ],
+  "lasers": "scripts/place/rigs/moxir-lasers-on-crane-2026-10-09.json checks",
+  "fails": []
+ },
+ "from_rig": "scripts/place/rigs/moxir-v2-spread-2026-10-09.json",
+ "near_crane": {
+  "show_z_m": 3.2,
+  "was_z_m": 0.15,
+  "drawn_by": "scripts/place/rigs/moxir-hall-2026-10-09-v10-show-park.hall.json (cranes_from_door_m 50.8)",
+  "stage": "scripts/place/rigs/moxir-stage-v2-cranes-2026-10-09.json",
+  "decision": "N463: the cut half behind the DJ, lighting him (crane-dj-light design)"
+ },
+ "built": "2026-10-10",
+ "owner": {
+  "N463": "2026-10-09 20:51: \"yes ther no crane one with the 6 lasers , go back one with trus dj 's back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences\"",
+  "N464": "2026-10-09 21:1x: \"6 lasers will go on the laser not like the trus\"; asked how: \"we dont need to hange laser put on the crane\"",
+  "N464.4": "2026-10-10 16:14: \"2 big ones goes to the up where audience enter, 6 on the crane not like trus we can go and put on the crane\" (no direction picked: the lead's default is B-L, the option that passes today)"
+ },
+ "hall": {
+  "json": "scripts/place/rigs/moxir-hall-2026-10-09-v10-show-park.hall.json",
+  "glb": "/mnt/data/footage/place-moxir-hall-v10-show-park-2026-10-09/hall.glb",
+  "glb_sha256": "1a1d47509200f81e9e281e966dd29269ccc64e82c9a0c014f55c1a996740ff2d",
+  "show_glb": "/mnt/data/footage/place-moxir-hall-v10-show-park-2026-10-09/hall-show.glb",
+  "why": "the room must draw hall v10 (both cranes moved); a project still on v9 draws the free crane at z -41 and the near crane at 0.15"
+ },
+ "patch_note": "DMX addresses kept from v2 spread (#864); rig-par-cut-11 holds rig-par-planes-25's address (the pit key's slot). The owner's v2 patch layer (N460.2) is laid on top by its own builder."
+}

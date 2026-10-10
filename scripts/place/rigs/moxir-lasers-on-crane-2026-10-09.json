@@ -1,0 +1,4115 @@
+{
+ "what": "MOXIR v2 cranes: the six LaserCube Ultra Mk2 (7.5 W) SIT on the free crane's far-side girder at z -12 and fire one static beam each -z over the crowd behind the stage to ONE point on the far (SE) wall's block (design B-L)",
+ "owner": {
+  "N463": "2026-10-09 20:51: \"yes ther no crane one with the 6 lasers , go back one with trus dj 's back but also light the dj not the full back half back, and 2 40w go the up where the audience entrences\"",
+  "N464": "2026-10-09 21:1x: \"6 lasers will go on the laser not like the trus\"; asked how: \"we dont need to hange laser put on the crane\"",
+  "N464.4": "2026-10-10 16:14: \"2 big ones goes to the up where audience enter, 6 on the crane not like trus we can go and put on the crane\" (no direction picked: the lead's default is B-L, the option that passes today)"
+ },
+ "date": "2026-10-09",
+ "built": "2026-10-10",
+ "written_by": "scripts/place/moxir_v2_cranes.py",
+ "design": {
+  "source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/laser-margin/design.md (B-L), judged 7/10 (judge-laser-safety/verdict.md: the only design consistent with the record), matched with the near crane at z 3.20 (match/match.md: fits, margin to that system +13.4 m)",
+  "name": "B-L"
+ },
+ "previous": {
+  "file": "scripts/place/rigs/moxir-aerial-far-crane-2026-10-09.json",
+  "sha256": "56826b0dea8b8e03b9ea704434e4eb34a58052db62b6e819210dbd5d90c8fefa",
+  "what": "v1.1 aerial (#844, the laser session's aerial-far-crane.json, byte copy): the cubes on a bar 2.49 m under the free crane (y 5.2), aimed +z over the audience to the entry wall. Superseded by N464 (\"put on the crane\", no hang): kept as the previous version."
+ },
+ "units": [
+  {
+   "id": "rig-lasercube-cut-01",
+   "colour": "ash white",
+   "x_m": -4.5,
+   "aperture_m": {
+    "p05": [
+     -4.5,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -4.5,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -4.5,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -4.5,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": 0.666,
+   "tilt_deg_above_level": 0.527,
+   "range_m": 40.354
+  },
+  {
+   "id": "rig-lasercube-cut-02",
+   "colour": "ash white",
+   "x_m": -3.8,
+   "aperture_m": {
+    "p05": [
+     -3.8,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -3.8,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -3.8,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -3.8,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -0.328,
+   "tilt_deg_above_level": 0.527,
+   "range_m": 40.352
+  },
+  {
+   "id": "rig-lasercube-cut-04",
+   "colour": "ember red",
+   "x_m": -3.1,
+   "aperture_m": {
+    "p05": [
+     -3.1,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -3.1,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -3.1,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -3.1,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -1.322,
+   "tilt_deg_above_level": 0.527,
+   "range_m": 40.362
+  },
+  {
+   "id": "rig-lasercube-cut-05",
+   "colour": "ember red",
+   "x_m": -2.4,
+   "aperture_m": {
+    "p05": [
+     -2.4,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -2.4,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -2.4,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -2.4,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -2.315,
+   "tilt_deg_above_level": 0.526,
+   "range_m": 40.385
+  },
+  {
+   "id": "rig-lasercube-cut-03",
+   "colour": "ash white",
+   "x_m": -1.7,
+   "aperture_m": {
+    "p05": [
+     -1.7,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -1.7,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -1.7,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -1.7,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -3.306,
+   "tilt_deg_above_level": 0.526,
+   "range_m": 40.419
+  },
+  {
+   "id": "rig-lasercube-cut-06",
+   "colour": "ash white",
+   "x_m": -1.0,
+   "aperture_m": {
+    "p05": [
+     -1.0,
+     8.54,
+     -13.45
+    ],
+    "p50": [
+     -1.0,
+     8.81,
+     -13.45
+    ],
+    "p95": [
+     -1.0,
+     9.09,
+     -13.45
+    ]
+   },
+   "p": [
+    -1.0,
+    8.81,
+    -13.45
+   ],
+   "to": [
+    -4.031,
+    9.181,
+    -53.8
+   ],
+   "pan_deg_from_minus_z_plus_toward_plus_x": -4.296,
+   "tilt_deg_above_level": 0.525,
+   "range_m": 40.465
+  }
+ ],
+ "mount": {
+  "on": "the free crane's FAR-side girder top (z -13.45..-12.75, PLACEHOLDER), outboard of the trolley rail, front faces flush with the girder's outer (far-wall) edge, facing -z",
+  "spacing_m": 0.7,
+  "spacing_why": "each beam's tube passes the next cube's body >= 0.25 m (laser margin)",
+  "aperture_over_base_m": 0.08,
+  "aperture_basis": "ASSUMED (not in our files; the maker's output window is 30 x 18 mm on the front face)",
+  "free_crane_top_m": {
+   "p05": 8.46,
+   "p50": 8.73,
+   "p95": 9.01
+  },
+  "top_basis": "photo 007, crane_height.py (Criminisi, Reid & Zisserman 2000), EQUIVALENT; the design is checked at p05, p50 and p95",
+  "fix": "the maker's tilt-lock screws + the safety eye bolt to a steel strap round the girder's top flange (the rigger's detail, owed)"
+ },
+ "aim": {
+  "end_m": [
+   -4.031,
+   9.181,
+   -53.8
+  ],
+  "why": "the one far-wall point with the largest worst margin over the six beams, the three top heights and both readings of the far gate (compass search, Hooke & Jeeves 1961; laser-margin design.md 10)",
+  "on_site": "set on a target mark on the far wall at (x -4.03, y 9.18), measured from the x -12 column line and the floor; the six-beam worst stays within 0.05 m of the design for an end in x -4.43..-3.99, y 9.14..9.24",
+  "h1_all_readings": {
+   "end_m": [
+    -7.825,
+    6.3,
+    -53.8
+   ],
+   "used": false,
+   "search": "scripts/place/moxir_v2_h1_reaim.py (compass, Hooke & Jeeves 1961; 12 starts; 6 beams x 3 tops x 2 near tops x the z -54 roof row off/on)",
+   "result": {
+    "design_end_worst_all_readings_m": -1.876,
+    "with_the_40w_keep_out_best_m": -0.657,
+    "with_the_40w_keep_out_best_end_m": [
+     -8.55,
+     8.45,
+     -53.8
+    ],
+    "with_the_40w_keep_out_binding": "KO-3 the two 40 W beams z -53.8..-30 (x -8.29..-5.13, y 5.18..8.16)",
+    "right_of_the_gate_best_m": -0.891,
+    "right_of_the_gate_binding": "the runway walkway right row",
+    "without_the_40w_keep_out_m": 0.03,
+    "without_the_40w_keep_out_binding": "G7 left jamb x -4.7, cube 06"
+   },
+   "cost": "the end moves 3.79 m left and 2.88 m down (x -4.031 -> -7.825, y 9.181 -> 6.30); pans -4.7..-9.7 deg instead of -0.3..-4.3 (the six lines fan wider); tilt about -3.4 deg (down) instead of +0.53; and it lands in #873's 40 W far patch, so the two 40 W ends must move first (their H8 re-aim)",
+   "source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/round2/h1-reaim*.json"
+  },
+  "after_h1": {
+   "end_m": [
+    -4.162,
+    9.019,
+    -53.8
+   ],
+   "when": "only once H1 confirms photo 007 (the model's centred gate ruled out): worst +0.325 m (laser-margin design 2.4); not used now"
+  }
+ },
+ "rule": {
+  "text": "MOXIR.md 4.0a: a person = surface + 2.0 m; the beam >= 3.0 m above every place a person can stand OR >= 2.5 m beside it (the 0.8 deg fan + 4 mm + 1 mrad); every body is its true box + 0.25 m and the 1.008 deg tube keeps >= 0.25 m from it (the laser margin); every ray of the 0.8 and 1.008 deg fans first hits the far wall's matte block; an opening in that wall is a standing level for the end (2.5 m beside or 3.0 m over its top)",
+  "standards": [
+   "IEC 60825-1:2014 (MPE, NOHD)",
+   "IEC TR 60825-3 (laser shows: 3.0 m over, 2.5 m beside audience places)",
+   "ILDA audience-safety guidance",
+   "HSE HS(G)95"
+  ],
+  "person_m": 2.0,
+  "vertical_m": 3.0,
+  "lateral_m": 2.5,
+  "fan_deg": 0.8,
+  "body_fan_deg": 1.008,
+  "body_pad_m": 0.25,
+  "laser_gap_min_m": 0.25,
+  "free_crane_bridge_top": "NOT a standing level: closed and locked out whenever a cube can emit (lead's addendum 3); the cubes are focused before doors by the operator only, beam block engaged, alignment power"
+ },
+ "hold_points": [
+  {
+   "id": "H1",
+   "what": "the far (SE) wall: the big gate's jambs and top, the steel door's jambs and top, the wall surface over x -5.5..-2.5, y 8.0..10.5 (photo 007 never saw that strip; a line at y ~10.0 above it)",
+   "stop_if": "the gate's left jamb is further left than x -1.1 (the judge's readings G3 / G4 / G7 fail by 0.57-1.88 m): use the fallback B-R or re-aim; something mounted in the end zone: move the end"
+  },
+  {
+   "id": "H2",
+   "what": "the free crane's top over x -5..-0.5: the far girder's top plate and outer edge, the trolley rail and clips, the festoon track on posts (photo 007), any walkway or conductor rail; the real top height; a strap point per cube",
+   "stop_if": "anything on the plate in front of a cube (the beam fires nearly level 0.08 m over it): a riser <= 0.28 m or a bracket off the outer face, then re-run"
+  },
+  {
+   "id": "H3",
+   "what": "the free crane seen at z -12; its trolley driven to the +x end (x 7.6-10.2) and locked; its hook wound up; the lock-out (MOXIR.md 5.2)",
+   "stop_if": "the trolley cannot move: its August place (x -2.3..+0.1) is where cubes 03, 05, 06 sit"
+  },
+  {
+   "id": "H4",
+   "what": "the pendant lamps over the far half (z -42..-5 never seen) along the strip x -6..0, z -13..-54",
+   "stop_if": "anything hanging below 9.43 m at z -18, 9.76 at z -30, 10.24 at z -48 within 0.58-1.11 m of a beam axis (the judge: off-node lamps from 9.5 m would take B-L to -0.18..-0.43)"
+  },
+  {
+   "id": "H5",
+   "what": "the space frame's bottom chord at z -48 (10.6-11.2; one reading straight up)",
+   "stop_if": "below 10.6 m"
+  },
+  {
+   "id": "H6",
+   "what": "#873's final far-wall ends (its steel-door fix raises them 0.40 m)",
+   "stop_if": "their keep-out moves: re-run this check"
+  },
+  {
+   "id": "H7",
+   "what": "the far half's floor under the beams' strip (the horizontal tank, the gas cylinders, the stair at a column)",
+   "stop_if": "anything higher than 3.71 m (z -31..-13) / 3.59 m (z -54..-31) in the strip x -7.1..1.5: fence or move it"
+  }
+ ],
+ "controls": [
+  "one static beam per cube (the owner, 2026-10-09); no effect leaves the +-0.3 deg zone",
+  "each cube's LaserOS Safety Zone keep-in = its aim +-0.3 deg; the lockable mechanical beam block set at the setup sheet's tilt (the judge's graft: a passive aperture mask, an 8 mm hole 0.25 m in front, aim +-0.4 deg, covers the unknown scan-fail behaviour: owed)",
+  "the free crane parked at z -12, locked out, its trolley at the +x end, its hook wound up (H3)",
+  "E-stop 1 at FOH, E-stop 2 (spotter): recommended at x -2.0, z -7.0 (the judge's graft: 97.6 % of each beam seen at either park, match.md)",
+  "dark until the IEC 60825-1 sign-off: the desk writes 0 to every laser channel (deskLookValues.js laserHeld); `laserSignedOff` is never written by this tool"
+ ],
+ "nohd_m": {
+  "7.5 W, 4 mm, 1 mrad, 0.25 s": 608,
+  "basis": "moxir_v1_1.nohd (IEC 60825-1:2014 Table A.1); every beam is hazardous wherever it is: separation and the hard stop are the control"
+ },
+ "setup_sheet": [
+  {
+   "cube": "rig-lasercube-cut-01",
+   "colour": "ash white",
+   "aim": {
+    "end_m": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "pan_deg_from_minus_z_plus_toward_plus_x": 0.666,
+    "tilt_deg_above_level": 0.527,
+    "range_m": 40.35
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -1.13,
+     1.73
+    ],
+    "tilt": [
+     -0.53,
+     1.93
+    ],
+    "half_widths_pan_tilt": [
+     -1.8,
+     1.06,
+     -1.06,
+     1.4
+    ],
+    "method": "the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall's block (moxir_v1_1 / moxir_entry_lasers setup_row)"
+   },
+   "laseros_safety_zone_keep_in_deg": {
+    "pan": [
+     0.37,
+     0.97
+    ],
+    "tilt": [
+     0.23,
+     0.83
+    ],
+    "inside_window_less_0_5_mount": true
+   },
+   "beam_block": {
+    "below_tilt_deg": -0.53,
+    "setting": "block everything below -0.53 deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)"
+   }
+  },
+  {
+   "cube": "rig-lasercube-cut-02",
+   "colour": "ash white",
+   "aim": {
+    "end_m": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "pan_deg_from_minus_z_plus_toward_plus_x": -0.328,
+    "tilt_deg_above_level": 0.527,
+    "range_m": 40.35
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -2.29,
+     0.73
+    ],
+    "tilt": [
+     -0.53,
+     1.93
+    ],
+    "half_widths_pan_tilt": [
+     -1.96,
+     1.06,
+     -1.06,
+     1.4
+    ],
+    "method": "the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall's block (moxir_v1_1 / moxir_entry_lasers setup_row)"
+   },
+   "laseros_safety_zone_keep_in_deg": {
+    "pan": [
+     -0.63,
+     -0.03
+    ],
+    "tilt": [
+     0.23,
+     0.83
+    ],
+    "inside_window_less_0_5_mount": true
+   },
+   "beam_block": {
+    "below_tilt_deg": -0.53,
+    "setting": "block everything below -0.53 deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)"
+   }
+  },
+  {
+   "cube": "rig-lasercube-cut-04",
+   "colour": "ember red",
+   "aim": {
+    "end_m": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "pan_deg_from_minus_z_plus_toward_plus_x": -1.322,
+    "tilt_deg_above_level": 0.527,
+    "range_m": 40.36
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -3.44,
+     -0.26
+    ],
+    "tilt": [
+     -0.53,
+     1.93
+    ],
+    "half_widths_pan_tilt": [
+     -2.12,
+     1.06,
+     -1.06,
+     1.4
+    ],
+    "method": "the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall's block (moxir_v1_1 / moxir_entry_lasers setup_row)"
+   },
+   "laseros_safety_zone_keep_in_deg": {
+    "pan": [
+     -1.62,
+     -1.02
+    ],
+    "tilt": [
+     0.23,
+     0.83
+    ],
+    "inside_window_less_0_5_mount": true
+   },
+   "beam_block": {
+    "below_tilt_deg": -0.53,
+    "setting": "block everything below -0.53 deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)"
+   }
+  },
+  {
+   "cube": "rig-lasercube-cut-05",
+   "colour": "ember red",
+   "aim": {
+    "end_m": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "pan_deg_from_minus_z_plus_toward_plus_x": -2.315,
+    "tilt_deg_above_level": 0.526,
+    "range_m": 40.38
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -4.57,
+     -1.25
+    ],
+    "tilt": [
+     -0.53,
+     1.93
+    ],
+    "half_widths_pan_tilt": [
+     -2.26,
+     1.06,
+     -1.06,
+     1.4
+    ],
+    "method": "the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall's block (moxir_v1_1 / moxir_entry_lasers setup_row)"
+   },
+   "laseros_safety_zone_keep_in_deg": {
+    "pan": [
+     -2.61,
+     -2.02
+    ],
+    "tilt": [
+     0.23,
+     0.83
+    ],
+    "inside_window_less_0_5_mount": true
+   },
+   "beam_block": {
+    "below_tilt_deg": -0.53,
+    "setting": "block everything below -0.53 deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)"
+   }
+  },
+  {
+   "cube": "rig-lasercube-cut-03",
+   "colour": "ash white",
+   "aim": {
+    "end_m": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "pan_deg_from_minus_z_plus_toward_plus_x": -3.306,
+    "tilt_deg_above_level": 0.526,
+    "range_m": 40.42
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -5.73,
+     -2.25
+    ],
+    "tilt": [
+     -0.53,
+     1.93
+    ],
+    "half_widths_pan_tilt": [
+     -2.42,
+     1.06,
+     -1.06,
+     1.4
+    ],
+    "method": "the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall's block (moxir_v1_1 / moxir_entry_lasers setup_row)"
+   },
+   "laseros_safety_zone_keep_in_deg": {
+    "pan": [
+     -3.61,
+     -3.01
+    ],
+    "tilt": [
+     0.23,
+     0.83
+    ],
+    "inside_window_less_0_5_mount": true
+   },
+   "beam_block": {
+    "below_tilt_deg": -0.53,
+    "setting": "block everything below -0.53 deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)"
+   }
+  },
+  {
+   "cube": "rig-lasercube-cut-06",
+   "colour": "ash white",
+   "aim": {
+    "end_m": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "pan_deg_from_minus_z_plus_toward_plus_x": -4.296,
+    "tilt_deg_above_level": 0.525,
+    "range_m": 40.47
+   },
+   "window_rule_holds_deg": {
+    "pan": [
+     -6.86,
+     -3.24
+    ],
+    "tilt": [
+     -0.54,
+     1.9
+    ],
+    "half_widths_pan_tilt": [
+     -2.56,
+     1.06,
+     -1.06,
+     1.38
+    ],
+    "method": "the rule for the beam alone (4 mm + 1 mrad, no fan) at each 0.02 deg step, its first hit on the far wall's block (moxir_v1_1 / moxir_entry_lasers setup_row)"
+   },
+   "laseros_safety_zone_keep_in_deg": {
+    "pan": [
+     -4.6,
+     -4.0
+    ],
+    "tilt": [
+     0.23,
+     0.82
+    ],
+    "inside_window_less_0_5_mount": true
+   },
+   "beam_block": {
+    "below_tilt_deg": -0.54,
+    "setting": "block everything below -0.54 deg above level (the window floor); set with the cube off, a spirit level on the block edge (the maker prints no angle scale)"
+   }
+  }
+ ],
+ "far_wall_openings": {
+  "source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/laser-margin/far_wall_openings.json (far_wall_openings.py: photo 007, single-view metrology as crane_height.py - Criminisi, Reid & Zisserman, IJCV 40(2) 2000; Monte Carlo n 20 000, seed 1; the camera x uniform -2.7..1.0)",
+  "photo_007": {
+   "far_gate": {
+    "x_left_m": {
+     "p05": -0.75,
+     "median": 0.06,
+     "p95": 0.89
+    },
+    "x_right_m": {
+     "p05": 4.83,
+     "median": 5.65,
+     "p95": 6.55
+    },
+    "top_m": {
+     "p05": 6.75,
+     "median": 7.06,
+     "p95": 7.38
+    },
+    "top_rule_m": 7.47,
+    "top_rule_why": "crane_height.py's own p95 gate height (6.90-7.47)"
+   },
+   "steel_door": {
+    "x_left_m": {
+     "p05": -4.31,
+     "median": -3.46,
+     "p95": -2.65
+    },
+    "x_right_m": {
+     "p05": -2.28,
+     "median": -1.45,
+     "p95": -0.64
+    },
+    "top_m": {
+     "p05": 2.25,
+     "median": 2.41,
+     "p95": 2.58
+    }
+   }
+  },
+  "model_gate": {
+   "x_m": [
+    -2.4,
+    2.4
+   ],
+   "top_m": 5.4,
+   "basis": "GUESS: hall json far_gate, \"far_gate_w_m: low (photo 004)\""
+  },
+  "judge_readings": {
+   "G3 (photo 007 gate 5.82 wide, centred)": {
+    "x_m": [
+     -2.91,
+     2.91
+    ],
+    "top_m": 7.47
+   },
+   "G4 (photo 007 gate, centre +1.4: the photo 032 fit)": {
+    "x_m": [
+     -1.51,
+     4.31
+    ],
+    "top_m": 7.47
+   },
+   "G7 (what-if: photo 007 taken from the near cab)": {
+    "x_m": [
+     -4.7,
+     0.9
+    ],
+    "top_m": 7.47
+   },
+   "source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/judge-laser-safety/judge_ls.py GATES (G3, G4, G7)"
+  },
+  "rule_set": [
+   "photo 007, safe-end jambs (G2)",
+   "the hall model's centred gate (G0)"
+  ],
+  "h1_hold_set": [
+   "G3 (photo 007 gate 5.82 wide, centred)",
+   "G4 (photo 007 gate, centre +1.4: the photo 032 fit)",
+   "G7 (what-if: photo 007 taken from the near cab)"
+  ],
+  "judge_readings_not_passed": {
+   "G3 (photo 007 centred)": -1.876,
+   "G4 (photo-032 read, centre +1.4)": -0.566,
+   "G7 (camera in the cab what-if)": -1.876,
+   "source": "~/work/agent-reports-2026-10-09/moxir-lead/cranes-lasers/judge-laser-safety/verdict.md + match/match.md: B-L fails these; the stop is hold point H1 (tape the gate's jambs)"
+  }
+ },
+ "checks": {
+  "summary": {
+   "lasers_worst_margin_m": 0.194,
+   "lasers_worst_at": [
+    "rig-lasercube-cut-06",
+    "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)"
+   ],
+   "lasers_min_body_gap_m": 0.448,
+   "lasers_min_level_margin_m": 3.538,
+   "lasers_min_opening_margin_m": 0.194,
+   "casts_all_on_far_wall_block": true,
+   "casts_all_clear_of_openings": true,
+   "mounts_clear_first_2_m": true,
+   "setup_sheet_zone_inside_window": true,
+   "lamp_bodies_min_gap_to_a_cube_tube_m": 7.66,
+   "forty_watt_their_worst_m": 0.232,
+   "forty_watt_body_rule_on_near_girders_m": -0.389,
+   "picks_worst_line_kg": 111.1,
+   "picks_worst_on_bridge_kg": 144.2,
+   "picks_pass": true,
+   "people_dj_gap_m": 0.665,
+   "people_public_gap_today_m": 0.33,
+   "people_public_gap_with_pen_condition_m": 0.622,
+   "lowest_lens_m": 3.145,
+   "dj_glare_ok": true,
+   "cut_light_into_people": 0,
+   "h1_judge_readings_worst_m (hold H1, not passed)": {
+    "end: far gate, the judge's G3 (x -2.91..2.91, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876,
+    "end: far gate, the judge's G4 (x -1.51..4.31, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -0.566,
+    "end: far gate, the judge's G7 (x -4.7..0.9, top 7.47) (2.5 m beside or 3.0 m over its 7.47 top)": -1.876
+   },
+   "b380f_into_people_or_cubes": 0,
+   "b380f_rays_on_the_cut (a look finding, not a rule)": {},
+   "dj_face_eye_height_lx": {
+    "dark": 20.0,
+    "peak": 19.9
+   },
+   "dj_head_top_lx": {
+    "dark": 184.6,
+    "peak": 186.8
+   },
+   "runtime_s": 38
+  },
+  "beams": [
+   {
+    "cube": "rig-lasercube-cut-01",
+    "colour": "ash white",
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "tops": {
+     "p05": {
+      "aperture_m": [
+       -4.5,
+       8.54,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.277,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -4.097,
+         9.091,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.371,
+        "item": "body: cube at x -3.80",
+        "at": [
+         -4.499,
+         8.541,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.49,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -4.095,
+         9.094,
+         -48.3
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.496,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.308,
+         8.803,
+         -30.0
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -4.499,
+         8.541,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.168,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -4.104,
+         9.081,
+         -47.493
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.538,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.499,
+         8.541,
+         -13.5
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.311,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -4.309,
+         8.8,
+         -29.843
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.76,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -4.499,
+         8.541,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -4.499,
+         8.541,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 15.472,
+        "item": "body: cut pick 2 (bridle + hoist + safety steel)",
+        "at": [
+         -4.499,
+         8.541,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p50": {
+      "aperture_m": [
+       -4.5,
+       8.81,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.239,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -4.097,
+         9.129,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.371,
+        "item": "body: cube at x -3.80",
+        "at": [
+         -4.499,
+         8.81,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.49,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -4.095,
+         9.13,
+         -48.3
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -4.499,
+         8.81,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.126,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -4.104,
+         9.123,
+         -47.496
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.41,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -4.309,
+         8.961,
+         -29.876
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.753,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -4.499,
+         8.81,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -4.499,
+         8.81,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 15.497,
+        "item": "body: cut pick 2 (bridle + hoist + safety steel)",
+        "at": [
+         -4.499,
+         8.81,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p95": {
+      "aperture_m": [
+       -4.5,
+       9.09,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.2,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -4.097,
+         9.168,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.371,
+        "item": "body: cube at x -3.80",
+        "at": [
+         -4.499,
+         9.09,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.49,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -4.095,
+         9.169,
+         -48.3
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -4.499,
+         9.09,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.082,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -4.104,
+         9.167,
+         -47.498
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.514,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -4.309,
+         9.127,
+         -29.912
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.752,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -4.499,
+         9.09,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -4.499,
+         9.09,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 15.528,
+        "item": "body: cut pick 2 (bridle + hoist + safety steel)",
+        "at": [
+         -4.499,
+         9.09,
+         -13.5
+        ]
+       }
+      }
+     }
+    },
+    "worst_margin_m": 0.195,
+    "variants": {
+     "photo 007 median jambs (G1), top p50": {
+      "margin_m": 0.239,
+      "binding": "body: roof bottom chord along x at z -48"
+     },
+     "the z -54 roof row counted (the laser judge)": {
+      "margin_m": 0.089,
+      "binding": "body: roof bottom chord along x at z -54"
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-02",
+    "colour": "ash white",
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "tops": {
+     "p05": {
+      "aperture_m": [
+       -3.8,
+       8.54,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.277,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.998,
+         9.091,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.371,
+        "item": "body: cube at x -4.50",
+        "at": [
+         -3.8,
+         8.541,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.585,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -4.0,
+         9.094,
+         -48.3
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -3.8,
+         8.541,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.168,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.995,
+         9.081,
+         -47.495
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.538,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -3.8,
+         8.541,
+         -13.5
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.639,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.895,
+         8.802,
+         -29.959
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.841,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -3.8,
+         8.541,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -3.8,
+         8.541,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 15.247,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -3.8,
+         8.541,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p50": {
+      "aperture_m": [
+       -3.8,
+       8.81,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.239,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.998,
+         9.129,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.371,
+        "item": "body: cube at x -4.50",
+        "at": [
+         -3.8,
+         8.81,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.585,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -4.0,
+         9.13,
+         -48.3
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -3.8,
+         8.81,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.126,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.995,
+         9.123,
+         -47.498
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.734,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.895,
+         8.962,
+         -29.991
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.834,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -3.8,
+         8.81,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -3.8,
+         8.81,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 15.29,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -3.8,
+         8.81,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p95": {
+      "aperture_m": [
+       -3.8,
+       9.09,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.2,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.998,
+         9.168,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.371,
+        "item": "body: cube at x -4.50",
+        "at": [
+         -3.8,
+         9.09,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.585,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -4.0,
+         9.169,
+         -48.3
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -3.8,
+         9.09,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.082,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.995,
+         9.167,
+         -47.499
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.834,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.895,
+         9.127,
+         -30.028
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.833,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -3.8,
+         9.09,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -3.8,
+         9.09,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 15.339,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -3.8,
+         9.09,
+         -13.5
+        ]
+       }
+      }
+     }
+    },
+    "worst_margin_m": 0.195,
+    "variants": {
+     "photo 007 median jambs (G1), top p50": {
+      "margin_m": 0.239,
+      "binding": "body: roof bottom chord along x at z -48"
+     },
+     "the z -54 roof row counted (the laser judge)": {
+      "margin_m": 0.089,
+      "binding": "body: roof bottom chord along x at z -54"
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-04",
+    "colour": "ember red",
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "tops": {
+     "p05": {
+      "aperture_m": [
+       -3.1,
+       8.54,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.277,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.9,
+         9.091,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.37,
+        "item": "body: cube at x -3.80",
+        "at": [
+         -3.101,
+         8.541,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.68,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.904,
+         9.094,
+         -48.3
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -3.101,
+         8.541,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.168,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.885,
+         9.081,
+         -47.487
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.538,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -3.101,
+         8.541,
+         -13.5
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 7.973,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.484,
+         8.804,
+         -30.089
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.958,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -3.101,
+         8.541,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -3.101,
+         8.541,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.805,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -3.101,
+         8.541,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p50": {
+      "aperture_m": [
+       -3.1,
+       8.81,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.239,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.9,
+         9.129,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.37,
+        "item": "body: cube at x -3.80",
+        "at": [
+         -3.101,
+         8.81,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.681,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.904,
+         9.13,
+         -48.3
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -3.101,
+         8.81,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.126,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.885,
+         9.123,
+         -47.49
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.064,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.485,
+         8.963,
+         -30.122
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.952,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -3.101,
+         8.81,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -3.101,
+         8.81,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.849,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -3.101,
+         8.81,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p95": {
+      "aperture_m": [
+       -3.1,
+       9.09,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.2,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.9,
+         9.168,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.37,
+        "item": "body: cube at x -3.80",
+        "at": [
+         -3.101,
+         9.09,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.397,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.534,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.681,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.904,
+         9.169,
+         -48.3
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -3.101,
+         9.09,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.082,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.885,
+         9.167,
+         -47.491
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.159,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.486,
+         9.128,
+         -30.158
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.951,
+        "item": "body: pendant lamp x -6 z 0 (modelled, from 9.0)",
+        "at": [
+         -3.101,
+         9.09,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -3.101,
+         9.09,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.9,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -3.101,
+         9.09,
+         -13.5
+        ]
+       }
+      }
+     }
+    },
+    "worst_margin_m": 0.195,
+    "variants": {
+     "photo 007 median jambs (G1), top p50": {
+      "margin_m": 0.239,
+      "binding": "body: roof bottom chord along x at z -48"
+     },
+     "the z -54 roof row counted (the laser judge)": {
+      "margin_m": 0.089,
+      "binding": "body: roof bottom chord along x at z -54"
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-05",
+    "colour": "ember red",
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "tops": {
+     "p05": {
+      "aperture_m": [
+       -2.4,
+       8.54,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.277,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.801,
+         9.091,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.37,
+        "item": "body: cube at x -3.10",
+        "at": [
+         -2.402,
+         8.541,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.396,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.533,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.773,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.815,
+         9.096,
+         -48.45
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -2.402,
+         8.541,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.168,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.775,
+         9.08,
+         -47.468
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.538,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -2.402,
+         8.541,
+         -13.5
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.31,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.078,
+         8.807,
+         -30.233
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.871,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -2.402,
+         8.541,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.363,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -2.402,
+         8.541,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -2.402,
+         8.541,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p50": {
+      "aperture_m": [
+       -2.4,
+       8.81,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.239,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.801,
+         9.129,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.37,
+        "item": "body: cube at x -3.10",
+        "at": [
+         -2.402,
+         8.81,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.396,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.533,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.773,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.815,
+         9.132,
+         -48.45
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -2.402,
+         8.81,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.126,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.775,
+         9.123,
+         -47.471
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.397,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.08,
+         8.965,
+         -30.266
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.865,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -2.402,
+         8.81,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.408,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -2.402,
+         8.81,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -2.402,
+         8.81,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p95": {
+      "aperture_m": [
+       -2.4,
+       9.09,
+       -13.45
+      ],
+      "worst_margin_m": 0.195,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.195,
+        "item": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.199,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.801,
+         9.168,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.37,
+        "item": "body: cube at x -3.10",
+        "at": [
+         -2.402,
+         9.09,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.396,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.533,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.773,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.815,
+         9.169,
+         -48.45
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.749,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -2.402,
+         9.09,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.082,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.775,
+         9.167,
+         -47.472
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.595,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.489,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -3.081,
+         9.128,
+         -30.302
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.863,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -2.402,
+         9.09,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.461,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -2.402,
+         9.09,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -2.402,
+         9.09,
+         -13.5
+        ]
+       }
+      }
+     }
+    },
+    "worst_margin_m": 0.195,
+    "variants": {
+     "photo 007 median jambs (G1), top p50": {
+      "margin_m": 0.239,
+      "binding": "body: roof bottom chord along x at z -48"
+     },
+     "the z -54 roof row counted (the laser judge)": {
+      "margin_m": 0.089,
+      "binding": "body: roof bottom chord along x at z -54"
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-03",
+    "colour": "ash white",
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "tops": {
+     "p05": {
+      "aperture_m": [
+       -1.7,
+       8.54,
+       -13.45
+      ],
+      "worst_margin_m": 0.194,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.194,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.276,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.707,
+         9.092,
+         -48.188
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.369,
+        "item": "body: cube at x -2.40",
+        "at": [
+         -1.703,
+         8.541,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.396,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.533,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.865,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.722,
+         9.096,
+         -48.45
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.748,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -1.703,
+         8.541,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.169,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.664,
+         9.08,
+         -47.439
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.538,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -1.703,
+         8.541,
+         -13.5
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.65,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -2.679,
+         8.809,
+         -30.391
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.779,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -1.703,
+         8.541,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 13.921,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -1.703,
+         8.541,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -1.703,
+         8.541,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p50": {
+      "aperture_m": [
+       -1.7,
+       8.81,
+       -13.45
+      ],
+      "worst_margin_m": 0.194,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.194,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.238,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.707,
+         9.129,
+         -48.191
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.369,
+        "item": "body: cube at x -2.40",
+        "at": [
+         -1.703,
+         8.81,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.396,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.533,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.865,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.722,
+         9.132,
+         -48.45
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.748,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -1.703,
+         8.81,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.126,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.664,
+         9.123,
+         -47.442
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.594,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.734,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -2.681,
+         8.966,
+         -30.424
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.773,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -1.703,
+         8.81,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 13.968,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -1.703,
+         8.81,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -1.703,
+         8.81,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p95": {
+      "aperture_m": [
+       -1.7,
+       9.09,
+       -13.45
+      ],
+      "worst_margin_m": 0.194,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.194,
+        "item": "end: far gate (photo 007, jambs at the safe ends) (2.5 m beside or 3.0 m over its 7.47 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.199,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.703,
+         9.168,
+         -48.12
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.369,
+        "item": "body: cube at x -2.40",
+        "at": [
+         -1.703,
+         9.09,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.396,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.533,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.865,
+        "item": "body: pendant lamp x -6 z -48 (ASSUMED row, never seen)",
+        "at": [
+         -3.722,
+         9.169,
+         -48.45
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.748,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -1.703,
+         9.09,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.082,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.664,
+         9.167,
+         -47.443
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.594,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.822,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -2.683,
+         9.128,
+         -30.46
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.771,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -1.703,
+         9.09,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 14.022,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -1.703,
+         9.09,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -1.703,
+         9.09,
+         -13.5
+        ]
+       }
+      }
+     }
+    },
+    "worst_margin_m": 0.194,
+    "variants": {
+     "photo 007 median jambs (G1), top p50": {
+      "margin_m": 0.238,
+      "binding": "body: roof bottom chord along x at z -48"
+     },
+     "the z -54 roof row counted (the laser judge)": {
+      "margin_m": 0.088,
+      "binding": "body: roof bottom chord along x at z -54"
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-06",
+    "colour": "ash white",
+    "to": [
+     -4.031,
+     9.181,
+     -53.8
+    ],
+    "tops": {
+     "p05": {
+      "aperture_m": [
+       -1.0,
+       8.54,
+       -13.45
+      ],
+      "worst_margin_m": 0.194,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.194,
+        "item": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.275,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.606,
+         9.091,
+         -48.148
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.368,
+        "item": "body: cube at x -1.70",
+        "at": [
+         -1.004,
+         8.541,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.395,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.515,
+        "item": "body: pendant lamp x 0 z -18 (ASSUMED row, never seen)",
+        "at": [
+         -1.319,
+         8.608,
+         -17.7
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.532,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.748,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -1.004,
+         8.541,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.17,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.55,
+         9.079,
+         -47.4
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.538,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -1.004,
+         8.541,
+         -13.5
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 8.992,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -2.285,
+         8.812,
+         -30.563
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.724,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -1.004,
+         8.541,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 13.48,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -1.004,
+         8.541,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -1.004,
+         8.541,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p50": {
+      "aperture_m": [
+       -1.0,
+       8.81,
+       -13.45
+      ],
+      "worst_margin_m": 0.194,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.194,
+        "item": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.237,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.607,
+         9.129,
+         -48.151
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.368,
+        "item": "body: cube at x -1.70",
+        "at": [
+         -1.004,
+         8.81,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.395,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.453,
+        "item": "body: pendant lamp x 0 z -18 (ASSUMED row, never seen)",
+        "at": [
+         -1.319,
+         8.849,
+         -17.7
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.532,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.748,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -1.004,
+         8.81,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.127,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.55,
+         9.122,
+         -47.403
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.594,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 9.072,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -2.288,
+         8.968,
+         -30.595
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.717,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -1.004,
+         8.81,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 13.529,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -1.004,
+         8.81,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -1.004,
+         8.81,
+         -13.5
+        ]
+       }
+      }
+     },
+     "p95": {
+      "aperture_m": [
+       -1.0,
+       9.09,
+       -13.45
+      ],
+      "worst_margin_m": 0.194,
+      "binding": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+      "by_group": {
+       "end: far wall openings": {
+        "margin_m": 0.194,
+        "item": "end: far gate as the hall model draws it (x -2.4..2.4, 5.4 m) (2.5 m beside or 3.0 m over its 5.40 top)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "roof": {
+        "margin_m": 0.198,
+        "item": "body: roof bottom chord along x at z -48",
+        "at": [
+         -3.607,
+         9.168,
+         -48.152
+        ]
+       },
+       "the other cubes": {
+        "margin_m": 0.368,
+        "item": "body: cube at x -1.70",
+        "at": [
+         -1.004,
+         9.09,
+         -13.5
+        ]
+       },
+       "end: far wall": {
+        "margin_m": 0.395,
+        "item": "end: under the far wall's plaster top (10.79, body rule)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "pendant lamps, ASSUMED rows": {
+        "margin_m": 0.442,
+        "item": "body: pendant lamp x 0 z -18 (ASSUMED row, never seen)",
+        "at": [
+         -1.319,
+         9.1,
+         -17.7
+        ]
+       },
+       "the 40 W lasers (#873 keep-out)": {
+        "margin_m": 0.532,
+        "item": "body: KO-3 the two beams z -53.8..-30",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "free crane": {
+        "margin_m": 1.748,
+        "item": "body: free crane stage-side girder",
+        "at": [
+         -1.004,
+         9.09,
+         -13.5
+        ]
+       },
+       "lanterns": {
+        "margin_m": 3.082,
+        "item": "body: lantern glazing (from the deck 13.35)",
+        "at": [
+         -3.551,
+         9.167,
+         -47.404
+        ]
+       },
+       "standing levels (3.0 m over / 2.5 m beside)": {
+        "margin_m": 3.594,
+        "item": "level: hall floor (dance floor, backstage, everywhere)",
+        "at": [
+         -4.031,
+         9.181,
+         -53.8
+        ]
+       },
+       "lamp bodies (v2 cranes rig, spheres)": {
+        "margin_m": 9.156,
+        "item": "body: lamp rig-beam-planes-07",
+        "at": [
+         -2.291,
+         9.129,
+         -30.631
+        ]
+       },
+       "pendant lamps, modelled rows": {
+        "margin_m": 12.716,
+        "item": "body: pendant lamp x 0 z 0 (modelled, from 9.0)",
+        "at": [
+         -1.004,
+         9.09,
+         -13.5
+        ]
+       },
+       "the cut (z 3.20)": {
+        "margin_m": 13.584,
+        "item": "body: cut tie-off hr (strap)",
+        "at": [
+         -1.004,
+         9.09,
+         -13.5
+        ]
+       },
+       "near crane (z 3.20)": {
+        "margin_m": 14.747,
+        "item": "body: near crane girder z +2.10",
+        "at": [
+         -1.004,
+         9.09,
+         -13.5
+        ]
+       }
+      }
+     }
+    },
+    "worst_margin_m": 0.194,
+    "variants": {
+     "photo 007 median jambs (G1), top p50": {
+      "margin_m": 0.237,
+      "binding": "body: roof bottom chord along x at z -48"
+     },
+     "the z -54 roof row counted (the laser judge)": {
+      "margin_m": 0.087,
+      "binding": "body: roof bottom chord along x at z -54"
+     }
+    }
+   }
+  ],
+  "casts": [
+   {
+    "cube": "rig-lasercube-cut-01",
+    "p05": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.594,
+       -3.467
+      ],
+      "end_y_m": [
+       8.618,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.741,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p50": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.594,
+       -3.467
+      ],
+      "end_y_m": [
+       8.618,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.741,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p95": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.594,
+       -3.467
+      ],
+      "end_y_m": [
+       8.618,
+       9.744
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.741,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-02",
+    "p05": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.595,
+       -3.468
+      ],
+      "end_y_m": [
+       8.618,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.741,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p50": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.595,
+       -3.468
+      ],
+      "end_y_m": [
+       8.618,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.741,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p95": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.594,
+       -3.468
+      ],
+      "end_y_m": [
+       8.618,
+       9.744
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.741,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-04",
+    "p05": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.595,
+       -3.467
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.742,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.892
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p50": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.595,
+       -3.467
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.742,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p95": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.595,
+       -3.467
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.742,
+       -3.321
+      ],
+      "end_y_m": [
+       8.471,
+       9.891
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-05",
+    "p05": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.596,
+       -3.467
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.743,
+       -3.32
+      ],
+      "end_y_m": [
+       8.47,
+       9.892
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p50": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.596,
+       -3.467
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.743,
+       -3.32
+      ],
+      "end_y_m": [
+       8.471,
+       9.892
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p95": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.596,
+       -3.467
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.743,
+       -3.32
+      ],
+      "end_y_m": [
+       8.47,
+       9.892
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-03",
+    "p05": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.597,
+       -3.466
+      ],
+      "end_y_m": [
+       8.617,
+       9.746
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.744,
+       -3.319
+      ],
+      "end_y_m": [
+       8.47,
+       9.893
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p50": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.597,
+       -3.466
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.744,
+       -3.319
+      ],
+      "end_y_m": [
+       8.47,
+       9.892
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p95": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.597,
+       -3.466
+      ],
+      "end_y_m": [
+       8.617,
+       9.745
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.744,
+       -3.319
+      ],
+      "end_y_m": [
+       8.47,
+       9.892
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    }
+   },
+   {
+    "cube": "rig-lasercube-cut-06",
+    "p05": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.598,
+       -3.465
+      ],
+      "end_y_m": [
+       8.616,
+       9.746
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.746,
+       -3.318
+      ],
+      "end_y_m": [
+       8.469,
+       9.893
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p50": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.598,
+       -3.465
+      ],
+      "end_y_m": [
+       8.616,
+       9.746
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.746,
+       -3.318
+      ],
+      "end_y_m": [
+       8.469,
+       9.893
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    },
+    "p95": {
+     "fan_0_8": {
+      "rays": 61,
+      "half_fan_deg": 0.8,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.598,
+       -3.465
+      ],
+      "end_y_m": [
+       8.616,
+       9.746
+      ],
+      "bad": []
+     },
+     "fan_1_008": {
+      "rays": 61,
+      "half_fan_deg": 1.008,
+      "all_first_hit_far_wall_block": true,
+      "all_clear_of_openings": true,
+      "first_hits": [
+       "hall-block"
+      ],
+      "end_x_m": [
+       -4.746,
+       -3.318
+      ],
+      "end_y_m": [
+       8.469,
+       9.893
+      ],
+      "bad": []
+     },
+     "mount": {
+      "rays": 61,
+      "clear_first_2_m": true,
+      "hits": []
+     }
+    }
+   }
+  ],
+  "lamp_clearance": [
+   {
+    "id": "rig-beam-planes-07",
+    "part": "plane 3 (behind the stage)",
+    "gap_m": 7.66,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-par-planes-07",
+    "part": "columns",
+    "gap_m": 8.688,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-par-planes-09",
+    "part": "columns",
+    "gap_m": 8.705,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-par-planes-11",
+    "part": "columns",
+    "gap_m": 8.833,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-08",
+    "part": "plane 3 (behind the stage)",
+    "gap_m": 9.559,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-10",
+    "part": "plane 3 (behind the stage)",
+    "gap_m": 9.577,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-12",
+    "part": "plane 2 (the wings)",
+    "gap_m": 9.693,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-smoke-planes",
+    "part": "haze",
+    "gap_m": 10.157,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-05",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.261,
+    "nearest_cube": "rig-lasercube-cut-04"
+   },
+   {
+    "id": "rig-beam-planes-06",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.261,
+    "nearest_cube": "rig-lasercube-cut-05"
+   },
+   {
+    "id": "rig-beam-planes-04",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.263,
+    "nearest_cube": "rig-lasercube-cut-01"
+   },
+   {
+    "id": "rig-beam-planes-03",
+    "part": "plane 1 (behind the DJ)",
+    "gap_m": 11.284,
+    "nearest_cube": "rig-lasercube-cut-01"
+   }
+  ],
+  "forty_watt": {
+   "rig-la40wf-entry-01": {
+    "their_terms": {
+     "near crane bridge at z 3.20 (#873's term: safe underside 7.2, no pad)": 0.232,
+     "the cut at z 3.20 (#873's term)": 1.341,
+     "cut pick 1 (bridle + hoist + safety steel) (#873's term)": 2.157,
+     "cut pick 2 (bridle + hoist + safety steel) (#873's term)": 1.07,
+     "cut pick 3 (bridle + hoist + safety steel) (#873's term)": 6.618,
+     "cut tie-off hl (strap) (r 0.05, margin 0.25)": 3.812,
+     "cut tie-off hr (strap) (r 0.05, margin 0.25)": 7.11,
+     "lamp bodies of the v2 cranes rig (sphere, margin 0.25)": 1.012
+    },
+    "their_worst_m": 0.232,
+    "nearest_lamp": "rig-par-cut-03",
+    "cubes_body_rule_on_the_near_girders_m": -0.389
+   },
+   "rig-la40wf-entry-02": {
+    "their_terms": {
+     "near crane bridge at z 3.20 (#873's term: safe underside 7.2, no pad)": 0.232,
+     "the cut at z 3.20 (#873's term)": 1.22,
+     "cut pick 1 (bridle + hoist + safety steel) (#873's term)": 2.622,
+     "cut pick 2 (bridle + hoist + safety steel) (#873's term)": 0.605,
+     "cut pick 3 (bridle + hoist + safety steel) (#873's term)": 6.154,
+     "cut tie-off hl (strap) (r 0.05, margin 0.25)": 4.167,
+     "cut tie-off hr (strap) (r 0.05, margin 0.25)": 6.642,
+     "lamp bodies of the v2 cranes rig (sphere, margin 0.25)": 1.14
+    },
+    "their_worst_m": 0.232,
+    "nearest_lamp": "rig-par-cut-03",
+    "cubes_body_rule_on_the_near_girders_m": -0.389
+   }
+  },
+  "world": {
+   "glb": "/mnt/data/footage/place-moxir-hall-v10-show-park-2026-10-09/hall.glb",
+   "glb_sha256": "1a1d47509200f81e9e281e966dd29269ccc64e82c9a0c014f55c1a996740ff2d",
+   "hall": "scripts/place/rigs/moxir-hall-2026-10-09-v10-show-park.hall.json",
+   "near_crane_z_m": 3.2,
+   "free_crane_z_m": -12.0,
+   "near_top_m": [
+    8.92,
+    9.02
+   ],
+   "roof_truss_bottom_m": 10.6,
+   "pendant_lamps": "modelled rows z 0..24 + ASSUMED rows z -48..-6, 30..48, from 9.0 m"
+  },
+  "passes": true
+ }
+}
