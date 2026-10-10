@@ -384,7 +384,7 @@ CUT_878 = {'crane_z_m': 3.2, 'section_m': 0.29,
            'girder': {'dz_m': 1.1, 'half_w_m': 0.35, 'y_m': (7.6, 8.92), 'x_abs_m': 11.35}}   # as fan_park_meets (the cranes-lasers fact sheet's upper bound)
 CUBES_878 = {'z0_m': -13.45, 'x_m': (-4.5, -1.0), 'y_m': (8.54, 9.09), 'end_m': (-4.031, 9.181, -53.8),   # units[].aperture_m p05..p95, aim.end_m
              'fan_deg': 1.008, 'waist_m': 0.004, 'margin_m': 0.25}  # rule: the 1.008 deg tube (+4 mm) keeps >= 0.25 m from every body
-B380F_HALF_DEG = math.degrees(0.0157) / 2.0   # the rig's angle_rad (full beam angle) for an up-b380f
+B380F_HALF_DEG = math.degrees(0.0157)   # the rig's angle_rad for an up-b380f is a HALF angle (epic_plot.py:483; three.js SpotLight.angle) = 0.9 deg; datasheet beam380 1.8 deg full (fixtures.json)
 SLOT_STEP_M = 3.0                 # the candidate grid for out-of-crowd places (beams and PARs)
 SLOT_MAX_FROM_PUBLIC_M = 12.0     # farther from the crowd, a unit lights nobody's view much: not scored
 RAMP_SECTION_M = 1.0              # ASSUMED: cable-protector sections 1 m long (the rental's model owed)

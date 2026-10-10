@@ -1225,7 +1225,10 @@ def checks(repo):
         head = np.array([f['p'][0], f['p'][1] - 0.7 + S.HEAD_Y, f['p'][2]])
         import occlusion_lib as O
         dirs, _ = O.cone_rays(LB.aim_dir(f['r']), 0.9, O.SPEC_RINGS)
-        t, names, cls, mesh = Cb.cast(head, dirs, reach=140.0, tmin=0.3, extra=ppl)
+        # a FLOOR-STANDING head (y < 2.4 m: the ground layer, out of the crowd by HEAD_REACH_M 1.5 m, ISO 13857 Table 2) sits INSIDE this check's
+        # 'people everywhere' volume, so every ray hit it at tmin (c3-split 2026-10-10). Its beams are judged by the ground layer's own model
+        # (moxir_v2_ground.py people_cells / checks_878, moxir-v2-ground.test.js 'every floor B380F out of the crowd'); this check keeps the hung ones.
+        t, names, cls, mesh = Cb.cast(head, dirs, reach=140.0, tmin=0.3, extra=ppl if head[1] >= 2.4 else [])
         b380.append({'id': f['id'], 'part': f['part'], 'into_people': int(sum(c == 'people' for c in cls)), 'into_cubes': int(sum(c == 'laser' for c in cls)),
                      'into_the_cut': int(sum(c in ('truss', 'rigging') for c in cls)), 'ends': sorted(set(n for n in names if n))})
     log('B380F done')
