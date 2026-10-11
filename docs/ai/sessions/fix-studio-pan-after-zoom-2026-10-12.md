@@ -1,3 +1,5 @@
+## 2026-10-12 — the Studio is stuck after a wheel zoom into open air (owner, ledger N511)
+
 ## 2026-10-12 measure: does the Auto Depth fix (2e20d44e) remove "zoom in, then right-drag is stuck" in the Studio editor?
 
 Result: NO, not in the case that reproduces the bug. Before (installed di 0.4.4-dev.0dc90bf2, studio preset autoDepth false) and after
