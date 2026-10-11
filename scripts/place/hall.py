@@ -226,7 +226,7 @@ MATERIALS = {
     'zone-stage':     ((0.02, 0.8, 0.08), 0.9, 0.0, (0.02, 0.8, 0.08)),
     'zone-backstage': ((1.0, 0.06, 0.03), 0.9, 0.0, (1.0, 0.06, 0.03)),
 }
-EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.06}   # shell: tuned on the owner's screen in the live viewer (ACES, exposure 3.5), 2026-10-12 02:15: 0.12 still read as light walls inside
+EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.0}   # shell: no light of its own (owner 2026-10-12 03:17: a self-lit wall reads as a flat board); walls show where lamps hit them
 SHELL_ALPHA = None    # set by --shell-alpha (0..1): the envelope's opacity; None = opaque block/deck as before
 # Open surfaces (the frame's prisms, glass planes): drawn from both sides and
 # never run through the "make normals consistent" pass meant for closed boxes.
