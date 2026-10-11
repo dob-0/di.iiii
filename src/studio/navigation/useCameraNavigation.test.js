@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Group, Scene } from 'three'
-import { applyPivot, entityRoots, settleForGesture } from './useCameraNavigation.js'
+import { applyPivot, entityRoots, resolveMissDepth, settleForGesture } from './useCameraNavigation.js'
 
 describe('adapter helpers', () => {
     it('applyPivot never moves the orbit point while camera-controls is animating', () => {
@@ -43,5 +43,23 @@ describe('settleForGesture', () => {
         settleForGesture({ active: false, stop: () => { stopped += 1 } })
         settleForGesture(null)
         expect(stopped).toBe(1)
+    })
+})
+
+describe('resolveMissDepth (nothing under the pointer)', () => {
+    it('first gesture: the framing distance is the depth, and is remembered', () => {
+        expect(resolveMissDepth(null, 24.2, 4.5)).toEqual({ depth: 24.2, remembered: 24.2 })
+    })
+    it('the 0.35 m clamp after a zoom into air never replaces the remembered depth', () => {
+        expect(resolveMissDepth(24.2, 0.399, 4.46)).toEqual({ depth: 24.2, remembered: 24.2 })
+    })
+    it('a zoom-out or a new framing (larger view distance) is adopted', () => {
+        expect(resolveMissDepth(3, 60, 4.5)).toEqual({ depth: 60, remembered: 60 })
+    })
+    it('the nearest surface is the floor of the answer when the remembered depth is nearer', () => {
+        expect(resolveMissDepth(2, 0.399, 4.46)).toEqual({ depth: 4.46, remembered: 4.46 })
+    })
+    it('empty space with nothing remembered: null, so applyPivot keeps the target', () => {
+        expect(resolveMissDepth(null, NaN, null)).toEqual({ depth: null, remembered: null })
     })
 })

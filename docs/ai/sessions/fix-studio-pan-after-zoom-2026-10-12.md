@@ -54,3 +54,17 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   (it keeps moving instead of dying at 6 cm). A first version that used the fallback whenever the ray missed slowed the approach
   to 0.29 m per notch from the start (7.2 m in 25 notches) and was dropped.
 - Not seen by the owner's hands yet. Rerun: `NAV_TRACE=1 NAV_NOTCHES=25 NAV_URL=<studio url> di-test-browser run scripts/nav/measure-pan-after-zoom.cjs`.
+
+## Owner's hands, round 1 (2026-10-12, moxir-test): "when I look forward and want to go down it is slow"
+
+- Measured first: a down drag and a sideways drag move the SAME (1.113 m per 240 px after 12 notches, both axes), so
+  "slow" is the whole grab in fog, not the direction. The nearest-surface rule alone picks the floor 3.5–4.5 m below
+  the camera: the most cautious depth in a 100 m hall.
+- Rule now (`resolveMissDepth`): on a miss, keep the depth the view last had from a real surface or a framing (Blender's
+  "previous depth"), never the 0.35 m clamp; a larger view distance (framing, zoom-out) is adopted, a smaller one may be
+  the clamp and is not; the nearest surface stays the floor of the answer. 5 unit tests.
+- Measured (12 notches at the centre, then 240 px right-drag): pan 1.113 → 7.747 m; every wheel notch 3.8 m (constant,
+  the framing depth of 24 m re-placed ahead at each quiet burst; before: decaying to 0.58 m by the 12th notch);
+  zoom total 21.1 → 43.8 m; max pan frame jump 0.387 m. Pointer on a surface keeps the exact grab (hit sets the depth).
+- Not measured: the 25-notch run timed out waiting for a test-browser lane (a peer was using lane 2); the 12-notch run
+  shows the rule. Owner's hands next.

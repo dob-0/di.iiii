@@ -9,6 +9,7 @@
 // the orbit point to the surface under the pointer (pickPivot).
 import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
+import { Vector3 } from 'three'
 import { clientToNdc, fallbackPivot, pickPivot, selectionCenter } from './autoDepth.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
@@ -42,6 +43,17 @@ export function settleForGesture(cc) {
     if (cc?.active) cc.stop()
 }
 
+// The depth to use when nothing is under the pointer. `remembered` is the last depth that came from a real surface or
+// a framing; `viewDistance` is camera-controls' current orbit distance; `nearestDepth` the nearest surface around the
+// camera (null in empty space). A larger view distance than remembered can only come from a framing or a zoom-out, so
+// it is adopted; a smaller one may be the clamp, so it is not. The nearest surface is the floor of the answer.
+export function resolveMissDepth(remembered, viewDistance, nearestDepth) {
+    let depth = remembered ?? null
+    if (Number.isFinite(viewDistance) && viewDistance > 0 && (depth == null || viewDistance > depth)) depth = viewDistance
+    if (nearestDepth != null && (depth == null || nearestDepth > depth)) depth = nearestDepth
+    return { depth, remembered: depth }
+}
+
 export function useCameraNavigation({
     controlsRef,
     presetId,
@@ -55,6 +67,7 @@ export function useCameraNavigation({
     // Read at gesture time, so a new selection does not re-register listeners.
     const selectionRef = useRef(selectedEntityIds)
     useEffect(() => { selectionRef.current = selectedEntityIds }, [selectedEntityIds])
+    const depthRef = useRef(null)
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
@@ -85,17 +98,26 @@ export function useCameraNavigation({
             if (!ndc) { trace({ action, gestureStart, why: 'no ndc' }); return }
             const roots = entityRoots(scene)
             const hit = pickPivot({ camera: cc.camera, ndc, objects: roots })
-            // Nothing under the pointer (fog, open air): Blender keeps the depth it has, and so do we while that depth
-            // is farther than the nearest surface around the camera (the approach down a hall stays fast). Once the
-            // orbit point has come closer than that surface (camera-controls drags it to its 0.35 m clamp), the nearest
-            // surface sets the depth instead, so a pan or a wheel step is never scaled by the clamp (see autoDepth.js).
+            // Nothing under the pointer (fog, open air): Blender keeps the depth the view had. We keep the depth the view
+            // LAST HAD FROM A REAL SURFACE OR A FRAMING (resolveMissDepth), never the 0.35 m clamp camera-controls drags
+            // the orbit point to while zooming into air; the nearest surface around the camera is its floor. The owner
+            // (2026-10-12) found the nearest surface alone "slow": 1.1 m per 240 px drag 4 m above a 100 m hall's floor.
             let point = hit
-            if (!point) {
-                const fb = fallbackPivot({ camera: cc.camera, objects: roots })
-                if (fb && cc.distance < cc.camera.position.distanceTo(fb)) point = fb
+            let fallback = null
+            if (hit) {
+                depthRef.current = cc.camera.position.distanceTo(hit)
+            } else {
+                const nearest = fallbackPivot({ camera: cc.camera, objects: roots })
+                const nearestDepth = nearest ? cc.camera.position.distanceTo(nearest) : null
+                const { depth, remembered } = resolveMissDepth(depthRef.current, cc.distance, nearestDepth)
+                depthRef.current = remembered
+                if (depth != null) {
+                    fallback = cc.camera.getWorldDirection(new Vector3()).multiplyScalar(depth).add(cc.camera.position)
+                    point = fallback
+                }
             }
             const applied = applyPivot(cc, point, { force: gestureStart })
-            trace({ action, gestureStart, roots: roots.length, ndc: ndc.map((v) => +v.toFixed(3)), hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, fallback: !hit && point ? [point.x, point.y, point.z].map((v) => +v.toFixed(2)) : null, applied, active: cc.active, distance: +cc.distance.toFixed(3) })
+            trace({ action, gestureStart, roots: roots.length, ndc: ndc.map((v) => +v.toFixed(3)), hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, fallback: fallback ? [fallback.x, fallback.y, fallback.z].map((v) => +v.toFixed(2)) : null, remembered: depthRef.current == null ? null : +depthRef.current.toFixed(2), applied, active: cc.active, distance: +cc.distance.toFixed(3) })
         }
 
         const onPointerDown = (event) => {

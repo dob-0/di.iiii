@@ -8,6 +8,7 @@ const { chromium } = require('playwright')
 const URL = process.env.NAV_URL
 const NOTCHES = Number(process.env.NAV_NOTCHES || 12)
 const DRAG = Number(process.env.NAV_DRAG || 240)
+const AXIS = process.env.NAV_AXIS === 'y' ? 'y' : 'x'   // drag right (x) or drag DOWN (y)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const install = () => {
@@ -78,7 +79,7 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     await page.mouse.move(cx, cy)
     await page.mouse.down({ button: 'right' })
     const steps = 20
-    for (let i = 1; i <= steps; i++) { await page.mouse.move(cx + (DRAG * i) / steps, cy); await sleep(300 / steps) }
+    for (let i = 1; i <= steps; i++) { await page.mouse.move(AXIS === 'x' ? cx + (DRAG * i) / steps : cx, AXIS === 'y' ? cy + (DRAG * i) / steps : cy); await sleep(300 / steps) }
     await page.mouse.up({ button: 'right' })
     const m2 = await mark()
     await sleep(600)
