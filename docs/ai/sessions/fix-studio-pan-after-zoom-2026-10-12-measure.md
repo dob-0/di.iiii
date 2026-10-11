@@ -28,3 +28,27 @@ was over a floating panel: no zoom in either build, invalid. (3) Not the owner's
 (5) Screenshots after the drag: scratchpad before.png / after.png / before-n25.png / after-n25.png.
 Owed: the real fix for the 25-notch case, e.g. scale pan speed from the distance to the surface under the pointer rather than the clamped orbit
 distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-measure with this script (expected: pan m / 240 px grows from 0.128).
+
+## The cause, and the fix measured (same session, after the table above)
+
+- The dev-only trace (`window.__diNavTrace`, `NAV_TRACE=1`) showed the pan handler firing with 147 entity roots and the pointer
+  ray hitting NOTHING: at the hall's centre the pointer sits on fog / the open length of the hall. Blender's Auto Depth has no
+  answer for a miss (it keeps the previous depth); here the previous depth is camera-controls' 0.35 m clamp, dragged along by
+  `infinityDolly` while zooming into air, so every pan and wheel step was scaled by 0.35–0.4 m. `scripts/nav/probe-pick.cjs`
+  cast rays from the stuck camera along six world axes: floor 4.46 m down, roof 8.89 m up, wall 3.68 m behind, nothing ahead
+  or to the sides (even with every material double-sided). So the miss is geometric, not a raycast fault.
+- Fix (`autoDepth.js fallbackPivot`, used by `useCameraNavigation.js` for PAN and DOLLY): when the pointer ray misses and the
+  orbit point is already closer than the nearest surface around the camera, the pivot is placed that nearest-surface distance
+  along the view ray. Our rule, written down as such; while the orbit point is farther than that surface, Blender's rule holds
+  (depth unchanged) so the approach down a hall is as fast as before.
+- Measured AFTER (MOXIR v1.1 Studio, real mouse on the RTX 3080, 240 px right-drag after N wheel notches at the canvas centre):
+
+| case | pan before | pan after | orbit distance before → after | last wheel notch before → after | max pan frame jump after |
+|---|---|---|---|---|---|
+| 25 notches | 0.128 m | 1.644 m | 0.399 m → 5.13 m | 0.063 m → 0.79 m | 0.082 m |
+| 12 notches | 0.996 m | 1.111 m | 3.11 m → 3.47 m | 0.579 m → 0.64 m | 0.056 m |
+
+  The first notches are identical before and after (3.80, 3.20, 2.70 m). Zoom-in total over 25 notches: 23.8 m → 29.4 m
+  (it keeps moving instead of dying at 6 cm). A first version that used the fallback whenever the ray missed slowed the approach
+  to 0.29 m per notch from the start (7.2 m in 25 notches) and was dropped.
+- Not seen by the owner's hands yet. Rerun: `NAV_TRACE=1 NAV_NOTCHES=25 NAV_URL=<studio url> di-test-browser run scripts/nav/measure-pan-after-zoom.cjs`.

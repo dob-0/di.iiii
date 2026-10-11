@@ -95,6 +95,7 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
         zoomTotalM: +f(dist(p0, p1)), zoomPerNotchM: perNotch.map((v) => +f(v)), zoomMeanPerNotchM: +f(dist(p0, p1) / NOTCHES), zoomMaxFrameJumpM: +f(zmax),
         panNetM: +f(dist(p1, p2)), panMaxFrameJumpM: +f(maxJump), panFrames: seg.length, camBefore: p0.slice(1, 4).map((v) => +f(v)), camAfterZoom: p1.slice(1, 4).map((v) => +f(v)), camAfterPan: p2.slice(1, 4).map((v) => +f(v)), orbitDistanceM: { before: +f(p0[4]), afterZoom: +f(p1[4]), afterPan: +f(p2[4]) },
     }))
+    if (process.env.NAV_TRACE) console.log('TRACE', JSON.stringify(await page.evaluate(() => (window.__diNavTrace || []).slice(-6))))
     if (process.env.NAV_SHOT) await page.screenshot({ path: process.env.NAV_SHOT })
     await page.close()
     process.exit(0)

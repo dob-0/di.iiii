@@ -9,7 +9,7 @@
 // the orbit point to the surface under the pointer (pickPivot).
 import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
-import { clientToNdc, pickPivot, selectionCenter } from './autoDepth.js'
+import { clientToNdc, fallbackPivot, pickPivot, selectionCenter } from './autoDepth.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 // A wheel burst is one gesture: pick once, after this much quiet.
@@ -66,9 +66,13 @@ export function useCameraNavigation({
         // `gestureStart`: the gesture's own pointerdown/wheel, after settleForGesture stopped any easing: camera-controls still
         // reports `active` for a frame after stop(), and a pivot that waits for it never lands (measured: the first gesture's pivot
         // was refused, the second's applied).
+        // Dev-only trace of every pivot decision (window.__diNavTrace), read by scripts/nav/measure-pan-after-zoom.cjs
+        // with NAV_TRACE=1: the 2026-10-12 measurement showed the fix changing nothing and this is how it was found.
+        const trace = (entry) => { if (import.meta.env?.DEV) (window.__diNavTrace ||= []).push({ t: Math.round(performance.now()), ...entry }) }
         const pivotAt = (event, action, gestureStart = false) => {
             const scene = getScene?.()
-            if (!scene) return
+            if (import.meta.env?.DEV) window.__diNavScene = scene
+            if (!scene) { trace({ action, gestureStart, why: 'no scene' }); return }
             const selected = selectionRef.current
             if (action === CC_ACTION.ROTATE && orbitSelection && selected?.length) {
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
@@ -76,14 +80,26 @@ export function useCameraNavigation({
             }
             // Auto Depth serves PAN and ZOOM (distance-scaled gestures). ROTATE keeps the target it has: re-pivoting an orbit
             // onto a surface 50 m down a hall swept the camera 30 m in one frame (measured 2026-10-08, Inside).
-            if (!preset.autoDepth || action === CC_ACTION.ROTATE) return
+            if (!preset.autoDepth || action === CC_ACTION.ROTATE) { trace({ action, gestureStart, why: 'rotate or no autoDepth' }); return }
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
-            if (!ndc) return
-            applyPivot(cc, pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) }), { force: gestureStart })
+            if (!ndc) { trace({ action, gestureStart, why: 'no ndc' }); return }
+            const roots = entityRoots(scene)
+            const hit = pickPivot({ camera: cc.camera, ndc, objects: roots })
+            // Nothing under the pointer (fog, open air): Blender keeps the depth it has, and so do we while that depth
+            // is farther than the nearest surface around the camera (the approach down a hall stays fast). Once the
+            // orbit point has come closer than that surface (camera-controls drags it to its 0.35 m clamp), the nearest
+            // surface sets the depth instead, so a pan or a wheel step is never scaled by the clamp (see autoDepth.js).
+            let point = hit
+            if (!point) {
+                const fb = fallbackPivot({ camera: cc.camera, objects: roots })
+                if (fb && cc.distance < cc.camera.position.distanceTo(fb)) point = fb
+            }
+            const applied = applyPivot(cc, point, { force: gestureStart })
+            trace({ action, gestureStart, roots: roots.length, ndc: ndc.map((v) => +v.toFixed(3)), hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, fallback: !hit && point ? [point.x, point.y, point.z].map((v) => +v.toFixed(2)) : null, applied, active: cc.active, distance: +cc.distance.toFixed(3) })
         }
 
         const onPointerDown = (event) => {
-            if (!element.contains(event.target)) return
+            if (!element.contains(event.target)) { trace({ why: 'pointer outside controls element', target: event.target?.tagName, cls: String(event.target?.className || '').slice(0, 60) }); return }
             // pointerType is what the browser reports, not a guess: touch keeps
             // the touch gestures, only mouse/pen buttons are remapped.
             if (event.pointerType === 'touch') return
