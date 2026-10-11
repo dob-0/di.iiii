@@ -186,7 +186,7 @@ export const v1Entities = (rig) => {
  * placeholders, FOH, the ash wall and cube 6's tower (all re-created from the file), and every solid an EARLIER rig file laid that
  * this one no longer lists (MOXIR v2 cranes, 2026-10-10: the #844 laser bar and v2 spread's two far-crane boxes stayed in a copy
  * of v2.0 once the cubes sat on the crane and hall v10 drew the free crane itself). Pure. */
-export const RIG_FILE_SOLIDS = /^rig-(crane-bar|far-crane-|ash-wall$|tower-)/
+export const RIG_FILE_SOLIDS = /^rig-(crane-bar|far-crane-|ash-wall$|tower-|shell-|out-)/   // + the v2.6 shell and outside boxes (2026-10-12)
 export const oldEntities = (doc) => (Array.isArray(doc.entities) ? doc.entities : []).filter((e) => (e.type === 'spotLight' && (e.id.startsWith('rig-') || e.id.startsWith('new-'))) ||
     /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6' ||
     (e.type === 'box' && RIG_FILE_SOLIDS.test(e.id)))    // laid by a rig file: taken out, and laid again only if this file still lists it

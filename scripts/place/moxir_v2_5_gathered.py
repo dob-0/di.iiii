@@ -130,17 +130,9 @@ def main():
         {'id': 'rig-out-ground', 'name': 'OUTSIDE ground (GUESS: flat, 60 m round the hall; no survey)', 'kind': 'box', 'p': [12.0, -0.15, 0.0], 'r': [0, 0, 0], 's': [220.0, 0.1, 230.0]},
         {'id': 'rig-out-road-left', 'name': 'OUTSIDE road along the left wall (GUESS: 8 m wide, 2 m off the wall, kerb 0.1 m; from memory of the venue video - owed a read)', 'kind': 'box', 'p': [-42.2, -0.05, -3.0], 'r': [0, 0, 0], 's': [8.0, 0.1, 150.0]},
         {'id': 'rig-out-forecourt', 'name': 'OUTSIDE forecourt at the entrance (GUESS: 16 m deep across the door front; owed a read of the video)', 'kind': 'box', 'p': [0.0, -0.05, 62.0], 'r': [0, 0, 0], 's': [100.0, 0.1, 16.0]}]
-    # the building's GHOST SHELL (owner 2026-10-12 00:46: "better to see the building but that parts like ghost"): hall.py draws the
-    # inside only (no roof deck, no outer wall faces), so from outside there is nothing. WORKAROUND: four outer walls and a flat roof as
-    # see-through boxes (opacity 0.2). Eave 12 m and the flat roof are GUESSES (truss bottom 10.8, ridge 16.5). The real fix - an
-    # envelope in hall.py with the lanterns and the roof pitch - is owed.
-    EAVE = 12.0
-    rig['solids'] = [sd for sd in rig['solids'] if not sd['id'].startswith('rig-shell-')] + [
-        {'id': 'rig-shell-wall-left', 'name': 'GHOST outer wall, left (x -36.2 face; eave 12 m GUESS)', 'kind': 'box', 'p': [-36.4, 0.0, 0.0], 'r': [0, 0, 0], 's': [0.4, EAVE, 108.0], 'opacity': 0.2},
-        {'id': 'rig-shell-wall-right', 'name': 'GHOST outer wall, right (x +60.2 face; eave 12 m GUESS)', 'kind': 'box', 'p': [60.4, 0.0, 0.0], 'r': [0, 0, 0], 's': [0.4, EAVE, 108.0], 'opacity': 0.2},
-        {'id': 'rig-shell-wall-entry', 'name': 'GHOST entrance end wall (z 53.8; the door opening not cut)', 'kind': 'box', 'p': [12.0, 0.0, 54.0], 'r': [0, 0, 0], 's': [97.2, EAVE, 0.4], 'opacity': 0.2},
-        {'id': 'rig-shell-wall-back', 'name': 'GHOST back end wall (z -53.8; the far gate not cut)', 'kind': 'box', 'p': [12.0, 0.0, -54.0], 'r': [0, 0, 0], 's': [97.2, EAVE, 0.4], 'opacity': 0.2},
-        {'id': 'rig-shell-roof', 'name': 'GHOST roof, flat at the eave 12 m (GUESS; real roof: trusses 10.8-16.5 with lanterns)', 'kind': 'box', 'p': [12.0, EAVE, 0.0], 'r': [0, 0, 0], 's': [97.2, 0.2, 108.4], 'opacity': 0.2}]
+    # (2026-10-12 00:5x: a box 'ghost shell' as rig solids was tried and taken out the same night - the owner: 'you take ghost literally'.
+    #  The envelope lives in hall.py now: --shell-alpha 0.3, hall v12.)
+    rig['solids'] = [sd for sd in rig['solids'] if not sd['id'].startswith('rig-shell-')]
     rig['symmetry'] = {'axis_x_m': X0, 'plates_mirror': 'the DJ axis (plates AND aims, v2.5)', 'source': src.get('version')}
     json.dump(rig, open(f'{a.repo}/{a.out}', 'w'), indent=1); print('wrote', a.out, len(rig['fixtures']), 'fixtures,', info['moved'], 'moved')
 

@@ -218,14 +218,19 @@ MATERIALS = {
     # 035, 1c3956d1). Emissive, so it reads as light at no per-pixel lighting
     # cost (no light source is added). Strength tuned on the GPU against 1c3956d1.
     'skylight':  ((0.70, 0.76, 0.82), 0.3, 0.0, (0.70, 0.76, 0.82)),
+    # The building's envelope seen from OUTSIDE at night (owner 2026-10-12: 'see the building ... out wall is like 30% visible'):
+    # the outer walls' panels, the end walls and the deck in a faintly self-lit, part-transparent version of the block colour,
+    # only when --shell-alpha is given. Unlit at night they were black on black from outside (v2.6 screenshot 00:46).
+    'shell':     ((0.40, 0.32, 0.25), 0.9, 0.0, (0.40, 0.32, 0.25)),
     'zone-dance':     ((0.02, 0.08, 1.0), 0.9, 0.0, (0.02, 0.08, 1.0)),
     'zone-stage':     ((0.02, 0.8, 0.08), 0.9, 0.0, (0.02, 0.8, 0.08)),
     'zone-backstage': ((1.0, 0.06, 0.03), 0.9, 0.0, (1.0, 0.06, 0.03)),
 }
-EMISSION_STRENGTH = {'skylight': 1.0}
+EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.12}
+SHELL_ALPHA = None    # set by --shell-alpha (0..1): the envelope's opacity; None = opaque block/deck as before
 # Open surfaces (the frame's prisms, glass planes): drawn from both sides and
 # never run through the "make normals consistent" pass meant for closed boxes.
-DOUBLE_SIDED = {'frame', 'glass', 'skylight'}
+DOUBLE_SIDED = {'frame', 'glass', 'skylight', 'shell'}
 
 
 def parse_cli():
@@ -242,6 +247,8 @@ def parse_cli():
             opts['out'] = argv[i + 1]; i += 2
         elif flag == '--dims':
             opts['dims'].append(argv[i + 1]); i += 2
+        elif flag == '--shell-alpha':
+            opts['shell_alpha'] = float(argv[i + 1]); i += 2
         elif flag == '--preview':
             opts['preview'] = True; i += 1
         elif flag == '--preview-camera':
@@ -550,6 +557,9 @@ def material(name):
     if emissive:
         bsdf.inputs['Emission Color'].default_value = (*emissive, 1.0)
         bsdf.inputs['Emission Strength'].default_value = EMISSION_STRENGTH.get(name, 0.6)
+    if name == 'shell' and SHELL_ALPHA is not None:
+        bsdf.inputs['Alpha'].default_value = float(SHELL_ALPHA)
+        mat.surface_render_method = 'BLENDED'      # Blender 4.2+; the glTF exporter writes alphaMode BLEND
     mat.use_backface_culling = name not in DOUBLE_SIDED
     return mat
 
@@ -866,7 +876,7 @@ def build(dims):
         holes = sorted((l[2], l[3]) for l in lanterns if l[0] <= mid <= l[1])
         y = -end_out
         for h0, h1 in holes + [(end_out, end_out)]:
-            b.box('deck', (a, y, deck_z), (c, h0, deck_z + deck_t))
+            b.box('shell' if SHELL_ALPHA is not None else 'deck', (a, y, deck_z), (c, h0, deck_z + deck_t))
             y = h1
 
     # Outer long walls with three ribbon window bands, mullions every half pitch.
@@ -878,7 +888,7 @@ def build(dims):
             edges += [lo, hi]
         edges.append(parapet)
         for k in range(0, len(edges), 2):
-            b.box('block', (x0, -end_out, edges[k]), (x1, end_out, edges[k + 1]))
+            b.box('shell' if SHELL_ALPHA is not None else 'block', (x0, -end_out, edges[k]), (x1, end_out, edges[k + 1]))
         xm = (x0 + x1) / 2
         for lo, hi in bands:
             b.box('glass', (xm - 0.03, -end_in, lo), (xm + 0.03, end_in, hi))
@@ -896,11 +906,12 @@ def build(dims):
         y0, y1 = sorted((sign * end_in, sign * end_out))
         gate_w, gate_h = (door_w, door_h) if sign < 0 else (far_w, far_h)
         if gate_w > 0 and gate_h > 0:
-            b.box('block', (wall_out[0], y0, 0.0), (-gate_w / 2, y1, gate_h))
-            b.box('block', (gate_w / 2, y0, 0.0), (wall_out[1], y1, gate_h))
-            b.box('block', (wall_out[0], y0, gate_h), (wall_out[1], y1, parapet))
+            em = 'shell' if SHELL_ALPHA is not None else 'block'
+            b.box(em, (wall_out[0], y0, 0.0), (-gate_w / 2, y1, gate_h))
+            b.box(em, (gate_w / 2, y0, 0.0), (wall_out[1], y1, gate_h))
+            b.box(em, (wall_out[0], y0, gate_h), (wall_out[1], y1, parapet))
         else:
-            b.box('block', (wall_out[0], y0, 0.0), (wall_out[1], y1, parapet))
+            b.box('shell' if SHELL_ALPHA is not None else 'block', (wall_out[0], y0, 0.0), (wall_out[1], y1, parapet))
         if sign < 0:
             for side in (-1, 1):
                 x = side * door_w / 2
@@ -1199,6 +1210,8 @@ def main():
     dims, origin, dims_source, dims_notes = resolve_dims(opts)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    global SHELL_ALPHA
+    SHELL_ALPHA = opts.get('shell_alpha')
     builder, geometry = build(dims)
     objects = builder.to_objects()
     glb = os.path.join(out, 'hall.glb')
