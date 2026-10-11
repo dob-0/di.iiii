@@ -15,7 +15,7 @@ laser-margin Scene run is owed. Output: scripts/place/rigs/moxir-v2-4-2026-10-11
 import argparse, json, math
 ap = argparse.ArgumentParser(); ap.add_argument('--repo', required=True); ap.add_argument('--src', default='scripts/place/rigs/moxir-v2-3-2026-10-11.json')
 ap.add_argument('--headings', default='-80,-48,-16,16,48,80'); ap.add_argument('--tilts', default='1.5,low', help='degrees, or "low" = the steepest DOWNWARD tilt whose end still meets the rule (side/back walls >= 3.5 m, entry wall >= 9.0 m = door top 6 + 3, and >= 9.2 m where it crosses the DJ crane at z 3.2)'); ap.add_argument('--pans', default='-18,18')
-ap.add_argument('--out', default='scripts/place/rigs/moxir-v2-4-2026-10-11.json')
+ap.add_argument('--out', default='scripts/place/rigs/moxir-v2-4-2026-10-11.json'); ap.add_argument('--version', default='2.4')
 a = ap.parse_args(); rig = json.load(open(f'{a.repo}/{a.src}'))
 WEST_X, EAST_X, WALL_Z, ROOF_Y, RULE_Y = -36.15, 60.15, 53.8, 10.3, 3.0   # the hall is 1+1+2 spans wide: inside x -36.2..60.2 (moxir_v2_symmetry.py HALL_IN); x +-12 are COLUMN ROWS, not walls (v2.4 first build had walls at +-12: WRONG, fixed 2026-10-11)
 def euler_for(d): c = math.asin(max(-1, min(1, d[0]))); return [round(math.atan2(-d[2], -d[1]), 4), 0.0, round(c, 4)]
@@ -59,7 +59,7 @@ for n, (f, h) in enumerate(zip(cubes, heads), 1):
                  'checks': 'end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)'}
             f['laser']['beams'].append(b); tubes.append({'beam': bid, 'cube': f['id'], 'from': p, 'to': T, 'half_fan_deg': 1.008, 'ends_on': name})
             lines.append((bid, round(h + pan), tl, name, round(L, 1)))
-rig['version'] = '2.4'
+rig['version'] = a.version
 # previs brightness (owner 2026-10-11: "make lasers too full bright that i can see what that cover"): a lasers-only look at 100 % as the
 # first cue, and peak's lasers at 100 %; the measured 0.16 white-out cap (2026-10-09) stays in desk_caps as the show desk's ceiling.
 import copy
