@@ -8,7 +8,7 @@
  * hall and they glow bright blue and green on a black floor: the first thing the eye reads
  * in an underground set (seen 2026-09-28 on /moxir, the Minimal version's live loop).
  *
- *   node scripts/place/hall-show.mjs --in hall.glb --out hall-show.glb          # offline
+ *   node scripts/place/hall-show.mjs --in hall.glb --out hall-show.glb [--double-sided]   # offline
  *   node scripts/place/hall-show.mjs --in hall.glb --out hall-show.glb \
  *       --api https://local.thedi.studio/serverXR --project moxir-hall-minimal --token-file ~/.di/di.env
  *
@@ -50,8 +50,14 @@ const main = async () => {
     const doc = await io.read(input)
     const removed = stripPlanningMarks(doc)
     if (!removed.length) die(`no planning marks (${PLANNING_MESH}) in ${input}`)
+    // --double-sided: every material drawn from both sides (glTF 2.0 material.doubleSided), so the hall reads from OUTSIDE too:
+    // hall.py builds faces for the inside; from above or outside, single-sided roof and walls vanish (owner 2026-10-12 00:24,
+    // v2.6 with the outside drawn: "it wrong shows the thing there"). Costs the back faces' fill; measured on his look.
+    let flipped = 0
+    if (args['double-sided']) for (const m of doc.getRoot().listMaterials()) if (!m.getDoubleSided()) { m.setDoubleSided(true); flipped++ }
     await doc.transform(prune())
     await io.write(output, doc)
+    if (flipped) say(`double-sided: ${flipped} materials`)
     say(`${path.basename(output)}: removed ${removed.join(', ')} — ${fs.statSync(output).size} bytes (was ${fs.statSync(input).size})`)
 
     if (!args.api) return
