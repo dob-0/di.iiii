@@ -226,7 +226,7 @@ MATERIALS = {
     'zone-stage':     ((0.02, 0.8, 0.08), 0.9, 0.0, (0.02, 0.8, 0.08)),
     'zone-backstage': ((1.0, 0.06, 0.03), 0.9, 0.0, (1.0, 0.06, 0.03)),
 }
-EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.12}
+EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.5}   # shell 0.12 (v12 build) read black from above at night; 0.5 = what v12's GLB carries since the 01:1x patch
 SHELL_ALPHA = None    # set by --shell-alpha (0..1): the envelope's opacity; None = opaque block/deck as before
 # Open surfaces (the frame's prisms, glass planes): drawn from both sides and
 # never run through the "make normals consistent" pass meant for closed boxes.
