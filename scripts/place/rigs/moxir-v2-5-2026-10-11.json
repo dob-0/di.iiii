@@ -6641,26 +6641,6 @@
     2.0,
     2.6
    ]
-  },
-  {
-   "id": "rig-foh-riser",
-   "name": "FOH riser 3 x 2 m, 0.6 m high (ASSUMED): the lighting + laser desk, the laser E-stop",
-   "kind": "box",
-   "p": [
-    -5.2,
-    0.0,
-    29.0
-   ],
-   "r": [
-    0,
-    0,
-    0
-   ],
-   "s": [
-    3.0,
-    0.6,
-    2.0
-   ]
   }
  ],
  "looks": [
@@ -24888,5 +24868,12 @@
   "axis_x_m": -5.2,
   "plates_mirror": "the DJ axis (plates AND aims, v2.5)",
   "source": "2.4"
- }
+ },
+ "removed": [
+  {
+   "id": "rig-foh-riser",
+   "why": "owner 2026-10-12 \"delete this\"",
+   "owed": "a place for the desk and the laser E-stop"
+  }
+ ]
 }

@@ -114,6 +114,9 @@ def main():
     rig['what'] = ('v2.4 with every ground unit, the 6 cubes and the haze re-placed: gathered behind and beside the DJ, mirrored about x -5.2 (owner 2026-10-11: '
                    '"balanced but not all spread", "best vision for the dance floor"): plane 1 fan row, 4 islands as a backward V, 28 PARs as a 4-row light field, 10 PARs OUTSIDE (left outer wall 6, entrance outer wall 4, unvalidated) '
                    'straight up, cubes centred. The light field (1215 m2 behind the stage) is fenced, crew only. Truss (the cut) untouched - rigging job owed. ' + json.dumps(info, default=str))
+    # owner 2026-10-12 00:11 (screenshot of the entry view, the grey box in front of the camera): "delete this" -> the FOH riser box goes.
+    # The lighting + laser desk and the laser E-stop still need a place (ASSUMED on that riser before) - owed, not drawn.
+    rig['solids'] = [sd for sd in rig.get('solids', []) if sd.get('id') != 'rig-foh-riser']; rig.setdefault('removed', []).append({'id': 'rig-foh-riser', 'why': 'owner 2026-10-12 "delete this"', 'owed': 'a place for the desk and the laser E-stop'})
     rig['symmetry'] = {'axis_x_m': X0, 'plates_mirror': 'the DJ axis (plates AND aims, v2.5)', 'source': src.get('version')}
     json.dump(rig, open(f'{a.repo}/{a.out}', 'w'), indent=1); print('wrote', a.out, len(rig['fixtures']), 'fixtures,', info['moved'], 'moved')
 
