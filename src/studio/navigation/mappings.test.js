@@ -17,12 +17,7 @@ describe('studio preset = the bindings Studio shipped before presets', () => {
         // autoDepth was false in the old literal; turned ON 2026-10-08 on purpose (pan/orbit stuck after a wheel zoom: 0.11 m per 240 px)
         expect(p.autoDepth).toBe(true)
         expect(p.modifierGestures).toBe(false)
-        // Right drag became the world move on 2026-10-12 (owner: the same step at any zoom): camera-controls gets NONE
-        // for that button and actionFor names the gesture, so the preset's own literal keeps TRUCK as the meaning.
-        expect(p.worldMove).toBe(true)
-        expect(mouseButtonsFor('studio').right).toBe(NONE)
-        expect(actionFor('studio', 2)).toBe('world-move')
-        expect(mouseButtonsFor('blender').right).toBe(NAVIGATION_PRESETS.blender.mouseButtons.right)
+        expect(p.focusOnDoubleClick).toBe(true) // Sketchfab's double-click focus (2026-10-12)
     })
     it('ortho view: left drag pans (was: isOrtho ? TRUCK : ROTATE)', () => {
         expect(mouseButtonsFor('studio', { ortho: true }).left).toBe(TRUCK)
@@ -32,7 +27,7 @@ describe('studio preset = the bindings Studio shipped before presets', () => {
         for (const mods of [{}, { shift: true }, { ctrl: true }, { alt: true }]) {
             expect(actionFor('studio', 0, mods)).toBe(ROTATE)
             expect(actionFor('studio', 1, mods)).toBe(DOLLY)
-            expect(actionFor('studio', 2, mods)).toBe('world-move') // was TRUCK; the world move since 2026-10-12 (owner)
+            expect(actionFor('studio', 2, mods)).toBe(TRUCK)
             expect(actionFor('studio', 0, mods, { ortho: true })).toBe(TRUCK)
         }
     })
@@ -59,10 +54,10 @@ describe('blender preset (Blender 5.2 manual behaviour)', () => {
         expect(actionFor('blender', 1, {}, { ortho: true })).toBe(ROTATE)
         expect(mouseButtonsFor('blender', { ortho: true }).left).toBe(NONE)
     })
-    it('wheel zooms toward the pointer; touch keeps studio gestures', () => {
+    it('wheel zooms like Blender (Zoom to Mouse Position OFF, the owner\'s preference 2026-10-12); touch keeps studio gestures', () => {
         const p = NAVIGATION_PRESETS.blender
         expect(p.mouseButtons.wheel).toBe(DOLLY)
-        expect(p.dollyToCursor).toBe(true)
+        expect(p.dollyToCursor).toBe(false)
         expect(p.autoDepth).toBe(true)
         expect({ ...p.touches }).toEqual({ one: ROTATE, two: TOUCH_DOLLY_TRUCK })
     })
@@ -87,17 +82,14 @@ describe('controlBindingsFor — what camera-controls is handed', () => {
         const cc = { mouseButtons, touches }
         expect(() => Object.assign(cc.mouseButtons, mouseButtonsFor(id, { ortho: true }))).not.toThrow() // the ortho swap
         expect(() => { cc.mouseButtons.left = 0 }).not.toThrow() // useCameraNavigation's per-gesture write
-        const preset = getNavigationPreset(id)
-        expect(Object.isFrozen(preset.mouseButtons)).toBe(true) // and the preset itself is untouched
-        expect(mouseButtonsFor(id)).toEqual(preset.worldMove ? { ...preset.mouseButtons, right: NONE } : preset.mouseButtons)
+        expect(mouseButtonsFor(id)).toEqual(getNavigationPreset(id).mouseButtons) // and the preset itself is untouched
     })
 
     it('is a fresh copy every call, equal to the preset', () => {
         const a = controlBindingsFor('studio')
         const b = controlBindingsFor('studio')
         expect(a.mouseButtons).not.toBe(b.mouseButtons)
-        // right is NONE for camera-controls: the world move is the app's gesture (2026-10-12)
-        expect(a.mouseButtons).toEqual({ ...getNavigationPreset('studio').mouseButtons, right: NONE })
+        expect(a.mouseButtons).toEqual(getNavigationPreset('studio').mouseButtons)
         expect(a.touches).toEqual(getNavigationPreset('studio').touches)
     })
 

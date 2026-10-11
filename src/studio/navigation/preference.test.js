@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    NAVIGATION_STORAGE_KEY, getMoveStepPreference, getNavigationPreference, getOrbitSelectionPreference,
-    resetNavigationPreferenceMemory, setMoveStepPreference, setNavigationPreference, setOrbitSelectionPreference,
+    NAVIGATION_STORAGE_KEY, getNavigationPreference, getOrbitSelectionPreference,
+    resetNavigationPreferenceMemory, setNavigationPreference, setOrbitSelectionPreference,
 } from './preference.js'
 
 beforeEach(() => {
@@ -36,16 +36,5 @@ describe('navigation preference', () => {
     it('orbit-selection flag round-trips', () => {
         setOrbitSelectionPreference(true)
         expect(getOrbitSelectionPreference()).toBe(true)
-    })
-})
-
-describe('move step preference (metres per 100 px of right-drag; null = auto from the scene)', () => {
-    it('defaults to auto, round-trips a number, junk or 0 clears it', () => {
-        expect(getMoveStepPreference()).toBeNull()
-        expect(setMoveStepPreference('2.5')).toBe(2.5)
-        expect(getMoveStepPreference()).toBe(2.5)
-        expect(setMoveStepPreference('abc')).toBeNull()
-        expect(getMoveStepPreference()).toBeNull()
-        expect(setMoveStepPreference(0)).toBeNull()
     })
 })

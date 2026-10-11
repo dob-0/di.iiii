@@ -9,6 +9,9 @@ const URL = process.env.NAV_URL
 const NOTCHES = Number(process.env.NAV_NOTCHES || 12)
 const DRAG = Number(process.env.NAV_DRAG || 240)
 const AXIS = process.env.NAV_AXIS === 'y' ? 'y' : 'x'   // drag right (x) or drag DOWN (y)
+const BUTTON = process.env.NAV_BUTTON || 'right'      // right (Sketchfab pan) or middle (Blender orbit; with NAV_SHIFT=1 = pan)
+const SHIFT = process.env.NAV_SHIFT === '1'
+const TOOL = process.env.NAV_TOOL || 'navigate'       // 'edit' clicks the Edit tool first (Blender mapping)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const install = () => {
@@ -56,7 +59,8 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     // On a Vite dev tree the preset can be read from the live module (a production build has no such path).
     console.log('mappings module urls', JSON.stringify(await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /mappings|useCameraNavigation|StudioViewport/.test(n)))))
     console.log('studioPresetAutoDepth', await page.evaluate(() => import('/studio/navigation/mappings.js').then((m) => m.NAVIGATION_PRESETS.studio.autoDepth).catch(() => 'n/a (production build)')))
-    await sleep(3000) // let the scene load and settle
+    await sleep(3000)
+    if (TOOL === 'edit') { await page.getByRole('button', { name: 'Edit', exact: true }).first().click(); await sleep(500) } // let the scene load and settle
     const box = await page.locator('canvas').first().boundingBox()
     const [fx, fy] = (process.env.NAV_AT || '0.5,0.5').split(',').map(Number)
     const cx = box.x + box.width * fx, cy = box.y + box.height * fy
@@ -78,10 +82,12 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     const p1 = await last(); const m1 = await mark()
     await page.evaluate(() => { window.__ctxMenu = null; document.addEventListener('contextmenu', (e) => { window.__ctxMenu = e.defaultPrevented ? 'suppressed' : 'OPENS' }) })
     await page.mouse.move(cx, cy)
-    await page.mouse.down({ button: 'right' })
+    if (SHIFT) await page.keyboard.down('Shift')
+    await page.mouse.down({ button: BUTTON })
     const steps = 20
     for (let i = 1; i <= steps; i++) { await page.mouse.move(AXIS === 'x' ? cx + (DRAG * i) / steps : cx, AXIS === 'y' ? cy + (DRAG * i) / steps : cy); await sleep(300 / steps) }
-    await page.mouse.up({ button: 'right' })
+    await page.mouse.up({ button: BUTTON })
+    if (SHIFT) await page.keyboard.up('Shift')
     const m2 = await mark()
     await sleep(600)
     const p2 = await last(); const m3 = await mark()

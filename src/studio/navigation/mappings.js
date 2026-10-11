@@ -17,8 +17,6 @@
 // actionFor() and applied by useCameraNavigation.js on pointerdown.
 
 // ACTION values from camera-controls (binary flags).
-import { WORLD_MOVE } from './worldMove.js'
-
 export const CC_ACTION = Object.freeze({
     NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
     TOUCH_DOLLY_TRUCK: 4096,
@@ -34,7 +32,8 @@ export const NAVIGATION_PRESETS = Object.freeze({
     studio: Object.freeze({
         id: 'studio',
         label: 'Studio',
-        description: 'Drag to orbit, right-drag to move in the world (the same step at any zoom), scroll to zoom. The default.',
+        // The NAVIGATE tool and the public viewer: like Sketchfab (owner, 2026-10-12: "view like sketchfab, edit like blender").
+        description: 'Drag to orbit, right-drag to pan, scroll to zoom toward the pointer, double-click a surface to focus on it. Like Sketchfab.',
         mouseButtons: Object.freeze({
             left: CC_ACTION.ROTATE,
             middle: CC_ACTION.DOLLY,
@@ -54,21 +53,22 @@ export const NAVIGATION_PRESETS = Object.freeze({
         // Auto Depth puts the point on the surface under the pointer (Blender manual, Preferences > Navigation > Auto Depth), so a
         // drag follows what you see. The buttons are unchanged.
         autoDepth: true,
-        // Right drag = move in the world by a fixed step, whatever the zoom (owner, 2026-10-12; worldMove.js). camera-controls
-        // gets NONE for that button (mouseButtonsFor) and the gesture is carried out by useCameraNavigation with truck().
-        worldMove: true,
+        focusOnDoubleClick: true,
         modifierGestures: false,
         rows: Object.freeze([
             ['Drag', 'Orbit'],
-            ['Right drag', 'Move (the same step at any zoom; step in Shortcuts)'],
+            ['Right drag', 'Pan'],
             ['Middle drag', 'Zoom'],
             ['Scroll', 'Zoom (toward the pointer)'],
+            ['Double-click', 'Focus on the surface under the pointer'],
         ]),
     }),
     blender: Object.freeze({
         id: 'blender',
         label: 'Blender',
-        description: 'Middle mouse button moves the view, like Blender. The left button only selects. No middle button? Hold Alt with the left button.',
+        // The EDIT tool: Blender's own buttons and the owner's Blender preferences, read from ~/.config/blender/5.2 on 2026-10-12
+        // (turntable, Auto Depth on, Zoom to Mouse Position OFF, Orbit Around Selection off): nothing new to learn.
+        description: 'Middle mouse button moves the view, exactly like Blender. The left button only selects. No middle button? Hold Alt with the left button.',
         mouseButtons: Object.freeze({
             left: CC_ACTION.NONE,
             middle: CC_ACTION.ROTATE,
@@ -82,7 +82,7 @@ export const NAVIGATION_PRESETS = Object.freeze({
             one: CC_ACTION.ROTATE,
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
-        dollyToCursor: true,
+        dollyToCursor: false, // the owner's Blender: Zoom to Mouse Position OFF (2026-10-12)
         autoDepth: true,
         modifierGestures: true,
         rows: Object.freeze([
@@ -108,9 +108,7 @@ export function getNavigationPreset(id) {
 // The resting mouse bindings for a preset (no modifier held).
 export function mouseButtonsFor(presetId, { ortho = false } = {}) {
     const preset = getNavigationPreset(presetId)
-    const buttons = { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
-    if (preset.worldMove) buttons.right = CC_ACTION.NONE // the world move is ours, not camera-controls'
-    return buttons
+    return { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
 }
 
 // The bindings to HAND camera-controls: fresh, writable copies. The presets
@@ -134,7 +132,6 @@ export function actionFor(presetId, button, mods = {}, { ortho = false } = {}) {
     const name = BUTTON_NAME[button]
     if (!name) return CC_ACTION.NONE
     const preset = getNavigationPreset(presetId)
-    if (preset.worldMove && name === 'right') return WORLD_MOVE
     const resting = mouseButtonsFor(preset.id, { ortho })
     if (!preset.modifierGestures) return resting[name]
 

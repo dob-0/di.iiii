@@ -517,7 +517,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     )
 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null, editMode = 'navigate' }) {
     const isXrPresenting = useXR((state) => state.session != null)
     useHoldFrames(isXrPresenting, 'xr') // a headset session is the headset's own loop
     const scene = useThree((state) => state.scene)
@@ -526,7 +526,13 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
     const navigation = useNavigationPreference()
-    const preset = getNavigationPreset(navigation.preset)
+    // The tool picks the mapping (owner, 2026-10-12: "view like sketchfab, edit like blender — people will not need to
+    // learn something new"): Navigate and the public viewer move like Sketchfab, Edit exactly like Blender.
+    const preset = getNavigationPreset(editMode === 'edit' ? 'blender' : 'studio')
+    // Blender turns 0.4° per pixel (its Orbit Sensitivity default, the owner's value); camera-controls turns 360° per
+    // viewport height, so the speed is scaled by the height to keep Blender's per-pixel feel in Edit.
+    const viewportHeight = useThree((state) => state.size.height)
+    const rotateSpeed = preset.id === 'blender' && viewportHeight > 0 ? viewportHeight / 900 : 1
     const isOrtho = (cameraView?.fov ?? 50) < 20
     useCameraNavigation({
         controlsRef,
@@ -535,7 +541,6 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         orbitSelection: navigation.orbitSelection,
         selectedEntityIds,
         getScene,
-        moveStep: navigation.moveStep,
         active: enabled && !isXrPresenting,
     })
 
@@ -615,6 +620,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             ref={controlsRef}
             makeDefault
             dollyToCursor={preset.dollyToCursor}
+            azimuthRotateSpeed={rotateSpeed}
+            polarRotateSpeed={rotateSpeed}
             // Zoom never stops: at minDistance the wheel carries the target forward with the
             // camera instead of doing nothing (a room's Inside lock holds the camera ≥ 2 m from
             // its target, and the zoom used to die there). The target stays in its boundary.
@@ -1256,6 +1263,7 @@ export default function StudioViewport({
                         enabled={enableNavigation}
                         fovRef={smartOn ? fovRef : null}
                         selectedEntityIds={selectedEntityIds}
+                        editMode={editMode}
                     />
                     <StudioSceneContent
                         document={document}

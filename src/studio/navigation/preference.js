@@ -6,7 +6,6 @@ import { DEFAULT_NAVIGATION_PRESET, normalizeNavigationPreset } from './mappings
 
 export const NAVIGATION_STORAGE_KEY = 'di.studio.navigation'
 export const ORBIT_SELECTION_STORAGE_KEY = 'di.studio.navigation.orbitSelection'
-export const MOVE_STEP_STORAGE_KEY = 'di.studio.navigation.moveStep'
 export const NAVIGATION_CHANGE_EVENT = 'di:studio-navigation-change'
 
 function storage() {
@@ -25,29 +24,6 @@ export function getNavigationPreference() {
     }
 }
 
-// The owner's own move step in metres per 100 px of right-drag (worldMove.js); null = auto from the scene.
-export function getMoveStepPreference() {
-    try {
-        const n = Number.parseFloat(storage()?.getItem(MOVE_STEP_STORAGE_KEY))
-        return Number.isFinite(n) && n > 0 ? n : null
-    } catch {
-        return null
-    }
-}
-export function setMoveStepPreference(value) {
-    const n = Number.parseFloat(value)
-    const next = Number.isFinite(n) && n > 0 ? n : null
-    try {
-        if (next == null) storage()?.removeItem(MOVE_STEP_STORAGE_KEY)
-        else storage()?.setItem(MOVE_STEP_STORAGE_KEY, String(next))
-    } catch {
-        // storage blocked — the choice holds for this page only
-    }
-    memory.moveStep = next
-    memory.moveStepSet = true
-    announce()
-    return next
-}
 export function getOrbitSelectionPreference() {
     try {
         return storage()?.getItem(ORBIT_SELECTION_STORAGE_KEY) === '1'
@@ -91,13 +67,12 @@ export function setOrbitSelectionPreference(on) {
 
 // When storage throws, a choice made on this page still has to stick for the
 // rest of the visit; this is that page-lifetime copy.
-const memory = { preset: null, orbitSelection: null, moveStep: null, moveStepSet: false }
+const memory = { preset: null, orbitSelection: null }
 
 function read() {
     return {
         preset: memory.preset ?? getNavigationPreference(),
         orbitSelection: memory.orbitSelection ?? getOrbitSelectionPreference(),
-        moveStep: memory.moveStepSet ? memory.moveStep : getMoveStepPreference(),
     }
 }
 
@@ -105,8 +80,6 @@ function read() {
 export function resetNavigationPreferenceMemory() {
     memory.preset = null
     memory.orbitSelection = null
-    memory.moveStep = null
-    memory.moveStepSet = false
 }
 
 export function useNavigationPreference() {
@@ -127,6 +100,5 @@ export function useNavigationPreference() {
     }, [])
     const setPreset = useCallback((value) => setNavigationPreference(value), [])
     const setOrbitSelection = useCallback((on) => setOrbitSelectionPreference(on), [])
-    const setMoveStep = useCallback((value) => setMoveStepPreference(value), [])
-    return { ...state, setPreset, setOrbitSelection, setMoveStep }
+    return { ...state, setPreset, setOrbitSelection }
 }

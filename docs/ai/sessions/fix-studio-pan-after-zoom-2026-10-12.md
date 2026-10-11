@@ -86,3 +86,23 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   depth). Raised with him as a question, not decided here.
 - Sterile: the measurement scripts close their page on error too; no stray pages after the runs; the `navfix` stack stays up
   as `studio-nav-test.diiii.localhost` while the owner tests (ledger N511.4), then `di-dev down navfix`.
+
+## Owner's hands, round 3: "open my Blender, look to the settings, make it like Blender" → "view like sketchfab, edit like blender"
+
+- His Blender (5.2.2 LTS, `~/.config/blender/5.2`, stock "Blender" keymap), read with `blender -b --python`: turntable, Orbit
+  Sensitivity 0.4°/px, Auto Depth ON, Auto Perspective ON, Zoom to Mouse Position OFF, Orbit Around Selection OFF, zoom
+  method Dolly/vertical, no inversions, Emulate 3 Button OFF, Walk mode (2.5 m/s, Shift ×5, eye 1.6 m, no gravity), Smooth
+  View 200 ms. Dump: `/tmp/…/scratchpad/blender-prefs.json` (session-only).
+- Decision (his, in words): the TOOL picks the mouse. **Navigate and the public viewer = Sketchfab** (drag orbit, right-drag
+  pan, wheel zoom toward the pointer, double-click focuses on the surface). **Edit = exactly Blender** (middle orbit, Shift+middle
+  pan, Ctrl+middle zoom, wheel zoom not to the pointer, left selects), "people will not need to learn something new".
+  Unlimited scroll stays ("look to browser you can unlimited scroll"). The fixed-step right-drag move (round 2) is removed:
+  it is in neither.
+- Built: `StudioViewport` picks the preset from `editMode`; Blender's 0.4°/px via `azimuthRotateSpeed = height/900`;
+  `blender.dollyToCursor=false`; `studio.focusOnDoubleClick` (orbit point to the surface under the pointer); the browser's
+  context menu is suppressed over the viewport in both; the Shortcuts tab shows both mouse tables and no radio (the
+  NavigationPreferenceControl and the moveStep preference are gone; `preference.js` keeps orbitSelection).
+- Measured (real mouse, RTX 3080, MOXIR v1.1): Navigate right-drag after 25 notches into fog 7.747 m per 240 px (orbit point
+  0.399 → 24.2 m by the previous-depth rule); Edit Shift+middle pan after 12 notches 7.747 m; Edit middle drag 240 px = 35.67 m
+  chord on a 24.2 m circle = 96° = 0.4°/px (Blender's); context menu suppressed in both tools.
+- Owed, next PR: Auto Perspective (his ON), Walk mode Shift+` with his numbers, the help dialog's rows for Edit's numpad keys.
