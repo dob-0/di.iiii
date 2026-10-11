@@ -11,6 +11,7 @@ import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
 import { clientToNdc, fallbackPivot, pickPivot, selectionCenter } from './autoDepth.js'
+import { WORLD_MOVE, dragToTruck, resolveMoveStep } from './worldMove.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 // A wheel burst is one gesture: pick once, after this much quiet.
@@ -61,9 +62,13 @@ export function useCameraNavigation({
     orbitSelection = false,
     selectedEntityIds = null,
     getScene,
+    // The owner's move step in metres per 100 px (null = auto from the scene), for presets with worldMove.
+    moveStep = null,
     // Re-run when the controls mount/unmount (Studio hides them in XR / when disabled).
     active = true,
 }) {
+    const moveStepRef = useRef(moveStep)
+    useEffect(() => { moveStepRef.current = moveStep }, [moveStep])
     // Read at gesture time, so a new selection does not re-register listeners.
     const selectionRef = useRef(selectedEntityIds)
     useEffect(() => { selectionRef.current = selectedEntityIds }, [selectedEntityIds])
@@ -71,7 +76,7 @@ export function useCameraNavigation({
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
-        if (!active || !cc || (preset.id === 'studio' && !preset.autoDepth)) return undefined
+        if (!active || !cc || (preset.id === 'studio' && !preset.autoDepth && !preset.worldMove)) return undefined
         const element = cc._domElement
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
@@ -120,6 +125,34 @@ export function useCameraNavigation({
             trace({ action, gestureStart, roots: roots.length, ndc: ndc.map((v) => +v.toFixed(3)), hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, fallback: fallback ? [fallback.x, fallback.y, fallback.z].map((v) => +v.toFixed(2)) : null, remembered: depthRef.current == null ? null : +depthRef.current.toFixed(2), applied, active: cc.active, distance: +cc.distance.toFixed(3) })
         }
 
+        // The world move (worldMove.js): right-drag moves camera and orbit point together by a fixed step per pixel,
+        // whatever the zoom. camera-controls holds NONE for that button; this is the whole gesture.
+        let move = null
+        const onMoveMove = (event) => {
+            if (!move || event.pointerId !== move.pointerId) return
+            const { x, y } = dragToTruck(event.clientX - move.x, event.clientY - move.y, move.step)
+            move.x = event.clientX; move.y = event.clientY
+            cc.truck(x, y, false)
+        }
+        const endMove = (event) => {
+            if (!move || (event && event.pointerId !== move.pointerId)) return
+            move = null
+            doc.removeEventListener('pointermove', onMoveMove, { capture: true })
+            doc.removeEventListener('pointerup', endMove, { capture: true })
+            doc.removeEventListener('pointercancel', endMove, { capture: true })
+            cc.dispatchEvent({ type: 'controlend' })
+        }
+        const startMove = (event) => {
+            const scene = getScene?.()
+            const step = resolveMoveStep(moveStepRef.current, scene ? entityRoots(scene) : [])
+            move = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, step }
+            trace({ action: WORLD_MOVE, step: +step.toFixed(3) })
+            doc.addEventListener('pointermove', onMoveMove, { capture: true })
+            doc.addEventListener('pointerup', endMove, { capture: true })
+            doc.addEventListener('pointercancel', endMove, { capture: true })
+            cc.dispatchEvent({ type: 'controlstart' })
+        }
+
         const onPointerDown = (event) => {
             if (!element.contains(event.target)) { trace({ why: 'pointer outside controls element', target: event.target?.tagName, cls: String(event.target?.className || '').slice(0, 60) }); return }
             // pointerType is what the browser reports, not a guess: touch keeps
@@ -129,6 +162,7 @@ export function useCameraNavigation({
             if (!name) return
             const action = actionFor(preset.id, event.button,
                 { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
+            if (action === WORLD_MOVE) { cc.mouseButtons[name] = CC_ACTION.NONE; settleForGesture(cc); startMove(event); return }
             cc.mouseButtons[name] = action
             if (action !== CC_ACTION.NONE) { settleForGesture(cc); pivotAt(event, action, true) }
         }
@@ -145,6 +179,7 @@ export function useCameraNavigation({
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })
         doc.addEventListener('wheel', onWheel, { capture: true, passive: true })
         return () => {
+            endMove()
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             doc.removeEventListener('wheel', onWheel, { capture: true })
         }

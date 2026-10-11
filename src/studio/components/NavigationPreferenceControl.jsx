@@ -3,15 +3,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { NAVIGATION_PRESETS, NAVIGATION_PRESET_IDS } from '../navigation/mappings.js'
 
-export default function NavigationPreferenceControl({ preset, orbitSelection, onPresetChange, onOrbitSelectionChange }) {
+export default function NavigationPreferenceControl({ preset, orbitSelection, onPresetChange, onOrbitSelectionChange, moveStep = null, onMoveStepChange }) {
     const [status, setStatus] = useState('')
     const changed = useRef(false)
 
     useEffect(() => {
         if (!changed.current) return
         const label = NAVIGATION_PRESETS[preset]?.label || preset
-        setStatus(`Mouse navigation: ${label}.${preset === 'blender' && orbitSelection ? ' Orbit around selection on.' : ''}`)
-    }, [preset, orbitSelection])
+        setStatus(`Mouse navigation: ${label}.${preset === 'blender' && orbitSelection ? ' Orbit around selection on.' : ''}${preset === 'studio' ? ` Move step: ${moveStep ?? 'auto'}.` : ''}`)
+    }, [preset, orbitSelection, moveStep])
 
     return (
         <fieldset className="sh-nav-pref">
@@ -48,6 +48,25 @@ export default function NavigationPreferenceControl({ preset, orbitSelection, on
                     />
                     <span className="sh-nav-pref-text">
                         <span>Turn around what you selected instead of the surface under the pointer.</span>
+                    </span>
+                </label>
+            )}
+            {preset === 'studio' && onMoveStepChange && (
+                <label className="sh-nav-pref-option sh-nav-pref-option--sub" htmlFor="sh-nav-pref-move-step">
+                    Move step
+                    <input
+                        id="sh-nav-pref-move-step"
+                        type="number"
+                        min="0.01"
+                        step="0.1"
+                        inputMode="decimal"
+                        placeholder="auto"
+                        value={moveStep ?? ''}
+                        aria-describedby="sh-nav-pref-move-step-desc"
+                        onChange={(event) => { changed.current = true; onMoveStepChange(event.target.value) }}
+                    />
+                    <span className="sh-nav-pref-text">
+                        <span id="sh-nav-pref-move-step-desc">Metres per 100 px of right-drag, the same at any zoom. Empty = auto: the scene&apos;s largest side / 40.</span>
                     </span>
                 </label>
             )}

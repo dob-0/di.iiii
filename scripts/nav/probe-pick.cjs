@@ -105,4 +105,4 @@ const probe = () => {
     }
     console.log('RAY', JSON.stringify(await page.evaluate(probeRay)))
     await page.close(); process.exit(0)
-})().catch((e) => { console.log('ERR', e.message); process.exit(1) })
+})().catch(async (e) => { console.log('ERR', e.message); try { for (const c of (await chromium.connectOverCDP(process.env.DI_TEST_CDP)).contexts()) for (const pg of c.pages()) if (pg.url() === URL) await pg.close() } catch {} ; process.exit(1) })

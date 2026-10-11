@@ -158,6 +158,8 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                             orbitSelection={navigation.orbitSelection}
                             onPresetChange={navigation.setPreset}
                             onOrbitSelectionChange={navigation.setOrbitSelection}
+                            moveStep={navigation.moveStep}
+                            onMoveStepChange={navigation.setMoveStep}
                         />
                         <div className="sh-help-shortcut-group">
                             <div className="sh-help-shortcut-title">Mouse · {getNavigationPreset(navigation.preset).label}</div>

@@ -68,3 +68,21 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   zoom total 21.1 → 43.8 m; max pan frame jump 0.387 m. Pointer on a surface keeps the exact grab (hit sets the depth).
 - Not measured: the 25-notch run timed out waiting for a test-browser lane (a peer was using lane 2); the 12-notch run
   shows the rule. Owner's hands next.
+
+## Owner's hands, round 2: "when I zoom and try to move it does not move … why change the numbers, we need to write logic"
+
+- Owner's rule, written to `~/.claude/CLAUDE.md` the same hour: only what he asked; if impossible or in need of a conversation, talk
+  first. What he asked (twice): right-drag moves in the world by the same step at any zoom, a default, and a place in the Studio
+  to set your own.
+- Built (`worldMove.js`, `useCameraNavigation.js`, `mappings.js`, `preference.js`, `NavigationPreferenceControl.jsx`): right drag
+  in the Studio preset is the app's gesture, not camera-controls' pan: camera and orbit point move together by `step / 100 px`
+  with `cc.truck(x, y)`; no distance in the formula. Step = the owner's value (Shortcuts tab, "Move step", metres per 100 px,
+  stored under `di.studio.navigation.moveStep`) or auto = the scene's largest side / 40. Orbit, wheel and touch unchanged.
+  19 new/updated unit tests (60 in the navigation suite + preference control + help dialog).
+- Measured (MOXIR v1.1 Studio, real mouse, RTX 3080, 240 px right-drag): 0 notches 7.889 m · 12 notches 7.889 m · 25 notches
+  7.889 m (auto step 3.287 m per 100 px; before this round: 7.747 / 1.113 / 0.128 m depending on the zoom). Max frame jump
+  0.394 m (20 steps over 300 ms).
+- Left on the branch from the earlier rounds and NOT asked for by the owner: the wheel's miss rules (nearest surface, remembered
+  depth). Raised with him as a question, not decided here.
+- Sterile: the measurement scripts close their page on error too; no stray pages after the runs; the `navfix` stack stays up
+  as `studio-nav-test.diiii.localhost` while the owner tests (ledger N511.4), then `di-dev down navfix`.

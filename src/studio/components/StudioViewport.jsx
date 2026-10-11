@@ -535,6 +535,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         orbitSelection: navigation.orbitSelection,
         selectedEntityIds,
         getScene,
+        moveStep: navigation.moveStep,
         active: enabled && !isXrPresenting,
     })
 

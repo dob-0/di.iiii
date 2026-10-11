@@ -17,6 +17,8 @@
 // actionFor() and applied by useCameraNavigation.js on pointerdown.
 
 // ACTION values from camera-controls (binary flags).
+import { WORLD_MOVE } from './worldMove.js'
+
 export const CC_ACTION = Object.freeze({
     NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
     TOUCH_DOLLY_TRUCK: 4096,
@@ -32,7 +34,7 @@ export const NAVIGATION_PRESETS = Object.freeze({
     studio: Object.freeze({
         id: 'studio',
         label: 'Studio',
-        description: 'Drag to orbit, right-drag to pan, scroll to zoom. The default.',
+        description: 'Drag to orbit, right-drag to move in the world (the same step at any zoom), scroll to zoom. The default.',
         mouseButtons: Object.freeze({
             left: CC_ACTION.ROTATE,
             middle: CC_ACTION.DOLLY,
@@ -52,10 +54,13 @@ export const NAVIGATION_PRESETS = Object.freeze({
         // Auto Depth puts the point on the surface under the pointer (Blender manual, Preferences > Navigation > Auto Depth), so a
         // drag follows what you see. The buttons are unchanged.
         autoDepth: true,
+        // Right drag = move in the world by a fixed step, whatever the zoom (owner, 2026-10-12; worldMove.js). camera-controls
+        // gets NONE for that button (mouseButtonsFor) and the gesture is carried out by useCameraNavigation with truck().
+        worldMove: true,
         modifierGestures: false,
         rows: Object.freeze([
             ['Drag', 'Orbit'],
-            ['Right drag', 'Pan'],
+            ['Right drag', 'Move (the same step at any zoom; step in Shortcuts)'],
             ['Middle drag', 'Zoom'],
             ['Scroll', 'Zoom (toward the pointer)'],
         ]),
@@ -103,7 +108,9 @@ export function getNavigationPreset(id) {
 // The resting mouse bindings for a preset (no modifier held).
 export function mouseButtonsFor(presetId, { ortho = false } = {}) {
     const preset = getNavigationPreset(presetId)
-    return { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
+    const buttons = { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
+    if (preset.worldMove) buttons.right = CC_ACTION.NONE // the world move is ours, not camera-controls'
+    return buttons
 }
 
 // The bindings to HAND camera-controls: fresh, writable copies. The presets
@@ -127,6 +134,7 @@ export function actionFor(presetId, button, mods = {}, { ortho = false } = {}) {
     const name = BUTTON_NAME[button]
     if (!name) return CC_ACTION.NONE
     const preset = getNavigationPreset(presetId)
+    if (preset.worldMove && name === 'right') return WORLD_MOVE
     const resting = mouseButtonsFor(preset.id, { ortho })
     if (!preset.modifierGestures) return resting[name]
 
