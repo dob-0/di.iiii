@@ -123,7 +123,11 @@ function VersionLink({ l, curRef }) {
 
 // mode 'row' (orbit): one horizontal row, current scrolled into view, an edge fade where it goes on.
 // mode 'walk': one 44 px "Versions" button; opens a column under it (owner: switch without Esc).
-export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row', maxWidth = null }) {
+// bare: the switch sits INSIDE the scene bar (SceneBar.jsx), which owns the glass, the border and the position;
+// then this is only the row of links, shrinking and scrolling inside the space the bar gives it.
+const bareStyle = { display: 'flex', gap: '2px', position: 'relative', minWidth: 0, flex: '0 1 auto', overflow: 'hidden' }
+
+export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row', maxWidth = null, bare = false }) {
     const variant = useMemo(() => rigVariantOf(entities), [entities])
     const existing = useSpaceProjects(spaceId, Boolean(variant))
     const list = useVersionList(versionListProjectOf(variant))
@@ -165,7 +169,7 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
     const current = links.find((l) => l.current)
     const fold = folded.length ? (
         <button type="button" aria-expanded={foldOpen} aria-controls="rig-old-versions" onClick={() => setFoldOpen((v) => !v)} style={buttonStyle}>
-            {`Old versions (${folded.length})`}
+            {`Old (${folded.length})`}
         </button>
     ) : null
     const conceptFold = concepts.length ? (
@@ -193,7 +197,7 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
         )
     }
     return (
-        <nav aria-label="rig versions" style={{ ...rowStyle, top, ...(maxWidth ? { maxWidth } : {}) }}>
+        <nav aria-label="rig versions" data-bare={bare ? 'true' : undefined} style={bare ? bareStyle : { ...rowStyle, top, ...(maxWidth ? { maxWidth } : {}) }}>
             <div ref={scrollerRef} onScroll={measure} style={scrollerStyle}>{items}</div>
             {cue.left ? <span aria-hidden="true" data-cue="left" style={fadeStyle('left')}>‹</span> : null}
             {cue.right ? <span aria-hidden="true" data-cue="right" style={fadeStyle('right')}>›</span> : null}

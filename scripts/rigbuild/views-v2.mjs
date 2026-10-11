@@ -33,14 +33,14 @@ export const viewsFor = (rig) => {
     const floor = v('floor', 'Floor 1.7 m', [x0, EYE, floorMid], [x0, djHead, djZ], 50)
     return {
         fixedCamera: { projection: 'perspective', ...floor, zoom: 1, near: 0.05, far: 400, locked: false, id: undefined, label: undefined },
-        viewPresets: [          // the viewer takes ONLY these ids (smartViewGeometry VIEW_PRESET_IDS: floor, dj, top, side, rig, crane; labels <= 16 chars)
+        viewPresets: [          // the viewer takes ONLY these ids (smartViewGeometry: the six built-in ids replace the computed view, any other slug is an extra named camera; labels <= 16 chars)
             floor,
             v('dj', 'DJ', [x0, dj.p[1] + DJ_EYE, djZ - 0.3], [x0, EYE, floorMid + 6], 60),
             v('top', 'Top plan', [x0, 85, djZ - 8], [x0, 0, djZ - 9], 60),
             v('side', 'Side', [x0 + 30, 6, floorMid], [x0, 4, djZ - 6], 55),
             v('rig', 'Under the lasers', [x0, 2.5, laserZ + 10], [x0, 9.0, doorZ], 60),
-            v('crane', 'Entrance', [x0, EYE, doorZ - 3], [x0, djHead + 1, djZ], 50),
-            // owed: 'entrance' and 'outside' as their own buttons need the viewer to take more ids (engine change)
+            v('entrance', 'Entrance', [x0, EYE, doorZ - 3], [x0, djHead + 1, djZ], 50),
+            v('outside', 'Outside', [x0 + 25, 6, doorZ + 30], [x0, 5, doorZ], 55),
         ],
     }
 }

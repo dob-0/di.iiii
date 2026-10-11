@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import lazyWithReload from '../utils/lazyWithReload.js'
 import { useRigLookEntities } from './useRigLook.js'
 import { useLightPool } from './useLightPool.js'
@@ -19,7 +20,7 @@ import { deskCues, cueClockWords } from './cueRun.js'
 const RoomFavourites = lazyWithReload(() => import('./RoomFavourites.jsx'), 'room-favourites')
 const RoomCueList = lazyWithReload(() => import('./RoomCueList.jsx'), 'room-cue-list')
 
-export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true, spaceId = '', projectId = '' }) {
+export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true, spaceId = '', projectId = '', bare = false, slot = null }) {
     const look = useRigLookEntities(document)
     // The light pool (lightPool.js): OFF by default; on, the look's light is carried by N
     // fixed slot lights. Off, `entities` passes through as the same array.
@@ -32,9 +33,11 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
     // The five favourite scenes, always on screen (RoomFavourites.jsx) - wherever a desk or the clock drives the room.
     const row = spaceId && projectId && (look.driver === 'desk' || (look.driver === 'clock' && look.clock))
         ? <Suspense fallback={null}><RoomFavourites spaceId={spaceId} projectId={projectId} /></Suspense> : null
-    if (look.driver === 'desk') return <><DeskShowChip projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />{row}</>
+    // In the scene bar (bare) the chip is drawn INTO the bar's slot; the favourites row stays where it is (bottom of the scene).
+    const place = (chip) => (bare ? (slot ? createPortal(chip, slot) : null) : chip)
+    if (look.driver === 'desk') return <>{place(<DeskShowChip bare={bare} projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />)}{row}</>
     if (look.driver !== 'clock' || !look.clock) return null
-    return <><ShowChip show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} />{row}</>
+    return <>{place(<ShowChip bare={bare} show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} />)}{row}</>
 }
 
 /**
@@ -49,7 +52,7 @@ export const deskShowWords = (cues, projectId) => {
 // WHERE A DESK DRIVES THE ROOM (a local install: the desk outranks the show's clock, showClock.js), the chip says so: the
 // desk's own runner, read once a second while the tab is visible (the cards page reads it the same way). Before
 // 2026-10-08 the room said nothing here, and a room played by the desk looked like a room playing nothing (MOXIR v1.0).
-export function DeskShowChip({ projectId, top, spaceId = '', routeProject = '' }) {
+export function DeskShowChip({ projectId, top, spaceId = '', routeProject = '', bare = false }) {
     const [cues, setCues] = useState(null)
     const [open, setOpen] = useState(false)
     const [again, setAgain] = useState(0) // bumped after a choice: read the desk now, not in a second
@@ -69,7 +72,7 @@ export function DeskShowChip({ projectId, top, spaceId = '', routeProject = '' }
     const line = deskShowWords(cues, projectId)
         || (cues.project && cues.project !== projectId && cues.n > 0 ? "the desk plays another project's list · choose a cue" : 'no cue on yet · choose one')
     return (
-        <div style={{ ...chipStyle, top }} data-testid="rig-show-chip" data-driver="desk" data-cue={cues.index}>
+        <div style={chipBox(bare, top)} data-testid="rig-show-chip" data-driver="desk" data-cue={cues.index}>
             <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)} disabled={!spaceId || !routeProject}
                 title="The light desk on this machine plays the cue list; the room follows it. Tap to see the cues and choose one.">
                 <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
@@ -77,7 +80,7 @@ export function DeskShowChip({ projectId, top, spaceId = '', routeProject = '' }
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
                 <Caret open={open} />
             </button>
-            {open ? <CueListPanel spaceId={spaceId} projectId={routeProject} onChosen={() => setAgain((n) => n + 1)} /> : null}
+            {open ? <Drop bare={bare}><CueListPanel spaceId={spaceId} projectId={routeProject} onChosen={() => setAgain((n) => n + 1)} /></Drop> : null}
         </div>
     )
 }
@@ -106,6 +109,15 @@ const chipStyle = {
     lineHeight: 1.3
 }
 
+// In the scene bar (bare) the chip is one cell of the bar: no border or glass of its own, and its
+// opened cue list hangs under the bar as a panel instead of growing the bar.
+const chipBox = (bare, top) => (bare
+    ? { position: 'relative', minWidth: 0, flex: '0 1 auto', color: '#f5f7fa', fontSize: '0.85rem', lineHeight: 1.3 }
+    : { ...chipStyle, top })
+const Drop = ({ bare, children }) => (bare
+    ? <div style={{ position: 'absolute', top: 'calc(100% + 3px)', left: 0, width: 'max-content', minWidth: 'min(22rem, calc(100vw - 2rem))', maxWidth: 'calc(100vw - 2rem)', maxHeight: '60vh', overflowY: 'auto', borderRadius: '2px', border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(10, 16, 24, 0.94)', backdropFilter: 'blur(12px)' }}>{children}</div>
+    : children)
+
 const buttonStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -132,13 +144,13 @@ const useSecondTick = () => {
     return now
 }
 
-export function ShowChip({ show, state, offset, top, spaceId = '', routeProject = '' }) {
+export function ShowChip({ show, state, offset, top, spaceId = '', routeProject = '', bare = false }) {
     const [open, setOpen] = useState(false)
     const now = useSecondTick() + (offset?.offset || 0)
     const nextInMs = state.nextInMs == null ? null : Math.max(0, state.firedAt + (show.cues[state.index]?.holdMs || 0) - now)
     const line = showWords({ ...state, nextInMs }, show)
     return (
-        <div style={{ ...chipStyle, top }} data-testid="rig-show-chip" data-look={state.lookId} data-cue={state.index}>
+        <div style={chipBox(bare, top)} data-testid="rig-show-chip" data-look={state.lookId} data-cue={state.index}>
             <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)}
                 title="The show plays by the clock: everyone watching sees the same look at the same moment">
                 <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
@@ -146,7 +158,7 @@ export function ShowChip({ show, state, offset, top, spaceId = '', routeProject 
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
                 <Caret open={open} />
             </button>
-            {open ? (spaceId && routeProject
+            {open ? <Drop bare={bare}>{spaceId && routeProject
                 ? <CueListPanel spaceId={spaceId} projectId={routeProject} />
                 : (
                     <ol style={{ margin: 0, padding: '0 0.95rem 0.7rem 2.2rem' }} aria-label="the looks of the show, in order">
@@ -160,7 +172,7 @@ export function ShowChip({ show, state, offset, top, spaceId = '', routeProject 
                             {show.loop ? 'Loops. ' : ''}Everyone watching sees the same look at the same moment.
                         </li>
                     </ol>
-                )) : null}
+                )}</Drop> : null}
         </div>
     )
 }
