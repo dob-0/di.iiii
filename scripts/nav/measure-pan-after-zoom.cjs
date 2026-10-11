@@ -76,6 +76,7 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     }
     await sleep(600)
     const p1 = await last(); const m1 = await mark()
+    await page.evaluate(() => { window.__ctxMenu = null; document.addEventListener('contextmenu', (e) => { window.__ctxMenu = e.defaultPrevented ? 'suppressed' : 'OPENS' }) })
     await page.mouse.move(cx, cy)
     await page.mouse.down({ button: 'right' })
     const steps = 20
@@ -96,6 +97,7 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
         zoomTotalM: +f(dist(p0, p1)), zoomPerNotchM: perNotch.map((v) => +f(v)), zoomMeanPerNotchM: +f(dist(p0, p1) / NOTCHES), zoomMaxFrameJumpM: +f(zmax),
         panNetM: +f(dist(p1, p2)), panMaxFrameJumpM: +f(maxJump), panFrames: seg.length, camBefore: p0.slice(1, 4).map((v) => +f(v)), camAfterZoom: p1.slice(1, 4).map((v) => +f(v)), camAfterPan: p2.slice(1, 4).map((v) => +f(v)), orbitDistanceM: { before: +f(p0[4]), afterZoom: +f(p1[4]), afterPan: +f(p2[4]) },
     }))
+    console.log('CONTEXTMENU', await page.evaluate(() => window.__ctxMenu))
     if (process.env.NAV_TRACE) console.log('TRACE', JSON.stringify(await page.evaluate(() => (window.__diNavTrace || []).slice(-6))))
     if (process.env.NAV_SHOT) await page.screenshot({ path: process.env.NAV_SHOT })
     await page.close()

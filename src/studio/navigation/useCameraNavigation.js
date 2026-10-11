@@ -176,12 +176,20 @@ export function useCameraNavigation({
             if (quiet) { settleForGesture(cc); pivotAt(event, CC_ACTION.DOLLY, true) }
         }
 
+        // The right button is ours in a worldMove preset: the browser's context menu must not open over the viewport.
+        // camera-controls used to suppress it while it owned the button (owner, 2026-10-12: "save image as, inspect… kidding me").
+        const onContextMenu = (event) => {
+            if (preset.worldMove && element.contains(event.target)) event.preventDefault()
+        }
+
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })
         doc.addEventListener('wheel', onWheel, { capture: true, passive: true })
+        doc.addEventListener('contextmenu', onContextMenu, { capture: true })
         return () => {
             endMove()
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             doc.removeEventListener('wheel', onWheel, { capture: true })
+            doc.removeEventListener('contextmenu', onContextMenu, { capture: true })
         }
     }, [active, controlsRef, presetId, ortho, orbitSelection, getScene])
 }
