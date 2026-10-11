@@ -7,7 +7,7 @@ mount heading across the forward half of the hall (pan -80..+80 deg from +z); it
 deg, tilt 1.5 and 24 deg) - a previs of a scan, the real cube fills between. Per heading two lines: one just above horizontal (+1.5 deg) and one 'low' - the steepest downward tilt whose end still meets
 the rule (side/back walls >= 3.5 m, the entry wall >= 9.0 m = door top 6 + 3 m, >= 9.2 m where a line crosses the DJ crane at z 3.2),
 so the sheet of lines fills the air from 9 m down to 3.5 m along the walls. Each line ends on the first of: a side wall
-(x +-11.95), the entry wall (z 53.8), the back wall (z -53.8) or the roof bottom chords (y 10.3). Scan fan width ASSUMED
+(x -36.2 / +60.2, the real outer walls one and two spans over; x +-12 are column rows), the entry wall (z 53.8), the back wall (z -53.8) or the roof bottom chords (y 10.3). Scan fan width ASSUMED
 +-30 deg (not in fixtures.json; owed from the LaserOS MK2 manual). Lamp/crane strikes along the lines: UNVALIDATED, the
 laser-margin Scene run is owed. Output: scripts/place/rigs/moxir-v2-4-2026-10-11.json.
   python3 scripts/place/moxir_v2_4_fan.py --repo . [--headings -80,-48,-16,16,48,80] [--tilts 1.5,24] [--pans -18,18]
@@ -17,11 +17,11 @@ ap = argparse.ArgumentParser(); ap.add_argument('--repo', required=True); ap.add
 ap.add_argument('--headings', default='-80,-48,-16,16,48,80'); ap.add_argument('--tilts', default='1.5,low', help='degrees, or "low" = the steepest DOWNWARD tilt whose end still meets the rule (side/back walls >= 3.5 m, entry wall >= 9.0 m = door top 6 + 3, and >= 9.2 m where it crosses the DJ crane at z 3.2)'); ap.add_argument('--pans', default='-18,18')
 ap.add_argument('--out', default='scripts/place/rigs/moxir-v2-4-2026-10-11.json')
 a = ap.parse_args(); rig = json.load(open(f'{a.repo}/{a.src}'))
-HALF_W, WALL_Z, ROOF_Y, RULE_Y = 11.95, 53.8, 10.3, 3.0
+WEST_X, EAST_X, WALL_Z, ROOF_Y, RULE_Y = -36.15, 60.15, 53.8, 10.3, 3.0   # the hall is 1+1+2 spans wide: inside x -36.2..60.2 (moxir_v2_symmetry.py HALL_IN); x +-12 are COLUMN ROWS, not walls (v2.4 first build had walls at +-12: WRONG, fixed 2026-10-11)
 def euler_for(d): c = math.asin(max(-1, min(1, d[0]))); return [round(math.atan2(-d[2], -d[1]), 4), 0.0, round(c, 4)]
 def first_hit(p, d):
     hits = []
-    for name, axis, val in (('east side wall (x +12)', 0, HALF_W), ('west side wall (x -12)', 0, -HALF_W), ('entry (NW) end wall above the door', 2, WALL_Z), ('back wall', 2, -WALL_Z), ('roof bottom chords', 1, ROOF_Y), ('FLOOR (never allowed)', 1, 0.0)):
+    for name, axis, val in (('east side wall (x +60.2, two spans over)', 0, EAST_X), ('west side wall (x -36.2, one span over)', 0, WEST_X), ('entry (NW) end wall above the door', 2, WALL_Z), ('back wall', 2, -WALL_Z), ('roof bottom chords', 1, ROOF_Y), ('FLOOR (never allowed)', 1, 0.0)):
         if abs(d[axis]) < 1e-9: continue
         t = (val - p[axis]) / d[axis]
         if t > 0: hits.append((t, name))
@@ -60,6 +60,16 @@ for n, (f, h) in enumerate(zip(cubes, heads), 1):
             f['laser']['beams'].append(b); tubes.append({'beam': bid, 'cube': f['id'], 'from': p, 'to': T, 'half_fan_deg': 1.008, 'ends_on': name})
             lines.append((bid, round(h + pan), tl, name, round(L, 1)))
 rig['version'] = '2.4'
+# previs brightness (owner 2026-10-11: "make lasers too full bright that i can see what that cover"): a lasers-only look at 100 % as the
+# first cue, and peak's lasers at 100 %; the measured 0.16 white-out cap (2026-10-09) stays in desk_caps as the show desk's ceiling.
+import copy
+peak = [l for l in rig['looks'] if l['id'] == 'peak'][0]
+if not any(l['id'] == 'lasers' for l in rig['looks']):
+    rig['looks'].insert(0, {'id': 'lasers', 'title': 'Lasers only (full, previs)', 'act': peak.get('act'), 'parts': {'laser': ['#e8e4dc', 1.0]},
+                            'desk_caps': {'laser': {'fader': 1.0, 'note': 'PREVIS override to see the fan coverage (owner 2026-10-11); the 0.16 cap measured 2026-10-09 (peak.desk_caps) still rules the show desk'}}})
+peak['parts']['laser'] = ['#e8e4dc', 1.0]; peak.setdefault('notes', []).append('v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps')
+if not any(c.get('look') == 'lasers' for c in rig['cues']):
+    c = copy.deepcopy([c for c in rig['cues'] if c.get('look') == 'peak'][0]); c.update({'look': 'lasers', 'name': 'lasers only (full, previs)'}); rig['cues'].insert(0, c)
 rig['lasers'].update({'tubes': tubes, 'previous': 'v2.3 one point above the door (moxir-v2-3-2026-10-11.json)',
     'design': 'v2.4 fan: six cubes on the far crane girder top, headings -80..+80 deg across the forward half, each scanning a fan drawn as 4 lines; all lines rise from 8.81 m and end on walls or roof chords (owner 2026-10-11: cover all the air space, not the full 360)',
     'scan_fan_deg': {'value': 60, 'basis': 'ASSUMED +-30 deg, NOT in fixtures.json; read the LaserOS MK2 manual (owed)'},

@@ -621,11 +621,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       9.01,
-       -43.5
+       -36.15,
+       9.65,
+       -46.9
       ],
-      "length_m": 7.526,
+      "length_m": 31.972,
       "r": [
        1.7568,
        0.0,
@@ -633,8 +633,8 @@
       ],
       "pan_deg": -98.0,
       "tilt_deg": 1.5,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 9.01,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 9.65,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -644,11 +644,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       9.03,
-       -38.49
+       -36.15,
+       9.75,
+       -25.62
       ],
-      "length_m": 8.441,
+      "length_m": 35.858,
       "r": [
        -1.6265,
        0.0,
@@ -656,8 +656,8 @@
       ],
       "pan_deg": -62.0,
       "tilt_deg": 1.5,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 9.03,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 9.75,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -667,22 +667,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       4.47,
-       -43.5
+       -36.15,
+       3.75,
+       -46.9
       ],
-      "length_m": 8.687,
+      "length_m": 32.359,
       "r": [
-       0.2365,
+       0.7209,
        0.0,
-       -1.0306
+       -1.361
       ],
       "pan_deg": -98.0,
-      "tilt_deg": -30.0,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 4.47,
-      "lowest_m": 4.47,
-      "over_rule_line_m": 1.47,
+      "tilt_deg": -9.0,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 3.75,
+      "lowest_m": 3.75,
+      "over_rule_line_m": 0.75,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      },
      {
@@ -690,22 +690,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       3.94,
-       -38.49
+       -36.15,
+       3.77,
+       -25.62
       ],
-      "length_m": 9.743,
+      "length_m": 36.198,
       "r": [
-       -0.6827,
+       -1.2799,
        0.0,
-       -0.8705
+       -1.0641
       ],
       "pan_deg": -62.0,
-      "tilt_deg": -30.0,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 3.94,
-      "lowest_m": 3.94,
-      "over_rule_line_m": 0.94,
+      "tilt_deg": -8.0,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 3.77,
+      "lowest_m": 3.77,
+      "over_rule_line_m": 0.77,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      }
     ],
@@ -779,11 +779,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       9.04,
-       -38.82
+       -36.15,
+       9.74,
+       -28.05
       ],
-      "length_m": 8.924,
+      "length_m": 35.424,
       "r": [
        -1.6351,
        0.0,
@@ -791,8 +791,8 @@
       ],
       "pan_deg": -66.0,
       "tilt_deg": 1.5,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 9.04,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 9.74,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -802,11 +802,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       9.24,
-       -28.33
+       -32.25,
+       10.3,
+       6.83
       ],
-      "length_m": 16.306,
+      "length_m": 56.92,
       "r": [
        -1.601,
        0.0,
@@ -814,8 +814,8 @@
       ],
       "pan_deg": -30.0,
       "tilt_deg": 1.5,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 9.24,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -825,22 +825,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       3.66,
-       -38.82
+       -36.15,
+       3.52,
+       -28.05
       ],
-      "length_m": 10.301,
+      "length_m": 35.805,
       "r": [
-       -0.6137,
+       -1.2187,
        0.0,
-       -0.9127
+       -1.1279
       ],
       "pan_deg": -66.0,
-      "tilt_deg": -30.0,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 3.66,
-      "lowest_m": 3.66,
-      "over_rule_line_m": 0.66,
+      "tilt_deg": -8.5,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 3.52,
+      "lowest_m": 3.52,
+      "over_rule_line_m": 0.52,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      },
      {
@@ -848,22 +848,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       3.51,
-       -28.33
+       -36.15,
+       9.37,
+       13.58
       ],
-      "length_m": 17.139,
+      "length_m": 64.702,
       "r": [
-       -1.2119,
+       -1.5809,
        0.0,
-       -0.4956
+       -0.5236
       ],
       "pan_deg": -30.0,
-      "tilt_deg": -18.0,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 3.51,
-      "lowest_m": 3.51,
-      "over_rule_line_m": 0.51,
+      "tilt_deg": 0.5,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 9.37,
+      "lowest_m": 8.81,
+      "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      }
     ],
@@ -937,11 +937,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       9.52,
-       -18.81
+       26.75,
+       10.3,
+       6.83
       ],
-      "length_m": 27.309,
+      "length_m": 56.92,
       "r": [
        -1.601,
        0.0,
@@ -949,8 +949,8 @@
       ],
       "pan_deg": 30.0,
       "tilt_deg": 1.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 9.52,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -960,11 +960,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       9.2,
-       -36.37
+       50.28,
+       10.3,
+       -19.31
       ],
-      "length_m": 14.947,
+      "length_m": 56.92,
       "r": [
        -1.6351,
        0.0,
@@ -972,8 +972,8 @@
       ],
       "pan_deg": 66.0,
       "tilt_deg": 1.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 9.2,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -983,22 +983,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       3.5,
-       -18.81
+       53.87,
+       9.78,
+       53.8
       ],
-      "length_m": 27.811,
+      "length_m": 111.144,
       "r": [
-       -1.35,
+       -1.5809,
        0.0,
-       0.513
+       0.5236
       ],
       "pan_deg": 30.0,
-      "tilt_deg": -11.0,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 3.5,
-      "lowest_m": 3.5,
-      "over_rule_line_m": 0.5,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.78,
+      "lowest_m": 8.81,
+      "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      },
      {
@@ -1006,22 +1006,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       3.52,
-       -36.37
+       60.15,
+       4.08,
+       -14.91
       ],
-      "length_m": 15.851,
+      "length_m": 67.869,
       "r": [
-       -0.8544,
+       -1.4005,
        0.0,
-       1.0375
+       1.1465
       ],
       "pan_deg": 66.0,
-      "tilt_deg": -19.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 3.52,
-      "lowest_m": 3.52,
-      "over_rule_line_m": 0.52,
+      "tilt_deg": -4.0,
+      "ends_on": "east side wall (x +60.2, two spans over)",
+      "end_height_m": 4.08,
+      "lowest_m": 4.08,
+      "over_rule_line_m": 1.08,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      }
     ],
@@ -1095,11 +1095,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       9.22,
-       -29.33
+       -34.92,
+       10.3,
+       4.72
       ],
-      "length_m": 15.832,
+      "length_m": 56.92,
       "r": [
        -1.6024,
        0.0,
@@ -1107,8 +1107,8 @@
       ],
       "pan_deg": -34.0,
       "tilt_deg": 1.5,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 9.22,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -1141,22 +1141,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.95,
-       3.51,
-       -29.33
+       -36.15,
+       9.33,
+       6.55
       ],
-      "length_m": 16.689,
+      "length_m": 59.105,
       "r": [
-       -1.1872,
+       -1.5813,
        0.0,
-       -0.5589
+       -0.5934
       ],
       "pan_deg": -34.0,
-      "tilt_deg": -18.5,
-      "ends_on": "west side wall (x -12)",
-      "end_height_m": 3.51,
-      "lowest_m": 3.51,
-      "over_rule_line_m": 0.51,
+      "tilt_deg": 0.5,
+      "ends_on": "west side wall (x -36.2, one span over)",
+      "end_height_m": 9.33,
+      "lowest_m": 8.81,
+      "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      },
      {
@@ -1276,11 +1276,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       9.48,
-       -21.18
+       29.42,
+       10.3,
+       4.72
       ],
-      "length_m": 25.671,
+      "length_m": 56.92,
       "r": [
        -1.6024,
        0.0,
@@ -1288,8 +1288,8 @@
       ],
       "pan_deg": 34.0,
       "tilt_deg": 1.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 9.48,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -1322,22 +1322,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       3.59,
-       -21.18
+       60.15,
+       9.79,
+       50.28
       ],
-      "length_m": 26.188,
+      "length_m": 111.862,
       "r": [
-       -1.3301,
+       -1.5813,
        0.0,
-       0.5799
+       0.5934
       ],
       "pan_deg": 34.0,
-      "tilt_deg": -11.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 3.59,
-      "lowest_m": 3.59,
-      "over_rule_line_m": 0.59,
+      "tilt_deg": 0.5,
+      "ends_on": "east side wall (x +60.2, two spans over)",
+      "end_height_m": 9.79,
+      "lowest_m": 8.81,
+      "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      }
     ],
@@ -1411,11 +1411,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       9.19,
-       -35.56
+       49.24,
+       10.3,
+       -15.74
       ],
-      "length_m": 14.672,
+      "length_m": 56.92,
       "r": [
        -1.6265,
        0.0,
@@ -1423,8 +1423,8 @@
       ],
       "pan_deg": 62.0,
       "tilt_deg": 1.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 9.19,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -1434,11 +1434,11 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       9.15,
-       -44.27
+       55.35,
+       10.3,
+       -50.37
       ],
-      "length_m": 13.082,
+      "length_m": 56.92,
       "r": [
        1.7568,
        0.0,
@@ -1446,8 +1446,8 @@
       ],
       "pan_deg": 98.0,
       "tilt_deg": 1.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 9.15,
+      "ends_on": "roof bottom chords",
+      "end_height_m": 10.3,
       "lowest_m": 8.81,
       "over_rule_line_m": 5.81,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
@@ -1457,22 +1457,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       3.62,
-       -35.56
+       60.15,
+       3.97,
+       -9.94
       ],
-      "length_m": 15.559,
+      "length_m": 69.426,
       "r": [
-       -0.9246,
+       -1.4229,
        0.0,
-       0.9832
+       1.0775
       ],
       "pan_deg": 62.0,
-      "tilt_deg": -19.5,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 3.62,
-      "lowest_m": 3.62,
-      "over_rule_line_m": 0.62,
+      "tilt_deg": -4.0,
+      "ends_on": "east side wall (x +60.2, two spans over)",
+      "end_height_m": 3.97,
+      "lowest_m": 3.97,
+      "over_rule_line_m": 0.97,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      },
      {
@@ -1480,22 +1480,22 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.95,
-       3.53,
-       -44.27
+       60.15,
+       3.95,
+       -51.04
       ],
-      "length_m": 14.104,
+      "length_m": 61.942,
       "r": [
-       0.3317,
+       1.0561,
        0.0,
-       1.1634
+       1.4107
       ],
       "pan_deg": 98.0,
-      "tilt_deg": -22.0,
-      "ends_on": "east side wall (x +12)",
-      "end_height_m": 3.53,
-      "lowest_m": 3.53,
-      "over_rule_line_m": 0.53,
+      "tilt_deg": -4.5,
+      "ends_on": "east side wall (x +60.2, two spans over)",
+      "end_height_m": 3.95,
+      "lowest_m": 3.95,
+      "over_rule_line_m": 0.95,
       "checks": "end >= 3.5 m on side/back walls, >= 9.0 m on the entry wall, >= 9.2 m crossing the DJ crane (this script); lamp/crane strikes UNVALIDATED - laser-margin Scene run owed (v2.4)"
      }
     ],
@@ -6645,6 +6645,23 @@
  ],
  "looks": [
   {
+   "id": "lasers",
+   "title": "Lasers only (full, previs)",
+   "act": 3,
+   "parts": {
+    "laser": [
+     "#e8e4dc",
+     1.0
+    ]
+   },
+   "desk_caps": {
+    "laser": {
+     "fader": 1.0,
+     "note": "PREVIS override to see the fan coverage (owner 2026-10-11); the 0.16 cap measured 2026-10-09 (peak.desk_caps) still rules the show desk"
+    }
+   }
+  },
+  {
    "id": "dark",
    "title": "Dark (one colour: ember)",
    "act": 1,
@@ -6766,7 +6783,7 @@
     ],
     "laser": [
      "#e8e4dc",
-     0.16
+     1.0
     ],
     "stage key": [
      "#e8e4dc",
@@ -6860,10 +6877,19 @@
      ],
      "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
-   }
+   },
+   "notes": [
+    "v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps"
+   ]
   }
  ],
  "cues": [
+  {
+   "look": "lasers",
+   "name": "lasers only (full, previs)",
+   "fade": 2,
+   "hold": 20
+  },
   {
    "look": "dark",
    "name": "v2.1 \u00b7 dark (one colour)",
@@ -16932,12 +16958,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     9.01,
-     -43.5
+     -36.15,
+     9.65,
+     -46.9
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "1b",
@@ -16948,12 +16974,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     9.03,
-     -38.49
+     -36.15,
+     9.75,
+     -25.62
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "1c",
@@ -16964,12 +16990,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     4.47,
-     -43.5
+     -36.15,
+     3.75,
+     -46.9
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "1d",
@@ -16980,12 +17006,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     3.94,
-     -38.49
+     -36.15,
+     3.77,
+     -25.62
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "2a",
@@ -16996,12 +17022,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     9.04,
-     -38.82
+     -36.15,
+     9.74,
+     -28.05
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "2b",
@@ -17012,12 +17038,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     9.24,
-     -28.33
+     -32.25,
+     10.3,
+     6.83
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "2c",
@@ -17028,12 +17054,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     3.66,
-     -38.82
+     -36.15,
+     3.52,
+     -28.05
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "2d",
@@ -17044,12 +17070,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     3.51,
-     -28.33
+     -36.15,
+     9.37,
+     13.58
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "3a",
@@ -17060,12 +17086,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     9.22,
-     -29.33
+     -34.92,
+     10.3,
+     4.72
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "3b",
@@ -17092,12 +17118,12 @@
      -42.45
     ],
     "to": [
-     -11.95,
-     3.51,
-     -29.33
+     -36.15,
+     9.33,
+     6.55
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -12)"
+    "ends_on": "west side wall (x -36.2, one span over)"
    },
    {
     "beam": "3d",
@@ -17140,12 +17166,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     9.48,
-     -21.18
+     29.42,
+     10.3,
+     4.72
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "4c",
@@ -17172,12 +17198,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     3.59,
-     -21.18
+     60.15,
+     9.79,
+     50.28
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "east side wall (x +60.2, two spans over)"
    },
    {
     "beam": "5a",
@@ -17188,12 +17214,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     9.52,
-     -18.81
+     26.75,
+     10.3,
+     6.83
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "5b",
@@ -17204,12 +17230,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     9.2,
-     -36.37
+     50.28,
+     10.3,
+     -19.31
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "5c",
@@ -17220,12 +17246,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     3.5,
-     -18.81
+     53.87,
+     9.78,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "5d",
@@ -17236,12 +17262,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     3.52,
-     -36.37
+     60.15,
+     4.08,
+     -14.91
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "east side wall (x +60.2, two spans over)"
    },
    {
     "beam": "6a",
@@ -17252,12 +17278,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     9.19,
-     -35.56
+     49.24,
+     10.3,
+     -15.74
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "6b",
@@ -17268,12 +17294,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     9.15,
-     -44.27
+     55.35,
+     10.3,
+     -50.37
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "roof bottom chords"
    },
    {
     "beam": "6c",
@@ -17284,12 +17310,12 @@
      -42.45
     ],
     "to": [
-     11.95,
-     3.62,
-     -35.56
+     60.15,
+     3.97,
+     -9.94
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "east side wall (x +60.2, two spans over)"
    },
    {
     "beam": "6d",
@@ -17300,30 +17326,30 @@
      -42.45
     ],
     "to": [
-     11.95,
-     3.53,
-     -44.27
+     60.15,
+     3.95,
+     -51.04
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +12)"
+    "ends_on": "east side wall (x +60.2, two spans over)"
    }
   ],
   "signed_off": false,
   "desk": "the desk writes 0 to every laser channel until the IEC 60825-1 sign-off (deskLookValues.js laserHeld)",
   "arithmetic": {
    "lines": 24,
-   "lowest_point_m": 3.5,
-   "over_rule_line_m": 0.5,
+   "lowest_point_m": 3.52,
+   "over_rule_line_m": 0.52,
    "rule": "IEC TR 60825-3: >= 3.0 m above places where people stand",
    "ends": [
-    "east side wall (x +12)",
+    "east side wall (x +60.2, two spans over)",
     "entry (NW) end wall above the door",
     "roof bottom chords",
-    "west side wall (x -12)"
+    "west side wall (x -36.2, one span over)"
    ],
    "length_m_min_max": [
-    7.5,
-    96.3
+    32.0,
+    111.9
    ],
    "basis": "this script, UNVALIDATED for lamp/crane strikes"
   },
