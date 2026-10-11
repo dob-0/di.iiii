@@ -221,12 +221,12 @@ MATERIALS = {
     # The building's envelope seen from OUTSIDE at night (owner 2026-10-12: 'see the building ... out wall is like 30% visible'):
     # the outer walls' panels, the end walls and the deck in a faintly self-lit, part-transparent version of the block colour,
     # only when --shell-alpha is given. Unlit at night they were black on black from outside (v2.6 screenshot 00:46).
-    'shell':     ((0.40, 0.32, 0.25), 0.9, 0.0, None),   # NO emission: a glowing shell washed the inside white (owner 2026-10-12 01:02); outside it is lit by the outdoor washes
+    'shell':     ((0.40, 0.32, 0.25), 0.9, 0.0, (0.40, 0.32, 0.25)),   # a FAINT self-light (strength 0.12, below): 0.5 washed the inside white (owner 01:02), none left the walls black from the side (owner 02:10)
     'zone-dance':     ((0.02, 0.08, 1.0), 0.9, 0.0, (0.02, 0.08, 1.0)),
     'zone-stage':     ((0.02, 0.8, 0.08), 0.9, 0.0, (0.02, 0.8, 0.08)),
     'zone-backstage': ((1.0, 0.06, 0.03), 0.9, 0.0, (1.0, 0.06, 0.03)),
 }
-EMISSION_STRENGTH = {'skylight': 1.0}
+EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.12}   # shell: tuned on the owner's screen in the live viewer (ACES, exposure 3.5), 2026-10-12
 SHELL_ALPHA = None    # set by --shell-alpha (0..1): the envelope's opacity; None = opaque block/deck as before
 # Open surfaces (the frame's prisms, glass planes): drawn from both sides and
 # never run through the "make normals consistent" pass meant for closed boxes.
