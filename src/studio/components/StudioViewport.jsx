@@ -867,6 +867,7 @@ function StudioSceneContent({
                         lockInside={smartView.lockInside}
                         onBuilding={smartView.onBuilding}
                         onLockPaused={smartView.onLockPaused}
+                        layers={smartView.layers}
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
@@ -1146,9 +1147,10 @@ export default function StudioViewport({
         lockInside: Boolean(smartView?.lockInside),
         onBuilding: smartView?.onBuilding,
         onLockPaused: smartView?.onLockPaused,
+        layers: smartView?.layers || null,
         onPresets: setPresets,
         onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, setPresets, releaseView])
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.

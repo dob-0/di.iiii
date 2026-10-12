@@ -34,6 +34,7 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import SceneBar, { EditInStudio, barButtonStyle } from '../../rigbuild/SceneBar.jsx'
+import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, layersParam, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -88,6 +89,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const [lockPaused, setLockPaused] = useState(false)
     const onBuilding = useCallback((on) => setHasBuilding(Boolean(on)), [])
     const onLockPaused = useCallback((on) => setLockPaused(Boolean(on)), [])
+    // The layers (SceneBar: Roof · Walls · Machines · Outside, owner 2026-10-12 "we need all 3"): all shown unless the
+    // link says otherwise (?layers=walls,machines — the layers shown), and every toggle writes the link back.
+    const [layers, setLayers] = useState(() => parseLayersParam(typeof window !== 'undefined' ? window.location.search : ''))
+    const toggleLayer = useCallback((id) => {
+        setLayers((prev) => {
+            const next = { ...prev, [id]: prev[id] === false }
+            try {
+                const url = new URL(window.location.href)
+                const value = layersParam(next)
+                if (value === null) url.searchParams.delete('layers')
+                else url.searchParams.set('layers', value)
+                window.history.replaceState(window.history.state, '', url)
+            } catch { /* no history (tests) */ }
+            return next
+        })
+    }, [])
     const toggleLockInside = useCallback(() => {
         setLockInside((on) => {
             try { window.localStorage.setItem('di.view.lockInside', on ? '0' : '1') } catch { /* private window */ }
@@ -659,6 +676,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         lockInside={lockInside}
                         onBuilding={onBuilding}
                         onLockPaused={onLockPaused}
+                        layers={layers}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'
@@ -687,7 +705,31 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         ) : null}
                         <EditInStudio spaceId={resolvedRouteSpaceId} projectId={projectId} />
                     </>}
-                    right={barControls}
+                    right={<>
+                        {navMode === 'orbit' && hasBuilding ? (
+                            <div role="group" aria-label="layers" data-testid="scene-layers" style={{ display: 'flex', alignItems: 'stretch', gap: '2px', flexWrap: 'wrap' }}>
+                                {VIEW_LAYER_IDS.map((id) => (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        data-testid={`layer-${id}`}
+                                        aria-pressed={layers[id] !== false}
+                                        title={`${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                                        onClick={() => toggleLayer(id)}
+                                        style={{
+                                            ...barButtonStyle,
+                                            padding: '0 0.7rem',
+                                            color: layers[id] !== false ? '#f5f7fa' : 'rgba(245,247,250,0.45)',
+                                            textDecoration: layers[id] !== false ? 'none' : 'line-through'
+                                        }}
+                                    >
+                                        {VIEW_LAYER_LABELS[id]}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                        {barControls}
+                    </>}
                 />
             ) : barControls}
 
