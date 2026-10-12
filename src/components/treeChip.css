@@ -25,3 +25,12 @@
     border-color: var(--di-danger);
     color: var(--di-danger);
 }
+
+/* Inside a scene bar (rigbuild/SceneBar.jsx): one more cell of the bar, a small red chip, same text. */
+.tree-chip--inline {
+    position: static;
+    align-self: center;
+    margin: 0 0.35rem;
+    max-width: 14rem;
+    border-radius: 2px;
+}

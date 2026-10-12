@@ -23,6 +23,7 @@ import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.js
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import LaserView from '../../rigbuild/LaserView.jsx'
 import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -46,6 +47,7 @@ import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
 
@@ -57,6 +59,7 @@ const SmartView = lazy(() => import('../../project/viewport/smartView/SmartView.
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
+const NO_SCENE_ENTITIES = Object.freeze([])
 
 
 // True when this viewport is showing a finished piece rather than hosting an
@@ -322,6 +325,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 // How the smart view finds an entity's object (SmartView.jsx).
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
+                    // Locked: not picked — the click goes on to whatever is behind it.
+                    if (isLocked) return
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelect?.(entity.id)
@@ -371,6 +376,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
                     if (e.delta > 2) return
+                    if (entity.components?.runtime?.locked === true) return
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelectEntity?.(entity.id)
@@ -656,6 +662,7 @@ function StudioSceneContent({
     screens = null,
     followLinks = false,
     rigLook = undefined,
+    lookDrawn = false,
     smartView = null,
     graphRoom = null
 }) {
@@ -666,8 +673,12 @@ function StudioSceneContent({
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     // A room with designed looks draws its lamps posed by the look the desk is playing
     // (src/rigbuild/useRigLook.js — a view, the document is untouched); any other room
-    // is exactly its document.
-    const { entities: sceneEntities } = useRigLookEntities(document, { explicit: rigLook })
+    // is exactly its document. A room handed here ALREADY drawn in its look (`lookDrawn`:
+    // the public page, where RoomLookFollower posed, faded, desk-drove and pooled it) is
+    // drawn as handed: posed a second time, every look level was drawn squared (MOXIR
+    // 2026-10-09, docs/ai/known-fixes.md; src/rigbuild/lookLevel.test.jsx).
+    const look = useRigLookEntities(lookDrawn ? null : document, { explicit: rigLook })
+    const sceneEntities = lookDrawn ? (document.entities || NO_SCENE_ENTITIES) : look.entities
     const childMap = useMemo(() => {
         const map = new Map()
         for (const entity of sceneEntities) {
@@ -729,6 +740,8 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            {/* MOXIR's LaserCubes: what the laser server is drawing, as beams (rigbuild/laserView.js) */}
+            <LaserView entities={document.entities} />
             <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
@@ -858,16 +871,18 @@ function StudioSceneContent({
                         lockInside={smartView.lockInside}
                         onBuilding={smartView.onBuilding}
                         onLockPaused={smartView.onLockPaused}
+                        layers={smartView.layers}
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.length > 0 && (
+            {transformOp && selectedEntities.some((entity) => entity.components?.runtime?.locked !== true) && (
                 <ModalTransform
                     op={transformOp}
-                    selectedEntities={selectedEntities}
+                    // A locked object never moves, even when it was selected before it was locked.
+                    selectedEntities={selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true)}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
@@ -1071,6 +1086,8 @@ export default function StudioViewport({
     controlsRef,
     xrStore,
     editMode = 'navigate',
+    boxSelect = false,
+    onSelectEntities,
     gizmoMode = 'translate',
     gizmoAxis = null,
     gizmoVisible = true,
@@ -1094,6 +1111,9 @@ export default function StudioViewport({
     // A designed look to pose the room by ('' none), overriding the desk's (view C's GO
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
+    // The document's entities are the room ALREADY drawn in its look (the public page:
+    // RoomLookFollower drew them): draw them as handed, never pose them again.
+    lookDrawn = false,
     // The smart view (docs/architecture/SMART_VIEW.md): occlusion fade, cutaway from
     // outside, the six view presets, x-ray. Off unless the surface asks:
     //   { bar: 'visitor' | 'studio' | false, constraints: bool, deepLink: bool }
@@ -1134,9 +1154,10 @@ export default function StudioViewport({
         lockInside: Boolean(smartView?.lockInside),
         onBuilding: smartView?.onBuilding,
         onLockPaused: smartView?.onLockPaused,
+        layers: smartView?.layers || null,
         onPresets: setPresets,
         onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, setPresets, releaseView])
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1247,6 +1268,15 @@ export default function StudioViewport({
                         fovRef={smartOn ? fovRef : null}
                         selectedEntityIds={selectedEntityIds}
                     />
+                    {onSelectEntities && !lowPower ? (
+                        <BoxSelect
+                            active={boxSelect}
+                            entities={document.entities}
+                            selectedEntityIds={selectedEntityIds}
+                            onSelectEntities={onSelectEntities}
+                            controlsRef={controlsRef}
+                        />
+                    ) : null}
                     <StudioSceneContent
                         document={document}
                         selectedEntityId={selectedEntityId}
@@ -1266,6 +1296,7 @@ export default function StudioViewport({
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
                         rigLook={rigLook}
+                        lookDrawn={lookDrawn}
                         screens={screens}
                         followLinks={followLinks}
                         smartView={smartViewProps}

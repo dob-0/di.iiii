@@ -48,6 +48,42 @@ const emitterHex = (drive) => {
     const peak = Math.max(...drive)
     return peak > 0 ? rgbHex(drive.map((v) => toCode(v / peak))) : null
 }
+// XYZ → linear Rec.709 (IEC 61966-2-1, D65) and its luminance row
+const XYZ_TO_RGB = [[3.2406, -1.5372, -0.4986], [-0.9689, 1.8758, 0.0415], [0.0557, -0.204, 1.057]]
+const LUMA709 = [0.2126, 0.7152, 0.0722]
+/**
+ * The colour of emitters in XYZ: `emitters` { r, g, b, w?: { x, y, flux_lm } } (CIE 1931 xy, lumens at full),
+ * `drive` 0..255 each (linear, PWM). Returns { colour (sRGB code at full), share (of the all-on lumens) } or
+ * null when the data is missing. Out-of-gamut mixes are desaturated toward the grey of equal luminance.
+ */
+export const emitterMix = (emitters, drive) => {
+    const keys = ['r', 'g', 'b', 'w'].filter((k) => emitters?.[k])
+    if (!['r', 'g', 'b'].every((k) => keys.includes(k))) return null
+    const ok = (e) => Number(e.x) > 0 && Number(e.y) > 0 && Number(e.flux_lm) > 0
+    if (!keys.every((k) => ok(emitters[k]))) return null
+    const XYZ = [0, 0, 0]
+    let full = 0
+    for (const k of keys) {
+        const { x, y, flux_lm: lm } = emitters[k]
+        const d = Math.max(0, Math.min(255, Number(drive[k]) || 0)) / 255
+        const f = lm * d
+        XYZ[0] += (f * x) / y
+        XYZ[1] += f
+        XYZ[2] += (f * (1 - x - y)) / y
+        full += lm
+    }
+    if (!(XYZ[1] > 0)) return { colour: null, share: 0 }
+    let rgb = XYZ_TO_RGB.map((row) => row[0] * XYZ[0] + row[1] * XYZ[1] + row[2] * XYZ[2])
+    const Y = LUMA709.reduce((sum, w, i) => sum + w * rgb[i], 0)
+    if (rgb.some((c) => c < 0)) {
+        let t = 0
+        for (const c of rgb) if (c < 0) t = Math.max(t, -c / (Y - c))
+        rgb = rgb.map((c) => Math.max(0, c + t * (Y - c)))
+    }
+    const peak = Math.max(...rgb)
+    return { colour: rgbHex(rgb.map((v) => toCode(v / peak))), share: Math.min(1, XYZ[1] / full) }
+}
+
 const WARM_3200K = [255, 180, 107]
 // What a white emitter adds, the desk's own mix (src/rigMirror/fixtureColour.js EMITTER_MIX.w).
 const WHITE_MIX = [0.92, 0.92, 0.92]
@@ -157,7 +193,22 @@ export const decodeDmx = (channels, values, type = null) => {
 
     // Level: the dimmer (16-bit with its fine), times the emitters where there is no wheel.
     const dim = has('dimmer') ? sixteen(at.dimmer, has('dimmerFine') ? at.dimmerFine : null) : 1
-    const emitted = (has('r') || has('g') || has('b') || has('w') || has('warm') || has('cool')) ? Math.min(1, peak / 255) : 1
+    let emitted = (has('r') || has('g') || has('b') || has('w') || has('warm') || has('cool')) ? Math.min(1, peak / 255) : 1
+    // PER-EMITTER COLOUR (2026-10-09): when the type carries each emitter's chromaticity and flux (CIE 1931
+    // xy and lumens at full, e.g. from a spectrometer or a GDTF <Emitter>), the mix is summed in XYZ and
+    // converted to linear Rec.709 (CIE 015:2018; IEC 61966-2-1), and the level is the mix's share of the
+    // full-white lumens. Otherwise the emitters are taken as the sRGB primaries (above) — said in
+    // `colourBasis`: no UPlight unit publishes emitter data (fixtures.json emitter_component: UNKNOWN).
+    if (emitterDrive) {
+        const mixed = emitterMix(type?.emitters, { r: at.r || 0, g: at.g || 0, b: at.b || 0, w: at.w || 0 })
+        if (mixed) {
+            out.colour = mixed.colour
+            emitted = mixed.share
+            out.colourBasis = `per-emitter XYZ (${type.emitters.basis || 'basis not given'}${type.emitters.source ? `, ${type.emitters.source}` : ''})`
+        } else {
+            out.colourBasis = 'ASSUMED: emitters as the sRGB primaries, white as a fixed 0.92 grey (no per-emitter chromaticity or flux)'
+        }
+    }
     out.level = Math.round(dim * emitted * 10000) / 10000
 
     // Shutter / strobe, or a dedicated flash-rate channel (a strobe fixture).

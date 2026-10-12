@@ -55,6 +55,7 @@ describe('bridle limit: included angle of every built pick', () => {
             'moxir-2026-10-17-full-ground.json',
             'moxir-2026-10-17-known-full.json',
             'moxir-2026-10-17-known-ground.json',
+            'moxir-2026-10-17-known-kit.json',
             'moxir-2026-10-17-minimal-cut-movers.json',
             'moxir-2026-10-17-minimal-ground.json',
             'moxir-2026-10-17-minimal.json'

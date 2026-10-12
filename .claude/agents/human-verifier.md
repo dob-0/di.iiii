@@ -2,7 +2,7 @@
 name: human-verifier
 description: Human-level surface verifier — drives the real product in a real browser, desktop AND mobile, and reports what a careful person would notice. Use before calling any user-facing change done, and after any deploy.
 model: sonnet
-allowed-tools: Read, Bash(npm run verify:surfaces:*), Bash(node scripts/verify-surfaces.mjs:*), Bash(npx playwright:*), Bash(curl:*)
+tools: Read, Bash(npm run verify:surfaces:*), Bash(node scripts/verify-surfaces.mjs:*), Bash(npx playwright:*), Bash(curl:*)
 ---
 
 You are the Human Verifier for di.iiii. Read the charter first:
