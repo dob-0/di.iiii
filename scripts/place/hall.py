@@ -383,6 +383,39 @@ class Builder:
                      (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
             faces.append(tuple(base + index for index in face))
 
+    def face(self, material, corners, normal):
+        """One single-sided quad (4 corners) whose normal points along `normal` (a 3-vector); the winding is flipped
+        when it does not. The SKIN of a ghost shell: seen only from the side the normal faces (glTF single-sided)."""
+        (ax, ay, az), (bx, by, bz), (cx, cy, cz) = corners[0], corners[1], corners[2]
+        u = (bx - ax, by - ay, bz - az); v = (cx - ax, cy - ay, cz - az)
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        if n[0] * normal[0] + n[1] * normal[1] + n[2] * normal[2] < 0:
+            corners = [corners[0], corners[3], corners[2], corners[1]]
+        verts, faces = self.parts[material]
+        base = len(verts); verts.extend(corners); faces.append((base, base + 1, base + 2, base + 3))
+
+    def shell_box(self, lo, hi, inner, skin):
+        """A ghost-shell box (SHELL_ALPHA) plus, 2 cm inside its inner face, an opaque single-sided SKIN facing the
+        hall (owner 2026-10-12 04:32 "look to lights": beams ended in the air on the 30 % ghost deck/walls). `inner`
+        is the inward normal: (0,0,-1) deck underside, (±1,0,0) long walls, (0,±1,0) end walls. Without SHELL_ALPHA
+        the box is plain `skin` material as before (opaque both ways). From outside the skin is culled (back face)
+        and the ghost shows the lit interior through it."""
+        if SHELL_ALPHA is None:
+            self.box(skin, lo, hi); return
+        self.box('shell', lo, hi)
+        (x0, y0, z0), (x1, y1, z1) = lo, hi
+        x0, x1 = min(x0, x1), max(x0, x1); y0, y1 = min(y0, y1), max(y0, y1); z0, z1 = min(z0, z1), max(z0, z1)
+        if x1 - x0 < 1e-6 or y1 - y0 < 1e-6 or z1 - z0 < 1e-6:
+            return
+        d = 0.02
+        if inner[2] < 0:   q = [(x0, y0, z0 - d), (x1, y0, z0 - d), (x1, y1, z0 - d), (x0, y1, z0 - d)]
+        elif inner[2] > 0: q = [(x0, y0, z1 + d), (x1, y0, z1 + d), (x1, y1, z1 + d), (x0, y1, z1 + d)]
+        elif inner[0] < 0: q = [(x0 - d, y0, z0), (x0 - d, y1, z0), (x0 - d, y1, z1), (x0 - d, y0, z1)]
+        elif inner[0] > 0: q = [(x1 + d, y0, z0), (x1 + d, y1, z0), (x1 + d, y1, z1), (x1 + d, y0, z1)]
+        elif inner[1] < 0: q = [(x0, y0 - d, z0), (x1, y0 - d, z0), (x1, y0 - d, z1), (x0, y0 - d, z1)]
+        else:              q = [(x0, y1 + d, z0), (x1, y1 + d, z0), (x1, y1 + d, z1), (x0, y1 + d, z1)]
+        self.face(skin, q, inner)
+
     def box(self, material, lo, hi):
         """Axis-aligned box from its two corners (Blender frame: x across, y along, z up)."""
         (x0, y0, z0), (x1, y1, z1) = lo, hi
@@ -876,7 +909,7 @@ def build(dims):
         holes = sorted((l[2], l[3]) for l in lanterns if l[0] <= mid <= l[1])
         y = -end_out
         for h0, h1 in holes + [(end_out, end_out)]:
-            b.box('shell' if SHELL_ALPHA is not None else 'deck', (a, y, deck_z), (c, h0, deck_z + deck_t))
+            b.shell_box((a, y, deck_z), (c, h0, deck_z + deck_t), (0, 0, -1), 'deck')
             y = h1
 
     # Outer long walls with three ribbon window bands, mullions every half pitch.
@@ -888,7 +921,7 @@ def build(dims):
             edges += [lo, hi]
         edges.append(parapet)
         for k in range(0, len(edges), 2):
-            b.box('shell' if SHELL_ALPHA is not None else 'block', (x0, -end_out, edges[k]), (x1, end_out, edges[k + 1]))
+            b.shell_box((x0, -end_out, edges[k]), (x1, end_out, edges[k + 1]), ((1, 0, 0) if x_in > x_out else (-1, 0, 0)), 'block')
         xm = (x0 + x1) / 2
         for lo, hi in bands:
             b.box('glass', (xm - 0.03, -end_in, lo), (xm + 0.03, end_in, hi))
@@ -906,12 +939,12 @@ def build(dims):
         y0, y1 = sorted((sign * end_in, sign * end_out))
         gate_w, gate_h = (door_w, door_h) if sign < 0 else (far_w, far_h)
         if gate_w > 0 and gate_h > 0:
-            em = 'shell' if SHELL_ALPHA is not None else 'block'
-            b.box(em, (wall_out[0], y0, 0.0), (-gate_w / 2, y1, gate_h))
-            b.box(em, (gate_w / 2, y0, 0.0), (wall_out[1], y1, gate_h))
-            b.box(em, (wall_out[0], y0, gate_h), (wall_out[1], y1, parapet))
+            inw = (0, -sign, 0)     # the inward normal: toward the hall's centre
+            b.shell_box((wall_out[0], y0, 0.0), (-gate_w / 2, y1, gate_h), inw, 'block')
+            b.shell_box((gate_w / 2, y0, 0.0), (wall_out[1], y1, gate_h), inw, 'block')
+            b.shell_box((wall_out[0], y0, gate_h), (wall_out[1], y1, parapet), inw, 'block')
         else:
-            b.box('shell' if SHELL_ALPHA is not None else 'block', (wall_out[0], y0, 0.0), (wall_out[1], y1, parapet))
+            b.shell_box((wall_out[0], y0, 0.0), (wall_out[1], y1, parapet), (0, -sign, 0), 'block')
         if sign < 0:
             for side in (-1, 1):
                 x = side * door_w / 2

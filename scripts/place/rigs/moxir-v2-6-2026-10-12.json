@@ -83,7 +83,9 @@
      0.15
     ],
     "part": "cut down"
-   }
+   },
+   "throw_m": 9.74,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-02",
@@ -127,7 +129,9 @@
      0.15
     ],
     "part": "cut up"
-   }
+   },
+   "throw_m": 3.15,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-03",
@@ -171,7 +175,9 @@
      0.15
     ],
     "part": "cut down"
-   }
+   },
+   "throw_m": 9.23,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-04",
@@ -215,7 +221,9 @@
      0.15
     ],
     "part": "cut up"
-   }
+   },
+   "throw_m": 3.66,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-05",
@@ -264,7 +272,9 @@
      0.15
     ],
     "part": "cut down"
-   }
+   },
+   "throw_m": 3.37,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-06",
@@ -308,7 +318,9 @@
      0.15
     ],
     "part": "cut up"
-   }
+   },
+   "throw_m": 8.45,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-07",
@@ -357,7 +369,9 @@
      0.15
     ],
     "part": "cut down"
-   }
+   },
+   "throw_m": 4.04,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-08",
@@ -401,7 +415,9 @@
      0.15
     ],
     "part": "cut up"
-   }
+   },
+   "throw_m": 4.7,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-09",
@@ -445,7 +461,9 @@
      0.15
     ],
     "part": "cut down"
-   }
+   },
+   "throw_m": 7.67,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-10",
@@ -489,7 +507,9 @@
      0.15
     ],
     "part": "cut up"
-   }
+   },
+   "throw_m": 5.09,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-par-cut-11",
@@ -539,7 +559,9 @@
     ],
     "part": "stage key"
    },
-   "was": "rig-par-planes-25"
+   "was": "rig-par-planes-25",
+   "throw_m": 9.19,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
   },
   {
    "id": "rig-smoke-planes",
@@ -6825,7 +6847,7 @@
       }
      ],
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   },
@@ -6944,7 +6966,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "notes": [
@@ -6963,13 +6985,13 @@
   },
   {
    "look": "dark",
-   "name": "v2.1 \u00b7 dark (one colour)",
+   "name": "v2.1 · dark (one colour)",
    "fade": 3,
    "hold": 40
   },
   {
    "look": "peak",
-   "name": "v2.1 \u00b7 peak",
+   "name": "v2.1 · peak",
    "fade": 2,
    "hold": 20
   }
@@ -14023,7 +14045,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "source": "the spread's cap after a9d4b0d1: fader 0.16 = the drawn fraction measured under the 0.65 % budget"
@@ -22369,19 +22391,19 @@
    9.7
   ],
   "counts": {
-   "B380F \u00b7 plane 1 (behind the DJ)": 6,
-   "B380F \u00b7 plane 3 (behind the stage)": 5,
-   "B380F \u00b7 plane 2 (the wings)": 7,
-   "PAR \u00b7 cut down": 5,
-   "PAR \u00b7 cut up": 5,
-   "PAR \u00b7 stage columns": 3,
-   "PAR \u00b7 halo": 3,
-   "PAR \u00b7 columns": 23,
-   "PAR \u00b7 roof": 3,
-   "PAR \u00b7 stage key": 2,
-   "PAR \u00b7 speaker face L": 1,
-   "PAR \u00b7 speaker face R": 1,
-   "PAR \u00b7 embers": 4
+   "B380F · plane 1 (behind the DJ)": 6,
+   "B380F · plane 3 (behind the stage)": 5,
+   "B380F · plane 2 (the wings)": 7,
+   "PAR · cut down": 5,
+   "PAR · cut up": 5,
+   "PAR · stage columns": 3,
+   "PAR · halo": 3,
+   "PAR · columns": 23,
+   "PAR · roof": 3,
+   "PAR · stage key": 2,
+   "PAR · speaker face L": 1,
+   "PAR · speaker face R": 1,
+   "PAR · embers": 4
   },
   "circuits": 14,
   "circuits_ok": false,
