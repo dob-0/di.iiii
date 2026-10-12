@@ -51,6 +51,15 @@ const setup = (withSpaceOpsLock, overrides = {}) => {
     ...(withSpaceOpsLock ? { withSpaceOpsLock } : {}),
     ...overrides
   }
+  // The route hands its scene, op and version to ONE commit (sceneWrite.js).
+  // This double records that commit as the three things it lands — the scene
+  // file, the op rows, the version — so each test below can say which.
+  deps.commitSceneWrite = deps.commitSceneWrite || vi.fn(async ({ spaceId, baseVersion, ops, scene, maxHistory, maxAgeMs, actor }) => {
+    await deps.writeJson(deps.getSpacePaths(spaceId).scenePath, scene)
+    await deps.appendOpsHistory(spaceId, ops, maxHistory, maxAgeMs, actor)
+    await deps.upsertSpaceMeta(spaceId, { touch: true, sceneVersion: baseVersion + ops.length })
+    return { ok: true, nextVersion: baseVersion + ops.length }
+  })
   registerInscriptionRoutes(router, deps)
   return { router, deps }
 }

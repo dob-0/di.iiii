@@ -85,6 +85,28 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops_quarantine ON project_ops_quarantine(project_id, quarantined_at);
 
+  -- The same record for a space's own scene log: rows in space_ops above
+  -- spaces.scene_version, which the old three-step scene write (scene.json,
+  -- then ops, then version) left when two servers wrote one space or a write
+  -- was cut off between its steps (audit 2026-10-09, data F1).
+  -- spaceStore.js healOrphanSpaceOps moves them here. No foreign key on
+  -- purpose, as above.
+  CREATE TABLE IF NOT EXISTS space_ops_quarantine (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    space_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    actor TEXT,
+    actor_type TEXT,
+    actor_label TEXT,
+    original_seq INTEGER,
+    document_version INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    quarantined_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_ops_quarantine ON space_ops_quarantine(space_id, quarantined_at);
+
   -- A breadcrumb left by scripts/project-move.mjs. Project ids are global and
   -- the row it moves keeps its id, so /api/projects/:projectId keeps working
   -- on its own — but the OLD space's bare vanity link
