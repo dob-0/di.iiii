@@ -85,6 +85,28 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops_quarantine ON project_ops_quarantine(project_id, quarantined_at);
 
+  -- The same record for a space's own scene log: rows in space_ops above
+  -- spaces.scene_version, which the old three-step scene write (scene.json,
+  -- then ops, then version) left when two servers wrote one space or a write
+  -- was cut off between its steps (audit 2026-10-09, data F1).
+  -- spaceStore.js healOrphanSpaceOps moves them here. No foreign key on
+  -- purpose, as above.
+  CREATE TABLE IF NOT EXISTS space_ops_quarantine (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    space_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    actor TEXT,
+    actor_type TEXT,
+    actor_label TEXT,
+    original_seq INTEGER,
+    document_version INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    quarantined_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_ops_quarantine ON space_ops_quarantine(space_id, quarantined_at);
+
   -- A breadcrumb left by scripts/project-move.mjs. Project ids are global and
   -- the row it moves keeps its id, so /api/projects/:projectId keeps working
   -- on its own — but the OLD space's bare vanity link
@@ -407,6 +429,46 @@ const SCHEMA = `
     revoked_at INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_telegram_act_expiry ON telegram_act_tokens(expires_at);
+
+  -- Signing in from a terminal (cliLoginStore.js, docs/architecture/CLI_LOGIN.md).
+  -- A terminal asking to be signed in: the device code it keeps and the short
+  -- code a person types are both stored as a SHA-256 only. status runs
+  -- pending -> approved | denied -> consumed (given once, to the first poll).
+  -- No SCHEMA_VERSION bump: a new table is invisible to an older build.
+  CREATE TABLE IF NOT EXISTS cli_device_codes (
+    id TEXT PRIMARY KEY,
+    device_hash TEXT NOT NULL UNIQUE,
+    user_code_hash TEXT NOT NULL,
+    label TEXT,
+    created_from TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    user_id TEXT,
+    interval_ms INTEGER NOT NULL,
+    last_poll_at INTEGER,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_cli_device_user_code ON cli_device_codes(user_code_hash);
+  CREATE INDEX IF NOT EXISTS idx_cli_device_expiry ON cli_device_codes(expires_at);
+
+  -- What the approval turns into: a terminal's own login, dii_cli_<id>.<secret>,
+  -- bound to one account, only the SHA-256 of the secret kept. Unlike an act
+  -- token it is NOT tied to the account's token_version: a browser sign-out must
+  -- not end a terminal login. It ends by revoke, by 90 days unused, or 365 days
+  -- after it was made.
+  CREATE TABLE IF NOT EXISTS cli_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    label TEXT,
+    created_from TEXT,
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    expires_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_cli_tokens_user ON cli_tokens(user_id);
+  CREATE INDEX IF NOT EXISTS idx_cli_tokens_expiry ON cli_tokens(expires_at);
 
   -- A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
   -- One row per hostname: yokozo.xyz and www.yokozo.xyz are two rows for the

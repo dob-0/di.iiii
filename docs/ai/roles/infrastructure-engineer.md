@@ -123,6 +123,18 @@ Required GitHub secrets/variables: see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
 - Run `npm run test:server-contracts` without a real SQLite database available
 - Push to `main` automatically without a manual approval step for production changes
 
+### Runner Images Are Pinned
+
+- Every Linux job runs on `ubuntu-24.04`, never `ubuntu-latest`. GitHub moves `ubuntu-latest` to Ubuntu 26
+  from 2026-10-19 ([actions/runner-images#14748](https://github.com/actions/runner-images/issues/14748)); an
+  unpinned label changes the OS under every workflow without a commit in this repo. On 2026-10-09
+  `ubuntu-latest` still resolved to image `ubuntu-24.04` (ci.yml run 37943811580), so the pin changed nothing.
+- Moving to a new image is its own branch: change the label, let CI and a dev-tier deploy pass, then merge.
+  Owed: try `ubuntu-26.04` that way after the 17 Oct show.
+- Known exception: `install-matrix.yml` still uses `windows-latest` (image `windows-2025-vs2026` on 2026-10-09,
+  run 37944621509). Pin it once the matching label is confirmed in the runner-images README.
+- New workflows and `docs/templates/*.yml` follow the same rule.
+
 ---
 
 ## Scripts — What's Available

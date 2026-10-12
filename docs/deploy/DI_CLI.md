@@ -36,6 +36,8 @@ di autoupdate  on | off | status — keep it on its channel every 15 minutes (Li
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
 di ndi get     video in and out over the network — OBS, Resolume, a projector
+di login       sign in once from the terminal — then di and Claude act as you
+di whoami      who this terminal is signed in as · di logout ends it
 di help        the rest
 ```
 
@@ -593,6 +595,35 @@ looked nothing like a real install — see below.
   PATH line in `.zshrc` is missing from exactly the shell an artist opens next.
   Pick the rc file from `$SHELL`, not from which files happen to exist —
   `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
+
+## Signing in from the terminal
+
+`di login` signs this machine in once, so `di` and the agents started from it
+(`di mcp`, Claude) act as the person in their own spaces — no trip to the
+browser for every space. Method and wire format: `docs/architecture/CLI_LOGIN.md`
+(the OAuth device flow, RFC 8628, the one `gh auth login` uses).
+
+```
+di login                        sign in to dev.diiii.xyz: the terminal shows a code, you type it in the browser you are signed in with
+di login --tier prod            another di.iiii of ours   (--to https://example.org for any other)
+di whoami                       who this terminal is signed in as, and when the login would end
+di logout                       end it on the host and remove it here
+di mcp --tier dev               hand dev.diiii.xyz to an agent, as that person
+```
+
+- Kept in `~/.config/di/credentials.json` (folder 0700, file 0600, written
+  atomically) — the file the SDK already reads: an entry per tier (`dev`, `prod`,
+  `local`), and one per origin for any other host. `DI_TOKEN` still wins, for CI.
+  The token is never printed and never put in an argument.
+- A terminal login can read and edit the person's spaces and projects. It cannot
+  publish or delete a space, mint access, or change who owns or edits one: those
+  stay in the browser.
+- It ends when the person ends it (the list at `/device` on that di.iiii, or
+  `di logout`), or after 90 days unused (a year at most). Signing out of the
+  browser does not end it.
+- Plain http to an address that is not yours is refused unless `--insecure`.
+- Not seen yet on any machine but the one it was built on. Windows file
+  permissions for the token file are untested.
 
 ## Handing it to an agent
 
