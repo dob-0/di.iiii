@@ -20,6 +20,7 @@ import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
+import { ShadowsOnDemand } from '../../project/viewport/RenderSettingsEffect.jsx'
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
@@ -748,6 +749,7 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            <ShadowsOnDemand live={Boolean(transformOp)} changeKey={document} />
             <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
@@ -1195,12 +1197,18 @@ export default function StudioViewport({
         if (lowPower) return undefined
         const kick = () => demand.kick()
         const visible = () => { if (!window.document.hidden) kick() }
+        // The pointer arriving over the view: frames start before the first drag, so the GPU clock is up when it begins
+        // (measured 2026-10-12: after ~4 s idle the clock sat at 225 MHz and the first frames of a drag took 52–144 ms;
+        // 300 ms of frames bring it back to 1680 MHz — docs/ai/research/render-smoothness-audit-2026-10-12.md).
+        const over = (e) => { if (e.target?.tagName === 'CANVAS') kick() }
         window.addEventListener('resize', kick)
         window.addEventListener('keydown', kick, true)
         window.addEventListener('keyup', kick, true)
+        window.addEventListener('pointerover', over, true)
         window.document.addEventListener('visibilitychange', visible)
         return () => {
             window.removeEventListener('resize', kick)
+            window.removeEventListener('pointerover', over, true)
             window.removeEventListener('keydown', kick, true)
             window.removeEventListener('keyup', kick, true)
             window.document.removeEventListener('visibilitychange', visible)

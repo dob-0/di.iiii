@@ -141,3 +141,20 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   24 m ahead. 7 new unit tests (68 in the navigation suites).
 - Owner's words that led here: "not smooth", "stuck", "full freedom to move omg", and "look deeper: OpenGL / WebGL / GLSL" — the
   rendering audit runs as a separate report (`docs/ai/research/render-smoothness-audit-2026-10-12.md`).
+
+## Round 6: the rendering side ("look deeper: OpenGL / WebGL / GLSL") — audit + the measured fixes
+
+- Audit (Opus, real GPU, his screen size 1707×960 CSS @ DPR 1.5): `docs/ai/research/render-smoothness-audit-2026-10-12.md`,
+  probe `scripts/nav/measure-render.cjs`. Per frame at full screen: GPU 9.74 ms of which the 96 spot lamps 7.3 ms (48 hidden →
+  5.34 ms; all off → 2.46 ms), beams 0.9–1.3 ms, bloom / SMAA / shadow draw ≤ 0.4 ms each; CPU 4.7–5.3 ms (240 Hz needs < 4.17 ms →
+  his 120 fps); the 12 spot shadow maps redrawn every frame (637 draw calls, 833 k triangles); after ~4 s idle the GPU clock sits at
+  225 MHz and the first frames of a drag took 52–144 ms (his worst frame 54 ms); a look fade's 30 Hz clock keeps re-rendering.
+- Fix 1 — `ShadowsOnDemand` (RenderSettingsEffect.jsx): `shadowMap.autoUpdate=false`, redrawn on a document change, when a
+  casting/receiving mesh arrives or leaves, during a gizmo drag or any hold (timeline, XR, walk). Measured while moving: draw calls
+  637 → 342–403, triangles 833 k → 145–151 k, CPU render 4.7 → 3.8–4.7 ms (wheel 4.0, single notch 3.8).
+- Fix 2 — the pointer arriving over the view kicks frames (StudioViewport, `pointerover` on the canvas): the GPU clock is up before
+  the first drag. Measured, first drawn frames of a drag after 6 s rest: before 78/75/52/52/53 ms; now with the pointer resting on
+  the view 16.5/17.7/17.2/17.8 ms; with the pointer arriving 500 ms early 11.4/11.6/11.7/13.7 ms.
+- Not mine to decide (said to the owner): the 96 lamps are the MOXIR rig's content and 75 % of the GPU frame; a Studio light
+  budget (e.g. Lite's 4 slots while navigating) is his call. Owed: an empty-page frame timer in his di browser on the 240 Hz panel
+  (is 120 fps the X11 layer's cap?); the look-fade clock; CPU per frame below 4.17 ms.
