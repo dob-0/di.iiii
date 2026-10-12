@@ -884,20 +884,31 @@ const cmdUpdate = async (args) => {
         if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
     }
 
-    // Before the flip, not after: if this update moves the schema, `--rollback`
-    // alone cannot undo it, so the way back has to exist first.
-    const dataSchema = dataSchemaVersion(home)
-    const nextSchema = buildSchemaVersion(staged.partialDir)
-    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
-    if (movesSchema) {
-        const snapshot = await snapshotData({ home, label: `before-${release.version}` })
-        if (snapshot) say(ui.snapshotTaken(snapshot))
-    }
-
     const runner = runnerFor(home)
     const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
+
+    // After the server has stopped (its last write is in the file), before the flip:
+    // if this update moves the schema, `--rollback` alone cannot undo it, so the
+    // way back has to exist first.
+    const dataSchema = dataSchemaVersion(home)
+    const nextSchema = buildSchemaVersion(staged.partialDir)
+    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
+    if (movesSchema) {
+        try {
+            const snapshot = await snapshotData({ home, label: `before-${release.version}` })
+            if (snapshot) say(ui.snapshotTaken(snapshot))
+        } catch (error) {
+            // No way back, so no update: the old version is still `current`; bring it back up.
+            await fsp.rm(staged.partialDir, { recursive: true, force: true }).catch(() => {})
+            fail(`could not save a snapshot of your work first — nothing has been changed: ${String(error.message || error)}`)
+            say(ui.updateFailed(from))
+            process.exitCode = 1
+            if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+            return
+        }
+    }
 
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })

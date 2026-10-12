@@ -18,6 +18,8 @@ const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb, getDb, SCHEMA_VERSION } = require('./db')
+const { installShutdown, createInflight } = require('./gracefulShutdown')
+const inflight = createInflight()
 const { migrateFromFilesystem } = require('./migrate')
 const logger = require('./logger')
 const {
@@ -352,6 +354,7 @@ async function initStorage() {
 }
 
 const app = express()
+app.use(inflight.middleware)
 // req.ip is the real client behind a proxy on this machine — see proxyTrust.js.
 app.set('trust proxy', TRUST_PROXY)
 const startedAt = Date.now()
@@ -543,10 +546,11 @@ const ndi = registerNdiRoutes(app, {
   mountPaths: [...new Set(['/ndi', `${config.mountPath || ''}/ndi`.replace(/\/+/g, '/')])],
   log: (line) => logger.info(line)
 })
-// index.js has no shutdown path of its own (a signal simply ends the process), so the
-// lighting desk's close() is not wired anywhere either. The NDI child does not depend
-// on one: it exits by itself when its IPC channel closes — a kill -9 of the server
-// included. This hook only makes an orderly process.exit() prompt about it.
+// The NDI child does not depend on an orderly stop: it exits by itself when its IPC
+// channel closes — a kill -9 of the server included. This hook only makes an orderly
+// process.exit() prompt about it. SIGTERM/SIGINT are handled by gracefulShutdown.js
+// (installed once the server listens); the sweeps' timers are collected here.
+const shutdownTimers = []
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
 // Going down: every cube blanked and its output switched off twice, then the socket closed
 // (laserEngine.js shutdown). SIGTERM / SIGINT wait for those messages to leave (≤ 250 ms), then the
@@ -3016,7 +3020,7 @@ initStorage()
         .then((purged) => { if (purged.length) logger.info(`[trash] purged ${purged.length} project(s) past the 30-day hold`) })
         .catch((error) => logger.warn('Failed to purge the trash', error))
     }
-    setInterval(sweep, 1000 * 60 * 30)
+    shutdownTimers.push(setInterval(sweep, 1000 * 60 * 30))
     // Domains waiting on DNS or a certificate switch on by themselves, and a
     // domain nobody pointed at us is dropped after a week. Nothing to do when
     // no provider (Cloudflare or Caddy) is configured.
@@ -3025,7 +3029,8 @@ initStorage()
         .then((done) => { if (done.activated || done.dropped) logger.info(`[domains] sweep: ${JSON.stringify(done)}`) })
         .catch((error) => logger.warn('Failed to check custom domains', error))
       sweepDomains()
-      setInterval(sweepDomains, config.customDomains.sweepMs).unref()
+      shutdownTimers.push(setInterval(sweepDomains, config.customDomains.sweepMs))
+      shutdownTimers.at(-1).unref()
     }
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
@@ -3035,12 +3040,12 @@ initStorage()
     // exist yet when a restore asked for it -- the 404 the contract test used to
     // poll around). Failure is logged and never blocks the boot.
     await snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
-    setInterval(() => {
+    shutdownTimers.push(setInterval(() => {
       snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
       // Long-idle account sandboxes fold down to a snapshot (revived on
       // return by ensureOwnSandbox) so permanent sandboxes never pile up.
       archiveIdleAccountSandboxes().catch((error) => logger.warn('Failed to archive idle sandboxes', error))
-    }, 1000 * 60 * 60 * 24)
+    }, 1000 * 60 * 60 * 24))
 
     // A padlock on a machine in a room.
     //
@@ -3162,6 +3167,14 @@ initStorage()
         deployEnv: releaseInfo.deployEnv
       })
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
+      installShutdown({
+        server: httpServer,
+        inflight,
+        timers: shutdownTimers,
+        checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),
+        closeDb: () => require('./db').closeDb(),
+        logger
+      })
     })
   })
   .catch((error) => {

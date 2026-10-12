@@ -60,4 +60,11 @@ USER app
 
 EXPOSE 4000
 
+# node is PID 1 here. It handles SIGTERM itself (src/gracefulShutdown.js: stop
+# accepting, checkpoint + close SQLite, exit 0, hard stop at 10 s), so the stop
+# signal is named and compose gives it room. Zombie reaping for the processes the
+# server spawns comes from `init: true` in the compose files (Docker's bundled
+# tini), which keeps the image free of an unpinned apk package.
+STOPSIGNAL SIGTERM
+
 CMD ["node", "src/index.js"]
