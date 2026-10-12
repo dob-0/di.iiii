@@ -5,6 +5,629 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-11 — Claude Code setup audited against Anthropic's published practice and fixed
+
+- Why: the owner asked for Claude Code to be "set well" for di.iiii after a day in which 99.96 % of 1.64 B tokens
+  was re-read context. Method: Anthropic's best-practices and memory docs (code.claude.com/docs/en/best-practices,
+  /memory): keep CLAUDE.md short, cut lines whose removal would not cause mistakes, hooks are deterministic while
+  CLAUDE.md is advisory, subagent frontmatter uses `tools:`, path-scoped rules for part-of-codebase instructions.
+- Findings: `AGENTS.md` mandated per-session reads of `CURRENT.md` (already injected by the SessionStart hook), a
+  role card and, via the scoped bridges, `PROGRESS.md` (1.1 MB); all 11 `.claude/agents/*.md` used `allowed-tools:`
+  (the commands key, ignored for agents); `settings.json` allowed `git stash *`, `node *`, `npx *` and two stale
+  `/home/nooo` commands and enabled MCP servers that `settings.local.json` disabled; `settings.local.json` was
+  tracked-adjacent (not ignored), pinned `fable[1m]` and allowed `pkill -f`; `/live`, `/stack` and the run skill
+  still said `npm run dev`, `localhost:5173` and `docker ps` against the di-dev / `diiii.localhost` hard rules.
+- Fix: AGENTS.md rewritten (121 → 113 lines, 10.1 → 9.3 kB) with grep-not-read rules, a "Local Run (aylmo)"
+  section and a compaction-preserve line; agents `tools:`; settings allow-list 44 → 39, MCP enable block removed
+  (disabled list kept); `.claude/settings.local.json` ignored; `/live`, `/stack`, run skill on di-dev and
+  `*.diiii.localhost`; sync template tells bridges to grep PROGRESS.md / known-fixes.md, never read them whole.
+- **Measured:** fresh-session base context, same-minute A/B (`claude -p` haiku, input+cache tokens): origin/dev 38,276 → this branch 39,010 (+1.9 %); +633 of that is the 11 agents now declaring `tools:` (the restriction was ignored before), +101 the doc/settings changes. Not a reduction; the removed per-session reads (CURRENT.md re-read, role card, whole PROGRESS.md/known-fixes) are measured only as rounds × context over the coming week. Report: `~/work/agent-reports-2026-10-11/claude-setup-audit.md`.
+  in `~/work/agent-reports-2026-10-11/claude-setup-audit.md`.
+- Undo: `git revert` of this branch's commit; the two untracked originals are in `~/di-backups/di.iiii-settings*.2026-10-11`.
+
+## 2026-10-10 — fold 46 session notes after #869 (the land job cannot push to protected dev)
+
+- **What:** dev's `land` job folded but could not push (GH006, run 38047290868); 46 notes waited on dev and
+  CURRENT.md's last recap was 2026-10-07, so every branch push dated 2026-10-10 failed the freshness gate.
+- **How:** `scripts/session-land-lib.mjs` (`foldNotesIntoProgress`, `buildLastSessionSection`,
+  `replaceLastSessionSection`) run on a fold branch off origin/dev c8fcb7f0, as the repo's own fold-branch route
+  (examples #653, #654); notes deleted; CURRENT.md 47 lines (cap 50).
+- **Owed (owner's call, unchanged):** a ruleset bypass actor (GitHub App / token) for the land job, or a job that
+  opens its fold as a PR — until then every landing needs this by hand.
+
+## 2026-10-08 — the show page: everyone sees the live cue, the team chooses it from a phone
+
+- New page `/{space}/show/{project}` (RIG_BUILD.md §24): the live cue (name, act, next, time to next, who chose it) and every cue as a big card with its ember/ash swatch. No WebGL; one JSON a second.
+- A tap sends the cue to Light's cue runner in process (`serverXR/src/routes/showRoutes.js`, rules in `serverXR/src/show/showRemote.js`). Who may choose is the operator's SETTING — team (default) · everyone · operator only — stored in `<DATA_ROOT>/show/control.json`; owner: "create it now, we decide later". One choice per 10 s for everybody.
+- Laser moments are refused for everyone, operator included (`shared/laserMoments.cjs`, guarded against the fixture library). MOXIR v1.0: 4 of 13 cues are laser moments (one line, sparks, fire returns, dawn).
+- Seen: scratch stack (auth off) and an auth-on throwaway server serving `dist/`, phone 390×844 @3 and desktop 1440×900 @2; a choice reached a second phone in 189–266 ms (3 runs).
+- Found, owed: the scene deck's `LASER_TYPES` misses `ext-lc-ultra-mk2` (MOXIR's LaserCubes); `rigToolAccess` treats `session.local` as "everyone edits" on a `--guests` install. Not on a real phone yet.
+
+## 2026-10-09 — the LaserCube drive finished on top of #776: cube info, the signal-loss stop, the still-beam guard
+
+On top of Emilya's #776 (`feat/moxir-laser-raw-2026-10-05`, her fork; merged with origin/dev 85d5ae49 here, her branch untouched). The owner's decision 10-09: MOXIR's six LaserCube Ultra MK2 (techno night, 17 Oct 2026) are driven from the Nodes editor.
+
+Sources: the nannou-org/lasercube `SPECIFICATION.md` (MIT, read 2026-10-09) — **reverse-engineered from Wicked Lasers' Python sample, not the maker's document**; the physics and safety numbers in `~/work/agent-reports-2026-10-09/devices/lasers-exact.md` (the report). No real laser was fired; every wire test used a UDP socket standing in for a cube.
+
+### What changed
+
+- **Cube info** (`lasercubeProtocol.js` `parseFullInfo`): the 64-byte GET_FULL_INFO (0x77) answer at the spec's offsets — firmware, output enabled, current/max DAC rate, RX buffer free/size, battery, temperature, connection type, serial, IP, model number and name. Two open readings kept as the spec writes them: the temperature has no unit (°C assumed), and the connection type is at offset 25 in the table but "offset 26" in the prose (25 read).
+- **The engine asks every addressed cube for its info at first use and every second** — the one message sent while disarmed (a read, no emission). `/laser/api/state` shows it per cube with its age; Laser Out lists every cube (what it is doing, then what it said about itself; a cube under 10 °C is marked). **A cube whose info never arrived is not armed**; none answered → nothing armed. The stream is paced to the cube's own current DAC rate with its maximum as the ceiling (`laser.json` `dacRate` may cap lower); the assumed 30000 is gone. Buffer room is estimated as the spec advises (last report + played since − sent since).
+- **Signal-loss stop** (the spec's "safety timeouts"): while armed, a lit frame not refreshed for **200 ms** blanks its cube (one blank message) and sends output-off twice; a fresh frame switches it back on. Laser Out refreshes a held frame every 50 ms (`POST /laser/api/alive`, no points). A cube not heard for **3 s** is stopped and stays stopped until armed again.
+- **Still-beam guard** (a software stand-in for scan-fail protection, which the maker documents none of): a frame whose every lit stretch is a dot inside **0.6°**, or one 0.6° spot taking **≥ 50 %** of the frame's time, held **200 ms**, blanks the cube. Still beams the laser safety officer lists for a cube in `laser.json` (`stillBeams: [{ x, y, within }]`) are allowed — MOXIR's design IS two static beams per cube, so the LSO lists them. Runs in sim too, so a rehearsal without cubes shows the stops. **All thresholds UNVALIDATED.**
+- **Server going down**: SIGTERM/SIGINT now blank and switch off every cube (output-off ×2, buffer answers off) and wait for those to leave (≤ 250 ms) before the process ends by the same signal. #776's `exit` hook never reached a cube (known-fixes row; `laserShutdownContracts.test.js`).
+- **A new frame starts where the playing one ends** (no torn figures; blackout and stops still cut at once).
+- **CI**: #776's build-and-test failed on two TESTS, not lint (lint had 0 errors): the catalogue (five `/laser` routes undescribed; now `catalogue/entries/laser.js`, all `agent: false`) and the spine (`raw.css` `#000` → `var(--di-black)`).
+- Kept: DISARMED at every start, the exact sign-off phrase, the keep-in zone, blackout, six sim cubes without `laser.json`.
+
+### The thresholds and why (the full reasoning is in `laserEngine.js` GUARD)
+
+| Number | Value | Against |
+|---|---|---|
+| Frame timeout | 200 ms | the 0.25 s time base of the visible MPE (IEC 60825-1 Table A.1; report §2.1): 200 ms + one 20 ms tick + the hop < 250 ms. Not a claim that 0.25 s in the beam is safe — at 61 m a static 6 W beam is 71× the MPE (report §2.3) |
+| Still window | 0.6° (±0.3°) | the report treats a beam held to ±0.3° as STATIC for its maths (§2.3); a dot wandering 0.6° still gives an eye at 20 m ≥ 15 % of the static dose (4 mm + 1 mrad·r beam, 7 mm pupil, §2.4) |
+| Field → degrees | ±18.5° | the maker's ">37°" (report §1, ASSUMPTION); the smaller angle makes the window wider in field units = the safe side. The scene's laser view assumes ±30° — one measured number should replace both |
+| Dwell share | 50 % | half a 6 W cube's power on one spot without a break. Measured on the Laser node's 8 shapes (120 and 500 points): worst 5.9 % at size 0.5, 21.0 % at 0.1, 39.7 % at 0.05; the test keeps that headroom |
+| Still hold | 200 ms | the same 0.25 s base; lets a shape pass through a point (a size knob swept through 0) |
+| Link lost | 3 s | three missed info answers with no data answers either |
+
+### Measured (2026-10-09, aylmo, scratch stack `di-dev up laser-drive --api scratch`, the fake cube on 127.0.0.1:45457/45458)
+
+Fake cube: `fake-cube.mjs` (answers 0x77 with a spec-layout info, plays a 6000-point buffer at 30 kpps, answers each data message with its free count, logs output on/off and lit points per 100 ms). Driver: `rehearse.mjs` (both in the session scratchpad, not in the repo). `laser.json`: cube-1 = the fake cube, cube-2 = 127.0.0.2 (nobody home). 10 runs:
+
+- arm without the phrase refused; with it: cube-1 armed, cube-2 refused (no info) — 10/10
+- lit points reaching the cube while streaming: 26 000–30 000 /s (100 ms bins; the fake cube plays 30 000)
+- signal loss: output-off heard twice, **173–215 ms** after the keep-alive stopped (the last keep-alive 0–50 ms before that); **0** lit points after the stop — 10/10
+- resume on the next keep-alive: output-on heard 60–79 ms after keep-alives restarted
+- still beam (a 60-point dot): output-off heard twice **213–238 ms** after the dot frame was posted — 10/10
+- `/laser/api/state` showed the fake cube's info field by field (firmware 1.7, 30 000 of 35 000, buffer 6000, 27, Ethernet, 127.0.0.1, serial face00000001, model 3 "FAKE cube (test)")
+
+Not measured here: a real cube's behaviour (everything below).
+
+### The 3D scene (item 6): does it play the same point stream the cubes get?
+
+`LaserView.jsx` / `laserView.js` read `GET /laser/api/frames` every 80 ms and draw `byCube[cubeId] || all` — the same choice the engine makes, after the keep-in zone. So **the same frames, yes; the same stream, not yet**. What is missing (not changed here: the beam's look is feat/sim-physics-kit-2026-10-09's):
+
+1. **Stops and arming are not shown**: a disarmed, stopped (no frame, still beam, link lost) or refused cube is drawn lit. `/laser/api/frames` now carries `stopped: { cubeId: reason }` and `armed`; LaserView should draw a stopped cube dark (and say "disarmed" for the preview).
+2. **Cube identity**: the scene numbers LaserCubes by entity-id order (cube-1…n); the server's ids come from `laser.json`. Any other id (e.g. "cut-1") never matches, and nothing ties an entity to an IP. Needs one mapping (an entity field naming its cube id, or `laser.json` ids = entity ids).
+3. **Sampling**: the scene's view samples at 12.5/s, frames change at ≤ 25/s; the server swaps frames at the end of the playing one (≤ 67 ms for 2000 points at 30 kpps). Frames between polls are never drawn.
+4. **Field angle**: ±30° in the scene's view vs ±18.5° in the guard, both assumed; measure once, use in both.
+5. **Time**: the scene draws every lit point as a full beam; a cube splits its time across the frame (the report's Talbot–Plateau point). That is the look — the other agent's.
+
+### Not tested — the real cube test, OWED (with the LSO, before 10-16)
+
+Set-up: one cube, lowest power that shows the beam, beam block fitted, aimed into a matte black stop, nobody downrange, laser safety eyewear for 455/525/638 nm, key and interlock in reach, LaserOS closed, the cube on the show's wired switch. Record each answer in this file.
+
+- [ ] Label photo of every cube (model, wattage, serial); the serial matches `info.serial`
+- [ ] Every info field against LaserOS's own display: firmware, DAC rate and maximum, buffer size, temperature (unit, beside a thermometer), connection type (offset 25 or 26?), IP, model number and name
+- [ ] Disarmed: a capture on the laser network (`tcpdump -i <nic> udp port 45457 or udp port 45458`) shows only 0x77 to 45457; the emission LED stays off
+- [ ] Armed with a circle at Level 0.05: the stream holds without flicker; `rate` in the state = the cube's DAC rate; the buffer neither runs dry nor overflows (watch `rxBufferFree`)
+- [ ] Close the editor tab: time to dark ≤ 250 ms (phone slow motion at 240 fps, or a photodiode)
+- [ ] Hide the editor tab (another tab in front): what happens (the keep-alive slows to 1/s → the cube should go dark); decide whether that is acceptable for the show
+- [ ] Output-off (0x80 0): does it cut at once, or only after the buffer drains? (measure as above)
+- [ ] **Pull the cable while a figure plays**: what does the cube do when its stream stops — blank, keep looping its buffer, or HOLD THE LAST POINT LIT (a still beam no software can stop)? The LSO must know before the show
+- [ ] `kill -9` the server while a figure plays: same question
+- [ ] `systemctl --user stop` / SIGTERM the server: dark ≤ 250 ms
+- [ ] Still beam: Laser Size 0 → dark after ~200 ms; Size 0.05 circle and the default fan do not stop; the design's two still beams listed in `stillBeams` play; a third point stops
+- [ ] Full field: draw x = ±1, y = 0…1 on a wall at a measured distance → the real scan angle; replace ±18.5° (guard) and ±30° (scene view)
+- [ ] Unplug one cube for 3 s: it is stopped "link lost"; plug back: it stays dark until armed again
+- [ ] Reboot a cube while armed: what it does when it comes back
+- [ ] Cold: the info temperature at power-on in the hall vs a thermometer; the maker's 10 °C floor
+- [ ] Nothing else drives the cubes: DMX, ILDA (the maker: an external DAC takes over), LaserOS, SD playlists — off
+- [ ] Six cubes at once on the show switch: each at its own rate, no lost frames (6 × ~30 000 points × 10 bytes ≈ 1.8 MB/s plus headers)
+- [ ] The thresholds after the test: keep, or change by a reviewed PR (not by laser.json) and say why here; then set `GUARD.VALIDATED`
+
+### Files
+
+`serverXR/src/laser/lasercubeProtocol.js`, `laserEngine.js`, `laser.test.js` · `serverXR/src/routes/laserRoutes.js` (+ `POST /laser/api/alive`), `laserRoutes.test.js` · `serverXR/src/index.js` (SIGTERM/SIGINT) · `serverXR/src/laserShutdownContracts.test.js` (in `test:server-contracts`) · `serverXR/src/catalogue/entries/laser.js` · `src/raw/components/LaserOutPanelWindow.jsx` (+ test) · `src/raw/styles/raw.css` · `src/wiki/wikiContent.js` · `docs/ai/known-fixes.md`.
+
+## 2026-10-10 — MOXIR v2 cranes: the cut half behind the DJ and lighting him, the six cubes sitting on the free crane
+
+- **Asked.** The owner, 2026-10-09 (N463, N464): the near crane's truss "dj 's back but also light the dj not the full back half back"; the six lasers "put on the crane", not hung. The lead's match chose the pair: the crane-dj-light park (z 3.20) and B-L (the cubes on the free crane's far-side girder at z −12, x −4.5..−1.0, one static beam each −z to one point on the far wall's block).
+- **Built** (`scripts/place/moxir_v2_cranes.py data`): new labelled files only. `moxir-stage-v2-cranes-2026-10-09.json` (the park, its decision table), `moxir-crane-cut-v2-cranes-2026-10-09.json` (hl tie-off to grid z 6, the 11-PAR list), `moxir-lasers-on-crane-2026-10-09.json` (B-L, its rule and hold points H1–H7), `moxir-v2-cranes-2026-10-09.json` (the v2 rig from v2 spread: the cut's 11, the pit stand's PAR now the cut's kicker, the cubes moved, the laser bar gone), hall v10 (both cranes moved: overlay `moxir-hall-crane-park-v2-cranes-2026-10-09.json`). The laser session's `aerial-far-crane.json` is kept in git as `moxir-aerial-far-crane-2026-10-09.json`, the previous version.
+- **Tools.** `rig-lib.mjs stageFrame` takes a park given as the design's own z (`truss.crane_z_m`), so stage-line.mjs derives the cut at z 3.20 from the new stage json; `cut-count.mjs --design <stage json>`.
+- **Checked** (`moxir_v2_cranes.py build`, 37 s; `check` exits 1 on a failed rule): the six tubes over the free crane's top p05/p50/p95 and the near crane's top 8.92/9.02 under MOXIR.md 4.0a (levels 3.0 m over / 2.5 m beside; bodies true box + 0.25 m with a 0.25 m gap; ends on the far wall's block, 2.5 m beside / 3.0 m over its openings, photo 007 and the model's gate), the 61-ray casts at 0.8 and 1.008 deg on hall v10, the mounts, the v1.1 setup sheet, the 40 W beams at the new park, cut-count picks, raised hands, the DJ's eyes and light. Worst laser margin +0.194 m, as the design said (passes these checks, not "safe"). The public's 0.5 m over raised hands holds only with the pen's owed barrier taking in the bay under the cut's low end and its hl strap (x −12..−10.5, z 1.75..6.5): a condition in the stage json.
+- **Guard:** `scripts/place/moxir-v2-cranes.test.js` (12), every pin re-derived in JS; each seen failing on a tampered copy (`MOXIR_V2_CRANES_DIR`): a roof gap 0.14 m, a lamp 0.21 m from a tube, a 150.7 kg pick, the DJ's hands at 0.28 m, the public at 0.33 m without the bay.
+- **Rig build fix:** `epic-build.mjs` now takes out every rig-file solid it owns (`RIG_FILE_SOLIDS`: crane bar, far-crane boxes, ash wall, towers) before it writes the new rig, so a removed bar is not left in the scene; guard in `epic-build.test.js`, seen failing without the fix.
+- **Seen** (scratch stack `moxir-cranes-lasers` only, from a copy of moxir-one's data; never dev, live or the owner's own di): project `moxir-v2-cranes` (copy of v2.0, the night hall v10, the cut re-cut +3.05 m, epic-build version 206). Eight frames on the RTX 3080 (floor 1.7 m, DJ, behind the stage, wing house right; peak and dark), all looked at: the cut's shafts and bridles behind the DJ, the DJ lit. The room's probe (build with 28f4028d): DJ face at eye height 20.4 lx dark / 20.7 lx peak (computed 20.0 / 19.9), head top 184.9 / 187.4. The lasers are drawn at the looks' preview level; the desk writes 0 to them until the sign-off.
+- **Doc:** MOXIR.md §4.0a gains the v2 cranes block (wins over the v1.1 hang, kept below as the previous version); the summary table's crane and laser rows point to it.
+- **Load route (written 2026-10-10, was missing):** the scratch copy is rebuilt from the rig file with `node scripts/rigbuild/epic-build.mjs --api http://127.0.0.1:4341/serverXR --project moxir-v2-cranes --rig scripts/place/rigs/moxir-v2-cranes-2026-10-09.json --apply` (dry run without `--apply`; stack `moxir-cranes-lasers`, api port from `di-dev ls`). Round 2 item 4 numbers: MOXIR.md 4.0a, v2 cranes block.
+
+## 2026-10-09 — MOXIR: the two Poligraf UP-LA40WF up at the entry, house left, pass the cubes' rule at +0.165 m
+
+- **Asked.** The owner (~20:30, N460.2 / N462): *"2 lasers from poli goes to the up to the entrance, where audience will enter, so 2 from one side 6 from other"*. Then N464 (21:1x): the cubes sit ON the free crane, so there is no hang under it.
+- **The tool.** `scripts/place/moxir_entry_lasers.py` places the two units under the cubes' rule set (MOXIR.md §4.0a) and writes `scripts/place/rigs/moxir-v2-entry-lasers-2026-10-09.json`. Each run produces the mount options, both beams with every margin, the 61-ray casts, the setup sheet, the NOHD and the keep-out envelope for the cubes' new ends. The source text is MOXIR.md §4.0b.
+- **The guard.** `scripts/place/moxir-entry-lasers.test.js`, 9 tests. Seen failing on a tampered rig (3 failed), then 9 passed.
+- **Result: passes these checks, not "safe".** A truss tower + T-bar at z 48, house left; worst margin +0.165 m (the near crane at its safe 7.2 underside). House left is the only side with a line. The NOHD is 1 097 m, so separation and a hard stop (an aperture mask, owed) are the control.
+- **Rerun** (about 40 s; heat rule: one BLAS thread, `cool.py` first). The v2 spread lamps are read from git at the pinned `--spread-commit`, so fetch that branch first:
+
+  ```
+  git fetch origin feat/moxir-v2-spread-2026-10-09
+  python3 -I scripts/place/moxir_entry_lasers.py --repo . --out ~/Downloads/moxir/v2-entry-lasers
+  npx vitest run scripts/place/moxir-entry-lasers.test.js --maxWorkers 1
+  ```
+
+- **Trap 1:** the hall GLB still draws the free crane at z −41. The script moves it to z −12, as `moxir_v2_spread.night_world` does.
+- **Trap 2:** a sight line's eye stands inside the people volume. Skip it (`skip_cls=('audience',)`), or every sample reads "seen".
+- **Trap 3:** the v1.1 crane check widens each girder's z band by the tube radius. A second implementation must do the same, or it differs by about 1.5 cm.
+- **Trap 4:** never name a numeric key `total` in a rig json: the public-repo price guard reads it as a price.
+- **Still undone:** MOXIR.md §4.0b "Owed before any emission" and §6 row 15. The first item is the aperture masks, the hard stop. There is no build into the scene or a scratch stack yet.
+
+## 2026-10-05 — the LaserCubes from the Nodes editor: Laser and Laser Out, a disarmed-by-default laser server, the lasers in the room
+
+- Emily (2026-10-04): the six LaserCube Ultra MK2 are driven live from the Nodes editor, not the desk; wired network; no cube until show day.
+- `shared/laserFrame.cjs` + browser twin `src/shared/laserFrame.js` (sync test): a frame is [[x, y, r, g, b], …], x/y -1..1 in the cube's field, colour 0..1, (0,0,0) a blank move; ≤2000 points.
+- serverXR `/laser` (routes/laserRoutes.js, laser/laserEngine.js, laser/lasercubeProtocol.js): the desk's twin — built on first use, local-only (404 hosted). DISARMED at every start; arming needs the exact sign-off phrase; a keep-in zone per cube (default the upper half of the field, y ≥ 0: no beam aims lower than the cube) blanks and pulls in every point outside; blackout; disarm sends output-off to every cube. Without cube addresses (laser.json) it is six simulated cubes and never opens a socket. The LaserCube UDP protocol (ports 45457/45458, 0xa9 sample data, ≤140 points × 10 bytes LE, ring-buffer flow control) is written from the lasercube-core crate's documented source; laser-dac (Node) is unmaintained.
+- Nodes: `laser.shape` "Laser" (circle, line, square, triangle, star, wave, fan, spiral; size, height, rotation, spin, colour, level, points) → `device.laser.out` "Laser Out" (preview with the keep-in zone shaded, sends on change ≤25/s, blackout, ARMED/DISARMED from the server). Built by a helper agent to the repo's node rules; reviewed.
+- The room: `src/rigbuild/LaserView.jsx` + `laserView.js` draw each LaserCube's held frame as beams (field ±30°, ASSUMED until a cube is measured). Vite dev proxies `/laser` (it served index.html before).
+- Verified in a real browser on a scratch copy of the MOXIR data (ports 4300/5300): six shapes sent → beams from the cut in Floor/Side views; a Laser → Laser Out graph shows the star in the preview, DISARMED, and the server holds its 120 points.
+- Not done: arming with real cubes (none until show day); a desk-cue input node; audio-reactive beyond Sound's volume into Level; the cubes' measured field angle; laser.json with the six IPs on site.
+
+## 2026-10-09 — MOXIR: ten moving scenes in the room favourites (ledger N442, brief B-2026-10-09-moxir-motion-scenes)
+
+Owner, 17:06: "kk so look i want to 10 animated scenes in favorite". STEP 1 of 2: built and proved on a scratch stack, draft PR. Step 2 (moxir [28e961] looks by eye, the owner looks, landing) is open in N442. Stacks on #841 (cue page, favourites), #844 (v1.1 rig, merged at tip cf954908) and on commit 408c5195 (work-light layer, owned by session di.iiii-moxir-worklight, not pushed by this work).
+
+- **Motion in the room.** A look may carry `motion` {mode, bpm, depth, spatial, kinds, still} (`normalizeRigLooks` in both schema copies). `src/rigbuild/lookMotion.js` is a pure client port of `serverXR/src/lighting/fx.js` (same 14 modes, same maths, no clock); `lookMotion.test.js` pins it: 169,344 comparisons, max difference 0/255 (limit 1/255). `useRigLook.js` plays it on the final drawn lamps (DMX included) at about 30 Hz from the SERVER's time (clock offset measured once per page) counted from the cue's `firedAt`, so every viewer is on the same beat; a look with no motion costs nothing (same array).
+- **Hard limits by construction.** The module returns one level multiplier per lamp and has no way to say pan, tilt or position; only UP-PL5403 and UP-B380F (the Sevan kit) are in any scene's `kinds`; lamps at or under `still` (0.35, the work-light layer's floor levels) hold still, so the readable floor never flickers.
+- **Ten favourites.** `FAVOURITES_MAX` 5 to 10 on the server (`showRemote.js`, an 11th is refused: "At most 10 favourites."), the client (`showApi.js`, a test pins both), the catalogue entry; `RoomFavourites.jsx` is a grid: 2 rows of 5 on a phone, one row of 10 from 720 px.
+- **The ten** (`scripts/place/moxir_motion.py` writes `scripts/place/rigs/moxir-looks-v1-1-motion-2026-10-09.json`; `scripts/rigbuild/motion-looks.mjs` puts it, with the work-light layer, on the scratch project; the ten cues come first so they are the server's default favourites in order). Departures from the relayed set (TBR): the laser scene is dropped (the server refuses laser scenes as favourites, `shared/laserMoments.cjs`), so it became Floor pulse; glitch on the B380F measured 4 flashes/s on one lamp at the slowest tempo (cap 3), so it is Sparkle (3/s).
+- **Tools.** `scripts/rigbuild/motion-probe.cjs` (run by `di-test-browser run`: scenes / frametime / phone) and `scripts/rigbuild/motion-sheet.py` (contact sheet, luminance maths, `motion-crops.json`).
+- **Scratch.** Stack `moxir-motion` (`di-dev up moxir-motion --api scratch`), project `moxir-v1-1-motion` in space `moxir`, a read-only copy of moxir-v1-1 from :4329 (`copy-version.mjs --from-api`), haze sigma 2.7e-4 /m (the brief's figure, EQUIVALENT, not measured). Nothing was written to dev, the installed di, moxir-v1-1 or moxir-v1-0.
+- **Owed.** Tempos, depths and levels are assumed (set by eye); the moxir [28e961] look; desk path: a real desk with its own FX engine would still need the same ten as desk FX (the room plays them itself, the desk's DMX is the level); the `di-test-browser` queue is machine-wide, another session held it for over 20 min.
+- Evidence: `~/Downloads/moxir/stage/animated/evidence/` (EXECUTOR-REPORT.md).
+
+### 2026-10-09 evening — STEP 2 of 3 (brief B-2026-10-09-moxir-motion-r8-separate): far wall out, R8 separating test
+
+The MOXIR lead took the far wall (8 x UP-250BSW, not in the Sevan kit) out: `moxir_motion.py` now drops the `far wall` part from the floor of every scene (the work-light layer is untouched); the regenerated JSON differs only by those 11 removals (`side roof` was never in these looks); the 6 test files still pass (92). Measured on the scratch stack only (ember-chase, 1280x720 "Floor z 20", floor and wall crops without any chrome, mean abs Rec.709 change per adjacent pair, max of 3, n = 2): in thick haze C1 pool off (`?quality=full`, 94 real lights) floor 0.32 / wall 0.16 of 255; C2 `?lightPool=1` and C3 pool with hold 0 / hand-over 0 floor 0.05 / wall 0.15; thin haze (C1) floor 0.03 / wall 0.04; a still look reads 0.000. None reaches 3/255, and C1-C3 do not differ in a way that matters, so the 8-light hold is NOT the cause of the missing surface motion. Two corrections to step 1: the room is in Lite by default, which turns the pool ON with 4 slots (`outputMode.js` `outputDocument`), so step 1 never ran "pool off"; and the scene's change is in the beams in the air (control crop 1.8/255 in thick haze, 0.3 in thin), not on those two surfaces. No pool or renderer file changed; scratch haze and lightPool put back. Evidence: `~/Downloads/moxir/stage/animated/evidence/r8/`.
+
+# feat/moxir-scene-bar — one scene bar, Edit in Studio, the v2.3–v2.6 scenes, hall envelope, offline renders (2026-10-12)
+
+Owner (2026-10-11/12): the lasers to the entrance, then fanned over the whole air; the lights gathered round the DJ in lines;
+the outside drawn; "we need a button to go to the edit studio … UI/UX is messed, fix that all"; "what we see is a different
+thing" (renderer, next branch). Lead chat (info@), session https://claude.ai/code/session_01UNHVw2UvuhRNSHukj2cxnE.
+
+## What changed
+- `src/rigbuild/SceneBar.jsx` (new) — one top strip on rig scenes: version switch, Edit in Studio (a real link to
+  `/{space}/{project}/studio`), the SHOW chip; right: Sound, Walk/Fly, Free, Lite/Full, the dev-copy chip. Shows in walk mode
+  too. `rigVariant.js shortTitle` names versions one way (v1.1, v1.1 looks, v2.6, Old (n)). `smartViewGeometry.js` takes any
+  named view camera after the six built-in ids. Tests: SceneBar.test.jsx, shortTitle cases, a views test.
+- `scripts/place/moxir_v2_3_aerial.py`, `moxir_v2_4_fan.py`, `moxir_v2_5_gathered.py` and their rigs (v2.3 one point above the
+  door; v2.4 the fan over the air with a lasers-only previs look; v2.5/v2.6 gathered lines round the DJ and the floor, 8+2
+  washes outside, ground/road/forecourt as GUESS boxes). `scripts/rigbuild/views-v2.mjs` re-aims the view buttons from the rig.
+- `scripts/place/hall.py --shell-alpha` (the envelope as a 30 % see-through shell, faint self-light), `hall-show.mjs
+  --double-sided --night --shell-glow`; hall v12 record `rigs/moxir-hall-2026-10-12-v12-shell.hall.json`.
+- `scripts/place/moxir_render.py` — offline Cycles previs (haze volume, every spotlight, fixed views); the owner wants the
+  real-time look instead, so it is the reference picture for the renderer branch, not a deliverable.
+- `scripts/rigbuild/epic-build.mjs` — rig-shell-*/rig-out-* boxes are rig-file solids (removed when a rig no longer lists them).
+
+## Checks
+- `npx vitest run src/rigbuild src/project/viewport/smartView src/project/components/PublicProjectViewer.test.jsx
+  src/components/TreeChip.test.jsx` → 1714 passed (126 files). Lint clean on touched files.
+- Seen: agent-screen shots desktop 1600 / walk / phone 390 in `~/work/agent-reports-2026-10-09/moxir-lead/scene-bar/`;
+  the owner saw the bar live on the scratch stack (moxir-one, `moxir-test.diiii.localhost/moxir/v2-6`).
+
+## Limits
+- Scratch only; nothing on dev or the owner's di until his look. Build button not done (needs a server job / the agent door).
+- Views menu in walk mode and the title ticker still owed; the laser margins (v2.3–v2.6) and the outside are UNVALIDATED.
+
+## 2026-10-12 03:00–06:5x (lead, info@) — the night's second half
+- Hall v13: the ghost shell got an opaque inner skin (hall.py `shell_box`); the 30 % shell had veiled every beam farther than the hall centre.
+- SmartView: per-scene occlusion-fade switch; then the see-through job (f5de6ae7): free-orbit collision, near-lens fade, Roof·Walls·Machines·Outside layers.
+- Show chip: PREVIEW row (a look for this viewer only). Studio: Cues section removed from the control cluster; undo/redo by key place
+  (Ctrl+Shift+Z, Armenian layout), Lock/Unlock any object + Lock the hall, box select with a Select tool (b310ce53; Shift/Ctrl-drag owed).
+- MOXIR v2.7 (moxir-v2-7, slug v2-7): side lines X0±8.2, laser net 36 lines under the hand rule (5.4 m), two UP-LA40WF on the entrance wall,
+  five looks; every throw walked (throws-of-cut.mjs); the +x machines stay (show-cleared `kept_for_the_show`).
+- Tools: di-open (di-atlas), rules "work sterile", "di-open", template item 13 (code jobs on their own tree).
+
+## MOXIR v1.1 work light + 26 looks (looks layer, scratch, 2026-10-09)
+
+Owner: "I don't like the lights - we can't see anything and can't work; I need more scenes."
+Layer apart from the v1.1 build: `scripts/place/moxir_worklight.py` writes `scripts/place/rigs/moxir-looks-v1-1-worklight-2026-10-09.json` (ambient 0.6, one `floor` key, 26 looks, 28 cues, WORK first). `scripts/rigbuild/worklight-looks.mjs` puts it on scratch `moxir-v1-1-looks` (never moxir-v1-1). Levels ASSUMED, not yet seen by eye (the shared test-browser lock was stuck). Owed: the eye check, then the fold-in.
+
+# feat/moxir-v2-2-symmetry — lights re-placed after the owner's example videos (2026-10-11)
+
+Owner (2026-10-11): "i want to edit light places i sent examples make it like examples but dont make moving things on the
+truss, but keep symmetry and organaize well". Ledger N501.3. Lead chat (info@), session
+https://claude.ai/code/session_01P24eqDHfgsnvBSJtN3ezVa.
+
+## What changed
+- `scripts/place/moxir_v2_symmetry.py` — new. Reads the v2.1 rig and the zones, lays the moved parts out as mirror pairs
+  about the DJ axis X0 = −5.2 (plane-1 laser fans, wing islands arching to the roof, side PAR rows on the paint edge,
+  back columns, cubes, haze on the axis), keeps every fixture and id, and writes `scripts/place/rigs/moxir-v2-2-2026-10-11.json`.
+  `--check-only` re-runs the checks; `--info-out <file>` writes the full checks info as JSON.
+- `scripts/place/rigs/moxir-v2-2-2026-10-11.json` — the v2.2 rig: 75 fixtures, 63 moved, nothing moving on the truss
+  (the 18 B380F heads are fixed-aim on the floor and the wing islands).
+
+## Checks
+- symmetry script: fails [] (worst beam-end mirror 0.06 m; plates follow the asymmetric paint, 8.4 m).
+- `MOXIR_CRANES_RIG=scripts/place/rigs/moxir-v2-2-2026-10-11.json python3 -I -B scripts/place/moxir_v2_cranes.py check --repo .` → fails [].
+- `npx vitest run scripts/place/moxir-v2-*.test.js` → 70 passed, 2 expected fail (ground suite = v2 ground layer, not v2.2).
+- Loaded on the scratch stack as `moxir-v2-2` (slug `v2-2`, document version 168); backup of v2.1 first in
+  `~/di-backups/moxir-scratch/2026-10-11-v2-2/`. Job record:
+  `~/work/agent-reports-2026-10-09/moxir-lead/symmetry-2026-10-11/brief.md`.
+
+## Limits
+- Scratch only; nothing on dev or the owner's di until he has looked at `http://moxir-test.diiii.localhost/moxir/v2-2`.
+- Motion looks do not apply to fixed-aim heads.
+
+## 2026-10-10 — MOXIR v2 ground: every wash and beam that is not on the truss stands on the floor, spread over the owner's whole painted area
+
+Branch `feat/moxir-v2-ground-2026-10-09`, cut from `feat/moxir-v2-spread-2026-10-09` (#864) and stacked on it. A build agent
+started it on 10-09 and was cut off by the usage limit; this session continued from its draft, re-checked what it had measured
+(its PAR scores reproduce exactly; its island scoring too), and finished it. The look-level fix (#868) is in as a cherry-pick of
+its three commits, not a merge of its branch: that branch also carries all of `integrate/moxir-one` (113 files).
+Scratch only: tree stack `moxir-ground`, project `moxir-v2-ground` beside the spread's own `moxir-v2-stage-lasers`, seeded from
+the spread's stopped scratch stack. Never dev, live or the owner's own di.
+
+The owner, 10-09 21:05 (N465): the washes and beams not used on the truss go on the ground, not on the arcs; the ground washes
+are too close; use the places of the area not used yet; epic, use the space right.
+
+- **Rig files.** `scripts/place/rigs/moxir-v2-ground-layer-2026-10-09.json` holds ONLY the 56 floor lamps (38 UP-PL5403 +
+  18 UP-B380F, ids kept from the spread). `moxir-v2-ground-2026-10-09.json` is the spread with its non-truss, non-laser,
+  non-smoke units replaced by that layer. The cut (10 PARs), the smoke machine and the cubes are untouched (other workflows);
+  12 PARs are reserved for the truss (2 held back). Written by `scripts/place/moxir_v2_ground.py` (candidates / build / plan /
+  measured / page), guarded by `scripts/place/moxir-v2-ground.test.js` (seen failing on the spread first: 51 violations).
+- **Placed from nine audience eyes** (the floor centre, both wings, behind the stage, mid-hall, near the entry, FOH, both far
+  corners): a PAR place scores by the light its lit steel sends to each eye, a beam by its glow in the haze, at four depths.
+  New PAR places: the same floor places aimed at the crane runway girder or the nearest column's flared head.
+- **Spacing: 6 m.** The column pitch, and the knee of the score curve (keeps 94 % at 6 m, 81 % at 7 m).
+- **Coverage.** The pick first gives every place of the painted area a lit PAR within one roof height (10.8 m; the
+  maximal covering location greedy, Church & ReVelle 1974), then follows the eyes: the largest unlit gap goes from 19.0 m
+  (spread) to 10.7 m, at 7 % of the eye score.
+- **Beams in four pens**: the stage pen (crew only) and three fenced pens, chosen by score × open sky (occlusion_sky; "clear"
+  is ~20 % everywhere under a 10.8 m roof, so the open share decides). 64 m of new barrier, longest low run 4.0 m.
+- **The entry lasers (#873)**: nothing in the tower's pen; no beam within 1 m of a laser unit or of the cubes' box; no beam end
+  within 3 m of a far-wall block (both margins ASSUMED).
+- **Measured** (EV100 2.84, Full, t40, real GPU): floor white-out at the peak 0.37 % with the lasers at 0.4 (budget 0.65 %);
+  every other view, both looks, within the same budget after plane 1 went to 0.5 (from behind the stage the stage pen's fan
+  whited out 0.92 % at 1.0: measured split, written into the rig). The old spread, drawn now with the fix: 1.05 % from the
+  floor (its faders were raised for the bug).
+
+Found: the spread's own patch put 53 devices on one DMX line (its file flagged it); the ground rig's lines are all <= 32.
+The level fix makes every MOXIR fader below 1 draw brighter: this rig's looks are set for the linear law.
+
+Owed: the crowd plan (pens, barrier type; Purple Guide not read) and guard cages; the venue's OK for floor plates; the PAR's
+candela (scene 30 478 cd vs spec 11 000 cd); the haze on site; the DJ key's level on site with the truss DJ light; the stage
+front (booth and PA faces read as silhouettes now: their PARs wait for the truss); a re-check of the beams once the crane,
+cut and cubes have their final places; the laser session's look at the beam paths; the owner's look.
+
+## 2026-10-10 (afternoon) — the fix after two reviews of #875: B's fan back, beams in the entry half, every rule checked densely
+
+Two reviews refuted the first build (4d76fc1c): EPIC not shown (beams about half as strong at the crowd, 9 of 10 frames darker,
+glare budget unused, no beams in the entry half, B's ember fan re-aimed), the stage front dark again, pens sized for one frozen
+aim, floor PARs with a standing eye in their beam, the re-aimed fan crossing the smoke machine's refill point, and the 30° rule
+checked at 10 eyes only. A first fix run (wf_69d9a387-e39) was cut off after scoring; its builder is committed as found
+(0e4c6fc1), then a9d4b0d1 merged (the lasers' cap as drawn light: fader 0.16), then this run's changes. Scratch only (tree stack
+`moxir-ground`); never dev, live or the owner's own di. Measured on the branch's viewer with the level fix (0f48b5b9).
+
+Owner's words (N465): *"and also other washes and beams what we dont use make on the ground, not on the arcs, and also washs are
+so close on the ground for now you can use the left places of the area so we need epic thing you know use space right"*.
+
+- **Every non-truss unit on the ground.** The truss keeps 10 PARs (the lead); the other 40 PARs and all 18 B380F stand on the
+  floor (58 of 58, body <= 1.0 m), none held back.
+- **(1) EPIC.** B's fan is the spread's six plane-1 heads, same place and aim (the test compares them exactly). Twelve more beams
+  in **four** fenced pens of three (a scratch comparison, a3_islands.py: +20 % beam glow at the crowd over three of four), one
+  in the entry half (`entry square x -8 z 33.5`, behind FOH), the others behind the stage (house left), beside the dance floor
+  (house left) and in the right wing. The peak runs every hall beam and PAR at full: measured from the floor 0.31 % white-out
+  of the 0.65 % budget (the first levels 0.31 %, all at full 0.32 %): the ground's beams stand >= 30° off every eye and glare far
+  less per unit than the spread's. The rest of the budget is out of reach with this kit (lasers at their 0.16 cap, the fan
+  ember as the owner saw it). **Beam strength from the same nine eyes, same hall (the crane park's air open, the near crane where
+  the model has it): x 0.430 of the spread at the crowd eyes with every beam at full (x 0.472 people-weighted over all nine), and
+  x 1.078 with each look's own peak levels (x 1.181).** Why below 1 at full: 60 % of the spread's crowd glow comes from nine of its
+  beams that each let 1,334-3,180 public points (0.5 m apart) look down them within 30° (a6_spread_rule.py); by the same dense rule the spread
+  fails on 77.5 % of the public floor. Frames (same 12 views both layouts, drawn now): at the peak the ground is brighter in 4 of
+  5 audience views (wings, behind, entry; the entry 0.064 vs 0.031 mean luminance), darker from the floor centre (0.047 vs
+  0.054); the dark look is darker in every view (its beam levels are the spread's design faders; the spread's dark now draws its
+  stage keys 1.58x brighter than the owner saw (0.63 drawn now against 0.63² = 0.397 then), left for his re-tune by a9d4b0d1). The DJ's own view is clear (the spread's is a
+  grey veil at 0.97 % white-out).
+- **(2) The stage front from the ground**, four PARs in the pit: the DJ key and a booth-front lamp in the gap between the PA
+  boxes (1.71 / 1.46 m behind the barrier: out of reach, ISO 13857:2019 Table 2 high risk, 1.4 m for a 0.4-0.6 m hazard behind a
+  1.0 m barrier, as reproduced in the Troax Safety Guide: EQUIVALENT), and one at each pit end beside its PA box (1.16 / 0.56 m
+  behind the barrier: within reach, mesh guard + the pit's security; the PA R lamp aimed into the face so its whole beam ends on
+  the box before a leaning eye, found by a grid search, a5_par.py). Lux in the scene (30 478 cd, linear; cut to one decimal, never up): peak DJ face 45.6,
+  booth 31.0, PA L 35.5, PA R 35.2; dark 44.4 / 31.5 / 35.0 / 19.1; floors = the spread as the owner saw it on 10-09 (44 / 31 / 35 / 35,
+  dark PA R 19). Faders 0.016-0.183: the PL5403's dimmer curve decides on site (owed).
+- **(3) Pens for the whole desk window.** Each head carries `desk_limits` (pan +-10° around its aim, tilt from the aim up 15°,
+  as fixture degrees from home and 16-bit DMX per dmxDecode.js, EQUIVALENT until the B380F channel walk) and `base` (bolted to a
+  600 x 600 x 18 mm ply plate + 2 x 15 kg sandbags or anchors with the venue's OK; statics with a factor 1.5: 163.5 N at the top,
+  the head alone 33.7 N; method MOXIR.md 5.2 / ANSI E1.21 practice). Every low run (lower edge from the lens's lowest point, 0.9° +
+  2° tolerance, 0.01 m steps) over every pan at the tilt limit stays inside its pen less 0.6 m; heads >= 1.5 m from their barrier
+  (ISO 13857 as above). Longest low run 2.58 m. Every window direction (9 pans x 4 tilts) ends on allowed steel (72 scored options
+  dropped for ending on a lantern frame between the coarser sample's directions).
+- **(4) No standing eye in a floor PAR's beam.** Rule: no public feet point (0.25 m grid) within 0.5 m (a lean over a 1.1 m
+  barrier) of the plan points where a PAR's beam (15° + 1° tolerance, from its 0.21 m lens, every ray to its first hit) is
+  between 1.5 and 1.9 m. Result: 0 of 40 (the first build: 35 by this rule). PARs stand in the stage pen (4, the pit lamps),
+  fenced beam pens (4) or their own fenced PAR pen (32, 2 x 2 m to 4.5 x 2.7 m: **296 m of barrier**), each on the stewards' round
+  (MOXIR.md 5.3). Spacing 6 m between the hall's 36 (min 6.0, median 6.0); coverage: median 4.1 m, largest gap 11.4 m (spread
+  5.7 / 19.0).
+- **(5) The crew.** B's fan sends its low runs into a strip in front of its heads (x -9..-0.4, z -5.4..-2.5, marked: crew keep
+  out); 1.77 m from the smoke machine's refill point behind it, 0.64 m from the crew lanes (the back lane, the house-right lane to
+  the booth). No PAR on the crew's way. The fan never meets the cut at any near-crane park z 0.15-4.25; at parks z 0.15-3.2 some
+  window directions end on the crane's girders (steel), as in the spread at z 0.15.
+- **(6) The 30° rule, dense.** 13,333 public points 0.5 m apart, eyes at 1.5 / 1.7 / 1.9 m (+0.6 on the FOH riser), every head
+  over its whole window: **0.00 % of the floor fails**, smallest angle 30.2°. The first build: 30.97 % by the test's own rule; the
+  spread: 77.5 % (its aims alone).
+- **Minors.** Pen radii now from the lens's lowest point with the 2° tolerance and the window; the DJ key 1.71 m behind the
+  barrier (was 0.36 m); the truss's 10 PARs on their own circuit (2 000 W, 944 W spare = 4 PARs) and their DMX lines keep 2 spare
+  (the fullest line 26 devices, every line <= 28); C-LASER on a phase (L1 7 220 / L2 7 300 / L3 6 700 W); a cable plan
+  (plan-cables.png: every circuit and line routed, 1 ramp); the laser table is the merged cap (0.16 = drawn); the glare still
+  excludes the 2 x 40 W entry lasers (owed).
+- **Tests** (`scripts/place/moxir-v2-ground.test.js`, 17, seen failing 11 on 4d76fc1c with MOXIR_GROUND_RIG / _LAYER, then
+  passing): the dense 30° rule, no eye in a PAR's beam, pens for the whole window, the stage front's lux floors, every non-truss
+  unit on the ground, B's fan kept, a pen in the entry half; each recomputes the geometry itself. All 30 files under scripts/place
+  pass (315 tests).
+- **Frames and page:** `~/Downloads/moxir/v2-ground/` (index.html, frames/, frame-luma.json, checks.json, candidates-fix2.json);
+  the first build's page and frames kept in `first-build-4d76fc1c/`.
+
+Owed: the crowd plan's acceptance of 4 beam pens (82 m) + 32 PAR pens (296 m) and stewards; the barrier 1 m further out (or the
+truss) for the two PA-face lamps; the B380F's manual (clamp points, reset and DMX-loss behaviour) and channel walk (the desk
+limits' DMX numbers); its IEC 62471 hazard distance; the PL5403 dimmer curve for the low stage-front faders; the haze on site;
+the glare with the 2 x 40 W entry lasers in the scene; the crane's final park (the fan's ends); the owner's look.
+
+## 2026-10-09 — MOXIR v2 layouts: occlusion analysis, the cut's PAR count, three industrial-depth layouts
+
+- `scripts/place/occlusion_sky.py`: a B380F's whole pan/tilt sky (1200 equal-solid-angle directions) cast against hall
+  v9-show-park's 55 728 named triangles + the v1.1 rig boxes + the audience volume (1.9 m + 0.5 m arms over the dance
+  floor), for 195 candidate places in the owner's zones; PAR uplights' lit column length and lux on steel (15 and 25 deg).
+  Heat rule: at most 2 processes, 1 BLAS thread, waits while the CPU package is above 85 C.
+- `scripts/place/cut-count.mjs`: the PARs on the cut by the repo's own rigging maths (stageLineRig + threePointReactions):
+  17 lands at 134 kg on the middle pick, 20 exceeds the 146 kg cap; 10 recommended (98.6 kg, every shaft its own piece
+  with a 15 or a 25 deg lens, 1 circuit, 1 DMX branch).
+- `scripts/place/moxir_v2.py`: three layouts of the fixed kit (18 B380F all on the ground, 50 PL5403 = 10 cut + 40
+  ground, 1 smoke): A the nave corridors, B three planes of depth, C long lines from the depth. Each beam aimed by
+  search in its sector, its whole beam checked: no ray into the crowd or glass, >= 3 m over every standing level.
+  Rig files `scripts/place/rigs/moxir-v2-{corridors,planes,lines}-2026-10-09.json`.
+- `epic-build.mjs` now takes a rig file's own cues / title / loop (`cuesOf`).
+- Built only into a scratch stack (tree moxir-v2). Never dev, live or the owner's own di.
+- Owed: the lasers (6 cubes on the free crane) come from the laser session's table; the haze output of the ONE smoke
+  machine is unmeasured; every pen and guard is to the Purple Guide, which nobody here has read (login).
+- Seen on the real GPU (24 frames, `~/Downloads/moxir/v2-layouts/`), and fixed because of it: the room drew beams through the
+  roof (epic-build `reachOf` now draws a beam to its cast throw); layout C's beams toward the crowd white out the floor view
+  (capped at 35 % in every look; still 9.8 % white-out at the peak, measured by `frame_luma.py`); an empty scratch desk drove
+  the room (rig files play by their own clock, `showSource: 'clock'`).
+- Advice to the owner: layout B (three planes of depth), 10 PARs on the cut. The free crane's laser corridor is feasible
+  (53 of 108 straight lines keep >= 3 m everywhere); the cube aims stay the laser session's table, not written yet.
+
+## 2026-10-09 — MOXIR v2 patch: two universes, the six LaserCubes on the LAN (owner N460.2)
+
+Branch `feat/moxir-v2-patch-2026-10-09`, cut from `integrate/moxir-one-2026-10-09` (#867, tip c4142e57), which moved on to 5701c81c (#864 folded) while this was built; that tip is merged in. For the MOXIR lead (session relocate-stage-lights-all-around). Owner, 2026-10-09 20:32: *"laser cubes will work with the lan and no dmx, so 2 lasers of the poli and beams one univers, and the wash other ones right also smoke goes with the beams"*. Nothing run on a unit, on dev or on the owner's own di; unit tests, one cross-check against the v2 spread rig's real file, and a PDF looked at.
+
+- **The patch** `scripts/place/rigs/moxir-v2-patch-2026-10-09.json`, in the format of `moxir-2026-10-17-minimal.patch.json` (RIG_BUILD §19, new §19.5): U1 = 18 UP-B380F (16 ch) @001 + 2 UP-LA40WF (32 ch) @401 + 1 UP-YZ31P (1 ch, ASSUMED) @501 = 353 of 512; U2 = 10 UP-PL5403 on the cut @001 + 40 on the planes @101 (8 ch) = 400 of 512. Room to grow after every block (beams 7, lasers 1, cut 2, planes 11). The lasers are `rig-la40wf-entry-01` → U1.401 and `-02` → U1.433, the ids #873's entry-laser rig gives them (group select `rig-la40wf-entry`); every address goes by unit id, so a unit that moves (the ground layout) keeps it: tested on the synthetic room and on the real rigs. The six cubes: `offDmx`, LAN only, UDP 45456–45458, no universe. Fixture numbers 101–118 / 131–132 / 141 and 201–210 / 221–260.
+- **Planner** (`src/rigbuild/patchPlan.js`): `order: "id-asc"` (addresses by unit id; the lasers' places come from the entry-laser rig), `units` per block (the plan is held to the kit), lamps kept off DMX are no error and are returned as `offDmx`, a block that names a `dmx: false` lamp (the smoke machine) puts it on DMX and clears the flag, `expectedRoom(plan)`. Fixed on the way: a missing position never converged on a re-run. Tests written first and seen failing (4 + 3 new).
+- **Checked** `src/rigbuild/moxirV2Patch.test.js`: no overlap, every fixture whole inside one universe, 353 / 400, no LaserCube on any universe, controls that fail on a wrong plan. Seen failing first on a deliberately overlapping copy (`MOXIR_PATCH_FILE=`: lasers at 281, inside the last beam: "U1 block up-la40wf (from 281) overlaps U1 block up-b380f (to 288)"), then passing. Against the real `moxir-v2-spread-2026-10-09.json` (#864; copied in for the first run, in the tree since this branch merged #867's round 2, 5701c81c, where the test now runs instead of skipping): the document `epic-build.mjs` makes from it plus two stand-in lasers, 71 lamps laid, the 6 cubes left off DMX, the smoke flipped onto U1.501 with a warning, 353 / 400.
+- **Crew table** `scripts/rigbuild/patch-table.mjs`: from the plan alone; `~/Downloads/moxir/v2-patch/patch-sheet.md`, `.html`, `.csv` and an A4 `.pdf` through LibreOffice (3 pages: the short table and notes, U1 by unit, U2 by unit; looked at).
+- **B380F 16-channel map** against the equivalent chart (PROST380, a different maker): ten disagreements, four against the console's own profile, channels 11–16 not settled from paper; ch 13 (the console note: "must be 145 or the head emits no light") can leave all 18 beams dark and is walked first on setup day. `docs/moxir/b380f-16ch-map-check-2026-10-09.md`. The TESTED map is unchanged.
+- **Docs** `docs/moxir/MOXIR.md` (the Control paragraph, plus a v2 one), `scripts/place/epic_plot.py` and `moxir_v1.py` (every sentence that put the cubes on Art-Net 10) now say LAN through di Nodes, no DMX; no test pinned the old text, a guard test now keeps it out.
+
+Owed: the cabling plan (U2 needs two DMX lines or more: 50 devices, 32 per line); the smoke machine's channel count; how the UP-LA40WF and UP-YZ31P are addressed on the unit; the B380F's channels 11–16 on a real unit; the real-cube test of the LaserCube stream (#847); the rigs still carry the legacy `laser.artnet` (universe 10) and `epic-build.mjs` writes the smoke `dmx: false` (the plan flips it, a rig policy would be cleaner); `moxir_v1.py`'s console cue F10 "lasers" still exists as a pointer: the cubes are run from di, the lead decides what F10 becomes; the 40 W lasers' safety numbers.
+
+## 2026-10-09 — MOXIR v2 B spread: the stage lit, the truss count, the lasers in, every light in the owner's hot zone
+
+Branch `feat/moxir-v2-spread-2026-10-09`, cut from `feat/moxir-v2-true-look-2026-10-09` (draft PR #853), stacks on it.
+Cherry-picked: the owner's zones (465b57e7: read_paint.py + rigs/moxir-v2-zones-2026-10-09.json) and the 7.5 W cubes
+(dfc7929f). Scratch only (tree stack `moxir-v2-spread`, seeded from the `moxir-v2` scratch copy with `sqlite3 .backup`;
+room `moxir-v2-stage-lasers`); never dev, live or the owner's own di.
+
+The owner on B tuned: "stage is totally dark", "you closed in one area", "check the lasers place on the other crane",
+"how much light goes to truss?". At 17:42 he painted the hall's areas: a hot zone (people + light, x −30..25, z −31..44),
+two wings, a bar and a chill + food area, and asked for the lights to be placed from the audience's view positions.
+
+- **Rig**: `scripts/place/rigs/moxir-v2-spread-2026-10-09.json`, written by `scripts/place/moxir_v2_spread.py build`
+  (placement in `moxir_v2_eyes.py`; `--placement` reuses a run's placement, the search takes ~25 min on one core).
+  B tuned stays untouched as the labelled old version.
+- **The stage**: a McCandless key pair on the DJ: a column bracket on the nave column x −12 z 12 at 6.0 m, and a stand
+  in the pit. Two more PARs on the bracket light the speaker faces. Computed: DJ face 0 → ~50 lx; the probe reading
+  is in `~/Downloads/moxir/v2-spread/probe.json`.
+- **The cut stays at 10 PARs**: it hangs behind him and gives 0 lx on his face at 10 or 12. 12 adds 9.8 kg on the
+  middle pick, and with the 25° lens a third of the shafts merge.
+- **The lasers** are the six cubes and the bar exactly as git cf954908 (PR #844). The crane travel to z −12 is the
+  owner's decision. No unit enters a tube. The closest is cut PAR 08 under 4a: 0.11 m with an ASSUMED 0.25 m body
+  sphere. The lines now carry the 7.5 W cube's flux per beam (epic-build `laserBeamLumens`, from `variant_in_use`);
+  the old fixed 254 / 72 lm was v1.0's two scanned 6 W beams.
+- **The hot zone**: people on all sides of the stage, so every beam is checked over the whole floor. 26 PARs and
+  12 B380F were re-placed onto out-of-reach column brackets in both wings and behind the stage, scored from 8 eyes.
+  Units outside the hot zone: 27 → 0. Read against the hot zone, B tuned had 6 floor heads among people and 9 beams
+  someone looks down within 30°; the spread has 0 and 0.
+
+- **Measured in the room:** the lux probe reads 0 → ~44 lx on the DJ's face in both looks. The room SQUARES a look's level
+  (the renderer's lamp list: intensity = nominal × level²; the second factor is not found: owed to the viewport), so the
+  faders are set for the room. White-out from the floor at the peak is 0.88 %; the lamps alone are 0.52 % (budget 0.65 %)
+  and the 7.5 W laser lines add the rest. The DJ sees a veil: the keys light the haze around him.
+- **Fixed:** a frames or probe run killed by `timeout` left its tab drawing the room (close-on-signal.cjs, known-fixes).
+  Laser lines now carry the 7.5 W cube's flux per beam.
+
+Owed: the viewport's level² factor; the DJ's veil and the lasers' glare share (the owner's call); the column brackets and the pit stand
+(the venue's OK, the rigger's check); the stage pen's barrier; guard cages for the floor PARs at the stage columns;
+the room's PAR candela (30 478 cd) vs the spec figure (11 000 cd); the crane's on-site move, inspection and lock-out;
+hall v10 with the crane at z −12.
+
+## 2026-10-09 — MOXIR v2: the true look with ONE smoke machine, B tuned for thin haze
+
+Branch `feat/moxir-v2-true-look-2026-10-09` = #848 (v2 layouts) + #849 (physics: one-machine haze, no cutoff) +
+#850 (measurement mode), merged at dc03510f, then this work on top. Scratch only (tree stack `moxir-v2-true`, seeded
+from the `moxir-v2` scratch copy); never dev, live or the owner's own di.
+
+What was found, and fixed or written down:
+- **The room opens in Lite** (owner 10-08 default), where only `OUTPUT_POOL_SLOTS` = 4 lamps are real lights: no PAR
+  lights any steel there. Every true-look frame is `?quality=full` (68 real lamps, shadows). The 10-09 v2 frames
+  did not say which quality they were.
+- **The 40-min "tank" state could not be drawn**: the fog's drying (`HAZE_KINDS['smoke-machine'].dryTau_min` 1.5 min)
+  was fixed, so the hall settled at ~2.7e-4 /m at any time. `renderSettings.atmosphere.haze.dries: false` now drops
+  it for a room (hazeField.js + both schemas).
+- **epic-build drew the v2 rooms the old way**: lamps had a cutoff (`distance` = throw); the smoke machine was always
+  turned to +Z whatever the rig file said; the air was always v1.0's uniform 0.0169 /m. Now: distance 0 +
+  `beam.length`, the rig file's `r` for the machine, the rig file's own `atmosphere` when it has one.
+- **B's smoke machine blew toward the stage, not "into the depth"** as its file said (r [0,0,0] is +Z).
+
+The pictures: `~/Downloads/moxir/v2-true/` (index.html, contact-sheet.png, 40 frames, frame-luma.json, tunes.json).
+Measurement mode at **EV100 2.84 fixed** (the room's own camera; MEASUREMENT_MODE.md), Full, bounce kept. States: old
+0.0169 /m; one machine, closed hall, not drying, at 10 min (~0.0024 /m) and 40 min (~0.0086 /m); the kit's own
+assumptions (~0.00027 /m, the floor of the range).
+
+B tuned (`scripts/place/rigs/moxir-v2-planes-tuned-2026-10-09.json`, one commit per tune, `moxir_v2_true.py tune
+--upto T#`): T1 pre-haze 40 min, hall closed; T2 the machine under the plane-1 row (1.0 m pitch) blowing through it;
+T3 plane-1 aims leaning toward the floor (forward scatter, every v2 safety rule kept); T4 three halo PARs graze the
+columns that frame the stage; T5 look levels (dark: columns 0.5, stage columns 0.6; peak: plane 3 0.35 → 0.7 under
+the old glare budget); T6 the 15° PAR lens and open B380F beams required.
+
+Owed: lasers (the laser session's `aerial-far-crane.json` did not exist; nothing invented); the haze measured on site
+(decay test + transmissometer); guard cages for the two floor PARs at z 6; the venue's OK for the PAR on the machine
+line; the rental's PAR lens; the floor model's mirror-like beam streaks; the owner's look at the page.
+
+## 2026-10-09 — Measurement mode: fixed exposure, lux and beam probes, analytical check
+
+- Step 2 of the simulation method (agent report `simulation-method.md` §3.4): `?measure` (or Alt+Shift+M) fixes the
+  scene's exposure at a stated EV100 and turns off auto exposure, bloom, the glare veil and the work light; probes read
+  linear values from a half-float target before tone mapping. Contract: `docs/architecture/MEASUREMENT_MODE.md`.
+- New code in `src/project/viewport/measure/`; small hooks in HdrBloom, atmosphereStore (`holdGlareVeil`),
+  RenderSettingsEffect (mounts it), RigBodies (names the bounce light). No physics file changed.
+- T1 on the real GPU (aylmo RTX 3080, ANGLE/Vulkan, under the browser lock), twice with identical numbers: 15 of 15
+  checks pass — inverse square and cosine law within 0.04 % (305.000 → 304.955 lx on axis), the fitted cone's 50 % point
+  within 0.012 %, the beam probe's FWHM within 0.45 %, the mode's switches seen in the pipeline; the control (mode off,
+  work light on) reads +4.36 % and fails as it must. Runner `scripts/measure/t1-gpu.cjs`, page
+  `src/project/viewport/measure/harness/t1.html`.
+- Found on the way: a `distance: 0` lamp draws its beam in air only 20 m long (`UNLIMITED_THROW`, spotBeam.js) —
+  reported to the physics branch. The harness needs `rendererWithFallback` (no 'high-performance' context on this laptop).
+- Seen read-only on MOXIR v1.0 (installed di, desktop 1600×900 and phone 390×844): the label, the dark hall with the
+  work light (0.3) and the rig bounce held off, 6 real SpotLights listed. Not yet seen by the owner.
+- Owed: the rig build should write `renderSettings.photometry.sceneScale` into rig documents (MOXIR needs `&scale=0.02`
+  until then); probe-point lists per cue (T2); the Cycles reference (step 4) before T2/T3 can pass or fail.
+
+## 2026-10-09 — light physics: real laser line, one haze for beams and surfaces, no cutoff, kit-only rig
+
+- Owner 10-09: the show uses only the Sevan kit (50 UP-PL5403, 18 UP-B380F, 6 LaserCube Ultra MK2, ONE UP-YZ31P);
+  no measuring kit, so every number is the best published one, labelled EXACT / COMPONENT / EQUIVALENT / TESTED / UNKNOWN.
+- Data: fixtures.json filled from agent-reports-2026-10-09/devices/fixtures-exact.json (B380F ch11-16 conflict kept OPEN);
+  candidate `known-kit` in the versions file → rigs/moxir-2026-10-17-known-kit.json (a copy beside known-full).
+- Physics: rig lamps distance 0 (no cutoff) + beam.length; surfaces dimmed by exp(−σd) at the beams' σ (patched fog chunk,
+  far < near); the two-zone haze (Nicas 1996) for one machine, never calibrated; the LaserCube as a line source (Km·V(λ)·P,
+  4 mm, 1 mrad, scans by duty share); field/beam ratios from the equivalents' reports (1.62 wash, 2.0 beam) with a
+  flux-keeping fit for three's light; per-emitter XYZ mixing hook (no emitter data exists: labelled ASSUMED).
+- Haze answer (UNVALIDATED): on the code's assumptions one machine gives the hall 2.7e-4 /m (steady in ~4 min), 0.23 /m within
+  3 m of it; best case (0.5 ACH, no drying) 0.005 /m after 22 min, 0.0086 /m at 40 min (tank empty), 0.02 /m after 129 min.
+- Scene: scripts/rigbuild/kit-from-full.mjs turns a known-full copy into the kit on a scratch stack (never dev).
+- Owed: lamp→surface extinction (per-light term); measurement mode (S2, other branch); transmissometer + decay test on site;
+  laser label wattage; field angles measured; emitter chromaticities; load-version for the space's version row.
+- Report: ~/work/agent-reports-2026-10-09/devices/sim-physics.md.
+
+## Measurement API reads beam-only laser lines (`__diMeasure.beams()`)
+
+Cause: `lampsOf` lists only SpotLights; lasers are `LaserLines` ribbon meshes with no light. Fix: `beamsOf` / `beams()` in MeasurementMode.jsx (position, direction, flux, drawn, diameter, divergence per line). Test: measureLights.test.js. Owed: drawn_fraction frames (#864) on the RTX 3080.
+
+## 2026-10-09 — Lite's light-pool slots are drawn with the rig's fit; why Lite's four slots light nothing; Lite and Full on the RTX 3080
+
+- MOXIR lead (many-lights plan section 6.1): in Lite, everyone's default since 2026-10-08, the scene's real light is the four light-pool slots, and a slot is built without `components.fixture`, so both renderers drew it with `fitted` false: three read a rig lamp's half-beam angle as the 0 % cutoff of its cone. A PL5403 slot carried 50 % of the lumens of the same lamp in Full (the 15 deg PAR 50.0 %, the 25 deg PAR 50.2 %, a B380F 55 %).
+- Fix: `lampIsFitted(components)` in `spotBeam.js` (a fixture, or `components.lightPool.fitted`); `applyLightPool` sets `lightPool.fitted` from the lamp the slot holds; `LiveProjectScene` and `EntityContent` ask it. The slot does not copy the fixture: `RigBodies` reads the pooled entities and draws a body for every entity that has one, so every slot would draw a second lamp body (the guard fails when it does). Hold time, margin, hand-over and the slot count are unchanged.
+- Guard: `src/rigbuild/lightPool.fit.test.jsx` (8 tests, the real pool, entity switch and lamp component). On the old code 6 fail (the slot's cutoff 0.2182 rad against the lamp's 0.3455); with the fixture copied into the slot instead, the "no second lamp" test fails.
+- Seen on the GPU (RTX 3080 Laptop, ANGLE/Vulkan, three r186, measurement mode, a scratch copy of MOXIR v2.0 with the B380F lamps held at 0 in the browser's copy so the pool takes PL5403 washes): the slot's cone read back as lux, divided by the lamp's candela times its colour's luminance, follows three's own falloff for the fitted cone (1.000, 0.998, 0.971, 0.870, 0.648, 0.317, 0.029, 0 at 0, 0.25 ... 2 half-beams off the axis) and for the old cone it reads 1.000 out to half a half-beam, 0.623 at 0.75 and 0 from one half-beam on. The flux ratio fitted to old is 2.000. In the measurement view the four PAR slots add 0.36 % to the picture's luma as drawn, 0.17 % as the old code drew them.
+- Why Lite's four slots light nothing, measured in the v2.0 look "peak" with levels drawn once (after #868, 28f4028d): the pool took the four B380F pencil beams (rig-beam-planes-01..04, 50.2 Mcd each, a 1.8 deg beam), because it ranks lamps by lumens (I times the cone's solid angle: 777 for a B380F, 33 for a PL5403 in this document). They stand on the stage floor at z -5 and aim up at the roof deck, 13 to 16 m away: four spots about 0.4 m in radius, and the probe reads 35 to 66 klx on them (the analytic value within 0.2 %). Switching the four slots off changes 0.12 % of the picture's pixels and 0.5 % of its luma. The floor reads 0.000 lx at 15 points (Full: 2 of the 15 are lit, 0.9 and 15 lx; the grid is coarse). The compiled lit programs hold NUM_SPOT_LIGHTS 4 (6 of 15 fragment programs; Full 74 in 10 of 40, with 12 shadow casters). Lumens: the four slots hold 255 k lm after the fix and 141 k lm before it, against 889 k lm for the 74 lamps in Full, so the lumens are there and the surfaces do not get them.
+- Ruled out with the same run: intensity 0 after the hand-over (the slots hold the lamps' full 1,004,000), a slot aimed off the scene (every axis lands in view), distance or decay (distance 0, decay 2), the scene scale (the probe agrees with candela x luminance / d^2 x cos at the aim points), a beam-only lamp (the slots are mounted lights: four lit SpotLights).
+- Not changed here, for the lead: the pool's choice of lamps, and the count. Four lights cannot light the scene whichever lamps they are: with PL5403 washes in the slots the picture gains 0.36 %. In the Full renderer with `?lightPool=1` (8 slots, beams 01..08) switching the slots off changes 73 % of the pixels and 17 % of the luma (mean luma 60.3 on, 51.5 off), which is the bloom and the floor's reflections of the same bright roof spots, not light on surfaces (not isolated here); the stage faces stay dark in that picture (`fullpool.png`).
+- Frame time on the 3080 (two runs each, 1280x720 and 2560x1340; the shared test browser's frame cap cannot be lifted from a script, so the page's loop sits at 60 fps vsync and these are the other measures): Lite 4.2 to 4.6 ms of GPU time per frame at 720p (5.2 to 5.4 at 1340p), Full 9.1 to 10.1 ms (13.6 to 13.8); the app's own render call looped without the cap, Lite 3.2 to 3.9 ms (258 to 313 fps) at 720p and 5.2 to 6.4 ms (155 to 194 fps) at 1340p, Full 5.3 to 6.4 ms (157 to 187 fps) and 10.8 to 10.9 ms (92 fps). Full at 1340p one frame at a time: median 16.3 to 17.5 ms, p95 18.7 to 20.5 ms. Full dropped one frame (33 ms) in three of its four 6 s runs; Lite none.
+- `scripts/measure/lite-vs-full-gpu.cjs` (+ its test): the instrument, one test-browser call (two short smoke calls came before it, while the instruments were checked). It reads every shader source the page gives WebGL for the spot count, reaches three's scene through the module the dev server gave the page (so it works in Lite, where `window.__diRoom` does not exist), and reports the page's capped cadence, GPU time per frame from EXT_disjoint_timer_query_webgl2, and the render call looped without the cap. The package climbed from 75 to 98 C inside the one call (the heat check runs when a call starts), so the script now waits between conditions; that change is unit-tested and not yet run on the GPU.
+- Owed: the pool's selection and count (the lead's plan); the same slot read on v1.1 motion (R8's scene); Full's frame time on a phone and on the owner's own screen; the owner's look at Lite and Full side by side.
+
+## 2026-10-09 — a look's level is drawn once in the public orbit view, not squared
+
+- MOXIR, owner: "totally dark … I think something is tuned bad". The v2 spread (#864) had read
+  `intensity = nominal × level²` in the renderer's own lamp list and could not find the second factor.
+- Cause: the public viewer poses its scene in `RoomLookFollower` and hands the posed objects on. Walk / Fly drew them as
+  handed. The orbit view (`StudioViewport`, the default) ran `useRigLookEntities` on them a second time, so light and
+  haze drew at level², and a moving look's beat and a lighting desk's dimmer were applied twice. The Studio editor and the
+  build and cards scenes posed once. Live since the rig-builder line (2026-09-28), on dev and main alike.
+- Ruled out with tests that could fail:
+  - a lighting desk's dimmer on top of the look (it replaces the look's level, from the document's nominal);
+  - a deliberate square-law dimmer curve and a gamma or sRGB decode (one pass is linear at ten fader levels);
+  - the measuring method (the renderer takes the object's number unchanged);
+  - a build-time bake (the builder writes candela × 0.02, with no level).
+- Fix: `StudioViewport` takes `lookDrawn` and draws a scene handed to it already drawn as handed.
+  `PublicProjectSceneSurface` sets it whenever `RoomLookFollower` handed posed objects.
+- Guard: `src/rigbuild/lookLevel.test.jsx`, 9 tests, traces one lamp from the look's json to the renderer. On the unfixed
+  code the orbit view drew 152.39 for 304.78 and the source check failed; with the fix, 9 / 9 pass. Known-fixes row added.
+- Owed:
+  - every MOXIR level below 1 now draws 1/L brighter in the orbit view. The levels tuned against the squared view (the v2
+    spread's stage faders and wing peak; B tuned's T5; v2 planes / lines plane 3; the work-light and motion layers set by
+    eye) are listed for the lead to decide, in the MOXIR lead's report `look-level.md`. Nothing was re-tuned here;
+  - the renderer's lamp list re-read on moxir-test after the fix is folded, then the owner's look.
+
+## MOXIR C3: B380F beams no longer "hit people" by a wrong cone and a wrong judge
+
+- Cause of skeptic finding C3 (one B380F ray into the audience in the composed v2.1 check): two
+  faults. `moxir_v2_ground.py` used the B380F `angle_rad` (0.0157) as the full cone, but it is a
+  half angle (epic_plot.py and three.js SpotLight.angle both mean half); the ground cone is now
+  `B380F_HALF_DEG = degrees(0.0157)`. And `moxir_v2_cranes.py check` judged floor-standing heads
+  (y < 2.4 m) against the people layer that the ground layer already judges with its own model
+  (ISO 13857 1.5 m), so one floor head was counted twice; floor heads now skip that extra cast.
+- Red test first (`R/c3-split-2026-10-10/red_test.py`): red on the old numbers, green after.
+- Ground, layer and v2.1 rigs rebuilt by the scripts (build → measured → compose, compose built
+  twice to the same sha). Composed check: 0 rays into people (was 1 of 108). Cranes check: 0.
+  Ground check still fails its own two checks (person clearance under the rule; a beam into
+  people or the cubes) — unchanged by this branch, open row N501.2.1.
+- vitest `scripts/place/moxir-v2`: 85 tests in 6 files, 0 failed.
+- Only cube-clearance numbers changed in the rigs (18 B380F window/aim clearances and one
+  beam_aim_min), because the narrower cone is now the true one.
+
+## 2026-10-09 — the far41 hall rig no longer points into /tmp
+
+- `moxir-hall-2026-10-08-v8-show-back21-far41.hall.json` listed its inputs file under a session scratchpad in `/tmp`, which is gone after a reboot. The inputs (`dims-far41.json`) are now in the repo as `scripts/place/rigs/moxir-hall-dims-far41-2026-10-08.json`, and `dimsFiles` / `dimsNotes` name that path like every other hall rig.
+- New check `scripts/place/rigs-no-tmp.test.js`: no file in `scripts/place/rigs` names a temporary path, and every `dimsFiles` entry of a `*.hall.json` exists in the repo.
+- Not rebuilt: the hall file was edited by path only, not regenerated with `hall.py`; its numbers are unchanged.
+
+## 2026-10-09 — MOXIR v1.1 bug hunt + the lasers (owner N382, N385)
+
+- Hunt on the real GPU (moxir-v11.diiii.localhost, 1440x900 and 390x844 @3, every view button, the cue loop) plus the rig json, the scene document and the pictures. Evidence: `~/Downloads/moxir/stage/v1-1/bugs/`. Fixed: speaker placeholder L stood 0.2 m inside the DJ step; two connected totals (35 984 W in the json, 36.1 kW in the map and MOXIR.md) and a v1.0 supply note; the authored `foh` view preset was dropped silently by the viewer (now the `rig` button); on a phone the SHOW chip sat on the Lite button (`rigChromeTops` takes the right-hand stack's line count); plan and power pictures had labels printed over each other or cut at the edge; MOXIR.md status / E-stop 2 / DJ position contradicted v1.1; the crew sheet put E-stop 2 at x -9, z 12 (on the v1.1 dance floor).
+- Lasers: the ash wall is removed (no panel without the owner's word) and the cubes draw ONE static beam each, the whole 6 W (the 12 beams were our own 2-point-scan choice). `moxir_v1_1.py` `lasers()`: 47 candidate points on the hall's press, all 61 fan rays must first-hit the press at >= 3.0 m, no two ends within 0.5 m, joint choice by depth-first search for the largest smallest margin. Result: 0.36 / 0.31 / 0.10 / 0.55 / 0.45 / 2.2 deg for cubes 1-6; cubes 1, 2, 3, 5 are under v1.0's 0.5 deg rule (MOXIR.md 4.0a names the smallest fixes). NOHD at 6 W is 544 m, unchanged. Brightness redone at duty 1.
+- `epic-build.mjs`: `laser.room_flux_share` (v1.1: 1); v1.0's 254 / 72 lm kept as it was (it was a double split, 0.225 of full flux: noted, not changed).
+- Scratch: moxir-v1-1 on :4329 rebuilt with `epic-build.mjs --apply`, `patch.mjs --exact`, `--desk-only` (OUTPUT OFF, laserSignedOff not written); backup `~/di-backups/moxir-scratch/moxir-v1-1-4329-before-laser-rework-2026-10-09.json`.
+- Owed: the far trio's margin (laser-level aims, or the far crane nearer, or a panel on the owner's word); the speaker L trim and the show-chip fix not yet seen on dev; v1.0's generator files (`moxir_v1.py`, `epic_plot.py`, `epic_placement.py`) still describe 12 beams as v1.0's record; tape numbers.
+
+## 2026-10-09 — the 30-day space sweep never deletes a space this machine follows
+
+- Cause: a follow does not carry a space's `permanent` mark, and `pruneSpaces` hard-deletes every non-permanent,
+  non-global space untouched for `SPACE_TTL_MS` (30 days). A follower whose hub was quiet for a month lost the space.
+- Measured on the owner's install (aylmo) the same morning, read-only from `di.db` + `follows.json`: 12 of 30 followed
+  spaces were not permanent; br-id-ge (74 projects) was within hours of deletion (marked permanent by hand at 07:50);
+  cascade, di-laser and the-light-put-back were 9.3 days away, support 11.6.
+- Fix: `createSpaceStore({ keptSpaceIds })`; `pruneSpaces` skips those ids and returns the ids it removed. `index.js`
+  passes the keys of `follows.json`, read on every sweep so `di follow` / `di unfollow` count without a restart. The
+  sweep now logs `[spaces] removed N space(s) …` — it used to delete without a word.
+- Test: `spaceStore.test.js` "never reaps a space this machine follows…" fails on the old store (no return value, no
+  keep list), passes with the fix; spaceStore + trash + archive contracts + follow suites 160/160.
+- Still owed, not in this branch: a follow could also carry `permanent` from the hub; on dev itself `support` is
+  `permanent: false` and idle 18 days, so dev's own sweep would take it — an admin decision, not code.
+
+## 2026-10-09 — MOXIR one: every MOXIR piece on one branch, one scratch stack (owner N452)
+
+- Owner, 18:5x: "so when we will have the one moxir that everything is synced?" This branch starts from dev and merges, with `--no-ff` and no rebase of anyone's branch, in this order: #844 v1.1 fixes + aerial lasers + 7.5 W numbers · #841 show page, room choosing, 5 favourites, no wait · #858 work light, readable floor, 26 looks · #849 light physics + kit data + 7.5 W cubes · #850 measurement mode · #848 v2 layout · #853 v2 true look (the owner's zones + paint tools) · #847 LaserCube drive on #776.
+- One textual conflict: `package.json` `test:server-contracts` (#841 added `showContracts`, #847 added `laserShutdownContracts`). Both kept.
+- One stale test pair fixed here: #849's tip moved `fixtures.json` to the 7.5 W cubes (4000 / 2000 / 1500 mW, owner N449) but `knownKit.test.js` and `kit-from-full.test.js` still expected the 6 W diodes. Both failed on #849's own tip; the tests now follow the owner's decision. The same fix is owed on #849.
+- Still failing, inherited from #853 unchanged: `t1Cases.test.js` "the rig's fitted cone gives three's falloff 0.5 at the beam half-angle" (0.646). #853's `00d601b4` moved the beam edges to the equivalents' field/beam ratios after #850 wrote that test. Which one is right is the physics owner's call; not changed here.
+- Scratch stack `moxir-one` (`di-dev up moxir-one --api scratch`): space `moxir` made on scratch; `v1-0` and `moxir-v1-1` copied from the cue-page scratch, `moxir-v1-1-looks` from the moxir-v11 scratch, all with `scripts/rigbuild/copy-version.mjs` (a dummy token file, sources only read), then slugs `v1-1` / `v1-1-looks` and the five favourites set through the show route. Nothing written to the installed di or to dev.
+- #858 moved to its kit-only tip after the first merge (no UP-250BSW far wall, no HK1915 roof, no blinders or strobes); merged again.
+- #866 (ten moving favourites, cap 5 → 10) folded in on the lead's word. Its four work-light files were the layer's first commit (408c5195) against #858's rebased, kit-only version: add/add conflicts, #858 kept (newer decision; #866 never changed them).
+- A conflict git did not see: #866's `motion-looks.mjs` concatenated the work-light looks raw, but #858 made the readable floor one key applied by `withFloor`, so the 22 floor looks lost their floor on the motion project. Fixed in `merged()`; guard `scripts/rigbuild/motion-looks.test.js` seen failing without the fix. Same fix owed on #866.
+- Scratch, after the folds: `moxir-v1-1-looks` re-laid with #858's kit-only layer by `worklight-looks.mjs` (backup in `~/di-backups/moxir-scratch/`); `moxir-v1-1-motion` copied from this stack's `moxir-v1-1` and laid with `motion-looks.mjs` (work light + the ten moving looks, ten favourites).
+- Found, owed (not changed here): Light is one desk per stack. A press holds (`running`, autoplay off), and a project whose list is not on the desk is refused ("Light is playing another project's cue list") until someone presses stop on that project's cards page. Look ids are shared across projects on the desk: v1-1 and the work-light layer share nine look ids with different levels, so the last "send looks to the desk" decides what those buttons play.
+- #866 still names the far wall (UP-250BSW, outside the kit) in its looks and floor; dob-22 is removing it. Fold the next tip.
+- Still to fold in when its owner says done: `feat/moxir-v2-spread-2026-10-09` (v2 from the owner's painted areas, and its v2 projects).
+
+## 2026-10-09 (round 2) — v2 in the one address: #864 folded, T1 settled, the 7.5 W tests upstream
+
+- Folded #849 at 06f2f9b2 (it now carries this branch's 7.5 W test fix, so the merge changed no file), #853 at 3b979b76 (the T1 fitted case expects the falloff the room draws, 0.646, with its limit stated) and #864 at 02dae7bb (v2 from the owner's painted areas: the stage lit with a key pair on the DJ, every light in the hot zone, lasers at 7.5 W per beam, close-on-signal).
+- Conflicts on #864: `docs/ai/known-fixes.md` (both rows kept) and `scripts/rigbuild/epic-build.mjs`, the laser beam's flux. #844 drew v1.1's beam at the 6 W cube's full flux × `room_flux_share` and kept v1.0's fixed 254 / 72 lm; #864 reads the cube in use from `fixtures.json` (7.5 W, owner N449) × the beam's duty × `room_flux_share` ÷ the beams that are on. Took #864's: the newer decision, and the rig files already carry #844's choices as data (v1.1: one beam, duty 1, share 1; v1.0: two beams at duty 0.45, the same 0.225 share as its 254 lm). Lines draw about 1.1× brighter. Projects built before this (the v1.1 scratch copies) keep the old line levels until they are rebuilt.
+- Scratch: `moxir-v2-stage-lasers` (B spread) copied from the moxir-v2-spread stack (started with `di-dev up`, stopped again after the copy) as **v2.0**, slug `v2-0`; `moxir-v2-planes-tuned` (B tuned) as the labelled old version, slug `v2-b-tuned`, listed as a kept copy under "Old versions".
+- Owed on #864's data: its cue names still say "B tuned + stage + lasers".
+
+## 2026-10-09 (round 3) — a look's level drawn once (#868), the laser caps (#864), the far wall out of motion (#866)
+
+- Folded #868 at a22a2e1b (retargeted to this branch; the public orbit view posed the room a second time, so every look level was drawn squared), #864 at cbfc0c1d (laser caps per look, a look's laser level reaches the room, cut PAR 08 clear of laser 4a) and #866 at 316db09e (no UP-250BSW in the ten moving looks). One conflict: `docs/ai/known-fixes.md`, both rows kept.
+- Scratch: v2.0 re-copied from the spread stack after checking it holds the new rig (PAR 08 at x −3.071, the peak's lasers at 0.40); the motion project re-laid with `motion-looks.mjs` from 316db09e. Backups of both in `~/di-backups/moxir-scratch/`.
+- Measured on moxir-test (measurement mode, the dark look held in the browser's copy): the stage key draws 384.02 (609.56 × 0.63), as the fix predicts; under the bug it read 241.93. The owner's view, the same look held: picture mean +10 % (dark 28.0 → 30.9, peak 38.9 → 42.8, 8-bit luma over the 3D area).
+- Levels tuned under the bug: 473 of 1,652 look levels now draw 1/level brighter (the lead's list `look-level-levels.csv`). In this stack's projects: the work-light layer 93, motion 46, v1.1 13, v2 spread 19, B tuned 14. The peak's laser cap was set at fader 0.40 for a drawn 0.16 (the room's old square law); drawn once, 0.40 now draws 0.40. The cap's own record says 0.16 keeps the measured white-out. The lead decides.
+- Found: the v1.1 build (`moxir-v1-1`, #844) still drives units outside the Sevan kit in four looks (still smoking, the roof, fire returns, dawn: UP-250BSW / HK1915 / blinder / strobe groups above 0). The looks and motion projects drive none.
+- Later in round 3: #868 again at 28f4028d (its test in test:raw's scope; `src/raw/rawTestScope.test.js` guards that) and #873 at a30b4757 (the two Poligraf UP-LA40WF 40 W on a truss tower at the entry, house left: rig json, guard, MOXIR.md §4.0b; data only, not loaded on the stack).
+- `src/rigbuild/types/moxir.json` was stale on #849's and #864's tips (the 7.5 W sources changed in fixtures.json, the library not regenerated), so `fixtureTypes.test.js` failed. Regenerated with `node scripts/rigbuild/types.mjs`. Same step owed on #849 and #864.
+
 # feat/assets-reid-2026-10-05
 
 ## What and why
