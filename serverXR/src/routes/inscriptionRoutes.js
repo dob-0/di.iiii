@@ -76,7 +76,6 @@ const proofMatches = (proof, proofHash) => {
 }
 
 function registerInscriptionRoutes(router, {
-  appendOpsHistory,
   applySceneOps,
   blankScene,
   broadcastLiveEvent,
@@ -89,20 +88,33 @@ function registerInscriptionRoutes(router, {
   maxOpAgeMs = 0,
   normalizeSpaceId,
   readJson,
-  upsertSpaceMeta,
-  writeJson,
   // Same per-space lock instance spaceRoutes.js uses for /ops and whole-scene
   // replaces (createKeyedLock() in asyncLock.js) -- previously this route
   // kept its own separate lock map, so an inscription write and a normal
   // op-write to the same space could race outside each other's mutex
   // (audit 2026-07-17). Falls back to a fresh per-registration lock only if
   // the caller doesn't inject one (e.g. an isolated test).
+  // index.js passes sceneWrite.js's withSceneWriteLock and commitSceneWrite:
+  // the same lock and the same one-step write as POST /api/spaces/:id/ops.
   withSpaceOpsLock = createKeyedLock(),
+  commitSceneWrite = async () => { throw new Error('commitSceneWrite is not wired (index.js createSceneWriter)') },
   // The tunnel's half of a shared secret with di.bo. Absent = the route is not
   // there at all; see the POST .../tunnel handler below.
   tunnelSecret = '',
   tunnelBotUsername = 'diiii111bot'
 }) {
+  // One inscription op, written as one scene write (sceneWrite.js). The lock
+  // around it makes a conflict near impossible; if one happens anyway (a lock
+  // taken over from a stalled server), nothing was written and it says so.
+  const commitInscription = async (spaceId, baseVersion, versionedOp, scene, actor) => {
+    const committed = await commitSceneWrite({
+      spaceId, baseVersion, ops: [versionedOp], scene,
+      maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
+    })
+    if (committed.notFound) throw Object.assign(new Error('Space not found.'), { status: 404 })
+    if (committed.conflict) throw Object.assign(new Error('The field changed while this was being written. Try again.'), { status: 409 })
+  }
+
   router.post('/api/spaces/:spaceId/inscriptions', inscriptionLimiter, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -160,9 +172,7 @@ function registerInscriptionRoutes(router, {
         const currentVersion = freshMeta?.sceneVersion || 0
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
-        await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs, actorFromAuthState(req.authState))
-        await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
+        await commitInscription(spaceId, currentVersion, versionedOp, updatedScene, actorFromAuthState(req.authState))
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
 
         return { id: object.id, total: existing.length + 1, proof }
@@ -221,9 +231,7 @@ function registerInscriptionRoutes(router, {
         const currentVersion = freshMeta?.sceneVersion || 0
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
-        await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs, actorFromAuthState(req.authState))
-        await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
+        await commitInscription(spaceId, currentVersion, versionedOp, updatedScene, actorFromAuthState(req.authState))
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
         return { id }
       })
@@ -277,9 +285,7 @@ function registerInscriptionRoutes(router, {
         const currentVersion = freshMeta?.sceneVersion || 0
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
-        await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs, actorFromAuthState(req.authState))
-        await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
+        await commitInscription(spaceId, currentVersion, versionedOp, updatedScene, actorFromAuthState(req.authState))
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
 
         const remaining = (updatedScene.objects || [])

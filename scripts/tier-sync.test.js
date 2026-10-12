@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip, readSignatures, listProjectMetas, listProjects, retryPolicy } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip, readSignatures, listProjectMetas, listProjects, retryPolicy, PARTIAL_VIEW, readsPartially } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -646,5 +646,53 @@ describe('reading a tier that throttles', () => {
         retryPolicy.sleep = async () => {}
         expect(await listProjectMetas(tier, 'nowhere')).toEqual([])
         expect(await listProjects(tier, 'nowhere')).toEqual([])
+    })
+})
+
+// 2026-10-09: an anonymous audit against dev.diiii.xyz called 96 projects "only
+// on local", all private work: dev shows an anonymous reader public spaces and
+// public projects only, and answers a private project's document 404, like one
+// that does not exist. A side read without its token cannot prove private work
+// absent, so the audit must say "could not be read", never "missing".
+describe('an anonymous read of a remote tier', () => {
+    const response = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+    const doc = { document: { projectMeta: { title: 't' }, entities: [] }, version: 1 }
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('is a partial view without its token; a token or a loopback read is full', () => {
+        expect(readsPartially({ base: 'https://dev.diiii.xyz/serverXR', token: null })).toBe(true)
+        expect(readsPartially({ base: 'https://dev.diiii.xyz/serverXR', token: 't' })).toBe(false)
+        expect(readsPartially({ base: 'http://diiii.localhost/serverXR', token: null })).toBe(false)
+        expect(readsPartially({ base: 'http://localhost:4000/serverXR' })).toBe(false)
+    })
+
+    it('flags work in a private space, and private projects in a public one', async () => {
+        vi.stubGlobal('fetch', vi.fn(async (url) => {
+            if (url.endsWith('/api/spaces')) return response({ spaces: [{ id: 'open', isPublic: true }, { id: 'closed', isPublic: false }] })
+            if (url.endsWith('/api/spaces/open/projects')) return response({ projects: [{ id: 'shown', visibility: 'public' }, { id: 'hidden', visibility: 'private' }] })
+            if (url.endsWith('/api/spaces/closed/projects')) return response({ projects: [{ id: 'inside', visibility: 'public' }] })
+            return response(doc)
+        }))
+        const inventory = await readSignatures({ base: 'https://tier.test/serverXR', token: null })
+        expect(inventory[PARTIAL_VIEW]).toBe(true)
+        expect(Object.keys(inventory)).toEqual(['open', 'closed'])
+        expect(inventory.open.shown.isPrivate).toBeUndefined()
+        expect(inventory.open.hidden.isPrivate).toBe(true)
+        expect(inventory.closed.inside.isPrivate).toBe(true)
+    })
+
+    it('never calls private work missing from a side read without its token', () => {
+        const open = documentSignature({ entities: [{ id: 'a' }] })
+        const secret = { ...open, isPrivate: true }
+        const partial = (inventory) => Object.defineProperty(inventory, PARTIAL_VIEW, { value: true })
+        const plan = planAudit({ source: { s: { p: secret, q: open } }, destination: partial({ s: {} }) })
+        expect(plan.unreadable).toEqual([{ spaceId: 's', projectId: 'p', side: 'destination', status: 'private' }])
+        expect(plan.missing.map((m) => m.projectId)).toEqual(['q'])
+        // A space the partial side does not list at all is the same case.
+        expect(planAudit({ source: { hidden: { p: secret } }, destination: partial({}) }).unreadable).toHaveLength(1)
+        // Read with its token, the same absence IS missing work.
+        expect(planAudit({ source: { s: { p: secret } }, destination: { s: {} } }).missing).toHaveLength(1)
+        // And the other direction.
+        expect(planAudit({ source: partial({ s: {} }), destination: { s: { p: secret } } }).unreadable[0].side).toBe('source')
     })
 })

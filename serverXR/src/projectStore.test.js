@@ -24,7 +24,8 @@ const {
     countProjectsBySpace,
     setProjectState,
     readProjectOps,
-    writeJson
+    writeJson,
+    writeProjectDocument
 } = require('./projectStore.js')
 const { initDb, closeDb } = require('./db.js')
 
@@ -155,25 +156,27 @@ describe('projectStore', () => {
         expect(after).toBe(before)
     })
 
-    it('readProjectDocument persists a self-heal correction back to disk', async () => {
+    // A read answers with the self-healed document but leaves the file alone;
+    // the correction reaches disk with the next save, which holds the write
+    // lock. A read that wrote back raced saves and lost edits (audit
+    // 2026-10-09, F3; serverXR/src/projectRead.test.js).
+    it('readProjectDocument self-heals in its answer only; the next save persists the correction', async () => {
         const spacesDir = await createSpacesDir()
         await ensureProject(spacesDir, 'main', 'stale-doc', { title: 'Stale' })
         const { documentPath } = getProjectPaths(spacesDir, 'main', 'stale-doc')
 
-        // Simulate a document with an unrecognized entity type — the kind of
-        // stale/malformed content normalizeEntity self-heals to 'box'. This
-        // is a content-level correction, not a version bump, so it exercises
-        // the general "existing differs from normalized" path, not just a
-        // version-number fast path.
+        // An unrecognized entity type -- the kind of stale/malformed content
+        // normalizeEntity self-heals to 'box'.
         const stale = await readJson(documentPath, null)
         stale.entities = [{ id: 'e1', type: 'not-a-real-type', components: {} }]
         await writeJson(documentPath, stale)
 
         const result = await readProjectDocument(spacesDir, 'main', 'stale-doc')
         expect(result.entities[0].type).toBe('box')
+        expect((await readJson(documentPath, null)).entities[0].type).toBe('not-a-real-type')
 
-        const onDisk = await readJson(documentPath, null)
-        expect(onDisk.entities[0].type).toBe('box')
+        await writeProjectDocument(spacesDir, 'main', 'stale-doc', result)
+        expect((await readJson(documentPath, null)).entities[0].type).toBe('box')
     })
 
     // Retention used to be by count alone, so a dormant project kept its last
