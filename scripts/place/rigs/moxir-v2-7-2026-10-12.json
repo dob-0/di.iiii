@@ -86,7 +86,7 @@
     "part": "cut down"
    },
    "throw_m": 9.74,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-cut-02",
@@ -132,7 +132,7 @@
     "part": "cut up"
    },
    "throw_m": 3.15,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): floor floor"
   },
   {
    "id": "rig-par-cut-03",
@@ -178,7 +178,7 @@
     "part": "cut down"
    },
    "throw_m": 9.23,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-cut-04",
@@ -224,7 +224,7 @@
     "part": "cut up"
    },
    "throw_m": 3.66,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): floor floor"
   },
   {
    "id": "rig-par-cut-05",
@@ -275,7 +275,7 @@
     "part": "cut down"
    },
    "throw_m": 3.37,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): stage rig-dj-table"
   },
   {
    "id": "rig-par-cut-06",
@@ -321,7 +321,7 @@
     "part": "cut up"
    },
    "throw_m": 8.45,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-cut-07",
@@ -372,7 +372,7 @@
     "part": "cut down"
    },
    "throw_m": 4.04,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): stage rig-dj-table"
   },
   {
    "id": "rig-par-cut-08",
@@ -418,7 +418,7 @@
     "part": "cut up"
    },
    "throw_m": 4.7,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): floor floor"
   },
   {
    "id": "rig-par-cut-09",
@@ -464,7 +464,7 @@
     "part": "cut down"
    },
    "throw_m": 7.67,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-cut-10",
@@ -510,7 +510,7 @@
     "part": "cut up"
    },
    "throw_m": 5.09,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): floor floor"
   },
   {
    "id": "rig-par-cut-11",
@@ -562,7 +562,7 @@
    },
    "was": "rig-par-planes-25",
    "throw_m": 9.19,
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record): deck / floor / DJ table"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): floor floor"
   },
   {
    "id": "rig-smoke-planes",
@@ -1882,7 +1882,9 @@
      -54.0
     ],
     "part": "columns"
-   }
+   },
+   "throw_m": 10.49,
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): stage rig-dj-table"
   },
   {
    "id": "rig-par-planes-37",
@@ -1910,7 +1912,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": null,
-   "throw_m": 13.04,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.043,
     "wing L": 0.008,
@@ -1949,7 +1951,8 @@
     "line": "NODE-STAGE-B",
     "node": "NODE-STAGE"
    },
-   "circuit": "C13"
+   "circuit": "C13",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-29",
@@ -1977,7 +1980,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.836,
-   "throw_m": 22.224,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.003,
     "wing L": 0.002,
@@ -2018,7 +2021,8 @@
    },
    "circuit": "C10",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): end wall"
   },
   {
    "id": "rig-par-planes-26",
@@ -2046,7 +2050,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.077,
-   "throw_m": 18.013,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.039,
     "wing L": 0.206,
@@ -2087,7 +2091,8 @@
    },
    "circuit": "C07",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-12",
@@ -2096,9 +2101,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +10 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -15, 21 m right of the axis; straight up (columns of li",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +10 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -15, 21 m right of the axis; straight up (columns of li; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     10.0
    ],
@@ -2115,7 +2120,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 4.595,
-   "throw_m": 20.5,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.0,
@@ -2154,7 +2159,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C10"
+   "circuit": "C10",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-09",
@@ -2182,7 +2188,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.227,
-   "throw_m": 18.013,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.006,
@@ -2223,7 +2229,8 @@
    },
    "circuit": "C04",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-32",
@@ -2232,9 +2239,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +16 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 15 m right of the axis; straight up (columns of li",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +16 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 15 m right of the axis; straight up (columns of li; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     16.0
    ],
@@ -2251,7 +2258,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 4.491,
-   "throw_m": 18.016,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.031,
     "wing L": 0.004,
@@ -2290,7 +2297,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C02"
+   "circuit": "C02",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-34",
@@ -2299,9 +2307,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +46 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 3 m right of the axis; straight up (columns of lig",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +46 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 3 m right of the axis; straight up (columns of lig; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     46.0
    ],
@@ -2318,7 +2326,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.077,
-   "throw_m": 18.013,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.05,
     "wing L": 0.021,
@@ -2357,7 +2365,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-10",
@@ -2385,7 +2394,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 4.179,
-   "throw_m": 22.227,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.001,
     "wing L": 0.001,
@@ -2424,7 +2433,8 @@
     "line": "NODE-FAR-B",
     "node": "NODE-FAR"
    },
-   "circuit": "C04"
+   "circuit": "C04",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-17",
@@ -2452,7 +2462,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 6.055,
-   "throw_m": 18.017,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.01,
     "wing L": 0.114,
@@ -2491,7 +2501,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-04",
@@ -2500,9 +2511,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +22 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x +12 (right of the door); grazi",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +22 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x +12 (right of the door); grazi; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     22.0
    ],
@@ -2519,7 +2530,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 6.922,
-   "throw_m": 20.668,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.001,
     "wing L": 0.0,
@@ -2559,7 +2570,8 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C10",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-07",
@@ -2587,7 +2599,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 7.026,
-   "throw_m": 18.009,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.002,
     "wing L": 0.006,
@@ -2626,7 +2638,8 @@
     "line": "NODE-FAR-B",
     "node": "NODE-FAR"
    },
-   "circuit": "C04"
+   "circuit": "C04",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-18",
@@ -2654,7 +2667,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 5.125,
-   "throw_m": 18.011,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.006,
     "wing L": 0.001,
@@ -2693,7 +2706,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C10"
+   "circuit": "C10",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-13",
@@ -2721,7 +2735,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 5.125,
-   "throw_m": 18.011,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.001,
     "wing L": 0.03,
@@ -2760,7 +2774,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-08",
@@ -2788,7 +2803,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.697,
-   "throw_m": 11.632,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.002,
     "wing L": 0.0,
@@ -2827,7 +2842,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C10"
+   "circuit": "C10",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-30",
@@ -2855,7 +2871,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.077,
-   "throw_m": 18.013,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.101,
     "wing L": 0.086,
@@ -2896,7 +2912,8 @@
    },
    "circuit": "C07",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-33",
@@ -2905,9 +2922,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +34 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x -12 (left of the door); grazin",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +34 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x -12 (left of the door); grazin; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     34.0
    ],
@@ -2924,7 +2941,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.077,
-   "throw_m": 18.013,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.03,
     "wing L": 0.004,
@@ -2964,7 +2981,8 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C10",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-36",
@@ -2992,7 +3010,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 1.522,
-   "throw_m": 7.956,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.014,
     "wing L": 0.011,
@@ -3033,7 +3051,8 @@
    },
    "circuit": "C08",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-21",
@@ -3061,7 +3080,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.836,
-   "throw_m": 18.011,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.004,
     "wing L": 0.207,
@@ -3100,7 +3119,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-35",
@@ -3109,9 +3129,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +34 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 9 m right of the axis; straight up (columns of lig",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +34 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 9 m right of the axis; straight up (columns of lig; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     34.0
    ],
@@ -3128,7 +3148,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 2.125,
-   "throw_m": 13.04,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.008,
     "wing L": 0.002,
@@ -3167,7 +3187,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C02"
+   "circuit": "C02",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-15",
@@ -3195,7 +3216,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 10.026,
-   "throw_m": 14.323,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.0,
@@ -3236,7 +3257,8 @@
    },
    "circuit": "C04",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-20",
@@ -3264,7 +3286,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 2.125,
-   "throw_m": 18.533,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.001,
     "wing L": 0.001,
@@ -3303,7 +3325,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C10"
+   "circuit": "C10",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-03",
@@ -3331,7 +3354,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 1.663,
-   "throw_m": 5.902,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.025,
     "wing L": 0.001,
@@ -3372,7 +3395,8 @@
    },
    "circuit": "C02",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-31",
@@ -3400,7 +3424,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 5.905,
-   "throw_m": 13.04,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.025,
     "wing L": 0.02,
@@ -3441,7 +3465,8 @@
    },
    "circuit": "C07",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-02",
@@ -3469,7 +3494,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 6.517,
-   "throw_m": 7.689,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.013,
     "wing L": 0.001,
@@ -3510,7 +3535,8 @@
    },
    "circuit": "C02",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): end wall"
   },
   {
    "id": "rig-par-planes-28",
@@ -3519,9 +3545,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +40 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +0; grazing up the wall at ~75 de",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +40 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +0; grazing up the wall at ~75 de; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     40.0
    ],
@@ -3538,7 +3564,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 9.66,
-   "throw_m": 15.021,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.03,
     "wing L": 0.063,
@@ -3578,7 +3604,8 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C07",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-27",
@@ -3587,9 +3614,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +16 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +24; grazing up the wall at ~75 d",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +16 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +24; grazing up the wall at ~75 d; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     16.0
    ],
@@ -3646,7 +3673,8 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C07",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-06",
@@ -3674,7 +3702,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 1.663,
-   "throw_m": 5.902,
+   "throw_m": 0.2,
    "eye_lux": {
     "floor centre": 0.005,
     "wing L": 0.02,
@@ -3715,7 +3743,8 @@
    },
    "circuit": "C08",
    "site": "outdoor",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
   },
   {
    "id": "rig-par-planes-01",
@@ -3724,9 +3753,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +10 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +12; grazing up the wall at ~75 d",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +10 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +12; grazing up the wall at ~75 d; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     10.0
    ],
@@ -3743,7 +3772,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 5.149,
-   "throw_m": 7.0,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.009,
     "wing L": 0.019,
@@ -3783,7 +3812,8 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C07",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-24",
@@ -3792,9 +3822,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +46 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z -12; grazing up the wall at ~75 d",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +46 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z -12; grazing up the wall at ~75 d; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     46.0
    ],
@@ -3811,7 +3841,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 8.283,
-   "throw_m": 16.47,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.017,
     "wing L": 0.215,
@@ -3851,7 +3881,8 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C07",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-19",
@@ -3879,7 +3910,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 3.125,
-   "throw_m": 15.02,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.013,
     "wing L": 0.169,
@@ -3918,7 +3949,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-40",
@@ -3927,9 +3959,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +28 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x +24 (right of the door); grazi",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +28 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x +24 (right of the door); grazi; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     28.0
    ],
@@ -3946,7 +3978,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 5.125,
-   "throw_m": 18.169,
+   "throw_m": 16.09,
    "eye_lux": {
     "floor centre": 0.005,
     "wing L": 0.001,
@@ -3986,7 +4018,8 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C10",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-39",
@@ -3995,9 +4028,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +22 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +36; grazing up the wall at ~75 d",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +22 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the left outer wall (x -36.2 face), 2 m out, z +36; grazing up the wall at ~75 d; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     22.0
    ],
@@ -4014,7 +4047,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 10.873,
-   "throw_m": 18.288,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.003,
     "wing L": 0.001,
@@ -4054,7 +4087,8 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C02",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-22",
@@ -4082,7 +4116,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 2.137,
-   "throw_m": 7.956,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.007,
     "wing L": 0.004,
@@ -4121,7 +4155,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C10"
+   "circuit": "C10",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-14",
@@ -4149,7 +4184,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 9.881,
-   "throw_m": 8.314,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.014,
@@ -4188,7 +4223,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-38",
@@ -4197,9 +4233,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +40 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 21 m right of the axis; straight up (columns of li",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line right along the floor, 14 m off the axis, z +40 (fenced strip); straight up. v2.5 gathered layout (moxir_v2_5_gathered.py): light field row z -21, 21 m right of the axis; straight up (columns of li; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    8.8,
+    3.0,
     0.31,
     40.0
    ],
@@ -4255,7 +4291,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C02"
+   "circuit": "C02",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-par-planes-16",
@@ -4283,7 +4320,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 2.359,
-   "throw_m": 8.111,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.009,
     "wing L": 0.0,
@@ -4322,7 +4359,8 @@
     "line": "NODE-RIGHT-B",
     "node": "NODE-RIGHT"
    },
-   "circuit": "C10"
+   "circuit": "C10",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-05",
@@ -4331,9 +4369,9 @@
    "layer": "pars",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +28 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x -24 (left of the door); grazin",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): side line left along the floor, 14 m off the axis, z +28 (fenced strip); straight up. v2.5 (moxir_v2_5_gathered.py): OUTDOOR, the entrance outer wall (z 53.8 face), 2 m out, x -24 (left of the door); grazin; v2.7c: side line moved in to 8.2 m off the axis (the +x machines stay, owner 2026-10-12)",
    "p": [
-    -19.2,
+    -13.4,
     0.31,
     28.0
    ],
@@ -4350,7 +4388,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 11.886,
-   "throw_m": 22.223,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.001,
     "wing L": 0.0,
@@ -4390,7 +4428,8 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C02",
-   "checks": "UNVALIDATED - no exterior model (owed)"
+   "checks": "UNVALIDATED - no exterior model (owed)",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-par-planes-11",
@@ -4418,7 +4457,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 5.096,
-   "throw_m": 8.574,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.006,
@@ -4457,7 +4496,8 @@
     "line": "NODE-LEFT-B",
     "node": "NODE-LEFT"
    },
-   "circuit": "C07"
+   "circuit": "C07",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-01",
@@ -5293,9 +5333,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 14 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    8.8,
+    3.0,
     0.7,
     13.0
    ],
@@ -5306,7 +5346,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": 18.13,
+   "throw_m": 18.0,
    "ends_on": "roof deck",
    "region": "house right",
    "slot": "slot x 27.5 z 22.1",
@@ -5419,7 +5459,7 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C09",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern side"
   },
   {
    "id": "rig-beam-planes-18",
@@ -5428,9 +5468,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 14 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    8.8,
+    3.0,
     0.7,
     19.0
    ],
@@ -5441,7 +5481,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": 2.31,
+   "throw_m": 18.0,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -17.5 z 34.1",
@@ -5554,7 +5594,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C06",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): machine duct-upper"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern side"
   },
   {
    "id": "rig-beam-planes-09",
@@ -5563,9 +5603,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 14 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    8.8,
+    3.0,
     0.7,
     25.0
    ],
@@ -5576,7 +5616,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": 18.13,
+   "throw_m": 18.0,
    "ends_on": "space frame diagonals / top chord",
    "region": "house right",
    "slot": "slot x 30.5 z -22.9",
@@ -5689,7 +5729,7 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C09",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern side"
   },
   {
    "id": "rig-beam-planes-10",
@@ -5698,9 +5738,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 14 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    -19.2,
+    -13.4,
     0.7,
     31.0
    ],
@@ -5833,9 +5873,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 14 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    -19.2,
+    -13.4,
     0.7,
     37.0
    ],
@@ -5968,9 +6008,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 14 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    8.8,
+    3.0,
     0.7,
     31.0
    ],
@@ -5981,7 +6021,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 18.13,
+   "throw_m": 18.0,
    "ends_on": "roof deck",
    "region": "far end",
    "slot": "slot x -26.5 z -37.9",
@@ -6094,7 +6134,7 @@
     "node": "NODE-FAR"
    },
    "circuit": "C03",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern side"
   },
   {
    "id": "rig-beam-planes-15",
@@ -6103,9 +6143,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 14 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    8.8,
+    3.0,
     0.7,
     37.0
    ],
@@ -6116,7 +6156,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 18.13,
+   "throw_m": 18.0,
    "ends_on": "roof deck",
    "region": "entry",
    "slot": "slot x 18.5 z 49.1",
@@ -6229,7 +6269,7 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C01",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern side"
   },
   {
    "id": "rig-beam-planes-11",
@@ -6238,9 +6278,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 14 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    8.8,
+    3.0,
     0.7,
     43.0
    ],
@@ -6251,7 +6291,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 18.13,
+   "throw_m": 18.0,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -32.5 z 22.1",
@@ -6364,7 +6404,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C05",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern side"
   },
   {
    "id": "rig-beam-planes-17",
@@ -6373,9 +6413,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 14 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    -19.2,
+    -13.4,
     0.7,
     43.0
    ],
@@ -6508,9 +6548,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 14 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    -19.2,
+    -13.4,
     0.7,
     13.0
    ],
@@ -6643,9 +6683,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 14 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    -19.2,
+    -13.4,
     0.7,
     19.0
    ],
@@ -6778,9 +6818,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 14 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor",
    "p": [
-    -19.2,
+    -13.4,
     0.7,
     25.0
    ],
@@ -6925,7 +6965,7 @@
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
    "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, 4 m left of the door axis, 7.0 m up; fires up over the crowd, crossed, to the roof above the back of the floor",
-   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance; owner 2026-10-12 05:4x: \"they stay at entrance\" (decided)",
+   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance; 05:4x \"they stay at entrance\" (decided)",
    "mount": "UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)",
    "laser": {
     "colour": "ash white",
@@ -6973,7 +7013,7 @@
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
    "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, 4 m right of the door axis, 7.0 m up; fires up over the crowd, crossed, to the roof above the back of the floor",
-   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance; owner 2026-10-12 05:4x: \"they stay at entrance\" (decided)",
+   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance; 05:4x \"they stay at entrance\" (decided)",
    "mount": "UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)",
    "laser": {
     "colour": "ash white",

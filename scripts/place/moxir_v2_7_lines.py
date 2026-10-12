@@ -25,7 +25,9 @@ a = ap.parse_args(); sys.path.insert(0, f'{a.repo}/scripts/place'); import moxir
 rig = json.load(open(f'{a.repo}/{a.src}')); X0 = sym.X0
 WEST_X, EAST_X, WALL_Z, BACK_Z, ROOF_Y = -36.15, 60.15, 53.8, -53.6, 10.3
 HAND_RULE_Y, ENTRY_MIN, NEAR_Z, NEAR_MIN = 5.4, 9.0, 3.2, 9.2
-SIDE_X, BEAM_Z = 14.0, (13.0, 19.0, 25.0, 31.0, 37.0, 43.0)
+SIDE_X_OLD, SIDE_X, BEAM_Z = 14.0, 8.2, (13.0, 19.0, 25.0, 31.0, 37.0, 43.0)   # v2.7c (owner 2026-10-12 05:53: the machines on the +x side STAY) ->
+# both side lines move in to X0 +-8.2 (x -13.4 / +3.0): the right one clear of the blower, ducts, canopy, tank and gallery (x >= 3.6), the
+# left one mirrored for the symmetry round the DJ. Fenced strips as before (moxir_v2_5_gathered.py SIDE_PENS, 2.4 m wide).
 def euler_for(d): c = math.asin(max(-1, min(1, d[0]))); return [round(math.atan2(-d[2], -d[1]), 4), 0.0, round(c, 4)]
 def first_hit(p, d):
     hits = []
@@ -49,6 +51,13 @@ def low_tilt(p, pa):
         if ok(p, d, L, name, T): return t
         t += 0.5
     return 1.5
+# --- 0. the side WASHES move with the lines (they stood at X0 +-14 since v2.5) ----------------------------------------------------------
+moved = 0
+for f in rig['fixtures']:
+    if f['type'] == 'up-pl5403' and f.get('part') in ('hall steel', 'columns') and abs(abs(f['p'][0] - X0) - SIDE_X_OLD) < 0.11:
+        s_ = -1 if f['p'][0] < X0 else 1; f['p'][0] = round(X0 + s_ * SIDE_X, 2); moved += 1
+        f['position'] = (f.get('position', '').split('; v2.7')[0] + f'; v2.7c: side line moved in to {SIDE_X} m off the axis (the +x machines stay, owner 2026-10-12)')
+print(f'side washes moved: {moved}')
 # --- 1. the island beams -> the side lines -------------------------------------------------------------------------------------
 heads = [f for f in rig['fixtures'] if f['type'] == 'up-b380f']
 wall = [f for f in heads if f['part'] == 'plane 1 (behind the DJ)']; islands = sorted([f for f in heads if f not in wall], key=lambda f: (f['p'][0], f['p'][2]))
