@@ -89,3 +89,23 @@ describe('the show chip', () => {
         expect(chip.textContent).toContain('Everyone watching sees the same look at the same moment.')
     })
 })
+
+describe('preview a look (owner 2026-10-12: pick a scene in view mode, for you only)', () => {
+    it('shows the chosen look to this viewer, says PREVIEW, and follows the show again on request', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(EPOCH + 12000) // the show is on cue 2 (red-room)
+        const onEntities = vi.fn()
+        globalThis.fetch = vi.fn(async () => ({ ok: false, status: 404, headers: { get: () => 'text/html' }, json: async () => ({}) }))
+        const { findByTestId, getByRole, getAllByRole } = render(<RoomLookFollower document={documentWith(SHOW)} onEntities={onEntities} />)
+        const chip = await findByTestId('rig-show-chip')
+        await act(async () => { getAllByRole('button')[0].click() })
+        await act(async () => { getByRole('button', { name: 'One beam' }).click() })
+        expect(chip.dataset.preview).toBe('one-beam')
+        expect(chip.dataset.look).toBe('one-beam')
+        expect(chip.textContent).toContain('PREVIEW · One beam')
+        expect(chip.textContent).toContain('the show is on')
+        await act(async () => { getByRole('button', { name: 'Follow the show' }).click() })
+        expect(chip.dataset.preview).toBeUndefined()
+        expect(chip.dataset.look).toBe('red-room')
+    })
+})
