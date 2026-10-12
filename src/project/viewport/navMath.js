@@ -1,4 +1,4 @@
-// Small pure helpers shared by the navigation surfaces (walk, fly, Studio). Source of each rule is in docs/ai/navigation-spec.md.
+// Small pure helpers shared by the navigation surfaces (walk, fly, Studio). Source of each rule is in docs/ai/research/smooth-navigation-2026-10-12.md.
 
 /** Longest frame a navigation loop counts, seconds. A hidden tab or a GC stall must not become a jump (flyMotion maxDt is the same). */
 export const NAV_MAX_DT = 0.1
