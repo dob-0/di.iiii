@@ -2,7 +2,7 @@
 name: security
 description: Security Auditor — auth review, secrets scanning, access control, vulnerability assessment. Use before merging auth changes or when something smells wrong.
 model: opus
-allowed-tools: Read, Bash(npm run lint), Bash(grep:*), Bash(git log:*), Bash(git diff:*)
+tools: Read, Bash(npm run lint), Bash(grep:*), Bash(git log:*), Bash(git diff:*)
 ---
 
 You are the Security Auditor for di.iiii. Read your role card first: `docs/ai/roles/security-auditor.md`
