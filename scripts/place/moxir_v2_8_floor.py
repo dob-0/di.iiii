@@ -43,13 +43,15 @@ import argparse, json, math, sys, copy
 ap = argparse.ArgumentParser(); ap.add_argument('--repo', required=True)
 ap.add_argument('--src', default='scripts/place/rigs/moxir-v2-7-2026-10-12.json')
 ap.add_argument('--out', default=None); ap.add_argument('--version', default='2.8')
-ap.add_argument('--lasers', default='crane', choices=('crane', 'columns'))
+ap.add_argument('--lasers', default='crane', choices=('crane', 'columns', 'matrix'))
+ap.add_argument('--comb-x', default='-17,6', help='matrix: the comb spans these x (abs, m) on the entry wall, evenly')
+ap.add_argument('--comb-per-cube', type=int, default=4); ap.add_argument('--diag-z', default='20,40', help='matrix: z of the diagonals\' ends on the side walls')
 ap.add_argument('--cube-z', default='18,30,42', help='z of the three brackets per side (column pitch 6 m)')
 ap.add_argument('--cube-y', type=float, default=6.0, help='bracket height, m (stage key precedent 6.0)')
 ap.add_argument('--pans', default='-30,-18,-6,6,18,30', help='deg from the heading, + toward the entry (+z)')
 ap.add_argument('--tilt', type=float, default=1.2, help='deg up: clears the opposite bracket (24 m) by 0.5 m')
 ap.add_argument('--tent', type=float, default=30.0, help='side washes: deg in from vertical toward the axis')
-a = ap.parse_args(); a.out = a.out or ('scripts/place/rigs/moxir-v2-8-2026-10-13.json' if a.lasers == 'crane' else 'scripts/place/rigs/moxir-v2-8-columns-try-2026-10-13.json'); sys.path.insert(0, f'{a.repo}/scripts/place'); import moxir_v2_symmetry as sym
+a = ap.parse_args(); a.out = a.out or {'crane': 'scripts/place/rigs/moxir-v2-8-2026-10-13.json', 'columns': 'scripts/place/rigs/moxir-v2-8-columns-try-2026-10-13.json', 'matrix': 'scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json'}[a.lasers]; sys.path.insert(0, f'{a.repo}/scripts/place'); import moxir_v2_symmetry as sym
 rig = json.load(open(f'{a.repo}/{a.src}')); X0 = sym.X0
 WEST_X, EAST_X, WALL_Z, BACK_Z, ROOF_Y = -36.4, 60.4, 53.8, -53.6, 10.3
 HAND_RULE_Y, ENTRY_MIN, NEAR_Z, NEAR_MIN = 5.4, 9.0, 3.2, 9.2
@@ -114,6 +116,46 @@ if a.lasers == 'crane':
                        'over_rule_line_m': round(min(min(b['lowest_m'] for b in f['laser']['beams']) for f in cubes) - HAND_RULE_Y, 2), 'unchanged_lines': pulled,
                        'lines_ending_on_the_entry_wall_m': sorted(set(round(T[1], 1) for _, _, nm, _, T1 in [(0, 0, l[2], 0, l[4]) for l in lines] for T in [[0, T1]] if nm.startswith('entry')))},
         'why_not_lower': 'measured 2026-10-12 (lid_probe.py): a line from the far crane that reaches the dance floor runs along the hall and ends on the entry wall (>= 9.0 m rule: door top 6 m + 3 m); only lines to the side walls can come down to 5.4 m, and those pass beside the floor. The owner was told and chose this (ledger N533).'})
+if a.lasers == 'matrix':
+    # owner 2026-10-13 00:4x: "lasers from the crane make like it will matrix on the dance floor". From one cluster 7 m wide the
+    # lines over a floor 50-90 m away are near-parallel, so the matrix is a COMB: per cube COMB_PER lines to evenly spaced points
+    # on the entry wall (x from --comb-x), at the lowest height the rules allow (DJ-crane crossing 9.2 m -> 9.65 m at the wall);
+    # plus two diagonals per cube to its own side wall (left three cubes -> west, right three -> east) ending at 5.5 m, framing
+    # the floor; the two 40 W from the door cross the comb. Lowest over a dancer: 9.2 m (the entry-wall and crane rules).
+    x_lo, x_hi = [float(v) for v in a.comb_x.split(',')]; n_comb = len(cubes) * a.comb_per_cube
+    comb_xs = [x_lo + (x_hi - x_lo) * i / (n_comb - 1) for i in range(n_comb)]
+    diag_zs = [float(v) for v in a.diag_z.split(',')]
+    def aim(p, T):
+        d = sym.unit((T[0] - p[0], T[1] - p[1], T[2] - p[2])); L, name, Th = first_hit(p, d); return d, L, name, Th
+    def lowest_ok(p, T0):
+        y = T0[1]
+        while y < 10.2:
+            d, L, name, T = aim(p, (T0[0], y, T0[2]))
+            if ok(p, d, L, name, T): return d, L, name, T
+            y += 0.05
+        return None
+    # the comb: cube i takes every 6th target (interleaved, so neighbours come from different cubes and the comb reads even)
+    for n, f in enumerate(cubes, 1):
+        p = f['p']; f['laser']['beams'] = []
+        f['position'] = f['position'].split('; v2.8')[0] + '; v2.8 matrix (moxir_v2_8_floor.py --lasers matrix): same place; a comb over the dance floor + two diagonals (owner 2026-10-13: "matrix on the dance floor")'
+        targets = [(comb_xs[j], 9.0, WALL_Z) for j in range(n - 1, n_comb, len(cubes))]
+        side = -1 if n <= 3 else 1
+        targets += [((WEST_X if side < 0 else EAST_X), HAND_RULE_Y + 0.1, z) for z in diag_zs]
+        for k, T0 in enumerate(targets):
+            r = lowest_ok(p, T0)
+            if r is None: pulled += 1; continue
+            d, L, name, T = r; bid = f'{n}{"abcdefgh"[k]}'
+            pan = math.degrees(math.atan2(d[0], d[2])); tilt = math.degrees(math.asin(d[1]))
+            b = {'id': bid, 'off': False, 'duty': 1.0, 'to': T, 'length_m': round(L, 3), 'r': euler_for(d), 'pan_deg': round(pan, 2), 'tilt_deg': round(tilt, 2), 'ends_on': name, 'end_height_m': T[1],
+                 'lowest_m': round(min(p[1], T[1]), 2), 'over_hand_rule_m': round(min(p[1], T[1]) - HAND_RULE_Y, 2), 'family': 'comb' if k < a.comb_per_cube else 'diagonal',
+                 'checks': f'lowest allowed: hand rule {HAND_RULE_Y} m on the side walls, entry wall >= {ENTRY_MIN} m, DJ crane crossing >= {NEAR_MIN} m; lamp/crane strikes UNVALIDATED'}
+            f['laser']['beams'].append(b); tubes.append({'beam': bid, 'cube': f['id'], 'from': p, 'to': T, 'half_fan_deg': 1.008, 'ends_on': name})
+            lines.append((bid, round(pan), name.split(' (')[0], round(L, 1), T[1]))
+    rig['lasers'].update({'tubes': tubes, 'previous': 'v2.8 crane lines (moxir-v2-8-2026-10-13.json)',
+        'design': f'v2.8 MATRIX: six cubes on the far crane; a comb of {n_comb} lines over the dance floor ({a.comb_per_cube} per cube, interleaved, x {a.comb_x} on the entry wall, {round((x_hi - x_lo) / (n_comb - 1), 2)} m apart) at the lowest height the rules allow, plus {len(diag_zs)} diagonals per cube to its side wall at {HAND_RULE_Y + 0.1} m; the two UP-LA40WF unchanged (they cross the comb)',
+        'arithmetic': {'lines': len(lines), 'comb_lines': n_comb, 'comb_spacing_m': round((x_hi - x_lo) / (n_comb - 1), 2), 'lowest_point_m': round(min(min(b['lowest_m'] for b in f['laser']['beams']) for f in cubes), 2),
+                       'comb_height_over_the_floor_m': [9.2, 9.65], 'dropped_lines': pulled},
+        'why_not_lower': 'the comb runs along the hall and ends on the entry wall (>= 9.0 m rule) after crossing the DJ crane (>= 9.2 m); a true lattice of crossings over the floor would need sources far apart (the cubes sit within 7 m)'})
 zs = [float(v) for v in a.cube_z.split(',')]; pans = [float(v) for v in a.pans.split(',')]
 if a.lasers == 'columns':
     places = [(-1, z) for z in zs] + [(1, z) for z in zs]          # side -1 = west column row (x -12) firing +x; +1 = east row firing -x
@@ -163,8 +205,8 @@ for look in rig['looks']:
         parts.setdefault('red tent left', list(base)); parts.setdefault('red tent right', list(base))
 # --- 3. the record -----------------------------------------------------------------------------------------------------------------
 rig['version'] = a.version; rig['date'] = '2026-10-13'; rig['written_by'] = 'scripts/place/moxir_v2_8_floor.py'
-rig['title'] = 'MOXIR v2.8 - from the dance floor: the lasers down to the rules from the far crane, the red tent' if a.lasers == 'crane' else 'MOXIR v2.8 columns try (not asked) - lasers on the column brackets'
-rig['what'] = ('v2.7 with every laser line from the far crane at its steepest down tilt under the rules (side walls 5.4-5.7 m, entry wall 9.0-9.8 m) and the 14 side washes tilted in as a red tent; everything else as v2.7' if a.lasers == 'crane' else 'v2.7 with the six LaserCubes moved from the far crane to the nave column brackets (6.0 m, x ±11.5, z 18/30/42) fanning a LID of 36 lines across the floor '
+rig['title'] = {'crane': 'MOXIR v2.8 - from the dance floor: the lasers down to the rules from the far crane, the red tent', 'matrix': 'MOXIR v2.8 - a laser matrix over the dance floor from the far crane, the red tent'}.get(a.lasers) or 'MOXIR v2.8 columns try (not asked) - lasers on the column brackets'
+rig['what'] = ('v2.7 with the six cubes on the far crane fanning a comb of lines over the dance floor (9.2-9.65 m, the lowest the rules allow) plus diagonals to the side walls at 5.5 m, and the 14 side washes tilted in as a red tent' if a.lasers == 'matrix' else 'v2.7 with every laser line from the far crane at its steepest down tilt under the rules (side walls 5.4-5.7 m, entry wall 9.0-9.8 m) and the 14 side washes tilted in as a red tent; everything else as v2.7' if a.lasers == 'crane' else 'v2.7 with the six LaserCubes moved from the far crane to the nave column brackets (6.0 m, x ±11.5, z 18/30/42) fanning a LID of 36 lines across the floor '
                f'(lowest 6.0 m, 4.3 m over a head), and the 14 side washes tilted {a.tent:.0f} deg in as a red tent; everything else as v2.7')
 rig['symmetry'] = {'axis_x_m': X0, 'plates_mirror': 'the DJ axis (plates AND aims, v2.5) for every lamp; the laser lid mirrors about the column rows (x 0) because the columns are where it hangs', 'source': '2.8'}
 rig.setdefault('owed', []).extend(['v2.8: lamp/crane strikes along all 36 lines (laser-margin run)'] + (['v2.8 columns try: brackets at 6.0 m (rigging), east lines over the kept machines'] if a.lasers == 'columns' else []))
