@@ -21,10 +21,16 @@ const RoomFavourites = lazyWithReload(() => import('./RoomFavourites.jsx'), 'roo
 const RoomCueList = lazyWithReload(() => import('./RoomCueList.jsx'), 'room-cue-list')
 
 export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true, spaceId = '', projectId = '', bare = false, slot = null }) {
+    // PREVIEW (owner 2026-10-12 05:3x: "scenes where we can pick ... now I can't in view select the scenes, it's the operator-only
+    // mode; can we have a preview mode"): a look chosen in the chip is shown to THIS viewer only; the show clock keeps running for
+    // everyone else and the chip says so. 'Follow the show' (or another document) drops it.
+    const [preview, setPreview] = useState(null)
+    useEffect(() => { setPreview(null) }, [document?.projectMeta?.id])
     const look = useRigLookEntities(document)
+    const previewed = useRigLookEntities(document, { explicit: preview ?? '' })
     // The light pool (lightPool.js): OFF by default; on, the look's light is carried by N
     // fixed slot lights. Off, `entities` passes through as the same array.
-    const entities = useLightPool(look.entities, document)
+    const entities = useLightPool(preview ? previewed.entities : look.entities, document)
     useEffect(() => {
         onEntities(entities === document?.entities ? null : entities)
     }, [entities, document, onEntities])
@@ -37,7 +43,7 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
     const place = (chip) => (bare ? (slot ? createPortal(chip, slot) : null) : chip)
     if (look.driver === 'desk') return <>{place(<DeskShowChip bare={bare} projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />)}{row}</>
     if (look.driver !== 'clock' || !look.clock) return null
-    return <>{place(<ShowChip bare={bare} show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} />)}{row}</>
+    return <>{place(<ShowChip bare={bare} show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} preview={preview} onPreview={setPreview} />)}{row}</>
 }
 
 /**
@@ -118,6 +124,7 @@ const Drop = ({ bare, children }) => (bare
     ? <div style={{ position: 'absolute', top: 'calc(100% + 3px)', left: 0, width: 'max-content', minWidth: 'min(22rem, calc(100vw - 2rem))', maxWidth: 'calc(100vw - 2rem)', maxHeight: '60vh', overflowY: 'auto', borderRadius: '2px', border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(10, 16, 24, 0.94)', backdropFilter: 'blur(12px)' }}>{children}</div>
     : children)
 
+const previewButton = { font: 'inherit', fontSize: '0.78rem', color: '#fff', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 0, padding: '0.22rem 0.55rem', cursor: 'pointer' }
 const buttonStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -144,13 +151,23 @@ const useSecondTick = () => {
     return now
 }
 
-export function ShowChip({ show, state, offset, top, spaceId = '', routeProject = '', bare = false }) {
+export function ShowChip({ show, state, offset, top, spaceId = '', routeProject = '', bare = false, preview = null, onPreview = null }) {
     const [open, setOpen] = useState(false)
     const now = useSecondTick() + (offset?.offset || 0)
     const nextInMs = state.nextInMs == null ? null : Math.max(0, state.firedAt + (show.cues[state.index]?.holdMs || 0) - now)
-    const line = showWords({ ...state, nextInMs }, show)
+    const previewCue = preview ? show.cues.find((c) => c.lookId === preview) : null
+    const line = preview ? `PREVIEW · ${previewCue?.name || preview} · the show is on ${showWords({ ...state, nextInMs }, show)}` : showWords({ ...state, nextInMs }, show)
+    const previewRow = onPreview ? (
+        <div role="group" aria-label="preview a look, for you only" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', padding: '0.5rem 0.95rem 0.4rem' }}>
+            {show.cues.map((c) => (
+                <button key={c.id} type="button" onClick={() => onPreview(c.lookId)} aria-pressed={preview === c.lookId}
+                    style={{ ...previewButton, fontWeight: preview === c.lookId ? 700 : 400, outline: preview === c.lookId ? '1px solid #fff' : 'none' }}>{c.name}</button>
+            ))}
+            <button type="button" onClick={() => onPreview(null)} disabled={!preview} style={{ ...previewButton, opacity: preview ? 1 : 0.5 }}>Follow the show</button>
+        </div>
+    ) : null
     return (
-        <div style={chipBox(bare, top)} data-testid="rig-show-chip" data-look={state.lookId} data-cue={state.index}>
+        <div style={chipBox(bare, top)} data-testid="rig-show-chip" data-look={preview || state.lookId} data-cue={state.index} data-preview={preview || undefined}>
             <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)}
                 title="The show plays by the clock: everyone watching sees the same look at the same moment">
                 <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
@@ -158,7 +175,7 @@ export function ShowChip({ show, state, offset, top, spaceId = '', routeProject 
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
                 <Caret open={open} />
             </button>
-            {open ? <Drop bare={bare}>{spaceId && routeProject
+            {open ? <Drop bare={bare}>{previewRow}{spaceId && routeProject
                 ? <CueListPanel spaceId={spaceId} projectId={routeProject} />
                 : (
                     <ol style={{ margin: 0, padding: '0 0.95rem 0.7rem 2.2rem' }} aria-label="the looks of the show, in order">
