@@ -513,6 +513,8 @@ export default function StudioInspector({
     values = {},
     onSectionChange,
     footer = null,
+    // A control that acts on the whole selection (the Lock toggle), beside the title.
+    headerAction = null,
     emptyMessage = 'Select an object to edit it.',
     // The lighting-desk store the Fixture field reads; only tests pass one.
     lightingMirror = undefined,
@@ -530,6 +532,7 @@ export default function StudioInspector({
             <div className="insp-header">
                 <span className="insp-title">{title}</span>
                 {subtitle ? <span className="insp-subtitle">{subtitle}</span> : null}
+                {headerAction ? <span className="insp-header-action">{headerAction}</span> : null}
             </div>
 
             {sections.map((section) => {

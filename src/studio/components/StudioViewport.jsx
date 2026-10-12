@@ -23,6 +23,7 @@ import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.js
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import LaserView from '../../rigbuild/LaserView.jsx'
 import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -46,6 +47,7 @@ import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
 
@@ -323,6 +325,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 // How the smart view finds an entity's object (SmartView.jsx).
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
+                    // Locked: not picked — the click goes on to whatever is behind it.
+                    if (isLocked) return
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelect?.(entity.id)
@@ -372,6 +376,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
                     if (e.delta > 2) return
+                    if (entity.components?.runtime?.locked === true) return
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelectEntity?.(entity.id)
@@ -735,6 +740,8 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            {/* MOXIR's LaserCubes: what the laser server is drawing, as beams (rigbuild/laserView.js) */}
+            <LaserView entities={document.entities} />
             <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
@@ -864,16 +871,18 @@ function StudioSceneContent({
                         lockInside={smartView.lockInside}
                         onBuilding={smartView.onBuilding}
                         onLockPaused={smartView.onLockPaused}
+                        layers={smartView.layers}
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.length > 0 && (
+            {transformOp && selectedEntities.some((entity) => entity.components?.runtime?.locked !== true) && (
                 <ModalTransform
                     op={transformOp}
-                    selectedEntities={selectedEntities}
+                    // A locked object never moves, even when it was selected before it was locked.
+                    selectedEntities={selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true)}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
@@ -1077,6 +1086,8 @@ export default function StudioViewport({
     controlsRef,
     xrStore,
     editMode = 'navigate',
+    boxSelect = false,
+    onSelectEntities,
     gizmoMode = 'translate',
     gizmoAxis = null,
     gizmoVisible = true,
@@ -1143,9 +1154,10 @@ export default function StudioViewport({
         lockInside: Boolean(smartView?.lockInside),
         onBuilding: smartView?.onBuilding,
         onLockPaused: smartView?.onLockPaused,
+        layers: smartView?.layers || null,
         onPresets: setPresets,
         onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, setPresets, releaseView])
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1256,6 +1268,15 @@ export default function StudioViewport({
                         fovRef={smartOn ? fovRef : null}
                         selectedEntityIds={selectedEntityIds}
                     />
+                    {onSelectEntities && !lowPower ? (
+                        <BoxSelect
+                            active={boxSelect}
+                            entities={document.entities}
+                            selectedEntityIds={selectedEntityIds}
+                            onSelectEntities={onSelectEntities}
+                            controlsRef={controlsRef}
+                        />
+                    ) : null}
                     <StudioSceneContent
                         document={document}
                         selectedEntityId={selectedEntityId}

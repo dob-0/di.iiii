@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
-import StudioCueStrip from './StudioCueStrip.jsx'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -21,6 +20,8 @@ export default function StudioControlCluster({
     canViewLive = false,
     editMode,
     onSetEditMode,
+    // Blender's Select Box tool is on (StudioShell viewportSelectTool).
+    selectTool = false,
     gizmoMode,
     onSetGizmoMode,
     openPanels,
@@ -123,6 +124,14 @@ export default function StudioControlCluster({
                                 >
                                     Edit
                                 </button>
+                                <button
+                                    className={`scc-btn ${selectTool ? 'active' : ''}`}
+                                    onClick={() => onSetEditMode('select')}
+                                    aria-pressed={selectTool}
+                                    title="Select box: drag on the room to select everything inside (Shift adds, Ctrl removes). B for one box from any mode."
+                                >
+                                    Select
+                                </button>
                                 {editMode === 'edit' && (
                                     <>
                                         <div className="scc-sep" />
@@ -188,19 +197,9 @@ export default function StudioControlCluster({
                             </div>
                         </div>
 
-                        {!minimal && onFireCue && cues.length > 0 && (
-                            <div className="scc-section">
-                                <div className="scc-section-label">Cues</div>
-                                <StudioCueStrip
-                                    cues={cues}
-                                    liveCueId={liveCueId}
-                                    onFire={onFireCue}
-                                    className="scc-buttons"
-                                    buttonClassName="scc-btn"
-                                />
-                            </div>
-                        )}
-
+                        {/* The Cues section is gone from the cluster (owner 2026-10-12 06:30, editing MOXIR v2.7 lamps: "the cue
+                            things is not necessary, remove that"): firing a cue from the editing panel changes the shared show
+                            for everyone watching; looks are previewed in the scene's SHOW chip and run from the desk / cue list. */}
                         {(canVr || canAr) && (
                             <div className="scc-section">
                                 <div className="scc-section-label">XR</div>
