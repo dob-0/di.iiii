@@ -84,14 +84,14 @@ describe('controlBindingsFor — what camera-controls is handed', () => {
         const cc = { mouseButtons, touches }
         expect(() => Object.assign(cc.mouseButtons, mouseButtonsFor(id, { ortho: true }))).not.toThrow() // the ortho swap
         expect(() => { cc.mouseButtons.left = 0 }).not.toThrow() // useCameraNavigation's per-gesture write
-        expect(mouseButtonsFor(id)).toEqual(getNavigationPreset(id).mouseButtons) // and the preset itself is untouched
+        expect(mouseButtonsFor(id)).toEqual({ ...getNavigationPreset(id).mouseButtons, wheel: NONE }) // the wheel is the app's own zoom (2026-10-12)
     })
 
     it('is a fresh copy every call, equal to the preset', () => {
         const a = controlBindingsFor('studio')
         const b = controlBindingsFor('studio')
         expect(a.mouseButtons).not.toBe(b.mouseButtons)
-        expect(a.mouseButtons).toEqual(getNavigationPreset('studio').mouseButtons)
+        expect(a.mouseButtons).toEqual({ ...getNavigationPreset('studio').mouseButtons, wheel: NONE }) // the wheel is the app's own zoom (2026-10-12)
         expect(a.touches).toEqual(getNavigationPreset('studio').touches)
     })
 

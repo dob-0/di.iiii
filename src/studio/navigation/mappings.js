@@ -119,7 +119,11 @@ export function getNavigationPreset(id) {
 // The resting mouse bindings for a preset (no modifier held).
 export function mouseButtonsFor(presetId, { ortho = false } = {}) {
     const preset = getNavigationPreset(presetId)
-    return { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
+    const buttons = { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
+    // The wheel is the app's gesture (useCameraNavigation wheelZoom): camera-controls' own dolly-to-cursor moved the orbit point
+    // toward the cursor in one frame while the radius eased (walked through 2026-10-12: a 6.9 m jump on the first notch).
+    buttons.wheel = CC_ACTION.NONE
+    return buttons
 }
 
 // The bindings to HAND camera-controls: fresh, writable copies. The presets

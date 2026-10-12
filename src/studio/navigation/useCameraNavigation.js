@@ -11,10 +11,10 @@ import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
 import { clientToNdc, fallbackPivot, pickPivot, selectionCenter } from './autoDepth.js'
+import { wheelNotches } from '../../project/viewport/navMath.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 // A wheel burst is one gesture: pick once, after this much quiet.
-export const WHEEL_PICK_QUIET_MS = 200
 
 // Content objects only: Studio tags every entity group with userData.svEntityId
 // (StudioViewport.jsx); grid, gizmo and rig markers carry no such tag.
@@ -29,10 +29,26 @@ export function entityRoots(scene, ids = null) {
 
 // camera-controls: setOrbitPoint "SHOULD NOT RUN DURING ANIMATIONS".
 // `active` is true while it is still easing toward a goal.
-export function applyPivot(cc, point, { force = false } = {}) {
+export function applyPivot(cc, point, { force = false, onAxis = true } = {}) {
     if (!cc || !point || (cc.active && !force)) return false
+    if (onAxis) {
+        // Blender's Auto Depth sets the view DEPTH under the mouse, never a sideways pivot. camera-controls' setOrbitPoint does
+        // the sideways version through a focal offset, and for a hit far off the view axis its next update() moved the camera
+        // 6.94 m in one frame (walked through 2026-10-12; the maintainer calls the focal offset problematic, issue #424). So the
+        // orbit point goes onto the view axis at the hit's depth: camera and aim stay exactly where they are.
+        const cam = cc.camera
+        const target = axisPointAtDepth(cam, point)
+        cc.setLookAt(cam.position.x, cam.position.y, cam.position.z, target.x, target.y, target.z, false)
+        return true
+    }
     cc.setOrbitPoint(point.x, point.y, point.z)
     return true
+}
+
+// The point on the camera's view axis at the same depth as `point`. Pure.
+export function axisPointAtDepth(camera, point) {
+    const depth = camera.position.distanceTo(point)
+    return camera.getWorldDirection(new Vector3()).multiplyScalar(depth).add(camera.position)
 }
 
 // A gesture is starting, so whatever the camera was easing toward (the slow turn a visitor who touches nothing is shown,
@@ -41,6 +57,44 @@ export function applyPivot(cc, point, { force = false } = {}) {
 // right-drag still moved the camera 0.11-0.64 m. applyPivot keeps its own refusal (setOrbitPoint must not run mid-ease).
 export function settleForGesture(cc) {
     if (cc?.active) cc.stop()
+}
+
+// The frame delta camera-controls may ease over. With frameloop="demand" the first frame of a gesture after a pause carries the
+// whole pause as its delta (walked through 2026-10-12: ~0.7 s), and SmoothDamp then finishes the ease in that one frame — a 6.9 m
+// snap at the floor, a pop at the start of every gesture after a rest. Clamped to two frames at 30 Hz. Pure.
+export const MAX_UPDATE_DT = 1 / 15
+export const clampUpdateDt = (dt) => (Number.isFinite(dt) && dt > 0 ? Math.min(dt, MAX_UPDATE_DT) : 0)
+
+// Installs the clamp on a camera-controls instance once (drei calls cc.update(delta) with R3F's raw delta). Returns the undo.
+export function clampUpdates(cc) {
+    if (!cc || typeof cc.update !== 'function' || cc.__diClampedUpdate) return () => {}
+    const original = cc.update
+    cc.update = function (dt) { return original.call(this, clampUpdateDt(dt)) }
+    cc.__diClampedUpdate = true
+    return () => { cc.update = original; delete cc.__diClampedUpdate }
+}
+
+// WHEEL ZOOM, the app's own (2026-10-12). Blender (view3d_navigate_view_zoom.cc): one wheel step scales the view distance by
+// 1.2 (in: /1.2). The camera moves along the ray through the pointer when "zoom to mouse position" is on (Navigate, like
+// Sketchfab) or along the view axis when it is off (Edit, the owner's Blender preference); the orbit point keeps the depth of
+// what is under the pointer. Pure: numbers in, numbers out.
+export const WHEEL_STEP_FACTOR = 1.2
+export function wheelZoomPlan({ depth, notches, zoomOutMaxDepth = Infinity }) {
+    if (!(depth > 0) || !Number.isFinite(notches) || notches === 0) return null
+    const factor = Math.pow(WHEEL_STEP_FACTOR, -notches) // notches > 0 = in
+    let newDepth = depth * factor
+    if (newDepth > zoomOutMaxDepth) newDepth = Math.max(depth, zoomOutMaxDepth)
+    return { step: depth - newDepth, newDepth }
+}
+
+// Does this wheel event zoom in (toward the scene)? camera-controls: negative deltaY dollies in. Pure.
+export const zoomsIn = (event) => Number(event?.deltaY) < 0
+
+// A hit farther than `maxDepth` from the camera is brought back onto the ray at `maxDepth` (same direction). Pure.
+export function capDepth(camera, point, maxDepth) {
+    const d = camera.position.distanceTo(point)
+    if (!(d > maxDepth)) return point
+    return point.clone().sub(camera.position).multiplyScalar(maxDepth / d).add(camera.position)
 }
 
 // The depth to use when nothing is under the pointer. `remembered` is the last depth that came from a real surface or
@@ -75,6 +129,7 @@ export function useCameraNavigation({
         const element = cc._domElement
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
+        const unclamp = clampUpdates(cc)
 
         // `gestureStart`: the gesture's own pointerdown/wheel, after settleForGesture stopped any easing: camera-controls still
         // reports `active` for a frame after stop(), and a pivot that waits for it never lands (measured: the first gesture's pivot
@@ -89,7 +144,7 @@ export function useCameraNavigation({
             const selected = selectionRef.current
             if (action === CC_ACTION.ROTATE && orbitSelection && selected?.length) {
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
-                if (center) { applyPivot(cc, center, { force: gestureStart }); return }
+                if (center) { applyPivot(cc, center, { force: gestureStart, onAxis: false }); return }
             }
             // Auto Depth serves PAN and ZOOM (distance-scaled gestures). ROTATE keeps the target it has: re-pivoting an orbit
             // onto a surface 50 m down a hall swept the camera 30 m in one frame (measured 2026-10-08, Inside).
@@ -99,7 +154,10 @@ export function useCameraNavigation({
             const roots = entityRoots(scene)
             // A surface within the clamp distance is the one we are pressed against: look past it (autoDepth.js `beyond`).
             const beyond = import.meta.env?.DEV && window.__diNavBeyond != null ? window.__diNavBeyond : cc.minDistance * 1.5 // dev: measurement A/B
-            const hit = pickPivot({ camera: cc.camera, ndc, objects: roots, beyond })
+            let hit = pickPivot({ camera: cc.camera, ndc, objects: roots, beyond })
+            // Going through a surface, the depth may at most double per wheel notch (walked through on 2026-10-12: the pick beyond
+            // the floor landed 30 m away and one notch jumped 4.25 m after frames of 2 cm). A doubling depth is a smooth ramp.
+            if (hit && action === CC_ACTION.DOLLY) hit = capDepth(cc.camera, hit, 2 * Math.max(cc.distance, cc.minDistance))
             // Nothing under the pointer (fog, open air): Blender keeps the depth the view had. We keep the depth the view
             // LAST HAD FROM A REAL SURFACE OR A FRAMING (resolveMissDepth), never the 0.35 m clamp camera-controls drags
             // the orbit point to while zooming into air; the nearest surface around the camera is its floor. The owner
@@ -115,6 +173,8 @@ export function useCameraNavigation({
                 depthRef.current = remembered
                 if (depth != null) {
                     fallback = cc.camera.getWorldDirection(new Vector3()).multiplyScalar(depth).add(cc.camera.position)
+                    // Leaving a surface into empty space, the same ramp: the depth may at most double per wheel notch.
+                    if (action === CC_ACTION.DOLLY) fallback = capDepth(cc.camera, fallback, 2 * Math.max(cc.distance, cc.minDistance))
                     point = fallback
                 }
             }
@@ -135,13 +195,46 @@ export function useCameraNavigation({
             if (action !== CC_ACTION.NONE) { settleForGesture(cc); pivotAt(event, action, true) }
         }
 
-        let lastWheel = 0
+        const rayDir = new Vector3(), viewDir = new Vector3(), camPos = new Vector3(), newPos = new Vector3(), newTarget = new Vector3()
         const onWheel = (event) => {
             if (!element.contains(event.target)) return
-            const now = performance.now()
-            const quiet = now - lastWheel > WHEEL_PICK_QUIET_MS
-            lastWheel = now
-            if (quiet) { settleForGesture(cc); pivotAt(event, CC_ACTION.DOLLY, true) }
+            event.preventDefault()
+            const notches = wheelNotches(event)
+            if (!notches) return
+            const scene = getScene?.()
+            const roots = scene ? entityRoots(scene) : []
+            const cam = cc.camera
+            cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
+            const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
+            // Depth under the pointer: the surface there (looking past the one we are pressed against), else the depth the view
+            // last had from a surface or a framing; through a surface or into empty space it may at most double per notch.
+            const beyond = cc.minDistance * 1.5
+            const hit = ndc && roots.length ? pickPivot({ camera: cam, ndc, objects: roots, beyond }) : null
+            let depth
+            if (hit) depth = camPos.distanceTo(hit)
+            else {
+                const nearest = roots.length ? fallbackPivot({ camera: cam, objects: roots }) : null
+                const r = resolveMissDepth(depthRef.current, cc.distance, nearest ? camPos.distanceTo(nearest) : null)
+                depthRef.current = r.remembered
+                depth = r.depth
+            }
+            if (depth == null) return
+            if (notches > 0) depth = Math.min(depth, 2 * Math.max(cc.distance, cc.minDistance))
+            if (hit) depthRef.current = depth
+            const plan = wheelZoomPlan({ depth, notches, zoomOutMaxDepth: cam.far / 4 })
+            if (!plan) return
+            // the ray to move along: through the pointer (zoom to mouse position) or the view axis
+            if (preset.dollyToCursor && ndc) rayDir.set(ndc[0], ndc[1], 0.5).unproject(cam).sub(camPos).normalize()
+            else rayDir.copy(viewDir)
+            newPos.copy(camPos).addScaledVector(rayDir, plan.step)
+            newTarget.copy(newPos).addScaledVector(viewDir, plan.newDepth)
+            // camera-controls' own wheel used to announce itself; drei invalidates the on-demand loop on 'update' and the Studio
+            // saves the camera on 'controlend', so the app's wheel announces the same way (else nothing draws until the next move).
+            cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
+            cc.setLookAt(newPos.x, newPos.y, newPos.z, newTarget.x, newTarget.y, newTarget.z, preset.draggingSmoothTime > 0)
+            cc.dispatchEvent({ type: 'update' })
+            cc.dispatchEvent({ type: 'controlend', originalEvent: event })
+            trace({ action: 'wheel', notches, hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, depth: +depth.toFixed(3), step: +plan.step.toFixed(3), remembered: depthRef.current == null ? null : +depthRef.current.toFixed(2) })
         }
 
         // Neither Blender nor Sketchfab ever shows the browser's menu over the view (owner, 2026-10-12: "save image as,
@@ -157,17 +250,18 @@ export function useCameraNavigation({
             if (!ndc) return
             settleForGesture(cc)
             const point = pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) })
-            if (point) { depthRef.current = cc.camera.position.distanceTo(point); applyPivot(cc, point, { force: true }) }
+            if (point) { depthRef.current = cc.camera.position.distanceTo(point); const c = cc.camera.position; cc.setLookAt(c.x, c.y, c.z, point.x, point.y, point.z, true) }
             trace({ action: 'focus', hit: point ? [point.x, point.y, point.z].map((v) => +v.toFixed(2)) : null })
         }
 
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })
-        doc.addEventListener('wheel', onWheel, { capture: true, passive: true })
+        element.addEventListener('wheel', onWheel, { passive: false })
         doc.addEventListener('contextmenu', onContextMenu, { capture: true })
         doc.addEventListener('dblclick', onDoubleClick, { capture: true })
         return () => {
+            unclamp()
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
-            doc.removeEventListener('wheel', onWheel, { capture: true })
+            element.removeEventListener('wheel', onWheel)
             doc.removeEventListener('contextmenu', onContextMenu, { capture: true })
             doc.removeEventListener('dblclick', onDoubleClick, { capture: true })
         }

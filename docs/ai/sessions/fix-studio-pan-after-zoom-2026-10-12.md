@@ -158,3 +158,31 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
 - Not mine to decide (said to the owner): the 96 lamps are the MOXIR rig's content and 75 % of the GPU frame; a Studio light
   budget (e.g. Lite's 4 slots while navigating) is his call. Owed: an empty-page frame timer in his di browser on the 240 Hz panel
   (is 120 fps the X11 layer's cap?); the look-fade clock; CPU per frame below 4.17 ms.
+
+## Round 7: "test yourself as a human" + "do the possible stress test"
+
+- `scripts/nav/walkthrough.cjs`: the journey a person makes (orbit, scroll into fog, pan, scroll at the floor, double-click, right-click,
+  Edit's middle button, walk, orbit again), judged per step by the real camera: net metres, median and max per-frame step, their
+  ratio ("jerk"), stalls > 33 ms, console errors, a screenshot each. `scripts/nav/stress.cjs`: 60 s of rapid mixed input with a stuck
+  detector, finiteness, heap and error checks. `scripts/nav/repro-edit-wheel.cjs`: Edit wheel after a pan, deterministic.
+- Found by the journey and fixed, each measured before/after:
+  1. Scroll at the floor: 2 cm per frame then a 6.9 m jump (jerk 69). Call-level trace: camera-controls' **dolly-to-cursor moves the
+     orbit point toward the cursor in ONE frame while only the radius eases** (`_target` jumped 6.9 m in y inside `update()`). The
+     wheel is now the app's own: Blender's 1.2× step of the depth under the pointer (view3d_navigate_view_zoom.cc), along the pointer
+     ray (Navigate, zoom to mouse) or the view axis (Edit, his preference), eased in Navigate / instant in Edit, through surfaces with
+     the depth at most doubling per notch, zoom-out bounded at far/4 (his 10-08 decision). Floor scroll jerk 69 → 2.3; 25 notches into
+     fog: 2.28 m per notch constant, max frame step 0.30 m, orbit point 20 m (no collapse); 40 notches on a surface: 94 m, through.
+  2. A pivot far off the view axis: camera-controls `setOrbitPoint` (focal offset 8.7 m) moved the camera 6.94 m on the next update.
+     Auto Depth now sets the DEPTH on the view axis (Blender's rule), `setLookAt` with no transition: camera and aim unchanged.
+     Orbit-around-selection keeps the sideways pivot; Sketchfab's double-click re-aims the camera at the point (eased).
+  3. The first frame after a pause carried the whole pause as its delta (~0.7 s) and SmoothDamp finished in one frame: `clampUpdates`
+     limits camera-controls' update delta to 1/15 s.
+  4. After a double-click in Navigate the wheel did nothing: the Studio's own double-click (Quick Insert) opened over the view. Quick
+     Insert is now the Edit tool's; Navigate's double-click focuses (Sketchfab). Esc closes Quick Insert (checked).
+  5. `infinityDolly` at maxDistance pulled the orbit point toward the camera (stuck at 500 m in the stress): the app's wheel needs none.
+- Stress (11–12 rounds × 60 s, several runs): camera always finite, 0 stuck after the test used uncovered canvas points, 0 console
+  errors. NOT clean: stalls > 33 ms (55–225 per run) — a peer's show test was rendering in both test lanes (GPU 50–93 % before my
+  runs), so the stall counts are polluted; the JS heap grew 150 → 240–350 MB per minute of stress with the test's own per-frame
+  logging arrays inside the page, so a leak is NOT shown either way. Both owed: a quiet-GPU rerun and a heap run without logging.
+- Journey, final run (GPU shared): every step's max/median step ratio 1.0–3.2 except double-click-then-scroll 5.6 (the eased re-aim
+  overlapping the first notch); browser menu never shown; no errors; Walk 4.3 m in 1.5 s with a look.
