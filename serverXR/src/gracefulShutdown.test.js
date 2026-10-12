@@ -95,6 +95,34 @@ describe('createShutdown (unit)', () => {
     await done
     expect(calls).toEqual(['close', 'checkpoint', 'closeDb', 'exit 0'])
   })
+  it('awaits the before step (the lasers) ahead of closing the server; its failure is logged, not fatal', async () => {
+    const calls = []
+    const server = { close: (cb) => { calls.push('close'); setImmediate(cb) } }
+    const warned = []
+    const done = new Promise((resolve) => {
+      const run = createShutdown({
+        server, logger: { ...quiet, warn: (m) => warned.push(m) },
+        before: () => new Promise((r) => setTimeout(() => { calls.push('before'); r() }, 20)),
+        checkpoint: () => calls.push('checkpoint'), closeDb: () => calls.push('closeDb'),
+        exit: (code) => { calls.push(`exit ${code}`); resolve() }
+      })
+      run('SIGTERM')
+    })
+    await done
+    expect(calls).toEqual(['before', 'close', 'checkpoint', 'closeDb', 'exit 0'])
+    const failing = []
+    const done2 = new Promise((resolve) => {
+      createShutdown({
+        server: { close: (cb) => { failing.push('close'); setImmediate(cb) } },
+        logger: { ...quiet, warn: (m) => warned.push(m) },
+        before: () => Promise.reject(new Error('cube unreachable')),
+        exit: (code) => { failing.push(`exit ${code}`); resolve() }
+      })('SIGTERM')
+    })
+    await done2
+    expect(failing).toEqual(['close', 'exit 0'])
+    expect(warned.some((m) => m.includes('cube unreachable'))).toBe(true)
+  })
   it('exits non-zero and says why when the stop hangs', async () => {
     const errors = []
     const code = await new Promise((resolve) => {

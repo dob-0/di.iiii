@@ -560,17 +560,13 @@ const ndi = registerNdiRoutes(app, {
 const shutdownTimers = []
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
 // Going down: every cube blanked and its output switched off twice, then the socket closed
-// (laserEngine.js shutdown). SIGTERM / SIGINT wait for those messages to leave (≤ 250 ms), then the
-// signal is raised again with this handler gone, so the process ends exactly as it did before. The
-// 'exit' hook is a last try only: nothing asynchronous — a UDP send — is sure to leave from it.
-// A kill -9 or a pulled cable cannot be caught here; the cube's own firmware is then the last word.
-const stopLasersThenExit = (signal) => () => {
-  const reraise = () => process.kill(process.pid, signal)
-  if (!lasers.hasEngine()) { reraise(); return }
-  Promise.resolve().then(() => lasers.close()).catch(() => {}).then(reraise)
-}
-process.once('SIGTERM', stopLasersThenExit('SIGTERM'))
-process.once('SIGINT', stopLasersThenExit('SIGINT'))
+// (laserEngine.js shutdown). That is the FIRST step of the orderly stop (gracefulShutdown.js
+// `before`, installed once the server listens): SIGTERM / SIGINT wait for those messages to
+// leave (≤ 250 ms), then the server drains and the database closes, and the process exits 0.
+// Two SIGTERM handlers (one re-raising the signal) killed the process mid-stop — 2026-10-12.
+// The 'exit' hook is a last try only: nothing asynchronous — a UDP send — is sure to leave
+// from it. A kill -9 or a pulled cable cannot be caught here; the cube's firmware is then the last word.
+const stopLasers = () => (lasers.hasEngine() ? lasers.close() : undefined)
 process.once('exit', () => { try { lasers.close() } catch { /* going down anyway */ } })
 // The NDI autoscan: which sources are on the network right now, known before anyone
 // asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
@@ -3282,6 +3278,7 @@ initStorage()
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
       installShutdown({
         server: httpServer,
+        before: stopLasers,
         inflight,
         timers: shutdownTimers,
         checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),

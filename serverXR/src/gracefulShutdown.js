@@ -31,6 +31,7 @@ function createShutdown({
   timers = [],
   checkpoint = () => {},
   closeDb = () => {},
+  before = () => {},
   exit = (code) => process.exit(code),
   logger = console,
   hardTimeoutMs = 10000,
@@ -51,6 +52,13 @@ function createShutdown({
     const cut = setTimeout(() => server.closeAllConnections?.(), Math.max(0, hardTimeoutMs - 500))
     cut.unref?.()
     for (const t of timers) clearInterval(t)
+    // `before` runs first and is awaited (the lasers: every cube blanked and switched off
+    // twice, index.js). It is bounded by the hard timeout like everything else; a failure
+    // is logged and the stop goes on, the database is never held for it.
+    Promise.resolve().then(() => before(signal))
+      .catch((error) => logger.warn(`[shutdown] before-step failed: ${error?.message || error}`))
+      .then(() => proceed())
+    function proceed () {
     let finished = false
     let closed = false
     const startedAt = Date.now()
@@ -83,6 +91,7 @@ function createShutdown({
     } catch (error) {
       logger.warn(`[shutdown] server.close: ${error?.message || error}`)
       closed = true
+    }
     }
   }
   return run
