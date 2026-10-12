@@ -1,7 +1,7 @@
 {
  "snapshot": "moxir-v2-ground-2026-10-09",
- "version": "MOXIR v2 ground (round 2) \u00b7 on the ground, out of the crowd",
- "title": "MOXIR v2 ground \u00b7 on the ground, out of the crowd",
+ "version": "MOXIR v2 ground (round 2) · on the ground, out of the crowd",
+ "title": "MOXIR v2 ground · on the ground, out of the crowd",
  "what": "The spread, with every wash and beam that is not on the truss brought down to the floor (owner 10-09 21:05) and, round 2 (2026-10-10), every one of them OUT OF THE CROWD: 40 PARs on the floor (the truss keeps 10): 37 along the walls, the wall column rows, the far end and the entry wall, the DJ key and the booth lamp behind the PA line in the stage pen, no two of the hall's closer than 6 m; B's ember fan behind the DJ as the owner saw it, and 12 beams at the walls, the far end and the entry corner, each with a desk window the line at the public floor's edge holds. No unit and no barrier on the public floor; the patch is the official v2 patch (#872).",
  "written_by": "scripts/place/moxir_v2_ground.py build (from scripts/place/rigs/moxir-v2-spread-2026-10-09.json; the layer scripts/place/rigs/moxir-v2-ground-layer-2026-10-09.json)",
  "date": "2026-10-09",
@@ -6161,7 +6161,7 @@
       }
      ],
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   },
@@ -6252,7 +6252,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   }
@@ -6260,13 +6260,13 @@
  "cues": [
   {
    "look": "dark",
-   "name": "v2 ground \u00b7 dark (one colour)",
+   "name": "v2 ground · dark (one colour)",
    "fade": 3,
    "hold": 40
   },
   {
    "look": "peak",
-   "name": "v2 ground \u00b7 peak",
+   "name": "v2 ground · peak",
    "fade": 2,
    "hold": 20
   }
@@ -13198,7 +13198,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "source": "the spread's cap after a9d4b0d1: fader 0.16 = the drawn fraction measured under the 0.65 % budget"
@@ -16186,7 +16186,7 @@
  "lasers": {
   "source": "git cf954908:scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json (PR #844, branch fix/moxir-v1-1-bugs-2026-10-09; the laser session)",
   "table": {
-   "table": "scripts/place/rigs/moxir-aerial-2026-10-07.json",
+   "table": "scripts/place/rigs/moxir-aerial-far-crane-2026-10-09.json",
    "table_sha256": "56826b0dea8b8e03b9ea704434e4eb34a58052db62b6e819210dbd5d90c8fefa",
    "equal": true
   },
