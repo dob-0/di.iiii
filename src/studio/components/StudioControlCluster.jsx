@@ -20,6 +20,8 @@ export default function StudioControlCluster({
     canViewLive = false,
     editMode,
     onSetEditMode,
+    // Blender's Select Box tool is on (StudioShell viewportSelectTool).
+    selectTool = false,
     gizmoMode,
     onSetGizmoMode,
     openPanels,
@@ -121,6 +123,14 @@ export default function StudioControlCluster({
                                     title="Edit mode (E)"
                                 >
                                     Edit
+                                </button>
+                                <button
+                                    className={`scc-btn ${selectTool ? 'active' : ''}`}
+                                    onClick={() => onSetEditMode('select')}
+                                    aria-pressed={selectTool}
+                                    title="Select box: drag on the room to select everything inside (Shift adds, Ctrl removes). B for one box from any mode."
+                                >
+                                    Select
                                 </button>
                                 {editMode === 'edit' && (
                                     <>

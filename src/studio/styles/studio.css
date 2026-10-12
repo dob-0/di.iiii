@@ -869,6 +869,33 @@
     margin-bottom: var(--di-space-1);
 }
 
+.insp-header-action {
+    display: block;
+    margin-top: var(--di-space-2);
+}
+
+.insp-lock-btn.active {
+    /* Locked reads by fill, not shape (controls are rectangles, 0-2 px). */
+    background: rgba(255, 255, 255, 0.85);
+    color: #0b0f14;
+}
+
+.insp-lock-row {
+    margin-top: var(--di-space-2);
+}
+
+/* Blender's Select Box: the dashed rectangle while a box is dragged (BoxSelect, StudioViewport). */
+.studio-box-select {
+    position: fixed;
+    border: 1px dashed rgba(255, 255, 255, 0.9);
+    outline: 1px dashed rgba(0, 0, 0, 0.6);
+    outline-offset: -2px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 2000;
+}
+
 .insp-subtitle {
     display: block;
     font-size: var(--di-text-1);

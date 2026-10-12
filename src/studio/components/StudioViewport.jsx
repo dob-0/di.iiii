@@ -47,6 +47,7 @@ import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
 
@@ -324,6 +325,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 // How the smart view finds an entity's object (SmartView.jsx).
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
+                    // Locked: not picked — the click goes on to whatever is behind it.
+                    if (isLocked) return
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelect?.(entity.id)
@@ -373,6 +376,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
                     if (e.delta > 2) return
+                    if (entity.components?.runtime?.locked === true) return
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelectEntity?.(entity.id)
@@ -874,10 +878,11 @@ function StudioSceneContent({
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.length > 0 && (
+            {transformOp && selectedEntities.some((entity) => entity.components?.runtime?.locked !== true) && (
                 <ModalTransform
                     op={transformOp}
-                    selectedEntities={selectedEntities}
+                    // A locked object never moves, even when it was selected before it was locked.
+                    selectedEntities={selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true)}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
@@ -1081,6 +1086,8 @@ export default function StudioViewport({
     controlsRef,
     xrStore,
     editMode = 'navigate',
+    boxSelect = false,
+    onSelectEntities,
     gizmoMode = 'translate',
     gizmoAxis = null,
     gizmoVisible = true,
@@ -1261,6 +1268,15 @@ export default function StudioViewport({
                         fovRef={smartOn ? fovRef : null}
                         selectedEntityIds={selectedEntityIds}
                     />
+                    {onSelectEntities && !lowPower ? (
+                        <BoxSelect
+                            active={boxSelect}
+                            entities={document.entities}
+                            selectedEntityIds={selectedEntityIds}
+                            onSelectEntities={onSelectEntities}
+                            controlsRef={controlsRef}
+                        />
+                    ) : null}
                     <StudioSceneContent
                         document={document}
                         selectedEntityId={selectedEntityId}
