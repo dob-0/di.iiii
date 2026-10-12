@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   compat-grid:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # fetch-depth 0: compat-grid needs `git worktree add <ref>` to work for
       # any past release tag, and the tag-selection step below needs every

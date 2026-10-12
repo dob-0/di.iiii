@@ -33,7 +33,7 @@ on:
 jobs:
   pack:
     name: pack the runtime
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@v7
@@ -57,7 +57,7 @@ jobs:
   linux:
     name: ${{ matrix.name }}
     needs: pack
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     strategy:
       fail-fast: false
@@ -146,7 +146,7 @@ jobs:
         # one does not — `current` is a junction, and removing a junction the
         # wrong way removes what it points at — so it has to be exercised on
         # every change, or it drifts until the day someone actually runs it.
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
@@ -270,7 +270,7 @@ jobs:
     # being true, not a sentence in a README.
     name: works with the network unplugged
     needs: pack
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
@@ -366,7 +366,7 @@ jobs:
     # them public.
     name: docker mode
     needs: pack
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: are the images public yet?
