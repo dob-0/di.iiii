@@ -29,7 +29,9 @@
    "why": "fire and pressure risk near lamps, cables and the smoke machines",
    "said_by": "owner, 2026-10-08 night (via the coordinator): \"the gas cylinders will be out\"",
    "check_on_site": "on the build day: none left in the hall, including the far half"
-  }
+  },
+  "floor-cylinders (two big rollers lying where the stage goes)",
+  "loose-steel-house-left (frames, sheet metal, the barrel, front left of the floor)"
  ],
  "kept_for_the_show": [
   {
@@ -52,5 +54,15 @@
    "said_by": "owner, 2026-10-12 05:53 on photo 004 marked: \"this all stay, plus the metal part behind the white bags; white bags go\"",
    "consequence": "the right side line of the rig moves inside the nave columns (v2.7, X0 +-8.2 instead of +-14)"
   }
- ]
+ ],
+ "owner_marks_2026-10-12": {
+  "photo": "004 marked (~/Downloads/moxir/photos/004-marked.jpg), 06:03",
+  "will_remove": [
+   "the two floor cylinders",
+   "the white bags",
+   "the loose steel pile house-left"
+  ],
+  "maybe_stays": "the tall grey cabinet by the left column row near the stage (transformer / column-foot cabinets in the model) - \"this mb can stay\"",
+  "said_by": "owner 2026-10-12 06:03: \"they will move all\""
+ }
 }
