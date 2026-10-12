@@ -97,7 +97,9 @@ export function useCameraNavigation({
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
             if (!ndc) { trace({ action, gestureStart, why: 'no ndc' }); return }
             const roots = entityRoots(scene)
-            const hit = pickPivot({ camera: cc.camera, ndc, objects: roots })
+            // A surface within the clamp distance is the one we are pressed against: look past it (autoDepth.js `beyond`).
+            const beyond = import.meta.env?.DEV && window.__diNavBeyond != null ? window.__diNavBeyond : cc.minDistance * 1.5 // dev: measurement A/B
+            const hit = pickPivot({ camera: cc.camera, ndc, objects: roots, beyond })
             // Nothing under the pointer (fog, open air): Blender keeps the depth the view had. We keep the depth the view
             // LAST HAD FROM A REAL SURFACE OR A FRAMING (resolveMissDepth), never the 0.35 m clamp camera-controls drags
             // the orbit point to while zooming into air; the nearest surface around the camera is its floor. The owner

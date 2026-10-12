@@ -18,6 +18,8 @@ describe('studio preset = the bindings Studio shipped before presets', () => {
         expect(p.autoDepth).toBe(true)
         expect(p.modifierGestures).toBe(false)
         expect(p.focusOnDoubleClick).toBe(true) // Sketchfab's double-click focus (2026-10-12)
+        expect([p.smoothTime, p.draggingSmoothTime]).toEqual([0.25, 0.125]) // glide: camera-controls defaults, stated as such
+        expect([NAVIGATION_PRESETS.blender.smoothTime, NAVIGATION_PRESETS.blender.draggingSmoothTime]).toEqual([0.2, 0]) // Blender: instant drags/wheel, Smooth View 200 ms
     })
     it('ortho view: left drag pans (was: isOrtho ? TRUCK : ROTATE)', () => {
         expect(mouseButtonsFor('studio', { ortho: true }).left).toBe(TRUCK)

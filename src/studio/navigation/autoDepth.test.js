@@ -122,3 +122,14 @@ describe('fallbackPivot (nothing under the pointer: the nearest surface around t
         expect(fallbackPivot({ camera: c, objects: [new Group()] })).toBeNull()
     })
 })
+
+describe('pickPivot beyond: the surface the camera is pressed against is looked past', () => {
+    it('skips hits closer than `beyond` and returns the next one, or null', () => {
+        const c = new PerspectiveCamera(50, 1, 0.05, 400)
+        c.position.set(0, 0, 1); c.lookAt(0, 0, -10); c.updateMatrixWorld(true)
+        const near = box(0), far = box(-8)   // a 1 m box at z=0 (its face 0.5 m ahead) and one at z=-8
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: [near, far] }).z).toBeCloseTo(0.5, 5)
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: [near, far], beyond: 0.525 }).z).toBeCloseTo(-7.5, 5)
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: [near], beyond: 0.525 })).toBeNull()
+    })
+})

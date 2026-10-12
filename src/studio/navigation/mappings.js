@@ -54,6 +54,10 @@ export const NAVIGATION_PRESETS = Object.freeze({
         // drag follows what you see. The buttons are unchanged.
         autoDepth: true,
         focusOnDoubleClick: true,
+        // Easing (camera-controls SmoothDamp times, seconds): a glide on drags and wheel like Sketchfab's feel. Sketchfab
+        // publishes no numbers; these are camera-controls' defaults (2.10.1), stated as such, not measured against Sketchfab.
+        smoothTime: 0.25,
+        draggingSmoothTime: 0.125,
         modifierGestures: false,
         rows: Object.freeze([
             ['Drag', 'Orbit'],
@@ -83,6 +87,11 @@ export const NAVIGATION_PRESETS = Object.freeze({
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
         dollyToCursor: false, // the owner's Blender: Zoom to Mouse Position OFF (2026-10-12)
+        // Blender (view3d_navigate_view_zoom.cc, main, read 2026-10-12): a wheel step is `step = 1.2f` applied at once, no
+        // Smooth View; drags write the view per mouse move. So no drag/wheel easing; Smooth View (his 200 ms) only for view
+        // changes (numpad views, frame), which camera-controls does with smoothTime on setLookAt transitions.
+        smoothTime: 0.2,
+        draggingSmoothTime: 0,
         autoDepth: true,
         modifierGestures: true,
         rows: Object.freeze([

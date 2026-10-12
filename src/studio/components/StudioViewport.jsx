@@ -626,8 +626,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             // camera instead of doing nothing (a room's Inside lock holds the camera ≥ 2 m from
             // its target, and the zoom used to die there). The target stays in its boundary.
             infinityDolly
-            smoothTime={0.15}
-            draggingSmoothTime={0.0}
+            smoothTime={preset.smoothTime}
+            draggingSmoothTime={preset.draggingSmoothTime}
             minDistance={0.35}
             maxDistance={500}
             mouseButtons={bindings.mouseButtons}

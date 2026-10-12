@@ -11,7 +11,8 @@ const DRAG = Number(process.env.NAV_DRAG || 240)
 const AXIS = process.env.NAV_AXIS === 'y' ? 'y' : 'x'   // drag right (x) or drag DOWN (y)
 const BUTTON = process.env.NAV_BUTTON || 'right'      // right (Sketchfab pan) or middle (Blender orbit; with NAV_SHIFT=1 = pan)
 const SHIFT = process.env.NAV_SHIFT === '1'
-const TOOL = process.env.NAV_TOOL || 'navigate'       // 'edit' clicks the Edit tool first (Blender mapping)
+const TOOL = process.env.NAV_TOOL || 'navigate'
+const POINTER = process.env.NAV_POINTER || 'centre'  // centre (fog) | low | high | surface (first screen point whose ray hits geometry, from a grid)       // 'edit' clicks the Edit tool first (Blender mapping)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const install = () => {
@@ -30,10 +31,13 @@ const install = () => {
         if (f.child) stack.push(f.child)
     }
     if (!cc) return false
+    window.__ccForMeasure = cc
     window.__navLog = []
+    window.__calls = []; for (const m of ['setLookAt','setPosition','setTarget','moveTo','dollyTo','setOrbitPoint','setFocalOffset','stop','truck','forward','dolly','zoomTo','lerpLookAt','fitToBox','reset']) { const o = cc[m]; if (typeof o === 'function') cc[m] = function (...a) { const st = (new Error().stack || '').split('\n').slice(2, 5).map((l) => l.trim().replace(/^at /, '').replace(/https?:\/\/[^/]+/, '').slice(0, 70)); window.__calls.push([performance.now(), m, a.map((v) => typeof v === 'number' ? +v.toFixed(2) : v), st]); return o.apply(this, a) } }
+    window.__upd = []; const origUpdate = cc.update.bind(cc); cc.update = (d) => { const r = origUpdate(d); window.__upd.push([performance.now(), +(+d).toFixed(4), r ? 1 : 0]); return r }
     const tick = () => {
-        const p = cc.getPosition(new (cc._camera.position.constructor)())
-        window.__navLog.push([performance.now(), p.x, p.y, p.z, cc.distance])
+        const p = cc._camera.position // the REAL camera; cc.getPosition() returns the END pose by default (camera-controls receiveEndValue=true)
+        const tg = cc.getTarget(new (cc._camera.position.constructor)()); window.__navLog.push([performance.now(), p.x, p.y, p.z, cc.distance, +tg.x.toFixed(2), +tg.y.toFixed(2), +tg.z.toFixed(2)])
         requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
@@ -60,6 +64,9 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     console.log('mappings module urls', JSON.stringify(await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /mappings|useCameraNavigation|StudioViewport/.test(n)))))
     console.log('studioPresetAutoDepth', await page.evaluate(() => import('/studio/navigation/mappings.js').then((m) => m.NAVIGATION_PRESETS.studio.autoDepth).catch(() => 'n/a (production build)')))
     await sleep(3000)
+    // A/B of camera-controls easing without a rebuild: NAV_DRAGSMOOTH / NAV_SMOOTH set draggingSmoothTime / smoothTime live.
+    if (process.env.NAV_DRAGSMOOTH != null || process.env.NAV_SMOOTH != null) await page.evaluate(([d, s]) => { const cc = window.__ccForMeasure; if (d != null) cc.draggingSmoothTime = +d; if (s != null) cc.smoothTime = +s }, [process.env.NAV_DRAGSMOOTH ?? null, process.env.NAV_SMOOTH ?? null])
+    if (process.env.NAV_D2C != null) await page.evaluate((v) => { window.__ccForMeasure.dollyToCursor = v === '1' }, process.env.NAV_D2C)
     if (TOOL === 'edit') { await page.getByRole('button', { name: 'Edit', exact: true }).first().click(); await sleep(500) } // let the scene load and settle
     const box = await page.locator('canvas').first().boundingBox()
     const [fx, fy] = (process.env.NAV_AT || '0.5,0.5').split(',').map(Number)
@@ -97,6 +104,18 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     const zseg = await slice(m0, m1)
     let zmax = 0
     for (let i = 1; i < zseg.length; i++) zmax = Math.max(zmax, dist(zseg[i - 1], zseg[i]))
+    const gaps = []; for (let i = 1; i < seg.length; i++) gaps.push(seg[i][0] - seg[i - 1][0])
+    const zgaps = []; for (let i = 1; i < zseg.length; i++) zgaps.push(zseg[i][0] - zseg[i - 1][0])
+    const stat = (a) => a.length ? { n: a.length, meanMs: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(1), maxMs: +Math.max(...a).toFixed(1), over33ms: a.filter((g) => g > 33).length } : null
+    const upd = await page.evaluate(() => window.__upd || [])
+    const zUpd = upd.filter((u) => u[0] >= zseg[0]?.[0] && u[0] <= zseg[zseg.length - 1]?.[0])
+    const pUpd = upd.filter((u) => u[0] >= seg[0]?.[0] && u[0] <= seg[seg.length - 1]?.[0])
+    const ds = (a) => a.length ? { calls: a.length, moved: a.filter((u) => u[2]).length, deltaMedian: +a.map((u) => u[1]).sort((x, y) => x - y)[Math.floor(a.length / 2)].toFixed(4), deltaMax: +Math.max(...a.map((u) => u[1])).toFixed(3) } : null
+    console.log('UPDATE', JSON.stringify({ zoom: ds(zUpd), pan: ds(pUpd) }))
+    if (NOTCHES === 1) { const calls = await page.evaluate(() => window.__calls || []); console.log('CALLS', JSON.stringify(calls.filter((c) => c[0] >= zseg[0][0] - 50 && c[0] <= zseg[0][0] + 400).map((c) => [Math.round(c[0] - zseg[0][0]), c[1], c[2], c[3]]))) }
+    if (NOTCHES === 1) console.log('NOTCHTRACE', JSON.stringify(zseg.slice(0, 8).map((r, i) => [Math.round(r[0] - zseg[0][0]), +r[4].toFixed(3), i ? +dist(zseg[i - 1], r).toFixed(3) : 0, 'cam', r.slice(1, 4).map((v) => +v.toFixed(2)), 'tgt', r.slice(5, 8)])))
+    const moving = zseg.filter((r, i) => i > 0 && dist(zseg[i - 1], r) > 0.001).length
+    console.log('FRAMES', JSON.stringify({ pan: stat(gaps), zoom: stat(zgaps), zoomFramesWithMotion: moving, notches: NOTCHES, framesPerNotch: NOTCHES ? +(moving / NOTCHES).toFixed(1) : null }))
     const f = (n) => n.toFixed(3)
     console.log(JSON.stringify({
         url: page.url(), canvas: [Math.round(box.width), Math.round(box.height)],

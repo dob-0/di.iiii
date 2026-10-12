@@ -106,3 +106,24 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   0.399 → 24.2 m by the previous-depth rule); Edit Shift+middle pan after 12 notches 7.747 m; Edit middle drag 240 px = 35.67 m
   chord on a 24.2 m circle = 96° = 0.4°/px (Blender's); context menu suppressed in both tools.
 - Owed, next PR: Auto Perspective (his ON), Walk mode Shift+` with his numbers, the help dialog's rows for Edit's numpad keys.
+
+## Round 4: "not smooth" → "scroll the link you opened, it is stuck" — the deep audit (owner: "read every possible thing")
+
+- Research (Sonnet, web + camera-controls 2.10.1 source): `docs/ai/research/smooth-navigation-2026-10-12.md`. Blender's own source
+  (`view3d_navigate_view_zoom.cc`, main, fetched): a wheel step is `step = 1.2f` applied at once, no Smooth View; drags write the
+  view per mouse move; Zoom to Mouse Position only with `use_cursor_init`. So Edit's instant wheel step already matched Blender.
+- My own probe was wrong for a round: camera-controls `getPosition()` returns the END pose by default (receiveEndValue=true);
+  the probe now logs `cc._camera.position`. With that: dev = 1 frame per notch (3.8 m jump), branch Navigate with
+  draggingSmoothTime 0.125 = 15.7 frames per notch, max frame step 0.385 m.
+- Easing is now per tool (`mappings.js`): Navigate smoothTime 0.25 / draggingSmoothTime 0.125 (camera-controls defaults, a glide;
+  Sketchfab publishes no numbers — stated as such); Edit 0.2 / 0 (Blender: instant drags and wheel; his Smooth View 200 ms for
+  view changes).
+- His tab, read-only sampler during his own test (eDP-2 2560×1440 @ 240 Hz, DPR 1.5, di browser --ozone-platform=x11
+  --use-angle=vulkan on the 3080): rAF median 8.3 ms (120 fps) in every active second, p90 8.4–16.6 ms, worst frames 37, 54
+  and 29 ms in the first three seconds (warm-up), none over 20 ms afterwards. Frame rate is not the stuck.
+- His pivot trace from that test: 25 wheel notches with the pointer on the roof at `distance 0.35` (camera-controls' minDistance
+  clamp), 4 cm per notch. Reproduced (`NAV_POINTER=surface`, 40 notches): before, the last notches 0.053 m each at 0.35 m;
+  after `pickPivot({ beyond: minDistance × 1.5 })` (a surface closer than the clamp is the one we are pressed against, look
+  past it): 5.7–7.2 m per notch, 150.5 m of travel, the camera goes through. Pan after: 7.746 → 17.244 m per 240 px.
+- Owed: the owner's hands on Navigate's glide vs Edit's instant feel; a drag at 120 fps with DPR 1.5 on a 2560×1440 panel is
+  the heaviest case — the render cost per frame on his GPU was not measured (only rAF gaps).
