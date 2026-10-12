@@ -71,6 +71,7 @@ export const stageAtLine = (base, design) => ({
     front_z_m: design.booth.front_z_m,
     truss_axis_x_m: design.truss.axis_x_m,
     ...(design.truss.behind_m !== undefined ? { truss_behind_m: design.truss.behind_m } : {}),
+    ...(design.truss.crane_z_m !== undefined ? { truss_crane_z_m: design.truss.crane_z_m } : {}),
     deck_h_m: design.booth.deck_h_m ?? base.stage.deck_h_m,
     ...(design.booth.stairs === false ? { stairs: null } : {}),
     label: `DJ place on the owner's stage line (z ${design.stage_line.z_m}), 2026-10-07`

@@ -87,6 +87,7 @@ export const FAMILY_BY_TYPE = {
     'device.ptz.osc': 'bring-in',
     // make — things you conjure into the space
     'geom.cube': 'make',
+    'laser.shape': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -174,6 +175,7 @@ export const FAMILY_BY_TYPE = {
     // changes is what a stranger receives, not what the graph makes.
     'view.publish': 'send-out',
     'device.dmx.out': 'send-out',
+    'device.laser.out': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -826,6 +828,32 @@ export const NODE_TYPES = {
         // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
         defaultFrame: { width: 340, height: 330 },
+    },
+
+    'device.laser.out': {
+        id: 'device.laser.out',
+        label: 'Laser Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['laser', 'lasers', 'lasercube', 'cube', 'beam', 'show', 'ilda', 'stage', 'blackout', 'preview'],
+        inputs: [
+            // The frame from a Laser node (or anything that makes the same
+            // shape of object); the panel draws it and sends it on change.
+            { id: 'frame',    type: 'any',    label: 'Frame' },
+            // 'all' or one cube's id, as the server names them.
+            { id: 'cube',     type: 'string', label: 'Cube', default: 'all' },
+            // `any`, the DMX Out idiom: a Button, a Compare, a Toggle.
+            { id: 'blackout', type: 'any',    label: 'Blackout' },
+        ],
+        outputs: [
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        // panel-2d: the preview of the shape is the point, and "disarmed" and
+        // "no server" are normal states that each need somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 360 },
     },
 
     'device.midi.out': {
@@ -2096,6 +2124,36 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'laser.shape': {
+        id: 'laser.shape',
+        label: 'Laser',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'beam', 'draw', 'frame', 'lasercube'],
+        inputs: [
+            // One of: circle, line, square, triangle, star, wave, fan, spiral.
+            { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
+            { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
+            // Where the shape sits up the cube's field, -1..1. 0.5 keeps a size-0.5 shape wholly in
+            // the upper half — the server blanks every point below the cube's own aim (the keep-in
+            // zone, serverXR/src/laser), so a shape at 0 loses its lower half.
+            { id: 'height',   type: 'number', label: 'Height',   default: 0.5 },
+            // Turns, not degrees: 0.25 is a quarter turn, the Oscillator's unit.
+            { id: 'rotation', type: 'number', label: 'Rotation', default: 0 },
+            { id: 'spin',     type: 'number', label: 'Spin',     default: 0 },
+            { id: 'colour',   type: 'color',  label: 'Colour',   default: '#00ff40' },
+            // Brightness 0..1 — Sound's volume wired here makes the shape breathe.
+            { id: 'level',    type: 'number', label: 'Level',    default: 1 },
+            { id: 'points',   type: 'number', label: 'Points',   default: 120 },
+        ],
+        outputs: [
+            { id: 'frame', type: 'any', label: 'Frame' },
         ],
         defaultValues: {},
         render: 'hidden',

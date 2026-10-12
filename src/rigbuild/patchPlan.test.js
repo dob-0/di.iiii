@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import library from './types/moxir.json'
 import minimalPlan from '../../scripts/place/rigs/moxir-2026-10-17-minimal.patch.json'
-import { addressSetting, artnetOf, footprintOfName, planPatch, resolveMode, selectorTest } from './patchPlan.js'
+import { addressSetting, artnetOf, expectedRoom, footprintOfName, naturalCompare, planPatch, resolveMode, selectorTest } from './patchPlan.js'
 import { typeById } from './fixtureTypes.js'
+import { mergePatch, normalizeFixture } from '../shared/projectSchema.js'
 
 const lamp = (id, type, x, z = 0, extra = {}) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [x, 6, z], rotation: [0, 0, 0] }, fixture: { type, ...extra } } })
 
@@ -91,6 +92,97 @@ describe('the patch plan', () => {
         const plan = basePlan()
         plan.minSpare = 480
         expect(planPatch({ entities: room(), library, plan }).warnings.join('\n')).toMatch(/U1: only 472 channels spare/)
+    })
+})
+
+describe('what a plan may ask of its lamps: ids, counts, lamps kept off DMX (MOXIR v2 patch, owner N460.2)', () => {
+    const lamps = (type, ids, x = (i) => i, extra = {}) => ids.map((id, i) => lamp(id, type, x(i), 0, extra))
+
+    it('walks a block in unit-id order when asked, whatever the positions: the addresses stay with the unit if its place changes', () => {
+        const plan = { modes: { 'up-b380f': { crew: '16ch' } }, universes: [{ universe: 1, blocks: [{ select: { type: 'up-b380f' }, start: 1, fixture: 101, order: 'id-asc' }] }] }
+        // unit 10 stands left of unit 2 and unit 1: an x walk would put it first; ids are compared as numbers (2 before 10)
+        const entities = [lamp('rig-laser-10', 'up-b380f', -5), lamp('rig-laser-2', 'up-b380f', 4), lamp('rig-laser-1', 'up-b380f', 9)]
+        const r = planPatch({ entities, library, plan })
+        expect(r.errors).toEqual([])
+        expect(r.assignments.map((a) => `${a.index} ${a.entityId} U1.${a.address}`)).toEqual(['101 rig-laser-1 U1.1', '102 rig-laser-2 U1.17', '103 rig-laser-10 U1.33'])
+        plan.universes[0].blocks[0].order = 'id-desc'
+        expect(planPatch({ entities, library, plan }).assignments.map((a) => a.entityId)).toEqual(['rig-laser-10', 'rig-laser-2', 'rig-laser-1'])
+    })
+
+    it('leaves a lamp the document keeps off DMX alone: it takes no address and its absence from every block is no error', () => {
+        const plan = { modes: { 'up-b380f': { crew: '16ch' } }, universes: [{ universe: 1, blocks: [{ select: { type: 'up-b380f' }, start: 1, fixture: 101 }] }] }
+        const cube = lamp('rig-laser-1a', 'ext-lc-ultra-mk2', 0, 0, { dmx: false })
+        const r = planPatch({ entities: [lamp('b-1', 'up-b380f', 0), cube], library, plan })
+        expect(r.errors).toEqual([])
+        expect(r.assignments.map((a) => a.entityId)).toEqual(['b-1'])
+        expect(r.offDmx).toEqual(['rig-laser-1a'])
+        expect(r.ops.map((o) => o.payload.entityId)).toEqual(['b-1'])
+        // the same cube WITHOUT the flag is still a lamp no block claims: said, not skipped
+        const loose = planPatch({ entities: [lamp('b-1', 'up-b380f', 0), lamp('rig-laser-1a', 'ext-lc-ultra-mk2', 0)], library, plan })
+        expect(loose.errors.join('\n')).toMatch(/rig-laser-1a .* in no block/)
+    })
+
+    it('puts a lamp on DMX when a block names it, clears its off-DMX flag in the same op, says so, and a re-run writes nothing', () => {
+        const plan = { modes: { 'up-yz31p': { crew: '1ch' } }, universes: [{ universe: 1, blocks: [{ select: { type: 'up-yz31p' }, start: 501, fixture: 141 }] }] }
+        const entities = [lamp('rig-smoke-planes', 'up-yz31p', 0, 0, { dmx: false })]
+        const r = planPatch({ entities, library, plan })
+        expect(r.errors).toEqual([])
+        expect(r.warnings.join('\n')).toMatch(/rig-smoke-planes .*off DMX in the document.*U1\.501/)
+        expect(r.ops).toHaveLength(1)
+        expect(r.ops[0].payload.patch).toMatchObject({ index: 141, universe: 1, address: 501, dmx: null })
+        // applied the way the document applies an updateComponent: merge patch, then the schema's own normalisation
+        const after = normalizeFixture(mergePatch(entities[0].components.fixture, r.ops[0].payload.patch))
+        expect(after).toMatchObject({ type: 'up-yz31p', index: 141, universe: 1, address: 501, mode: '1ch-assumed' })
+        expect(after.dmx).toBeUndefined()
+        entities[0].components.fixture = after
+        expect(planPatch({ entities, library, plan }).ops).toEqual([])
+        expect(planPatch({ entities, library, plan }).offDmx).toEqual([])
+    })
+
+    it('holds a block to the number of lamps it expects, so a missing or extra unit is said before anything is written', () => {
+        const plan = { modes: { 'up-b380f': { crew: '16ch' } }, universes: [{ universe: 1, blocks: [{ select: { type: 'up-b380f' }, start: 1, fixture: 101, units: 3 }] }] }
+        expect(planPatch({ entities: lamps('up-b380f', ['a', 'b', 'c']), library, plan }).errors).toEqual([])
+        const short = planPatch({ entities: lamps('up-b380f', ['a', 'b']), library, plan })
+        expect(short.errors.join('\n')).toMatch(/expects 3 lamps, the document has 2/)
+        const extra = planPatch({ entities: lamps('up-b380f', ['a', 'b', 'c', 'd']), library, plan })
+        expect(extra.errors.join('\n')).toMatch(/expects 3 lamps, the document has 4/)
+    })
+})
+
+describe('the room a plan expects (stand-in lamps, for a crew table or a check when no project is at hand)', () => {
+    const plan = () => ({
+        modes: { 'up-b380f': { crew: '16ch' }, 'up-pl5403': { crew: '8ch' } },
+        universes: [
+            { universe: 1, blocks: [{ select: { type: 'up-b380f' }, start: 1, fixture: 101, order: 'id-asc', units: 3 }] },
+            { universe: 2, blocks: [
+                { select: { group: 'rig-par-cut', type: 'up-pl5403' }, start: 1, fixture: 201, order: 'id-asc', units: 2 },
+                { select: { group: 'rig-par-planes', type: 'up-pl5403' }, start: 101, fixture: 221, order: 'id-asc', units: 4 }
+            ] }
+        ],
+        offDmx: [{ type: 'ext-lc-ultra-mk2', units: 6 }]
+    })
+    it('makes one lamp per expected unit, named so the block that expects it selects it, plus the lamps kept off DMX', () => {
+        const room = expectedRoom(plan())
+        expect(room.filter((e) => e.components.fixture.dmx !== false).map((e) => e.id)).toEqual([
+            'up-b380f-01', 'up-b380f-02', 'up-b380f-03', 'rig-par-cut-01', 'rig-par-cut-02', 'rig-par-planes-01', 'rig-par-planes-02', 'rig-par-planes-03', 'rig-par-planes-04'
+        ])
+        expect(room.filter((e) => e.components.fixture.dmx === false)).toHaveLength(6)
+        const r = planPatch({ entities: room, library, plan: plan() })
+        expect(r.errors).toEqual([])
+        expect(r.offDmx).toHaveLength(6)
+        expect(r.assignments.map((a) => `U${a.universe}.${a.address} #${a.index}`).slice(0, 4)).toEqual(['U1.1 #101', 'U1.17 #102', 'U1.33 #103', 'U2.1 #201'])
+    })
+    it('cannot make lamps for a block it cannot describe, and says so', () => {
+        const noUnits = plan()
+        delete noUnits.universes[0].blocks[0].units
+        expect(() => expectedRoom(noUnits)).toThrow(/states no units/)
+        const byHeight = plan()
+        byHeight.universes[0].blocks[0].select.y = '>3'
+        expect(() => expectedRoom(byHeight)).toThrow(/geometry/)
+    })
+    it('counts ids the way a person does', () => {
+        expect(['rig-par-10', 'rig-par-2', 'rig-par-1'].sort(naturalCompare)).toEqual(['rig-par-1', 'rig-par-2', 'rig-par-10'])
+        expect(['b-02', 'b-1', 'a-9'].sort(naturalCompare)).toEqual(['a-9', 'b-1', 'b-02'])
     })
 })
 
