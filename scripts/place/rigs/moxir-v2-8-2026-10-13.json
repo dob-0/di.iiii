@@ -1,8 +1,8 @@
 {
  "snapshot": "moxir-v2-1-2026-10-10",
  "version": "2.8",
- "title": "MOXIR v2.8 - from the dance floor: the laser lid on the columns, the red tent",
- "what": "v2.7 with the six LaserCubes moved from the far crane to the nave column brackets (6.0 m, x \u00b111.5, z 18/30/42) fanning a LID of 36 lines across the floor (lowest 6.0 m, 4.3 m over a head), and the 14 side washes tilted 30 deg in as a red tent; everything else as v2.7",
+ "title": "MOXIR v2.8 - from the dance floor: the lasers down to the rules from the far crane, the red tent",
+ "what": "v2.7 with every laser line from the far crane at its steepest down tilt under the rules (side walls 5.4-5.7 m, entry wall 9.0-9.8 m) and the 14 side washes tilted in as a red tent; everything else as v2.7",
  "written_by": "scripts/place/moxir_v2_8_floor.py",
  "date": "2026-10-13",
  "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
@@ -614,19 +614,19 @@
   {
    "id": "rig-lasercube-cut-01",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recompu; v2.8 (moxir_v2_8_floor.py): off the far crane onto the west column row, bracket at 6.0 m, z 18, the laser LID over the floor (owner 2026-10-12: close over the heads, from the floor)",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +60 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience; v2.8 (moxir_v2_8_floor.py): same place and heading, every line at its steepest down tilt under the rules (owner 2026-10-13: keep the place, change the angle)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    -11.5,
-    6.0,
-    18.0
+    -8.7,
+    8.81,
+    -42.45
    ],
    "r": [
-    -3.1416,
+    -1.778,
     0.0,
-    1.5499
+    1.0378
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -644,23 +644,24 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.68,
-       53.07
+       53.81,
+       9.31,
+       53.8
       ],
-      "length_m": 80.014,
+      "length_m": 114.766,
       "r": [
-       -1.6185,
+       -1.576,
        0.0,
-       1.1166
+       0.576
       ],
-      "pan_deg": 64.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.68,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 33.0,
+      "tilt_deg": 0.25,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.31,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "1b",
@@ -668,22 +669,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.58,
-       41.36
+       5.71,
+       13.51
       ],
-      "length_m": 75.617,
+      "length_m": 88.969,
       "r": [
-       -1.6385,
+       -1.5154,
        0.0,
-       1.256
+       0.8894
       ],
-      "pan_deg": 72.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 51.0,
+      "tilt_deg": -2.0,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.58,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.71,
+      "lowest_m": 5.71,
+      "over_hand_rule_m": 0.31,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "1c",
@@ -691,22 +693,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.51,
-       25.56
+       5.58,
+       -15.92
       ],
-      "length_m": 72.312,
+      "length_m": 74.087,
       "r": [
-       -1.7686,
+       -1.4496,
        0.0,
-       1.464
+       1.2018
       ],
-      "pan_deg": 84.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 69.0,
+      "tilt_deg": -2.5,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.51,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.58,
+      "lowest_m": 5.58,
+      "over_hand_rule_m": 0.18,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": -2.5
      },
      {
       "id": "1d",
@@ -714,22 +717,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.51,
-       10.44
+       5.49,
+       -38.83
       ],
-      "length_m": 72.312,
+      "length_m": 69.275,
       "r": [
-       1.7686,
+       -0.8282,
        0.0,
-       1.464
+       1.4998
       ],
-      "pan_deg": 96.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 87.0,
+      "tilt_deg": -2.75,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.51,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.49,
+      "lowest_m": 5.49,
+      "over_hand_rule_m": 0.09,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "1e",
@@ -737,22 +741,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.58,
-       -5.36
+       5.65,
+       34.29
       ],
-      "length_m": 75.617,
+      "length_m": 103.317,
       "r": [
-       1.6385,
+       -1.5297,
        0.0,
-       1.256
+       0.7326
       ],
-      "pan_deg": 108.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 42.0,
+      "tilt_deg": -1.75,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.58,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.65,
+      "lowest_m": 5.65,
+      "over_hand_rule_m": 0.25,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      },
      {
       "id": "1f",
@@ -760,22 +765,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.66,
-       -15.53
+       5.42,
+       -27.76
       ],
-      "length_m": 79.35,
+      "length_m": 70.725,
       "r": [
-       1.6203,
+       -1.3438,
        0.0,
-       1.134
+       1.356
       ],
-      "pan_deg": 115.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 78.0,
+      "tilt_deg": -2.75,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.66,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.42,
+      "lowest_m": 5.42,
+      "over_hand_rule_m": 0.02,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      }
     ],
     "duty": 1.0,
@@ -813,25 +819,24 @@
      -1.299
     ]
    },
-   "heading_deg": 90.0,
-   "mount": "UNVALIDATED: column bracket on the nave column x -12 z 18 at 6.0 m (the stage key precedent), facing across the floor; the rigging check is owed (SIDE 2)"
+   "heading_deg": 60.0
   },
   {
    "id": "rig-lasercube-cut-02",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recompu; v2.8 (moxir_v2_8_floor.py): off the far crane onto the west column row, bracket at 6.0 m, z 30, the laser LID over the floor (owner 2026-10-12: close over the heads, from the floor)",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +36 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience; v2.8 (moxir_v2_8_floor.py): same place and heading, every line at its steepest down tilt under the rules (owner 2026-10-13: keep the place, change the angle)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    -11.5,
-    6.0,
-    30.0
+    -7.3,
+    8.81,
+    -42.45
    ],
    "r": [
-    -3.1416,
+    -1.7,
     0.0,
-    1.5499
+    0.6243
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -849,46 +854,48 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.58,
-       53.36
+       7.94,
+       9.66,
+       53.8
       ],
-      "length_m": 75.617,
+      "length_m": 97.453,
       "r": [
-       -1.6385,
+       -1.5796,
        0.0,
-       1.256
+       0.1571
       ],
-      "pan_deg": 72.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.58,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 9.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.66,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "2b",
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.58,
-       53.36
+       41.74,
+       9.28,
+       53.8
       ],
-      "length_m": 75.617,
+      "length_m": 108.025,
       "r": [
-       -1.6385,
+       -1.5757,
        0.0,
-       1.256
+       0.4712
       ],
-      "pan_deg": 72.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.58,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 27.0,
+      "tilt_deg": 0.25,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.28,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "2c",
@@ -896,22 +903,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.51,
-       37.56
+       5.47,
+       25.25
       ],
-      "length_m": 72.312,
+      "length_m": 95.801,
       "r": [
-       -1.7686,
+       -1.5215,
        0.0,
-       1.464
+       0.7848
       ],
-      "pan_deg": 84.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 45.0,
+      "tilt_deg": -2.0,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.51,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.47,
+      "lowest_m": 5.47,
+      "over_hand_rule_m": 0.07,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "2d",
@@ -919,45 +927,47 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.51,
-       22.44
+       5.49,
+       -7.96
       ],
-      "length_m": 72.312,
+      "length_m": 76.054,
       "r": [
-       1.7686,
+       -1.4749,
        0.0,
-       1.464
+       1.0977
       ],
-      "pan_deg": 96.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 63.0,
+      "tilt_deg": -2.5,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.51,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.49,
+      "lowest_m": 5.49,
+      "over_hand_rule_m": 0.09,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "2e",
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.58,
-       6.64
+       23.97,
+       9.69,
+       53.8
       ],
-      "length_m": 75.617,
+      "length_m": 101.207,
       "r": [
-       1.6385,
+       -1.58,
        0.0,
-       1.256
+       0.3141
       ],
-      "pan_deg": 108.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.58,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 18.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.69,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      },
      {
       "id": "2f",
@@ -965,22 +975,23 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.74,
-       -11.51
+       5.52,
+       6.74
       ],
-      "length_m": 83.041,
+      "length_m": 83.746,
       "r": [
-       1.6127,
+       -1.5041,
        0.0,
-       1.0468
+       0.9414
       ],
-      "pan_deg": 120.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 54.0,
+      "tilt_deg": -2.25,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.74,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.52,
+      "lowest_m": 5.52,
+      "over_hand_rule_m": 0.12,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      }
     ],
     "duty": 1.0,
@@ -1018,25 +1029,24 @@
      -0.8138
     ]
    },
-   "heading_deg": 90.0,
-   "mount": "UNVALIDATED: column bracket on the nave column x -12 z 30 at 6.0 m (the stage key precedent), facing across the floor; the rigging check is owed (SIDE 2)"
+   "heading_deg": 36.0
   },
   {
    "id": "rig-lasercube-cut-03",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomp; v2.8 (moxir_v2_8_floor.py): off the far crane onto the east column row, bracket at 6.0 m, z 30, the laser LID over the floor (owner 2026-10-12: close over the heads, from the floor)",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -36 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience; v2.8 (moxir_v2_8_floor.py): same place and heading, every line at its steepest down tilt under the rules (owner 2026-10-13: keep the place, change the angle)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    11.5,
-    6.0,
-    30.0
+    -3.1,
+    8.81,
+    -42.45
    ],
    "r": [
-    -3.1416,
+    -1.7,
     0.0,
-    -1.5499
+    -0.6243
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -1055,22 +1065,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.12,
-       53.36
+       5.54,
+       -25.48
       ],
-      "length_m": 53.305,
+      "length_m": 37.516,
       "r": [
-       -1.6185,
+       -1.3804,
        0.0,
-       -1.1166
+       -1.0921
       ],
-      "pan_deg": -64.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -63.0,
+      "tilt_deg": -5.0,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.12,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.54,
+      "lowest_m": 5.54,
+      "over_hand_rule_m": 0.14,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": -5.0
      },
      {
       "id": "5b",
@@ -1078,22 +1089,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.05,
-       45.56
+       5.52,
+       -9.15
       ],
-      "length_m": 50.376,
+      "length_m": 47.208,
       "r": [
-       -1.6385,
+       -1.4722,
        0.0,
-       -1.256
+       -0.783
       ],
-      "pan_deg": -72.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -45.0,
+      "tilt_deg": -4.0,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.05,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.52,
+      "lowest_m": 5.52,
+      "over_hand_rule_m": 0.12,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "5c",
@@ -1101,45 +1113,47 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.01,
-       35.03
+       5.61,
+       22.9
       ],
-      "length_m": 48.174,
+      "length_m": 73.419,
       "r": [
-       -1.7686,
+       -1.5218,
        0.0,
-       -1.464
+       -0.4708
       ],
-      "pan_deg": -84.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -27.0,
+      "tilt_deg": -2.5,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.01,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.61,
+      "lowest_m": 5.61,
+      "over_hand_rule_m": 0.21,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "5d",
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       7.01,
-       24.97
+       -18.34,
+       9.66,
+       53.8
       ],
-      "length_m": 48.174,
+      "length_m": 97.453,
       "r": [
-       1.7686,
+       -1.5796,
        0.0,
-       -1.464
+       -0.1571
       ],
-      "pan_deg": -96.0,
-      "tilt_deg": 1.2,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.01,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": -9.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.66,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "5e",
@@ -1147,45 +1161,47 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.05,
-       14.44
+       5.57,
+       -18.26
       ],
-      "length_m": 50.376,
+      "length_m": 41.288,
       "r": [
-       1.6385,
+       -1.4377,
        0.0,
-       -1.256
+       -0.9382
       ],
-      "pan_deg": -108.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -54.0,
+      "tilt_deg": -4.5,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.05,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.57,
+      "lowest_m": 5.57,
+      "over_hand_rule_m": 0.17,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      },
      {
       "id": "5f",
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       7.16,
-       2.34
+       -34.37,
+       9.25,
+       53.8
       ],
-      "length_m": 55.322,
+      "length_m": 101.204,
       "r": [
-       1.6127,
+       -1.5754,
        0.0,
-       -1.0468
+       -0.3142
       ],
-      "pan_deg": -120.0,
-      "tilt_deg": 1.2,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.16,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": -18.0,
+      "tilt_deg": 0.25,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.25,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      }
     ],
     "duty": 1.0,
@@ -1223,25 +1239,24 @@
      0.8138
     ]
    },
-   "heading_deg": -90.0,
-   "mount": "UNVALIDATED: column bracket on the nave column x +12 z 30 at 6.0 m (the stage key precedent), facing across the floor; the rigging check is owed (SIDE 2)"
+   "heading_deg": -36.0
   },
   {
    "id": "rig-lasercube-cut-04",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recompu; v2.8 (moxir_v2_8_floor.py): off the far crane onto the west column row, bracket at 6.0 m, z 42, the laser LID over the floor (owner 2026-10-12: close over the heads, from the floor)",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +12 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience; v2.8 (moxir_v2_8_floor.py): same place and heading, every line at its steepest down tilt under the rules (owner 2026-10-13: keep the place, change the angle)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    -11.5,
-    6.0,
-    42.0
+    -5.9,
+    8.81,
+    -42.45
    ],
    "r": [
-    -3.1416,
+    -1.6778,
     0.0,
-    1.5499
+    0.2083
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0105,
@@ -1259,69 +1274,72 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.52,
-       53.39
+       -31.69,
+       9.24,
+       53.8
       ],
-      "length_m": 72.812,
+      "length_m": 99.646,
       "r": [
-       -1.7039,
+       -1.5753,
        0.0,
-       1.4123
+       -0.2618
       ],
-      "pan_deg": 81.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.52,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": -15.0,
+      "tilt_deg": 0.25,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.24,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "3b",
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.52,
-       53.39
+       -0.86,
+       9.65,
+       53.8
       ],
-      "length_m": 72.812,
+      "length_m": 96.386,
       "r": [
-       -1.7039,
+       -1.5795,
        0.0,
-       1.4123
+       0.0524
       ],
-      "pan_deg": 81.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.52,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 3.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "3c",
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.51,
-       49.56
+       31.05,
+       9.71,
+       53.8
       ],
-      "length_m": 72.312,
+      "length_m": 103.102,
       "r": [
-       -1.7686,
+       -1.5801,
        0.0,
-       1.464
+       0.3665
       ],
-      "pan_deg": 84.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.51,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 21.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.71,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "3d",
@@ -1329,68 +1347,71 @@
       "duty": 1.0,
       "to": [
        60.4,
-       7.51,
-       34.44
+       5.59,
+       39.42
       ],
-      "length_m": 72.312,
+      "length_m": 105.401,
       "r": [
-       1.7686,
+       -1.5315,
        0.0,
-       1.464
+       0.6803
       ],
-      "pan_deg": 96.0,
-      "tilt_deg": 1.2,
+      "pan_deg": 39.0,
+      "tilt_deg": -1.75,
       "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.51,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.59,
+      "lowest_m": 5.59,
+      "over_hand_rule_m": 0.19,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "3e",
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.58,
-       18.64
+       -16.02,
+       9.65,
+       53.8
       ],
-      "length_m": 75.617,
+      "length_m": 96.784,
       "r": [
-       1.6385,
+       -1.5796,
        0.0,
-       1.256
+       -0.1047
       ],
-      "pan_deg": 108.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.58,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": -6.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      },
      {
       "id": "3f",
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       7.74,
-       0.49
+       49.67,
+       9.29,
+       53.8
       ],
-      "length_m": 83.041,
+      "length_m": 111.141,
       "r": [
-       1.6127,
+       -1.5758,
        0.0,
-       1.0468
+       0.5236
       ],
-      "pan_deg": 120.0,
-      "tilt_deg": 1.2,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 7.74,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 30.0,
+      "tilt_deg": 0.25,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.29,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      }
     ],
     "duty": 1.0,
@@ -1428,25 +1449,24 @@
      -0.273
     ]
    },
-   "heading_deg": 90.0,
-   "mount": "UNVALIDATED: column bracket on the nave column x -12 z 42 at 6.0 m (the stage key precedent), facing across the floor; the rigging check is owed (SIDE 2)"
+   "heading_deg": 12.0
   },
   {
    "id": "rig-lasercube-cut-05",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomp; v2.8 (moxir_v2_8_floor.py): off the far crane onto the east column row, bracket at 6.0 m, z 18, the laser LID over the floor (owner 2026-10-12: close over the heads, from the floor)",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -12 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience; v2.8 (moxir_v2_8_floor.py): same place and heading, every line at its steepest down tilt under the rules (owner 2026-10-13: keep the place, change the angle)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    11.5,
-    6.0,
-    18.0
+    -4.5,
+    8.81,
+    -42.45
    ],
    "r": [
-    -3.1416,
+    -1.6778,
     0.0,
-    -1.5499
+    -0.2083
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0105,
@@ -1465,22 +1485,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.16,
-       45.66
+       5.49,
+       -3.06
       ],
-      "length_m": 55.322,
+      "length_m": 50.798,
       "r": [
-       -1.6127,
+       -1.4867,
        0.0,
-       -1.0468
+       -0.6789
       ],
-      "pan_deg": -60.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -39.0,
+      "tilt_deg": -3.75,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.16,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.49,
+      "lowest_m": 5.49,
+      "over_hand_rule_m": 0.09,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": -3.5
      },
      {
       "id": "4b",
@@ -1488,68 +1509,71 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.05,
-       33.56
+       5.7,
+       40.65
       ],
-      "length_m": 50.376,
+      "length_m": 89.069,
       "r": [
-       -1.6385,
+       -1.5334,
        0.0,
-       -1.256
+       -0.3663
       ],
-      "pan_deg": -72.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -21.0,
+      "tilt_deg": -2.0,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.05,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.7,
+      "lowest_m": 5.7,
+      "over_hand_rule_m": 0.3,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "4c",
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       7.01,
-       23.03
+       -9.54,
+       9.65,
+       53.8
       ],
-      "length_m": 48.174,
+      "length_m": 96.386,
       "r": [
-       -1.7686,
+       -1.5795,
        0.0,
-       -1.464
+       -0.0524
       ],
-      "pan_deg": -84.0,
-      "tilt_deg": 1.2,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.01,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": -3.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 0.5
      },
      {
       "id": "4d",
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       7.01,
-       12.97
+       21.29,
+       9.68,
+       53.8
       ],
-      "length_m": 48.174,
+      "length_m": 99.649,
       "r": [
-       1.7686,
+       -1.5798,
        0.0,
-       -1.464
+       0.2618
       ],
-      "pan_deg": -96.0,
-      "tilt_deg": 1.2,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.01,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 15.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.68,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "4e",
@@ -1557,45 +1581,47 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.05,
-       2.44
+       5.47,
+       12.8
       ],
-      "length_m": 50.376,
+      "length_m": 63.888,
       "r": [
-       1.6385,
+       -1.5104,
        0.0,
-       -1.256
+       -0.5228
       ],
-      "pan_deg": -108.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -30.0,
+      "tilt_deg": -3.0,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.05,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.47,
+      "lowest_m": 5.47,
+      "over_hand_rule_m": 0.07,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      },
      {
       "id": "4f",
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       7.11,
-       -4.34
+       5.62,
+       9.65,
+       53.8
       ],
-      "length_m": 52.863,
+      "length_m": 96.784,
       "r": [
-       1.6203,
+       -1.5796,
        0.0,
-       -1.134
+       0.1047
       ],
-      "pan_deg": -115.0,
-      "tilt_deg": 1.2,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.11,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "pan_deg": 6.0,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      }
     ],
     "duty": 1.0,
@@ -1633,25 +1659,24 @@
      0.273
     ]
    },
-   "heading_deg": -90.0,
-   "mount": "UNVALIDATED: column bracket on the nave column x +12 z 18 at 6.0 m (the stage key precedent), facing across the floor; the rigging check is owed (SIDE 2)"
+   "heading_deg": -12.0
   },
   {
    "id": "rig-lasercube-cut-06",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomp; v2.8 (moxir_v2_8_floor.py): off the far crane onto the east column row, bracket at 6.0 m, z 42, the laser LID over the floor (owner 2026-10-12: close over the heads, from the floor)",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -60 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience; v2.8 (moxir_v2_8_floor.py): same place and heading, every line at its steepest down tilt under the rules (owner 2026-10-13: keep the place, change the angle)",
    "part": "laser",
    "layer": "lines",
    "status": "used",
    "p": [
-    11.5,
-    6.0,
-    42.0
+    -1.7,
+    8.81,
+    -42.45
    ],
    "r": [
-    -3.1416,
+    -1.778,
     0.0,
-    -1.5499
+    -1.0378
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -1670,22 +1695,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.03,
-       53.06
+       5.46,
+       -40.63
       ],
-      "length_m": 49.171,
+      "length_m": 34.908,
       "r": [
-       -1.6636,
+       -0.4979,
        0.0,
-       -1.343
+       -1.4615
       ],
-      "pan_deg": -77.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -87.0,
+      "tilt_deg": -5.5,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.03,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.46,
+      "lowest_m": 5.46,
+      "over_hand_rule_m": 0.06,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": -5.5
      },
      {
       "id": "6b",
@@ -1693,22 +1719,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.03,
-       53.06
+       5.56,
+       -29.13
       ],
-      "length_m": 49.171,
+      "length_m": 37.311,
       "r": [
-       -1.6636,
+       -1.3313,
        0.0,
-       -1.343
+       -1.1945
       ],
-      "pan_deg": -77.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -69.0,
+      "tilt_deg": -5.0,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.03,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.56,
+      "lowest_m": 5.56,
+      "over_hand_rule_m": 0.16,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "6c",
@@ -1716,22 +1743,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.01,
-       47.03
+       5.49,
+       -14.35
       ],
-      "length_m": 48.174,
+      "length_m": 44.774,
       "r": [
-       -1.7686,
+       -1.4533,
        0.0,
-       -1.464
+       -0.8867
       ],
-      "pan_deg": -84.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -51.0,
+      "tilt_deg": -4.25,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.01,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.49,
+      "lowest_m": 5.49,
+      "over_hand_rule_m": 0.09,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": -4.0
      },
      {
       "id": "6d",
@@ -1739,22 +1767,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.01,
-       36.97
+       5.47,
+       10.98
       ],
-      "length_m": 48.174,
+      "length_m": 63.799,
       "r": [
-       1.7686,
+       -1.5084,
        0.0,
-       -1.464
+       -0.5751
       ],
-      "pan_deg": -96.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -33.0,
+      "tilt_deg": -3.0,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.01,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.47,
+      "lowest_m": 5.47,
+      "over_hand_rule_m": 0.07,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 1.5
      },
      {
       "id": "6e",
@@ -1762,22 +1791,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.05,
-       26.44
+       5.55,
+       -35.07
       ],
-      "length_m": 50.376,
+      "length_m": 35.625,
       "r": [
-       1.6385,
+       -1.1547,
        0.0,
-       -1.256
+       -1.3425
       ],
-      "pan_deg": -108.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -78.0,
+      "tilt_deg": -5.25,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.05,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.55,
+      "lowest_m": 5.55,
+      "over_hand_rule_m": 0.15,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      },
      {
       "id": "6f",
@@ -1785,22 +1815,23 @@
       "duty": 1.0,
       "to": [
        -36.4,
-       7.16,
-       14.34
+       5.41,
+       -3.91
       ],
-      "length_m": 55.322,
+      "length_m": 51.97,
       "r": [
-       1.6127,
+       -1.4828,
        0.0,
-       -1.0468
+       -0.7311
       ],
-      "pan_deg": -120.0,
-      "tilt_deg": 1.2,
+      "pan_deg": -42.0,
+      "tilt_deg": -3.75,
       "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 7.16,
-      "lowest_m": 6.0,
-      "over_hand_rule_m": 0.6,
-      "checks": "lowest point 6.00 m >= 5.4 m (hand 2.4 m + 3 m, owner 2026-10-12); entry wall >= 9.0 m; no line through the crane park; DJ crane crossing >= 9.2 m; lamp/machine strikes UNVALIDATED"
+      "end_height_m": 5.41,
+      "lowest_m": 5.41,
+      "over_hand_rule_m": 0.01,
+      "checks": "steepest down under: lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m, no line through the crane park; lamp/crane strikes UNVALIDATED",
+      "was_tilt_deg_v2_7": 6.0
      }
     ],
     "duty": 1.0,
@@ -1838,8 +1869,7 @@
      1.299
     ]
    },
-   "heading_deg": -90.0,
-   "mount": "UNVALIDATED: column bracket on the nave column x +12 z 42 at 6.0 m (the stage key precedent), facing across the floor; the rigging check is owed (SIDE 2)"
+   "heading_deg": -60.0
   },
   {
    "id": "rig-par-planes-23",
@@ -17578,7 +17608,7 @@
  },
  "lasers": {
   "source": "scripts/place/moxir_v2_3_aerial.py",
-  "design": "v2.8 LID: six cubes on the nave column brackets at 6.0 m (x \u00b111.5, z 18,30,42), six lines each in the horizontal plane rising 1.2 deg, across the floor to the far side wall; the two UP-LA40WF unchanged",
+  "design": "v2.8: the v2.7 net (six cubes on the far crane, crossed headings, 36 lines) with every line at its steepest down tilt under the rules; the two UP-LA40WF unchanged",
   "previous": "v2.7 net from the far crane (moxir-v2-7-2026-10-12.json)",
   "tubes": [
    {
@@ -17617,30 +17647,30 @@
     "beam": "1a",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -11.5,
-     6.0,
-     18.0
+     -8.7,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.68,
-     53.07
+     53.81,
+     9.31,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "1b",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -11.5,
-     6.0,
-     18.0
+     -8.7,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.58,
-     41.36
+     5.71,
+     13.51
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17649,14 +17679,14 @@
     "beam": "1c",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -11.5,
-     6.0,
-     18.0
+     -8.7,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.51,
-     25.56
+     5.58,
+     -15.92
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17665,14 +17695,14 @@
     "beam": "1d",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -11.5,
-     6.0,
-     18.0
+     -8.7,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.51,
-     10.44
+     5.49,
+     -38.83
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17681,14 +17711,14 @@
     "beam": "1e",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -11.5,
-     6.0,
-     18.0
+     -8.7,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.58,
-     -5.36
+     5.65,
+     34.29
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17697,14 +17727,14 @@
     "beam": "1f",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -11.5,
-     6.0,
-     18.0
+     -8.7,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.66,
-     -15.53
+     5.42,
+     -27.76
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17713,46 +17743,46 @@
     "beam": "2a",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -11.5,
-     6.0,
-     30.0
+     -7.3,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.58,
-     53.36
+     7.94,
+     9.66,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "2b",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -11.5,
-     6.0,
-     30.0
+     -7.3,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.58,
-     53.36
+     41.74,
+     9.28,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "2c",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -11.5,
-     6.0,
-     30.0
+     -7.3,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.51,
-     37.56
+     5.47,
+     25.25
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17761,14 +17791,14 @@
     "beam": "2d",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -11.5,
-     6.0,
-     30.0
+     -7.3,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.51,
-     22.44
+     5.49,
+     -7.96
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17777,30 +17807,30 @@
     "beam": "2e",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -11.5,
-     6.0,
-     30.0
+     -7.3,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.58,
-     6.64
+     23.97,
+     9.69,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "2f",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -11.5,
-     6.0,
-     30.0
+     -7.3,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.74,
-     -11.51
+     5.52,
+     6.74
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17809,62 +17839,62 @@
     "beam": "3a",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -11.5,
-     6.0,
-     42.0
+     -5.9,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.52,
-     53.39
+     -31.69,
+     9.24,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "3b",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -11.5,
-     6.0,
-     42.0
+     -5.9,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.52,
-     53.39
+     -0.86,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "3c",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -11.5,
-     6.0,
-     42.0
+     -5.9,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.51,
-     49.56
+     31.05,
+     9.71,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "3d",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -11.5,
-     6.0,
-     42.0
+     -5.9,
+     8.81,
+     -42.45
     ],
     "to": [
      60.4,
-     7.51,
-     34.44
+     5.59,
+     39.42
     ],
     "half_fan_deg": 1.008,
     "ends_on": "east side wall (x +60.4)"
@@ -17873,46 +17903,46 @@
     "beam": "3e",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -11.5,
-     6.0,
-     42.0
+     -5.9,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.58,
-     18.64
+     -16.02,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "3f",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -11.5,
-     6.0,
-     42.0
+     -5.9,
+     8.81,
+     -42.45
     ],
     "to": [
-     60.4,
-     7.74,
-     0.49
+     49.67,
+     9.29,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "4a",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     11.5,
-     6.0,
-     18.0
+     -4.5,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.16,
-     45.66
+     5.49,
+     -3.06
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -17921,14 +17951,14 @@
     "beam": "4b",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     11.5,
-     6.0,
-     18.0
+     -4.5,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.05,
-     33.56
+     5.7,
+     40.65
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -17937,46 +17967,46 @@
     "beam": "4c",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     11.5,
-     6.0,
-     18.0
+     -4.5,
+     8.81,
+     -42.45
     ],
     "to": [
-     -36.4,
-     7.01,
-     23.03
+     -9.54,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "4d",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     11.5,
-     6.0,
-     18.0
+     -4.5,
+     8.81,
+     -42.45
     ],
     "to": [
-     -36.4,
-     7.01,
-     12.97
+     21.29,
+     9.68,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "4e",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     11.5,
-     6.0,
-     18.0
+     -4.5,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.05,
-     2.44
+     5.47,
+     12.8
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -17985,30 +18015,30 @@
     "beam": "4f",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     11.5,
-     6.0,
-     18.0
+     -4.5,
+     8.81,
+     -42.45
     ],
     "to": [
-     -36.4,
-     7.11,
-     -4.34
+     5.62,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "5a",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     11.5,
-     6.0,
-     30.0
+     -3.1,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.12,
-     53.36
+     5.54,
+     -25.48
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18017,14 +18047,14 @@
     "beam": "5b",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     11.5,
-     6.0,
-     30.0
+     -3.1,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.05,
-     45.56
+     5.52,
+     -9.15
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18033,14 +18063,14 @@
     "beam": "5c",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     11.5,
-     6.0,
-     30.0
+     -3.1,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.01,
-     35.03
+     5.61,
+     22.9
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18049,30 +18079,30 @@
     "beam": "5d",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     11.5,
-     6.0,
-     30.0
+     -3.1,
+     8.81,
+     -42.45
     ],
     "to": [
-     -36.4,
-     7.01,
-     24.97
+     -18.34,
+     9.66,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "5e",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     11.5,
-     6.0,
-     30.0
+     -3.1,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.05,
-     14.44
+     5.57,
+     -18.26
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18081,30 +18111,30 @@
     "beam": "5f",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     11.5,
-     6.0,
-     30.0
+     -3.1,
+     8.81,
+     -42.45
     ],
     "to": [
-     -36.4,
-     7.16,
-     2.34
+     -34.37,
+     9.25,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "6a",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     11.5,
-     6.0,
-     42.0
+     -1.7,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.03,
-     53.06
+     5.46,
+     -40.63
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18113,14 +18143,14 @@
     "beam": "6b",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     11.5,
-     6.0,
-     42.0
+     -1.7,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.03,
-     53.06
+     5.56,
+     -29.13
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18129,14 +18159,14 @@
     "beam": "6c",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     11.5,
-     6.0,
-     42.0
+     -1.7,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.01,
-     47.03
+     5.49,
+     -14.35
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18145,14 +18175,14 @@
     "beam": "6d",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     11.5,
-     6.0,
-     42.0
+     -1.7,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.01,
-     36.97
+     5.47,
+     10.98
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18161,14 +18191,14 @@
     "beam": "6e",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     11.5,
-     6.0,
-     42.0
+     -1.7,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.05,
-     26.44
+     5.55,
+     -35.07
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18177,14 +18207,14 @@
     "beam": "6f",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     11.5,
-     6.0,
-     42.0
+     -1.7,
+     8.81,
+     -42.45
     ],
     "to": [
      -36.4,
-     7.16,
-     14.34
+     5.41,
+     -3.91
     ],
     "half_fan_deg": 1.008,
     "ends_on": "west side wall (x -36.4)"
@@ -18194,10 +18224,14 @@
   "desk": "the desk writes 0 to every laser channel until the IEC 60825-1 sign-off (deskLookValues.js laserHeld)",
   "arithmetic": {
    "lines": 36,
-   "lowest_point_m": 6.0,
-   "over_rule_line_m": 0.6,
-   "over_a_1_7_m_head_m": 4.3,
-   "pans_pulled_in": 9
+   "lowest_point_m": 5.41,
+   "over_rule_line_m": 0.01,
+   "unchanged_lines": 0,
+   "lines_ending_on_the_entry_wall_m": [
+    9.2,
+    9.3,
+    9.7
+   ]
   },
   "scan_fan_deg": {
    "value": 60,
@@ -18207,7 +18241,7 @@
    "lowest_over_standing_m": 5.4,
    "basis": "owner 2026-10-12: 3 m counted from a raised hand (2.4 m) \u2014 IEC TR 60825-3 separation above the audience"
   },
-  "why_moved": "measured 2026-10-12 (lid_probe.py): from the far crane the lowest line over the floor is 9.27 m (9.04 with the crane rule off) because every such line ends on the entry wall (>= 9.0 m rule); the owner chose the floor view over the crane position"
+  "why_not_lower": "measured 2026-10-12 (lid_probe.py): a line from the far crane that reaches the dance floor runs along the hall and ends on the entry wall (>= 9.0 m rule: door top 6 m + 3 m); only lines to the side walls can come down to 5.4 m, and those pass beside the floor. The owner was told and chose this (ledger N533)."
  },
  "review": {
   "from": "scripts/place/rigs/moxir-v2-spread-2026-10-09.json",
@@ -23101,9 +23135,7 @@
   "A5, NOT MET: the FOH eye's PAR light at the peak is x0.74 of the spread (mid-hall x1.40, near the entry x1.69). Bound, measured on candidates-r2.json: all 38 hall PARs aimed for the FOH eye alone, under the 6 m spacing, reach 0.91 (full-level sum); about 20 of the 38 would have to serve it to pass, at the cost of the hall's coverage. A wash by the FOH riser (the island, or the desk's own) is the other way: the owner's call.",
   "A13-A15 (#878): the cut's geometry is copied from #878 at 9c732712 (not merged here); the lead re-runs A13-A15 when v2.1 combines both. The bay's barrier (x -12..-10.5, z 1.75..6.5) is in the order list as part of the stage pen's. rig-beam-planes-06's pan is capped on the operator sheet (a wider pan meets the near crane's girder): the desk enforcing it is the same OWED code as every window.",
   "The owner's look at the page and at the project in the scene.",
-  "v2.8: column brackets at 6.0 m \u2014 rigging check (SIDE 2)",
-  "v2.8: east-side laser lines over the kept machines \u2014 heights not in the hall record; a laser-margin run",
-  "v2.8: lamp strikes along all 36 lines (laser-margin run)"
+  "v2.8: lamp/crane strikes along all 36 lines (laser-margin run)"
  ],
  "near_crane": {
   "show_z_m": 3.2,
