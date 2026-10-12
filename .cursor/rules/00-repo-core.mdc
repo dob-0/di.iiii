@@ -37,7 +37,7 @@ Full guide: `docs/ai/roles/README.md` · Model routing: `docs/ai/roles/model-rou
 
 ## Token / Context Efficiency
 
-- Read `AGENTS.md`, `PROGRESS.md`, nearest scoped `AGENTS.md`, and your role card — then stop loading files.
+- Read `AGENTS.md` and the nearest scoped `AGENTS.md`; open your role card only when the task falls in its scope — then stop loading files. Never read `PROGRESS.md` (1.6 MB) or `docs/ai/known-fixes.md` (0.7 MB) whole: grep them.
 - Do not pre-read docs, architecture files, or tests "just in case". Read them only if blocked.
-- Use targeted grep over directory scans. Stop and summarize every 5 tool calls.
+- Use targeted grep over directory scans; batch independent commands into one tool call.
 - Model tiers: Haiku (simple edits) → Sonnet (features) → Opus (arch/security only). There is no local tier.
