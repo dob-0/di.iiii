@@ -207,3 +207,32 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
 - Also found and ended: a `scripts/nav/_probe.cjs` node from 13 h earlier (my own, file since deleted) still held test lane 1; the probes
   `probe-ceiling.cjs` / `probe-where.cjs` now `process.exit` so the CDP socket does not keep node alive after the page closes.
 - Still owed: the lamps budget while navigating (his decision), the 10-08 nav branches, Auto Perspective, Edit numpad rows in help.
+
+## Round 9 (2026-10-13): "still not what I want — stuck, stuck, then it goes hard; new mechanics, not numbers"
+
+- The seeded stress with a per-notch trace (`stress.cjs` now takes `NAV_TRACE=1` for an `ACT` line after every action and
+  `NAV_SHOTS=<dir>` for a picture per round; seed 835088540) showed both halves of what he felt. **Stuck:** zoom-out stopped at the
+  bound of far/4 (100 m: MOXIR v1-1's saved Far is 400), the last 7 of 20 notches out were 0 m. **Goes hard:** a zoom-in with nothing
+  under the pointer took the depth cap of twice the orbit distance, which grows the orbit distance 1.67x per notch, so the steps ran
+  0.62 → 1.04 → 1.73 → 1.86 m and the camera ended under the floor. Both rules were mine (rounds 1–8), neither is Blender's.
+- **The owner's own Blender 5.2.2, measured** (`scripts/nav/blender-wheel-probe.py` on the agent screen, his preferences read live:
+  Zoom to Mouse OFF, Auto Depth ON, Auto Perspective ON, Orbit Around Selection OFF): 20 notches in = 1.2^20 exactly (18.388 → 0.4796 m),
+  the orbit point never moved, the pointer at a corner changed nothing, 120 more notches out ran to 10 861 m (clip end 1000 x 10, one
+  step past), 300 in stopped at 0.001 m. Source read: `view3d_navigate_view_zoom.cc` `view_zoom_apply_step` (step 1.2, soft range
+  `ED_view3d_dist_soft_range_get` = clip end x 10, no clamp), `view3d_navigate.cc` `navigate_pivot_get` (a drag's pivot = the surface
+  under the pointer, else the view centre: `fallback_depth_pt = -rv3d->ofs`), v5.0.0.
+- **Built (his decision: "edit like in Blender, view like Sketchfab"):** `wheelZoomPlan` is now Blender's rule of the ORBIT DISTANCE
+  (1.2 per notch, steps only inside the soft range near clip x 1.5 … far x 10, never a clamp). The Blender tool's wheel reads nothing
+  under the pointer and keeps the orbit point. The Sketchfab tool's wheel still goes toward what is under the pointer (through it when
+  pressed against it), and with nothing there takes the orbit distance. `resolveMissDepth`, `capDepth`, the remembered depth and the
+  nearest-surface floor are gone: a drag with nothing under the pointer keeps the orbit point (Blender). Auto Depth now serves the
+  Blender tool's orbit too (Blender's USER_ZBUF_ORBIT); the Sketchfab tool's orbit keeps its centre (double-click moves it).
+- Measured after, same seed, 60 s quiet run: 12 rounds, 0 stuck, 0 zero-step notches (was 7 of 20), camera never under the floor
+  (min y 0.54 m; was −3 913 m), end-of-round distances 0.5–10.7 m (were pinned at 208 m), 0 errors, stalls 80 of 4181 frames; JS heap
+  155 → 300 MB over 68 s (NOT the 152 → 183 of round 8 — unexplained, owed a check). Walkthrough: every step jerk ≤ 2.2 except
+  "double-click floor then scroll 5" (max 0.95 m frame, probed in `probe-focus-scroll.cjs`, result below). Pan after 25 notches in:
+  0.49 m per 240 px (the depth under the pointer; round 1 fix gave 1.64 m with the remembered depth). Unit tests 415/415, eslint clean.
+- Sketchfab itself: not measured today — its viewer reports "3D/WebGL context error" in the test lane (embed and `probe-sketchfab.cjs`
+  kept for when the lane's GL allows it); its docs publish no zoom rule. The Sketchfab tool is unchanged beyond the shared rules above.
+- Stalls 842 of 1030 frames in one run were another session's lane rendering at the same time (lane 1, `floor-shots.cjs`); the clean
+  rerun gave 80 of 4181. CPU reached 91 °C during the probes; later runs waited for < 83 °C.

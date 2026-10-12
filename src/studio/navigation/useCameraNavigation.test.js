@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Group, PerspectiveCamera, Scene } from 'three'
 import { Vector3 } from 'three'
-import { MAX_UPDATE_DT, WHEEL_STEP_FACTOR, wheelZoomPlan, applyPivot, axisPointAtDepth, capDepth, clampUpdateDt, clampUpdates, entityRoots, resolveMissDepth, settleForGesture, zoomsIn } from './useCameraNavigation.js'
+import { MAX_UPDATE_DT, WHEEL_STEP_FACTOR, wheelZoomPlan, applyPivot, axisPointAtDepth, clampUpdateDt, clampUpdates, entityRoots, settleForGesture, zoomsIn } from './useCameraNavigation.js'
 
 describe('adapter helpers', () => {
     it('applyPivot never moves the orbit point while camera-controls is animating', () => {
@@ -58,34 +58,6 @@ describe('settleForGesture', () => {
     })
 })
 
-describe('resolveMissDepth (nothing under the pointer)', () => {
-    it('first gesture: the framing distance is the depth, and is remembered', () => {
-        expect(resolveMissDepth(null, 24.2, 4.5)).toEqual({ depth: 24.2, remembered: 24.2 })
-    })
-    it('the 0.35 m clamp after a zoom into air never replaces the remembered depth', () => {
-        expect(resolveMissDepth(24.2, 0.399, 4.46)).toEqual({ depth: 24.2, remembered: 24.2 })
-    })
-    it('a zoom-out or a new framing (larger view distance) is adopted', () => {
-        expect(resolveMissDepth(3, 60, 4.5)).toEqual({ depth: 60, remembered: 60 })
-    })
-    it('the nearest surface is the floor of the answer when the remembered depth is nearer', () => {
-        expect(resolveMissDepth(2, 0.399, 4.46)).toEqual({ depth: 4.46, remembered: 4.46 })
-    })
-    it('empty space with nothing remembered: null, so applyPivot keeps the target', () => {
-        expect(resolveMissDepth(null, NaN, null)).toEqual({ depth: null, remembered: null })
-    })
-})
-
-describe('capDepth: through a surface the depth may at most double per notch', () => {
-    it('brings a far hit back onto the ray at the cap and leaves a near hit alone', () => {
-        const camera = { position: new Vector3(0, 0, 0) }
-        const far = capDepth(camera, new Vector3(0, 0, -30), 0.7)
-        expect(far.length()).toBeCloseTo(0.7, 6); expect(far.z).toBeLessThan(0)
-        const near = new Vector3(0, 0, -0.5)
-        expect(capDepth(camera, near, 0.7)).toBe(near)
-    })
-})
-
 describe('zoomsIn: infinityDolly only for a notch that zooms in', () => {
     it('negative deltaY zooms in; positive, zero and junk do not', () => {
         expect(zoomsIn({ deltaY: -100 })).toBe(true)
@@ -110,27 +82,22 @@ describe('clampUpdates: the first frame after a pause never carries the pause', 
     })
 })
 
-describe('wheelZoomPlan: Blender\'s 1.2x step of the depth under the pointer', () => {
-    it('one notch in moves 1 - 1/1.2 of the depth; one out moves 0.2 of it; zoom-out is bounded', () => {
+describe('wheelZoomPlan: Blender\'s 1.2x step of the orbit distance (measured on the owner\'s Blender 5.2.2, 2026-10-13)', () => {
+    it('one notch in moves 1 - 1/1.2 of the distance; one out moves 0.2 of it; 20 in = 1.2^20', () => {
         expect(WHEEL_STEP_FACTOR).toBe(1.2)
-        const a = wheelZoomPlan({ depth: 24, notches: 1 }); expect(a.step).toBeCloseTo(24 - 20, 6); expect(a.newDepth).toBeCloseTo(20, 6)
-        const b = wheelZoomPlan({ depth: 20, notches: -1 }); expect(b.step).toBeCloseTo(-4, 6); expect(b.newDepth).toBeCloseTo(24, 6)
-        const c = wheelZoomPlan({ depth: 90, notches: -1, zoomOutMaxDepth: 100 }); expect(c.newDepth).toBe(100)
-        expect(wheelZoomPlan({ depth: 100, notches: -1, zoomOutMaxDepth: 100 }).step).toBe(0)
-        expect(wheelZoomPlan({ depth: 0, notches: 1 })).toBeNull(); expect(wheelZoomPlan({ depth: 10, notches: 0 })).toBeNull()
+        const a = wheelZoomPlan({ distance: 24, notches: 1 }); expect(a.step).toBeCloseTo(24 - 20, 6); expect(a.newDistance).toBeCloseTo(20, 6)
+        const b = wheelZoomPlan({ distance: 20, notches: -1 }); expect(b.step).toBeCloseTo(-4, 6); expect(b.newDistance).toBeCloseTo(24, 6)
+        expect(wheelZoomPlan({ distance: 18.388, notches: 20 }).newDistance).toBeCloseTo(18.388 / 38.338, 2) // blender-wheel-probe: 18.388 -> 0.4796
+        expect(wheelZoomPlan({ distance: 0, notches: 1 })).toBeNull(); expect(wheelZoomPlan({ distance: 10, notches: 0 })).toBeNull()
     })
-    it('the bound is for zoom-out only: a view already beyond it still zooms in (seed-11 stress, 2026-10-12)', () => {
-        const above = wheelZoomPlan({ depth: 221, notches: 1, zoomOutMaxDepth: 100 })
-        expect(above.newDepth).toBeCloseTo(221 / 1.2, 6); expect(above.step).toBeGreaterThan(30)
-        expect(wheelZoomPlan({ depth: 221, notches: -1, zoomOutMaxDepth: 100 }).step).toBe(0)
-    })
-    it('a zoom-out never steps from a depth smaller than the view distance (grazing the floor from below)', () => {
-        const out = wheelZoomPlan({ depth: 1.6, notches: -1, viewDistance: 24 })
-        expect(out.newDepth).toBeCloseTo(28.8, 6); expect(out.step).toBeCloseTo(-4.8, 6)
-        expect(wheelZoomPlan({ depth: 1.6, notches: 1, viewDistance: 24 }).newDepth).toBeCloseTo(1.6 / 1.2, 6) // zoom-in keeps the surface
-        expect(wheelZoomPlan({ depth: 30, notches: -1, viewDistance: 24 }).newDepth).toBeCloseTo(36, 6)
+    it('Blender\'s soft range: no step from outside it in the same direction, never a clamp, always a way back', () => {
+        expect(wheelZoomPlan({ distance: 10000, notches: -1, maxDistance: 10000 })).toBeNull()
+        expect(wheelZoomPlan({ distance: 9000, notches: -1, maxDistance: 10000 }).newDistance).toBeCloseTo(10800, 6) // one step past, as Blender (probe: 10861 m)
+        expect(wheelZoomPlan({ distance: 10800, notches: 1, maxDistance: 10000 }).newDistance).toBeCloseTo(9000, 6)
+        expect(wheelZoomPlan({ distance: 0.01, notches: 1, minDistance: 0.015 })).toBeNull()
+        expect(wheelZoomPlan({ distance: 0.01, notches: -1, minDistance: 0.015 }).newDistance).toBeCloseTo(0.012, 6)
     })
     it('a trackpad\'s fractional notch is a fractional step', () => {
-        expect(wheelZoomPlan({ depth: 24, notches: 0.5 }).newDepth).toBeCloseTo(24 / Math.sqrt(1.2), 6)
+        expect(wheelZoomPlan({ distance: 24, notches: 0.5 }).newDistance).toBeCloseTo(24 / Math.sqrt(1.2), 6)
     })
 })

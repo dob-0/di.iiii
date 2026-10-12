@@ -40,21 +40,25 @@ process.on('unhandledRejection', (e) => { console.log('ERR', String(e).slice(0, 
     const at = async () => { for (let i = 0; i < 40; i++) { const x = box.x + rnd(0.1, 0.9) * box.width, y = box.y + rnd(0.1, 0.9) * box.height; if (await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS', [x, y])) return [x, y] } return [box.x + box.width / 2, box.y + box.height / 2] }
     const drag = async (button, dx, dy, ms, mods = []) => { const [x, y] = await at(); for (const k of mods) await page.keyboard.down(k); await page.mouse.move(x, y); await page.mouse.down({ button }); const n = 12; for (let i = 1; i <= n; i++) { await page.mouse.move(x + dx * i / n, y + dy * i / n); await sleep(ms / n) } await page.mouse.up({ button }); for (const k of mods) await page.keyboard.up(k) }
     const wheel = async (n, dir, gap) => { const [x, y] = await at(); await page.mouse.move(x, y); for (let i = 0; i < n; i++) { await page.mouse.wheel(0, -100 * dir); await sleep(gap) } }
+    const TRACE = process.env.NAV_TRACE === '1', SHOTS = process.env.NAV_SHOTS
+    let traceAt = 0
+    const mark = async (what, round) => { if (!TRACE) return; const m = await page.evaluate((from) => { const c = window.__cc; const t = c._target ? c._target.toArray() : []; const tr = (window.__diNavTrace || []).slice(from); return { distance: +c.distance.toFixed(3), pos: c._camera.position.toArray().map((v) => +v.toFixed(2)), target: t.map((v) => +v.toFixed(2)), n: (window.__diNavTrace || []).length, trace: tr.slice(-6) } }, traceAt); traceAt = m.n; console.log('ACT', JSON.stringify({ round, what, distance: m.distance, pos: m.pos, target: m.target, trace: m.trace })) }
     const t0 = Date.now(); let round = 0; const stuck = []; const rounds = []; const first = await page.evaluate(state)
     while (Date.now() - t0 < SECONDS * 1000) {
         round++
         const tool = round % 2 ? 'Navigate' : 'Edit'
         await page.keyboard.press('Escape'); await page.getByRole('button', { name: tool, exact: true }).first().click({ timeout: 5000 }).catch(() => {}); await sleep(100)
-        await wheel(20, 1, 25); await wheel(20, -1, 25)                       // a fast burst in, a fast burst out
-        await drag(tool === 'Edit' ? 'middle' : 'left', rnd(-400, 400), rnd(-200, 200), 250)   // orbit
-        await drag(tool === 'Edit' ? 'middle' : 'right', rnd(-300, 300), rnd(-200, 200), 250, tool === 'Edit' ? ['Shift'] : []) // pan
-        if (tool === 'Navigate') { const [dx, dy] = await at(); await page.mouse.dblclick(dx, dy); await sleep(150) } // Edit's double-click is Quick Insert, not navigation
+        await mark('tool', round); await wheel(20, 1, 25); await mark('wheel-in-20', round); await wheel(20, -1, 25); await mark('wheel-out-20', round)    // a fast burst in, a fast burst out
+        await drag(tool === 'Edit' ? 'middle' : 'left', rnd(-400, 400), rnd(-200, 200), 250); await mark('orbit', round)   // orbit
+        await drag(tool === 'Edit' ? 'middle' : 'right', rnd(-300, 300), rnd(-200, 200), 250, tool === 'Edit' ? ['Shift'] : []); await mark('pan', round) // pan
+        if (tool === 'Navigate') { const [dx, dy] = await at(); await page.mouse.dblclick(dx, dy); await sleep(150); await mark('dblclick', round) } // Edit's double-click is Quick Insert, not navigation
         // stuck detector: 5 notches in at a random spot must move the camera
         const before = await page.evaluate(state); await wheel(5, 1, 60); await sleep(250); const after = await page.evaluate(state)
-        const moved = Math.hypot(...before.pos.map((v, i) => v - after.pos[i]))
+        const moved = Math.hypot(...before.pos.map((v, i) => v - after.pos[i])); await mark('wheel-in-5', round)
         if (moved < 0.01) stuck.push({ round, tool, distance: before.distance, pos: before.pos, diag: await page.evaluate(() => { const c = window.__cc; return { enabled: c.enabled, infinityDolly: c.infinityDolly, wheel: c.mouseButtons.wheel, locked: Boolean(document.pointerLockElement), active: c.active, trace: (window.__diNavTrace || []).slice(-6).map((e) => [e.action, e.notches, e.hit ? 'hit' : e.fallback ? 'fb' : e.why || '-', e.depth, e.step]) } }), updatesDuring: after.updates - before.updates, endR: after.endR, far: after.far })
         if (round % 3 === 0) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await page.keyboard.press('Shift+Backquote'); await sleep(150); await page.keyboard.down('KeyW'); await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 6 }); await sleep(500); await page.keyboard.up('KeyW'); await page.keyboard.press('Escape'); await sleep(150) }
         if (round === 4) { await page.setViewportSize({ width: 1200, height: 700 }); await sleep(600); box = await page.locator('canvas').first().boundingBox() }
+        await mark('round-end', round); if (SHOTS) await page.screenshot({ path: `${SHOTS}/round-${round}.png` }).catch(() => {})
         const s = await page.evaluate(state); rounds.push({ round, tool, ...s, moved: +moved.toFixed(2) }); console.log('ROUND', JSON.stringify({ round, tool, distance: s.distance, endR: s.endR, far: s.far, updates: s.updates, moved: +moved.toFixed(2), pos: s.pos }))
         if (!s.finite) break
     }
