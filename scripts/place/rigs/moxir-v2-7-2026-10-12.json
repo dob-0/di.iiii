@@ -1980,7 +1980,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.836,
-   "throw_m": 0.2,
+   "throw_m": 22.224,
    "eye_lux": {
     "floor centre": 0.003,
     "wing L": 0.002,
@@ -2022,7 +2022,7 @@
    "circuit": "C10",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): end wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-26",
@@ -2050,7 +2050,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.077,
-   "throw_m": 0.2,
+   "throw_m": 18.013,
    "eye_lux": {
     "floor centre": 0.039,
     "wing L": 0.206,
@@ -2092,7 +2092,7 @@
    "circuit": "C07",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-12",
@@ -2188,7 +2188,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.227,
-   "throw_m": 0.2,
+   "throw_m": 18.013,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.006,
@@ -2230,7 +2230,7 @@
    "circuit": "C04",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-32",
@@ -2871,7 +2871,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 3.077,
-   "throw_m": 0.2,
+   "throw_m": 18.013,
    "eye_lux": {
     "floor centre": 0.101,
     "wing L": 0.086,
@@ -2913,7 +2913,7 @@
    "circuit": "C07",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-33",
@@ -3010,7 +3010,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 1.522,
-   "throw_m": 0.2,
+   "throw_m": 7.956,
    "eye_lux": {
     "floor centre": 0.014,
     "wing L": 0.011,
@@ -3052,7 +3052,7 @@
    "circuit": "C08",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-21",
@@ -3216,7 +3216,7 @@
    "pick_phase": "cover",
    "guard": null,
    "from_public_m": 10.026,
-   "throw_m": 0.2,
+   "throw_m": 14.323,
    "eye_lux": {
     "floor centre": 0.0,
     "wing L": 0.0,
@@ -3258,7 +3258,7 @@
    "circuit": "C04",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-20",
@@ -3354,7 +3354,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 1.663,
-   "throw_m": 0.2,
+   "throw_m": 5.902,
    "eye_lux": {
     "floor centre": 0.025,
     "wing L": 0.001,
@@ -3396,7 +3396,7 @@
    "circuit": "C02",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-31",
@@ -3424,7 +3424,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 5.905,
-   "throw_m": 0.2,
+   "throw_m": 13.04,
    "eye_lux": {
     "floor centre": 0.025,
     "wing L": 0.02,
@@ -3466,7 +3466,7 @@
    "circuit": "C07",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-02",
@@ -3494,7 +3494,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 6.517,
-   "throw_m": 0.2,
+   "throw_m": 7.689,
    "eye_lux": {
     "floor centre": 0.013,
     "wing L": 0.001,
@@ -3536,7 +3536,7 @@
    "circuit": "C02",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): end wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-28",
@@ -3702,7 +3702,7 @@
    "pick_phase": "entry",
    "guard": null,
    "from_public_m": 1.663,
-   "throw_m": 0.2,
+   "throw_m": 5.902,
    "eye_lux": {
     "floor centre": 0.005,
     "wing L": 0.02,
@@ -3744,7 +3744,7 @@
    "circuit": "C08",
    "site": "outdoor",
    "checks": "UNVALIDATED - no exterior model (owed)",
-   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): side wall"
+   "throw_source": "kept from v2.6: the lamp stands OUTSIDE the hall; footprints castRay models the outside as solid (0.2 m) - owed: an outside-aware march"
   },
   {
    "id": "rig-par-planes-01",
