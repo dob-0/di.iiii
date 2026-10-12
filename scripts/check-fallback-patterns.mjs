@@ -33,7 +33,11 @@ const ALLOWLIST = [
   // Optional request-body field on chat creation: null means "chat is not
   // linked to a project", a legal state — not a masked lookup failure. The
   // chat's real ownership gate is user_id, enforced in every store query.
-  ['aiChatRoutes.js', "projectId: typeof projectId === 'string' ? projectId : null"]
+  ['aiChatRoutes.js', "projectId: typeof projectId === 'string' ? projectId : null"],
+  // 'bundle' is the fixed name of the open-a-file route (POST /api/spaces/bundle),
+  // matched so the route is NOT read as a space id — a route name, not a
+  // fallback standing in for a real space. The scope check runs for all else.
+  ['index.js', "req.params.spaceId === 'bundle'"]
 ]
 
 const FALLBACK_PATTERN = /\b(spaceId|scope|tenant|projectId)\b\s*(\|\||\?\?)\s*['"]/
