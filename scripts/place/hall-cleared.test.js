@@ -31,4 +31,16 @@ describe('moxir hall: cleared for the show', () => {
     expect(ids).toContain('prefab-cabin')
     for (const fixed of ['press', 'blower', 'machine-line', 'drum-tank']) expect(ids).not.toContain(fixed)
   })
+  it('keeps what is cleared but never modelled (the bulk bags) out of massing_remove, with the same record', () => {
+    // hall.py refuses a massing_remove id the massing does not hold; the bags stay out of the massing on purpose
+    const ids = new Set(asFound.map((m) => m.id))
+    const notModelled = layer.cleared_not_modelled || []
+    expect(notModelled.map((m) => m.id)).toContain('white-bags')
+    for (const m of notModelled) {
+      expect(ids.has(m.id), m.id).toBe(false)
+      expect(m.said_by, m.id).toMatch(/owner/)
+      expect(m.why, m.id).toBeTruthy()
+      expect(m.check_on_site, m.id).toBeTruthy()
+    }
+  })
 })

@@ -49,6 +49,8 @@ export default function StudioPresentationSurface({
     onCameraChange,
     onRotateStart,
     editMode,
+    boxSelect = false,
+    onSelectEntities,
     gizmoMode,
     gizmoAxis = null,
     gizmoVisible = true,
@@ -169,6 +171,8 @@ export default function StudioPresentationSurface({
             onCameraChange={onCameraChange}
             onRotateStart={onRotateStart}
             editMode={editMode}
+            boxSelect={boxSelect}
+            onSelectEntities={onSelectEntities}
             gizmoMode={gizmoMode}
             gizmoAxis={gizmoAxis}
             gizmoVisible={gizmoVisible}

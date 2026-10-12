@@ -24,6 +24,7 @@ import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
 import { isJamProject, loadJamAllTools, saveAllTools, saveJamAllTools, useAllTools } from '../utils/jamMode.js'
+import { hallEntityIds, isLockedEntity } from '../utils/selectionTools.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
@@ -133,6 +134,10 @@ export default function StudioShell({
     onRenameEntity,
     onToggleEntityVisible,
     onToggleEntityLocked,
+    onSetEntitiesLocked,
+    onLockHall,
+    onUnlockAll,
+    onSelectEntities,
     onReparentEntity,
     onViewportDropFiles,
     onDuplicateSelected,
@@ -187,6 +192,18 @@ export default function StudioShell({
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
     const [uiHidden, setUiHidden] = useState(false)
     const [viewportEditMode, setViewportEditMode] = useState('navigate')
+    // Blender's Select Box tool (owner 2026-10-12): in Edit, a left drag draws a box and
+    // selects what is inside; the Tools row's "Select" button turns it on, Navigate off.
+    const [viewportSelectTool, setViewportSelectTool] = useState(false)
+    const setEditModeFromTools = useCallback((mode) => {
+        if (mode === 'navigate') setViewportSelectTool(false)
+        if (mode === 'select') {
+            setViewportEditMode('edit')
+            setViewportSelectTool((on) => !on)
+            return
+        }
+        setViewportEditMode(mode)
+    }, [])
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
@@ -396,6 +413,7 @@ export default function StudioShell({
             if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
+                setViewportSelectTool(false)
             }
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
@@ -499,6 +517,28 @@ export default function StudioShell({
         }
     }, [])
 
+    // Lock (owner 2026-10-12: "a function where you can lock the objects, not only the
+    // hall"): the toggle for the whole selection — any kind of object. Locked = not
+    // picked by a click or a box, not moved by G/R/S or the gizmo (runtime.locked).
+    const selectionLocked = useMemo(() => {
+        const ids = new Set(selectedEntityIds.length ? selectedEntityIds : (selectedEntityId ? [selectedEntityId] : []))
+        const picked = (entities || []).filter((entity) => ids.has(entity.id))
+        return { ids: [...ids], all: picked.length > 0 && picked.every(isLockedEntity) }
+    }, [entities, selectedEntityIds, selectedEntityId])
+    const hallIds = useMemo(() => hallEntityIds(entities), [entities])
+    const lockedCount = useMemo(() => (entities || []).filter(isLockedEntity).length, [entities])
+    const lockToggle = onSetEntitiesLocked && selectionLocked.ids.length ? (
+        <button
+            type="button"
+            className={`scc-btn insp-lock-btn${selectionLocked.all ? ' active' : ''}`}
+            aria-pressed={selectionLocked.all}
+            title={selectionLocked.all ? 'Unlock: it can be picked and moved again' : 'Lock: it can no longer be clicked, boxed or moved'}
+            onClick={() => onSetEntitiesLocked(selectionLocked.ids, !selectionLocked.all)}
+        >
+            {selectionLocked.all ? 'Locked' : 'Lock'}
+        </button>
+    ) : null
+
     const inspectorFooter = (
         <button
             className="scc-btn spa-btn-wide insp-delete-btn"
@@ -520,6 +560,8 @@ export default function StudioShell({
         onCursorLeave: presence?.clearCursor,
         xrStore: xrState?.xrStore,
         editMode: viewportEditMode,
+        boxSelect: viewportSelectTool && viewportEditMode === 'edit',
+        onSelectEntities,
         gizmoMode: viewportGizmoMode,
         gizmoAxis: viewportGizmoAxis,
         gizmoVisible: viewportGizmoVisible,
@@ -590,9 +632,27 @@ export default function StudioShell({
                                     surfaceOptions={surfaceOptions}
                                     onSectionChange={onInspectorChange}
                                     footer={inspectorFooter}
+                                    headerAction={lockToggle}
                                 />
                             ) : (
-                                <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
+                                <>
+                                    <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
+                                    {(onLockHall || onUnlockAll) && (
+                                        <div className="scc-buttons insp-lock-row">
+                                            {onLockHall && hallIds.length > 0 && (
+                                                <button type="button" className="scc-btn" onClick={onLockHall}
+                                                    title="Lock the building and its outside boxes: they can no longer be clicked, boxed or moved">
+                                                    Lock the hall
+                                                </button>
+                                            )}
+                                            {onUnlockAll && lockedCount > 0 && (
+                                                <button type="button" className="scc-btn" onClick={onUnlockAll} title={`Unlock all ${lockedCount} locked objects`}>
+                                                    Unlock all ({lockedCount})
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
                             {selectedEntity && selectedEntityIds.length <= 1 && !insideGeo && (
                                 <TimelinePanel
@@ -716,7 +776,8 @@ export default function StudioShell({
                         onViewLive={onViewLive}
                         canViewLive={Boolean(liveProjectState?.isLiveProject)}
                         editMode={viewportEditMode}
-                        onSetEditMode={setViewportEditMode}
+                        onSetEditMode={setEditModeFromTools}
+                        selectTool={viewportSelectTool && viewportEditMode === 'edit'}
                         gizmoMode={viewportGizmoMode}
                         onSetGizmoMode={selectGizmoMode}
                         openPanels={open}
@@ -874,6 +935,7 @@ export default function StudioShell({
                     selectTicks={selectTicks}
                     covered={isMobile && Boolean(mobileSheet)}
                     shareOpen={isOpen('publish') || mobileSheet === 'publish'}
+                    createOpen={isOpen('create') || mobileSheet === 'create'}
                     isOpenJam={isJam}
                 />
             )}

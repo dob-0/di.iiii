@@ -429,9 +429,14 @@ const config = {
     proposalTtlMs: Number(process.env.CONTENT_PROPOSAL_TTL_MS || 3 * 24 * 60 * 60 * 1000)
   },
   // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
-  // Without the three CLOUDFLARE_SAAS_* values a domain can still be saved, but
-  // nothing switches it on except an admin; the settings page says so.
+  // Without a provider a domain can still be saved, but nothing switches it on
+  // except an admin; the settings page says so.
   customDomains: {
+    // Who switches a domain on: 'cloudflare' (Cloudflare for SaaS) or 'caddy'
+    // (Caddy's on-demand TLS, on a machine with its own public IP). Unset keeps
+    // the first behaviour: Cloudflare when the three values below are set.
+    // domainService.chooseDomainProvider() decides, and says why when it can't.
+    provider: (process.env.DOMAINS_PROVIDER || '').trim().toLowerCase(),
     // Where editing lives. An editor path opened on a space's domain goes here.
     platformOrigin: (process.env.PLATFORM_ORIGIN || '').trim().replace(/\/+$/, '') ||
       (authHubConfig.url ? new URL(authHubConfig.url).origin : 'https://diiii.xyz'),
@@ -441,6 +446,13 @@ const config = {
       apiToken: (process.env.CLOUDFLARE_SAAS_API_TOKEN || '').trim(),
       // The name a domain's CNAME points at (domains.diiii.xyz).
       cnameTarget: (process.env.CLOUDFLARE_SAAS_CNAME_TARGET || '').trim().toLowerCase()
+    },
+    caddy: {
+      // The name a domain's CNAME points at (domains.diiii.xyz), resolving to
+      // this machine.
+      publicTarget: (process.env.DOMAINS_PUBLIC_TARGET || '').trim().toLowerCase().replace(/\.$/, ''),
+      // The A/AAAA addresses a domain's root may point at, comma-separated.
+      publicIps: String(process.env.DOMAINS_PUBLIC_IPS || '').split(',').map((ip) => ip.trim()).filter(Boolean)
     },
     // Our own names; no space may claim one or anything under it.
     platformSuffixes: [

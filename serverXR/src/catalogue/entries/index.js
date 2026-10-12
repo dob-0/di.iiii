@@ -7,6 +7,7 @@ const entries = {
   assets: require("./assets"),
   chat: require("./chat"),
   integrations: require("./integrations"),
+  laser: require("./laser"),
   ndi: require("./ndi"),
   place: require("./place"),
   platform: require("./platform"),

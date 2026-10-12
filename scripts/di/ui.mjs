@@ -224,19 +224,27 @@ export const ui = {
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
-    followList: (follows, live) => {
+    // `carrier` is what the server says about who carries this data folder's
+    // follows (serverXR/src/follow/lease.js). When it is another server on the
+    // same folder — the installed di beside a dev stack — the list says so
+    // instead of calling every follow "not running".
+    followList: (follows, live, carrier = null) => {
         const ids = Object.keys(follows || {})
         if (!ids.length) return `this di.iiii follows nothing. ${style.dim(`${CMD} follow <space> --from <url> --key <key>`)}`
         const byId = new Map((live || []).map(entry => [entry.spaceId, entry]))
-        return ids.map((id) => {
+        const elsewhere = carrier && carrier.carriedHere === false
+        const by = elsewhere && carrier.carriedBy ? `pid ${carrier.carriedBy.pid}, port ${carrier.carriedBy.port}` : 'another server'
+        const head = elsewhere ? [style.yellow(`another di.iiii server on this data folder carries these follows (${by}). ask that one how they are doing; this one takes over if it stops.`)] : []
+        return [...head, ...ids.map((id) => {
             const entry = follows[id]
             const state = byId.get(id)
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            if (!state && elsewhere) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim(`(carried by ${by})`)}`
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
             return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
-        }).join('\n')
+        })].join('\n')
     },
 
     unfollowed: (spaceId) => `no longer following ${spaceId}. ${style.dim('your copy stays exactly as it is.')}`,

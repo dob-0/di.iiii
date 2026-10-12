@@ -28,6 +28,9 @@
 const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
     'wiki', 'privacy', 'terms', 'tools', 'for-apps',
+    // `/shoot/{key}` — a crew's shared shoot sheet. Checked on diiii.xyz and
+    // dev.diiii.xyz before reserving (2026-10-07): nothing answers to the word.
+    'shoot',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
     'spaces', 'projects', 'chat', 'login',
     // `/{space}/scan` — the phone collecting a place. Checked on all three

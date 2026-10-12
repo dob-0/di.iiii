@@ -279,6 +279,7 @@ const GATED_ROUTES = [
   { method: 'PATCH', pathTest: (p) => p === '/api/config', kind: 'config.patch' },
   { method: 'POST', pathTest: (p) => p === '/api/admin/sandboxes/purge', kind: 'sandboxes.purge' },
   { method: 'DELETE', pathTest: (p) => /^\/api\/spaces\/[^/]+$/.test(p), kind: 'spaces.delete' },
+  { method: 'DELETE', pathTest: (p) => /^\/api\/spaces\/[^/]+\/purge$/.test(p), kind: 'spaces.purge' },
   { method: 'DELETE', pathTest: (p) => /^\/api\/commons\/assets\/[^/]+$/.test(p), kind: 'commons.asset.delete' },
   {
     method: 'PATCH',

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useStore, useThree } from '@react-three/fiber'
+import { useRenderDemand } from '../../studio/utils/renderDemand.jsx'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { setBloomAllowed } from '../../objectComponents/atmosphereStore.js'
 import { HITCH_MS, QUALITY_STEPS, RAISE_FPS, WARMUP_MS, WINDOW_MS, cappedDpr, mayRaiseTo, nextQuality, qualityDpr } from './qualityGovernor.js'
@@ -41,6 +42,26 @@ export default function QualityGovernor({ renderSettings }) {
         hazeUniformsFor(gl).uSamples.value = QUALITY_STEPS[0].samples
         setBloomAllowed(gl, true)
     }, [gl])
+
+    // Studio's on-demand loop: quality may drop only while the picture is moving. When a burst
+    // ends (the loop is about to go idle), put full quality back and draw ONE final frame at it
+    // (progressive refinement), so a scene at rest looks the same as a fresh load.
+    const demand = useRenderDemand()
+    useEffect(() => {
+        if (!demand) return undefined
+        let timer = null
+        const off = demand.subscribe(() => {
+            if (demand.isActive() || level.current === 0) return
+            level.current = 0
+            apply(0)
+            const w = win.current
+            w.start = 0; w.frames = 0; w.goodSince = 0; w.last = 0
+            clearTimeout(timer)
+            timer = setTimeout(() => store.getState().invalidate(), 120)
+        })
+        return () => { off(); clearTimeout(timer) }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [demand, gl])
 
     useFrame(() => {
         if (gl.xr.isPresenting || frameloop !== 'always') return
