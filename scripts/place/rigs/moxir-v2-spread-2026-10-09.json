@@ -5930,7 +5930,7 @@
  "lasers": {
   "source": "git cf954908:scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json (PR #844, branch fix/moxir-v1-1-bugs-2026-10-09; the laser session)",
   "table": {
-   "table": "/tmp/claude-1000/-home-dob/f28555fe-b198-4163-85d9-cbd2b3df47ba/scratchpad/aerial-far-crane.json",
+   "table": "scripts/place/rigs/moxir-aerial-2026-10-07.json",
    "table_sha256": "56826b0dea8b8e03b9ea704434e4eb34a58052db62b6e819210dbd5d90c8fefa",
    "equal": true
   },
