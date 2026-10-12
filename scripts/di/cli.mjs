@@ -68,6 +68,7 @@ import {
 import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
+import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
 const HOME = () => {
@@ -560,7 +561,8 @@ const cmdMove = async (args) => {
     const headers = { 'Content-Type': 'application/json' }
     if (from && from !== true) {
         base = `${String(from).replace(/\/+$/, '')}/serverXR`
-        const token = args.flags.token === '-' ? (await readStdin()).trim() : String(process.env.DI_TOKEN || '').trim()
+        // stdin, else DI_TOKEN, else the login `di login` stored for that very address
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
         if (token) headers.Authorization = `Bearer ${token}`
     } else {
         const home = HOME()
@@ -884,20 +886,31 @@ const cmdUpdate = async (args) => {
         if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
     }
 
-    // Before the flip, not after: if this update moves the schema, `--rollback`
-    // alone cannot undo it, so the way back has to exist first.
-    const dataSchema = dataSchemaVersion(home)
-    const nextSchema = buildSchemaVersion(staged.partialDir)
-    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
-    if (movesSchema) {
-        const snapshot = await snapshotData({ home, label: `before-${release.version}` })
-        if (snapshot) say(ui.snapshotTaken(snapshot))
-    }
-
     const runner = runnerFor(home)
     const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
+
+    // After the server has stopped (its last write is in the file), before the flip:
+    // if this update moves the schema, `--rollback` alone cannot undo it, so the
+    // way back has to exist first.
+    const dataSchema = dataSchemaVersion(home)
+    const nextSchema = buildSchemaVersion(staged.partialDir)
+    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
+    if (movesSchema) {
+        try {
+            const snapshot = await snapshotData({ home, label: `before-${release.version}` })
+            if (snapshot) say(ui.snapshotTaken(snapshot))
+        } catch (error) {
+            // No way back, so no update: the old version is still `current`; bring it back up.
+            await fsp.rm(staged.partialDir, { recursive: true, force: true }).catch(() => {})
+            fail(`could not save a snapshot of your work first — nothing has been changed: ${String(error.message || error)}`)
+            say(ui.updateFailed(from))
+            process.exitCode = 1
+            if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+            return
+        }
+    }
 
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })
@@ -1005,7 +1018,7 @@ const cmdMcp = async (args) => {
     const entry = candidates.find((p) => fs.existsSync(p))
     if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
     const port = resolvePort(HOME(), args.flags?.port)
-    const child = spawn(process.execPath, [entry, '--base', `http://localhost:${port}/serverXR`], { stdio: 'inherit' })
+    const child = spawn(process.execPath, [entry, ...mcpArgs({ flags: args.flags, port })], { stdio: 'inherit' })
     await new Promise((resolve) => child.on('exit', resolve))
 }
 
@@ -1589,6 +1602,9 @@ const COMMANDS = {
     keeper: cmdKeeper,
     ndi: cmdNdi,
     mcp: cmdMcp,
+    login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    logout: (args) => runLogout(args),
+    whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }
 
