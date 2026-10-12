@@ -682,3 +682,13 @@ export const reachInBox = (from, to, box) => {
     }
     return Math.max(0, Math.min(1, k))
 }
+
+/**
+ * Is the occlusion fade (the circle round the target that cuts the building away when it stands between the camera and
+ * the target) on for this scene? Off only when the author says so: presentationState.smartView.occlusionFade === false
+ * (owner 2026-10-12 04:55, MOXIR v2.6 Free camera beside the press: "what is this circle view thing" — in a show scene
+ * the building is the subject, a hole in it reads as a fault).
+ * @param {object} [presentationState]
+ * @returns {boolean}
+ */
+export const occlusionFadeEnabled = (presentationState) => presentationState?.smartView?.occlusionFade !== false

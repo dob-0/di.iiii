@@ -12,6 +12,7 @@ import {
     computeViewPresets,
     cutawayPlan,
     emptyBox,
+    occlusionFadeEnabled,
     farthestCornerDistance,
     enclosingModelIds,
     firstDrawnHit,
@@ -228,6 +229,7 @@ export default function SmartView({
     const entityById = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities])
     const venueOutline = useMemo(() => venueOf(entities).plan?.outline || null, [entities])
     const authored = useMemo(() => sanitizeViewPresets(document?.presentationState?.viewPresets), [document?.presentationState?.viewPresets])
+    const fadeOn = occlusionFadeEnabled(document?.presentationState)   // a show scene may switch the circle off
     const openingView = document?.presentationState?.fixedCamera?.position ? document.presentationState.fixedCamera : document?.worldState?.savedView || null
     const opening = openingView?.position || null
     const referenceDistance = useMemo(() => {
@@ -682,7 +684,7 @@ export default function SmartView({
                     if (hit && isOccluding(hit.distance, length)) { blocked = true; break }
                 }
             }
-            state.goal = blocked && !state.atPreset ? 1 : 0
+            state.goal = blocked && !state.atPreset && fadeOn ? 1 : 0
         }
         state.strength = approach(state.strength, state.goal, delta, state.goal > state.strength ? 0.08 : 0.2)
         if (Math.abs(state.strength - state.goal) > 0.002) moving = true
