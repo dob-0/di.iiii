@@ -37,6 +37,15 @@ describe('Studio keyboard contract', () => {
         expect(guide).toMatch(/Deselect all/i)
     })
 
+    it('the help lists the lock keys and StudioEditor routes them through the one lock batch', () => {
+        const guide = read('utils/studioGuide.js')
+        expect(guide).toMatch(/\['L', 'Lock the selection/)
+        expect(guide).toMatch(/\['Alt\+L', 'Unlock all/)
+        const editor = read('components/StudioEditor.jsx')
+        expect(editor).toMatch(/lockFromKey\(event\)/)
+        expect(editor).toMatch(/handleSetEntitiesLocked\(selectedEntities\.map/)
+    })
+
     it('StudioEditor still implements select-all behind the freed-up key', () => {
         const editor = read('components/StudioEditor.jsx')
         expect(editor).toMatch(/if \(!meta && \(key === 'a' \|\| key === 'A'\)\)/)
