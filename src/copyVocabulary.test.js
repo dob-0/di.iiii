@@ -145,6 +145,7 @@ const COPY_FILES = [
     'src/raw/components/CreatePanelWindow.jsx',
     'src/raw/components/DesktopWindow.jsx',
     'src/raw/components/KeeperPanelWindow.jsx',
+    'src/raw/components/LaserOutPanelWindow.jsx',
     'src/raw/components/NodePalette.jsx',
     'src/raw/components/OutlinerPanelWindow.jsx',
     'src/raw/components/RawEditor.jsx',

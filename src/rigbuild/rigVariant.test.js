@@ -173,3 +173,15 @@ describe('the switch lists the space\'s live versions, from every version', () =
         expect(shortTitle('', '')).toBe('')
     })
 })
+
+describe('one way to name a version in the row', () => {
+    it.each([
+        ['MOXIR v1.1', 'v1.1'],
+        ['MOXIR v1.1 · looks', 'v1.1 looks'],
+        ['MOXIR v1.1 · motion', 'v1.1 motion'],
+        ['MOXIR v2.0 · 2.6', 'v2.6'],
+        ['MOXIR v2.6 — the show build', 'v2.6'],
+        ['v3.0', 'v3.0'],
+        ['Minimal · old hall 09-29', 'Minimal · old hall 09-29']
+    ])('%s -> %s', (title, want) => expect(shortTitle(title, 'x')).toBe(want))
+})

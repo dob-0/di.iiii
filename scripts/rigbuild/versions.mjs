@@ -520,6 +520,9 @@ export const versionRig = ({ spec, base, id }) => {
         // be; the renderer caps only the shadows, shadowCasting.js) — stated, never inferred
         budget: { ...clone(base.budget), realLights: clone(v.realLights), ...(v.realLightsAll ? { realLightsAll: true, realLightsWhy: v.realLightsWhy } : {}) },
         night: clone(spec.night || base.night),
+        // the room's air (renderSettings.atmosphere) when the version states one (known-kit, 2026-10-09: the haze
+        // worked out from its one smoke machine, calibrate false) — the rig file carries it, rig.mjs writes it
+        ...(v.atmosphere ? { atmosphere: clone(v.atmosphere) } : {}),
         photometry: { ...clone(base.photometry), ...(spec.photometry?.air ? { air: spec.photometry.air, airWhy: spec.photometry.why } : {}) },
         defaultLook: v.defaultLook || spec.defaultLook,
         looks,
