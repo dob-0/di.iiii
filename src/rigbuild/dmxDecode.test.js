@@ -225,3 +225,29 @@ describe('emitters are driven linearly (render audit B)', () => {
         expect(cell.g).toBeLessThanOrEqual(129)
     })
 })
+
+// 2026-10-09: colour per emitter, in CIE XYZ, where the type carries emitter data — else the stand-in, labelled.
+describe('per-emitter colour mixing (XYZ → linear Rec.709)', async () => {
+    const { emitterMix } = await import('./dmxDecode.js')
+    const rgbw = [{ role: 'dimmer' }, { role: 'r' }, { role: 'g' }, { role: 'b' }, { role: 'w' }]
+    // TEST DATA, not a fixture's: typical RGBW LED chromaticities and a lumen split, to exercise the method
+    const emitters = { r: { x: 0.700, y: 0.299, flux_lm: 200 }, g: { x: 0.170, y: 0.700, flux_lm: 700 }, b: { x: 0.140, y: 0.050, flux_lm: 100 }, w: { x: 0.313, y: 0.329, flux_lm: 1000 }, basis: 'TEST DATA' }
+    it('makes a red-only lamp as bright as its red emitters\' share of the lumens, not sRGB red\'s 0.2126', () => {
+        const d = decodeDmx(rgbw, [255, 255, 0, 0, 0], { emitters })
+        expect(d.level).toBeCloseTo(200 / 2000, 4)
+        expect(d.colourBasis).toMatch(/per-emitter XYZ \(TEST DATA/)
+        const [r, g, b] = [1, 3, 5].map((i) => parseInt(d.colour.slice(i, i + 2), 16))
+        expect(r).toBe(255)
+        expect(g).toBeLessThan(80)
+        expect(b).toBeLessThan(80)
+        // all on: the full lumens
+        expect(decodeDmx(rgbw, [255, 255, 255, 255, 255], { emitters }).level).toBeCloseTo(1, 6)
+    })
+    it('says when it has no emitter data and uses the sRGB-primary stand-in', () => {
+        const d = decodeDmx(rgbw, [255, 255, 0, 0, 0], {})
+        expect(d.colourBasis).toMatch(/^ASSUMED/)
+        expect(d.level).toBe(1)
+        expect(emitterMix(null, { r: 255 })).toBe(null)
+        expect(emitterMix({ r: emitters.r, g: emitters.g }, { r: 255 })).toBe(null)
+    })
+})
