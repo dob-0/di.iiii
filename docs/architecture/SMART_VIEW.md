@@ -77,6 +77,32 @@ they are, and the row as soon as it adds `&views=1` to its room frame's address.
    the target held inside, a camera outside always has the building in front of it, and the
    cutaway opens it — the black screen cannot happen.
 
+## See-through (2026-10-12)
+
+The owner on MOXIR v2.6, 2026-10-12: the circle of the occlusion fade "read as a fault" beside the press, and
+"there where are walls of the building again that pass-through thing, so I think we need all 3". The three:
+
+1. **The camera never enters a solid.** camera-controls' own `colliderMeshes` (four rays from the target out to the
+   near-plane corners each update) now run in free orbit too, not only under "Inside"; the camera also stops
+   `INSIDE_STANDOFF` (1 m) short of the first surface between it and its target. The colliders are proxies of the
+   building's meshes that drop any hit on a part the cutaway or a layer took away (`keptByPlan`), so Top, Side and the
+   cutaway still open the building from outside. Presets in flight, and the view while it rests at a preset, are
+   exempt. Sources: Unreal Engine *Spring Arm* camera collision, Unity Cinemachine *Deoccluder* (pull camera forward).
+2. **Near-lens fade** (`presentationState.smartView.occlusionFade: 'near'`, the default; `'circle'` keeps the
+   2026-09-29 circle, `false` turns both off; `nearFadeM`, default 2.5 m). Building fragments nearer the lens than
+   `nearFadeM` are discarded from the opaque pass (depth stays true, beams and haze behind draw as before) and drawn
+   again by a transparent ghost twin of the mesh at 15 %, rising by a smoothstep to full over the last metre
+   (`nearFadeOpacity`). No circle, no dither dots. The twin is shown only while a shown building surface is within
+   `nearFadeM` (three-mesh-bvh `closestPointToPoint`, 15 Hz). Why a twin and not a stipple: 15 % without dots needs
+   real blending or MSAA coverage, and the Full renderer draws through HdrBloom's half-float target with no
+   multisampling, so alpha-to-coverage would collapse to on/off. Rig, lamps, beams and people are never touched.
+   Source: Cinemachine Deoccluder's transparency of occluders; the ghost is Blender's X-ray drawn only near the lens.
+3. **Layers** in the scene bar: Roof · Walls · Machines · Outside. A layer hides the hall's material groups
+   (hall.py v13: roof = deck, skylight; walls = block, brick, glass, steel; machines = machine, press, rust; outside =
+   entities `rig-out-*`), and the merged `shell` mesh's roof and wall parts are taken by the cutaway planes held in
+   place (`planWithLayers`). All on by default; `?layers=walls,machines` (the layers shown, `none` for none) carries the
+   state in a link. Sources: The Sims "walls down", Capture / Depence layer visibility.
+
 ## What is "the building"
 
 In order (`isArchitectureEntity`, `enclosingModelIds`):
@@ -121,7 +147,9 @@ offload), uncapped (`--disable-gpu-vsync --disable-frame-rate-limit`), 1440×900
 
 ## Limits, said plainly
 
-- The fade circle is a fixed share of the screen, not fitted to the subject's projected size.
+- The fade circle ('circle' mode) is a fixed share of the screen, not fitted to the subject's projected size.
+- Walls off cuts every building material 1.2 m inside each wall line, so a machine standing within that band is cut too.
+- The collision acts between the target and the camera only: an object beside the line can still be passed through.
 - A click on a cut-away part of the building still selects the building (pointer raycasts
   know nothing of clip planes) — in Studio this can pick the hall through a cut wall.
 - Room bounds are axis-aligned: a building turned off the world axes gets a loose box and a

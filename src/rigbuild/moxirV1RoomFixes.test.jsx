@@ -42,9 +42,10 @@ describe('MOXIR v1.0 room fixes', () => {
     })
 
     it('words the desk runner for this project only', () => {
-        const cues = { project: 'moxir-v1-0', index: 2, n: 13, name: 'Act 1 · the silhouette', running: true, nextInMs: 9000, loop: true }
+        const cues = { project: 'moxir-v1-0', index: 2, n: 13, name: 'Act 1 · the silhouette', running: true, nextInMs: 9000, loop: true, autoplay: true }
         expect(deskShowWords(cues, 'moxir-v1-0')).toBe('3 / 13 · Act 1 · the silhouette · next in 9 s · loop')
         expect(deskShowWords(cues, 'another-room')).toBe('')
+        expect(deskShowWords({ ...cues, autoplay: false, nextInMs: null }, 'moxir-v1-0')).toBe('3 / 13 · Act 1 · the silhouette · holds')
         expect(deskShowWords(null, 'moxir-v1-0')).toBe('')
         expect(deskShowWords({ ...cues, index: -1 }, 'moxir-v1-0')).toBe('')
     })

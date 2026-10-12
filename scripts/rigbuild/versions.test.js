@@ -135,7 +135,8 @@ for (const v of allVersions(spec)) {
             // lamp is real (`realLightsAll`, MOXIR Known and Known · full, 2026-10-01), and then it is
             if (rig.budget?.realLightsAll) {
                 it(`${look}: lights the room with every lamp real, as its version states`, () => {
-                    expect(built.summary.real).toBe(lamps.length)
+                    // a laser drawn as a line source (beam.laser, known-kit) is never a three.js lamp
+                    expect(built.summary.real).toBe(lamps.filter((e) => !e.components.beam?.laser).length)
                 })
             } else {
                 it(`${look}: lights the room with 8 real lamps at most`, () => {
