@@ -27,3 +27,12 @@ thing" (renderer, next branch). Lead chat (info@), session https://claude.ai/cod
 ## Limits
 - Scratch only; nothing on dev or the owner's di until his look. Build button not done (needs a server job / the agent door).
 - Views menu in walk mode and the title ticker still owed; the laser margins (v2.3–v2.6) and the outside are UNVALIDATED.
+
+## 2026-10-12 03:00–06:5x (lead, info@) — the night's second half
+- Hall v13: the ghost shell got an opaque inner skin (hall.py `shell_box`); the 30 % shell had veiled every beam farther than the hall centre.
+- SmartView: per-scene occlusion-fade switch; then the see-through job (f5de6ae7): free-orbit collision, near-lens fade, Roof·Walls·Machines·Outside layers.
+- Show chip: PREVIEW row (a look for this viewer only). Studio: Cues section removed from the control cluster; undo/redo by key place
+  (Ctrl+Shift+Z, Armenian layout), Lock/Unlock any object + Lock the hall, box select with a Select tool (b310ce53; Shift/Ctrl-drag owed).
+- MOXIR v2.7 (moxir-v2-7, slug v2-7): side lines X0±8.2, laser net 36 lines under the hand rule (5.4 m), two UP-LA40WF on the entrance wall,
+  five looks; every throw walked (throws-of-cut.mjs); the +x machines stay (show-cleared `kept_for_the_show`).
+- Tools: di-open (di-atlas), rules "work sterile", "di-open", template item 13 (code jobs on their own tree).
