@@ -152,7 +152,9 @@ const useSecondTick = () => {
 }
 
 export function ShowChip({ show, state, offset, top, spaceId = '', routeProject = '', bare = false, preview = null, onPreview = null }) {
-    const [open, setOpen] = useState(false)
+    // Open by default where a look can be picked (owner 2026-10-13 01:3x: "by default make the scenes
+    // selectable"): the PREVIEW row is on screen without a click. The chip still folds.
+    const [open, setOpen] = useState(Boolean(onPreview))
     const now = useSecondTick() + (offset?.offset || 0)
     const nextInMs = state.nextInMs == null ? null : Math.max(0, state.firedAt + (show.cues[state.index]?.holdMs || 0) - now)
     const previewCue = preview ? show.cues.find((c) => c.lookId === preview) : null

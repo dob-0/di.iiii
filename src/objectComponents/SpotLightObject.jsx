@@ -174,8 +174,10 @@ export default function SpotLightObject({
                     position={throwShape.position}
                     // Never in the way of a click: the cone is as wide as the
                     // throw, and a selectable one would swallow every pick in
-                    // the Studio for whatever stands inside the beam.
+                    // the Studio for whatever stands inside the beam. Nor in the selection
+                    // box: userData.noBounds (selectionBounds.js) keeps the box on the lamp.
                     raycast={() => null}
+                    userData={{ noBounds: true }}
                 >
                     <meshBasicMaterial
                         color={color}
@@ -255,7 +257,7 @@ function BeamPart({ gl, part, values }) {
     setBeamAirUniforms(material, values)
     return (
         <>
-            <mesh ref={meshRef} geometry={geometry} material={material} raycast={() => null} onBeforeRender={beforeBeamRender} />
+            <mesh ref={meshRef} geometry={geometry} material={material} raycast={() => null} userData={{ noBounds: true }} onBeforeRender={beforeBeamRender} />
             {values.strobeHz > 0 ? <BeamAirStrobe material={material} values={values} /> : null}
         </>
     )
@@ -295,7 +297,7 @@ function LaserLines({ gl, laser, color, level = 1, length, anisotropy }) {
     material.uniforms.uDiam.value = laser.diameter_mm / 1000
     material.uniforms.uDiv.value = laser.divergence_mrad / 1000
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
-    return <mesh geometry={geometry} material={material} raycast={() => null} frustumCulled={false} onBeforeRender={beforeLaserRender} />
+    return <mesh geometry={geometry} material={material} raycast={() => null} frustumCulled={false} userData={{ noBounds: true }} onBeforeRender={beforeLaserRender} />
 }
 
 function beforeLaserRender(renderer, scene, camera) {

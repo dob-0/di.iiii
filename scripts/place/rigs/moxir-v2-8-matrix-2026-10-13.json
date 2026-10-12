@@ -7531,6 +7531,180 @@
     "v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps",
     "v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps"
    ]
+  },
+  {
+   "id": "tent",
+   "title": "The tent (the red fans alone meet under the roof)",
+   "act": 2,
+   "parts": {
+    "red tent left": [
+     "#ff3a12",
+     1.0
+    ],
+    "red tent right": [
+     "#ff3a12",
+     1.0
+    ],
+    "hall steel": [
+     "#ff3a12",
+     0.25
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.1
+    ]
+   }
+  },
+  {
+   "id": "dj",
+   "title": "The DJ (the plane behind him, the kicker, nothing else)",
+   "act": 1,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     0.3
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.2
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.2
+    ]
+   }
+  },
+  {
+   "id": "columns",
+   "title": "The columns (the hall in ash, the floor dark)",
+   "act": 2,
+   "parts": {
+    "columns": [
+     "#e8e4dc",
+     0.7
+    ],
+    "hall steel": [
+     "#e8e4dc",
+     0.4
+    ],
+    "cut up": [
+     "#e8e4dc",
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "cut",
+   "title": "The cut (the cut truss in ember, the side lines low)",
+   "act": 2,
+   "parts": {
+    "cut up": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff3a12",
+     0.4
+    ],
+    "side line right": [
+     "#ff3a12",
+     0.4
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.1
+    ]
+   }
+  },
+  {
+   "id": "matrix",
+   "title": "The matrix (the lasers over a red floor)",
+   "act": 3,
+   "parts": {
+    "laser": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent left": [
+     "#ff3a12",
+     0.5
+    ],
+    "red tent right": [
+     "#ff3a12",
+     0.5
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "white",
+   "title": "White out (everything in ash, the lasers in)",
+   "act": 3,
+   "parts": {
+    "laser": [
+     "#e8e4dc",
+     1.0
+    ],
+    "hall steel": [
+     "#e8e4dc",
+     1.0
+    ],
+    "columns": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "plane 1 (behind the DJ)": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj back": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     1.0
+    ],
+    "stage key": [
+     "#e8e4dc",
+     1.0
+    ]
+   }
   }
  ],
  "cues": [
@@ -7563,6 +7737,42 @@
    "name": "peak",
    "fade": 2,
    "hold": 15
+  },
+  {
+   "look": "tent",
+   "name": "the tent",
+   "fade": 2,
+   "hold": 12
+  },
+  {
+   "look": "dj",
+   "name": "the DJ",
+   "fade": 2,
+   "hold": 10
+  },
+  {
+   "look": "columns",
+   "name": "the columns",
+   "fade": 2,
+   "hold": 12
+  },
+  {
+   "look": "cut",
+   "name": "the cut",
+   "fade": 2,
+   "hold": 10
+  },
+  {
+   "look": "matrix",
+   "name": "the matrix",
+   "fade": 2,
+   "hold": 12
+  },
+  {
+   "look": "white",
+   "name": "white out",
+   "fade": 1,
+   "hold": 6
   }
  ],
  "loop": true,

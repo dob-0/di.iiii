@@ -73,20 +73,24 @@ describe('hosted playback — who drives the room', () => {
 })
 
 describe('the show chip', () => {
-    it('names the look on and, opened, every look of the loop', async () => {
+    it('names the look on and, open by default, every look of the loop; folded, only the line', async () => {
         vi.useFakeTimers({ toFake: ['Date'] })
         vi.setSystemTime(EPOCH + 12000)
         const onEntities = vi.fn()
         // RoomLookFollower reads the page's shared desk store; on a test page there is no
         // /light, so the probe answers "no desk" — the hosted case.
         globalThis.fetch = vi.fn(async () => ({ ok: false, status: 404, headers: { get: () => 'text/html' }, json: async () => ({}) }))
-        const { findByTestId, getByRole } = render(<RoomLookFollower document={documentWith(SHOW)} onEntities={onEntities} />)
+        const { findByTestId, getByRole, getAllByRole } = render(<RoomLookFollower document={documentWith(SHOW)} onEntities={onEntities} />)
         const chip = await findByTestId('rig-show-chip')
         expect(chip.textContent).toContain('SHOW')
         expect(chip.textContent).toContain('2 / 2 · Red room')
-        await act(async () => { getByRole('button').click() })
+        // open by default (owner 2026-10-13: "by default make the scenes selectable"): every look is a button already
         expect(chip.textContent).toContain('One beam')
         expect(chip.textContent).toContain('Everyone watching sees the same look at the same moment.')
+        await act(async () => { getAllByRole('button')[0].click() })
+        expect(chip.textContent).not.toContain('One beam')
+        await act(async () => { getByRole('button').click() })
+        expect(chip.textContent).toContain('One beam')
     })
 })
 
@@ -96,9 +100,9 @@ describe('preview a look (owner 2026-10-12: pick a scene in view mode, for you o
         vi.setSystemTime(EPOCH + 12000) // the show is on cue 2 (red-room)
         const onEntities = vi.fn()
         globalThis.fetch = vi.fn(async () => ({ ok: false, status: 404, headers: { get: () => 'text/html' }, json: async () => ({}) }))
-        const { findByTestId, getByRole, getAllByRole } = render(<RoomLookFollower document={documentWith(SHOW)} onEntities={onEntities} />)
+        const { findByTestId, getByRole } = render(<RoomLookFollower document={documentWith(SHOW)} onEntities={onEntities} />)
         const chip = await findByTestId('rig-show-chip')
-        await act(async () => { getAllByRole('button')[0].click() })
+        // no click to open: the looks are selectable by default
         await act(async () => { getByRole('button', { name: 'One beam' }).click() })
         expect(chip.dataset.preview).toBe('one-beam')
         expect(chip.dataset.look).toBe('one-beam')

@@ -211,6 +211,38 @@ rig['what'] = ('v2.7 with the six cubes on the far crane fanning a comb of lines
 rig['symmetry'] = {'axis_x_m': X0, 'plates_mirror': 'the DJ axis (plates AND aims, v2.5) for every lamp; the laser lid mirrors about the column rows (x 0) because the columns are where it hangs', 'source': '2.8'}
 rig.setdefault('owed', []).extend(['v2.8: lamp/crane strikes along all 36 lines (laser-margin run)'] + (['v2.8 columns try: brackets at 6.0 m (rigging), east lines over the kept machines'] if a.lasers == 'columns' else []))
 rig['from_rig'] = a.src
+# --- 3. more scenes (owner 2026-10-13 01:3x: "before I edit you can write some more scenes") ------------------------------------
+# Six looks on the v2.8/v2.9 parts, in the show's two colours (ember #ff3a12, ash #e8e4dc), each one a single idea seen from
+# the floor; appended to the loop after 'peak' with the loop's own fade/hold. Idempotent: a look already there is left alone.
+EMBER, ASH = '#ff3a12', '#e8e4dc'
+MORE_LOOKS = [
+    {'id': 'tent', 'title': 'The tent (the red fans alone meet under the roof)', 'act': 2,
+     'parts': {'red tent left': [EMBER, 1.0], 'red tent right': [EMBER, 1.0], 'hall steel': [EMBER, 0.25], 'dj back': [EMBER, 0.1]}},
+    {'id': 'dj', 'title': 'The DJ (the plane behind him, the kicker, nothing else)', 'act': 1,
+     'parts': {'plane 1 (behind the DJ)': [EMBER, 1.0], 'dj kicker': [ASH, 0.3], 'dj back': [EMBER, 0.2], 'stage key': [ASH, 0.2]}},
+    {'id': 'columns', 'title': 'The columns (the hall in ash, the floor dark)', 'act': 2,
+     'parts': {'columns': [ASH, 0.7], 'hall steel': [ASH, 0.4], 'cut up': [ASH, 0.5]}},
+    {'id': 'cut', 'title': 'The cut (the cut truss in ember, the side lines low)', 'act': 2,
+     'parts': {'cut up': [EMBER, 1.0], 'cut down': [EMBER, 1.0], 'side line left': [EMBER, 0.4], 'side line right': [EMBER, 0.4], 'dj back': [EMBER, 0.1]}},
+    {'id': 'matrix', 'title': 'The matrix (the lasers over a red floor)', 'act': 3,
+     'parts': {'laser': [ASH, 1.0], 'red tent left': [EMBER, 0.5], 'red tent right': [EMBER, 0.5], 'plane 1 (behind the DJ)': [EMBER, 0.3]}},
+    {'id': 'white', 'title': 'White out (everything in ash, the lasers in)', 'act': 3,
+     'parts': {p: [ASH, 1.0] for p in ('laser', 'hall steel', 'columns', 'red tent left', 'red tent right', 'plane 1 (behind the DJ)',
+                                       'side line left', 'side line right', 'cut up', 'cut down', 'dj back', 'dj kicker', 'stage key')}},
+]
+MORE_CUES = [('tent', 'the tent', 2, 12), ('dj', 'the DJ', 2, 10), ('columns', 'the columns', 2, 12),
+             ('cut', 'the cut', 2, 10), ('matrix', 'the matrix', 2, 12), ('white', 'white out', 1, 6)]
+have = {l['id'] for l in rig['looks']}
+parts_in_rig = {f.get('part') for f in rig['fixtures']}
+for l in MORE_LOOKS:
+    missing = set(l['parts']) - parts_in_rig
+    assert not missing, (l['id'], missing)
+    if l['id'] not in have: rig['looks'].append(copy.deepcopy(l))
+have_cues = {c['look'] for c in rig['cues']}
+for look, name, fade, hold in MORE_CUES:
+    if look not in have_cues: rig['cues'].append({'look': look, 'name': name, 'fade': fade, 'hold': hold})
+print(f"looks {len(rig['looks'])}, cues {len(rig['cues'])} (six scenes added 2026-10-13)")
+
 json.dump(rig, open(f'{a.repo}/{a.out}', 'w'), indent=1)
 print(f'wrote {a.out} ({a.lasers}): {len(lines)} lines, {pulled} pulled/unchanged; lowest {rig["lasers"]["arithmetic"]["lowest_point_m"]} m; tent {len(side)} washes at {a.tent:.0f} deg')
 for bid, pan, nm, L, h in lines: print(f'  {bid} pan {pan:+4d} -> {nm} {L:5.1f} m, end {h:.1f} m')

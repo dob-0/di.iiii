@@ -23,6 +23,7 @@ import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
 import { ShadowsOnDemand } from '../../project/viewport/RenderSettingsEffect.jsx'
 import '../../project/viewport/spotLightSkip.js'
+import { bodyBounds } from '../utils/selectionBounds.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
 import LaserView from '../../rigbuild/LaserView.jsx'
@@ -233,7 +234,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
 
     useEffect(() => {
         if (!selected || !isVisible || !groupRef.current) return undefined
-        const helper = new THREE.BoxHelper(groupRef.current, isPrimary ? 0xffa500 : 0x2ecc71)
+        // The box is the entity's body (selectionBounds.js), never its beam: a spot light's
+        // subtree holds a cone as long as the throw, and BoxHelper took all of it (owner 2026-10-13).
+        const helper = new THREE.Box3Helper(bodyBounds(groupRef.current), isPrimary ? 0xffa500 : 0x2ecc71)
         helper.material.depthTest = false
         helper.material.transparent = true
         helper.material.opacity = 0.95
@@ -256,13 +259,13 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
     // selected-but-static entity (2026-07-17 perf audit).
     useEffect(() => {
         if (highlightRef.current && groupRef.current) {
-            highlightRef.current.setFromObject(groupRef.current)
+            bodyBounds(groupRef.current, highlightRef.current.box)
         }
     }, [overrideTransform, entity.components?.transform, selected])
 
     useFrame(() => {
         if (isDragging.current && highlightRef.current && groupRef.current) {
-            highlightRef.current.setFromObject(groupRef.current)
+            bodyBounds(groupRef.current, highlightRef.current.box)
         }
     })
 
