@@ -67,7 +67,7 @@ const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30
  * and does not stop it at the steel (spotBeam.js): without this a beam the cast stops at the roof is drawn through it. Pure. */
 export const reachOf = (f) => (f.throw_m !== undefined ? r3(Math.min(Math.max(f.throw_m ?? 120, 1), 120)) : DIST[f.type] || 24)
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
-const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1 }
+const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1, 'up-la40wf': 1 }
 // A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
 // wide: seen from the floor, near its axis, every line became a white blob of forward scatter + bloom, and side-on it was a
 // dim smear). The beam's real luminous flux into a 2 mrad half-angle (a 4 mm aperture + ~1 mrad divergence + the 0.3 deg
@@ -85,7 +85,15 @@ export const FIXTURES_FILE = 'scripts/place/fixtures/fixtures.json'
 export const cubeVariant = (file = path.join(REPO_ROOT, FIXTURES_FILE)) => JSON.parse(fs.readFileSync(file, 'utf8')).kinds.lasercube.specs.variant_in_use.value
 const CUBE = cubeVariant()
 /** Lumens in one laser beam of a cube unit (see FLUX above). Pure given the variant. */
-export const laserBeamLumens = (f, b, variant = CUBE) => {
+/** The laser types a rig may carry: the cubes (mW per line from the variant in use) and the UPlight UP-LA40WF (fixtures.json kind
+ * 'laser': R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm — mapped onto the cube's nearest lines; owner 2026-10-12 05:2x: "we take also
+ * 2 lasers from Sevan", the rental units that ran at the Sevan festival). */
+export const LASER_TYPES = {
+    'ext-lc-ultra-mk2': { name: (f) => `LaserCube ${f.id.slice(-1)}`, mW: () => CUBE },
+    'up-la40wf': { name: (f) => `UP-LA40WF ${f.id.slice(-1)}`, mW: () => ({ '445nm': 16000, '455nm': 16000, '520nm': 15000, '525nm': 15000, '638nm': 10000 }) }
+}
+export const isLaserType = (type) => Object.prototype.hasOwnProperty.call(LASER_TYPES, type)
+export const laserBeamLumens = (f, b, variant = (LASER_TYPES[f.type] || LASER_TYPES['ext-lc-ultra-mk2']).mW()) => {
     const mW = CUBE_NM.map((nm) => Number(variant[`${nm}nm`]) || 0)
     const { lumens } = laserColourFlux({ mW, drive: driveOfHex(f.colour) })
     const on = (f.laser?.beams || []).filter((x) => !x.off).length || 1
@@ -131,17 +139,17 @@ export const positionOf = (f) => {
 export const v1Entities = (rig) => {
     const out = []
     for (const f of rig.fixtures) {
-        if (f.type === 'ext-lc-ultra-mk2') {
+        if (isLaserType(f.type)) {
             for (const b of f.laser.beams) {
                 if (b.off) continue                                      // a cube that cannot pass the aerial rule (moxir_v1_1.py) draws no beam
-                out.push({ id: `rig-laser-${b.id}`, type: 'spotLight', name: `LaserCube ${f.id.slice(-1)} beam ${b.id} (${f.laser.colour}) — previs, never emitted from here`, parentId: null,
+                out.push({ id: `rig-laser-${b.id}`, type: 'spotLight', name: `${LASER_TYPES[f.type].name(f)} beam ${b.id} (${f.laser.colour}) — previs, never emitted from here`, parentId: null,
                     components: {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
                         appearance: { color: f.colour, opacity: 1 },
                         light: { color: f.colour, intensity: laserIntensityOfLumens(laserBeamLumens(f, b)), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
                         beam: { visible: true, haze: 1, aperture: LASER_APERTURE },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
-                        fixture: { type: 'ext-lc-ultra-mk2', unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
+                        fixture: { type: f.type, unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
                     } })
             }
             continue
@@ -196,7 +204,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const units = ents.filter((e) => e.type === 'spotLight')
     const byPart = new Map()
     for (const f of rig.fixtures) {
-        if (f.type === 'ext-lc-ultra-mk2') {
+        if (isLaserType(f.type)) {
             for (const b of f.laser.beams) if (!b.off) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
         } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f) })
     }
