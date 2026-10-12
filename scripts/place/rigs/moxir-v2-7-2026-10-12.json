@@ -6925,7 +6925,7 @@
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
    "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, 4 m left of the door axis, 7.0 m up; fires up over the crowd, crossed, to the roof above the back of the floor",
-   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance",
+   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance; owner 2026-10-12 05:4x: \"they stay at entrance\" (decided)",
    "mount": "UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)",
    "laser": {
     "colour": "ash white",
@@ -6973,7 +6973,7 @@
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
    "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, 4 m right of the door axis, 7.0 m up; fires up over the crowd, crossed, to the roof above the back of the floor",
-   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance",
+   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance; owner 2026-10-12 05:4x: \"they stay at entrance\" (decided)",
    "mount": "UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)",
    "laser": {
     "colour": "ash white",

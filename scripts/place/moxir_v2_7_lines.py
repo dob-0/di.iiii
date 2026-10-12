@@ -90,7 +90,7 @@ for n, (u, s_) in enumerate(((-4.0, 1), (4.0, -1)), 1):
     assert ok(p, d, L, name, T), (name, T)
     rig['fixtures'].append({'id': f'rig-laser40-{n}', 'type': 'up-la40wf', 'part': 'laser', 'layer': 'lines', 'status': 'used', 'p': p, 'r': euler_for(d), 'colour': '#e8e4dc', 'angle_rad': 0.0013,
         'position': f'v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, {abs(u):.0f} m {"left" if u < 0 else "right"} of the door axis, {ENTRY_MOUNT[0]} m up; fires up over the crowd, crossed, to the roof above the back of the floor',
-        'source': 'owner 2026-10-12 05:2x: "we take also 2 lasers from Sevan and they go up to the entrance"; his drawing 05:26: the units stand AT the entrance',
+        'source': 'owner 2026-10-12 05:2x: "we take also 2 lasers from Sevan and they go up to the entrance"; his drawing 05:26: the units stand AT the entrance; 05:4x "they stay at entrance" (decided)',
         'mount': 'UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)',
         'laser': {'colour': 'ash white', 'beams': [{'id': f'4{n}', 'off': False, 'duty': 1.0, 'to': T, 'length_m': round(L, 3), 'r': euler_for(d), 'ends_on': name, 'end_height_m': T[1],
                   'lowest_m': round(min(p[1], T[1]), 2), 'over_hand_rule_m': round(min(p[1], T[1]) - HAND_RULE_Y, 2), 'checks': f'static line, no scan; from {ENTRY_MOUNT[0]} m at the door up to the roof chords; DJ crane crossing >= {NEAR_MIN} m; lamp/crane strikes UNVALIDATED'}]}})
