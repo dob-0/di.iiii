@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # epic_plot.py — the epic plot, PHASE 2 DRAFT (2026-10-08), SUPERSEDED by moxir_v1.py (elite + minimal + the review): kept for its helpers: the owner chose every advised placement option.
 # From the advised placement (epic_placement.py) this derives the looks and cues, the full fixture schedule (position,
-# mount, aim, colour, DMX, watts, circuit), the network (the 6 LaserCubes on one switch, fixed IPs, Art-Net), the
+# mount, aim, colour, DMX, watts, circuit), the network (the 6 LaserCubes on one switch, fixed IPs; they take di's LAN stream, not DMX), the
 # power budget per circuit and the supply the venue must give, the cable runs, every check, and writes:
 #   rigs/moxir-epic-2026-10-08.json         the rig file (the beta v0.9 snapshot schema: one record per unit, read by
 #                                          scripts/rigbuild/epic-build.mjs to load it into a copy of beta, as ops)
@@ -116,6 +116,9 @@ def advised_units():
 
 
 # ------------------------------------------------------------------ the lasers
+# LEGACY (owner N460.2, 2026-10-09): the cubes were once planned on Art-Net universe ten, 16 ch each. They run on the LAN through
+# di Nodes (LaserCube UDP 45456-45458) with NO DMX. The key stays only because the committed rig files and moxir_v1_1.py still
+# read laser.artnet; nothing is patched from it and no text below says it.
 ARTNET_LASER_UNIVERSE = 10
 
 
@@ -308,17 +311,17 @@ def network(cubes_):
     ips = [{'ip': '192.168.1.2', 'what': 'SW-FOH, managed gigabit switch (mgmt)'}, {'ip': '192.168.1.3', 'what': 'SW-STAGE, managed gigabit switch (mgmt)'},
            {'ip': '192.168.1.4', 'what': 'SW-LASER, managed gigabit switch, 8 ports: the 6 cubes + the uplink + NODE-FAR'},
            {'ip': '192.168.1.10', 'what': 'the desk (UP-Q3L MA console from the rental list): Art-Net out'},
-           {'ip': '192.168.1.11', 'what': 'the di Raw laptop (the lasers\' stream, the previs)'},
+           {'ip': '192.168.1.11', 'what': 'the di Nodes laptop (the lasers\' stream, the previs)'},
            {'ip': '192.168.1.21', 'what': 'NODE-STAGE, Art-Net to DMX, 2 ports (port-address 0 on both: U1-A, U1-B)'},
            {'ip': '192.168.1.22', 'what': 'NODE-FAR, Art-Net to DMX, 1 port (port-address 1)'},
            {'ip': '192.168.1.23', 'what': 'NODE-LEFT, Art-Net to DMX, 2 ports (port-address 2 on both)'},
            {'ip': '192.168.1.24', 'what': 'NODE-RIGHT, Art-Net to DMX, 2 ports (port-address 3 on both)'}] + \
-          [{'ip': c['ip'], 'what': 'LaserCube %d (%s), Art-Net universe %d, address %d, 16 ch' % (c['n'], c['colour'], c['artnet']['universe'], c['artnet']['address'])} for c in cubes_]
+          [{'ip': c['ip'], 'what': 'LaserCube %d (%s): LAN only, through di Nodes (LaserCube UDP 45456-45458), no DMX' % (c['n'], c['colour'])} for c in cubes_]
     return {'subnet': '192.168.1.0/24, mask 255.255.255.0, no gateway, no DHCP: every address fixed by hand on the unit, written on a label on it',
             'rules': ['a closed show network: nothing else plugged in, no Wi-Fi bridge (each cube\'s Wi-Fi OFF, set in LaserOS)',
-                      'the cubes on ONE switch, SW-LASER, as asked; the desk reaches them through the two backbone links',
-                      'Art-Net 4: the desk sends unicast to the nodes and the cubes (no broadcast storm on the cubes\' 100 Mbit ports)',
-                      'the cubes\' DMX/Art-Net profile is the maker\'s default 16-ch (ULTRA MK2 Guide pp. 57-59): check on the test whether LaserOS counts the universe from 0 or 1'],
+                      'the cubes on ONE switch, SW-LASER, as asked; di Nodes (the laptop at 192.168.1.11) reaches them through the two backbone links',
+                      'Art-Net 4: the console sends unicast to the nodes; the cubes are not on Art-Net (di Nodes sends each its own UDP stream, ports 45456-45458, about 2.4 Mbit/s at 30 kpps)',
+                      'the cubes run over the LAN through di Nodes, never DMX or Art-Net (owner N460.2, 2026-10-09); the maker\'s 16-ch DMX profile (ULTRA MK2 Guide pp. 57-59) is unused. The stream is reverse-engineered and unconfirmed on a real cube: the real-cube test is owed'],
             'ips': ips, 'links': links}
 
 
@@ -465,8 +468,8 @@ def schedule(fx, cubes_):
     for c in cubes_:
         rows.append({'id': c['id'], 'type': c['type'], 'model': CODE[c['type']], 'part': 'laser', 'layer': 'lasers', 'p': c['p'], 'mount': c['mount'],
                      'aim': '; '.join('%s → (%.1f, %.1f, %.1f) %s' % (b['id'], *b['to'], b['stop']) for b in c['beams']), 'yaw_deg': None, 'el_deg': None,
-                     'beam_deg': 0.06, 'home_colour': c['colour'], 'dmx': {'universe': 'Art-Net %d' % c['artnet']['universe'], 'address': c['artnet']['address'],
-                                                                             'footprint': 16, 'branch': 'network: SW-LASER, ' + c['ip']},
+                     'beam_deg': 0.06, 'home_colour': c['colour'], 'dmx': {'universe': 'LAN (no DMX)', 'address': None,
+                                                                             'footprint': 0, 'branch': 'network: SW-LASER, ' + c['ip']},
                      'power_w': c['power_w'], 'circuit': c.get('circuit')})
     return rows
 
@@ -665,7 +668,7 @@ for(const lk of D.looks){const m=D.lookMeta[lk.id];h3(esc(lk.title)+" <span styl
 h2("3","From above: the whole building");root.appendChild(img(D.png.plan,"plan"));
 h2("4","Heights");root.appendChild(img(D.png.section,"section"));
 h2("5","The lasers");
-root.appendChild(table(["cube","colour","at (x, y, z)","mount","IP · Art-Net","beam","to (stop)","length","passes","floor sees","cd/m² per beam"],B.cubes.flatMap(c=>c.beams.map((b,i)=>[i?"":c.n,i?"":{html:swatch(c.hex)+esc(c.colour)},i?"":"("+c.p.join(", ")+")",i?"":c.mount,i?"":c.ip+" · U"+c.artnet.universe+"/"+c.artnet.address,b.id,"("+b.to.join(", ")+") "+b.stop,b.length_m+" m",okc(b.pass),Math.round(100*b.seen)+" %",b.cd_m2_per_beam]))),true);
+root.appendChild(table(["cube","colour","at (x, y, z)","mount","IP · LAN","beam","to (stop)","length","passes","floor sees","cd/m² per beam"],B.cubes.flatMap(c=>c.beams.map((b,i)=>[i?"":c.n,i?"":{html:swatch(c.hex)+esc(c.colour)},i?"":"("+c.p.join(", ")+")",i?"":c.mount,i?"":c.ip+" · LAN (di Nodes)",b.id,"("+b.to.join(", ")+") "+b.stop,b.length_m+" m",okc(b.pass),Math.round(100*b.seen)+" %",b.cd_m2_per_beam]))),true);
 note("Per beam: the 6 W unit, its power split between the cube's 2 beams (duty 0.45; Talbot–Plateau). Safety at 10 W, all power in one beam (scan failure, IEC TR 60825-3): NOHD "+B.lasers_sum.nohd.nohd_m+" m (IEC 60825-1:2014 Table A.1), longer than the hall: no beam may reach an eye, and none does: every beam ends on steel behind the DJ or on a side span's runway girder, never past z 21, never under 3 m over a floor.");
 if(B.lasers_sum.crane_precondition.length)root.appendChild(el("p",{color:C.bad,font:"600 14px/1.5 "+F},"HARD PRECONDITION: the near crane parked at z 21 is the beam stop. Where the photos show it (z 4.8), "+B.lasers_sum.crane_precondition.map(x=>x.beam).join(", ")+" would reach the entry end. No stage-ward emission until it is seen at z 21 and the stop checked (crew sheet, the laser test)."));
 h2("6","Looks and cues");
@@ -673,11 +676,11 @@ root.appendChild(table(["look","layers lit (≤ 3)","parts: colour, level","eyes
 root.appendChild(table(["Q","look","GO","fade","note"],D.cues.map(q=>[q.q,q.look?D.looks.find(l=>l.id===q.look).title:"(black)",q.go,q.fade_s+" s",q.note])));
 note("References (the owner's 4 videos, 2026-10-06): silhouette, mirrored pairs, one colour per part, beams meeting at one point, side combs, blackouts; never more than 3 layers lit. Strobes at most 4 flashes per second (HSE HSG195), and a notice at the door.");
 h2("7","Fixture schedule (every unit)");
-root.appendChild(table(["id","model","x","y","z","mount","aim","beam°","colour","DMX","W","circuit"],B.schedule.map(r=>[r.id.replace("rig-",""),r.model,r.p[0],r.p[1],r.p[2],r.mount,r.aim||"",r.beam_deg==null?"":r.beam_deg,{html:swatch(r.home_colour&&r.home_colour[0]==="#"?r.home_colour:null)+esc(r.home_colour||"")},(typeof r.dmx.universe==="number"?"U"+r.dmx.universe+" / "+r.dmx.address+" ("+r.dmx.footprint+" ch)":r.dmx.universe+" / "+r.dmx.address),r.power_w,r.circuit||""]),true));
+root.appendChild(table(["id","model","x","y","z","mount","aim","beam°","colour","DMX","W","circuit"],B.schedule.map(r=>[r.id.replace("rig-",""),r.model,r.p[0],r.p[1],r.p[2],r.mount,r.aim||"",r.beam_deg==null?"":r.beam_deg,{html:swatch(r.home_colour&&r.home_colour[0]==="#"?r.home_colour:null)+esc(r.home_colour||"")},(typeof r.dmx.universe==="number"?"U"+r.dmx.universe+" / "+r.dmx.address+" ("+r.dmx.footprint+" ch)":r.dmx.universe+(r.dmx.address==null?"":" / "+r.dmx.address)),r.power_w,r.circuit||""]),true));
 note(B.schedule.length+" units. Aim: a target point (x, y, z) in the hall frame, or yaw (0 = toward the far gate, + toward house right) and the angle up. DMX footprints: the smallest mode each maker publishes (fixtures.json). Colour: the unit's home colour; the looks set the rest.");
 h3("DMX / Art-Net");
 root.appendChild(table(["branch","universe","Art-Net port-address","node","devices (≤ 32)","run","check"],B.patch.map(r=>{const run=B.dmx_runs.find(x=>x.branch===r.branch);return [r.branch,r.universe,r.artnet_port_address,r.node,r.devices,run.length_m+" m",okc(run.ok)];})));
-note("Slots used: "+Object.entries(B.used).map(([u,n])=>"U"+u+" "+n+"/512").join(", ")+"; lasers on Art-Net universe 10 (6 × 16 = 96). DMX512-A (ANSI E1.11): 32 unit loads per segment; U1 leaves the splitter on two outputs.");
+note("Slots used: "+Object.entries(B.used).map(([u,n])=>"U"+u+" "+n+"/512").join(", ")+"; the 6 lasers are on the LAN through di Nodes, not on DMX (owner N460.2). DMX512-A (ANSI E1.11): 32 unit loads per segment; U1 leaves the splitter on two outputs.");
 h3("Network: the 6 cubes on one switch");
 root.appendChild(table(["IP","what"],B.network.ips.map(x=>[x.ip,x.what])));
 root.appendChild(table(["link","from → to","cable","length (+10 %)","≤ 100 m"],B.network.links.map(l=>[l.what,esc(l.from)+" → "+esc(l.to),l.kind,l.length_m+" m",okc(l.ok)])));
@@ -752,7 +755,7 @@ def crew_body(B):
         zs = sorted({r['p'][2] for r in rs})
         ys = sorted({r['p'][1] for r in rs})
         dm = [r['dmx'] for r in rs]
-        dmx = ('U%s %s–%s' % (dm[0]['universe'], min(d['address'] for d in dm), max(d['address'] + d['footprint'] - 1 for d in dm))) if isinstance(dm[0]['universe'], int) else 'Art-Net U10 (network)'
+        dmx = ('U%s %s–%s' % (dm[0]['universe'], min(d['address'] for d in dm), max(d['address'] + d['footprint'] - 1 for d in dm))) if isinstance(dm[0]['universe'], int) else 'LAN: di Nodes, no DMX'
         aims = sorted({r['aim'] for r in rs if r['aim']})
         t.append('<tr><td><b>%s</b></td><td>%d</td><td>%s</td><td>x %s; z %s</td><td>%s m</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
             esc(part), len(rs), esc(rs[0]['model']), esc(', '.join('%g' % v for v in xs[:8]) + (' …' if len(xs) > 8 else '')), esc(', '.join('%g' % v for v in zs[:8]) + (' …' if len(zs) > 8 else '')),
@@ -764,7 +767,7 @@ def crew_body(B):
              ''.join('<tr><td>%s</td><td>%s</td></tr>' % (esc(x['ip']), esc(x['what'])) for x in net['ips']) + '</table><div class="sub">%s</div>' % esc(net['subnet']))
     t.append('<h2>3 · DMX</h2><table><tr><th>branch</th><th>U</th><th>node</th><th>devices</th><th>run</th></tr>' +
              ''.join('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s m</td></tr>' % (esc(r['branch']), r['universe'], esc(r['node']), r['devices'], [x for x in B['dmx_runs'] if x['branch'] == r['branch']][0]['length_m']) for r in B['patch']) +
-             '</table><div class="sub">5-pin DMX, 120 Ω terminator on the last unit of every branch. Lasers: Art-Net universe 10, addresses 1/17/33/49/65/81.</div>')
+             '</table><div class="sub">5-pin DMX, 120 Ω terminator on the last unit of every branch. Lasers: not DMX &mdash; the LAN through di Nodes (LaserCube UDP 45456&ndash;45458).</div>')
     t.append('<h2>4 · Power</h2><table><tr><th>distro</th><th>circuits</th><th>load</th></tr>' +
              ''.join('<tr><td>%s</td><td>%s</td><td>%d W</td></tr>' % (esc(d), ', '.join(c['circuit'] for c in B['circuits'] if c['distro'] == d), w) for d, w in B['supply']['per_distro_w'].items()) +
              '</table><div class="sub">Venue supply needed: %s. Every circuit ≤ 2944 W (16 A at 80 %%). Heaters (hazers, smoke) never on a lamp circuit; lasers + network on their own circuit.</div></div>' % esc(B['supply']['need']))
@@ -785,7 +788,7 @@ SAFETY = [
 LASER_TEST = [
     'LSO present; the Class 4 permit on site; the key switches with the LSO; the emergency stop (interlock) of every cube tested.',
     'Confirm the label on each cube (10 W or 6 W) and write it on the sheet: the NOHD changes (724 m at 10 W, 544 m at 6 W).',
-    'Each cube on its fixed IP; Wi-Fi OFF; Art-Net from the desk reaches it (one test cue per cube).',
+    'Each cube on its fixed IP; Wi-Fi OFF; di Nodes reaches it over the LAN (one test frame per cube, output disarmed).',
     'In LaserOS set the output zones so that NO point outside the two beam points can be drawn (the controller\'s zones are the second barrier).',
     'Align at the lowest power the cube allows, one beam at a time, with a card at the stop: the beam lands on the near crane\'s back girder (z 19.55, 7.95-8.75 m) or the side span\'s runway girder, never past it.',
     'Walk each beam\'s path with a card from the cube to the stop: nothing hangs in it (pendant lamps, cables, hooks at 7-9 m).',
@@ -799,7 +802,7 @@ def answer(B):
     lz = B['lasers_sum']
     K = B['checks']
     return ['Your placement, lit as a night in 7 looks that build like a fire: <b>embers → the burnt-out hall → the silhouette → sparks from the depth → the fire (the drop, then black) → ash falling → dawn over the ruin</b>; never more than 3 layers at once, ash-white and ember-red, one colour per part, mirrored pairs.',
-            '<b>%d units</b> scheduled (position, mount, aim, colour, DMX, watts, circuit): 4 DMX universes + the lasers on Art-Net 10, the 6 cubes on one switch at 192.168.1.101–106; %d circuits, the venue must give <b>%s</b>.' % (
+            '<b>%d units</b> scheduled (position, mount, aim, colour, DMX, watts, circuit): 4 DMX universes (the 6 cubes are not DMX: the LAN through di Nodes), the 6 cubes on one switch at 192.168.1.101–106; %d circuits, the venue must give <b>%s</b>.' % (
                 len(B['schedule']), K['circuits'], '3-phase, %d A per phase' % B['supply']['need_a']),
             'Checks: lasers %d/%d beams on steel; front row %.0f lux in every look; no ground mover through the dance zone; every universe, branch, Cat6 link and circuit inside its limit. Owed: the towers\' stability, the crane at z 21, the cube labels, the venue\'s supply.' % (
                 K['lasers']['pass'], K['lasers']['beams'], K['glare']['front_row_lux'])]

@@ -22,7 +22,9 @@ describe('the fixtures manifest', () => {
             expect(entry.code, kind).toMatch(/^(UP|EXT)-/)
             if (entry.code.startsWith('EXT-')) expect(entry.identified, kind).toMatch(/another supplier/)
             for (const [field, spec] of Object.entries(entry.specs)) {
-                expect(['EXACT', 'EQUIVALENT', 'TESTED', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
+                expect(['EXACT', 'COMPONENT', 'EQUIVALENT', 'TESTED', 'UNKNOWN', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
+                // UNKNOWN: looked for and not found — it holds no number and cites nothing
+                if (spec.basis === 'UNKNOWN') { expect(spec.value, `${kind}.${field}`).toBeNull(); expect(spec.note, `${kind}.${field}`).toBeTruthy(); continue }
                 if (spec.basis === 'ASSUMED') continue
                 for (const src of String(spec.src).split(/,\s*/)) expect(manifest.sources[src], `${kind}.${field} cites ${src}`).toBeTruthy()
             }
@@ -32,9 +34,29 @@ describe('the fixtures manifest', () => {
         }
         // A source is a page, or (TESTED) the rental unit itself, which has no page: it says so.
         for (const [id, s] of Object.entries(manifest.sources)) {
-            if (s.url === null) expect(s.what, id).toMatch(/rental units? themselves/)
+            // or a file the owner's own unit came with (the cube's SD card), named by path and hash
+            if (s.file) { expect(s.sha256_16, id).toMatch(/^[0-9a-f]{16}$/); expect(s.what, id).toMatch(/owner's own/) }
+            else if (s.url === null) expect(s.what, id).toMatch(/rental units? themselves/)
             else expect(s.url, id).toMatch(/^https:\/\//)
         }
+    })
+
+    it('carries the Sevan-kit research of 2026-10-09: each number labelled, the open conflict kept open', () => {
+        const { beam380, par, smoke, lasercube } = manifest.kinds
+        // the B380F's two TESTED channel maps disagree from ch11: written down as OPEN, not resolved by choice
+        expect(beam380.specs.dmx_order.basis).toBe('TESTED')
+        expect(beam380.specs.dmx_order.open).toMatch(/^OPEN/)
+        expect(beam380.specs.dmx_order.open).toMatch(/ch11-16/)
+        expect(beam380.specs.lamp_component.basis).toBe('COMPONENT')
+        expect(beam380.specs.lamp_component.value.flux_lm).toBe(20000)
+        expect(beam380.specs.field_deg.basis).toBe('UNKNOWN')
+        expect(par.specs.field_deg.basis).toBe('UNKNOWN')
+        expect(par.specs.dmx_order.basis).toBe('TESTED')
+        // the one haze source: its output volume is not published, and is never copied from a reseller
+        expect(smoke.specs.output_m3_min.basis).toBe('UNKNOWN')
+        expect(smoke.specs.fluid_ml_per_min.value).toBe(150)
+        // the owner's cubes: the 6.0 W variant, per diode, from the maker's Guide v1.2
+        expect(lasercube.specs.variant_in_use.value).toMatchObject({ name: '7.5 W', '455nm': 4000, '525nm': 2000, '638nm': 1500 })
     })
 
     it('says what licence the models are under and that they are not the makers\' CAD', () => {

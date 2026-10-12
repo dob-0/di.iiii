@@ -157,6 +157,10 @@ const currentOrigin = () => (typeof window !== 'undefined' ? window.location.ori
 export const deskApiBase = (origin = currentOrigin(), basePrefix = getBasePrefix()) =>
     new URL(joinPath('/', basePrefix, '/light/api'), origin).toString().replace(/\/+$/, '')
 
+// The laser server's routes, beside the desk's: same origin, same base path.
+export const laserApiBase = (origin = currentOrigin(), basePrefix = getBasePrefix()) =>
+    new URL(joinPath('/', basePrefix, '/laser/api'), origin).toString().replace(/\/+$/, '')
+
 // The interface itself — what "Open the desk" opens.
 export const deskHomeUrl = (origin = currentOrigin(), basePrefix = getBasePrefix()) =>
     new URL(joinPath('/', basePrefix, '/light/'), origin).toString()
