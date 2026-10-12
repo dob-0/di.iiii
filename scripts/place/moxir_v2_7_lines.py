@@ -18,7 +18,8 @@ Output: scripts/place/rigs/moxir-v2-7-2026-10-12.json; the laser lines' lamp/cra
 import argparse, json, math, sys, copy
 ap = argparse.ArgumentParser(); ap.add_argument('--repo', required=True); ap.add_argument('--src', default='scripts/place/rigs/moxir-v2-6-2026-10-12.json')
 ap.add_argument('--out', default='scripts/place/rigs/moxir-v2-7-2026-10-12.json'); ap.add_argument('--version', default='2.7')
-ap.add_argument('--headings', default='60,36,12,-12,-36,-60', help='per cube, left to right: crossed (+-60 with pans +-27 keeps every line forward of the crane)'); ap.add_argument('--pans', default='-27,-9,9,27')
+ap.add_argument('--headings', default='60,36,12,-12,-36,-60', help='per cube, left to right: crossed (+-60 with pans +-27 keeps every line forward of the crane)'); ap.add_argument('--pans', default='-27,-9,9,27,-18,18')
+ap.add_argument('--tilts', default='low,1.5,low,1.5,6,6', help='per pan: low = steepest down that keeps the hand rule; numbers in deg; the +6 pair fills the air up to the roof chords (owner 2026-10-12 05:24: "this area laser not close")')
 ap.add_argument('--point', default='0,9.8,53.8', help='the point above the door; 9.8 so the line clears the DJ crane at z 3.2 by the 9.2 m rule (9.63 gave 9.199)')
 a = ap.parse_args(); sys.path.insert(0, f'{a.repo}/scripts/place'); import moxir_v2_symmetry as sym
 rig = json.load(open(f'{a.repo}/{a.src}')); X0 = sym.X0
@@ -63,7 +64,7 @@ for side, group, s in (('left', left, -1), ('right', right, 1)):
         f['throw_m'] = None; f['throw_source'] = 'epic-build default (reachOf) until the footprint run'
 # --- 2. the net: six cubes, crossed headings, four lines each ------------------------------------------------------------------------
 cubes = sorted([f for f in rig['fixtures'] if f['type'] == 'ext-lc-ultra-mk2'], key=lambda f: f['p'][0])
-heads_deg = [float(v) for v in a.headings.split(',')]; pans = [float(v) for v in a.pans.split(',')]; tilts = ['low', 1.5, 'low', 1.5]
+heads_deg = [float(v) for v in a.headings.split(',')]; pans = [float(v) for v in a.pans.split(',')]; tilts = [v if v == 'low' else float(v) for v in a.tilts.split(',')]
 tubes, lines = [], []
 for n, (f, h) in enumerate(zip(cubes, heads_deg), 1):
     p = f['p']; mid = [math.sin(math.radians(h)) * math.cos(math.radians(6)), math.sin(math.radians(6)), math.cos(math.radians(h)) * math.cos(math.radians(6))]
@@ -71,31 +72,49 @@ for n, (f, h) in enumerate(zip(cubes, heads_deg), 1):
     f['position'] = f['position'].split('; v2.4')[0] + f'; v2.7 (moxir_v2_7_lines.py): crossed heading {h:+.0f} deg from +z, 4 lines (pans {a.pans}), a net over the audience'
     f['laser']['beams'] = []
     for k, (pan, tilt) in enumerate(zip(pans, tilts)):
-        bid = f'{n}{"abcd"[k]}'; pa = math.radians(h + pan); tl = low_tilt(p, pa) if tilt == 'low' else tilt; ti = math.radians(tl)
+        bid = f'{n}{"abcdef"[k]}'; pa = math.radians(h + pan); tl = low_tilt(p, pa) if tilt == 'low' else tilt; ti = math.radians(tl)
         d = [math.sin(pa) * math.cos(ti), math.sin(ti), math.cos(pa) * math.cos(ti)]; L, name, T = first_hit(p, d)
         b = {'id': bid, 'off': False, 'duty': 1.0, 'to': T, 'length_m': round(L, 3), 'r': euler_for(d), 'pan_deg': round(h + pan, 2), 'tilt_deg': tl, 'ends_on': name,
              'end_height_m': T[1], 'lowest_m': round(min(p[1], T[1]), 2), 'over_hand_rule_m': round(min(p[1], T[1]) - HAND_RULE_Y, 2),
              'checks': f'lowest point >= {HAND_RULE_Y} m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= {ENTRY_MIN} m, DJ crane crossing >= {NEAR_MIN} m; lamp/crane strikes UNVALIDATED'}
         f['laser']['beams'].append(b); tubes.append({'beam': bid, 'cube': f['id'], 'from': p, 'to': T, 'half_fan_deg': 1.008, 'ends_on': name}); lines.append((bid, round(h + pan), tl, name, round(L, 1)))
-# --- 3. two UP-LA40WF to the point above the door ------------------------------------------------------------------------------------
-P = [float(v) for v in a.point.split(',')]; cy, cz = cubes[0]['p'][1], cubes[0]['p'][2]
+# --- 3. two UP-LA40WF AT THE ENTRANCE (owner's drawing 2026-10-12 05:26: "lasers from sevan this is entrance") -----------------------
+# On the entry wall above the door (y 7.0, door top 6.0), 4 m left and right of the door axis (x 0), each firing UP over the crowd,
+# crossed, to the roof chords above the back part of the floor (target the DJ axis -+8 m, y 10.2, z -12): the line rises from 7.0 m
+# at the door to the chords; at the DJ crane (z 3.2) it passes at ~9.5 m (rule >= 9.2 m), everywhere >= 5.4 m over heads.
+ENTRY_MOUNT = (7.0, 53.3); AIM_Z = -12.0
 rig['fixtures'] = [f for f in rig['fixtures'] if f['type'] != 'up-la40wf']
-for n, u in enumerate((-5.0, 5.0), 1):
-    p = [round(X0 + u, 2), cy, cz]; d = sym.unit((P[0] - p[0], P[1] - p[1], P[2] - p[2])); L, name, T = first_hit(p, d)
-    assert ok(p, d, L, name, T) and name.startswith('entry'), (name, T)
+for n, (u, s_) in enumerate(((-4.0, 1), (4.0, -1)), 1):
+    p = [u, ENTRY_MOUNT[0], ENTRY_MOUNT[1]]; T0 = (X0 + s_ * 8.0, ROOF_Y - 0.1, AIM_Z)
+    d = sym.unit((T0[0] - p[0], T0[1] - p[1], T0[2] - p[2])); L, name, T = first_hit(p, d)
+    assert ok(p, d, L, name, T), (name, T)
     rig['fixtures'].append({'id': f'rig-laser40-{n}', 'type': 'up-la40wf', 'part': 'laser', 'layer': 'lines', 'status': 'used', 'p': p, 'r': euler_for(d), 'colour': '#e8e4dc', 'angle_rad': 0.0013,
-        'position': f'v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the back crane girder top, {abs(u):.0f} m {"left" if u < 0 else "right"} of the DJ axis; one straight line to the point above the door',
-        'source': 'owner 2026-10-12 05:2x: "we take also 2 lasers from Sevan and they go up to the entrance"',
+        'position': f'v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, {abs(u):.0f} m {"left" if u < 0 else "right"} of the door axis, {ENTRY_MOUNT[0]} m up; fires up over the crowd, crossed, to the roof above the back of the floor',
+        'source': 'owner 2026-10-12 05:2x: "we take also 2 lasers from Sevan and they go up to the entrance"; his drawing 05:26: the units stand AT the entrance',
+        'mount': 'UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)',
         'laser': {'colour': 'ash white', 'beams': [{'id': f'4{n}', 'off': False, 'duty': 1.0, 'to': T, 'length_m': round(L, 3), 'r': euler_for(d), 'ends_on': name, 'end_height_m': T[1],
-                  'lowest_m': round(min(p[1], T[1]), 2), 'over_hand_rule_m': round(min(p[1], T[1]) - HAND_RULE_Y, 2), 'checks': 'static line, no scan; ends on the entry wall above the door at 9.8 m; lamp/crane strikes UNVALIDATED'}]}})
+                  'lowest_m': round(min(p[1], T[1]), 2), 'over_hand_rule_m': round(min(p[1], T[1]) - HAND_RULE_Y, 2), 'checks': f'static line, no scan; from {ENTRY_MOUNT[0]} m at the door up to the roof chords; DJ crane crossing >= {NEAR_MIN} m; lamp/crane strikes UNVALIDATED'}]}})
     tubes.append({'beam': f'4{n}', 'cube': f'rig-laser40-{n}', 'from': p, 'to': T, 'half_fan_deg': 0.0, 'ends_on': name})
 rig.setdefault('kit', {})['UP-LA40WF'] = 2
+# --- 4. five scenes, a faster loop (owner 2026-10-12 05:2x: "create 5 scenes and loop a bit faster") --------------------------------------
+ASH, EMBER = '#e8e4dc', '#ff3a12'
+looks = {l['id']: l for l in rig['looks']}
+for lid in ('dark', 'peak'):
+    looks[lid]['parts']['side line left'] = [EMBER if lid == 'dark' else ASH, 0.5 if lid == 'dark' else 1.0]
+    looks[lid]['parts']['side line right'] = looks[lid]['parts']['side line left']
+wall = {'id': 'wall', 'title': 'The wall (beams behind the DJ + the side lines)', 'act': looks['peak'].get('act'),
+        'parts': {'plane 1 (behind the DJ)': [EMBER, 1.0], 'side line left': [EMBER, 0.8], 'side line right': [EMBER, 0.8], 'cut down': [EMBER, 0.3]}}
+lines_ = {'id': 'lines', 'title': 'The lines (side washes and beams, columns)', 'act': looks['peak'].get('act'),
+          'parts': {'side line left': [ASH, 0.9], 'side line right': [ASH, 0.9], 'hall steel': [EMBER, 0.6], 'columns': [EMBER, 0.6], 'stage key': [ASH, 0.3]}}
+rig['looks'] = [looks['lasers'], wall, lines_, looks['dark'], looks['peak']]
+rig['cues'] = [{'look': 'lasers', 'name': 'the net (lasers only)', 'fade': 2, 'hold': 12}, {'look': 'wall', 'name': 'the wall', 'fade': 2, 'hold': 12},
+               {'look': 'lines', 'name': 'the lines', 'fade': 2, 'hold': 12}, {'look': 'dark', 'name': 'dark (one colour)', 'fade': 3, 'hold': 15}, {'look': 'peak', 'name': 'peak', 'fade': 2, 'hold': 15}]
 rig['version'] = a.version; rig['title'] = 'MOXIR v2.7 - lines left and right, a laser net, two 40 W lasers to the door'
 rig['what'] = 'v2.6 + the 12 island beams on the side lines (X0 +-14, z 13..43), the six cubes crossed into a net (hand rule 5.4 m), two UP-LA40WF to the point above the door'
 rig['lasers'].update({'tubes': tubes, 'previous': 'v2.6 fan (moxir-v2-6-2026-10-12.json)',
     'design': 'v2.7 net: six cubes on the far crane, crossed headings +60..-60 (left cube aims right), 4 lines each; two UP-LA40WF to one point above the door',
     'hand_rule': {'lowest_over_standing_m': HAND_RULE_Y, 'basis': 'owner 2026-10-12: 3 m counted from a raised hand (2.4 m) — IEC TR 60825-3 separation above the audience'},
-    'arithmetic': {'lines': len(lines) + 2, 'lowest_point_m': round(min(t['from'][1] if t['from'][1] < t['to'][1] else t['to'][1] for t in tubes), 2), 'ends': sorted(set(l[3] for l in lines)),
+    'arithmetic': {'lines': len(lines) + 2, 'per_cube': 6, 'lowest_point_m': round(min(t['from'][1] if t['from'][1] < t['to'][1] else t['to'][1] for t in tubes), 2), 'ends': sorted(set(l[3] for l in lines)),
                    'length_m_min_max': [min(l[4] for l in lines), max(l[4] for l in lines)], 'basis': 'this script, UNVALIDATED for lamp/crane strikes'}})
 json.dump(rig, open(f'{a.repo}/{a.out}', 'w'), indent=1)
 print(f'wrote {a.out}: {len(lines)} net lines + 2 x 40 W; lowest {rig["lasers"]["arithmetic"]["lowest_point_m"]} m; ' + '; '.join(f'{b} pan {pa} tilt {ti} -> {nm.split(" (")[0]} {L} m' for b, pa, ti, nm, L in lines))

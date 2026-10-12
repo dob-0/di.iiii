@@ -614,7 +614,7 @@
   {
    "id": "rig-lasercube-cut-01",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +60 deg from +z, 4 lines (pans -27,-9,9,27), a net over the audience",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +60 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience",
    "part": "laser",
    "layer": "lines",
    "status": "used",
@@ -730,6 +730,52 @@
       "lowest_m": 8.81,
       "over_hand_rule_m": 3.41,
       "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "1e",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       0.79,
+       10.3,
+       -31.91
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.7113,
+       0.0,
+       0.7281
+      ],
+      "pan_deg": 42.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "1f",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       5.17,
+       10.3,
+       -39.5
+      ],
+      "length_m": 14.254,
+      "r": [
+       -2.0389,
+       0.0,
+       1.337
+      ],
+      "pan_deg": 78.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
     "duty": 1.0,
@@ -772,7 +818,7 @@
   {
    "id": "rig-lasercube-cut-02",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +36 deg from +z, 4 lines (pans -27,-9,9,27), a net over the audience",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +36 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience",
    "part": "laser",
    "layer": "lines",
    "status": "used",
@@ -888,6 +934,52 @@
       "lowest_m": 8.81,
       "over_hand_rule_m": 3.41,
       "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "2e",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -2.92,
+       10.3,
+       -28.97
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.6809,
+       0.0,
+       0.3124
+      ],
+      "pan_deg": 18.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "2f",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       4.17,
+       10.3,
+       -34.12
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.7477,
+       0.0,
+       0.935
+      ],
+      "pan_deg": 54.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
     "duty": 1.0,
@@ -930,7 +1022,7 @@
   {
    "id": "rig-lasercube-cut-03",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -36 deg from +z, 4 lines (pans -27,-9,9,27), a net over the audience",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 2.1 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -36 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience",
    "part": "laser",
    "layer": "lines",
    "status": "used",
@@ -1046,6 +1138,52 @@
       "lowest_m": 8.81,
       "over_hand_rule_m": 3.41,
       "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "5e",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -14.57,
+       10.3,
+       -34.12
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.7477,
+       0.0,
+       -0.935
+      ],
+      "pan_deg": -54.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "5f",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -7.48,
+       10.3,
+       -28.97
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.6809,
+       0.0,
+       -0.3124
+      ],
+      "pan_deg": -18.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
     "duty": 1.0,
@@ -1088,7 +1226,7 @@
   {
    "id": "rig-lasercube-cut-04",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +12 deg from +z, 4 lines (pans -27,-9,9,27), a net over the audience",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m left of the DJ axis; the v2.4 fan is recompu; v2.7 (moxir_v2_7_lines.py): crossed heading +12 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience",
    "part": "laser",
    "layer": "lines",
    "status": "used",
@@ -1204,6 +1342,52 @@
       "lowest_m": 8.81,
       "over_hand_rule_m": 3.41,
       "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "3e",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -7.38,
+       10.3,
+       -28.35
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.6761,
+       0.0,
+       -0.1041
+      ],
+      "pan_deg": -6.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "3f",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       1.19,
+       10.3,
+       -30.17
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.6916,
+       0.0,
+       0.5204
+      ],
+      "pan_deg": 30.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
     "duty": 1.0,
@@ -1246,7 +1430,7 @@
   {
    "id": "rig-lasercube-cut-05",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -12 deg from +z, 4 lines (pans -27,-9,9,27), a net over the audience",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 0.7 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -12 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience",
    "part": "laser",
    "layer": "lines",
    "status": "used",
@@ -1362,6 +1546,52 @@
       "lowest_m": 8.81,
       "over_hand_rule_m": 3.41,
       "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "4e",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -11.59,
+       10.3,
+       -30.17
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.6916,
+       0.0,
+       -0.5204
+      ],
+      "pan_deg": -30.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "4f",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -3.02,
+       10.3,
+       -28.35
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.6761,
+       0.0,
+       0.1041
+      ],
+      "pan_deg": 6.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
     "duty": 1.0,
@@ -1404,7 +1634,7 @@
   {
    "id": "rig-lasercube-cut-06",
    "type": "ext-lc-ultra-mk2",
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -60 deg from +z, 4 lines (pans -27,-9,9,27), a net over the audience",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomputed on this rig. v2.5 gathered layout (moxir_v2_5_gathered.py): back crane girder top, 3.5 m right of the DJ axis; the v2.4 fan is recomp; v2.7 (moxir_v2_7_lines.py): crossed heading -60 deg from +z, 4 lines (pans -27,-9,9,27,-18,18), a net over the audience",
    "part": "laser",
    "layer": "lines",
    "status": "used",
@@ -1515,6 +1745,52 @@
       ],
       "pan_deg": -33.0,
       "tilt_deg": 1.5,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "6e",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -15.57,
+       10.3,
+       -39.5
+      ],
+      "length_m": 14.254,
+      "r": [
+       -2.0389,
+       0.0,
+       -1.337
+      ],
+      "pan_deg": -78.0,
+      "tilt_deg": 6.0,
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "checks": "lowest point >= 5.4 m over standing areas (hand 2.4 m + 3 m, owner 2026-10-12), entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
+     },
+     {
+      "id": "6f",
+      "off": false,
+      "duty": 1.0,
+      "to": [
+       -11.19,
+       10.3,
+       -31.91
+      ],
+      "length_m": 14.254,
+      "r": [
+       -1.7113,
+       0.0,
+       -0.7281
+      ],
+      "pan_deg": -42.0,
+      "tilt_deg": 6.0,
       "ends_on": "roof bottom chords (y 10.3)",
       "end_height_m": 10.3,
       "lowest_m": 8.81,
@@ -6631,19 +6907,20 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -10.2,
-    8.81,
-    -42.45
+    -4.0,
+    7.0,
+    53.3
    ],
    "r": [
-    -1.5811,
+    1.6198,
     0.0,
-    0.1056
+    0.1036
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
-   "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the back crane girder top, 5 m left of the DJ axis; one straight line to the point above the door",
-   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"",
+   "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, 4 m left of the door axis, 7.0 m up; fires up over the crowd, crossed, to the roof above the back of the floor",
+   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance",
+   "mount": "UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)",
    "laser": {
     "colour": "ash white",
     "beams": [
@@ -6652,21 +6929,21 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       0.0,
-       9.8,
-       53.8
+       3.01,
+       10.3,
+       -14.04
       ],
-      "length_m": 96.794,
+      "length_m": 67.785,
       "r": [
-       -1.5811,
+       1.6198,
        0.0,
-       0.1056
+       0.1036
       ],
-      "ends_on": "entry (NW) end wall above the door",
-      "end_height_m": 9.8,
-      "lowest_m": 8.81,
-      "over_hand_rule_m": 3.41,
-      "checks": "static line, no scan; ends on the entry wall above the door at 9.8 m; lamp/crane strikes UNVALIDATED"
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 7.0,
+      "over_hand_rule_m": 1.6,
+      "checks": "static line, no scan; from 7.0 m at the door up to the roof chords; DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ]
    }
@@ -6678,19 +6955,20 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -0.2,
-    8.81,
-    -42.45
+    4.0,
+    7.0,
+    53.3
    ],
    "r": [
-    -1.5811,
+    1.6198,
     0.0,
-    0.0021
+    -0.2573
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
-   "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the back crane girder top, 5 m right of the DJ axis; one straight line to the point above the door",
-   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"",
+   "position": "v2.7 (moxir_v2_7_lines.py): UPlight UP-LA40WF (40 W, from the Sevan rental) on the entry wall above the door, 4 m right of the door axis, 7.0 m up; fires up over the crowd, crossed, to the roof above the back of the floor",
+   "source": "owner 2026-10-12 05:2x: \"we take also 2 lasers from Sevan and they go up to the entrance\"; his drawing 05:26: the units stand AT the entrance",
+   "mount": "UNVALIDATED: a wall bracket or a tower at the door at 7.0 m; the rigging check is owed (SIDE 2)",
    "laser": {
     "colour": "ash white",
     "beams": [
@@ -6699,21 +6977,21 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       0.0,
-       9.8,
-       53.8
+       -13.74,
+       10.3,
+       -14.04
       ],
-      "length_m": 96.255,
+      "length_m": 69.716,
       "r": [
-       -1.5811,
+       1.6198,
        0.0,
-       0.0021
+       -0.2573
       ],
-      "ends_on": "entry (NW) end wall above the door",
-      "end_height_m": 9.8,
-      "lowest_m": 8.81,
-      "over_hand_rule_m": 3.41,
-      "checks": "static line, no scan; ends on the entry wall above the door at 9.8 m; lamp/crane strikes UNVALIDATED"
+      "ends_on": "roof bottom chords (y 10.3)",
+      "end_height_m": 10.3,
+      "lowest_m": 7.0,
+      "over_hand_rule_m": 1.6,
+      "checks": "static line, no scan; from 7.0 m at the door up to the roof chords; DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ]
    }
@@ -6860,6 +7138,56 @@
    }
   },
   {
+   "id": "wall",
+   "title": "The wall (beams behind the DJ + the side lines)",
+   "act": 3,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff3a12",
+     0.8
+    ],
+    "side line right": [
+     "#ff3a12",
+     0.8
+    ],
+    "cut down": [
+     "#ff3a12",
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "lines",
+   "title": "The lines (side washes and beams, columns)",
+   "act": 3,
+   "parts": {
+    "side line left": [
+     "#e8e4dc",
+     0.9
+    ],
+    "side line right": [
+     "#e8e4dc",
+     0.9
+    ],
+    "hall steel": [
+     "#ff3a12",
+     0.6
+    ],
+    "columns": [
+     "#ff3a12",
+     0.6
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.3
+    ]
+   }
+  },
+  {
    "id": "dark",
    "title": "Dark (one colour: ember)",
    "act": 1,
@@ -6919,6 +7247,14 @@
     "speaker face R": [
      "#ff3a12",
      1.0
+    ],
+    "side line left": [
+     "#ff3a12",
+     0.5
+    ],
+    "side line right": [
+     "#ff3a12",
+     0.5
     ]
    },
    "desk_caps": {
@@ -7038,6 +7374,14 @@
     "speaker face R": [
      "#e8e4dc",
      0.76
+    ],
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
     ]
    },
    "desk_caps": {
@@ -7086,21 +7430,33 @@
  "cues": [
   {
    "look": "lasers",
-   "name": "lasers only (full, previs)",
+   "name": "the net (lasers only)",
    "fade": 2,
-   "hold": 20
+   "hold": 12
+  },
+  {
+   "look": "wall",
+   "name": "the wall",
+   "fade": 2,
+   "hold": 12
+  },
+  {
+   "look": "lines",
+   "name": "the lines",
+   "fade": 2,
+   "hold": 12
   },
   {
    "look": "dark",
-   "name": "v2.1 \u00b7 dark (one colour)",
+   "name": "dark (one colour)",
    "fade": 3,
-   "hold": 40
+   "hold": 15
   },
   {
    "look": "peak",
-   "name": "v2.1 \u00b7 peak",
+   "name": "peak",
    "fade": 2,
-   "hold": 20
+   "hold": 15
   }
  ],
  "loop": true,
@@ -17214,6 +17570,38 @@
     "ends_on": "roof bottom chords (y 10.3)"
    },
    {
+    "beam": "1e",
+    "cube": "rig-lasercube-cut-01",
+    "from": [
+     -8.7,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     0.79,
+     10.3,
+     -31.91
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "1f",
+    "cube": "rig-lasercube-cut-01",
+    "from": [
+     -8.7,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     5.17,
+     10.3,
+     -39.5
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
     "beam": "2a",
     "cube": "rig-lasercube-cut-02",
     "from": [
@@ -17273,6 +17661,38 @@
      43.4,
      10.3,
      -16.62
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "2e",
+    "cube": "rig-lasercube-cut-02",
+    "from": [
+     -7.3,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -2.92,
+     10.3,
+     -28.97
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "2f",
+    "cube": "rig-lasercube-cut-02",
+    "from": [
+     -7.3,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     4.17,
+     10.3,
+     -34.12
     ],
     "half_fan_deg": 1.008,
     "ends_on": "roof bottom chords (y 10.3)"
@@ -17342,6 +17762,38 @@
     "ends_on": "roof bottom chords (y 10.3)"
    },
    {
+    "beam": "3e",
+    "cube": "rig-lasercube-cut-04",
+    "from": [
+     -5.9,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -7.38,
+     10.3,
+     -28.35
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "3f",
+    "cube": "rig-lasercube-cut-04",
+    "from": [
+     -5.9,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     1.19,
+     10.3,
+     -30.17
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
     "beam": "4a",
     "cube": "rig-lasercube-cut-05",
     "from": [
@@ -17401,6 +17853,38 @@
      10.23,
      10.3,
      12.51
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "4e",
+    "cube": "rig-lasercube-cut-05",
+    "from": [
+     -4.5,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -11.59,
+     10.3,
+     -30.17
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "4f",
+    "cube": "rig-lasercube-cut-05",
+    "from": [
+     -4.5,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -3.02,
+     10.3,
+     -28.35
     ],
     "half_fan_deg": 1.008,
     "ends_on": "roof bottom chords (y 10.3)"
@@ -17470,6 +17954,38 @@
     "ends_on": "roof bottom chords (y 10.3)"
    },
    {
+    "beam": "5e",
+    "cube": "rig-lasercube-cut-03",
+    "from": [
+     -3.1,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -14.57,
+     10.3,
+     -34.12
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "5f",
+    "cube": "rig-lasercube-cut-03",
+    "from": [
+     -3.1,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -7.48,
+     10.3,
+     -28.97
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
     "beam": "6a",
     "cube": "rig-lasercube-cut-06",
     "from": [
@@ -17534,42 +18050,75 @@
     "ends_on": "roof bottom chords (y 10.3)"
    },
    {
-    "beam": "41",
-    "cube": "rig-laser40-1",
+    "beam": "6e",
+    "cube": "rig-lasercube-cut-06",
     "from": [
-     -10.2,
+     -1.7,
      8.81,
      -42.45
     ],
     "to": [
-     0.0,
-     9.8,
-     53.8
+     -15.57,
+     10.3,
+     -39.5
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "6f",
+    "cube": "rig-lasercube-cut-06",
+    "from": [
+     -1.7,
+     8.81,
+     -42.45
+    ],
+    "to": [
+     -11.19,
+     10.3,
+     -31.91
+    ],
+    "half_fan_deg": 1.008,
+    "ends_on": "roof bottom chords (y 10.3)"
+   },
+   {
+    "beam": "41",
+    "cube": "rig-laser40-1",
+    "from": [
+     -4.0,
+     7.0,
+     53.3
+    ],
+    "to": [
+     3.01,
+     10.3,
+     -14.04
     ],
     "half_fan_deg": 0.0,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "roof bottom chords (y 10.3)"
    },
    {
     "beam": "42",
     "cube": "rig-laser40-2",
     "from": [
-     -0.2,
-     8.81,
-     -42.45
+     4.0,
+     7.0,
+     53.3
     ],
     "to": [
-     0.0,
-     9.8,
-     53.8
+     -13.74,
+     10.3,
+     -14.04
     ],
     "half_fan_deg": 0.0,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "roof bottom chords (y 10.3)"
    }
   ],
   "signed_off": false,
   "desk": "the desk writes 0 to every laser channel until the IEC 60825-1 sign-off (deskLookValues.js laserHeld)",
   "arithmetic": {
-   "lines": 26,
+   "lines": 38,
+   "per_cube": 6,
    "lowest_point_m": 5.49,
    "ends": [
     "east side wall (x +60.2, two spans over)",
@@ -17578,7 +18127,7 @@
     "west side wall (x -36.2, one span over)"
    ],
    "length_m_min_max": [
-    34.7,
+    14.3,
     114.8
    ],
    "basis": "this script, UNVALIDATED for lamp/crane strikes"
