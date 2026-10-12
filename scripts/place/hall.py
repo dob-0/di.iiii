@@ -218,14 +218,19 @@ MATERIALS = {
     # 035, 1c3956d1). Emissive, so it reads as light at no per-pixel lighting
     # cost (no light source is added). Strength tuned on the GPU against 1c3956d1.
     'skylight':  ((0.70, 0.76, 0.82), 0.3, 0.0, (0.70, 0.76, 0.82)),
+    # The building's envelope seen from OUTSIDE at night (owner 2026-10-12: 'see the building ... out wall is like 30% visible'):
+    # the outer walls' panels, the end walls and the deck in a faintly self-lit, part-transparent version of the block colour,
+    # only when --shell-alpha is given. Unlit at night they were black on black from outside (v2.6 screenshot 00:46).
+    'shell':     ((0.40, 0.32, 0.25), 0.9, 0.0, (0.40, 0.32, 0.25)),   # a FAINT self-light (strength 0.12, below): 0.5 washed the inside white (owner 01:02), none left the walls black from the side (owner 02:10)
     'zone-dance':     ((0.02, 0.08, 1.0), 0.9, 0.0, (0.02, 0.08, 1.0)),
     'zone-stage':     ((0.02, 0.8, 0.08), 0.9, 0.0, (0.02, 0.8, 0.08)),
     'zone-backstage': ((1.0, 0.06, 0.03), 0.9, 0.0, (1.0, 0.06, 0.03)),
 }
-EMISSION_STRENGTH = {'skylight': 1.0}
+EMISSION_STRENGTH = {'skylight': 1.0, 'shell': 0.0}   # shell: no light of its own (owner 2026-10-12 03:17: a self-lit wall reads as a flat board); walls show where lamps hit them
+SHELL_ALPHA = None    # set by --shell-alpha (0..1): the envelope's opacity; None = opaque block/deck as before
 # Open surfaces (the frame's prisms, glass planes): drawn from both sides and
 # never run through the "make normals consistent" pass meant for closed boxes.
-DOUBLE_SIDED = {'frame', 'glass', 'skylight'}
+DOUBLE_SIDED = {'frame', 'glass', 'skylight', 'shell'}
 
 
 def parse_cli():
@@ -242,6 +247,8 @@ def parse_cli():
             opts['out'] = argv[i + 1]; i += 2
         elif flag == '--dims':
             opts['dims'].append(argv[i + 1]); i += 2
+        elif flag == '--shell-alpha':
+            opts['shell_alpha'] = float(argv[i + 1]); i += 2
         elif flag == '--preview':
             opts['preview'] = True; i += 1
         elif flag == '--preview-camera':
@@ -375,6 +382,39 @@ class Builder:
         for face in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
                      (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
             faces.append(tuple(base + index for index in face))
+
+    def face(self, material, corners, normal):
+        """One single-sided quad (4 corners) whose normal points along `normal` (a 3-vector); the winding is flipped
+        when it does not. The SKIN of a ghost shell: seen only from the side the normal faces (glTF single-sided)."""
+        (ax, ay, az), (bx, by, bz), (cx, cy, cz) = corners[0], corners[1], corners[2]
+        u = (bx - ax, by - ay, bz - az); v = (cx - ax, cy - ay, cz - az)
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        if n[0] * normal[0] + n[1] * normal[1] + n[2] * normal[2] < 0:
+            corners = [corners[0], corners[3], corners[2], corners[1]]
+        verts, faces = self.parts[material]
+        base = len(verts); verts.extend(corners); faces.append((base, base + 1, base + 2, base + 3))
+
+    def shell_box(self, lo, hi, inner, skin):
+        """A ghost-shell box (SHELL_ALPHA) plus, 2 cm inside its inner face, an opaque single-sided SKIN facing the
+        hall (owner 2026-10-12 04:32 "look to lights": beams ended in the air on the 30 % ghost deck/walls). `inner`
+        is the inward normal: (0,0,-1) deck underside, (±1,0,0) long walls, (0,±1,0) end walls. Without SHELL_ALPHA
+        the box is plain `skin` material as before (opaque both ways). From outside the skin is culled (back face)
+        and the ghost shows the lit interior through it."""
+        if SHELL_ALPHA is None:
+            self.box(skin, lo, hi); return
+        self.box('shell', lo, hi)
+        (x0, y0, z0), (x1, y1, z1) = lo, hi
+        x0, x1 = min(x0, x1), max(x0, x1); y0, y1 = min(y0, y1), max(y0, y1); z0, z1 = min(z0, z1), max(z0, z1)
+        if x1 - x0 < 1e-6 or y1 - y0 < 1e-6 or z1 - z0 < 1e-6:
+            return
+        d = 0.02
+        if inner[2] < 0:   q = [(x0, y0, z0 - d), (x1, y0, z0 - d), (x1, y1, z0 - d), (x0, y1, z0 - d)]
+        elif inner[2] > 0: q = [(x0, y0, z1 + d), (x1, y0, z1 + d), (x1, y1, z1 + d), (x0, y1, z1 + d)]
+        elif inner[0] < 0: q = [(x0 - d, y0, z0), (x0 - d, y1, z0), (x0 - d, y1, z1), (x0 - d, y0, z1)]
+        elif inner[0] > 0: q = [(x1 + d, y0, z0), (x1 + d, y1, z0), (x1 + d, y1, z1), (x1 + d, y0, z1)]
+        elif inner[1] < 0: q = [(x0, y0 - d, z0), (x1, y0 - d, z0), (x1, y0 - d, z1), (x0, y0 - d, z1)]
+        else:              q = [(x0, y1 + d, z0), (x1, y1 + d, z0), (x1, y1 + d, z1), (x0, y1 + d, z1)]
+        self.face(skin, q, inner)
 
     def box(self, material, lo, hi):
         """Axis-aligned box from its two corners (Blender frame: x across, y along, z up)."""
@@ -550,6 +590,9 @@ def material(name):
     if emissive:
         bsdf.inputs['Emission Color'].default_value = (*emissive, 1.0)
         bsdf.inputs['Emission Strength'].default_value = EMISSION_STRENGTH.get(name, 0.6)
+    if name == 'shell' and SHELL_ALPHA is not None:
+        bsdf.inputs['Alpha'].default_value = float(SHELL_ALPHA)
+        mat.surface_render_method = 'BLENDED'      # Blender 4.2+; the glTF exporter writes alphaMode BLEND
     mat.use_backface_culling = name not in DOUBLE_SIDED
     return mat
 
@@ -866,7 +909,7 @@ def build(dims):
         holes = sorted((l[2], l[3]) for l in lanterns if l[0] <= mid <= l[1])
         y = -end_out
         for h0, h1 in holes + [(end_out, end_out)]:
-            b.box('deck', (a, y, deck_z), (c, h0, deck_z + deck_t))
+            b.shell_box((a, y, deck_z), (c, h0, deck_z + deck_t), (0, 0, -1), 'deck')
             y = h1
 
     # Outer long walls with three ribbon window bands, mullions every half pitch.
@@ -878,7 +921,7 @@ def build(dims):
             edges += [lo, hi]
         edges.append(parapet)
         for k in range(0, len(edges), 2):
-            b.box('block', (x0, -end_out, edges[k]), (x1, end_out, edges[k + 1]))
+            b.shell_box((x0, -end_out, edges[k]), (x1, end_out, edges[k + 1]), ((1, 0, 0) if x_in > x_out else (-1, 0, 0)), 'block')
         xm = (x0 + x1) / 2
         for lo, hi in bands:
             b.box('glass', (xm - 0.03, -end_in, lo), (xm + 0.03, end_in, hi))
@@ -896,11 +939,12 @@ def build(dims):
         y0, y1 = sorted((sign * end_in, sign * end_out))
         gate_w, gate_h = (door_w, door_h) if sign < 0 else (far_w, far_h)
         if gate_w > 0 and gate_h > 0:
-            b.box('block', (wall_out[0], y0, 0.0), (-gate_w / 2, y1, gate_h))
-            b.box('block', (gate_w / 2, y0, 0.0), (wall_out[1], y1, gate_h))
-            b.box('block', (wall_out[0], y0, gate_h), (wall_out[1], y1, parapet))
+            inw = (0, -sign, 0)     # the inward normal: toward the hall's centre
+            b.shell_box((wall_out[0], y0, 0.0), (-gate_w / 2, y1, gate_h), inw, 'block')
+            b.shell_box((gate_w / 2, y0, 0.0), (wall_out[1], y1, gate_h), inw, 'block')
+            b.shell_box((wall_out[0], y0, gate_h), (wall_out[1], y1, parapet), inw, 'block')
         else:
-            b.box('block', (wall_out[0], y0, 0.0), (wall_out[1], y1, parapet))
+            b.shell_box((wall_out[0], y0, 0.0), (wall_out[1], y1, parapet), (0, -sign, 0), 'block')
         if sign < 0:
             for side in (-1, 1):
                 x = side * door_w / 2
@@ -1199,6 +1243,8 @@ def main():
     dims, origin, dims_source, dims_notes = resolve_dims(opts)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    global SHELL_ALPHA
+    SHELL_ALPHA = opts.get('shell_alpha')
     builder, geometry = build(dims)
     objects = builder.to_objects()
     glb = os.path.join(out, 'hall.glb')
