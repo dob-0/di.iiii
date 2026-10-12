@@ -33,3 +33,23 @@ describe('isTypingTarget', () => {
         expect(isTypingTarget(null)).toBe(false)
     })
 })
+
+import { lockFromKey } from './editKeys.js'
+
+describe('lockFromKey (L = lock selection, Alt+L = unlock all)', () => {
+    const ev = (o) => ({ key: '', code: '', ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...o })
+    it('L locks, by letter and by key place (Armenian layout)', () => {
+        expect(lockFromKey(ev({ key: 'l', code: 'KeyL' }))).toBe('lock')
+        expect(lockFromKey(ev({ key: 'L', code: 'KeyL' }))).toBe('lock')
+        expect(lockFromKey(ev({ key: 'լ', code: 'KeyL' }))).toBe('lock')
+    })
+    it('Alt+L unlocks all (Alt may change event.key, the place stays)', () => {
+        expect(lockFromKey(ev({ key: 'l', code: 'KeyL', altKey: true }))).toBe('unlock-all')
+        expect(lockFromKey(ev({ key: '¬', code: 'KeyL', altKey: true }))).toBe('unlock-all')
+    })
+    it('never with Ctrl or Cmd (Ctrl+L is the browser address bar), nor other keys', () => {
+        expect(lockFromKey(ev({ key: 'l', code: 'KeyL', ctrlKey: true }))).toBeNull()
+        expect(lockFromKey(ev({ key: 'l', code: 'KeyL', metaKey: true }))).toBeNull()
+        expect(lockFromKey(ev({ key: 'k', code: 'KeyK' }))).toBeNull()
+    })
+})
