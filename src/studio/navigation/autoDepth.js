@@ -37,7 +37,10 @@ const sharedNdc = new Vector2()
 // Nearest visible, non-helper mesh hit under ndc ([-1..1, -1..1]), as a
 // Vector3, or null. Only the first `maxMeshes` meshes (depth-first) are tested,
 // so a huge scene costs a bounded amount per gesture.
-export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES }) {
+// `beyond` (metres): a surface closer than this is the one the camera is pressed against (camera-controls' minDistance
+// clamp, 0.35 m); the pick looks PAST it to what is behind, so a wheel notch keeps going through instead of dollying
+// 15.7 % of 0.35 m (owner, 2026-10-12: "you can unlimited scroll"; his trace: 25 notches at 0.35 m from the roof, 4 cm each).
+export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES, beyond = 0 }) {
     if (!camera || !Array.isArray(ndc) || !objects?.length) return null
     const meshes = collectMeshes(objects, maxMeshes, [])
     if (!meshes.length) return null
@@ -46,7 +49,41 @@ export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES
     sharedRaycaster.setFromCamera(sharedNdc, camera)
     // recursive=false: collectMeshes already walked the tree and dropped helpers.
     const hits = sharedRaycaster.intersectObjects(meshes, false)
-    return hits.length ? hits[0].point.clone() : null
+    const hit = hits.find((h) => h.distance > beyond)
+    return hit ? hit.point.clone() : null
+}
+
+// When nothing is under the pointer (fog, the open length of a hall, sky), Blender keeps the
+// previous depth. Here the previous depth can be camera-controls' 0.35 m clamp — after a
+// wheel zoom into open air `infinityDolly` has dragged the orbit point along at that clamp,
+// and every pan and wheel step is then scaled by 0.35 m (measured 2026-10-12, MOXIR v1.1:
+// 240 px drag = 0.128 m, the owner's "stuck"). This fallback is OUR rule, not Blender's:
+// the depth is the nearest surface around the camera along six world axes (the floor you
+// stand over, the roof, the wall behind you), and the pivot is placed that far along the
+// view ray. In the same measurement the floor was 4.46 m down and a wall 3.68 m back.
+// Returns null when no axis hits (the camera is outside every surface).
+export const FALLBACK_DIRECTIONS = Object.freeze([
+    new Vector3(0, -1, 0), new Vector3(0, 1, 0),
+    new Vector3(-1, 0, 0), new Vector3(1, 0, 0),
+    new Vector3(0, 0, -1), new Vector3(0, 0, 1),
+])
+const sharedOrigin = new Vector3()
+const sharedDir = new Vector3()
+export function fallbackPivot({ camera, objects, maxMeshes = DEFAULT_MAX_MESHES }) {
+    if (!camera || !objects?.length) return null
+    const meshes = collectMeshes(objects, maxMeshes, [])
+    if (!meshes.length) return null
+    camera.updateMatrixWorld?.()
+    camera.getWorldPosition(sharedOrigin)
+    let depth = Infinity
+    for (const dir of FALLBACK_DIRECTIONS) {
+        sharedRaycaster.set(sharedOrigin, dir)
+        const hits = sharedRaycaster.intersectObjects(meshes, false)
+        if (hits.length && hits[0].distance < depth) depth = hits[0].distance
+    }
+    if (!Number.isFinite(depth)) return null
+    camera.getWorldDirection(sharedDir)
+    return sharedOrigin.clone().addScaledVector(sharedDir, depth)
 }
 
 // Pointer position on an element -> normalized device coordinates.

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
@@ -10,7 +10,7 @@ import { installBeerLambertFog } from '../../objectComponents/beerLambertFog.js'
 // program of the room is compiled — both renderers import this module before they draw.
 installBeerLambertFog()
 import { bloomOf } from './bloom.js'
-import { useHoldFrames } from '../../studio/utils/renderDemand.jsx'
+import { useHoldFrames, useRenderDemand } from '../../studio/utils/renderDemand.jsx'
 import { surfacesOf } from './surfaces.js'
 import SurfaceOverrides from './SurfaceOverrides.jsx'
 import BeamMirrors from './BeamMirrors.jsx'
@@ -48,12 +48,37 @@ export const toneMappingOf = (name) => {
 //
 // The Canvas-level half of renderSettings (shadows, antialias, dpr) cannot be
 // set from inside the tree — each surface passes those to its own <Canvas>.
+// Shadow maps are drawn only when something that casts or receives them could have changed (three.js: shadowMap.autoUpdate=false
+// + needsUpdate). Measured 2026-10-12 on the RTX 3080 (docs/ai/research/render-smoothness-audit-2026-10-12.md): with autoUpdate the
+// 12 spot shadow maps were redrawn every frame while only the camera moved — draw calls 637 → 384, triangles 833 k → 146 k,
+// CPU 5.3 → 4.5 ms per frame when frozen. `live` (a gizmo drag, a timeline, XR) redraws every frame; a document change, a mesh that
+// arrived or left, and the first frames redraw once.
+export function ShadowsOnDemand({ live = false, changeKey = null }) {
+    const { gl, scene } = useThree()
+    const demand = useRenderDemand() // a hold = something moves on its own (timeline, XR, walk): redraw every frame
+    const pending = useRef(2)
+    const meshCount = useRef(-1)
+    useEffect(() => { gl.shadowMap.autoUpdate = false; return () => { gl.shadowMap.autoUpdate = true } }, [gl])
+    useEffect(() => { pending.current = 2 }, [changeKey])
+    useFrame(() => {
+        let n = 0
+        scene.traverse((o) => { if (o.isMesh && (o.castShadow || o.receiveShadow)) n++ })
+        if (n !== meshCount.current) { meshCount.current = n; pending.current = 2 }
+        if (live || pending.current > 0 || (demand && demand.holdReasons().length > 0)) {
+            gl.shadowMap.needsUpdate = true
+            if (pending.current > 0) pending.current--
+        }
+    }, -2)
+    return null
+}
+
 export default function RenderSettingsEffect({ renderSettings }) {
     const { gl } = useThree()
     useEffect(() => {
         gl.toneMapping = toneMappingOf(renderSettings?.toneMapping)
         gl.toneMappingExposure = renderSettings?.toneMappingExposure ?? 1
         gl.shadowMap.enabled = renderSettings?.shadows !== false
+        gl.shadowMap.needsUpdate = true
     }, [gl, renderSettings?.toneMapping, renderSettings?.toneMappingExposure, renderSettings?.shadows])
     const scattering = renderSettings?.atmosphere?.scattering
     const anisotropy = renderSettings?.atmosphere?.anisotropy
