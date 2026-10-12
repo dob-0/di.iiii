@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { SV_FRAGMENT_BODY, SV_VERTEX_BODY } from './SmartView.jsx'
+import { occlusionFadeEnabled } from './smartViewGeometry.js'
 
 // 2026-10-02 (the "dotted dome" on the crane bridge): the occlusion fade was a 4x4 Bayer screen-door
 // over most of the circle, which reads as dots once the renderer has no MSAA. It is a clean cut-out now.
@@ -18,5 +19,18 @@ describe('the occlusion fade shader', () => {
         expect(SV_FRAGMENT_BODY).toMatch(/if \(uSvStrength > 0\.001 && vSvWorldY < uSvCeiling\)/)
         expect(SV_VERTEX_BODY).toMatch(/vSvWorldY = \(modelMatrix \* svWorld\)\.y;/)
         expect(SV_VERTEX_BODY).toMatch(/instanceMatrix \* svWorld/)
+    })
+})
+
+describe('occlusionFadeEnabled (the per-scene off switch, owner 2026-10-12)', () => {
+    it('is on unless the author turns it off', () => {
+        expect(occlusionFadeEnabled(undefined)).toBe(true)
+        expect(occlusionFadeEnabled({})).toBe(true)
+        expect(occlusionFadeEnabled({ smartView: {} })).toBe(true)
+        expect(occlusionFadeEnabled({ smartView: { occlusionFade: true } })).toBe(true)
+    })
+    it('is off only on an explicit false', () => {
+        expect(occlusionFadeEnabled({ smartView: { occlusionFade: false } })).toBe(false)
+        expect(occlusionFadeEnabled({ smartView: { occlusionFade: 0 } })).toBe(true)
     })
 })
