@@ -1,3 +1,4 @@
+import { pickLampBody } from '../utils/selectionTools.js'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
 import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
@@ -696,6 +697,7 @@ function StudioSceneContent({
         () => (insideGeo ? [] : sceneEntities.filter((e) => !e.parentId)),
         [sceneEntities, insideGeo]
     )
+    const pickLamp = onSelectEntity ? (id, e) => pickLampBody(sceneEntities, id, e, { onSelect: onSelectEntity, onToggle: onToggleSelectEntity }) : undefined
     const hasRig = useMemo(() => hasRigLamps(sceneEntities), [sceneEntities])
     const [previewById, setPreviewById] = useState({})
 
@@ -844,7 +846,7 @@ function StudioSceneContent({
                         — the whole room blanked while the lamps' bodies loaded. */}
                     {hasRig && !insideGeo ? (
                         <Suspense fallback={null}>
-                            <RigBodies entities={sceneEntities} />
+                            <RigBodies entities={sceneEntities} onPick={pickLamp} />
                         </Suspense>
                     ) : null}
                     <MultiSelectionGizmo
