@@ -127,3 +127,17 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   past it): 5.7–7.2 m per notch, 150.5 m of travel, the camera goes through. Pan after: 7.746 → 17.244 m per 240 px.
 - Owed: the owner's hands on Navigate's glide vs Edit's instant feel; a drag at 120 fps with DPR 1.5 on a 2560×1440 panel is
   the heaviest case — the render cost per frame on his GPU was not measured (only rAF gaps).
+
+## Round 5: "can we make that will have full freedom to move" → Blender's Walk in the Studio
+
+- `useWalkNavigation.js` (modal, both tools): Shift+` enters (Blender's key), pointer lock, mouse looks at 0.4°/px (his Orbit
+  Sensitivity; Blender's own walk factor is not published — stated), W/S along the look, A/D strafe, Q/E world up/down, Shift ×5
+  (his walk_speed_factor), Alt ×0.25 (ours), 2.5 m/s (his walk_speed), no gravity (his). Esc / Enter / left click keep the place,
+  right click returns to the start (Blender's cancel). camera-controls is paused while walking and re-aimed from the new place with
+  the look depth kept, so orbit continues. Frames are held while walking (renderDemand). Motion = the 10-08 pure `flyMotion.js`
+  (ported with its 12 tests) with a short ramp.
+- Measured (`scripts/nav/measure-walk.cjs`, real keys, RTX 3080): pointer lock on; W for 1 s = 2.451 m (2.5 m/s minus the ramp);
+  Shift+W for 1 s = 12.253 m; 200 px of mouse turned the look to (0.98, 0.12, −0.17); after Esc camera-controls enabled again, target
+  24 m ahead. 7 new unit tests (68 in the navigation suites).
+- Owner's words that led here: "not smooth", "stuck", "full freedom to move omg", and "look deeper: OpenGL / WebGL / GLSL" — the
+  rendering audit runs as a separate report (`docs/ai/research/render-smoothness-audit-2026-10-12.md`).

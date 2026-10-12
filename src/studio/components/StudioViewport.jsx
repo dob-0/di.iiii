@@ -41,6 +41,7 @@ import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
@@ -534,6 +535,10 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     const viewportHeight = useThree((state) => state.size.height)
     const rotateSpeed = preset.id === 'blender' && viewportHeight > 0 ? viewportHeight / 900 : 1
     const isOrtho = (cameraView?.fov ?? 50) < 20
+    // Blender's Walk (Shift+`): the camera is free of any orbit point while walking; frames are held while it lasts.
+    const [walking, setWalking] = useState(false)
+    useHoldFrames(walking, 'walk')
+    useWalkNavigation({ controlsRef, active: enabled && !isXrPresenting, onWalkingChange: setWalking, onCameraChange })
     useCameraNavigation({
         controlsRef,
         presetId: preset.id,
