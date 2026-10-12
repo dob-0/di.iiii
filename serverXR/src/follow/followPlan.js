@@ -128,4 +128,37 @@ const accountedThrough = (ops = [], accounted = new Set(), fallback = null) => {
     return ops.length ? (through ?? fallback) : fallback
 }
 
-module.exports = { BATCH, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval }
+/*
+ * A write the other side REFUSES with a server error is not a network blip.
+ * On 2026-10-02 every write into project `test` answered 500 (its database had
+ * ops above its version), and the follower sent the same batch again on every
+ * tick — every ~25 s, for hours — while `di follows` said only "500". Now a
+ * stream whose write fails with a server error is left alone for a while that
+ * doubles each time (5 s, 10 s, 20 s … at most 5 min), the other streams keep
+ * moving, and the error is a sentence naming the project.
+ */
+const FAILURE_FLOOR_MS = 5000
+const FAILURE_CEILING_MS = 5 * 60 * 1000
+
+/** How long to leave a stream alone after its `count`-th failure in a row. */
+const failureDelay = (count, { floor = FAILURE_FLOOR_MS, ceiling = FAILURE_CEILING_MS } = {}) =>
+    Math.min(ceiling, floor * 2 ** Math.max(0, (Number(count) || 1) - 1))
+
+/** Is this refusal one that sending the same thing again cannot get past? */
+const isStuckRefusal = (status) => Number.isInteger(status) && status >= 500
+
+/**
+ * What a person reads when a write was refused — in `di follows` and the log.
+ * Names the project (or the room), the direction, and the server's own words.
+ */
+const describeWriteFailure = ({ stream, direction, status, error = null, retryInMs = null }) => {
+    const what = stream?.kind === 'project' ? `project ${stream.projectId || String(stream.key || '').replace(/^project:/, '')}` : `the room ${String(stream?.key || '').replace(/^scene:/, '') || ''}`.trim()
+    const who = direction === 'in' ? 'this di.iiii refused the other side\'s changes to' : 'the other di.iiii refused this side\'s changes to'
+    const code = status ? `HTTP ${status}` : 'no answer'
+    const words = error ? `: ${String(error).slice(0, 200)}` : ''
+    const later = retryInMs ? ` — trying again in ${Math.round(retryInMs / 1000)} s; the rest of the space keeps following` : ''
+    const look = direction === 'in' && isStuckRefusal(status) ? ' (see this server\'s log)' : ''
+    return `${who} ${what} (${code}${words})${look}${later}`
+}
+
+module.exports = { BATCH, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, failureDelay, isStuckRefusal, describeWriteFailure, FAILURE_FLOOR_MS, FAILURE_CEILING_MS }

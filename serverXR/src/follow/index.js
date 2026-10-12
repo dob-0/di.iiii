@@ -123,4 +123,24 @@ const nudgeFollow = (spaceId) => {
 /** What every follower is doing, for `di follows` and for the interface. */
 const followStates = () => [...running.values()].map(follower => follower.state)
 
-module.exports = { startFollows, stopFollows, followStates, nudgeFollow, selfBase }
+// The lease that says whether THIS server carries the follows of its data
+// folder (lease.js). Set by index.js; absent in tests that drive startFollows
+// directly, which then read as carrying — as every server did before.
+let lease = null
+const setFollowLease = (next) => { lease = next }
+
+/**
+ * Who carries this data folder's follows, for GET /api/follows and `di follows`.
+ * On a server that does not, says so plainly and names the one that does.
+ */
+const followCarrier = () => {
+    if (!lease || lease.held) return { carriedHere: true }
+    const holder = lease.holder()
+    return {
+        carriedHere: false,
+        carriedBy: holder ? { pid: holder.pid, port: holder.port, hostname: holder.hostname, heartbeatAt: holder.heartbeatAt } : null,
+        message: lease.describe()
+    }
+}
+
+module.exports = { startFollows, stopFollows, followStates, followCarrier, setFollowLease, nudgeFollow, selfBase }

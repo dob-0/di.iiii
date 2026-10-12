@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
+import Canvas from './GuardedCanvas.jsx'
 import { Grid, OrbitControls, Text, Billboard } from '@react-three/drei'
 import { TROIKA_FONT_URL } from '../project/viewport/troikaFont.js'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
@@ -32,6 +33,7 @@ import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
 import SpotLightObject from '../objectComponents/SpotLightObject.jsx'
+import { lampIsFitted } from '../objectComponents/spotBeam.js'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import useRoomSound from '../hooks/useRoomSound.js'
 import { roomHasSound } from '../utils/roomSound.js'
@@ -253,7 +255,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={Boolean(entity.components?.fixture)} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={lampIsFitted(entity.components)} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}

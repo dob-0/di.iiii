@@ -120,7 +120,7 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines."
+    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines. One server per data folder carries the follows (follow/lease.js): on any other server on the same folder the list is empty and `carriedHere: false` + `carriedBy` {pid, port} + `message` say which one does."
   },
   {
     route: "GET /api/health",
@@ -253,5 +253,22 @@ module.exports = [
     role: "guest",
     agent: true,
     note: "answers from the request's own host; `space` is null for di.iiii's own addresses and for any domain that is not live on a public space. Cached for 60 s."
+  },
+  {
+    route: "GET /api/domain-check",
+    summary: "may this hostname have a certificate? Caddy's on-demand TLS `ask` endpoint for a space's own domain",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    input: {
+      query: {
+        type: "object",
+        required: ["domain"],
+        properties: {
+          domain: { type: "string", description: "the hostname Caddy is about to get a certificate for, e.g. yokozo.xyz" }
+        }
+      }
+    },
+    note: "answers 200 only when the hostname is a live domain of a public space, 404 for anything else; Caddy reads only the status (https://caddyserver.com/docs/caddyfile/options#on-demand-tls). Never cached."
   },
 ]

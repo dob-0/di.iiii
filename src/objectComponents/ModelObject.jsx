@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
+import { useKickFrames } from '../studio/utils/renderDemand.jsx'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
@@ -346,9 +347,16 @@ export default function ModelObject({
         }
     }, [renderedScene, loaded, playAnimations, animationClip])
 
-    useFrame((_, delta) => {
+    // A model that just arrived: the scene walks that dress it (shadows, surfaces,
+    // the smart view's measure) poll for a few frames under an on-demand loop.
+    useKickFrames(renderedScene)
+
+    useFrame((frameState, delta) => {
         const speed = Number.isFinite(animationSpeed) ? animationSpeed : 1
-        mixerRef.current?.update(delta * speed)
+        if (!mixerRef.current) return
+        mixerRef.current.update(delta * speed)
+        // On-demand loop: a playing clip asks for the next frame; speed 0 is a still.
+        if (speed !== 0) frameState.invalidate()
     })
 
     if (!renderedScene) return null

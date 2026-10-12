@@ -13,7 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a space on its own domain (yokozo.xyz shows taronx), set up by the server
+- Claude Code setup audited against Anthropic's published practice and fixed
+- fold 46 session notes after #869 (the land job cannot push to protected dev)
+- the show page: everyone sees the live cue, the team chooses it from a phone
+- the LaserCube drive finished on top of #776: cube info, the signal-loss stop, the still-beam guard
+- MOXIR v2 cranes: the cut half behind the DJ and lighting him, the six cubes sitting on the free crane
+- …and 21 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 

@@ -1,0 +1,248 @@
+{
+ "photo": "003-file_86.JPG",
+ "f_px": 2795.6,
+ "f_source": "EXIF FocalLengthIn35mmFormat 24 (iPhone 14 Pro Max main, portrait) -> 2795.6 px; VGGT 2786 px",
+ "snap": 14,
+ "prior_cy": [
+  1.5,
+  0.3
+ ],
+ "hypothesis": "a",
+ "note": "Floor at the entry end looking -z. Outer silhouette edges of the shafts (left row: (-12.4, z+0.25), (-11.6, z-0.25); right row: (11.6, z-0.25), (12.4, z+0.25)). Left-row picks from strips-003.jpg, right-row picks re-read on crops-003.jpg (native px). Identities: right-row hypothesis a (nearest visible z 30) beat b (z 36): 16.5 vs 24.9 px on the first picks. Camera height prior 1.5 +- 0.3 m (hand-held; VGGT 1.5).",
+ "edges": [
+  {
+   "col": "L z12 left silhouette",
+   "x": -12.4,
+   "z": 12.25,
+   "p0": [
+    148,
+    2085
+   ],
+   "p1": [
+    148,
+    2337
+   ]
+  },
+  {
+   "col": "L z12 right silhouette",
+   "x": -11.6,
+   "z": 11.75,
+   "p0": [
+    225,
+    2085
+   ],
+   "p1": [
+    225,
+    2337
+   ]
+  },
+  {
+   "col": "L z6 left silhouette",
+   "x": -12.4,
+   "z": 6.25,
+   "p0": [
+    306,
+    2085
+   ],
+   "p1": [
+    306,
+    2310
+   ]
+  },
+  {
+   "col": "L z6 right silhouette",
+   "x": -11.6,
+   "z": 5.75,
+   "p0": [
+    377,
+    2085
+   ],
+   "p1": [
+    377,
+    2310
+   ]
+  },
+  {
+   "col": "L z0.5 left silhouette",
+   "x": -12.4,
+   "z": 0.75,
+   "p0": [
+    447,
+    2110
+   ],
+   "p1": [
+    447,
+    2290
+   ]
+  },
+  {
+   "col": "L z0.5 right silhouette",
+   "x": -11.6,
+   "z": 0.25,
+   "p0": [
+    517,
+    2110
+   ],
+   "p1": [
+    517,
+    2290
+   ]
+  },
+  {
+   "col": "L z-6 left silhouette",
+   "x": -12.4,
+   "z": -5.75,
+   "p0": [
+    562,
+    2110
+   ],
+   "p1": [
+    562,
+    2290
+   ]
+  },
+  {
+   "col": "L z-6 right silhouette",
+   "x": -11.6,
+   "z": -6.25,
+   "p0": [
+    626,
+    2110
+   ],
+   "p1": [
+    626,
+    2290
+   ]
+  },
+  {
+   "col": "L z-12 left silhouette",
+   "x": -12.4,
+   "z": -11.75,
+   "p0": [
+    658,
+    2125
+   ],
+   "p1": [
+    658,
+    2280
+   ]
+  },
+  {
+   "col": "L z-12 right silhouette",
+   "x": -11.6,
+   "z": -12.25,
+   "p0": [
+    703,
+    2125
+   ],
+   "p1": [
+    703,
+    2280
+   ]
+  },
+  {
+   "col": "R z30 left silhouette",
+   "x": 11.6,
+   "z": 29.75,
+   "p0": [
+    2485,
+    2060
+   ],
+   "p1": [
+    2485,
+    2300
+   ]
+  },
+  {
+   "col": "R z30 right silhouette",
+   "x": 12.4,
+   "z": 30.25,
+   "p0": [
+    2590,
+    2060
+   ],
+   "p1": [
+    2590,
+    2300
+   ]
+  },
+  {
+   "col": "R z24 left silhouette",
+   "x": 11.6,
+   "z": 23.75,
+   "p0": [
+    2240,
+    2075
+   ],
+   "p1": [
+    2240,
+    2175
+   ]
+  },
+  {
+   "col": "R z24 right silhouette",
+   "x": 12.4,
+   "z": 24.25,
+   "p0": [
+    2340,
+    2075
+   ],
+   "p1": [
+    2340,
+    2175
+   ]
+  },
+  {
+   "col": "R z18 left silhouette",
+   "x": 11.6,
+   "z": 17.75,
+   "p0": [
+    2020,
+    2050
+   ],
+   "p1": [
+    2020,
+    2175
+   ]
+  },
+  {
+   "col": "R z18 right silhouette",
+   "x": 12.4,
+   "z": 18.25,
+   "p0": [
+    2090,
+    2050
+   ],
+   "p1": [
+    2090,
+    2175
+   ]
+  },
+  {
+   "col": "R z12 left silhouette",
+   "x": 11.6,
+   "z": 11.75,
+   "p0": [
+    1915,
+    2150
+   ],
+   "p1": [
+    1915,
+    2300
+   ]
+  },
+  {
+   "col": "R z12 right silhouette",
+   "x": 12.4,
+   "z": 12.25,
+   "p0": [
+    1970,
+    2150
+   ],
+   "p1": [
+    1970,
+    2300
+   ]
+  }
+ ]
+}

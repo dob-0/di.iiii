@@ -15,6 +15,8 @@ This is the order to put them in, and what each step does *not* cover.
 
 ## The sequence
 
+**On aylmo: `di-dev up <tree>` (di-atlas tools/di-dev); never a relative `DATA_ROOT`.** serverXR refuses to start in a git checkout with an unset or relative `DATA_ROOT` (absolute path, or `DI_SCRATCH=1` for a throwaway) — `serverXR/src/dataRootGuard.js`.
+
 ```bash
 git fetch                        # 1
 npm run state                    # 2

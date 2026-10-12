@@ -12,6 +12,7 @@ import { randomBytes, X509Certificate } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
+import { writeFileAtomic } from './atomicWrite.mjs'
 import { paths } from './paths.mjs'
 import { probeHealth } from './probe.mjs'
 
@@ -31,7 +32,7 @@ export const writeState = async (home, patch = {}) => {
     const p = paths(home)
     const next = { ...readState(home), ...patch }
     await fsp.mkdir(p.home, { recursive: true })
-    await fsp.writeFile(p.state, `${JSON.stringify(next, null, 2)}\n`)
+    await writeFileAtomic(p.state, `${JSON.stringify(next, null, 2)}\n`)
     return next
 }
 
@@ -80,12 +81,13 @@ export const writeEnv = async (home, patch = {}) => {
         .map(([key, value]) => `${key}=${value}`)
         .join('\n')
     await fsp.mkdir(p.home, { recursive: true })
-    // 0600, and chmod on rewrite: this file holds the session-signing secret and
+    // 0600 on every rewrite: this file holds the session-signing secret and
     // an admin token since guest mode, and it was being written world-readable
     // on a machine other people log into. Same treatment credentialsStore gives
-    // the sync keys, for the same reason.
-    await fsp.writeFile(p.env, `${body}\n`, { mode: 0o600 })
-    try { await fsp.chmod(p.env, 0o600) } catch { /* a filesystem without modes */ }
+    // the sync keys, for the same reason. Written atomically — a freeze half-way
+    // through a plain writeFile left an empty file, and the next start minted
+    // new secrets (every guest signed out) and forgot the port.
+    await writeFileAtomic(p.env, `${body}\n`, { mode: 0o600 })
     return next
 }
 

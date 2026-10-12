@@ -74,11 +74,76 @@ The pieces:
   keeps us inside the 100 free hostnames. A domain inside our own platform names (diiii.xyz, di-studio.xyz,
   thedi.studio…), an IP address or a bare name is refused.
 
-## When Cloudflare is not configured
+## When no provider is configured
 
-Without `CLOUDFLARE_SAAS_*` in the environment (a local install, or dev), a domain can still be saved. It shows "waiting
-for the platform to be connected", and the host lookup works for a domain an admin marks active by hand. The code path
-is the same either way. Nothing pretends to be live.
+Without a provider (no `CLOUDFLARE_SAAS_*`, no `DOMAINS_PROVIDER=caddy`: a local install, or dev), a domain can still be
+saved. It shows "waiting for the platform to be connected", and the host lookup works for a domain an admin marks
+active by hand. The code path is the same either way. Nothing pretends to be live.
+
+## Without Cloudflare: Caddy on-demand TLS
+
+A second provider, for a di.iiii on a machine with **its own public IP** (a VPS, a server in a rack), where nothing sits in
+front of it. The table, the states, the limits, the 7-day drop, the host → space lookup and the owner's panel are the
+same; only who checks the domain and who issues the certificate change.
+
+**Method (established, cited): Caddy's on-demand TLS.** Caddy is already this repo's self-hosted HTTPS front
+(`Caddyfile`, compose profile `https`). On-demand TLS is its documented way to serve customers' own domains: Caddy gets a
+certificate from Let's Encrypt during the first TLS handshake for a name it has not seen, after asking an endpoint of
+ours whether that name is allowed.
+- How it works: https://caddyserver.com/docs/automatic-https#on-demand-tls
+- The `ask` option: https://caddyserver.com/docs/caddyfile/options#on-demand-tls. Caddy calls the endpoint with
+  `?domain=<name>`; a 2xx answer allows the certificate, anything else cancels it and fails the handshake. Caddy refuses
+  to start an on-demand site without it (checked with Caddy v2.11.7: "on-demand TLS cannot be enabled without a
+  permission module to prevent abuse").
+
+The pieces:
+1. **serverXR, `DOMAINS_PROVIDER=caddy`**, with `DOMAINS_PUBLIC_TARGET` (the name customers CNAME to, e.g.
+   `domains.your-domain`, resolving to this machine) and/or `DOMAINS_PUBLIC_IPS` (this machine's public A/AAAA
+   addresses, comma-separated). Unset `DOMAINS_PROVIDER` keeps the first behaviour: Cloudflare when its three values are
+   set, otherwise none. A provider asked for but missing its values logs why at boot and runs as "not connected".
+2. **Adding a domain** saves it `pending` with the records owed: a CNAME to the target for a subdomain; A/AAAA to the
+   listed addresses for an apex (two labels), or a CNAME that needs flattening (ALIAS/ANAME) when no addresses are
+   listed. No external API is called.
+3. **Checking** (at add, on the 2-minute sweep, on "Check now") uses `node:dns/promises`
+   (`resolveCname`, `resolve4`, `resolve6`). The domain is pointed at us when its CNAME is the target, or when **every**
+   address it resolves to is ours (the listed addresses plus the target's own, so a flattened apex counts). Every, not
+   some: Let's Encrypt "will always prefer the IPv6 addresses for the initial connection"
+   (https://letsencrypt.org/docs/ipv6-support/), so a stray AAAA at a parking page fails the certificate. Pointed →
+   `active`; not pointed → `pending`, with the reason; NXDOMAIN → `pending`. A lookup that fails (timeout, SERVFAIL)
+   changes only the note, never the state, so a resolver hiccup does not switch off a live domain. A live domain is
+   re-checked once a day and goes back to `pending` if its DNS moved away.
+4. **`GET /serverXR/api/domain-check?domain=<name>`** is the `ask` endpoint: 200 only for an **active** domain of a
+   **public** space, 404 for anything else. It is the same rule as `/api/host`, so a name gets a certificate exactly
+   when it would show a space. One read on the table's primary key, and a space lookup only for a live domain.
+5. **`Caddyfile`**: a global `on_demand_tls { ask http://server:4000/serverXR/api/domain-check }` and a last block
+   `{$CUSTOM_DOMAINS_SITE} { tls { on_demand } reverse_proxy client:8080 }`. It is inert by default:
+   `CUSTOM_DOMAINS_SITE` defaults in `docker-compose.yml` to a `.invalid` name, and an on-demand site gets no certificate
+   until a visitor arrives. Set `CUSTOM_DOMAINS_SITE=https://` to make it the catch-all for every name the other blocks
+   do not claim. No HSTS on that block: it would bind the domain owner's name, which is their decision.
+
+**What it needs:** a machine with a public IPv4 (and IPv6, if listed) address, ports **80 and 443** reaching Caddy (the
+HTTP-01 and TLS-ALPN-01 challenges arrive there), the compose profile `https`, and the four values above in `.env`.
+
+**Proof of control** is the same as with Cloudflare: the DNS record itself. A name that does not point here never turns
+active, so `ask` never allows it, so no certificate is requested for it.
+
+**Where it does not apply:** the Mac standby, which serves diiii.xyz and dev.diiii.xyz today, does **not** run Caddy. It is
+a Cloudflare Tunnel (`cloudflared`, tunnel `di-standby-mac`; di-atlas `machines/mac-standby.md`) in front of an nginx
+generated from this repo's `nginx.conf` by `scripts/standby/nginx-conf.sh`. Behind a tunnel there is no public IP for a
+domain to point at, so the Cloudflare provider is the one for that machine.
+
+**Limits (stated):**
+- **Let's Encrypt rate limits** (https://letsencrypt.org/docs/rate-limits/, read 2026-10-07): 300 new orders per account
+  every 3 hours; 50 certificates per registered domain every 7 days; 5 certificates for the exact same set of names every
+  7 days; 5 authorization failures per name per account per hour. The `ask` gate keeps strangers from spending them; a
+  domain that is pointed here but whose ports are blocked can still use up its own failures, and then waits an hour.
+- The first visitor to a newly live domain waits for the certificate during the handshake (seconds).
+- Between DNS moving away and the daily re-check, `ask` still says yes, but a renewal would fail validation anyway
+  because Let's Encrypt reaches the new address.
+- The apex guess is "two labels". A domain under a two-part suffix (`example.co.uk`) is asked for a CNAME at its root,
+  which most DNS providers cannot hold; the owner then adds the A record by hand from the instructions.
+- Unverified until it runs on a real public-IP machine: the whole path from DNS to certificate has been tested with a
+  stand-in resolver and a validated `Caddyfile`, not with a real domain and a real Let's Encrypt issuance.
 
 ## Limits (stated)
 
@@ -91,6 +156,9 @@ is the same either way. Nothing pretends to be live.
 - More than 100 domains costs $0.10 each per month. That is the owner's budget line, not a technical limit.
 
 ## Owed after this branch
+
+- The Caddy provider on a real public-IP machine: one domain end to end (DNS → `active` → `ask` 200 → certificate),
+  measured, with its time to live written down.
 
 - di-atlas: the one-time platform setup script (fallback origin, the `domains` record, the tunnel catch-all) and the
   revised `space-domain.sh` (PR #45 to be reworked).

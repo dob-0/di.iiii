@@ -28,8 +28,15 @@ async function writeJson(filePath, data) {
   await ensureDir(path.dirname(filePath))
   const serialized = JSON.stringify(data, null, 2)
   const tempPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`
-  await fsp.writeFile(tempPath, serialized)
-  await fsp.rename(tempPath, filePath)
+  try {
+    await fsp.writeFile(tempPath, serialized)
+    await fsp.rename(tempPath, filePath)
+  } catch (error) {
+    // A failed write (a full disk is the usual one) must not leave its half-written temp file behind: the next
+    // attempt would find even less room, and nothing ever sweeps these.
+    await fsp.rm(tempPath, { force: true }).catch(() => {})
+    throw error
+  }
 }
 
 async function readJson(filePath, fallback = null) {

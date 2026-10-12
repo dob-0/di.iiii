@@ -1,0 +1,214 @@
+{
+  "site": "MOXIR hall, Charentsavan. Owner's pin 40.406524, 44.636560 (inside span 3).",
+  "date": "2026-10-07",
+  "what": "The hall measured from above (OSM, Microsoft ML footprints, two Esri/Maxar captures). Layered AFTER moxir-hall-dims-2026-09-28/-09-29/-10-02 and moxir-site-2026-09-28; nothing in those files is edited. Method and sources: docs/moxir/AERIAL_2026-10-07.md; script scripts/place/aerial_measure.py.",
+  "frame": "Image hall frame per capture: origin = OSM way 289841504 OBB centre, UTM 38N E 469134.28 N 4472953.73; u across (azimuth bearing-90, NE+), v along (azimuth = bearing_grid_deg, SE+), metres. Model frame: z = -(v - joint_v), x = nave_u - u.",
+  "per_capture": {
+    "44873": {
+      "imagery": "Esri World Imagery Wayback release 44873 (2023-03-15); source Maxar WorldView-3, 2020-10-30, native 0.31 m, served at z18 = 0.455 m/px",
+      "attribution": "Imagery: Esri, Maxar, Earthstar Geographics, GIS User Community. Esri Wayback 44873 (Maxar WV-3 2020-10-30)",
+      "bearing_grid_deg": 144.33,
+      "roof_u": [
+        -51.16,
+        46.18
+      ],
+      "roof_v": [
+        -46.54,
+        61.66
+      ],
+      "roof_v_inner_se_edge": 60.08,
+      "joint_v": 6.7,
+      "rows_u": [
+        -50.49,
+        -26.49,
+        -2.49,
+        21.51,
+        45.51
+      ],
+      "lantern_u": [
+        [
+          -20.7,
+          -8.33
+        ],
+        [
+          3.3,
+          15.65
+        ]
+      ],
+      "lantern_v": [
+        [
+          -39.6,
+          1.6
+        ],
+        [
+          13.05,
+          54.4
+        ]
+      ],
+      "lantern_shadow_m": {
+        "across_ne": 1.9,
+        "along_nw": 4.5,
+        "pm_m": 0.5,
+        "date": "2020-10-30"
+      }
+    },
+    "22252": {
+      "imagery": "Esri World Imagery Wayback release 22252 (2026-01-29) = current World Imagery here; source Maxar GeoEye-1, 2024-08-22, native 0.46 m, served at z18 = 0.455 m/px. Solar arrays cover the roof.",
+      "attribution": "Imagery: Esri, Maxar/Vantor, Earthstar Geographics, GIS User Community. Esri Wayback 22252 (Maxar GE-1 2024-08-22)",
+      "bearing_grid_deg": 144.23,
+      "roof_u": [
+        -51.53,
+        45.81
+      ],
+      "roof_v": [
+        -48.84,
+        59.41
+      ],
+      "joint_v": 4.5,
+      "rows_u": [
+        -50.86,
+        -26.86,
+        -2.86,
+        21.14,
+        45.14
+      ],
+      "lantern_u": [],
+      "lantern_v": [],
+      "lantern_shadow_m": {
+        "across_ne": 1.55,
+        "along_nw": 2.6,
+        "pm_m": 0.5,
+        "date": "2024-08-22"
+      }
+    }
+  },
+  "result": {
+    "length_m": {
+      "value": 108.2,
+      "pm": 0.6,
+      "how": "roof edge to roof edge along the hall; 2020 capture 108.2 (outer SE edge; the inner SE edge gives 106.6, which the 09-28 session used), 2024 capture 108.25"
+    },
+    "width_m": {
+      "value": 97.3,
+      "pm": 0.4,
+      "how": "roof edge to roof edge across; 97.34 in both captures"
+    },
+    "spans": {
+      "value": 4,
+      "how": "lantern centres at roof centre -12.0 and +12.0 (= span 2 and 3 centres of a 4 x 24 grid within 0.1 m); a roof line at roof centre -36 (span 1 middle) in both captures; 97.3 = 4 x 24 + 1.3 m of walls"
+    },
+    "span_m": {
+      "value": 24.0,
+      "pm": 0.3,
+      "how": "lantern centre to lantern centre 24.0; lantern NE edges 15.65 - (-8.33) = 23.98 (2020)"
+    },
+    "pitch_m": {
+      "value": 6.0,
+      "pm": 0.4,
+      "how": "2020 capture: FFT peak 5.96-6.02 m in four along-hall strips over spans 1 and 4; its phase is the same across 16 strips 3 m wide (Rayleigh R 0.85, p < 1e-4); the 12 m component is not phase-coherent (R 0.06). The 2024 capture is covered by solar arrays and gives no bay rhythm. The roof shows the roof module, not the columns: a 6 m module over 12 m columns cannot be told apart from above."
+    },
+    "bays": {
+      "value": 18,
+      "how": "108.2 m roof = 18 x 6 + 0.2; 9 bays each side of the joint (the joint at 53.3 m from the NW roof edge, 54.9 m from the SE edge, both captures)"
+    },
+    "joint_from_nw_roof_edge_m": {
+      "value": 53.3,
+      "pm": 0.5
+    },
+    "joint_from_se_roof_edge_m": {
+      "value": 54.9,
+      "pm": 0.6
+    },
+    "lantern_w_m": {
+      "value": 12.3,
+      "pm": 0.4
+    },
+    "lantern_from_joint_m": {
+      "value": [
+        6.0,
+        46.9
+      ],
+      "pm": [
+        0.8,
+        0.7
+      ],
+      "how": "2020: joint line v 6.7; segment ends 46.3/5.1 (NW line side) and 6.35/47.7 (SE side), symmetric about the lantern-gap centre v 7.33 (+-5.7, +-47.0). 2024: NW ends 46.8 and 6.6 from its joint line. NW ends read at the sunlit lantern top after the cast shadow; SE ends from the NE shadow band + 2.2 m (shadow geometry)."
+    },
+    "lantern_length_m": {
+      "value": 41.3,
+      "pm": 1.0,
+      "how": "2020: 41.2 and 41.35 m per segment"
+    },
+    "lantern_gap_at_joint_m": {
+      "value": 11.5,
+      "pm": 1.2
+    },
+    "bearing_true_deg": {
+      "value": 144.1,
+      "pm": 0.3,
+      "how": "image grid bearing 144.33 / 144.23 by projection-profile deskew, converted with the meridian convergence (-0.24 deg here)"
+    },
+    "lantern_end_from_roof_edge_m": {
+      "value": 6.9,
+      "pm": 0.4,
+      "how": "NW 6.9 (2020), 6.5 (2024); SE 7.3 (2020)"
+    },
+    "lantern_h_from_shadow_m": {
+      "value": 3.4,
+      "pm": 0.4,
+      "confidence": "UNVALIDATED: the capture time is not in Esri's metadata; the sun azimuth is taken from the shadow direction itself and the elevation from the NOAA solar equations for 2020-10-30 at that azimuth. The 2024 capture gives 5.5 +- 1.0, read as PV panels on the lantern tops (SUSPECTED)."
+    },
+    "model_corrections": {
+      "lantern_segments_m": {
+        "model": [
+          [
+            -45.75,
+            -7.25
+          ],
+          [
+            7.25,
+            45.75
+          ]
+        ],
+        "measured": [
+          [
+            -46.9,
+            -6.0
+          ],
+          [
+            6.0,
+            46.9
+          ]
+        ],
+        "pm": 0.8
+      },
+      "end_wall_outer_face_z_m": {
+        "model": 54.8,
+        "measured_mean": 54.1,
+        "measured_nw_entry": 53.3,
+        "measured_se_far": 54.9,
+        "pm": 0.6
+      },
+      "length_outer_m": {
+        "model": 109.6,
+        "measured": 108.2,
+        "pm": 0.6
+      },
+      "width_outer_m": {
+        "model": 97.4,
+        "measured": 97.3,
+        "pm": 0.4
+      },
+      "rows_u_offset_m": {
+        "value": 0.1,
+        "how": "model as placed by moxir-site-2026-09-28 vs measured rows, 2020 frame"
+      },
+      "joint_v_site_frame_m": {
+        "site_file": -2.0,
+        "measured_roof_line": -1.25,
+        "measured_lantern_gap_centre": -0.62,
+        "pm": 0.5
+      }
+    }
+  }
+}

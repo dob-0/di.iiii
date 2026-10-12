@@ -1,0 +1,561 @@
+{
+  "set": "moxir-lights-beta-options-2026-10-07",
+  "title": "MOXIR beta v0.9: the lights step, three options for the owner's look",
+  "writtenAt": "2026-10-07",
+  "status": "PROPOSAL, pictures only. Nothing here is built into any project; the owner picks by looking. Drawn and checked by scripts/place/lights_beta_options.py from the beta's own fixtures (moxir-beta-v0.9-lights-2026-10-07.json).",
+  "owner": "Order of 2026-10-07: stage, crane place, truss, then the lights. The cut is a BACKDROP behind the DJ (crane z 21, not flipped, 1.0 m house left).",
+  "rules_kept": [
+    "only the fixtures on the order: 50 UP-PL5403, 18 UP-B380F, 6 LaserCube Ultra MK2, 4 smoke, the hazers (counts are checked per option)",
+    "moving heads stay on the ground, mount face <= 0.6 m (owner 2026-09-30, moxir-ground-movers-2026-09-30.json rules)",
+    "statics stay on the truss; the truss, the crane and the stage do not move",
+    "no ground mover's beam through the dance zone under 2.5 m; no narrow beam (beam or laser) through the DJ (rig-lib performerBox)",
+    "every laser beam >= 3 m over any floor a person stands on, rising, ending on the solid roof deck beside the lantern, >= 0.3 m from steel (rig-lib LASER_MIN_HEIGHT_M, checkLaser, laser-beside-lantern / audit A-03)"
+  ],
+  "frame": "hall frame: metres, Y up, +x house right (the audience's right facing the DJ), +z toward the entry. The DJ's riser is x -1.37..1.63, z 22.5..24.5, 0.4 m; the truss hangs in the plane z 21.0; crane girders z 19.55..20.25 and 21.75..22.45, bottom 7.95 m (ASSUMED).",
+  "options": [
+    {
+      "id": "A",
+      "title": "Silhouette: the DJ cut out of light",
+      "idea": "Everything shines from behind him. The 7 floor beams stand in a row 0.4 m behind the riser and open into a fan over his head; the curtain falls straight down 1.5 m behind him; the X crosses just above his head in the truss's plane. The crowd sees the beams and a black figure, never a lamp's face. The lasers rise behind the truss, away from the crowd.",
+      "palette": "cold white beams, deep blue curtain, white X",
+      "groups": [
+        {
+          "match": "rig-par-cut-x-",
+          "aim": {
+            "rule": "point",
+            "target": [
+              0.13,
+              2.6,
+              21.0
+            ]
+          },
+          "colour": "#eef3ff",
+          "why": "the X re-centred: its crossing in the truss plane (z 21) at 2.6 m, just over the DJ's head as the floor sees it (the head at 2.2-2.4 m, 2 m in front). The beams stay in their own plane, so no eye is in them."
+        },
+        {
+          "match": "rig-par-cut-curtain-",
+          "aim": {
+            "rule": "down"
+          },
+          "colour": "#2c5bff",
+          "why": "kept: straight down at z 21, 1.5 m behind the riser's back edge: the sheet the DJ stands in front of"
+        },
+        {
+          "match": "rig-par-cut-bridge-",
+          "aim": {
+            "rule": "targets",
+            "targets": [
+              [
+                -10.5,
+                7.95,
+                22.1
+              ],
+              [
+                -9.06,
+                7.95,
+                22.1
+              ],
+              [
+                6.99,
+                7.95,
+                22.1
+              ],
+              [
+                8.44,
+                7.95,
+                22.1
+              ]
+            ]
+          },
+          "colour": "#2c5bff",
+          "why": "the bridge-underside rule re-derived for the crane at z 21: each lamp 6 m out along the FRONT girder's bottom flange (z 22.1): the bridge drawn as a frame over the silhouette"
+        },
+        {
+          "match": "rig-beam380-backstage-",
+          "positions": [
+            [
+              -3.15,
+              0.7,
+              22.1
+            ],
+            [
+              -2.1,
+              0.7,
+              22.1
+            ],
+            [
+              -1.05,
+              0.7,
+              22.1
+            ],
+            [
+              0.0,
+              0.7,
+              22.1
+            ],
+            [
+              1.05,
+              0.7,
+              22.1
+            ],
+            [
+              2.1,
+              0.7,
+              22.1
+            ],
+            [
+              3.15,
+              0.7,
+              22.1
+            ]
+          ],
+          "aim": {
+            "rule": "fan",
+            "up": true,
+            "spread_deg": 40,
+            "fwd_deg": 6
+          },
+          "colour": "#ffffff",
+          "why": "MOVED from z -1.5 (behind the press, 24 m behind the DJ) to the floor strip between the truss and the riser (z 22.1, 0.4 m behind the riser), x -3.15..3.15 (the roller conveyor starts at x 3.6). Leaned 6 deg toward the house so every beam passes in front of the front girder (z 22.45 at 7.95 m: 0.41 m clear), fanned 40 deg. This strip was REJECTED on 09-30 when the crane stood over the DJ; at z 21 the girder is behind the beams' path."
+        },
+        {
+          "match": "rig-lasercube-cut-",
+          "aim": {
+            "rule": "targets",
+            "targets": [
+              [
+                -10.0,
+                13.35,
+                4.0
+              ],
+              [
+                -6.0,
+                13.35,
+                4.0
+              ],
+              [
+                -2.0,
+                13.35,
+                4.0
+              ],
+              [
+                2.0,
+                13.35,
+                4.0
+              ],
+              [
+                6.0,
+                13.35,
+                4.0
+              ],
+              [
+                10.0,
+                13.35,
+                4.0
+              ]
+            ]
+          },
+          "colour": "#3cff3c",
+          "why": "a fan rising BACKWARD, away from the crowd: each beam passes under the back girder (z 19.55) and ends on the solid roof deck between the two lanterns (z 4; lanterns are z 6..46.9 and -46.9..-6) Cube 6 slides one clamp point (0.5 m along the line) toward the low end, to x 3.29: where it hangs today it is 0.27 m from hoist 3's chain (every option and today fail the 0.3 m steel clearance there).",
+          "positions": [
+            [
+              -5.84,
+              3.98,
+              21.11
+            ],
+            [
+              -3.92,
+              4.49,
+              21.11
+            ],
+            [
+              -2.0,
+              5.01,
+              21.11
+            ],
+            [
+              -0.08,
+              5.52,
+              21.11
+            ],
+            [
+              1.85,
+              6.04,
+              21.11
+            ],
+            [
+              3.287,
+              6.421,
+              21.11
+            ]
+          ]
+        },
+        {
+          "match": "rig-hazer-back-",
+          "positions": [
+            [
+              -4.5,
+              0.23,
+              19.8
+            ],
+            [
+              2.8,
+              0.23,
+              19.8
+            ]
+          ],
+          "why": "MOVED from z 3.95 (the old booth, 19 m behind the new one) to behind the truss, so the haze is where the beams are"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "title": "The wall: a sheet of light under the slash, beams standing up through it",
+      "idea": "The truss becomes the top edge of a wall. All 13 lamps under it (6 X + 7 curtain) fall straight down: a sheet 9.5 m wide whose top edge is the cut's 15 deg slope. The 7 floor beams stand up behind the sheet, through the bridge's gap, and the 4 top PARs shine up the same gap. The lasers fan out of the truss's own plane into the roof. Everything stays in one plane behind the DJ.",
+      "palette": "warm white sheet, white beams, green lasers",
+      "groups": [
+        {
+          "match": "rig-par-cut-x-",
+          "aim": {
+            "rule": "down"
+          },
+          "colour": "#fff1d6",
+          "why": "the X joins the curtain: straight down, so the sheet runs the whole hung length (x -5.7..3.8)"
+        },
+        {
+          "match": "rig-par-cut-curtain-",
+          "aim": {
+            "rule": "down"
+          },
+          "colour": "#fff1d6",
+          "why": "kept"
+        },
+        {
+          "match": "rig-par-cut-bridge-",
+          "aim": {
+            "rule": "up"
+          },
+          "colour": "#fff1d6",
+          "why": "straight up through the gap between the two girders (inner faces z 20.25 and 21.75; the 15 deg cone is 0.9 m wide there): the wall continues above the bridge"
+        },
+        {
+          "match": "rig-beam380-backstage-",
+          "positions": [
+            [
+              -5.6,
+              0.7,
+              20.55
+            ],
+            [
+              -4.2,
+              0.7,
+              20.55
+            ],
+            [
+              -2.8,
+              0.7,
+              20.55
+            ],
+            [
+              -0.5,
+              0.7,
+              20.55
+            ],
+            [
+              0.9,
+              0.7,
+              20.55
+            ],
+            [
+              2.3,
+              0.7,
+              20.55
+            ],
+            [
+              3.3,
+              0.7,
+              20.55
+            ]
+          ],
+          "aim": {
+            "rule": "up"
+          },
+          "colour": "#ffffff",
+          "why": "MOVED from z -1.5 to the floor just behind the truss (z 20.55: 0.3 m behind the truss face, 0.3 m in front of the back girder's face). Vertical, at x between the three picks so no beam meets a hoist, chain or bridle; through the bridge gap into the roof."
+        },
+        {
+          "match": "rig-lasercube-cut-",
+          "aim": {
+            "rule": "targets",
+            "targets": [
+              [
+                -7.4,
+                13.35,
+                21.11
+              ],
+              [
+                -9.5,
+                13.35,
+                21.11
+              ],
+              [
+                -11.0,
+                13.35,
+                21.11
+              ],
+              [
+                7.0,
+                13.35,
+                21.11
+              ],
+              [
+                8.5,
+                13.35,
+                21.11
+              ],
+              [
+                -7.0,
+                13.35,
+                21.11
+              ]
+            ]
+          },
+          "colour": "#3cff3c",
+          "why": "in the truss's own plane (z 21.11), up between the girders, each to the solid roof deck beside lantern 1 (|x| >= 7): lamps 1-3 and 6 lean house left, 4-5 house right. Each crosses a pick's vertical only above 7.95 m, where nothing hangs in that plane; lamp 6 cannot go right (hoist 3 is 0.13 m from it). Cube 6 slides one clamp point (0.5 m along the line) toward the low end, to x 3.29: where it hangs today it is 0.27 m from hoist 3's chain (every option and today fail the 0.3 m steel clearance there).",
+          "positions": [
+            [
+              -5.84,
+              3.98,
+              21.11
+            ],
+            [
+              -3.92,
+              4.49,
+              21.11
+            ],
+            [
+              -2.0,
+              5.01,
+              21.11
+            ],
+            [
+              -0.08,
+              5.52,
+              21.11
+            ],
+            [
+              1.85,
+              6.04,
+              21.11
+            ],
+            [
+              3.287,
+              6.421,
+              21.11
+            ]
+          ]
+        },
+        {
+          "match": "rig-hazer-back-",
+          "positions": [
+            [
+              -4.5,
+              0.23,
+              19.8
+            ],
+            [
+              2.8,
+              0.23,
+              19.8
+            ]
+          ],
+          "why": "as A"
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "title": "Crowd wash and a laser ceiling over the floor",
+      "idea": "The room is the show. 10 truss PARs reach over the DJ and wash the dance floor warm, the curtain stays as the backdrop, the 10 column beams lean in and meet in an arch over the crowd, and the 6 lasers open a ceiling over the floor to the solid roof beside the lantern. The fewest moves: only the two hazers and cube 6 (one clamp point). The cost: the crowd looks into the wash.",
+      "palette": "amber wash, white arch, green laser ceiling",
+      "groups": [
+        {
+          "match": "rig-par-cut-x-",
+          "aim": {
+            "rule": "targets",
+            "targets": [
+              [
+                -4.0,
+                1.0,
+                30.0
+              ],
+              [
+                -2.5,
+                1.0,
+                33.0
+              ],
+              [
+                -1.0,
+                1.0,
+                36.0
+              ],
+              [
+                1.0,
+                1.0,
+                30.0
+              ],
+              [
+                2.5,
+                1.0,
+                34.0
+              ],
+              [
+                4.0,
+                1.0,
+                38.0
+              ]
+            ]
+          },
+          "colour": "#ffb36b",
+          "why": "a crowd wash from the truss: focus at chest height (1.0 m) on the dance floor, z 30-38"
+        },
+        {
+          "match": "rig-par-cut-bridge-",
+          "aim": {
+            "rule": "targets",
+            "targets": [
+              [
+                -4.0,
+                1.0,
+                42.0
+              ],
+              [
+                -1.5,
+                1.0,
+                45.0
+              ],
+              [
+                1.5,
+                1.0,
+                45.0
+              ],
+              [
+                4.0,
+                1.0,
+                42.0
+              ]
+            ]
+          },
+          "colour": "#ffb36b",
+          "why": "the far half of the wash, z 42-45"
+        },
+        {
+          "match": "rig-par-cut-curtain-",
+          "aim": {
+            "rule": "down"
+          },
+          "colour": "#ff5a4f",
+          "why": "kept as the backdrop, red"
+        },
+        {
+          "match": "rig-beam380-columns-",
+          "aim": {
+            "rule": "cross",
+            "x": 1.0,
+            "y": 11.0
+          },
+          "colour": "#ffffff",
+          "why": "the 'Tunnel' look (k-tunnel) kept: each column beam leans across to 1 m past the axis at 11 m, the two rows meet in an arch over the floor; >= 5.7 m over the dance zone"
+        },
+        {
+          "match": "rig-lasercube-cut-",
+          "aim": {
+            "rule": "targets",
+            "targets": [
+              [
+                -10.0,
+                13.35,
+                44.0
+              ],
+              [
+                -8.5,
+                13.35,
+                40.0
+              ],
+              [
+                -7.0,
+                13.35,
+                36.0
+              ],
+              [
+                7.0,
+                13.35,
+                36.0
+              ],
+              [
+                8.5,
+                13.35,
+                40.0
+              ],
+              [
+                10.0,
+                13.35,
+                44.0
+              ]
+            ]
+          },
+          "colour": "#3cff3c",
+          "why": "the laser-beside-lantern rule (audit A-03) toward the house: each beam rises over the DJ (>= 6 m there) and over the floor (>= 5.9 m over the front row) to the solid roof deck beside lantern 1, never into its glazing Cube 6 slides one clamp point (0.5 m along the line) toward the low end, to x 3.29: where it hangs today it is 0.27 m from hoist 3's chain (every option and today fail the 0.3 m steel clearance there).",
+          "positions": [
+            [
+              -5.84,
+              3.98,
+              21.11
+            ],
+            [
+              -3.92,
+              4.49,
+              21.11
+            ],
+            [
+              -2.0,
+              5.01,
+              21.11
+            ],
+            [
+              -0.08,
+              5.52,
+              21.11
+            ],
+            [
+              1.85,
+              6.04,
+              21.11
+            ],
+            [
+              3.287,
+              6.421,
+              21.11
+            ]
+          ]
+        },
+        {
+          "match": "rig-hazer-back-",
+          "positions": [
+            [
+              -4.5,
+              0.23,
+              19.8
+            ],
+            [
+              2.8,
+              0.23,
+              19.8
+            ]
+          ],
+          "why": "as A"
+        }
+      ]
+    }
+  ]
+}

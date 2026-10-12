@@ -9,6 +9,7 @@ import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { isBloomAllowed, isCameraOutside, setBloomActive } from '../../objectComponents/atmosphereStore.js'
 import { bloomOf } from './bloom.js'
 import { AutoExposurePass, autoExposureOf } from './autoExposure.js'
+import { isMeasuring } from './measure/measureState.js'
 
 // THE ROOM IN HIGH DYNAMIC RANGE, WITH BLOOM (renderSettings.bloom, bloom.js).
 //
@@ -93,13 +94,16 @@ export default function HdrBloom({ renderSettings }) {
         // HDR path here tone-mapped each beam on its own (overlaps clipped white), put the
         // fog after the exposure, and recompiled every lit material mid-measurement.
         const dbg = (import.meta.env.DEV && window.__diRoom?.debug) || {}
-        const glow = isBloomAllowed(gl) && !isCameraOutside(gl) && !dbg.noGlow // no eye in the hall to glow from outside (SmartView)
+        // the measurement mode (measure/MeasurementMode.jsx): no glow and no auto exposure, so
+        // the picture is the room at one stated EV100 (its veil is held off in atmosphereStore)
+        const measuring = isMeasuring(gl)
+        const glow = isBloomAllowed(gl) && !isCameraOutside(gl) && !dbg.noGlow && !measuring // no eye in the hall to glow from outside (SmartView)
         passes.glow.enabled = glow
         setBloomActive(gl, glow)
         passes.render.camera = state.camera
         if (import.meta.env.DEV && window.__diRoom) Object.assign(window.__diRoom, { camera: state.camera, passes })
         const auto = autoExposureOf(renderSettings)
-        passes.exposure.enabled = Boolean(auto) && !dbg.noExposure
+        passes.exposure.enabled = Boolean(auto) && !dbg.noExposure && !measuring
         if (auto) Object.assign(passes.exposure, auto)
         passes.glow.strength = bloom.strength
         passes.glow.radius = bloom.radius

@@ -34,6 +34,7 @@ describe('plotModel', () => {
         const t = titleTotals(model.sheet)
         expect(t.channels).toBe('U1 33')
         expect(t.fixtures).toBe('3 fixtures · 2 patched')
+        expect(t.power).toMatch(/kW connected \(datasheet max\) · \d+ circuits$/)
     })
 
     it('says how many of each type are left to place when the project has a rental list (view C, §11)', () => {

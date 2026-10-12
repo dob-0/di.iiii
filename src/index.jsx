@@ -8,9 +8,11 @@ import { trackEvent } from './utils/track.js'
 import { watchPreviewPaint } from './utils/previewMode.js'
 import { getInitialSpaceIdFromLocation, getPlatformRedirect } from './utils/spaceRouting.js'
 import { resolveHostSpace } from './utils/hostSpace.js'
+import { installPreloadRecovery } from './utils/preloadRecovery.js'
 
 ensureRuntimeConsole()
 suppressNativeDrag()
+installPreloadRecovery()
 
 // A space on its own domain (docs/architecture/SPEC_space_own_domain.md): on
 // yokozo.xyz the page must know it IS the space `taronx` before anything

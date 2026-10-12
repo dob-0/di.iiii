@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOXIR 17.10 overview</title>
+<meta name="description" content="MOXIR 17.10: the hall measured, the stage placed, the light next. Status of the digital twin as of 7 October 2026.">
+<style>
+/* house register — di-brand/SYSTEM.md: one accent (#4df9ff) marks meaning only, square corners, 1px lines,
+   no shadow/glow, mono carries facts, sans carries prose, semantic triple from base.css. */
+*{box-sizing:border-box;border-radius:0}
+:root{color-scheme:dark;
+ --bg:#000;--fg:#e9eef2;--dim:#7f8b96;--faint:#4b545c;
+ --line:rgba(77,249,255,.15);--line2:rgba(255,255,255,.12);
+ --accent:#4df9ff;--fill:rgba(77,249,255,.06);--fill2:rgba(77,249,255,.10);
+ --danger:#f25f5c;--success:#4df9c0;--warning:#ffb347;
+ --mono:ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,Consolas,monospace;
+ --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--sans)}
+main{max-width:1040px;margin:0 auto;padding:0 16px 72px}
+.eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 0;border-bottom:1px solid var(--line2)}
+.brand{display:flex;align-items:center;gap:12px;font:700 20px/1 var(--sans);letter-spacing:-.05em}
+.brand svg{width:22px;height:22px;color:var(--fg)}
+.brand .dot{color:var(--accent)}
+.hero{padding:64px 0 40px;border-bottom:1px solid var(--line2)}
+h1{font:700 clamp(34px,6vw,60px)/1.02 var(--sans);letter-spacing:-.04em;margin:14px 0 18px}
+.lede{max-width:60ch;color:var(--dim);font-size:17px;margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));border-left:1px solid var(--line2);margin-top:40px}
+.stat{padding:14px 18px;border-right:1px solid var(--line2);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.stat b{display:block;font:600 28px/1.1 var(--mono);letter-spacing:-.02em}
+.stat span{display:block;margin-top:8px}
+section{padding:48px 0 0}
+h2{font:700 26px/1.15 var(--sans);letter-spacing:-.03em;margin:10px 0 6px}
+.note{color:var(--dim);max-width:64ch;margin:0 0 22px}
+.mono{font-family:var(--mono)}
+.k{color:var(--dim);font:12px/1.4 var(--mono)}
+table{width:100%;border-collapse:collapse;border:1px solid var(--line2)}
+th{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:left;padding:12px 14px;border-bottom:1px solid var(--line2)}
+td{padding:12px 14px;border-bottom:1px solid var(--line2);vertical-align:top;font-size:15px}
+tr:last-child td{border-bottom:0}
+td.m{font-family:var(--mono);font-size:14px;white-space:nowrap}
+.state{display:inline-block;font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:5px 8px;border:1px solid var(--line2);color:var(--dim);white-space:nowrap}
+.state.ok{color:var(--success);border-color:rgba(77,249,192,.35)}
+.state.warn{color:var(--warning);border-color:rgba(255,179,71,.35)}
+.state.bad{color:var(--danger);border-color:rgba(242,95,92,.4)}
+.state.now{color:var(--accent);border-color:var(--line);background:var(--fill)}
+/* version ladder */
+.ladder{border:1px solid var(--line2)}
+.rung{display:grid;grid-template-columns:84px 1fr auto;gap:16px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--line2)}
+.rung:last-child{border-bottom:0}
+.rung.now{background:var(--fill);box-shadow:inset 2px 0 0 var(--accent)}
+.rung .v{font:600 18px/1.3 var(--mono)}
+.rung.now .v{color:var(--accent)}
+.rung p{margin:2px 0 0;color:var(--dim);font-size:14.5px}
+.rung b{font-weight:600}
+/* material cells */
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));border-left:1px solid var(--line2);border-top:1px solid var(--line2)}
+.cell{padding:16px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.cell b{display:block;font:600 26px/1.1 var(--mono);letter-spacing:-.02em}
+.cell span{display:block;margin-top:8px;font-size:14.5px}
+.cell .k{margin-top:6px;word-break:break-all}
+/* two-column lists */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));border-left:1px solid var(--line2);border-top:1px solid var(--line2)}
+.col{padding:18px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.col ul{margin:12px 0 0;padding:0;list-style:none}
+.col li{padding:8px 0;border-top:1px solid var(--line2);font-size:15px}
+.col li:first-child{border-top:0;padding-top:0}
+/* the rig bar: a measured quantity drawn as a quantity */
+.bar{display:flex;height:10px;margin-top:10px;border:1px solid var(--line2)}
+.bar i{display:block;height:100%}
+.foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--line2);color:var(--dim);font:12.5px/1.7 var(--mono)}
+.foot b{color:var(--fg);font-weight:500}
+@media(max-width:600px){.rung{grid-template-columns:64px 1fr}.rung .state{grid-column:2}.hero{padding-top:40px}
+ table,thead,tbody,tr,th,td{display:block}thead{display:none}tr{border-bottom:1px solid var(--line2);padding:8px 0}td{border:0;padding:4px 14px}td.m{white-space:normal}td[data-l]:before{content:attr(data-l) " · ";color:var(--dim);font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase}}
+</style></head>
+<body><main>
+
+<header>
+ <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><rect x="4" y="4" width="92" height="92" fill="none" stroke="currentColor" stroke-width="11"/><rect x="37" y="37" width="26" height="26" fill="currentColor"/></svg>
+ <span>di<span class="dot">.</span>iiii</span></div>
+ <span class="eyebrow">production · MOXIR 17.10</span>
+</header>
+
+<div class="hero">
+ <div class="eyebrow">status · 7 October 2026</div>
+ <h1>The hall is measured.<br>The stage is placed.<br>The light is next.</h1>
+ <p class="lede">MOXIR is a factory hall in Charentsavan. We built its twin in di.iiii so the light can be designed and checked before anyone hangs a lamp. This page says what exists, what it is made of, and what is still to confirm on site.</p>
+ <div class="stats">
+  <div class="stat"><b>108.2 m</b><span class="eyebrow">hall length, from aerial survey</span></div>
+  <div class="stat"><b>v0.9</b><span class="eyebrow">current model</span></div>
+  <div class="stat"><b>74</b><span class="eyebrow">light sources in the model</span></div>
+  <div class="stat"><b>17.1 kW</b><span class="eyebrow">light load, datasheet maximum</span></div>
+ </div>
+</div>
+
+<section>
+ <div class="eyebrow">01 · the model</div>
+ <h2>Six states, one number each</h2>
+ <p class="note">Each number is a state of the model someone looked at. Nothing is renumbered. The newest state is a working copy and is not yet in the shared space.</p>
+ <div class="ladder">
+  <div class="rung"><div class="v">v0.5</div><div><b>Known · full</b><p>The hall as of 2 October, the crane over the DJ at the press end, the cut as drawn on 29 September. This is the shared copy today.</p></div><span class="state ok">shared</span></div>
+  <div class="rung"><div class="v">v0.6</div><div><b>The hall corrected</b><p>Lanterns and end walls re-measured from aerial imagery. Crane girder set to 7.95 m (assumed until measured on site).</p></div><span class="state">working copy</span></div>
+  <div class="rung"><div class="v">v0.7</div><div><b>The machinery by the white bags</b><p>Blower, ducts, hopper and the roller conveyor are modelled. The prefab cabin is cleared for the show.</p></div><span class="state">working copy</span></div>
+  <div class="rung"><div class="v">v0.8</div><div><b>The stage on its line</b><p>Stage line drawn on a video frame and projected to the floor. DJ on a 0.4 m step, PA stacks at ±5.4 m.</p></div><span class="state">working copy</span></div>
+  <div class="rung now"><div class="v">v0.9</div><div><b>MOXIR beta</b><p>The truss behind the DJ, the crane parked at 21 m from the door, moved 1 m toward house left.</p></div><span class="state now">current</span></div>
+  <div class="rung"><div class="v">v1.0</div><div><b>The show</b><p>v0.9 plus the site measurements of 8 October and the lighting design. Built into the shared space with a backup first.</p></div><span class="state warn">to do</span></div>
+ </div>
+</section>
+
+<section>
+ <div class="eyebrow">02 · what it is made of</div>
+ <h2>Every material, counted</h2>
+ <p class="note">Counted from the files on the studio machine on 7 October. Each has a source and a date on record; the space keeps a provenance file.</p>
+ <div class="cells">
+  <div class="cell"><b>52</b><span>venue photographs and video</span><div class="k">481 MB</div></div>
+  <div class="cell"><b>49</b><span>source images and one video the model was made from</span><div class="k">127 MB</div></div>
+  <div class="cell"><b>133</b><span>documents: maker manuals, equipment order, patch, scans, hall history</span><div class="k">117 MB</div></div>
+  <div class="cell"><b>13</b><span>from the label’s brief: story slides and videos</span><div class="k">15 MB</div></div>
+  <div class="cell"><b>15</b><span>hall builds, one per measured state</span><div class="k">≈ 3.2 MB each</div></div>
+  <div class="cell"><b>3.0 GB</b><span>photo analysis: masks, lens correction, multi-view poses</span></div>
+  <div class="cell"><b>58</b><span>rig, hall and stage records, kept in version control</span></div>
+  <div class="cell"><b>25</b><span>projects in the space: 5 live, 20 archived</span></div>
+ </div>
+</section>
+
+<section>
+ <div class="eyebrow">03 · how it was measured</div>
+ <h2>Where each number came from</h2>
+ <table>
+  <thead><tr><th>Measured</th><th>Method</th><th>Result</th></tr></thead>
+  <tbody>
+   <tr><td>Hall footprint, lanterns, end walls</td><td>OpenStreetMap, Microsoft building footprints, two satellite captures</td><td class="m">108.2 m long; column grid holds</td></tr>
+   <tr><td>Columns and roof rhythm</td><td>Photographs with lens correction, multi-view pose estimation</td><td class="m">right row fixed; one photo fit not accepted</td></tr>
+   <tr><td>Stage line and DJ position</td><td>Line drawn on video frame 954, projected to the floor plane</td><td class="m">z 24.5 m; booth moved 0.445 m clear of the conveyor</td></tr>
+   <tr><td>Crane girder, cab, pipe racks</td><td>—</td><td class="m"><span class="state warn">assumed · measure 8 Oct</span></td></tr>
+  </tbody>
+ </table>
+</section>
+
+<section>
+ <div class="eyebrow">04 · the light</div>
+ <h2>What is in the model, against the equipment list</h2>
+ <p class="note">Counted from model v0.9 and compared with the source list for 17 October.</p>
+ <table>
+  <thead><tr><th>Fixture</th><th>In model</th><th>On list</th><th></th></tr></thead>
+  <tbody>
+   <tr><td>PAR, 54 × 3 W LED</td><td class="m" data-l="In model">50</td><td class="m" data-l="On list">50</td><td><span class="state ok">match</span></td></tr>
+   <tr><td>Beam moving head, 380 W</td><td class="m" data-l="In model">18</td><td class="m" data-l="On list">18</td><td><span class="state ok">match</span></td></tr>
+   <tr><td>Smoke machine</td><td class="m" data-l="In model">4</td><td class="m" data-l="On list">4</td><td><span class="state ok">match</span></td></tr>
+   <tr><td>Laser, LaserCube Ultra MK2</td><td class="m" data-l="In model">6</td><td class="m" data-l="On list">6</td><td><span class="state warn">terms open</span></td></tr>
+   <tr><td>Hazer</td><td class="m" data-l="In model">4</td><td class="m" data-l="On list">6</td><td><span class="state bad">gap</span></td></tr>
+  </tbody>
+ </table>
+ <div class="bar" role="img" aria-label="Light sources: 50 PAR, 18 beam, 6 laser"><i style="width:67.6%;background:var(--accent);opacity:.9"></i><i style="width:24.3%;background:var(--fg);opacity:.7"></i><i style="width:8.1%;background:var(--warning)"></i></div>
+ <div class="k" style="margin-top:8px">74 sources · 50 PAR · 18 beam · 6 laser</div>
+</section>
+
+<section>
+ <div class="eyebrow">05 · to confirm before the show</div>
+ <h2>Open, in plain terms</h2>
+ <div class="cols">
+  <div class="col"><div class="eyebrow">light and control</div><ul>
+   <li>The light desk does not yet hold the show. It has to be loaded from a script, with an undo.</li>
+   <li>The show clock is not running yet.</li>
+   <li>Nothing drives the six lasers yet. A named laser safety officer signs off first.</li>
+   <li>The channel order of the PAR and beam fixtures comes from a desk map, not the maker. Test on the units.</li>
+   <li>Hazers: the list says six, the model has four, and the rental source has none.</li>
+  </ul></div>
+  <div class="col"><div class="eyebrow">site, on 8 October</div><ul>
+   <li>Underside of the near crane girder (assumed 7.95 m) and the cab bottom (5.85 m).</li>
+   <li>Heights of the pipe racks at the stage column.</li>
+   <li>The crane’s travel along the runway: brakes, rated load, lock-out.</li>
+   <li>Venue power: circuit C6 reads 3200 W against 2944 W available.</li>
+  </ul></div>
+  <div class="col"><div class="eyebrow">picture</div><ul>
+   <li>The white column beams read as solid pillars in the viewer. The look is being reworked.</li>
+   <li>Press lights aim at the blower, not the press, in the new stage copies. A one-rule fix.</li>
+   <li>Not yet measured: frame time on the show machine, and light levels at the audience.</li>
+  </ul></div>
+ </div>
+</section>
+
+<section>
+ <div class="eyebrow">06 · next</div>
+ <h2>Order of work</h2>
+ <table>
+  <thead><tr><th>#</th><th>Step</th><th></th></tr></thead>
+  <tbody>
+   <tr><td class="m">1</td><td>Fix the look, then check it on the show screen.</td><td><span class="state now">next</span></td></tr>
+   <tr><td class="m">2</td><td>Pin the press lights to the press; compare every look on v0.9.</td><td><span class="state">to do</span></td></tr>
+   <tr><td class="m">3</td><td>Aim the truss lights for the new truss position; draw each lamp’s footprint on the floor.</td><td><span class="state">to do</span></td></tr>
+   <tr><td class="m">4</td><td>Load the show onto the desk by script, start the show clock, prove the laser path.</td><td><span class="state">to do</span></td></tr>
+   <tr><td class="m">5</td><td>Take the 8 October measurements into the model; build v1.0.</td><td><span class="state warn">8 oct</span></td></tr>
+  </tbody>
+ </table>
+</section>
+
+<div class="foot">
+ <b>Provenance.</b> Counts read from the studio’s files on 7 October 2026; model v0.9 is a working copy that has not been published to the shared space. Aerial sources: OpenStreetMap (ODbL), Microsoft building footprints (ODbL), two satellite captures. Venue photographs and brief supplied for this production.<br>
+ <b>Not in this page:</b> prices, contracts, and any measurement not yet taken on site.<br>
+ <b>Regenerate:</b> docs/moxir/LIGHT_AUDIT_2026-10-07.md in the di.iiii repository.
+</div>
+
+</main></body></html>

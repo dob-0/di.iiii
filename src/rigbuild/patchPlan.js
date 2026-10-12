@@ -10,8 +10,16 @@
 // This turns it into the document's fixture fields; the desk then takes exactly those
 // addresses (patch.mjs --exact). Nothing is ever moved to "somewhere free": a plan that
 // does not fit is an error, said, and nothing is written.
+//
+// A block may also say `units` — how many lamps it expects — and the plan is then held to
+// it (a missing or extra unit is an error before anything is written); and `order:
+// "id-asc"` walks a block by unit id, so an address stays with its unit when the unit's
+// place changes (MOXIR v2 patch, 2026-10-09). A lamp the document keeps off DMX
+// (`fixture.dmx === false`: the LaserCubes, run over the LAN) takes no address and is no
+// error; a block that names such a lamp puts it on DMX and clears the flag, said.
 
 import { modeOf, typeById } from './fixtureTypes.js'
+import { isOffDmx } from './autoPatch.js'
 
 const pad3 = (n) => String(n).padStart(3, '0')
 
@@ -78,11 +86,31 @@ export const selectorTest = (sel = {}) => {
     }
 }
 
+/**
+ * Ids in the order a person counts them: "rig-par-2" before "rig-par-10". Numbers inside the
+ * id compare as numbers, everything else by code unit, so the answer is the same on every machine.
+ */
+export const naturalCompare = (a, b) => {
+    const pa = String(a).split(/(\d+)/)
+    const pb = String(b).split(/(\d+)/)
+    for (let i = 0; i < Math.min(pa.length, pb.length); i++) {
+        if (pa[i] === pb[i]) continue
+        if (i % 2 === 1) { // a split with a capture group puts the digit runs at the odd indices
+            const d = Number(pa[i]) - Number(pb[i])
+            if (d) return d
+        }
+        return pa[i] < pb[i] ? -1 : 1
+    }
+    return pa.length - pb.length
+}
+
 const ORDER = {
     'x-asc': (a, b) => a.x - b.x || a.z - b.z,
     'x-desc': (a, b) => b.x - a.x || a.z - b.z,
     'z-asc': (a, b) => a.z - b.z || a.x - b.x,
-    'z-desc': (a, b) => b.z - a.z || a.x - b.x
+    'z-desc': (a, b) => b.z - a.z || a.x - b.x,
+    'id-asc': (a, b) => naturalCompare(a.e.id, b.e.id),
+    'id-desc': (a, b) => naturalCompare(b.e.id, a.e.id)
 }
 
 /**
@@ -90,7 +118,8 @@ const ORDER = {
  * @param {object[]} args.entities  the project document's entities
  * @param {object}   args.library   a type library ({types})
  * @param {object}   args.plan      the patch plan (see scripts/place/rigs/*.patch.json)
- * @returns {{ assignments: object[], ops: object[], universes: object[], errors: string[], warnings: string[] }}
+ * @returns {{ assignments: object[], ops: object[], universes: object[], errors: string[], warnings: string[], offDmx: string[] }}
+ *   `offDmx` = ids of the lamps the document keeps off DMX that no block names (not patched, not an error)
  */
 export const planPatch = ({ entities = [], library, plan }) => {
     const errors = []
@@ -119,6 +148,9 @@ export const planPatch = ({ entities = [], library, plan }) => {
                 return { e, x: Number(p[0]) || 0, z: Number(p[2]) || 0 }
             }).filter((m) => onSide(m.x))
             if (!members.length) { errors.push(`${where}: no lamp matches`); continue }
+            // The block's count is a promise the document is held to; the block still runs, so one wrong
+            // count is one error, not one more error per lamp.
+            if (block.units != null && members.length !== Number(block.units)) errors.push(`${where}: the plan expects ${block.units} lamps, the document has ${members.length}`)
             const order = ORDER[block.order || 'x-asc']
             if (!order) { errors.push(`${where}: order "${block.order}" is not one of ${Object.keys(ORDER).join(', ')}`); continue }
             members.sort(order)
@@ -139,6 +171,7 @@ export const planPatch = ({ entities = [], library, plan }) => {
                 const prior = claimed.get(m.e.id)
                 if (prior) { errors.push(`${m.e.id} is in two blocks: ${prior} and ${where}`); return }
                 claimed.set(m.e.id, where)
+                if (isOffDmx(m.e)) warnings.push(`${m.e.id} (${type?.code || typeId}) is kept off DMX in the document; the plan puts it on U${u.universe}.${pad3(start + step * i)} and clears the flag`)
                 assignments.push({
                     entityId: m.e.id,
                     name: m.e.name || '',
@@ -179,7 +212,9 @@ export const planPatch = ({ entities = [], library, plan }) => {
         if (seenIndex.has(a.index)) errors.push(`fixture ${a.index} is given twice (${seenIndex.get(a.index)} and ${a.entityId})`)
         seenIndex.set(a.index, a.entityId)
     }
-    for (const e of lamps) if (!claimed.has(e.id)) errors.push(`${e.id} (${e.components.fixture.type}) is in no block of the plan`)
+    // A lamp the document keeps off DMX (the LaserCubes, run over the LAN) is in no block on purpose.
+    const offDmx = lamps.filter((e) => !claimed.has(e.id) && isOffDmx(e)).map((e) => e.id)
+    for (const e of lamps) if (!claimed.has(e.id) && !isOffDmx(e)) errors.push(`${e.id} (${e.components.fixture.type}) is in no block of the plan`)
 
     const ops = []
     const byId = new Map(lamps.map((e) => [e.id, e]))
@@ -187,12 +222,42 @@ export const planPatch = ({ entities = [], library, plan }) => {
         const f = byId.get(a.entityId).components.fixture
         const want = { index: a.index, universe: a.universe, address: a.address, mode: a.mode, unit: a.unit, position: a.position, hung: a.hung }
         const patch = {}
-        // `hung` is kept only when true (the schema drops false): compare as booleans.
-        for (const [k, v] of Object.entries(want)) if ((k === 'hung' ? f[k] === true : f[k]) !== v) patch[k] = v
+        // The schema keeps `hung` only when true and drops an empty position: compare what it would store.
+        const have = { hung: f.hung === true, position: f.position ?? '' }
+        for (const [k, v] of Object.entries(want)) if ((k in have ? have[k] : f[k]) !== v) patch[k] = v
+        // The plan put this lamp on DMX: the schema keeps `dmx` only when it is false, so null clears it.
+        if (f.dmx === false) patch.dmx = null
         if (Object.keys(patch).length) ops.push({ type: 'updateComponent', payload: { entityId: a.entityId, component: 'fixture', patch } })
     }
     assignments.sort((a, b) => a.universe - b.universe || a.address - b.address)
-    return { assignments, ops, universes, errors, warnings }
+    return { assignments, ops, universes, errors, warnings, offDmx }
+}
+
+/**
+ * The room a plan EXPECTS, as stand-in lamps — for a crew table, or a check of the plan itself, when no
+ * project document is at hand. One lamp per unit of every block that states `units` (ids `<group>-NN`, else
+ * `<type>-NN`, NN from 01), plus the plan's `offDmx` devices (`dmx: false`, as a document keeps them).
+ * The stand-ins say how many lamps of which type, never where: a block that selects by height or position
+ * cannot be described this way and throws, because a stand-in cannot satisfy it. Pure.
+ */
+export const expectedRoom = (plan) => {
+    const room = []
+    const lamp = (id, fixture, n) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [n, 0, 0], rotation: [0, 0, 0] }, fixture } })
+    const nn = (i) => String(i + 1).padStart(2, '0')
+    for (const u of plan?.universes || []) {
+        for (const block of u.blocks || []) {
+            const sel = block.select || {}
+            const where = `U${u.universe} block ${sel.group || sel.type || '(all)'}`
+            if (!Number.isInteger(block.units) || block.units < 1) throw new Error(`${where} states no units: say how many lamps it expects`)
+            if (!sel.type) throw new Error(`${where} names no type: a stand-in lamp needs one`)
+            if (Object.keys(sel).some((k) => !['group', 'type'].includes(k))) throw new Error(`${where} selects by geometry or position, which a stand-in cannot satisfy: use the project document`)
+            for (let i = 0; i < block.units; i++) room.push(lamp(`${sel.group || sel.type}-${nn(i)}`, { type: sel.type }, i))
+        }
+    }
+    for (const d of plan?.offDmx || []) {
+        for (let i = 0; i < (d.units || 0); i++) room.push(lamp(`${d.type}-${nn(i)}`, { type: d.type, dmx: false }, i))
+    }
+    return room
 }
 
 /** Art-Net 4 Port-Address of a 1-based desk universe (U1 = 0), as Net.Sub-Net.Universe. */
