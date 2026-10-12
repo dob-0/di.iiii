@@ -6,7 +6,6 @@
       "Bash(npm run *)",
       "Bash(npm install)",
       "Bash(npm install *)",
-      "Bash(npx *)",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
@@ -17,10 +16,8 @@
       "Bash(git pull *)",
       "Bash(git branch *)",
       "Bash(git merge --no-edit *)",
-      "Bash(git stash *)",
       "Bash(bash scripts/*)",
       "Bash(node scripts/*)",
-      "Bash(node *)",
       "Bash(curl -s http://localhost:*)",
       "Bash(curl http://localhost:*)",
       "Bash(docker compose *)",
@@ -42,16 +39,10 @@
       "Bash(npm test)",
       "Bash(npm test *)",
       "Bash(npm info *)",
-      "Bash(npm audit)",
-      "Bash(git -C /home/nooo/di.iiii remote set-url origin git@github.com:dob-0/di.iiii.git)",
-      "Bash(git -C /home/nooo/di.iiii push origin dev)"
+      "Bash(npm audit)"
     ],
     "defaultMode": "auto"
   },
-  "enabledMcpjsonServers": [
-    "context7",
-    "playwright"
-  ],
   "hooks": {
     "SessionStart": [
       {
@@ -156,5 +147,6 @@
     "frontend-design@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
-  }
+  },
+  "disabledMcpjsonServers": ["context7", "playwright"]
 }

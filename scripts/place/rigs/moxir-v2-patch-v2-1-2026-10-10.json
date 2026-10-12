@@ -1,0 +1,159 @@
+{
+ "patch": "moxir-v2-patch-2026-10-09",
+ "title": "MOXIR v2 \u2014 the show patch (two universes; the six LaserCubes on the LAN)",
+ "writtenAt": "2026-10-09",
+ "owner": "2026-10-09 20:32 (ledger N460.2, N462), his words: \"laser cubes will work with the lan and no dmx, so 2 lasers of the poli and beams one univers, and the wash other ones right also smoke goes with the beams\"",
+ "project": "moxir-v2-stage-lasers",
+ "howToRead": "The same format as moxir-2026-10-17-minimal.patch.json (docs/architecture/RIG_BUILD.md \u00a719; this plan is \u00a719.5). It is the LD's patch as data: which universe each group of lamps runs on, where each block starts, the fixture numbers and the DMX mode per type. Apply it: node scripts/rigbuild/patch-plan.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json --keep-circuits [--project <id>] [--api <base>] [--dry-run] (the v2 rig carries its own power plan, so --keep-circuits), then node scripts/rigbuild/patch.mjs --project <id> --exact. `project` is the scratch copy of the v2 rig (B spread, slug v2-0, the MOXIR one integrator's note of 2026-10-09): the id of a copy on dev or on an install differs, so pass --project there. The crew's short table comes from the plan alone: node scripts/rigbuild/patch-table.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json. Never edit addresses in the project or on the console by hand \u2014 change this file and run them again.",
+ "method": [
+  "Two universes, by the owner's decision (N460.2): U1 holds the 18 UP-B380F beams, the 2 Poligraf UP-LA40WF lasers and the one UP-YZ31P smoke machine (353 of 512 channels); U2 holds the 50 UP-PL5403 washes (400 of 512). The six LaserCubes are on no universe at all (offDmx, below).",
+  "Blocks select lamps from the PROJECT by type or by unit-id group \u2014 never by the name of a truss \u2014 and walk them in unit-id order (order id-asc), so an address belongs to its unit and moves only if the unit's number does. Every unit keeps its address when its place changes (a new ground layout moves units, not their ids): the beams by type, the PARs by the id groups rig-par-cut and rig-par-planes, the two lasers by rig-la40wf-entry-01 and -02 (the entry-laser rig, #873). Each block also states how many lamps it expects (units): a project with another count is refused before anything is written.",
+  "Blocks start on round numbers (001, 101, 401, 501) and a fixture sits whole inside one universe: every block is checked against 512 (ANSI E1.11 DMX512-A: 512 slots per universe).",
+  "Room to grow: every block is followed by free addresses up to the next block, so a lamp added on the night takes the next address of its own block and nothing moves \u2014 beams 289\u2013400 (7 more heads), lasers 465\u2013500 (1 more), smoke 502\u2013512, cut 081\u2013100 (2 more PARs), planes 421\u2013512 (11 more). The lasers start 112 channels after the last beam, so a beam set seven units too high still lands on free slots and never on a laser's channels.",
+  "Fixture numbers: the hundred is the universe; a block's numbers leave the same room to grow as its addresses (beams 101\u2013125, lasers 131\u2013133, smoke 141, cut 201\u2013212, planes 221\u2013271). A crew reads U2.101 and fixture 221 as the same lamp.",
+  "At most 32 devices on one DMX line (ANSI E1.11): U1 has 21 devices and runs on one line; U2 has 50 and must leave its node on at least two lines, the same universe on two outputs or one output through a splitter. Which lamp sits on which line is the cabling plan (owed); the addresses do not depend on it.",
+  "Spare: U1 keeps 159 channels and U2 112, so the Minimal plan's rule of half of every universe spare (256) cannot hold here; minSpare is 100, and the planner warns if a universe falls under it.",
+  "Mode per type: the maker's own mode where the maker lists one (UP-B380F 16ch, UP-PL5403 8ch \u2014 both single-mode units), the mode the unit ran in at the Sevan festival for the UP-LA40WF (32ch), and for the smoke machine the one-channel ASSUMED list until the unit's chart is read. Where a channel ORDER is not the maker's, the sheet says so.",
+  "The 40 W lasers are a different safety class from the 7.5 W cubes (NOHD, aerial clearance, the crossing zone with the cube beams) and the console holds them dark until the IEC 60825-1 sign-off: this patch only gives them addresses."
+ ],
+ "node": {
+  "what": "Art-Net to DMX node output(s): three DMX lines in all \u2014 U1 on one, U2 on two. The rental list has DMX splitters UP-PDU60A/B but no node, and the node count and places are the cabling plan's (owed), not this patch's.",
+  "protocol": "Art-Net 4 (sACN E1.31 also possible \u2014 the console sends either)",
+  "numbering": "universe U1 = Art-Net Port-Address 0 (Net 0 \u00b7 Sub-Net 0 \u00b7 Universe 0) = sACN universe 1; U2 = Port-Address 1 = sACN 2",
+  "splitters": "ANSI E1.11 allows 32 devices on one DMX line. U1 (21 devices) is one line. U2 (50 devices) leaves its node on at least two lines of 32 devices or fewer \u2014 a second output carrying the same universe, or a splitter (the rental house's UP-PDU60A/B); every line ends in a 120 \u03a9 terminator.",
+  "cubes": "The six LaserCubes are on no node output: they sit on the show network and take di's LaserCube stream (offDmx, below)."
+ },
+ "modes": {
+  "up-b380f": {
+   "crew": "16ch",
+   "why": "the maker lists one mode, 16 channels (uplight.com.cn UP-B380F page); the channel map is the one TESTED on the Sevan units (src/rigbuild/fixtureTypes.js). Channels 11\u201316 of that map disagree with the 16-channel chart of the equivalent head and with the studio console's own profile, and ch 13 may have to rest at 145 for the head to emit light: they are walked on a real unit on setup day (docs/moxir/b380f-16ch-map-check-2026-10-09.md). All three maps are 16 channels, so no address here moves."
+  },
+  "up-la40wf": {
+   "crew": "32ch",
+   "why": "the mode the unit ran in at the Sevan festival (TESTED, console profile Laser 32ch, src/rigbuild/fixtureTypes.js); the maker publishes no mode list. The console holds the laser dark (every channel 0) until the IEC 60825-1 sign-off."
+  },
+  "up-yz31p": {
+   "crew": "1ch",
+   "why": "ASSUMED: one channel, fog output (the Antari Z-1500 III stand-in, assumedProfiles.js). UPlight's own multi-angle smoke machines are 2ch and the owner says it may be 2: read it on the unit. 501\u2013512 are free, so 2ch needs no move."
+  },
+  "up-pl5403": {
+   "crew": "8ch",
+   "why": "the maker lists ONE mode, 8 channels (uplight.com.cn UP-PL5403 page, checked 2026-09-29); the order is the Wash 8ch list TESTED at the Sevan festival (dimmer, R, G, B, W, strobe, two unused)."
+  }
+ },
+ "universes": [
+  {
+   "universe": 1,
+   "port": "A",
+   "label": "Beams, Poligraf lasers, smoke",
+   "run": "node output A \u2192 one DMX line of 21 devices (\u2264 32): the 18 UP-B380F, the 2 UP-LA40WF at the entry end (the tower at z 48, house left), the smoke machine",
+   "blocks": [
+    {
+     "select": {
+      "type": "up-b380f"
+     },
+     "start": 1,
+     "fixture": 101,
+     "order": "id-asc",
+     "units": 18,
+     "name": "UP-B380F beam",
+     "what": "the 18 UP-B380F beams in unit order, 16 ch each: 001, 017 \u2026 273 (last channel 288); room for 7 more heads before 401"
+    },
+    {
+     "select": {
+      "group": "rig-la40wf-entry",
+      "type": "up-la40wf"
+     },
+     "start": 401,
+     "fixture": 131,
+     "order": "id-asc",
+     "units": 2,
+     "name": "UP-LA40WF laser (Poligraf 40 W)",
+     "what": "the 2 Poligraf UP-LA40WF lasers (40 W), 32 ch each: rig-la40wf-entry-01 at 401 and rig-la40wf-entry-02 at 433 (last channel 464); room for 1 more before 501. Addressed by those unit ids (the entry-laser rig, #873: the truss tower at z 48, house left); the address stays with the unit if its place changes"
+    },
+    {
+     "select": {
+      "type": "up-yz31p"
+     },
+     "start": 501,
+     "fixture": 141,
+     "order": "id-asc",
+     "units": 1,
+     "name": "UP-YZ31P smoke machine",
+     "what": "the one UP-YZ31P smoke machine, 1 ch ASSUMED: 501 (a 2 ch unit takes 501\u2013502)"
+    }
+   ]
+  },
+  {
+   "universe": 2,
+   "port": "B",
+   "label": "Washes",
+   "run": "node output B (and a second output or a splitter): the 50 UP-PL5403 on at least two DMX lines of \u2264 32 devices",
+   "blocks": [
+    {
+     "select": {
+      "group": "rig-par-cut",
+      "type": "up-pl5403"
+     },
+     "start": 1,
+     "fixture": 201,
+     "order": "id-asc",
+     "units": 11,
+     "name": "UP-PL5403 wash, the cut",
+     "what": "the 10 UP-PL5403 on the cut, 8 ch each: 001, 009 \u2026 073 (last channel 080); room for 2 more before 101"
+    },
+    {
+     "select": {
+      "group": "rig-par-planes",
+      "type": "up-pl5403"
+     },
+     "start": 101,
+     "fixture": 221,
+     "order": "id-asc",
+     "units": 39,
+     "name": "UP-PL5403 wash, the planes",
+     "what": "the 40 UP-PL5403 of the planes (columns, embers, halo, roof, speaker faces, stage), 8 ch each: 101, 109 \u2026 413 (last channel 420); room for 11 more before the end of the universe"
+    }
+   ]
+  }
+ ],
+ "crewNotes": [
+  "The two Poligraf lasers are rig-la40wf-entry-01 (U1.401) and rig-la40wf-entry-02 (U1.433), on the truss tower at the entry end (z 48, house left). Every unit keeps its address if its place changes.",
+  "UP-B380F: channels 1\u201310 of the 16-channel map were tested at the Sevan festival; channels 11\u201316 disagree with the equivalent chart and with the studio console's own profile, and channel 13 may have to rest at 145 for the head to emit light. Step one unit through channels 13, 7\u20138, 11\u201312 and 14\u201315 first (docs/moxir/b380f-16ch-map-check-2026-10-09.md).",
+  "UP-LA40WF (40 W lasers): the console holds them dark until the laser safety sign-off (IEC 60825-1). The patch only gives them addresses.",
+  "How the UP-LA40WF and the UP-YZ31P are addressed on the unit (display or DIP) is read on the unit; the LaserCubes need no address \u2014 each sits on the show network at its own IP."
+ ],
+ "minSpare": 100,
+ "addressing": {
+  "up-b380f": {
+   "method": "display",
+   "seen": "LCD and keys on the front of the base in the maker's own render (made-in-china listing qdrawUbcCMAf, description image 45f3j00VpthLuPIRyYf, checked 2026-09-29)",
+   "menu": "OWED \u2014 the menu wording (e.g. \"A001\" / \"d001\") is in no published UPlight document"
+  },
+  "up-pl5403": {
+   "method": "display",
+   "seen": "LCD with 4 buttons on the rear of the can in the maker's photos (pro-uplight.com UP-PL5403 page, checked 2026-09-29)",
+   "menu": "OWED \u2014 the menu wording and which item selects the mode is in no published UPlight document"
+  },
+  "up-la40wf": {
+   "method": null,
+   "menu": "OWED \u2014 how the Poligraf UP-LA40WF is addressed (display or DIP) is read on the unit"
+  },
+  "up-yz31p": {
+   "method": null,
+   "menu": "OWED \u2014 how the UP-YZ31P is addressed, and whether it takes 1 or 2 channels, is read on the unit"
+  }
+ },
+ "offDmx": [
+  {
+   "type": "ext-lc-ultra-mk2",
+   "units": 6,
+   "what": "6 \u00d7 LaserCube Ultra MK2 7.5 W (the owner's, from hosq)",
+   "how": "LAN only, through di Nodes: the LaserCube's own UDP protocol \u2014 port 45456 alive, 45457 commands, 45458 point data. No DMX, no Art-Net, no universe, no address.",
+   "owner": "N460.2, 2026-10-09 20:32",
+   "source": "serverXR/src/laser/lasercubeProtocol.js \u2014 reverse-engineered from the open lasercube-core crate, unconfirmed on a real Ultra MK2 until the real-cube test (#847)",
+   "load": "10 bytes per point: about 2.4 Mbit/s per cube at 30 000 points a second, about 14.4 Mbit/s for the six on the show network"
+  }
+ ],
+ "v2_1_note": "a copy of the official v2 patch (N460.2) with the block counts cut 11 / planes 39 (planes-25 became cut-11); nothing else changed"
+}
