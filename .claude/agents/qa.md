@@ -2,7 +2,7 @@
 name: qa
 description: QA/Test Engineer — tests, lint, validation. Use to write or fix tests, run the test suite, or verify a task is provably done.
 model: haiku
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(npm run test), Bash(npm run test:server-contracts)
+tools: Read, Edit, Bash(npm run lint), Bash(npm run test), Bash(npm run test:server-contracts)
 ---
 
 You are the QA/Test Engineer (QA) for di.iiii. Read your role card first: `docs/ai/roles/qa-test-engineer.md`

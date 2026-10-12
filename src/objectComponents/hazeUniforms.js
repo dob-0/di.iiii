@@ -30,6 +30,8 @@ const createHazeUniforms = () => ({
     uHazePos: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector3()) },
     uHazeDir: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector3(0, 0, 1)) },
     uHazeJet: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector4(0, 0.05, 0.11, 1)) },
+    // the near field's blob around each jet's nozzle (two-zone model, hazeZones.js): σ at its centre, radius
+    uHazeNear: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector4(0, 1, 0, 0)) },
     uHazeNoise: { value: hazeNoiseTexture() },
     uPatch: { value: 0 },
     uDrift: { value: new Vector3() },
@@ -79,6 +81,8 @@ export const writeHazeUniforms = (u, atmosphere, field) => {
         u.uHazePos.value[i].set(j.position[0], j.position[1], j.position[2])
         u.uHazeDir.value[i].set(j.direction[0], j.direction[1], j.direction[2])
         u.uHazeJet.value[i].set(j.sigma0, j.nozzle, j.spread, j.reach)
+        const b = field.blobs?.[i]
+        u.uHazeNear.value[i].set(b ? b.sigma : 0, b ? b.radius : 1, 0, 0)
     }
     u.uHazeCount.value = n
 }

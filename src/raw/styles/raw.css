@@ -3633,6 +3633,42 @@
     overflow-wrap: anywhere;
 }
 
+/* Laser Out reuses the DMX panel's frame; these are only its own two things:
+   the square the shape is drawn in, and the armed/disarmed badge. */
+.raw-laser-panel-canvas {
+    align-self: center;
+    width: 100%;
+    max-width: 240px;
+    aspect-ratio: 1 / 1;
+    background: var(--di-black);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+}
+
+.raw-laser-panel-armed {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+/* One line a cube: what it is doing, then what it said about itself. */
+.raw-laser-panel-cubes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    overflow-wrap: anywhere;
+}
+
+.raw-laser-panel-cube-about {
+    opacity: 0.75;
+}
+
+.raw-laser-panel-cube-warn {
+    color: var(--di-danger);
+}
+
 /* Phones. The topbar is a fixed-height single flex row holding the back button,
    breadcrumb, surface toggles, window list, scale select, node count, chat and
    overflow — at 390px that overflowed with no wrap and no collapse, and

@@ -512,6 +512,7 @@
         "basis": "EXACT",
         "note": "A-CN gives rated 450 W; the higher figure (A) is kept for power planning"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 23,
         "src": "A",
@@ -579,6 +580,18 @@
         "A2": {
           "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
           "what": "UPlight UP-B380F, second store page"
+        },
+        "NEREID": {
+          "url": "https://electromarket.co.uk/beamz-pro-nereid380b-outdoor-weatherproof-moving-head-beam-light-380w",
+          "what": "BeamZ Pro Nereid380B, 380 W IP65 beam, 1 deg; 209,000 lx @ 7 m from the beamZ 152.040B listing (manuals.plus), via a search snippet — the low end of the 380 W class bracket"
+        },
+        "OSRAM380": {
+          "url": "https://www.osram.com/ecat/",
+          "what": "Osram eCat, SIRIUS HRI 380 W S PRO (ZMP_4061881): 20,000 lm, 7700 K, Ra 85, 70 V 5 A, 2500 h — values as quoted by a web search 2026-10-09; the product page answered HTTP 500 on a direct fetch, so UNVERIFIED at source. The lamp class of the UP-B380F (\"350XL/380\"); its make is not confirmed"
+        },
+        "SEVAN": {
+          "url": null,
+          "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
         },
         "SHEHDS-GALAXYJET": {
           "url": "https://shehds.com/products/galaxyjet-beam-380w-19r-moving-head-lights-display-stage-effect-lighting-for-dj-disco-stage-performance-stage-concert-wedding",
@@ -927,6 +940,7 @@
         "src": "B",
         "basis": "EXACT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 13.5,
         "src": "B",
@@ -1220,6 +1234,7 @@
         "basis": "EXACT",
         "note": "C3 says 300 W"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 15,
         "src": "OFL-K10",
@@ -1488,6 +1503,12 @@
         "basis": "EXACT",
         "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
       },
+      "supply_w": {
+        "value": 200,
+        "src": "D-CN",
+        "basis": "EXACT",
+        "note": "the mains draw the maker states beside the 162 W rating (switch-mode supply with PFC): circuits and power totals are planned on it (audit A-05, 2026-10-05: 16 PARs on C6 = 3200 W at supply, over the 2944 W planning limit, though 2592 W at the rating)"
+      },
       "weight_kg": {
         "value": 8,
         "src": "D",
@@ -1548,6 +1569,10 @@
         "D-CN": {
           "url": "https://www.uplight.com.cn/pd48298011.html",
           "what": "UPlight UP-PL5403 on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
+        },
+        "SEVAN": {
+          "url": null,
+          "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
         }
       },
       "manifest": {
@@ -1786,6 +1811,7 @@
         "src": "BLUESEA",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 35,
         "src": "BLUESEA",
@@ -1910,6 +1936,7 @@
         "src": "MAGICFX",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 4.2,
         "src": "MAGICFX",
@@ -2008,6 +2035,7 @@
         "basis": "EQUIVALENT",
         "note": "the code's '600' suggests a 600 W generic unit"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 8.5,
         "src": "SHOWVEN",
@@ -2122,6 +2150,7 @@
         "src": "ANTARI",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 13.3,
         "src": "ANTARI",
@@ -2282,6 +2311,7 @@
         "basis": "EQUIVALENT",
         "note": "maximum; 663 W typical"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 7.8,
         "src": "MARTIN-A3K",
@@ -2483,6 +2513,7 @@
         "basis": "EQUIVALENT",
         "note": "at 230 V"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 8.7,
         "src": "CHAUVET-STRIKE4",
@@ -2603,6 +2634,7 @@
         "src": "ANTARI-HZ1000",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 74.6,
         "src": "ANTARI-HZ1000",
@@ -2741,6 +2773,7 @@
         "basis": "EXACT",
         "note": "rated 180 W (200 W light source)"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 5.1,
         "src": "E",
@@ -2897,6 +2930,7 @@
       "modesOwed": false,
       "assumedMode": null,
       "power_w": null,
+      "supply_w": null,
       "weight_kg": {
         "value": 3.7,
         "src": "LASEROS-MK2",
@@ -2944,6 +2978,11 @@
         "LASEROS-MK2": {
           "url": "https://www.laseros.com/lasercube-models/",
           "what": "Wicked Lasers, LaserCube Ultra MK2: the maker's specs page, and its ULTRA MK2 Guide v1.2 (https://www.laseros.com/manual-mk2.pdf): specifications, connections, and the DMX/Art-Net default fixture channel layout (pp. 57-59). Accessed 2026-10-04"
+        },
+        "LASEROS-MK2-MANUAL-V1": {
+          "file": "/mnt/data/backups/lasercube-mk2-sd-2026-09-10/ULTRA_MK2 Full Manual v1-0.pdf",
+          "sha256_16": "055b6761e13250f1",
+          "what": "LaserCube Ultra MK2 Full Manual v1.0 (89 pp), from the SD card of the owner's own cubes (backup 2026-09-10), pp. 11-12: the '7.5 Ultra Mk2' (7500 mW: blue 455 nm 4000, green 525 nm 2000, red 638 nm 1500 mW) and the 2.5 W variant. No beam diameter or divergence line. Read with pdftotext 2026-10-09"
         }
       },
       "manifest": {

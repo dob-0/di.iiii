@@ -26,6 +26,7 @@ const mixedExponent = (edge, frost) => {
     return p + (2 - p) * f
 }
 import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
+import { BLOB_EDGE } from './hazeZones.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { BEAM_SHAPE_GLSL, FROST_WIDEN, beamOpticsOf, frostWiden, opticsSpreadTan } from './beamOptics.js'
 
@@ -35,6 +36,55 @@ export const FLOOR_Y = 0
 // A rough floor spreads a reflected ray over ~MIRROR_SPREAD·α radians either side (α =
 // roughness², the GGX lobe's half-width, Walter et al. 2007, roughly): the reflection's blur.
 export const MIRROR_SPREAD = 1.3
+
+/** The haze field in GLSL — hazeSigma(p) — shared by the beams and the laser lines (laserLineMaterial.js). */
+export const HAZE_FIELD_GLSL = /* glsl */`
+// THE HAZE FIELD (hazeField.js has the formulas and where they come from; this is
+// hazeScatteringAt, line for line). Shared by every beam of the renderer
+// (hazeUniforms.js).
+#define HAZE_MAX ${MAX_HAZE_SOURCES}
+uniform float uFill;
+uniform int uHazeCount;
+uniform vec3 uHazePos[HAZE_MAX];
+uniform vec3 uHazeDir[HAZE_MAX];
+uniform vec4 uHazeJet[HAZE_MAX]; // σ0 at the nozzle, nozzle diameter, spread, reach
+uniform vec4 uHazeNear[HAZE_MAX]; // the near field's blob: σ at its centre, radius (hazeZones.js)
+uniform highp sampler3D uHazeNoise;
+uniform float uPatch;
+uniform vec3 uDrift;
+uniform float uHazeTime;
+
+float hazeSigma(vec3 p) {
+    if (uHazeCount == 0 && uPatch <= 0.0) return uFill;
+    float n = 0.5;
+    if (uPatch > 0.0) n = texture(uHazeNoise, (p - uDrift * uHazeTime) / ${NOISE_TILE_M.toFixed(1)}).r;
+    float swing = 2.0 * (n - 0.5);
+    float sigma = uFill * (1.0 + uPatch * swing);
+    float eddy = clamp(1.0 + 1.6 * uPatch * swing, 0.0, 3.0);
+    // a loop bounded by a uniform: ANGLE's Direct3D back end keeps it a loop (a constant
+    // bound is unrolled — 12 jets × 12 samples became a program too large to build)
+    for (int j = 0; j < uHazeCount; j++) {
+        vec4 jet = uHazeJet[j];
+        vec3 v = p - uHazePos[j];
+        // the near field's blob (hazeZones.js blobShape: full inside 0.8 r, gone past 1.2 r)
+        vec4 nearZone = uHazeNear[j];
+        if (nearZone.x > 0.0) sigma += nearZone.x * (1.0 - smoothstep(${BLOB_EDGE[0].toFixed(2)}, ${BLOB_EDGE[1].toFixed(2)}, length(v) / nearZone.y)) * eddy;
+        float u = dot(v, uHazeDir[j]);
+        float along = max(u, 0.0);
+        // far behind the nozzle, past five reaches, or three widths off the axis:
+        // under e^-5 of the jet, skipped (most samples, most jets)
+        if (u < -jet.y || along > jet.w * 5.0) continue;
+        float r2 = max(dot(v, v) - u * u, 0.0);
+        float w = jet.y * 0.5 + jet.z * along;
+        if (r2 > 9.0 * w * w) continue;
+        float decay = min(1.0, ${JET_K.toFixed(1)} * jet.y / max(along, 1e-6));
+        float ramp = clamp((u + jet.y * 0.5) / jet.y, 0.0, 1.0);
+        sigma += jet.x * decay * exp(-r2 / (w * w)) * exp(-along / jet.w) * ramp * eddy;
+    }
+    return sigma;
+}
+
+`
 
 const vertexShader = /* glsl */`
 varying vec3 vLocal;
@@ -82,47 +132,7 @@ varying vec3 vWorld;
 #include <common>
 #include <dithering_pars_fragment>
 
-// THE HAZE FIELD (hazeField.js has the formulas and where they come from; this is
-// hazeScatteringAt, line for line). Shared by every beam of the renderer
-// (hazeUniforms.js).
-#define HAZE_MAX ${MAX_HAZE_SOURCES}
-uniform float uFill;
-uniform int uHazeCount;
-uniform vec3 uHazePos[HAZE_MAX];
-uniform vec3 uHazeDir[HAZE_MAX];
-uniform vec4 uHazeJet[HAZE_MAX]; // σ0 at the nozzle, nozzle diameter, spread, reach
-uniform highp sampler3D uHazeNoise;
-uniform float uPatch;
-uniform vec3 uDrift;
-uniform float uHazeTime;
-
-float hazeSigma(vec3 p) {
-    if (uHazeCount == 0 && uPatch <= 0.0) return uFill;
-    float n = 0.5;
-    if (uPatch > 0.0) n = texture(uHazeNoise, (p - uDrift * uHazeTime) / ${NOISE_TILE_M.toFixed(1)}).r;
-    float swing = 2.0 * (n - 0.5);
-    float sigma = uFill * (1.0 + uPatch * swing);
-    float eddy = clamp(1.0 + 1.6 * uPatch * swing, 0.0, 3.0);
-    // a loop bounded by a uniform: ANGLE's Direct3D back end keeps it a loop (a constant
-    // bound is unrolled — 12 jets × 12 samples became a program too large to build)
-    for (int j = 0; j < uHazeCount; j++) {
-        vec4 jet = uHazeJet[j];
-        vec3 v = p - uHazePos[j];
-        float u = dot(v, uHazeDir[j]);
-        float along = max(u, 0.0);
-        // far behind the nozzle, past five reaches, or three widths off the axis:
-        // under e^-5 of the jet, skipped (most samples, most jets)
-        if (u < -jet.y || along > jet.w * 5.0) continue;
-        float r2 = max(dot(v, v) - u * u, 0.0);
-        float w = jet.y * 0.5 + jet.z * along;
-        if (r2 > 9.0 * w * w) continue;
-        float decay = min(1.0, ${JET_K.toFixed(1)} * jet.y / max(along, 1e-6));
-        float ramp = clamp((u + jet.y * 0.5) / jet.y, 0.0, 1.0);
-        sigma += jet.x * decay * exp(-r2 / (w * w)) * exp(-along / jet.w) * ramp * eddy;
-    }
-    return sigma;
-}
-
+${HAZE_FIELD_GLSL}
 // WHAT IS IN THE BEAM'S PATH (beamOptics.js): prism, honeycomb, gobo; frost below.
 uniform float uFrost;
 ${BEAM_SHAPE_GLSL}
@@ -145,7 +155,7 @@ void main() {
     float a = uAperture;
     // The cross-section (beamAir.js beamProfile): 50 % at the beam angle, falling as
     // exp(−ln2·ρ^p); the chord is taken through where it has fallen to PROFILE_FLOOR.
-    float pExp = 2.0 + 6.0 * (1.0 - clamp(uEdge, 0.0, 1.0));
+    float pExp = 2.0 + 6.0 * (1.0 - clamp(uEdge, 0.0, 1.2)); // EDGE_MAX, beamAir.js
     // frost: the beam angle widened, the candela ÷ the widening² (flux kept), the edge
     // gone Gaussian (beamOptics.js)
     float fw = 1.0 + ${FROST_WIDEN.toFixed(1)} * uFrost;

@@ -34,6 +34,12 @@ const GAP = 6;               // join runs separated by fewer unchanged slots tha
 const KEEPALIVE_MS = 15000;  // an SSE comment, so an idle stream is never cut
 const SLOW_BYTES = 256 * 1024;
 const MAX_CLIENTS = 32;      // a runaway page cannot open streams until the desk stalls
+// A page that stops READING (a frozen background tab, a page held in the back/forward cache, a
+// closed tab whose socket the browser or a dev proxy keeps open) still holds its slot: on
+// 2026-10-08 the scratch desk behind a Vite dev proxy had its 32 slots taken by such pages and
+// answered every new room with 503. A client whose socket stays backed up past SLOW_BYTES for
+// STALL_MS is dropped; a page that wakes reconnects by itself (`retry:`) and starts from a key frame.
+const STALL_MS = 20000;
 const RETRY_MS = 1000;       // what the browser waits before reconnecting by itself
 
 // The runs of slots that differ between `prev` (or nothing) and `next`. Pure.
@@ -110,7 +116,13 @@ function createDmxStream({ now = () => Date.now(), log = () => {} } = {}) {
     const t = now();
     let metaText = null;
     for (const c of [...clients]) {
-      if (c.res.writableLength > SLOW_BYTES) { c.key = true; continue; }
+      if (c.res.writableLength > SLOW_BYTES) {
+        c.key = true;
+        if (!c.slowSince) c.slowSince = t;
+        else if (t - c.slowSince > STALL_MS) { log(`dmx stream: a page stopped reading for ${Math.round((t - c.slowSince) / 1000)} s; its slot is freed`); drop(c); }
+        continue;
+      }
+      c.slowSince = 0;
       const d = [];
       const key = c.key;
       for (const [u, buf] of frames) {
@@ -139,4 +151,4 @@ function createDmxStream({ now = () => Date.now(), log = () => {} } = {}) {
   return { subscribe, frame, close, get size() { return clients.size; } };
 }
 
-module.exports = { createDmxStream, deltaRuns, parseUniverses, GAP, KEEPALIVE_MS };
+module.exports = { createDmxStream, deltaRuns, parseUniverses, GAP, KEEPALIVE_MS, STALL_MS };

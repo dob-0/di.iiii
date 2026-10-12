@@ -67,6 +67,18 @@ const formatTimestamp = (value) => {
     }
 }
 
+
+// The outliner's lock mark: a small padlock, shut and full strength when locked,
+// open and faint when not (owner 2026-10-12: "there is no lock button").
+function LockMark({ locked }) {
+    return (
+        <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true" focusable="false" style={{ display: 'block' }}>
+            <rect x="1" y="5.5" width="8" height="6" fill={locked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1" />
+            <path d={locked ? 'M2.5 5.5V2.5H7.5V5.5' : 'M2.5 5.5V2.5H7.5V3.5'} fill="none" stroke="currentColor" strokeWidth="1" />
+        </svg>
+    )
+}
+
 export function PanelHeader({ title, onClose, action = null }) {
     return (
         <Stack
@@ -657,7 +669,7 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                             style={locked ? undefined : { opacity: 0.55 }}
                             onClick={(e) => { e.stopPropagation(); onToggleEntityLocked(entity.id) }}
                         >
-                            {locked ? '■' : '□'}
+                            <LockMark locked={locked} />
                         </button>
                     )}
                 </div>
