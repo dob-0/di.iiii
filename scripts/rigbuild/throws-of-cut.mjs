@@ -8,7 +8,7 @@ const building = makeBuilding(hall); const solids = [...hallSolids(hall), ...rig
 for (const e of doc.entities) {
   if (e.type !== 'spotLight') continue
   const fx = e.components.fixture || {}; const pos = fx.position || ''
-  if (!/cut/.test(pos)) continue
+  if (!(process.env.MATCH ? new RegExp(process.env.MATCH).test(pos + ' ' + (fx.type || '')) : /cut/.test(pos))) continue
   const T = e.components.transform; const m = eulerXYZ(T.rotation); const dir = [-m[0][1], -m[1][1], -m[2][1]]   // the spot's own axis is -Y, as in moxir_render.py dir_of
   const h = castRay(T.position, dir, { building, solids, maxReach: 80 })
   let thr = h.throw, hit = h.hit

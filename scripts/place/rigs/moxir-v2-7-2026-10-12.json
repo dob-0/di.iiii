@@ -4479,7 +4479,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 16.653,
+   "throw_m": 13.85,
    "ends_on": "roof deck",
    "region": "stage pen",
    "island": "the stage pen",
@@ -4593,7 +4593,8 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C11"
+   "circuit": "C11",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-02",
@@ -4615,7 +4616,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 14.487,
+   "throw_m": 13.85,
    "ends_on": "roof deck",
    "region": "stage pen",
    "island": "the stage pen",
@@ -4729,7 +4730,8 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C11"
+   "circuit": "C11",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-03",
@@ -4751,7 +4753,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 13.511,
+   "throw_m": 13.85,
    "ends_on": "roof deck",
    "region": "stage pen",
    "island": "the stage pen",
@@ -4865,7 +4867,8 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C11"
+   "circuit": "C11",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-04",
@@ -4887,7 +4890,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 13.511,
+   "throw_m": 17.19,
    "ends_on": "roof deck",
    "region": "stage pen",
    "island": "the stage pen",
@@ -5001,7 +5004,8 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C11"
+   "circuit": "C11",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-05",
@@ -5023,7 +5027,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 8.372,
+   "throw_m": 17.19,
    "ends_on": "crane z 0.15 girder",
    "region": "stage pen",
    "island": "the stage pen",
@@ -5137,7 +5141,8 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C11"
+   "circuit": "C11",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-06",
@@ -5159,7 +5164,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": 17.026,
+   "throw_m": 17.19,
    "ends_on": "roof deck",
    "region": "stage pen",
    "island": "the stage pen",
@@ -5278,7 +5283,8 @@
     "line": "NODE-STAGE-A",
     "node": "NODE-STAGE"
    },
-   "circuit": "C12"
+   "circuit": "C12",
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-16",
@@ -5300,7 +5306,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 18.13,
    "ends_on": "roof deck",
    "region": "house right",
    "slot": "slot x 27.5 z 22.1",
@@ -5413,7 +5419,7 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C09",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-18",
@@ -5435,7 +5441,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 2.31,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -17.5 z 34.1",
@@ -5548,7 +5554,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C06",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): machine duct-upper"
   },
   {
    "id": "rig-beam-planes-09",
@@ -5570,7 +5576,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 18.13,
    "ends_on": "space frame diagonals / top chord",
    "region": "house right",
    "slot": "slot x 30.5 z -22.9",
@@ -5683,7 +5689,7 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C09",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-10",
@@ -5705,7 +5711,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 14.61,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -32.5 z -16.9",
@@ -5818,7 +5824,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C05",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-13",
@@ -5840,7 +5846,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 14.61,
    "ends_on": "space frame diagonals / top chord",
    "region": "house left",
    "slot": "slot x -35.5 z 16.1",
@@ -5953,7 +5959,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C05",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-07",
@@ -5975,7 +5981,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 18.13,
    "ends_on": "roof deck",
    "region": "far end",
    "slot": "slot x -26.5 z -37.9",
@@ -6088,7 +6094,7 @@
     "node": "NODE-FAR"
    },
    "circuit": "C03",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-15",
@@ -6110,7 +6116,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 18.13,
    "ends_on": "roof deck",
    "region": "entry",
    "slot": "slot x 18.5 z 49.1",
@@ -6223,7 +6229,7 @@
     "node": "NODE-RIGHT"
    },
    "circuit": "C01",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-11",
@@ -6245,7 +6251,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 18.13,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -32.5 z 22.1",
@@ -6358,7 +6364,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C05",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top"
   },
   {
    "id": "rig-beam-planes-17",
@@ -6380,7 +6386,7 @@
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 14.61,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -29.5 z 34.1",
@@ -6493,7 +6499,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C06",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-14",
@@ -6515,7 +6521,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 14.61,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -35.5 z 10.1",
@@ -6628,7 +6634,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C05",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-12",
@@ -6650,7 +6656,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 14.61,
    "ends_on": "roof deck",
    "region": "house left",
    "slot": "slot x -35.5 z -1.9",
@@ -6763,7 +6769,7 @@
     "node": "NODE-LEFT"
    },
    "circuit": "C05",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-beam-planes-08",
@@ -6785,7 +6791,7 @@
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0157,
-   "throw_m": null,
+   "throw_m": 14.61,
    "ends_on": "roof deck",
    "region": "far end",
    "slot": "slot x -35.5 z -31.9",
@@ -6898,7 +6904,7 @@
     "node": "NODE-FAR"
    },
    "circuit": "C03",
-   "throw_source": "epic-build default (reachOf) until the footprint run"
+   "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck"
   },
   {
    "id": "rig-laser40-1",
@@ -7290,7 +7296,7 @@
       }
      ],
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   },
@@ -7417,7 +7423,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "notes": [
@@ -14508,7 +14514,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "source": "the spread's cap after a9d4b0d1: fader 0.16 = the drawn fraction measured under the 0.65 % budget"
@@ -18138,7 +18144,7 @@
   },
   "hand_rule": {
    "lowest_over_standing_m": 5.4,
-   "basis": "owner 2026-10-12: 3 m counted from a raised hand (2.4 m) \u2014 IEC TR 60825-3 separation above the audience"
+   "basis": "owner 2026-10-12: 3 m counted from a raised hand (2.4 m) — IEC TR 60825-3 separation above the audience"
   }
  },
  "review": {
@@ -23081,19 +23087,19 @@
    9.7
   ],
   "counts": {
-   "B380F \u00b7 plane 1 (behind the DJ)": 6,
-   "B380F \u00b7 plane 3 (behind the stage)": 5,
-   "B380F \u00b7 plane 2 (the wings)": 7,
-   "PAR \u00b7 cut down": 5,
-   "PAR \u00b7 cut up": 5,
-   "PAR \u00b7 stage columns": 3,
-   "PAR \u00b7 halo": 3,
-   "PAR \u00b7 columns": 23,
-   "PAR \u00b7 roof": 3,
-   "PAR \u00b7 stage key": 2,
-   "PAR \u00b7 speaker face L": 1,
-   "PAR \u00b7 speaker face R": 1,
-   "PAR \u00b7 embers": 4
+   "B380F · plane 1 (behind the DJ)": 6,
+   "B380F · plane 3 (behind the stage)": 5,
+   "B380F · plane 2 (the wings)": 7,
+   "PAR · cut down": 5,
+   "PAR · cut up": 5,
+   "PAR · stage columns": 3,
+   "PAR · halo": 3,
+   "PAR · columns": 23,
+   "PAR · roof": 3,
+   "PAR · stage key": 2,
+   "PAR · speaker face L": 1,
+   "PAR · speaker face R": 1,
+   "PAR · embers": 4
   },
   "circuits": 14,
   "circuits_ok": false,
