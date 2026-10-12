@@ -877,7 +877,7 @@
 .insp-lock-btn.active {
     /* Locked reads by fill, not shape (controls are rectangles, 0-2 px). */
     background: rgba(255, 255, 255, 0.85);
-    color: #0b0f14;
+    color: var(--di-black);
 }
 
 .insp-lock-row {

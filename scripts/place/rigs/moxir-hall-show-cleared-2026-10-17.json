@@ -30,8 +30,20 @@
    "said_by": "owner, 2026-10-08 night (via the coordinator): \"the gas cylinders will be out\"",
    "check_on_site": "on the build day: none left in the hall, including the far half"
   },
-  "floor-cylinders (two big rollers lying where the stage goes)",
-  "loose-steel-house-left (frames, sheet metal, the barrel, front left of the floor)"
+  {
+   "id": "floor-cylinders",
+   "label": "floor-cylinders (two big rollers lying where the stage goes)",
+   "said_by": "owner, 2026-10-12 06:03 on photo 004 marked: \"this will remove ... they will move all\"",
+   "why": "loose things lying where the stage and the floor go; never in the hall model (not massing)",
+   "check_on_site": "the venue day: confirm they are gone before the stage build; if not, the stage line moves"
+  },
+  {
+   "id": "loose-steel-house-left",
+   "label": "loose-steel-house-left (frames, sheet metal, the barrel, front left of the floor)",
+   "said_by": "owner, 2026-10-12 06:03 on photo 004 marked: \"this will remove ... they will move all\"",
+   "why": "loose things lying where the stage and the floor go; never in the hall model (not massing)",
+   "check_on_site": "the venue day: confirm they are gone before the stage build; if not, the stage line moves"
+  }
  ],
  "kept_for_the_show": [
   {
