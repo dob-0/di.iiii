@@ -79,11 +79,16 @@ export function clampUpdates(cc) {
 // Sketchfab) or along the view axis when it is off (Edit, the owner's Blender preference); the orbit point keeps the depth of
 // what is under the pointer. Pure: numbers in, numbers out.
 export const WHEEL_STEP_FACTOR = 1.2
-export function wheelZoomPlan({ depth, notches, zoomOutMaxDepth = Infinity }) {
+// `viewDistance` is the orbit distance the view has now: a zoom-out never steps from a depth smaller than it (stress 2026-10-12:
+// backing under the floor, the pointer grazed its underside at 1.6 m and 60 notches out shrank a 24 m view to 2 m).
+// `zoomOutMaxDepth` bounds zoom-out only: a view that is already beyond it (a focus or a drag put it there) still zooms in
+// (stress 2026-10-12, seed 11: both directions returned a zero step above the bound, and the wheel was dead for good).
+export function wheelZoomPlan({ depth, notches, viewDistance = 0, zoomOutMaxDepth = Infinity }) {
     if (!(depth > 0) || !Number.isFinite(notches) || notches === 0) return null
+    if (notches < 0 && Number.isFinite(viewDistance) && viewDistance > depth) depth = viewDistance
     const factor = Math.pow(WHEEL_STEP_FACTOR, -notches) // notches > 0 = in
     let newDepth = depth * factor
-    if (newDepth > zoomOutMaxDepth) newDepth = Math.max(depth, zoomOutMaxDepth)
+    if (notches < 0 && newDepth > zoomOutMaxDepth) newDepth = Math.max(depth, zoomOutMaxDepth)
     return { step: depth - newDepth, newDepth }
 }
 
@@ -221,7 +226,7 @@ export function useCameraNavigation({
             if (depth == null) return
             if (notches > 0) depth = Math.min(depth, 2 * Math.max(cc.distance, cc.minDistance))
             if (hit) depthRef.current = depth
-            const plan = wheelZoomPlan({ depth, notches, zoomOutMaxDepth: cam.far / 4 })
+            const plan = wheelZoomPlan({ depth, notches, viewDistance: cc.distance, zoomOutMaxDepth: cam.far / 4 })
             if (!plan) return
             // the ray to move along: through the pointer (zoom to mouse position) or the view axis
             if (preset.dollyToCursor && ndc) rayDir.set(ndc[0], ndc[1], 0.5).unproject(cam).sub(camPos).normalize()

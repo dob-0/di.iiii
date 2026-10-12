@@ -119,6 +119,17 @@ describe('wheelZoomPlan: Blender\'s 1.2x step of the depth under the pointer', (
         expect(wheelZoomPlan({ depth: 100, notches: -1, zoomOutMaxDepth: 100 }).step).toBe(0)
         expect(wheelZoomPlan({ depth: 0, notches: 1 })).toBeNull(); expect(wheelZoomPlan({ depth: 10, notches: 0 })).toBeNull()
     })
+    it('the bound is for zoom-out only: a view already beyond it still zooms in (seed-11 stress, 2026-10-12)', () => {
+        const above = wheelZoomPlan({ depth: 221, notches: 1, zoomOutMaxDepth: 100 })
+        expect(above.newDepth).toBeCloseTo(221 / 1.2, 6); expect(above.step).toBeGreaterThan(30)
+        expect(wheelZoomPlan({ depth: 221, notches: -1, zoomOutMaxDepth: 100 }).step).toBe(0)
+    })
+    it('a zoom-out never steps from a depth smaller than the view distance (grazing the floor from below)', () => {
+        const out = wheelZoomPlan({ depth: 1.6, notches: -1, viewDistance: 24 })
+        expect(out.newDepth).toBeCloseTo(28.8, 6); expect(out.step).toBeCloseTo(-4.8, 6)
+        expect(wheelZoomPlan({ depth: 1.6, notches: 1, viewDistance: 24 }).newDepth).toBeCloseTo(1.6 / 1.2, 6) // zoom-in keeps the surface
+        expect(wheelZoomPlan({ depth: 30, notches: -1, viewDistance: 24 }).newDepth).toBeCloseTo(36, 6)
+    })
     it('a trackpad\'s fractional notch is a fractional step', () => {
         expect(wheelZoomPlan({ depth: 24, notches: 0.5 }).newDepth).toBeCloseTo(24 / Math.sqrt(1.2), 6)
     })

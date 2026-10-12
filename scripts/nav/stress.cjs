@@ -3,6 +3,9 @@
 // console errors, JS heap, stalls > 33 ms. NAV_URL=<studio url> NAV_SECONDS=60 di-test-browser run scripts/nav/stress.cjs
 const { chromium } = require('playwright')
 const URL = process.env.NAV_URL, SECONDS = Number(process.env.NAV_SECONDS || 60)
+// seeded random (mulberry32) so a run can be repeated: NAV_SEED=<n>; the seed used is printed
+const SEED = Number(process.env.NAV_SEED || (Date.now() % 1e9)); let seedState = SEED >>> 0
+const random = () => { seedState = (seedState + 0x6D2B79F5) >>> 0; let t = seedState; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const install = () => {
     const rootEl = document.getElementById('root') || document.body.firstElementChild
@@ -13,11 +16,14 @@ const install = () => {
         if (f.sibling) stack.push(f.sibling); if (f.child) stack.push(f.child) }
     if (!cc) return false
     window.__cc = cc; window.__gaps = []; let last = null
+    window.__upd = 0; cc.addEventListener('update', () => { window.__upd++ })
     const tick = (ts) => { if (last != null) window.__gaps.push(ts - last); last = ts; requestAnimationFrame(tick) }; requestAnimationFrame(tick)
     return true
 }
-const state = () => { const c = window.__cc; const p = c._camera.position.toArray(); return { pos: p.map((v) => +v.toFixed(2)), finite: p.every(Number.isFinite) && Number.isFinite(c.distance), distance: +c.distance.toFixed(3), heapMB: performance.memory ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(0) : null, stalls: window.__gaps.filter((g) => g > 33).length, frames: window.__gaps.length } }
+const state = () => { const c = window.__cc; const p = c._camera.position.toArray(); return { pos: p.map((v) => +v.toFixed(2)), finite: p.every(Number.isFinite) && Number.isFinite(c.distance), distance: +c.distance.toFixed(3), endR: +c._sphericalEnd.radius.toFixed(3), far: c._camera.far, updates: window.__upd, heapMB: performance.memory ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(0) : null, stalls: window.__gaps.filter((g) => g > 33).length, frames: window.__gaps.length } }
 let page
+const bye = async (code) => { try { await page.goto('about:blank') } catch {} try { await page.close() } catch {} process.exit(code) }
+process.on('unhandledRejection', (e) => { console.log('ERR', String(e).slice(0, 200)); bye(3) })
 ;(async () => {
     const browser = await chromium.connectOverCDP(process.env.DI_TEST_CDP)
     page = await browser.contexts()[0].newPage()
@@ -26,10 +32,10 @@ let page
     await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 90000 })
     await page.waitForSelector('canvas', { timeout: 60000 })
     let ok = false; for (let i = 0; i < 40 && !ok; i++) { ok = await page.evaluate(install); if (!ok) await sleep(500) }
-    if (!ok) { console.log('no cc'); await page.close(); process.exit(2) }
+    if (!ok) { console.log('no cc'); await bye(2) }
     await sleep(3000)
     let box = await page.locator('canvas').first().boundingBox()
-    const rnd = (a, b) => a + Math.random() * (b - a)
+    const rnd = (a, b) => a + random() * (b - a)
     // a point on the canvas that no panel covers (the Studio's panels float over the view)
     const at = async () => { for (let i = 0; i < 40; i++) { const x = box.x + rnd(0.1, 0.9) * box.width, y = box.y + rnd(0.1, 0.9) * box.height; if (await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS', [x, y])) return [x, y] } return [box.x + box.width / 2, box.y + box.height / 2] }
     const drag = async (button, dx, dy, ms, mods = []) => { const [x, y] = await at(); for (const k of mods) await page.keyboard.down(k); await page.mouse.move(x, y); await page.mouse.down({ button }); const n = 12; for (let i = 1; i <= n; i++) { await page.mouse.move(x + dx * i / n, y + dy * i / n); await sleep(ms / n) } await page.mouse.up({ button }); for (const k of mods) await page.keyboard.up(k) }
@@ -46,13 +52,13 @@ let page
         // stuck detector: 5 notches in at a random spot must move the camera
         const before = await page.evaluate(state); await wheel(5, 1, 60); await sleep(250); const after = await page.evaluate(state)
         const moved = Math.hypot(...before.pos.map((v, i) => v - after.pos[i]))
-        if (moved < 0.01) stuck.push({ round, tool, distance: before.distance, pos: before.pos, diag: await page.evaluate(() => { const c = window.__cc; return { enabled: c.enabled, infinityDolly: c.infinityDolly, wheel: c.mouseButtons.wheel, locked: Boolean(document.pointerLockElement), active: c.active, trace: (window.__diNavTrace || []).slice(-4).map((e) => [e.action, e.hit ? 'hit' : e.fallback ? 'fb' : e.why || '-', e.distance]) } }) })
+        if (moved < 0.01) stuck.push({ round, tool, distance: before.distance, pos: before.pos, diag: await page.evaluate(() => { const c = window.__cc; return { enabled: c.enabled, infinityDolly: c.infinityDolly, wheel: c.mouseButtons.wheel, locked: Boolean(document.pointerLockElement), active: c.active, trace: (window.__diNavTrace || []).slice(-6).map((e) => [e.action, e.notches, e.hit ? 'hit' : e.fallback ? 'fb' : e.why || '-', e.depth, e.step]) } }), updatesDuring: after.updates - before.updates, endR: after.endR, far: after.far })
         if (round % 3 === 0) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await page.keyboard.press('Shift+Backquote'); await sleep(150); await page.keyboard.down('KeyW'); await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 6 }); await sleep(500); await page.keyboard.up('KeyW'); await page.keyboard.press('Escape'); await sleep(150) }
         if (round === 4) { await page.setViewportSize({ width: 1200, height: 700 }); await sleep(600); box = await page.locator('canvas').first().boundingBox() }
-        const s = await page.evaluate(state); rounds.push({ round, tool, ...s, moved: +moved.toFixed(2) })
+        const s = await page.evaluate(state); rounds.push({ round, tool, ...s, moved: +moved.toFixed(2) }); console.log('ROUND', JSON.stringify({ round, tool, distance: s.distance, endR: s.endR, far: s.far, updates: s.updates, moved: +moved.toFixed(2), pos: s.pos }))
         if (!s.finite) break
     }
     const last = rounds[rounds.length - 1]
-    console.log('STRESS', JSON.stringify({ seconds: Math.round((Date.now() - t0) / 1000), rounds: rounds.length, allFinite: rounds.every((r) => r.finite), stuckEvents: stuck.length, stuck: stuck.slice(0, 5), stalls33ms: last?.stalls, frames: last?.frames, heapMB: { first: first.heapMB, last: last?.heapMB }, errors: errors.length, errorSample: errors.slice(0, 4), distances: rounds.map((r) => r.distance) }))
-    await page.close(); process.exit(0)
+    console.log('STRESS', JSON.stringify({ seed: SEED, seconds: Math.round((Date.now() - t0) / 1000), rounds: rounds.length, allFinite: rounds.every((r) => r.finite), stuckEvents: stuck.length, stuck: stuck.slice(0, 5), stalls33ms: last?.stalls, frames: last?.frames, heapMB: { first: first.heapMB, last: last?.heapMB }, errors: errors.length, errorSample: errors.slice(0, 4), distances: rounds.map((r) => r.distance) }))
+    await bye(0)
 })().catch(async (e) => { console.log('ERR', e.message); try { await page?.close() } catch {} ; process.exit(1) })

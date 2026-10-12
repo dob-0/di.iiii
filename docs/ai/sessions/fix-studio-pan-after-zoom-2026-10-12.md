@@ -186,3 +186,24 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   logging arrays inside the page, so a leak is NOT shown either way. Both owed: a quiet-GPU rerun and a heap run without logging.
 - Journey, final run (GPU shared): every step's max/median step ratio 1.0–3.2 except double-click-then-scroll 5.6 (the eased re-aim
   overlapping the first notch); browser menu never shown; no errors; Walk 4.3 m in 1.5 s with a look.
+
+## Round 8: "so moving stress test passed?" — the quiet-GPU rerun found what the polluted one hid
+
+- Owed from round 7 and now done: a stress run with both test lanes empty (GPU 43 % idle, CPU 73 °C). It found **5 stuck rounds**
+  the polluted runs had not: from round 8 the view sat at 656 m and every notch, in or out, was a zero step.
+- The stress is now **seeded** (`NAV_SEED`, mulberry32; the seed is printed) so a run can be repeated, counts camera-controls updates by
+  its `update` event (wrapping `cc.update` is undone by the preset effect on a tool switch — a test artefact that looked like a frozen
+  loop), prints a `ROUND` line per round (distance, far, updates, metres moved) and ends on `about:blank`. Seed 11 reproduced it:
+  10 of 12 rounds stuck at 221.047 m, trace `["wheel", 1, "-", 221.047, 0]`.
+- **Cause 1** (`wheelZoomPlan`): the zoom-out bound (far/4 = 100 m here) clamped the NEW depth whenever it exceeded the bound, so a view
+  already beyond it — a double-click focus or a long drag at depth put it at 221 m — got a zero step for zoom-IN too. The bound now
+  applies to zoom-out only. **Cause 2** (`scripts/nav/probe-ceiling.cjs`): backing out at the centre tilted the camera under the floor;
+  the pointer then grazed the floor's underside at 1.6 m and 60 notches out took a 24 m view to 2.1 m (step 0.32 m, the hit sliding).
+  A zoom-out now never steps from a depth smaller than the view distance (`viewDistance` = `cc.distance`). Zoom-in is unchanged.
+- Measured after, same scripts: ceiling probe 60 out → 100 m (the bound), 5 in → 40.7 m, 20 more → 11.5 m; seed 11: 0 stuck (was 10),
+  seed 22: 0 stuck; camera finite, 0 console errors; stalls > 33 ms per 60 s on the quiet GPU: **10 and 15** of ~3780 frames
+  (polluted runs: 55–225); JS heap over 60 s: 152 → 183 MB and 140 → 181 MB (polluted runs: 150 → 240–350), with only the test's
+  frame-gap array in the page — no leak shown. Navigation unit tests 60/60; eslint clean.
+- Also found and ended: a `scripts/nav/_probe.cjs` node from 13 h earlier (my own, file since deleted) still held test lane 1; the probes
+  `probe-ceiling.cjs` / `probe-where.cjs` now `process.exit` so the CDP socket does not keep node alive after the page closes.
+- Still owed: the lamps budget while navigating (his decision), the 10-08 nav branches, Auto Perspective, Edit numpad rows in help.
