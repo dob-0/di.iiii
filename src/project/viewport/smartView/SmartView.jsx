@@ -868,7 +868,23 @@ export default function SmartView({
         }
 
         // --- the camera's limits (a visitor's view) -------------------------------------
-        if (constraints && cc) {
+        // Free (owner, 2026-10-13: "the Free/Inside button decides"): a visitor goes everywhere, through walls and under the
+        // floor, with no distance cap, boundary or collision, at the standard move's speed (useCameraNavigation). Inside keeps
+        // the hall and keeps the camera out of solids, as before.
+        if (constraints && cc && !lockRef.current) {
+            if (!state.freeApplied) {
+                state.freeApplied = true
+                cc.maxPolarAngle = Math.PI
+                cc.maxDistance = Infinity
+                if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? Number.EPSILON
+                if (cc.setBoundary) cc.setBoundary()
+                state.boundaryKey = null
+                if ('colliderMeshes' in cc) cc.colliderMeshes = []
+                state.colliding = false
+                state.collidersSet = null
+            }
+        } else if (constraints && cc) {
+            state.freeApplied = false
             const distance = typeof cc.distance === 'number' ? cc.distance : toTarget
             cc.maxPolarAngle = floorMaxPolar(target.y, distance, frame.floorY, 0.3)
             cc.maxDistance = orbitMaxDistance(frame, state.presetDistance)
