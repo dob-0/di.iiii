@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     CMF_1931, KM, beamWidth, driveOfHex, fieldDirection, gamutMapConstantY, hgPhase, laserColourFlux, laserFlux, laserOf,
-    lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb
+    lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, scanLinesAt
 } from './laserLine.js'
 
 const SIX_W = [2700, 1500, 1800] // mW at 455 / 525 / 638 nm, the maker's 6.0 W Ultra MK2 (Guide v1.2 p. 12)
@@ -87,5 +87,51 @@ describe('laserLine: a laser in haze as a line source', () => {
         expect(laserOf({ laser: { mW: [1, 2, 3], nm: [455, 525, 999] } })).toBe(null)
         const l = laserOf({ laser: { mW: SIX_W, nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1, sceneScale: 0.02 } })
         expect(l).toMatchObject({ mW: SIX_W, diameter_mm: 4, divergence_mrad: 1, sceneScale: 0.02, frame: null })
+    })
+})
+
+// N562 (2026-10-13): frames in time — a list of frames over a period, the one drawn picked by the show's time.
+describe('laserLine: frames in time', () => {
+    const left = [[-0.5, 0, 1, 1, 1]]
+    const right = [[0.5, 0, 1, 1, 1]]
+    const dark = [[0, 0, 0, 0, 0]]
+    const laser = laserOf({ laser: { mW: SIX_W, nm: [455, 525, 638], frame: [[0, 0.5, 0, 1, 0]], frames: { period: 3, list: [left, right, dark] } } })
+
+    it('reads frames beside the static frame, dropping empty or bad ones', () => {
+        expect(laser.frames.period).toBe(3)
+        expect(laser.frames.list).toEqual([left, right, dark])
+        expect(framesOf({ period: 2, list: [[], [['x']], right] })).toEqual({ period: 2, list: [right] })
+        expect(framesOf({ period: 0, list: [right] })).toBe(null)
+        expect(framesOf({ period: 2, list: [] })).toBe(null)
+        expect(laserOf({ laser: { mW: SIX_W } }).frames).toBe(null)
+    })
+
+    it('picks the frame by time: even steps over the period, wrapping, negative time too', () => {
+        expect([0, 0.99, 1, 1.5, 2, 2.99, 3, 4.2, -0.5].map((t) => frameIndexAt(laser.frames, t))).toEqual([0, 0, 1, 1, 2, 2, 0, 1, 2])
+        expect(frameIndexAt(null, 1)).toBe(-1)
+        expect(nextFrameIn(laser.frames, 1.25)).toBeCloseTo(0.75, 9)
+        expect(nextFrameIn(null, 1)).toBe(Infinity)
+    })
+
+    it('scanLines by time: the line moves across the field from frame to frame, and a blank frame draws nothing', () => {
+        const at0 = scanLinesAt(laser, 0.5)
+        const at1 = scanLinesAt(laser, 1.5)
+        expect(at0).toHaveLength(1)
+        expect(at1).toHaveLength(1)
+        expect(at0[0].duty).toBe(1)
+        // x −0.5 of a ±18.5° field: 9.25° to the lamp's right of its −Y, then the mirror
+        expect(Math.atan2(at0[0].dir[0], -at0[0].dir[1]) * 180 / Math.PI).toBeCloseTo(-9.25, 6)
+        expect(Math.atan2(at1[0].dir[0], -at1[0].dir[1]) * 180 / Math.PI).toBeCloseTo(9.25, 6)
+        expect(scanLinesAt(laser, 2.5)).toEqual([])
+        expect(at0).toEqual(scanLines(left))
+    })
+
+    it('keeps the static path unchanged: no frames → the static frame at any time, the same lines as before', () => {
+        const still = laserOf({ laser: { mW: SIX_W, nm: [455, 525, 638], frame: [[0, 0.5, 0, 1, 0], [0.5, 0.5, 0, 1, 0]] } })
+        expect(laserFrameAt(still, 0)).toBe(still.frame)
+        expect(laserFrameAt(still, 123.4)).toBe(still.frame)
+        expect(scanLinesAt(still, 7)).toEqual(scanLines(still.frame))
+        const bare = laserOf({ laser: { mW: SIX_W } })
+        expect(scanLinesAt(bare, 7)).toEqual([{ dir: [0, -1, 0], drive: [1, 1, 1], duty: 1 }])
     })
 })

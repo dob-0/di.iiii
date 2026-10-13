@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { context as fiberContext, useFrame } from '@react-three/fiber'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
@@ -9,7 +9,8 @@ import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAir
 import { registerBeamMesh, registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
-import { driveOfHex, laserColourFlux, laserOf, scanLines } from './laserLine.js'
+import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, nextFrameIn, scanLines } from './laserLine.js'
+import { getServerOffset } from '../rigbuild/serverClock.js'
 import { createLaserLineMaterial, laserLineBeforeRender, laserLineGeometry } from './laserLineMaterial.js'
 
 // A spot light that actually points where the entity is turned.
@@ -67,7 +68,8 @@ export default function SpotLightObject({
     // candela, the haze and the camera's exposure; without one, the old flat cone.
     // Read through the Canvas's own store (not useThree, which throws outside a Canvas —
     // the lamp is also rendered to markup in tests).
-    const gl = useContext(fiberContext)?.getState?.().gl || null
+    const fiberStore = useContext(fiberContext)
+    const gl = fiberStore?.getState?.().gl || null
     const atmosphere = useAtmosphere(gl)
     // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
     // light is not mounted at all rather than mounted at zero — three.js pays
@@ -150,7 +152,7 @@ export default function SpotLightObject({
                 </>
             ) : null}
             {laserLines ? (
-                <LaserLines gl={gl} laser={laser} color={color} level={beam?.haze} length={throwShape.length} anisotropy={atmosphere.anisotropy} />
+                <LaserLines gl={gl} store={fiberStore} laser={laser} color={color} level={beam?.haze} length={throwShape.length} anisotropy={atmosphere.anisotropy} />
             ) : null}
             {physical ? (
                 <BeamInAir
@@ -278,11 +280,14 @@ function BeamAirStrobe({ material, values }) {
 // 1 = full); the colour is the cube's drive per diode (the lamp's colour read as r, g, b drive, as a frame
 // carries it), the flux Km·V(λ)·P per diode, in linear Rec.709 with the out-of-gamut lines desaturated at
 // constant luminance (stated in laserLine.js).
-function LaserLines({ gl, laser, color, level = 1, length, anisotropy }) {
-    const key = JSON.stringify([laser, color, level, length])
+// A laser with frames in time (laserLine.js §6) draws the frame on at the show's time; without, its static frame as before.
+function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) {
+    const index = useLaserFrameIndex(store, laser.frames)
+    const points = index >= 0 && index < laser.frames.list.length ? laser.frames.list[index] : laser.frame
+    const key = JSON.stringify([laser, color, level, length, index])
     const geometry = useMemo(() => {
         const lvl = Math.min(1, Math.max(0, Number(level ?? 1)))
-        const lines = scanLines(laser.frame, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => {
+        const lines = scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => {
             const { rgb } = laserColourFlux({ mW: laser.mW, nm: laser.nm, drive: l.drive })
             return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale) }
         })
@@ -296,6 +301,39 @@ function LaserLines({ gl, laser, color, level = 1, length, anisotropy }) {
     material.uniforms.uDiv.value = laser.divergence_mrad / 1000
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
     return <mesh geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+}
+
+// THE FRAME ON NOW (laserLine.js frameIndexAt): the show's time is the SERVER's (serverClock.js, measured once for the
+// page), so every viewer draws the same frame. One timer, set to the next frame change: nothing runs per frame, and a
+// laser without frames runs nothing at all.
+function useLaserFrameIndex(store, frames) {
+    const framesKey = frames ? JSON.stringify(frames) : ''
+    const [index, setIndex] = useState(() => (frames ? frameIndexAt(frames, Date.now() / 1000) : -1))
+    useEffect(() => {
+        if (!frames) {
+            setIndex(-1)
+            return undefined
+        }
+        let alive = true
+        let offset = 0
+        let timer = null
+        const tick = () => {
+            if (!alive) return
+            clearTimeout(timer)
+            const t = (Date.now() + offset) / 1000
+            setIndex(frameIndexAt(frames, t))
+            store?.getState?.().invalidate?.() // an on-demand loop draws the new frame
+            timer = setTimeout(tick, Math.max(16, nextFrameIn(frames, t) * 1000 + 1))
+        }
+        tick()
+        Promise.resolve(getServerOffset()).then((o) => { offset = Number(o?.offset) || 0; tick() }, () => {})
+        return () => {
+            alive = false
+            clearTimeout(timer)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: laserOf makes a new object each render
+    }, [framesKey, store])
+    return frames ? index : -1
 }
 
 function beforeLaserRender(renderer, scene, camera) {

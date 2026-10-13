@@ -1263,8 +1263,11 @@ const normalizeBeamOptics = (optics) => {
 
 // `components.beam.laser` (2026-10-09, src/objectComponents/laserLine.js): a laser's diodes (mW at each
 // wavelength, nm), its beam diameter and divergence, the scene's exposure scale, the cube's field half-angle,
-// a frame it holds ([x, y, r, g, b] points, the Nodes editor's laser frame) and where the numbers come from.
+// a frame it holds ([x, y, r, g, b] points, the Nodes editor's laser frame), its frames in time and where the numbers come from.
 const LASER_NM = new Set([455, 525, 638])
+const laserFramePoints = (points) => (Array.isArray(points) ? points : []).slice(0, 2000)
+  .filter((p) => Array.isArray(p) && p.length >= 5 && p.slice(0, 5).every((v) => Number.isFinite(Number(v))))
+  .map((p) => [0, 1, 2, 3, 4].map((k) => (k < 2 ? Math.min(1, Math.max(-1, Number(p[k]))) : Math.min(1, Math.max(0, Number(p[k]))))))
 const normalizeBeamLaser = (laser) => {
   if (!laser || typeof laser !== 'object' || !Array.isArray(laser.mW) || !Array.isArray(laser.nm)) return null
   if (laser.mW.length !== laser.nm.length || laser.mW.length < 1 || laser.mW.length > 3) return null
@@ -1278,9 +1281,21 @@ const normalizeBeamLaser = (laser) => {
   positive('sceneScale', 1)
   positive('fieldHalfDeg', 60)
   if (Array.isArray(laser.frame)) {
-    const frame = laser.frame.slice(0, 2000).filter((p) => Array.isArray(p) && p.length >= 5 && p.slice(0, 5).every((v) => Number.isFinite(Number(v))))
-      .map((p) => [0, 1, 2, 3, 4].map((k) => (k < 2 ? Math.min(1, Math.max(-1, Number(p[k]))) : Math.min(1, Math.max(0, Number(p[k]))))))
+    const frame = laserFramePoints(laser.frame)
     if (frame.length) out.frame = frame
+  }
+  // `frames` (2026-10-13, N562): { period (s), list of frames } played by show time (laserLine.js framesOf, the same caps)
+  if (laser.frames && typeof laser.frames === 'object' && Array.isArray(laser.frames.list) && ensureNumber(laser.frames.period, 0) > 0) {
+    const list = []
+    let total = 0
+    for (const f of laser.frames.list.slice(0, 256)) {
+      const pts = laserFramePoints(f)
+      if (!pts.length) continue
+      if (total + pts.length > 20000) break
+      total += pts.length
+      list.push(pts)
+    }
+    if (list.length) out.frames = { period: Math.min(3600, Math.max(0.05, ensureNumber(laser.frames.period, 0))), list }
   }
   if (typeof laser.source === 'string') out.source = laser.source.slice(0, 500)
   return out

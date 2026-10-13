@@ -232,7 +232,7 @@ export const scanLines = (points, { fieldHalfDeg = FIELD_HALF_DEG, stepDeg = SCA
 
 /**
  * A lamp's `beam.laser` read for the renderer, or null: the diodes (mW per nm), beam diameter and
- * divergence, the scene's exposure scale, and the frame it holds (if any).
+ * divergence, the scene's exposure scale, the frame it holds (if any) and its frames in time (if any, see 6.).
  */
 export const laserOf = (beam) => {
     const l = beam?.laser
@@ -246,6 +246,60 @@ export const laserOf = (beam) => {
         divergence_mrad: Math.max(num(l.divergence_mrad, 1), 0.01),
         sceneScale: num(l.sceneScale, 0.02) > 0 ? num(l.sceneScale, 0.02) : 0.02,
         fieldHalfDeg: clamp(num(l.fieldHalfDeg, FIELD_HALF_DEG), 1, 60),
-        frame: Array.isArray(l.frame) ? framePoints(l.frame) : null
+        frame: Array.isArray(l.frame) ? framePoints(l.frame) : null,
+        frames: framesOf(l.frames)
     }
+}
+
+// 6. FRAMES IN TIME (2026-10-13, ledger N562). Next to the static `frame`, a laser may hold `frames`:
+//    { period, list } — `list` frames played in order, evenly, over `period` seconds, again and again. The frame on at
+//    show time t (seconds) is list[floor(((t mod period) / period) · n)]; t is the SERVER's time (serverClock.js), so
+//    every viewer draws the same frame. A frame here is a cube's whole drawing for that step (each still scanned at its
+//    point rate and time-averaged as in 4.). A laser with `frames` draws them; `frame` is then not read. Without
+//    `frames` nothing changes: the static path is the same call as before.
+export const MIN_PERIOD_S = 0.05
+export const MAX_PERIOD_S = 3600
+export const MAX_FRAMES = 256
+export const MAX_FRAME_POINTS_TOTAL = 20000
+
+/** `frames` cleaned: { period (s), list: [points…] } with every frame non-empty, or null. */
+export const framesOf = (frames) => {
+    if (!frames || typeof frames !== 'object' || !Array.isArray(frames.list)) return null
+    const period = num(frames.period, 0)
+    if (!(period > 0)) return null
+    const list = []
+    let total = 0
+    for (const f of frames.list.slice(0, MAX_FRAMES)) {
+        const pts = framePoints(f)
+        if (!pts.length) continue
+        if (total + pts.length > MAX_FRAME_POINTS_TOTAL) break
+        total += pts.length
+        list.push(pts)
+    }
+    return list.length ? { period: clamp(period, MIN_PERIOD_S, MAX_PERIOD_S), list } : null
+}
+
+/** Which of `frames.list` is on at show time `t` (seconds): an index, or -1 when there are no frames. */
+export const frameIndexAt = (frames, t) => {
+    if (!frames?.list?.length || !(frames.period > 0)) return -1
+    const n = frames.list.length
+    const phase = ((num(t) % frames.period) + frames.period) % frames.period
+    return Math.min(n - 1, Math.floor((phase / frames.period) * n))
+}
+
+/** The points a laser (laserOf's reading) draws at show time `t`: its frame in time, else its static frame. */
+export const laserFrameAt = (laser, t) => {
+    const i = frameIndexAt(laser?.frames, t)
+    return i >= 0 ? laser.frames.list[i] : laser?.frame || null
+}
+
+/** scanLines of what a laser draws at show time `t` (its own field half-angle). */
+export const scanLinesAt = (laser, t, opts = {}) => scanLines(laserFrameAt(laser, t), { fieldHalfDeg: laser?.fieldHalfDeg ?? FIELD_HALF_DEG, ...opts })
+
+/** Seconds until the frame on at `t` changes (Infinity when the laser holds no frames in time). */
+export const nextFrameIn = (frames, t) => {
+    if (!frames?.list?.length || !(frames.period > 0)) return Infinity
+    const step = frames.period / frames.list.length
+    const phase = ((num(t) % step) + step) % step
+    return step - phase
 }

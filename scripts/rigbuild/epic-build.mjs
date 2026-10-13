@@ -28,6 +28,13 @@
  * field touched, so lamps moved by hand stay where they are. Refuses when a project beam is not in the rig file. Dry run unless
  * --apply; back the document up first. Undo: the backup, or the same patch with `laser: null`.
  *
+ * --laser-frames (2026-10-13, ledger N562): the lasers in TIME (laser-frames.mjs). Every UP-LA40WF beam gets a MATRIX frame
+ * (--matrix-n lines, default 9, on a grid inside its field) as its static `frame`; every LaserCube line gets a slow FAN SWEEP as
+ * `frames` (--fan-deg ±, default 6, capped by the field; --fan-period s, default 24; --fan-steps, default 48), the room picking the
+ * frame by the server's time (SpotLightObject LaserLines). Each sent as `updateComponent` beam `{ laser }` (laserComponentOf + the
+ * frames), nothing else. With no --api it only prints the frames from the rig file. Fields ASSUMED (fixtures.json
+ * scan_field_half_deg). Dry run unless --apply; back the document up first. Undo: --laser-lines-only (the static line again).
+ *
  * --desk (after --apply, or alone with --desk-only): where a light desk answers (a local stack's /light), the room is drawn
  * FROM THE DESK'S DMX for every patched lamp (useRigLook.js "DMX wins"), so the desk must carry each look WITH its values.
  * The cards page's "send looks" sends empty shells (2026-10-08: every lamp then sat at the desk's idle full white: the glare,
@@ -49,6 +56,7 @@ import { loadLibrary } from './library.mjs'
 import { runnerList } from './show-loop.mjs'
 import { atmosphereOfRig } from '../place/rig-lib.mjs'
 import { laserColourFlux, driveOfHex, laserOf, CUBE_NM } from '../../src/objectComponents/laserLine.js'
+import { laserFramesOf, MATRIX_N, FAN_DEG, FAN_PERIOD_S, FAN_STEPS } from './laser-frames.mjs'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -152,6 +160,36 @@ export const laserLineOps = (doc, rig) => {
         unmatched: have.filter((e) => !want.has(e.id)).map((e) => e.id),
         absent: [...want.keys()].filter((id) => !ids.has(id))
     }
+}
+/** --laser-frames: `beam.laser` of every rig laser beam WITH its frames (laser-frames.mjs), as merge patches on the beams the
+ * project has; `unmatched` / `absent` as laserLineOps. Pure but for fixtures.json. */
+export const laserFrameOps = (doc, rig, opts = {}) => {
+    const { byBeam, units } = laserFramesOf(rig, { dirOf: dirOfRotation, ...opts })
+    const want = new Map(v1Entities(rig).filter((e) => byBeam.has(e.id)).map((e) => [e.id, { ...e.components.beam.laser, ...byBeam.get(e.id) }]))
+    const have = (Array.isArray(doc?.entities) ? doc.entities : []).filter((e) => String(e.id).startsWith('rig-laser-'))
+    const ids = new Set(have.map((e) => e.id))
+    return {
+        ops: have.filter((e) => want.has(e.id)).map((e) => ({ type: 'updateComponent', payload: { entityId: e.id, component: 'beam', patch: { laser: want.get(e.id) } } })),
+        unmatched: have.filter((e) => !want.has(e.id)).map((e) => e.id),
+        absent: [...want.keys()].filter((id) => !ids.has(id)),
+        want,
+        units
+    }
+}
+/** The frames, printed (the dry run's record). */
+export const describeLaserFrames = ({ units, want }) => {
+    const lines = []
+    for (const u of units) {
+        const f = u.field
+        lines.push(u.picture === 'matrix'
+            ? `${u.unit} (${u.type}): MATRIX, ${u.lines} lines on a grid within ±${u.reachDeg.toFixed(2)} deg of its aim; field ±${f.halfDeg} deg ${f.basis}`
+            : `${u.unit} (${u.type}): FAN SWEEP of its ${u.lines} lines, ±${u.amplitudeDeg.toFixed(2)} deg over ${u.period} s in ${u.steps} frames; lines span ±${u.widestDeg.toFixed(2)} deg (±${u.tallestDeg.toFixed(2)} up/down) around the cube's axis, so they reach ±${u.reachDeg.toFixed(2)} deg; field ±${f.halfDeg} deg ${f.basis}`)
+    }
+    for (const [id, l] of want) {
+        if (l.frame) lines.push(`  ${id} frame (${l.frame.length} points, lit ${l.frame.filter((p) => p[2] || p[3] || p[4]).length}): ${JSON.stringify(l.frame.filter((p) => p[2] || p[3] || p[4]).map((p) => [p[0], p[1]]))}`)
+        if (l.frames) lines.push(`  ${id} frames: period ${l.frames.period} s, ${l.frames.list.length} frames, x = ${JSON.stringify(l.frames.list.map((fr) => fr[0][0]).filter((_, k) => k % 6 === 0))} (every 6th)`)
+    }
+    return lines
 }
 export const laserIntensityOfLumens = (lm) => Math.round((lm / (2 * Math.PI * (1 - Math.cos(LASER_ANGLE)))) * SCALE)
 /** v1.0's laser intensity by colour alone (2 scanned beams per cube, duty 0.45), now from the cube in use. */
@@ -422,6 +460,15 @@ export const v1RentalItems = (rental, rig) => {
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     const api = String(args.api || '').replace(/\/+$/, '')
+    const frameOpts = { matrixN: Number(args['matrix-n'] ?? MATRIX_N), fanDeg: Number(args['fan-deg'] ?? FAN_DEG), period: Number(args['fan-period'] ?? FAN_PERIOD_S), steps: Number(args['fan-steps'] ?? FAN_STEPS) }
+    if (args['laser-frames'] && !args.api) {
+        const rigFile = String(args.rig || RIG_FILE)
+        const rig = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, rigFile), 'utf8'))
+        const plan = laserFrameOps({ entities: [] }, rig, frameOpts)
+        say(`${rigFile}: laser frames for ${plan.want.size} beams of ${plan.units.length} units (no --api: printed only, nothing read or written)`)
+        for (const line of describeLaserFrames(plan)) say(line)
+        return
+    }
     if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(`${api}/`)) die('epic-build.mjs writes to a scratch stack on localhost / 127.0.0.1 only (--api)')
     const project = String(args.project || die('needs --project <the copy>'))
     const client = makeClient(api, args['token-file'] ? readToken(String(args['token-file'])) : null)
@@ -470,6 +517,29 @@ const main = async () => {
         say(`written, version ${out.body.newVersion}; read back v${back.body.version}: ${d2.entities.length} entities (before ${doc.entities.length}), ` +
             `${drawn}/${lz.length} laser beams carry beam.laser; other fields changed since the read: ${changed.length}${changed.length ? ` (${changed.slice(0, 5).join(', ')})` : ''}`)
         if (d2.entities.length !== doc.entities.length || drawn !== lz.length) die('read back: not every laser beam carries beam.laser, or the entity count moved')
+        return
+    }
+    if (args['laser-frames']) {
+        const plan = laserFrameOps(doc, rig, frameOpts)
+        const { ops, unmatched, absent } = plan
+        say(`${project} @ v${got.body.version}: laser frames — ${ops.length} beams get beam.laser with frames (updateComponent beam {laser}); ` +
+            `in the project, not in the rig file: ${unmatched.length}${unmatched.length ? ` (${unmatched.slice(0, 5).join(', ')})` : ''}; in the rig file, not in the project: ${absent.length}`)
+        for (const line of describeLaserFrames(plan)) say(line)
+        if (args.out) {
+            fs.mkdirSync(String(args.out), { recursive: true })
+            fs.writeFileSync(path.join(String(args.out), `laser-frames-${project}-before.json`), JSON.stringify(got.body))
+            fs.writeFileSync(path.join(String(args.out), `laser-frames-${project}-ops.json`), JSON.stringify(ops, null, 1))
+        }
+        if (unmatched.length || !ops.length) die(`${project}: its laser beams do not match the rig file (${args.rig || RIG_FILE}): nothing written`)
+        if (!args.apply) { say('dry run: nothing written (--apply to write)'); return }
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-laser-frames-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        if (!out.ok) die(`laser frame ops: ${out.status} ${out.text.slice(0, 300)}`)
+        const back = await client.get(`/api/projects/${project}/document`)
+        if (!back.ok) die(`read back: ${back.status}`)
+        const lz = back.body.document.entities.filter((e) => plan.want.has(e.id))
+        const timed = lz.filter((e) => { const l = laserOf(e.components?.beam); return l && (l.frames || l.frame) }).length
+        say(`written, version ${out.body.newVersion}; read back v${back.body.version}: ${timed}/${lz.length} laser beams carry their frames`)
+        if (timed !== lz.length) die('read back: not every laser beam carries its frames')
         return
     }
     if (args['mark-only'] || args.apply) {
