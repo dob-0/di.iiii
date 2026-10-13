@@ -40,3 +40,9 @@
   v2-9 (v928 → v1017) as 89 updateComponent ops on exactly the 18 heads + 36 cube lines, derived from epic-build's own dry run
   against the live document (no unit re-created; the two 40 W at the door and every hand-moved wash untouched). Backup
   `~/di-backups/moxir-scratch/2026-10-13-v2-9-before-arrangement/document.json`.
+- Owner 16:2x (screenshot after the first comb): "they light almost nothing and nowhere — the left 2 and the right ones": a comb
+  over the whole bay sends the outer lines to the bay's edges, past the crowd. The comb now spans the crowd in front of the DJ,
+  x -10..0 on the entry wall (the barrier's width around the DJ axis), 36 lines 0.29 m apart at 9.65 m, ≥ 9.2 m over the crane
+  (`--comb-x` default). Applied to v2-9 (v1017 → v1088, 71 ops on the 36 cube lines only). Backup
+  `~/di-backups/moxir-scratch/2026-10-13-v2-9-before-comb-crowd`. The real-laser look over heads is scanned FANS (sheets of
+  light, laserLine.js §4 frames); the rig and epic-build carry static lines only — engine work, owed (N562).

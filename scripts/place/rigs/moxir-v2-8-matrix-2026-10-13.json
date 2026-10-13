@@ -644,17 +644,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.5,
+       -10.0,
        9.65,
        53.8
       ],
-      "length_m": 96.294,
+      "length_m": 96.262,
       "r": [
        -1.5795,
        0.0,
-       -0.0291
+       -0.0135
       ],
-      "pan_deg": -1.67,
+      "pan_deg": -0.77,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -668,17 +668,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -7.56,
+       -8.29,
        9.65,
        53.8
       ],
-      "length_m": 96.26,
+      "length_m": 96.255,
       "r": [
        -1.5795,
        0.0,
-       0.0119
+       0.0043
       ],
-      "pan_deg": 0.68,
+      "pan_deg": 0.25,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -692,17 +692,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -3.61,
+       -6.57,
        9.65,
        53.8
       ],
-      "length_m": 96.388,
+      "length_m": 96.277,
       "r": [
        -1.5795,
        0.0,
-       0.0528
+       0.0221
       ],
-      "pan_deg": 3.02,
+      "pan_deg": 1.27,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -716,17 +716,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       0.33,
+       -4.86,
        9.65,
        53.8
       ],
-      "length_m": 96.676,
+      "length_m": 96.33,
       "r": [
        -1.5795,
        0.0,
-       0.0935
+       0.0399
       ],
-      "pan_deg": 5.36,
+      "pan_deg": 2.29,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -740,17 +740,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       4.27,
+       -3.14,
        9.65,
        53.8
       ],
-      "length_m": 97.124,
+      "length_m": 96.414,
       "r": [
        -1.5795,
        0.0,
-       0.134
+       0.0577
       ],
-      "pan_deg": 7.68,
+      "pan_deg": 3.3,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -764,18 +764,18 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       8.21,
+       -1.43,
        9.65,
        53.8
       ],
-      "length_m": 97.729,
+      "length_m": 96.528,
       "r": [
        -1.5795,
        0.0,
-       0.174
+       0.0754
       ],
-      "pan_deg": 9.97,
-      "tilt_deg": 0.49,
+      "pan_deg": 4.32,
+      "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
       "lowest_m": 8.81,
@@ -854,17 +854,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -10.84,
+       -9.71,
        9.65,
        53.8
       ],
-      "length_m": 96.319,
+      "length_m": 96.284,
       "r": [
        -1.5795,
        0.0,
-       -0.0368
+       -0.0251
       ],
-      "pan_deg": -2.11,
+      "pan_deg": -1.44,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -878,17 +878,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -6.9,
+       -8.0,
        9.65,
        53.8
       ],
-      "length_m": 96.254,
+      "length_m": 96.256,
       "r": [
        -1.5795,
        0.0,
-       0.0042
+       -0.0073
       ],
-      "pan_deg": 0.24,
+      "pan_deg": -0.42,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -902,17 +902,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -2.96,
+       -6.29,
        9.65,
        53.8
       ],
-      "length_m": 96.352,
+      "length_m": 96.259,
       "r": [
        -1.5795,
        0.0,
-       0.0451
+       0.0105
       ],
-      "pan_deg": 2.58,
+      "pan_deg": 0.6,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -926,17 +926,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       0.99,
+       -4.57,
        9.65,
        53.8
       ],
-      "length_m": 96.61,
+      "length_m": 96.292,
       "r": [
        -1.5795,
        0.0,
-       0.0859
+       0.0283
       ],
-      "pan_deg": 4.92,
+      "pan_deg": 1.62,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -950,17 +950,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       4.93,
+       -2.86,
        9.65,
        53.8
       ],
-      "length_m": 97.027,
+      "length_m": 96.356,
       "r": [
        -1.5795,
        0.0,
-       0.1264
+       0.0461
       ],
-      "pan_deg": 7.24,
+      "pan_deg": 2.64,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -974,18 +974,18 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       8.87,
+       -1.14,
        9.65,
        53.8
       ],
-      "length_m": 97.603,
+      "length_m": 96.45,
       "r": [
        -1.5795,
        0.0,
-       0.1665
+       0.0639
       ],
-      "pan_deg": 9.54,
-      "tilt_deg": 0.49,
+      "pan_deg": 3.66,
+      "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
       "lowest_m": 8.81,
@@ -1064,17 +1064,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -8.87,
+       -8.86,
        9.65,
        53.8
       ],
-      "length_m": 96.427,
+      "length_m": 96.426,
       "r": [
        -1.5795,
        0.0,
-       -0.0599
+       -0.0597
       ],
-      "pan_deg": -3.43,
+      "pan_deg": -3.42,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1088,17 +1088,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -4.93,
+       -7.14,
        9.65,
        53.8
       ],
-      "length_m": 96.271,
+      "length_m": 96.339,
       "r": [
        -1.5795,
        0.0,
-       -0.019
+       -0.042
       ],
-      "pan_deg": -1.09,
+      "pan_deg": -2.41,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1112,17 +1112,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -0.99,
+       -5.43,
        9.65,
        53.8
       ],
-      "length_m": 96.277,
+      "length_m": 96.282,
       "r": [
        -1.5795,
        0.0,
-       0.022
+       -0.0242
       ],
-      "pan_deg": 1.26,
+      "pan_deg": -1.39,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1136,17 +1136,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       2.96,
+       -3.71,
        9.65,
        53.8
       ],
-      "length_m": 96.444,
+      "length_m": 96.256,
       "r": [
        -1.5795,
        0.0,
-       0.0628
+       -0.0064
       ],
-      "pan_deg": 3.6,
+      "pan_deg": -0.37,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1160,17 +1160,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       6.9,
+       -2.0,
        9.65,
        53.8
       ],
-      "length_m": 96.772,
+      "length_m": 96.26,
       "r": [
        -1.5795,
        0.0,
-       0.1035
+       0.0114
       ],
-      "pan_deg": 5.93,
+      "pan_deg": 0.65,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1184,18 +1184,18 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       10.84,
+       -0.29,
        9.65,
        53.8
       ],
-      "length_m": 97.258,
+      "length_m": 96.295,
       "r": [
        -1.5795,
        0.0,
-       0.1439
+       0.0292
       ],
-      "pan_deg": 8.24,
-      "tilt_deg": 0.49,
+      "pan_deg": 1.67,
+      "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
       "lowest_m": 8.81,
@@ -1274,17 +1274,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -10.19,
+       -9.43,
        9.65,
        53.8
       ],
-      "length_m": 96.349,
+      "length_m": 96.318,
       "r": [
        -1.5795,
        0.0,
-       -0.0445
+       -0.0366
       ],
-      "pan_deg": -2.55,
+      "pan_deg": -2.1,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1298,17 +1298,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -6.24,
+       -7.71,
        9.65,
        53.8
       ],
-      "length_m": 96.254,
+      "length_m": 96.271,
       "r": [
        -1.5795,
        0.0,
-       -0.0036
+       -0.0188
       ],
-      "pan_deg": -0.2,
+      "pan_deg": -1.08,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1322,17 +1322,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -2.3,
+       -6.0,
        9.65,
        53.8
       ],
-      "length_m": 96.321,
+      "length_m": 96.254,
       "r": [
        -1.5795,
        0.0,
-       0.0374
+       -0.001
       ],
-      "pan_deg": 2.14,
+      "pan_deg": -0.06,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1346,17 +1346,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       1.64,
+       -4.29,
        9.65,
        53.8
       ],
-      "length_m": 96.549,
+      "length_m": 96.267,
       "r": [
        -1.5795,
        0.0,
-       0.0782
+       0.0168
       ],
-      "pan_deg": 4.48,
+      "pan_deg": 0.96,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1370,17 +1370,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       5.59,
+       -2.57,
        9.65,
        53.8
       ],
-      "length_m": 96.937,
+      "length_m": 96.311,
       "r": [
        -1.5795,
        0.0,
-       0.1188
+       0.0346
       ],
-      "pan_deg": 6.81,
+      "pan_deg": 1.98,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1394,18 +1394,18 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       9.53,
+       -0.86,
        9.65,
        53.8
       ],
-      "length_m": 97.482,
+      "length_m": 96.386,
       "r": [
        -1.5795,
        0.0,
-       0.1589
+       0.0523
       ],
-      "pan_deg": 9.11,
-      "tilt_deg": 0.49,
+      "pan_deg": 3.0,
+      "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
       "lowest_m": 8.81,
@@ -1484,17 +1484,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -9.53,
+       -9.14,
        9.65,
        53.8
       ],
-      "length_m": 96.385,
+      "length_m": 96.366,
       "r": [
        -1.5795,
        0.0,
-       -0.0522
+       -0.0482
       ],
-      "pan_deg": -2.99,
+      "pan_deg": -2.76,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1508,17 +1508,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -5.59,
+       -7.43,
        9.65,
        53.8
       ],
-      "length_m": 96.26,
+      "length_m": 96.298,
       "r": [
        -1.5795,
        0.0,
-       -0.0113
+       -0.0304
       ],
-      "pan_deg": -0.65,
+      "pan_deg": -1.74,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1532,17 +1532,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -1.64,
+       -5.71,
        9.65,
        53.8
       ],
-      "length_m": 96.296,
+      "length_m": 96.261,
       "r": [
        -1.5795,
        0.0,
-       0.0297
+       -0.0126
       ],
-      "pan_deg": 1.7,
+      "pan_deg": -0.72,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1556,17 +1556,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       2.3,
+       -4.0,
        9.65,
        53.8
       ],
-      "length_m": 96.494,
+      "length_m": 96.255,
       "r": [
        -1.5795,
        0.0,
-       0.0705
+       0.0052
       ],
-      "pan_deg": 4.04,
+      "pan_deg": 0.3,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1580,17 +1580,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       6.24,
+       -2.29,
        9.65,
        53.8
       ],
-      "length_m": 96.851,
+      "length_m": 96.279,
       "r": [
        -1.5795,
        0.0,
-       0.1111
+       0.023
       ],
-      "pan_deg": 6.37,
+      "pan_deg": 1.32,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1604,18 +1604,18 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       10.19,
+       -0.57,
        9.65,
        53.8
       ],
-      "length_m": 97.368,
+      "length_m": 96.334,
       "r": [
        -1.5795,
        0.0,
-       0.1514
+       0.0408
       ],
-      "pan_deg": 8.68,
-      "tilt_deg": 0.49,
+      "pan_deg": 2.34,
+      "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
       "lowest_m": 8.81,
@@ -1694,17 +1694,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -8.21,
+       -8.57,
        9.65,
        53.8
       ],
-      "length_m": 96.474,
+      "length_m": 96.499,
       "r": [
        -1.5795,
        0.0,
-       -0.0676
+       -0.0713
       ],
-      "pan_deg": -3.87,
+      "pan_deg": -4.08,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1718,17 +1718,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -4.27,
+       -6.86,
        9.65,
        53.8
       ],
-      "length_m": 96.288,
+      "length_m": 96.392,
       "r": [
        -1.5795,
        0.0,
-       -0.0267
+       -0.0535
       ],
-      "pan_deg": -1.53,
+      "pan_deg": -3.07,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1742,17 +1742,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -0.33,
+       -5.14,
        9.65,
        53.8
       ],
-      "length_m": 96.263,
+      "length_m": 96.315,
       "r": [
        -1.5795,
        0.0,
-       0.0142
+       -0.0358
       ],
-      "pan_deg": 0.82,
+      "pan_deg": -2.05,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1766,17 +1766,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       3.61,
+       -3.43,
        9.65,
        53.8
       ],
-      "length_m": 96.4,
+      "length_m": 96.269,
       "r": [
        -1.5795,
        0.0,
-       0.0552
+       -0.018
       ],
-      "pan_deg": 3.16,
+      "pan_deg": -1.03,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1790,17 +1790,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       7.56,
+       -1.71,
        9.65,
        53.8
       ],
-      "length_m": 96.698,
+      "length_m": 96.254,
       "r": [
        -1.5795,
        0.0,
-       0.0959
+       -0.0001
       ],
-      "pan_deg": 5.49,
+      "pan_deg": -0.01,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1814,17 +1814,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       11.5,
+       -0.0,
        9.65,
        53.8
       ],
-      "length_m": 97.155,
+      "length_m": 96.269,
       "r": [
        -1.5795,
        0.0,
-       0.1363
+       0.0177
       ],
-      "pan_deg": 7.81,
+      "pan_deg": 1.01,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -18317,7 +18317,7 @@
  },
  "lasers": {
   "source": "scripts/place/moxir_v2_3_aerial.py",
-  "design": "v2.8 MATRIX: six cubes on the far crane; a comb of 36 lines over the dance floor (6 per cube, interleaved, x -11.5,11.5 on the entry wall, 0.66 m apart) at the lowest height the rules allow, plus 0 diagonals per cube to its side wall at 5.5 m; the two UP-LA40WF unchanged (they cross the comb)",
+  "design": "v2.8 MATRIX: six cubes on the far crane; a comb of 36 lines over the dance floor (6 per cube, interleaved, x -10,0 on the entry wall, 0.29 m apart) at the lowest height the rules allow, plus 0 diagonals per cube to its side wall at 5.5 m; the two UP-LA40WF unchanged (they cross the comb)",
   "previous": "v2.8 crane lines (moxir-v2-8-2026-10-13.json)",
   "tubes": [
    {
@@ -18361,7 +18361,7 @@
      -42.45
     ],
     "to": [
-     -11.5,
+     -10.0,
      9.65,
      53.8
     ],
@@ -18377,7 +18377,7 @@
      -42.45
     ],
     "to": [
-     -7.56,
+     -8.29,
      9.65,
      53.8
     ],
@@ -18393,7 +18393,7 @@
      -42.45
     ],
     "to": [
-     -3.61,
+     -6.57,
      9.65,
      53.8
     ],
@@ -18409,7 +18409,7 @@
      -42.45
     ],
     "to": [
-     0.33,
+     -4.86,
      9.65,
      53.8
     ],
@@ -18425,7 +18425,7 @@
      -42.45
     ],
     "to": [
-     4.27,
+     -3.14,
      9.65,
      53.8
     ],
@@ -18441,7 +18441,7 @@
      -42.45
     ],
     "to": [
-     8.21,
+     -1.43,
      9.65,
      53.8
     ],
@@ -18457,7 +18457,7 @@
      -42.45
     ],
     "to": [
-     -10.84,
+     -9.71,
      9.65,
      53.8
     ],
@@ -18473,7 +18473,7 @@
      -42.45
     ],
     "to": [
-     -6.9,
+     -8.0,
      9.65,
      53.8
     ],
@@ -18489,7 +18489,7 @@
      -42.45
     ],
     "to": [
-     -2.96,
+     -6.29,
      9.65,
      53.8
     ],
@@ -18505,7 +18505,7 @@
      -42.45
     ],
     "to": [
-     0.99,
+     -4.57,
      9.65,
      53.8
     ],
@@ -18521,7 +18521,7 @@
      -42.45
     ],
     "to": [
-     4.93,
+     -2.86,
      9.65,
      53.8
     ],
@@ -18537,7 +18537,7 @@
      -42.45
     ],
     "to": [
-     8.87,
+     -1.14,
      9.65,
      53.8
     ],
@@ -18553,7 +18553,7 @@
      -42.45
     ],
     "to": [
-     -10.19,
+     -9.43,
      9.65,
      53.8
     ],
@@ -18569,7 +18569,7 @@
      -42.45
     ],
     "to": [
-     -6.24,
+     -7.71,
      9.65,
      53.8
     ],
@@ -18585,7 +18585,7 @@
      -42.45
     ],
     "to": [
-     -2.3,
+     -6.0,
      9.65,
      53.8
     ],
@@ -18601,7 +18601,7 @@
      -42.45
     ],
     "to": [
-     1.64,
+     -4.29,
      9.65,
      53.8
     ],
@@ -18617,7 +18617,7 @@
      -42.45
     ],
     "to": [
-     5.59,
+     -2.57,
      9.65,
      53.8
     ],
@@ -18633,7 +18633,7 @@
      -42.45
     ],
     "to": [
-     9.53,
+     -0.86,
      9.65,
      53.8
     ],
@@ -18649,7 +18649,7 @@
      -42.45
     ],
     "to": [
-     -9.53,
+     -9.14,
      9.65,
      53.8
     ],
@@ -18665,7 +18665,7 @@
      -42.45
     ],
     "to": [
-     -5.59,
+     -7.43,
      9.65,
      53.8
     ],
@@ -18681,7 +18681,7 @@
      -42.45
     ],
     "to": [
-     -1.64,
+     -5.71,
      9.65,
      53.8
     ],
@@ -18697,7 +18697,7 @@
      -42.45
     ],
     "to": [
-     2.3,
+     -4.0,
      9.65,
      53.8
     ],
@@ -18713,7 +18713,7 @@
      -42.45
     ],
     "to": [
-     6.24,
+     -2.29,
      9.65,
      53.8
     ],
@@ -18729,7 +18729,7 @@
      -42.45
     ],
     "to": [
-     10.19,
+     -0.57,
      9.65,
      53.8
     ],
@@ -18745,7 +18745,7 @@
      -42.45
     ],
     "to": [
-     -8.87,
+     -8.86,
      9.65,
      53.8
     ],
@@ -18761,7 +18761,7 @@
      -42.45
     ],
     "to": [
-     -4.93,
+     -7.14,
      9.65,
      53.8
     ],
@@ -18777,7 +18777,7 @@
      -42.45
     ],
     "to": [
-     -0.99,
+     -5.43,
      9.65,
      53.8
     ],
@@ -18793,7 +18793,7 @@
      -42.45
     ],
     "to": [
-     2.96,
+     -3.71,
      9.65,
      53.8
     ],
@@ -18809,7 +18809,7 @@
      -42.45
     ],
     "to": [
-     6.9,
+     -2.0,
      9.65,
      53.8
     ],
@@ -18825,7 +18825,7 @@
      -42.45
     ],
     "to": [
-     10.84,
+     -0.29,
      9.65,
      53.8
     ],
@@ -18841,7 +18841,7 @@
      -42.45
     ],
     "to": [
-     -8.21,
+     -8.57,
      9.65,
      53.8
     ],
@@ -18857,7 +18857,7 @@
      -42.45
     ],
     "to": [
-     -4.27,
+     -6.86,
      9.65,
      53.8
     ],
@@ -18873,7 +18873,7 @@
      -42.45
     ],
     "to": [
-     -0.33,
+     -5.14,
      9.65,
      53.8
     ],
@@ -18889,7 +18889,7 @@
      -42.45
     ],
     "to": [
-     3.61,
+     -3.43,
      9.65,
      53.8
     ],
@@ -18905,7 +18905,7 @@
      -42.45
     ],
     "to": [
-     7.56,
+     -1.71,
      9.65,
      53.8
     ],
@@ -18921,7 +18921,7 @@
      -42.45
     ],
     "to": [
-     11.5,
+     -0.0,
      9.65,
      53.8
     ],
@@ -18934,7 +18934,7 @@
   "arithmetic": {
    "lines": 36,
    "comb_lines": 36,
-   "comb_spacing_m": 0.66,
+   "comb_spacing_m": 0.29,
    "lowest_point_m": 8.81,
    "comb_height_over_the_floor_m": [
     9.2,
