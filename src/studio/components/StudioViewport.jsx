@@ -31,7 +31,8 @@ import LaserView from '../../rigbuild/LaserView.jsx'
 import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
-import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
+import { createPivotDrag, getSelectionCentroid } from '../utils/multiTransform.js'
+import { sameTransform } from '../utils/transformDelta.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
 import { animationSeed, applyAnimation, authoredAnimation } from '../../project/viewport/entityAnimation.js'
 import { applyProximity, resolveProximity } from '../../project/viewport/entityProximity.js'
@@ -295,6 +296,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
         return () => { tc.detach() }
     }, [gizmoActive, gizmoSpace])
 
+    const storedTransformRef = useRef(entity.components?.transform)
+    useEffect(() => { storedTransformRef.current = entity.components?.transform }, [entity.components?.transform])
+
     // Drag events: disable orbit during drag, commit on release
     useEffect(() => {
         const tc = tcRef.current
@@ -310,11 +314,13 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
             if (orbitRef?.current) orbitRef.current.enabled = !e.value
             if (!e.value && groupRef.current) {
                 const { position, rotation, scale } = groupRef.current
-                onTransformCommit?.(entity.id, {
+                const next = {
                     position: [position.x, position.y, position.z],
                     rotation: [rotation.x, rotation.y, rotation.z],
                     scale: [scale.x, scale.y, scale.z]
-                })
+                }
+                // A press and release with no motion is not an edit (transformDelta.js).
+                if (!sameTransform(storedTransformRef.current, next)) onTransformCommit?.(entity.id, next)
             }
         }
         tc.addEventListener('dragging-changed', handleDraggingChanged)
@@ -466,7 +472,6 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
 function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVisible, onPreview, onCommit, orbitRef }) {
     const pivotRef = useRef()
     const controlsRef = useRef()
-    const initialPivotRef = useRef(null)
     const isDraggingRef = useRef(false)
     const centroid = useMemo(() => getSelectionCentroid(entities), [entities])
     const active = canTransform(editMode) && gizmoVisible && entities.length > 1
@@ -480,6 +485,10 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
         pivot.scale.set(1, 1, 1)
     }, [centroid])
 
+    // Read at the grab, so a document change never re-attaches the gizmo or reaches a commit.
+    const entitiesRef = useRef(entities)
+    useEffect(() => { entitiesRef.current = entities }, [entities])
+
     useEffect(() => {
         const controls = controlsRef.current
         const pivot = pivotRef.current
@@ -488,33 +497,29 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
         controls.attach(pivot)
         controls.setSpace('world')
 
-        const pivotTransform = () => ({
-            position: pivot.position.toArray(),
-            rotation: [pivot.rotation.x, pivot.rotation.y, pivot.rotation.z],
-            scale: pivot.scale.toArray()
+        const drag = createPivotDrag({
+            readPivot: () => ({
+                position: pivot.position.toArray(),
+                rotation: [pivot.rotation.x, pivot.rotation.y, pivot.rotation.z],
+                scale: pivot.scale.toArray()
+            }),
+            getEntities: () => entitiesRef.current,
+            onPreview,
+            onCommit
         })
-        const preview = () => {
-            if (!initialPivotRef.current) return []
-            const updates = applyPivotTransform(entities, initialPivotRef.current, pivotTransform())
-            onPreview(Object.fromEntries(updates.map((entry) => [entry.id, entry.transform])))
-            return updates
-        }
         const handleDraggingChanged = (event) => {
             const dragging = Boolean(event.value)
             isDraggingRef.current = dragging
             if (orbitControls) orbitControls.enabled = !dragging
-            if (dragging) {
-                initialPivotRef.current = pivotTransform()
-            } else if (initialPivotRef.current) {
-                const updates = preview()
-                initialPivotRef.current = null
-                onPreview({})
-                onCommit(updates)
+            drag.draggingChanged(dragging)
+            // The pivot rests at identity between grabs; a rotation left on it made every next
+            // grab's delta R·R⁻¹ — float noise the release then wrote back (scale 0.9999…).
+            if (!dragging) {
+                pivot.rotation.set(0, 0, 0)
+                pivot.scale.set(1, 1, 1)
             }
         }
-        const handleObjectChange = () => {
-            if (isDraggingRef.current) preview()
-        }
+        const handleObjectChange = () => drag.objectChange()
         controls.addEventListener('dragging-changed', handleDraggingChanged)
         controls.addEventListener('objectChange', handleObjectChange)
         return () => {
@@ -523,7 +528,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
             controls.detach()
             if (orbitControls) orbitControls.enabled = true
         }
-    }, [active, entities, onCommit, onPreview, orbitRef])
+    }, [active, onCommit, onPreview, orbitRef])
 
     return (
         <>
@@ -1134,6 +1139,7 @@ export default function StudioViewport({
     gizmoSpace = 'world',
     transformOp = null,
     setEditMode,
+    viewBar = false,
     setGizmoMode,
     onTransformCommit,
     onTransformCommitMany,
@@ -1376,7 +1382,10 @@ export default function StudioViewport({
                 />
             )}
 
-            {setEditMode && controlsRef && (
+            {/* Mounted only where a surface asks for it (`viewBar`). Its gate used to be setEditMode,
+                which no caller passes — so the bar was dead everywhere, the Studio included, while it
+                looked wired (brief 2026-10-13 item 2). */}
+            {viewBar && controlsRef && (
                 <ViewCommandBar
                     onCommand={(command) => runViewCommand(controlsRef.current, command, {
                         entities: document.entities || [],

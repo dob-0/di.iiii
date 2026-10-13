@@ -91,6 +91,8 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         rows: [
             ['Click', 'Select object'],
             ['Shift / Ctrl + Click', 'Add to the selection'],
+            ['Click a beam', 'Select its lamp; a lamp body in front of a beam wins'],
+            ['Click a locked object', 'Not picked: the click goes through; with only locked things under the pointer, the selection clears'],
             ['A', 'Select all'],
             ['Alt+A', 'Deselect all'],
             ['Esc', 'Deselect'],

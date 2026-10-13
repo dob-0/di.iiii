@@ -184,6 +184,12 @@ export default function StudioPresentationSurface({
             gizmoVisible={gizmoVisible}
             transformOp={transformOp}
             setEditMode={setEditMode}
+            // No view bar on the Studio surface (brief 2026-10-13 item 2): each pane already has the
+            // axis widget (top-right: Front/Back/Left/Right/Top/Bottom) and the keys run the same
+            // commands (Numpad or Shift+1/3/7, F, Home — studioGuide.js, View rows). A third way to the same
+            // six views, as 44 px buttons over the bottom of every pane, is a new shape on the
+            // owner's screen; the bar stays for a surface without that widget.
+            viewBar={false}
             setGizmoMode={setGizmoMode}
             onTransformCommit={onTransformCommit}
             onTransformCommitMany={onTransformCommitMany}
