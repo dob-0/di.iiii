@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { TYPE_LIBRARY } from './types/index.js'
+import { PENDING, useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
 import { rigProgress } from './rigProgress.js'
 import { RigSteps, usePointerLocked } from './RigSteps.jsx'
@@ -11,7 +11,10 @@ import { RigSteps, usePointerLocked } from './RigSteps.jsx'
 // room is drawn from — and asks the desk nothing.
 export default function RoomRigSteps({ document, spaceId, projectId, projectLabel = null, isLocalInstall = false, underBar = false }) {
     const entities = document?.entities
-    const progress = useMemo(() => (entities ? rigProgress({ entities, library: libraryWithShow(TYPE_LIBRARY, entities), projectId }) : null), [entities, projectId])
+    // the project's own types alone (types/projectTypes.js); no progress until they are in
+    const library = useProjectLibrary(entities || null)
+    const ready = Boolean(entities) && library !== PENDING
+    const progress = useMemo(() => (ready ? rigProgress({ entities, library: libraryWithShow(library, entities), projectId }) : null), [ready, entities, library, projectId])
     const locked = usePointerLocked()
     return (
         <RigSteps
