@@ -61,6 +61,7 @@ const selection0 = () => probe('let g=0, h=0; root.scene.traverse(o=>{ if(o.isTr
 const screenOf = async (name) => probe(`const V=root.camera.position.constructor; const v=new V(...arg).project(root.camera); const b=root.gl.domElement.getBoundingClientRect(); return {x:b.left+(v.x+1)/2*b.width, y:b.top+(1-v.y)/2*b.height}`, LAMP[name])
 // The Objects window's pressed rows = what the document says is selected.
 const selection = async () => {
+    if (!process.env.OBJ_ROWS) return selection0()
     const gizmo = await selection0()
     await page.getByRole('button', { name: 'Objects', exact: true }).click()
     await page.waitForTimeout(500)
@@ -130,6 +131,12 @@ const GESTURES = {
         await page.keyboard.press('g'); await page.keyboard.press('x'); await page.mouse.move(600, 500); await page.mouse.move(700, 540, { steps: 8 }); await page.mouse.click(700, 540)
         return { selectionBefore: s }
     },
+    'G X, mouse, click (1 lamp clicked)': async () => {
+        const p = await screenOf('A'); await page.mouse.click(p.x, p.y); await page.waitForTimeout(500)
+        const s = await selection()
+        await page.keyboard.press('g'); await page.keyboard.press('x'); await page.mouse.move(600, 500); await page.mouse.move(700, 540, { steps: 8 }); await page.mouse.click(700, 540)
+        return { selectionBefore: s }
+    },
     'R, mouse, click (2 lamps)': async () => {
         await boxSelect(['A', 'B']); const s = await selection()
         await page.keyboard.press('r'); await page.mouse.move(600, 500); await page.mouse.move(700, 540, { steps: 8 }); await page.mouse.click(700, 540)
@@ -163,7 +170,7 @@ for (const [label, gesture] of Object.entries(GESTURES)) {
     await page.waitForTimeout(6000)
     for (const w of ['Create', 'Objects']) await page.getByRole('button', { name: w, exact: true }).click().catch(() => {})  // the Windows toggles
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
-    await page.getByRole('button', { name: 'Select', exact: true }).click()
+    if (!process.argv.includes('--noselect')) await page.getByRole('button', { name: 'Select', exact: true }).click()
     await page.waitForTimeout(800)
     const on = await page.evaluate(() => document.querySelector('canvas')?.dataset.boxSelect)
     console.log('lamp screen points', JSON.stringify({ A: await screenOf('A'), B: await screenOf('B'), C: await screenOf('C') }))
