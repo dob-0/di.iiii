@@ -21,6 +21,9 @@ export const WALK_PREFS = Object.freeze({
     pitchLimit: Math.PI / 2 - 0.01,
     accelTime: 0.08,       // Blender's walk has no published ramp; a short one keeps the frame-rate independence of flyStep. ours
     stopTime: 0.06,
+    // The longest frame the walk counts: the flight's (useCameraNavigation, 0.25 s). flyStep's own 0.1 s made a walk below
+    // 10 fps slower (review 2: 1.05 m a second at 5 fps instead of 2.5).
+    maxDt: 0.25,
 })
 
 /** Is this keydown the Blender walk toggle (Shift+`)? Pure. */
@@ -33,6 +36,7 @@ export const walkParams = (held, prefs = WALK_PREFS) => ({
     sprintFactor: held.has('shift') ? prefs.walkSpeedFactor : held.has('alt') ? prefs.slowFactor : 1,
     accelTime: prefs.accelTime,
     stopTime: prefs.stopTime,
+    maxDt: prefs.maxDt,
     wheelStep: 1, // the wheel does not change the walk speed (Blender walk: speed is a preference)
 })
 

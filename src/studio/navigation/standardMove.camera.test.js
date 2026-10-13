@@ -6,7 +6,7 @@ import CameraControls from 'camera-controls'
 import { renderHook, act } from '@testing-library/react'
 import { autoSpeedFor, useCameraNavigation } from './useCameraNavigation.js'
 import { useWalkNavigation } from './useWalkNavigation.js'
-import { controlBindingsFor } from './mappings.js'
+import { controlBindingsFor, mouseButtonsFor } from './mappings.js'
 import { slideMetresPerPixel } from './freeMove.js'
 
 CameraControls.install({ THREE })
@@ -374,5 +374,112 @@ describe('turning in place right after another move', () => {
         act(() => { document.dispatchEvent(pe('pointerup', { button: 0, buttons: 0, clientX: 1000 })) })
         settle(cc)
         expect(cam.position.distanceTo(a)).toBeLessThan(0.005)
+    })
+})
+
+// Second review (2026-10-13, review/standard-move-2): each case below failed before its fix.
+describe('the standard move, second review', () => {
+    it('a chord never runs camera-controls\' own zoom: StudioViewport puts the resting bindings back after the hook set them aside', () => {
+        const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+        // StudioViewport's own effect, which runs after this hook's (declared later in StudioOrbit) and on every tool switch
+        act(() => { Object.assign(cc.mouseButtons, mouseButtonsFor('studio')) })
+        const d0 = cc.distance
+        act(() => { el.dispatchEvent(pe('pointerdown', { button: 0, buttons: 1 })) }) // a turn
+        // the middle button pressed mid-turn: a chord arrives as a pointermove with more buttons, never as a pointerdown
+        for (const y of [450, 550, 650]) { act(() => { document.dispatchEvent(pe('pointermove', { buttons: 1 | 4, clientY: y })) }); cc.update(1 / 60) }
+        act(() => { document.dispatchEvent(pe('pointerup', { button: 0, buttons: 0, clientY: 650 })) })
+        settle(cc)
+        expect(cc.distance).toBeCloseTo(d0, 6) // the turning point stays 10 steps ahead: no zoom that scales with the distance
+    })
+    it('a third finger lifted mid-pinch does not jump: the next 1 px moves 1 px worth', () => {
+        const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+        act(() => {
+            el.dispatchEvent(pe('pointerdown', { pointerType: 'touch', pointerId: 11, clientX: 750, clientY: 450 }))
+            el.dispatchEvent(pe('pointerdown', { pointerType: 'touch', pointerId: 12, clientX: 850, clientY: 450 }))
+            el.dispatchEvent(pe('pointerdown', { pointerType: 'touch', pointerId: 13, clientX: 400, clientY: 450 }))
+            document.dispatchEvent(pe('pointerup', { pointerType: 'touch', pointerId: 11, clientX: 750, clientY: 450 }))
+        })
+        settle(cc)
+        const a = cc.getPosition(new V(), true).clone()
+        act(() => { document.dispatchEvent(pe('pointermove', { pointerType: 'touch', pointerId: 12, clientX: 851, clientY: 450 })) })
+        settle(cc)
+        expect(cc.getPosition(new V(), true).distanceTo(a)).toBeLessThan(0.02 * STEP)
+        act(() => {
+            document.dispatchEvent(pe('pointerup', { pointerType: 'touch', pointerId: 12, clientX: 851, clientY: 450 }))
+            document.dispatchEvent(pe('pointerup', { pointerType: 'touch', pointerId: 13, clientX: 400, clientY: 450 }))
+        })
+    })
+    it('with Orbit Around Selection on, a turn that starts mid-glide keeps the whole notch', () => {
+        const scene = new THREE.Scene(); scene.add(entity('a', [1, 1, 1], [8, 1.6, -20])); scene.updateMatrixWorld(true)
+        const { el, cam, cc } = setup({ scene, orbitSelection: true, selectedEntityIds: ['a'] })
+        act(() => { wheel(el, { shiftKey: true }) })
+        for (let i = 0; i < 6; i += 1) cc.update(1 / 60)
+        act(() => { el.dispatchEvent(pe('pointerdown', { button: 0, buttons: 1 })) })
+        act(() => { document.dispatchEvent(pe('pointerup', { button: 0, buttons: 0 })) })
+        settle(cc)
+        expect(-cam.position.z).toBeCloseTo(5 * STEP, 1)
+        expect(cam.position.x).toBeCloseTo(0, 3)
+    })
+    it('a one-finger touch that starts mid-glide keeps the whole pinch', () => {
+        const { el, cam, cc } = setup()
+        act(() => {
+            el.dispatchEvent(pe('pointerdown', { pointerType: 'touch', pointerId: 11, clientX: 750, clientY: 450 }))
+            el.dispatchEvent(pe('pointerdown', { pointerType: 'touch', pointerId: 12, clientX: 850, clientY: 450 }))
+            document.dispatchEvent(pe('pointermove', { pointerType: 'touch', pointerId: 11, clientX: 550, clientY: 450 }))
+            document.dispatchEvent(pe('pointermove', { pointerType: 'touch', pointerId: 12, clientX: 1050, clientY: 450 }))
+            document.dispatchEvent(pe('pointerup', { pointerType: 'touch', pointerId: 11, clientX: 550, clientY: 450 }))
+            document.dispatchEvent(pe('pointerup', { pointerType: 'touch', pointerId: 12, clientX: 1050, clientY: 450 }))
+        })
+        for (let i = 0; i < 3; i += 1) cc.update(1 / 60)
+        act(() => {
+            el.dispatchEvent(pe('pointerdown', { pointerType: 'touch', pointerId: 14, clientX: 800, clientY: 450 }))
+            document.dispatchEvent(pe('pointerup', { pointerType: 'touch', pointerId: 14, clientX: 800, clientY: 450 }))
+        })
+        settle(cc)
+        expect(-cam.position.z).toBeCloseTo(4 * STEP, 1) // fingers 400 px further apart: four steps, all of them
+    })
+    it('Walk at 5 fps still covers its 2.5 m a second', () => {
+        const { cc } = setup({ walk: true })
+        const a = cc.camera.position.clone()
+        act(() => {
+            document.body.dispatchEvent(key('keydown', { key: '~', code: 'Backquote', shiftKey: true }))
+            document.body.dispatchEvent(key('keydown', { key: 'w', code: 'KeyW' }))
+        })
+        runFrames(6, 200, null) // the first frame only starts the clock: five frames of 0.2 s
+        const walked = cc.camera.position.distanceTo(a)
+        act(() => { document.body.dispatchEvent(key('keyup', { key: 'w', code: 'KeyW' })); document.body.dispatchEvent(key('keydown', { key: 'Escape', code: 'Escape' })) })
+        expect(walked).toBeGreaterThan(2.5 * 0.85); expect(walked).toBeLessThan(2.5 * 1.05)
+    })
+    it('a model still downloading keeps the automatic speed provisional (ModelObject reports its load)', async () => {
+        vi.resetModules()
+        vi.doMock('@react-three/fiber', () => ({ useThree: (sel) => sel({ gl: null, invalidate: () => {} }), useFrame: () => {} }))
+        vi.doMock('../../storage/assetStore.js', () => ({ getAssetBlob: async () => null, deleteAsset: async () => {} }))
+        vi.doMock('../../services/assetSources.js', () => ({ getAssetSourceUrl: () => '/hall.glb', streamRemoteAsset: async () => null }))
+        let finish
+        const fetchStub = vi.fn(() => new Promise((resolve) => { finish = resolve }))
+        vi.stubGlobal('fetch', fetchStub)
+        try {
+            const { default: ModelObject } = await import('../../objectComponents/ModelObject.jsx')
+            const { createElement } = await import('react')
+            const { render } = await import('@testing-library/react')
+            const r = render(createElement(ModelObject, { assetRef: { id: 'hall' } }))
+            await vi.waitFor(() => expect(fetchStub).toHaveBeenCalled())
+            const scene = new THREE.Scene()
+            let size = 1 // the chair that is already in
+            const read = () => size / 40
+            expect(autoSpeedFor(scene, { read })).toBeCloseTo(0.025, 9)
+            size = 100 // the hall arrived
+            expect(autoSpeedFor(scene, { read })).toBeCloseTo(2.5, 9) // taken again: the chair's reading was provisional
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            finish({ ok: false, headers: { get: () => '' } }) // the download ends (here in an error): loading is idle again
+            await vi.waitFor(() => { const s = new THREE.Scene(); autoSpeedFor(s, { read: () => 7 }); expect(autoSpeedFor(s, { read: () => 9 })).toBe(7) })
+            warn.mockRestore()
+            r.unmount()
+        } finally {
+            vi.doUnmock('@react-three/fiber'); vi.doUnmock('../../storage/assetStore.js'); vi.doUnmock('../../services/assetSources.js')
+            vi.unstubAllGlobals()
+            vi.stubGlobal('requestAnimationFrame', (cb) => { rafQ.push(cb); return rafQ.length })
+            vi.stubGlobal('cancelAnimationFrame', () => {})
+        }
     })
 })
