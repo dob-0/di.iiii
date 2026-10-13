@@ -5,7 +5,7 @@ import { Vector3 } from 'three'
 import {
     pointerOnPivotPlane, pivotOnScreen, grabStep, rotateAxis, rotateEulerAroundWorldAxis,
     orbitAroundPivot, scaleStep, angleAround, distanceFrom, snapVector, snapScalar,
-    PLANE_OF_KEY, isPlane, indicesOf, typedRotateAxis,
+    PLANE_OF_KEY, isPlane, indicesOf, typedRotateAxis, snapStepFor,
 } from '../utils/modalMotion.js'
 
 const AXIS_VEC = {
@@ -16,10 +16,9 @@ const AXIS_VEC = {
 const AXIS_COLOR = { x: '#ff5a6a', y: '#7dd35f', z: '#5a8bff' }
 const LINE_LEN = 1000
 const MODE_LABEL = { translate: 'GRAB', rotate: 'ROTATE', scale: 'SCALE' }
-// Ctrl-held snap increments (Blender-style): world units / radians (15°) /
-// scale-factor steps. Snapping rounds the accumulated total, so tapping Ctrl
-// mid-drag snaps the current result instead of just future movement.
-const SNAP_STEP = { translate: 0.5, rotate: Math.PI / 12, scale: 0.1 }
+// Ctrl-held snap increments live in modalMotion.js (snapStepFor: 0.5 m / 15° / 0.1, a tenth with
+// Shift). Snapping rounds the accumulated total, so tapping Ctrl mid-drag snaps the current result
+// instead of just future movement.
 
 const wrapAngle = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI
 
@@ -110,7 +109,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const typed = session.numeric
                 ? ` · ${session.numeric}${session.mode === 'rotate' ? '°' : session.mode === 'scale' ? '×' : ''}`
                 : ''
-            const hint = session.axis ? ' · move the mouse or type a value · CTRL snap · SHIFT fine · ENTER' : ' · move the mouse · X / Y / Z lock an axis · SHIFT+X / Y / Z keep a plane · CTRL snap · SHIFT fine · ENTER'
+            const hint = session.axis ? ' · move the mouse or type a value · CTRL snap · CTRL+SHIFT fine snap · SHIFT fine · ENTER' : ' · move the mouse · X / Y / Z lock an axis · SHIFT+X / Y / Z keep a plane · CTRL snap · SHIFT fine · ENTER'
             cbRef.current.onStatus?.({
                 text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${typed}${typed ? ' · ENTER' : hint}`
             })
@@ -210,19 +209,20 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         }
 
         // Blender: the drag follows the cursor from where it is — the first move only takes the start.
-        const applyDrag = (snap) => {
+        const applyDrag = (snap, fine = false) => {
+            const step = snapStepFor(session.mode, fine)
             if (session.mode === 'translate') {
-                const d = snap ? snapVector(session.delta, SNAP_STEP.translate) : session.delta
+                const d = snap ? snapVector(session.delta, step) : session.delta
                 for (const e of session.entities) e.pos = [e.base.pos[0] + d.x, e.base.pos[1] + d.y, e.base.pos[2] + d.z]
             } else if (session.mode === 'rotate') {
-                const a = snap ? snapScalar(session.angle, SNAP_STEP.rotate) : session.angle
+                const a = snap ? snapScalar(session.angle, step) : session.angle
                 const axisVec = rotateAxis(camera, session.axis)
                 for (const e of session.entities) {
                     e.rot = rotateEulerAroundWorldAxis(e.base.rot, axisVec, a)
                     if (n > 1) e.pos = orbitAroundPivot(e.base.pos, pivot, axisVec, a)
                 }
             } else if (session.mode === 'scale') {
-                const f = Math.max(0.01, snap ? snapScalar(session.factor, SNAP_STEP.scale) : session.factor)
+                const f = Math.max(0.01, snap ? snapScalar(session.factor, step) : session.factor)
                 const indices = indicesOf(session.axis)
                 for (const e of session.entities) {
                     for (const idx of indices) {
@@ -263,7 +263,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 session.factor *= scaleStep(last.dist, d, precision)
                 last.dist = d
             }
-            applyDrag(event.ctrlKey || event.metaKey)
+            applyDrag(event.ctrlKey || event.metaKey, event.shiftKey)
             session.moved = true
             cbRef.current.onPreview?.(buildPreviewMap())
         }

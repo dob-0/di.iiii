@@ -112,6 +112,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['→ A', 'All axes (uniform)'],
             ['→ Shift+X / Y / Z', 'Keep a plane: every axis but that one (Shift+Y = along the floor)'],
             ['Shift + drag', 'Fine / slow adjustment'],
+            ['Ctrl + drag', 'Snap: 0.5 m · 15° · 0.1 (gizmo too); Ctrl+Shift snaps to a tenth (5 cm · 1.5° · 0.01)'],
             ['Click · Enter · Space', 'Confirm'],
             ['Esc', 'Cancel'],
         ]

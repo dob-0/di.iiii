@@ -122,6 +122,12 @@ export function typedRotateAxis(camera, axis) {
     return AXIS_VEC[normalAxisOf(axis)].clone()
 }
 
+// Ctrl-held snap increments (Blender-style, the same as the gizmo's: src/studio/utils/gizmoSnap.js):
+// world metres / radians (15°) / scale-factor steps. Ctrl+Shift snaps to a tenth of them (Blender:
+// Shift while snapping = precision snap) — 5 cm, 1.5°, 0.01.
+export const SNAP_STEP = { translate: 0.5, rotate: Math.PI / 12, scale: 0.1 }
+export const snapStepFor = (mode, fine = false) => (SNAP_STEP[mode] ?? 0) * (fine ? 0.1 : 1)
+
 /** Snap helpers (Ctrl): a vector to a world grid, an angle to 15°, a factor to 0.1. */
 export const snapVector = (v, step) => new Vector3(Math.round(v.x / step) * step, Math.round(v.y / step) * step, Math.round(v.z / step) * step)
 export const snapScalar = (value, step) => Math.round(value / step) * step

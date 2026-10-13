@@ -227,3 +227,13 @@ describe('typed R and S (Blender numeric input)', () => {
         expect(grab.onPreview).not.toHaveBeenCalled()
     })
 })
+
+describe('Ctrl+Shift snaps to a tenth of the increment (Blender: precision snap)', () => {
+    it('G X, 100 px with Ctrl+Shift: the fine move (0.155 m) lands on the 5 cm grid, not the 0.5 m one', () => {
+        const { onPreview } = setup()
+        fireEvent.keyDown(window, { key: 'x' })
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 300, ctrlKey: true, shiftKey: true })
+        expect(onPreview.mock.calls.at(-1)[0].e1.position[0]).toBeCloseTo(0.15, 9)
+    })
+})

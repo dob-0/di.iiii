@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import {
-    pointerOnPivotPlane, pivotOnScreen, grabStep, indicesOf, isPlane, rotateAxis, rotateEulerAroundWorldAxis,
+    pointerOnPivotPlane, pivotOnScreen, grabStep, indicesOf, isPlane, snapStepFor, rotateAxis, rotateEulerAroundWorldAxis,
     orbitAroundPivot, scaleStep, angleAround, distanceFrom,
 } from './modalMotion.js'
 
@@ -86,5 +86,14 @@ describe('a plane constraint keeps two axes (Blender: Shift+X / Y / Z)', () => {
         expect(indicesOf(null)).toEqual([0, 1, 2])
         expect(isPlane('xz')).toBe(true)
         expect(isPlane('x')).toBe(false)
+    })
+})
+
+describe('snap increments (Ctrl; Ctrl+Shift a tenth)', () => {
+    it('0.5 m / 15° / 0.1, and a tenth of each when fine', () => {
+        expect(snapStepFor('translate')).toBe(0.5)
+        expect(snapStepFor('translate', true)).toBeCloseTo(0.05, 12)
+        expect(snapStepFor('rotate', true)).toBeCloseTo(Math.PI / 120, 12)
+        expect(snapStepFor('scale', true)).toBeCloseTo(0.01, 12)
     })
 })
