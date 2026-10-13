@@ -15,7 +15,7 @@ import process from 'node:process'
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeHealth } from './probe.mjs'
 import * as service from './service.mjs'
-import { currentVersionDir, readCert, readEnv, readState } from './state.mjs'
+import { currentVersionDir, ONE_LOCAL_NAME, readCert, readEnv, readState } from './state.mjs'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -74,6 +74,11 @@ export const serverEnv = ({ home, port, host = '127.0.0.1', guests = false, base
     const wildcard = host === '0.0.0.0' || host === '::'
     const cert = readCert(home)
     return {
+        // The one local address (docs/ai/one-local-address.md): the server
+        // opens http://diiii.localhost/ on loopback :80 when it may, and
+        // stands aside when it may not. Before di.env, so a machine can say
+        // DI_LOCAL_NAME=off there (a machine whose dev-router owns :80).
+        DI_LOCAL_NAME: ONE_LOCAL_NAME,
         ...base,
         ...readEnv(home),
         PORT: String(port),

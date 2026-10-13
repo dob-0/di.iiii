@@ -51,3 +51,136 @@
         width: 100%;
     }
 }
+
+/* The door that opens the phones-and-headsets panel: a button that reads like
+   the links beside it. */
+.lh-door-button {
+    font: inherit;
+    letter-spacing: inherit;
+    color: var(--di-cyan);
+    background: none;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.lh-door-button:hover,
+.lh-door-button[aria-expanded='true'] {
+    border-bottom-color: var(--di-cyan);
+}
+
+/* Phones and headsets in this place (GuestAddressPanel.jsx). One band under
+   the bar, square corners, the code always dark on white. */
+.lh-guest {
+    padding: var(--di-space-4);
+    border-bottom: 1px solid var(--di-cyan-border);
+    background: var(--di-surface);
+    color: var(--di-text);
+    font-family: var(--di-sans);
+}
+
+.lh-guest-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    margin-bottom: var(--di-space-3);
+}
+
+.lh-guest-head h2 {
+    margin: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    font-weight: 600;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+}
+
+.lh-guest-close {
+    font: inherit;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+    background: none;
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    padding: var(--di-space-1) var(--di-space-2);
+    cursor: pointer;
+}
+
+.lh-guest-row {
+    display: flex;
+    gap: var(--di-space-4);
+    align-items: flex-start;
+}
+
+.lh-guest-qr {
+    flex: none;
+    line-height: 0;
+}
+
+.lh-guest-qr .qr-code {
+    display: block;
+    border-radius: 0;
+}
+
+.lh-guest-text {
+    min-width: 0;
+    max-width: 60ch;
+}
+
+.lh-guest-text p {
+    margin: 0 0 var(--di-space-2);
+    font-size: var(--di-text-3);
+    line-height: 1.45;
+}
+
+.lh-guest-address {
+    display: inline-block;
+    margin-bottom: var(--di-space-2);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-5);
+    color: var(--di-cyan);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.lh-guest-text .lh-guest-dim,
+.lh-guest > .lh-guest-dim {
+    color: var(--di-text-muted);
+    font-size: var(--di-text-2);
+}
+
+.lh-guest-warn {
+    color: var(--di-warning);
+}
+
+.lh-guest-cmd {
+    font-family: var(--di-mono);
+    font-size: inherit;
+    padding: 0 var(--di-space-1);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-text);
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .lh-guest-row {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .lh-guest-text {
+        text-align: left;
+        width: 100%;
+    }
+
+    .lh-guest-cmd--long {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}

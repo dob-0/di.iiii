@@ -8,6 +8,7 @@
 
 import { execFile, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
@@ -16,6 +17,13 @@ import { NODE_FLOOR, parseVersion, satisfiesFloor } from './detect.mjs'
 import { isWindows, paths } from './paths.mjs'
 
 const execFileAsync = promisify(execFile)
+
+// The one local address (docs/ai/one-local-address.md): the same link on every
+// machine with di, opening that machine's own di.iiii. Defined here, the layer
+// below state.mjs, so the pretty-name probe below can default to it; state.mjs
+// re-exports both for everything that imports them from there.
+export const ONE_LOCAL_NAME = 'diiii.localhost'
+export const oneLocalUrl = (name = ONE_LOCAL_NAME) => `http://${name}/`
 
 const GHCR_IMAGE = 'dob-0/dii-server'
 const NET_TIMEOUT_MS = 3000
@@ -225,10 +233,12 @@ export { NODE_FLOOR, parseVersion, satisfiesFloor }
  *
  * Two of them, and neither needs a root password or a file in /etc:
  *
- *   di.localhost — this machine only. Every current browser and every resolver
- *     that follows RFC 6761 sends *.localhost to loopback, but "every" is not
- *     "all", so it is asked before it is printed. A pretty address that does
- *     not answer is worse than an ugly one that does.
+ *   diiii.localhost — this machine only, and the SAME word as the one local
+ *     address (docs/ai/one-local-address.md): a machine that may not hold :80
+ *     yet still prints the one name, with its port. Every current browser and
+ *     every resolver that follows RFC 6761 sends *.localhost to loopback, but
+ *     "every" is not "all", so it is asked before it is printed. A pretty
+ *     address that does not answer is worse than an ugly one that does.
  *
  *   di.local — the room. Published over mDNS by avahi-publish, which any Linux
  *     desktop with avahi running can do as an ordinary user; phones resolve it
@@ -236,8 +246,8 @@ export { NODE_FLOOR, parseVersion, satisfiesFloor }
  *     network act, and the loopback default is nobody's business but this
  *     machine's.
  */
-export const probePrettyLocalName = async (port, name = 'di.localhost', scheme = 'http') => {
-    const answered = await probeHealth(port, name, '/serverXR', scheme)
+export const probePrettyLocalName = async (port, name = ONE_LOCAL_NAME, scheme = 'http', { ask = probeHealth } = {}) => {
+    const answered = await ask(port, name, '/serverXR', scheme)
     return answered ? name : null
 }
 
@@ -245,3 +255,35 @@ export const probeCanPublishName = async () => quiet(async () => {
     await execFileAsync('avahi-publish', ['--version'], { timeout: NET_TIMEOUT_MS })
     return true
 }, false)
+
+/**
+ * Ask the one local address who it is: GET /serverXR/api/config on loopback
+ * :80 with `Host: diiii.localhost`, the request a browser on this machine
+ * sends for http://diiii.localhost/. Connected by address, not by name: Node
+ * asks the OS resolver, and only some systems map *.localhost (systemd's
+ * nss-myhostname does, to ::1 only; macOS and Windows do not), while every
+ * browser maps it itself. Resolves to { status, config } or null when nothing
+ * answers on :80.
+ */
+export const probeDoorConfig = (name, { port = 80, address = '127.0.0.1', basePath = '/serverXR', request = http.request } = {}) => new Promise((resolve) => {
+    let done = false
+    const finish = (value) => { if (!done) { done = true; resolve(value) } }
+    try {
+        const req = request({ host: address, port, path: `${basePath}/api/config`, headers: { host: name, accept: 'application/json' }, timeout: 2000 }, (res) => {
+            let body = ''
+            res.setEncoding('utf8')
+            res.on('data', (chunk) => { if (body.length < 65536) body += chunk })
+            res.on('end', () => {
+                let config = null
+                try { config = JSON.parse(body)?.config ?? null } catch { /* not di.iiii */ }
+                finish({ status: res.statusCode, config })
+            })
+            res.on('error', () => finish(null))
+        })
+        req.on('timeout', () => { req.destroy(); finish(null) })
+        req.on('error', () => finish(null))
+        req.end()
+    } catch {
+        finish(null)
+    }
+})
