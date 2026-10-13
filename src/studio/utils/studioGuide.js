@@ -122,7 +122,8 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         title: 'Edit',
         rows: [
             ['Ctrl+C / X / V', 'Copy / Cut / Paste'],
-            ['Shift+D / Ctrl+D', 'Duplicate'],
+            ['Shift+D', 'Duplicate and move the copy at once (Esc leaves it in place)'],
+            ['Ctrl+D', 'Duplicate in place'],
             ['Del / Backspace', 'Delete selected'],
             ['Ctrl+G', 'Group selection'],
             ['Ctrl+Shift+G', 'Ungroup'],
