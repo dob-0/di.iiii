@@ -180,6 +180,7 @@ export function useCameraNavigation({
         const focusPoint = new Vector3()
 
         const camPos = new Vector3(), viewDir = new Vector3(), point = new Vector3(), goalPos = new Vector3(), goalTarget = new Vector3(), moveDelta = new Vector3()
+        const curPos = new Vector3(), curTarget = new Vector3(), endPos = new Vector3(), endTarget = new Vector3()
         // The turning point onto the view axis, `distance` ahead; the camera does not move.
         const offset = new Vector3()
         const placeTurnPoint = (distance) => {
@@ -192,10 +193,16 @@ export function useCameraNavigation({
                 cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, false)
                 return
             }
-            cc.getPosition(camPos, true); cc.getTarget(goalTarget, true)
-            viewDir.subVectors(goalTarget, camPos).normalize()
-            point.copy(camPos).addScaledVector(viewDir, distance)
-            cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, cc.active)
+            // The point goes `distance` ahead of the camera where it is AND where a running glide is heading, so the glide goes on
+            // and the turning distance is right from the first frame (easing it whenever camera-controls had not yet rested swung a
+            // turn in place 4 cm: measured on the 3080, 2026-10-13).
+            cc.getPosition(curPos, false); cc.getTarget(curTarget, false)
+            cc.getPosition(endPos, true); cc.getTarget(endTarget, true)
+            const gliding = curPos.distanceToSquared(endPos) > 1e-12 || curTarget.distanceToSquared(endTarget) > 1e-12
+            viewDir.subVectors(endTarget, endPos).normalize()
+            point.copy(curPos).addScaledVector(viewDir, distance)
+            cc.setLookAt(curPos.x, curPos.y, curPos.z, point.x, point.y, point.z, false)
+            if (gliding) { point.copy(endPos).addScaledVector(viewDir, distance); cc.setLookAt(endPos.x, endPos.y, endPos.z, point.x, point.y, point.z, true) }
         }
         // Camera and turning point forward (+) or back along the view, from where the controls are heading (their goal), so
         // notches that arrive while a glide is still running add up exactly.
@@ -214,7 +221,6 @@ export function useCameraNavigation({
         // Flight moves the camera at once (a glide behind the keys lagged 0.6 m in a second and drifted on after the keys were
         // up: measured on the 3080, 2026-10-13). If a wheel glide is running, where it is heading moves by the same delta and it
         // goes on: nothing jumps and no notch is cut.
-        const curPos = new Vector3(), curTarget = new Vector3(), endPos = new Vector3(), endTarget = new Vector3()
         const translateAll = (delta) => {
             cc.getPosition(curPos, false); cc.getTarget(curTarget, false)
             cc.getPosition(endPos, true); cc.getTarget(endTarget, true)

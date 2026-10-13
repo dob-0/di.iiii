@@ -249,3 +249,18 @@ describe('flight moves at once', () => {
         expect(cam.position.distanceTo(b)).toBeLessThan(1e-3) // no tail after the key is up
     })
 })
+
+describe('turning in place right after another move', () => {
+    it('a turn in place right after a flight (camera-controls not yet rested) stays in place', () => {
+        const { el, cam, cc } = setup({ turn: 'place' })
+        act(() => { el.dispatchEvent(pe('pointerdown', { button: 2, buttons: 2 })); document.body.dispatchEvent(key('keydown', { key: 'w', code: 'KeyW' })) })
+        runFrames(10, 1000 / 60, cc)
+        act(() => { document.body.dispatchEvent(key('keyup', { key: 'w', code: 'KeyW' })); document.dispatchEvent(pe('pointerup', { button: 2, buttons: 0 })) })
+        const a = cam.position.clone()
+        act(() => { el.dispatchEvent(pe('pointerdown', { button: 0, buttons: 1 })) })
+        for (let i = 1; i <= 10; i += 1) { act(() => { document.dispatchEvent(pe('pointermove', { buttons: 1, clientX: 800 + 20 * i })) }); cc.update(1 / 60) }
+        act(() => { document.dispatchEvent(pe('pointerup', { button: 0, buttons: 0, clientX: 1000 })) })
+        settle(cc)
+        expect(cam.position.distanceTo(a)).toBeLessThan(0.005)
+    })
+})
