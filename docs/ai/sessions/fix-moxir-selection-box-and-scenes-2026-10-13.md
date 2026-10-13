@@ -68,3 +68,6 @@ Owner: 'make the beams straight up so they are easy to edit now' → the 12 side
 
 ## 10-13 19:5x — the owner's decisions written down (nothing left behind)
 Decision record `docs/ai/decisions/2026-10-13-views-library-words-workflow.md` (views per project, default walk+plan, per production, one fixture library with provenance, viewer loads only the project's types, words owed, connected workflow, versions in one place). Hard rule 'Nothing is left behind' in the owner's CLAUDE.md, memory, brief template, board.
+
+## 10-13 20:4x — the professional sweep brief
+Owner: one best walk, every device (touchpad!), everything professional. Brief `docs/ai/cloud-briefs/2026-10-13-pro-sweep.md`: his standing decisions, one method (Nielsen heuristics + WCAG 2.2 AA + a device matrix with touchpad wheel/pinch), file ownership for six cloud agents #24–#29.
