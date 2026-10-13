@@ -63,7 +63,8 @@ process.on('unhandledRejection', (e) => { console.log('ERR', String(e).slice(0, 
         const fr = await page.evaluate(() => window.__frames); const tr = await page.evaluate(() => (window.__diNavTrace || []).slice(-12))
         const steps = fr.map((f) => f[0]).filter((s) => s > 1e-4); const sorted = [...steps].sort((a, b) => a - b); const med = sorted[Math.floor(sorted.length / 2)] || 0
         const jumps = fr.map((f, i) => ({ i, s: f[0], dist: f[1] })).filter((f) => med && f.s > 6 * med && f.s > 0.05)
-        const g = { label, distStart: +d0.toFixed(3), distEnd: fr.length ? fr[fr.length - 1][1] : null, moving: steps.length, med: +med.toFixed(4), max: steps.length ? Math.max(...steps) : 0, jumps: jumps.slice(0, 4), picks: tr.filter((t) => t.gestureStart || t.action === 'wheel').map((t) => ({ a: t.action, hit: t.hit, kept: t.kept, dist: t.distance, step: t.step })).slice(0, 6) }
+        const top = fr.map((f, i) => [i, f[0], f[1]]).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        const g = { label, top, traceAll: steps.length < 3 ? tr.slice(-5) : undefined, distStart: +d0.toFixed(3), distEnd: fr.length ? fr[fr.length - 1][1] : null, moving: steps.length, med: +med.toFixed(4), max: steps.length ? Math.max(...steps) : 0, jumps: jumps.slice(0, 4), picks: tr.filter((t) => t.gestureStart || t.action === 'wheel').map((t) => ({ a: t.action, hit: t.hit, kept: t.kept, dist: t.distance, step: t.step })).slice(0, 6) }
         gestures.push(g); console.log('GESTURE', JSON.stringify(g))
     }
     const drag = async (button, from, to, mods = [], ms = 500) => { for (const k of mods) await page.keyboard.down(k); await page.mouse.move(...from); await page.mouse.down({ button }); const n = 20; for (let i = 1; i <= n; i++) { await page.mouse.move(from[0] + (to[0] - from[0]) * i / n, from[1] + (to[1] - from[1]) * i / n); await sleep(ms / n) } await page.mouse.up({ button }); for (const k of mods) await page.keyboard.up(k) }
@@ -90,6 +91,7 @@ process.on('unhandledRejection', (e) => { console.log('ERR', String(e).slice(0, 
     await gesture('edit scroll out 12', () => scroll(P(0.5, 0.5), 12, -1))
     await tool('Navigate')
     await gesture('nav orbit across the stage', () => drag('left', P(0.4, 0.55), P(0.65, 0.5)))
+    console.log('AT', JSON.stringify(await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return { tag: e?.tagName, cls: String(e?.className || '').slice(0, 80), id: e?.id } }, P(0.6, 0.5))))
     await gesture('nav pan across the stage', () => drag('right', P(0.6, 0.5), P(0.35, 0.6)))
     await gesture('nav scroll in 12 over the rig', () => scroll(P(0.5, 0.35), 12, 1))
     await gesture('nav scroll in 12 sweeping across', async () => { for (let i = 0; i < 12; i++) { await page.mouse.move(...P(0.3 + i * 0.035, 0.4)); await page.mouse.wheel(0, -100); await sleep(70) } })

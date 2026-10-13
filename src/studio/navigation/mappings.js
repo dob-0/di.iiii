@@ -88,6 +88,8 @@ export const NAVIGATION_PRESETS = Object.freeze({
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
         dollyToCursor: false, // the owner's Blender: Zoom to Mouse Position OFF (2026-10-12)
+        // Every move's speed from the scene distance, not the pixel under the pointer (sceneDistance.js; owner's yes, 2026-10-13).
+        speedFromView: true,
         // Blender (view3d_navigate_view_zoom.cc, main, read 2026-10-12): a wheel step is `step = 1.2f` applied at once, no
         // Smooth View; drags write the view per mouse move. So no drag/wheel easing; Smooth View (his 200 ms) only for view
         // changes (numpad views, frame), which camera-controls does with smoothTime on setLookAt transitions.

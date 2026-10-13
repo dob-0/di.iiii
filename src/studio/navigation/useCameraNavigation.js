@@ -12,6 +12,7 @@ import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
 import { clientToNdc, pickPivot, selectionCenter } from './autoDepth.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
+import { createSceneDistance, nextSceneDistance } from './sceneDistance.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 // A wheel burst is one gesture: pick once, after this much quiet.
@@ -99,6 +100,8 @@ export function useCameraNavigation({
     orbitSelection = false,
     selectedEntityIds = null,
     getScene,
+    // The WebGLRenderer, for the scene-distance depth picture (sceneDistance.js). Read at gesture time.
+    getGl,
     // Re-run when the controls mount/unmount (Studio hides them in XR / when disabled).
     active = true,
 }) {
@@ -113,6 +116,14 @@ export function useCameraNavigation({
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
         const unclamp = clampUpdates(cc)
+        // The Blender tool's moves take their speed from the scene distance (sceneDistance.js, owner's yes 2026-10-13).
+        const sceneDistance = preset.speedFromView ? createSceneDistance() : null
+        let lastWheel = null // { pos, distance }: where this wheel left the camera, so the next notch knows it is the same run
+        const measureView = () => {
+            const scene = getScene?.()
+            return sceneDistance?.measure({ gl: getGl?.(), scene, camera: cc.camera, roots: scene ? entityRoots(scene) : [], near: cc.minDistance }) ?? null
+        }
+        const viewRange = () => ({ min: cc.minDistance, max: Math.min(cc.maxDistance, cc.camera.far) })
 
         // `gestureStart`: the gesture's own pointerdown/wheel, after settleForGesture stopped any easing: camera-controls still
         // reports `active` for a frame after stop(), and a pivot that waits for it never lands (measured: the first gesture's pivot
@@ -128,6 +139,16 @@ export function useCameraNavigation({
             if (action === CC_ACTION.ROTATE && orbitSelection && selected?.length) {
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
                 if (center) { applyPivot(cc, center, { force: gestureStart, onAxis: false }); return }
+            }
+            // The Blender tool: the orbit point goes onto the view axis at the scene distance, so orbit, pan and the drag zoom move
+            // in proportion to what the view shows, never to the one object under the pointer (sceneDistance.js).
+            if (preset.speedFromView) {
+                lastWheel = null
+                const measured = measureView()
+                const d = nextSceneDistance({ measured, ...viewRange() })
+                const applied = d ? applyPivot(cc, axisPointAtDepth(cc.camera, cc.camera.getWorldDirection(new Vector3()).multiplyScalar(d).add(cc.camera.position)), { force: gestureStart }) : false
+                trace({ action, gestureStart, source: 'scene distance', measured: measured == null ? null : +measured.toFixed(3), distance: d == null ? null : +d.toFixed(3), applied })
+                return
             }
             // Auto Depth (Blender view3d_navigate.cc `navigate_pivot_get`, v5.0.0): the orbit point goes to the depth of the surface
             // under the pointer when a drag starts; nothing there, and the view centre stays where it is (Blender's fallback_depth_pt
@@ -165,8 +186,9 @@ export function useCameraNavigation({
             if (!notches) return
             const cam = cc.camera
             cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
-            // Blender's soft range: in to the near clip (ED_view3d_dist_soft_min_get, perspective: clip start x 1.5), out to clip end x 10.
-            const range = { minDistance: cam.near * 1.5, maxDistance: cam.far * 10 }
+            // Blender's soft range: in to the near clip (ED_view3d_dist_soft_min_get, perspective: clip start x 1.5), out to clip end x 10,
+            // and never past the controls' own maxDistance, which would pull the camera back (camera-controls clamps the radius).
+            let range = { minDistance: cam.near * 1.5, maxDistance: Math.min(cc.maxDistance, cam.far * 10) }
             let hit = null, distance = cc.distance
             if (preset.dollyToCursor) {
                 // The Sketchfab tool zooms toward what is under the pointer, through it when pressed against it (`beyond`),
@@ -179,13 +201,22 @@ export function useCameraNavigation({
                 if (ndc) rayDir.set(ndc[0], ndc[1], 0.5).unproject(cam).sub(camPos).normalize()
                 else rayDir.copy(viewDir)
             } else {
-                // The Blender tool (Zoom to Mouse Position OFF, the owner's preference): along the view axis, the orbit point stays.
+                // The Blender tool (Zoom to Mouse Position OFF, the owner's preference): along the view axis, by Blender's ratio of
+                // the SCENE DISTANCE. Inside one run of notches it changes at most 1.2x per notch; a surface closer than the
+                // contact distance is not in the depth picture, so the wheel goes through it and never stops at it.
                 rayDir.copy(viewDir)
+                const consecutive = Boolean(lastWheel) && camPos.distanceTo(lastWheel.pos) < 1e-3
+                const measured = measureView()
+                const d = nextSceneDistance({ measured, previous: consecutive ? lastWheel.distance : cc.distance, consecutive, ...viewRange() })
+                if (d) distance = d
+                range = { minDistance: 0, maxDistance: viewRange().max }
+                trace({ action: 'wheel-measure', measured: measured == null ? null : +measured.toFixed(3), consecutive, distance: +distance.toFixed(3) })
             }
             const plan = wheelZoomPlan({ distance, notches, ...range })
             if (!plan) { trace({ action: 'wheel', notches, distance: +distance.toFixed(3), step: 0, why: 'outside the soft range' }); return }
             newPos.copy(camPos).addScaledVector(rayDir, plan.step)
-            newTarget.copy(newPos).addScaledVector(viewDir, plan.newDistance)
+            newTarget.copy(newPos).addScaledVector(viewDir, Math.max(plan.newDistance, cc.minDistance))
+            if (preset.speedFromView) lastWheel = { pos: newPos.clone(), distance: plan.newDistance > 0 ? Math.max(plan.newDistance, cc.minDistance) : distance }
             // camera-controls' own wheel used to announce itself; drei invalidates the on-demand loop on 'update' and the Studio
             // saves the camera on 'controlend', so the app's wheel announces the same way (else nothing draws until the next move).
             cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
@@ -218,10 +249,11 @@ export function useCameraNavigation({
         doc.addEventListener('dblclick', onDoubleClick, { capture: true })
         return () => {
             unclamp()
+            sceneDistance?.dispose()
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             element.removeEventListener('wheel', onWheel)
             doc.removeEventListener('contextmenu', onContextMenu, { capture: true })
             doc.removeEventListener('dblclick', onDoubleClick, { capture: true })
         }
-    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene])
+    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene, getGl])
 }
