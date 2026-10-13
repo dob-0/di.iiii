@@ -7,6 +7,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
 import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
@@ -888,6 +889,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 return
             }
 
+            // Clear Location / Rotation / Scale (Alt+G / Alt+R / Alt+S, Blender): the selection back to
+            // the rest value in one batch (one Ctrl+Z); locked objects are left where they are.
+            const clearCommand = clearFromKey(event)
+            if (clearCommand && !isTypingTarget(event.target)) {
+                event.preventDefault()
+                const ops = clearTransformOps(entities, selectedEntities.map((entity) => entity.id), clearCommand)
+                if (ops.length) applyLocalOps(ops, { activityMessage: `Cleared the ${clearCommand} of ${ops.length} object${ops.length === 1 ? '' : 's'}.` })
+                return
+            }
+
             // Clipboard — Copy (Ctrl/Cmd+C), Paste (Ctrl/Cmd+V), Cut (Ctrl/Cmd+X)
             if (meta && (key === 'c' || key === 'C')) {
                 if (!selectedEntity && !selectedEntities.length) return
@@ -920,11 +931,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 return
             }
 
-            // Duplicate — Shift+D (Blender) or Ctrl/Cmd+D
+            // Duplicate — Shift+D (Blender) or Ctrl/Cmd+D. Shift+D then moves the copy at once (Blender's
+            // Duplicate Objects: a grab follows; Esc leaves the copy where the original stands). Ctrl+D only copies.
             if ((event.shiftKey || meta) && (key === 'd' || key === 'D')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDuplicateSelected()
+                if (event.shiftKey && !meta) handleStartTransform('translate', null)
                 return
             }
             // Delete / Backspace. Bare X is reserved for gizmo axis constraint.

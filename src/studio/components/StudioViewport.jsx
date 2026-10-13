@@ -1,6 +1,6 @@
 import { movableEntities, pickLampBody } from '../utils/selectionTools.js'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
-import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
+import { gizmoSnapSteps, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
 import { runViewCommand } from '../utils/viewCommands.js'
 import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -369,9 +369,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
-                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
-                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
-                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
+                    translationSnap={gizmoSnapSteps(snapping).translation}
+                    rotationSnap={gizmoSnapSteps(snapping).rotation}
+                    scaleSnap={gizmoSnapSteps(snapping).scale}
                 />
             )}
         </>
@@ -529,9 +529,9 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
-                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
-                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
-                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
+                    translationSnap={gizmoSnapSteps(snapping).translation}
+                    rotationSnap={gizmoSnapSteps(snapping).rotation}
+                    scaleSnap={gizmoSnapSteps(snapping).scale}
                 />
             )}
         </>

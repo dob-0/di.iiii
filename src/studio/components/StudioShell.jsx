@@ -436,7 +436,8 @@ export default function StudioShell({
             // gizmo mode + chosen axis (mouse delta moves on that axis immediately).
             // ModalTransform's capture listener owns X/Y/Z once a session is running.
             // T toggles gizmo visibility.
-            if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            // Alt+G/R/S are Clear Location/Rotation/Scale (StudioEditor) — never a grab.
+            if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'

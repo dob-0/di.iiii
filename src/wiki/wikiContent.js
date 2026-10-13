@@ -832,10 +832,10 @@ export const WIKI_ARTICLES = [
                 'Every file — uploaded, from Google Drive, or from the Commons — sits in the Create window’s Files list with + Add to place it in the scene, badges for where it is used and for public sharing, and × to delete. PDFs import as images, one per page.',
                 'Drag to position; edit the selected object in the Objects window — the defaults for the whole scene live in the Scene window.',
                 'In the Objects tree: double-click any object to rename it, and use the per-row circle (show/hide) and square (lock/unlock) toggles — hidden objects disappear from the scene, locked ones can be selected but not moved.',
-                'Duplicate (Ctrl+D / Shift+D) and copy/paste (Ctrl+C / Ctrl+V) carry whole hierarchies — duplicating a group brings all of its children along, and copy works on multi-selections.',
+                'Duplicate (Shift+D copies and starts moving the copy at once — Esc leaves it in place; Ctrl+D copies in place) and copy/paste (Ctrl+C / Ctrl+V) carry whole hierarchies — duplicating a group brings all of its children along, and copy works on multi-selections.',
                 'Drag an Objects-tree row onto a group to nest it (its position in the scene is kept), onto another object to make them siblings, or onto empty list space to move it back to the root.',
                 'Drop files straight onto the viewport — from your computer or from the Create window’s Files list — and they land in the scene at the point under your cursor.',
-                'Hold Ctrl while dragging a gizmo or during G/R/S to snap: 0.5-unit moves, 15° rotations, 0.1 scale steps. Or type an exact value mid-operation (R, Y, then 45 = 45°; S then 2 = double size). Rotating or scaling a multi-selection with G/R/S turns the whole arrangement around its shared center.',
+                'Hold Ctrl while dragging a gizmo or during G/R/S to snap: 0.5-unit moves, 15° rotations, 0.1 scale steps; Ctrl+Shift snaps to a tenth (5 cm, 1.5°, 0.01). Shift+X / Y / Z during G/R/S keeps a plane — Shift+Y slides an object along the floor without lifting it. Or type an exact value mid-operation (R, Y, then 45 = 45° about the world Y; R 90 turns around the view; S then 2 = double size). Alt+G / Alt+R / Alt+S put the selection back to the origin / no rotation / size 1. The Inspector reads rotation in degrees. Rotating or scaling a multi-selection with G/R/S turns the whole arrangement around its shared center.',
                 'Eight primitive shapes — box, sphere, cone, cylinder, plane, torus, capsule, ring — all take materials: one-click Presets (Matte, Metal, Glass, Glow — Glow uses the object’s own colour), any imported image as a Texture, and fine Roughness / Metalness / Emissive controls in the Appearance section.',
                 'Videos can play sound: untick Muted and set Volume in the video’s Media section. Sound starts after the visitor’s first click or keypress (browser autoplay rules) — this works in the editor and on published pages.',
                 'Text objects have full type controls: six 2D font choices with weight, italic, and alignment; and for 3D text, four sculpted typefaces (Helvetiker, Helvetiker Bold, Optimer, Gentilis) with depth and bevel shaping.',
@@ -1080,8 +1080,9 @@ export const WIKI_ARTICLES = [
                 'H — toggle the UI',
                 'F or . — frame the selection (Studio)',
                 'Ctrl+Z — undo · Ctrl+Y or Ctrl+Shift+Z — redo (granular: reverts only your own last change, collaborator-safe)',
-                'Shift+D or Ctrl+D — duplicate · Delete/Backspace — remove',
-                'G / R / S — move, rotate, scale gizmo; X / Y / Z constrain the axis; hold Ctrl to snap or type an exact value (degrees for R, factor for S)',
+                'Shift+D — duplicate and move · Ctrl+D — duplicate in place · Delete/Backspace — remove',
+                'G / R / S — move, rotate, scale gizmo; X / Y / Z constrain the axis, Shift+X / Y / Z keep a plane; hold Ctrl to snap (Ctrl+Shift finer) or type an exact value (degrees for R, factor for S)',
+                'Alt+G / Alt+R / Alt+S — clear location / rotation / scale',
                 'While moving/rotating/scaling: Enter, Space or click — confirm · Esc — cancel and put everything back',
                 'A — select all · Alt+A — deselect all',
                 'Mouse wheel — zoom (always; it never rotates the view)',
@@ -1091,7 +1092,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
-        updated: '2026-08-19'
+        updated: '2026-10-13'
     },
     {
         id: 'api-and-agents',

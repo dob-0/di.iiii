@@ -110,16 +110,20 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['S', 'Scale: starts at once with a selection (never Select — that is the tool, or B)'],
             ['→ X / Y / Z', 'Constrain axis + start drag'],
             ['→ A', 'All axes (uniform)'],
+            ['→ Shift+X / Y / Z', 'Keep a plane: every axis but that one (Shift+Y = along the floor)'],
             ['Shift + drag', 'Fine / slow adjustment'],
+            ['Ctrl + drag', 'Snap: 0.5 m · 15° · 0.1 (gizmo too); Ctrl+Shift snaps to a tenth (5 cm · 1.5° · 0.01)'],
             ['Click · Enter · Space', 'Confirm'],
             ['Esc', 'Cancel'],
+            ['Alt+G / Alt+R / Alt+S', 'Clear location / rotation / scale of the selection (locked objects stay)'],
         ]
     },
     {
         title: 'Edit',
         rows: [
             ['Ctrl+C / X / V', 'Copy / Cut / Paste'],
-            ['Shift+D / Ctrl+D', 'Duplicate'],
+            ['Shift+D', 'Duplicate and move the copy at once (Esc leaves it in place)'],
+            ['Ctrl+D', 'Duplicate in place'],
             ['Del / Backspace', 'Delete selected'],
             ['Ctrl+G', 'Group selection'],
             ['Ctrl+Shift+G', 'Ungroup'],
