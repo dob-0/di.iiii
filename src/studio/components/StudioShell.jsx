@@ -481,8 +481,12 @@ export default function StudioShell({
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
+        // Navigate moves like Sketchfab (owner, 2026-10-12): a double-click focuses the camera on the surface under the pointer
+        // (useCameraNavigation). Quick Insert on double-click stays the Edit tool's. Walked through 2026-10-12: with both, the
+        // Quick Insert panel took the wheel and every scroll after a double-click did nothing.
+        if (viewportEditMode === 'navigate') return
         setQuickInsert({ x: e.clientX, y: e.clientY, worldPos: computeGroundPoint(e, controlsRef) })
-    }, [controlsRef])
+    }, [controlsRef, viewportEditMode])
 
     // Drop targets: OS files and Files-list items land in the scene at the
     // ground point under the cursor (same raycast as double-click Quick Insert).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene } from 'three'
-import { clientToNdc, isNavigationHelper, pickPivot, selectionCenter } from './autoDepth.js'
+import { clientToNdc, fallbackPivot, isNavigationHelper, pickPivot, selectionCenter } from './autoDepth.js'
 
 const geo = new BoxGeometry(1, 1, 1)
 const mat = new MeshBasicMaterial()
@@ -92,5 +92,44 @@ describe('helpers', () => {
         const c = selectionCenter([box(0, -2), box(0, 2)])
         expect(c.x).toBeCloseTo(0, 5)
         expect(selectionCenter([])).toBeNull()
+    })
+})
+
+describe('fallbackPivot (nothing under the pointer: the nearest surface around the camera sets the depth)', () => {
+    // A hall the camera stands inside: floor 4 m below, roof 9 m above, a wall 3.5 m behind, open ahead.
+    function hall() {
+        const g = new Group()
+        const floor = new Mesh(new BoxGeometry(40, 0.1, 200), mat); floor.position.set(0, -4.05, 0)
+        const roof = new Mesh(new BoxGeometry(40, 0.1, 200), mat); roof.position.set(0, 9.05, 0)
+        const back = new Mesh(new BoxGeometry(40, 20, 0.1), mat); back.position.set(0, 0, 3.55)
+        g.add(floor, roof, back); g.updateMatrixWorld(true)
+        return [g]
+    }
+    it('puts the pivot the floor-distance ahead along the view ray when the pointer ray misses', () => {
+        const c = new PerspectiveCamera(50, 1, 0.05, 400)
+        c.position.set(0, 0, 0); c.lookAt(0, 0, -100); c.updateMatrixWorld(true)
+        const roots = hall()
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: roots })).toBeNull()
+        const p = fallbackPivot({ camera: c, objects: roots })
+        expect(p).not.toBeNull()
+        expect(p.z).toBeCloseTo(-3.5, 1)   // the wall 3.5 m behind is the nearest surface
+        expect(p.x).toBeCloseTo(0, 5); expect(p.y).toBeCloseTo(0, 5)
+    })
+    it('returns null in empty space, so applyPivot keeps the current target', () => {
+        const c = new PerspectiveCamera(50, 1, 0.05, 400)
+        c.position.set(0, 0, 0); c.updateMatrixWorld(true)
+        expect(fallbackPivot({ camera: c, objects: [] })).toBeNull()
+        expect(fallbackPivot({ camera: c, objects: [new Group()] })).toBeNull()
+    })
+})
+
+describe('pickPivot beyond: the surface the camera is pressed against is looked past', () => {
+    it('skips hits closer than `beyond` and returns the next one, or null', () => {
+        const c = new PerspectiveCamera(50, 1, 0.05, 400)
+        c.position.set(0, 0, 1); c.lookAt(0, 0, -10); c.updateMatrixWorld(true)
+        const near = box(0), far = box(-8)   // a 1 m box at z=0 (its face 0.5 m ahead) and one at z=-8
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: [near, far] }).z).toBeCloseTo(0.5, 5)
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: [near, far], beyond: 0.525 }).z).toBeCloseTo(-7.5, 5)
+        expect(pickPivot({ camera: c, ndc: [0, 0], objects: [near], beyond: 0.525 })).toBeNull()
     })
 })
