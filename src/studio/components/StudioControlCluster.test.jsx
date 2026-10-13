@@ -33,7 +33,7 @@ describe('the Preview button', () => {
         expect(help.nextElementSibling).toBe(preview)
         expect(preview.className).toBe('scc-btn')
         expect(preview.closest('.scc-section').querySelector('.scc-section-label')).toHaveTextContent('Display')
-        expect(preview).toHaveAttribute('title', 'Preview — the room as visitors see it (new tab)')
+        expect(preview).toHaveAttribute('title', 'Preview — the scene as visitors see it (new tab)')
     })
 
     it('opens this project\'s VIEW page in a new tab, for a given space and slug', () => {

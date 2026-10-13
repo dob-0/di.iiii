@@ -171,7 +171,7 @@ export default function StudioControlCluster({
                                     <button
                                         className="scc-btn"
                                         onClick={() => window.open(previewUrl, '_blank', 'noopener')}
-                                        title="Preview — the room as visitors see it (new tab)"
+                                        title="Preview — the scene as visitors see it (new tab)"
                                     >
                                         Preview
                                     </button>
