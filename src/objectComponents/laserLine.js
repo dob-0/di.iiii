@@ -198,8 +198,11 @@ export const scanLines = (points, { fieldHalfDeg = FIELD_HALF_DEG, stepDeg = SCA
     for (let i = 0; i < N; i += 1) {
         const a = pts[i]
         const b = pts[(i + 1) % N]
-        const colour = [b[2], b[3], b[4]]
-        if (!(colour[0] > 0 || colour[1] > 0 || colour[2] > 0)) continue
+        const own = [b[2], b[3], b[4]]
+        if (!(own[0] > 0 || own[1] > 0 || own[2] > 0)) continue
+        // The lamp's colour (the look's, read as drive) scales the frame's own colour per diode, as a projector's DMX
+        // colour channels scale the frame it plays; default drive [1, 1, 1] leaves the frame as written.
+        const colour = own.map((c, k) => c * (drive[k] ?? 1))
         const angle = Math.hypot(b[0] - a[0], b[1] - a[1]) * fieldHalfDeg
         const k = Math.max(1, Math.ceil(angle / stepDeg))
         segments.push({ a, b, colour, k })

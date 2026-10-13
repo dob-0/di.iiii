@@ -99,7 +99,9 @@ export const laserFramesOf = (rig, { dirOf, matrixN = MATRIX_N, spread = MATRIX_
         const beams = (f.laser?.beams || []).filter((b) => !b.off)
         if (!beams.length) continue
         const field = fieldOf(f.type)
-        const drive = driveOfHex(f.colour).map(r4)
+        // Lit points at full (1, 1, 1): the room scales a frame by the look's colour (laserLine.js scanLines), so the
+        // scene decides the colour as it does for a static line; the unit's own colour would be applied twice.
+        const drive = [1, 1, 1]
         if (f.type === 'up-la40wf') {
             const frame = matrixFrame({ n: matrixN, spread, drive })
             for (const b of beams) byBeam.set(`rig-laser-${b.id}`, { frame, fieldHalfDeg: field.halfDeg })

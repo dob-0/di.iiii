@@ -135,3 +135,24 @@ describe('laserLine: frames in time', () => {
         expect(scanLinesAt(bare, 7)).toEqual([{ dir: [0, -1, 0], drive: [1, 1, 1], duty: 1 }])
     })
 })
+
+// 2026-10-13: with frames the look's colour never reached the lines (they kept the frame's own colour, so 'the net'
+// in green drew white). The lamp's drive now scales the frame per diode, as a projector's DMX colour channels do.
+describe('a frame is scaled by the lamp\'s colour', () => {
+    const frame = [[-0.5, 0, 0, 0, 0], [-0.5, 0, 1, 1, 1], [0.5, 0, 0, 0, 0], [0.5, 0, 1, 1, 1]]
+    it('white lit points under a green look draw green lines', () => {
+        const lines = scanLines(frame, { drive: [0, 1, 0] })
+        expect(lines.length).toBeGreaterThan(0)
+        for (const l of lines) expect(l.drive).toEqual([0, 1, 0])
+    })
+    it('the default drive leaves the frame\'s own colour', () => {
+        const red = [[0, 0, 0, 0, 0], [0, 0, 1, 0, 0]]
+        for (const l of scanLines(red)) expect(l.drive).toEqual([1, 0, 0])
+    })
+    it('blank moves stay blank whatever the look', () => {
+        const lines = scanLines(frame, { drive: [1, 1, 1] })
+        const lit = lines.reduce((sum, l) => sum + l.duty, 0)
+        expect(lit).toBeCloseTo(0.5, 6)
+    })
+})
+
