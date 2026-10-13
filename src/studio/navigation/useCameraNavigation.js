@@ -304,7 +304,7 @@ export function useCameraNavigation({
         }
         const onPointerUp = (event) => { if (event.button === 2) stopFlying() }
         // A release outside the window may never arrive as pointerup: the next move that shows no right button ends the flight.
-        const onPointerMoveFly = (event) => { readMods(event); if (rightHeld && (event.buttons & 2) === 0) stopFlying() }
+        const onPointerMoveFly = (event) => { if (event.pointerType === 'touch') return; readMods(event); if (rightHeld && (event.buttons & 2) === 0) stopFlying() }
 
         // Touch (review-move F3): spreading two fingers 100 px goes one step forward (the zoom drag's rule) and moving them
         // together slides at the standard metres per pixel; one finger turns (camera-controls), around the point placed here.
@@ -318,7 +318,10 @@ export function useCameraNavigation({
                 if (!focused) placeTurnPoint(Math.min(Math.max(turnDistance(speed(true), settingsRef.current.turn), cc.minDistance), cc.maxDistance))
                 return
             }
-            if (touchPts.size === 2) { focused = false; speed(true); pinch = touchMeasure(); cc.dispatchEvent({ type: 'controlstart', originalEvent: event }) }
+            if (touchPts.size === 2 && !pinch) { focused = false; speed(true); cc.dispatchEvent({ type: 'controlstart', originalEvent: event }) }
+            // A pair is measured from the moment it is a pair: a third finger landing makes it three (no move), and the pair
+            // that remains after any lift is a new pair, so its first move is measured against itself, not the old pair.
+            if (touchPts.size === 2) pinch = touchMeasure()
         }
         const onTouchMove = (event) => {
             if (event.pointerType !== 'touch' || !touchPts.has(event.pointerId)) return
@@ -332,7 +335,8 @@ export function useCameraNavigation({
         }
         const onTouchUp = (event) => {
             if (event.pointerType !== 'touch' || !touchPts.delete(event.pointerId)) return
-            if (pinch && touchPts.size < 2) { pinch = null; cc.dispatchEvent({ type: 'controlend', originalEvent: event }) }
+            if (!pinch) return
+            if (touchPts.size < 2) { pinch = null; cc.dispatchEvent({ type: 'controlend', originalEvent: event }) } else if (touchPts.size === 2) pinch = touchMeasure()
         }
 
         const onPointerDown = (event) => {
