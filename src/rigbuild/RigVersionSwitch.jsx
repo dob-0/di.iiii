@@ -54,7 +54,7 @@ const linkStyle = (current, extra = {}) => ({
     alignItems: 'center',
     minHeight: '44px',
     padding: '0 0.95rem',
-    borderRadius: 'var(--di-radius, 2px)',
+    borderRadius: '2px',
     fontSize: 'var(--di-text-4, 0.9rem)',
     whiteSpace: 'nowrap',
     textDecoration: 'none',

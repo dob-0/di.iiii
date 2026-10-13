@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -20,7 +20,9 @@ const document = {
     ] } } }],
 }
 
-afterEach(() => cleanup())
+// the picker is folded at first visit; the older tests are about the open list, so this viewer has opened it
+beforeEach(() => window.localStorage.setItem('di.panel.studio-scenes', '1'))
+afterEach(() => { cleanup(); window.localStorage.clear() })
 
 describe('scenesOf: the cue list with each look\'s one-line intent', () => {
     it('keeps the cue order, strips the rig- prefix, carries title and intent; a cue without a look still lists', () => {

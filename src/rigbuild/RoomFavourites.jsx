@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShowError, blockOf, chooseCue, cleanName, favouriteButtons, isLiveScene, liveOf } from './showApi.js'
 import { useShowFeed } from './useShowFeed.js'
 import useRememberedOpen from '../utils/rememberedOpen.js'
-import { CHIP, ACTIVE, INK, LINE, RADIUS } from './chromeStyle.js'
+import { CHIP, ACTIVE, INK, LINE } from './chromeStyle.js'
 
 // THE TEN FAVOURITE SCENE BUTTONS (were five; owner, 2026-10-09: "10 animated scenes in favorite"), IN THE ROOM BEHIND ONE SMALL CONTROL (owner 2026-10-13:
 // "look how many UI things pop up when you first load the view page; they cover the view" - before, the ten bricks stood on the scene from the first frame;
@@ -153,7 +153,7 @@ const brickStyle = {
     minHeight: 48,
     padding: '0.25rem 0.2rem',
     border: '1px solid',
-    borderRadius: RADIUS,
+    borderRadius: '2px',
     color: 'inherit',
     font: 'inherit',
     display: 'flex',
@@ -164,4 +164,4 @@ const brickStyle = {
     touchAction: 'manipulation',
     backdropFilter: 'blur(8px)'
 }
-const noticeStyle = { pointerEvents: 'auto', margin: '0 0 4px', padding: '0.3rem 0.5rem', background: EMBER, color: '#000', fontWeight: 700, fontSize: 'var(--di-text-3, 0.76rem)', borderRadius: RADIUS }
+const noticeStyle = { pointerEvents: 'auto', margin: '0 0 4px', padding: '0.3rem 0.5rem', background: EMBER, color: '#000', fontWeight: 700, fontSize: 'var(--di-text-3, 0.76rem)', borderRadius: '2px' }

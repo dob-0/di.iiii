@@ -11,7 +11,6 @@ export const ACTIVE = 'var(--di-cyan, #4df9ff)'
 export const ACTIVE_WASH = 'var(--di-cyan-dim, rgba(77, 249, 255, 0.1))'
 export const INK = 'var(--di-text, #fff)'
 export const INK_DIM = 'var(--di-text-muted, rgba(255, 255, 255, 0.5))'
-export const RADIUS = 'var(--di-radius, 2px)'
 export const TARGET = 'var(--di-touch-target, 44px)'
 
 /** A small chip: glass, one line, the touch target tall. The base of every button on the view page. */
@@ -25,7 +24,7 @@ export const CHIP = {
     minWidth: TARGET,
     padding: '0 var(--di-space-3, 12px)',
     border: `1px solid ${LINE}`,
-    borderRadius: RADIUS,
+    borderRadius: '2px',
     background: GLASS,
     backdropFilter: 'blur(12px)',
     color: INK,
@@ -50,7 +49,7 @@ export const PANEL = {
     maxWidth: 'calc(100vw - 2rem)',
     maxHeight: '60vh',
     overflowY: 'auto',
-    borderRadius: RADIUS,
+    borderRadius: '2px',
     border: `1px solid ${LINE}`,
     background: GLASS_STRONG,
     backdropFilter: 'blur(12px)',

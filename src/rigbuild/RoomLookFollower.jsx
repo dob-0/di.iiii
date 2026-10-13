@@ -6,7 +6,7 @@ import { useLightPool } from './useLightPool.js'
 import { showWords } from './showClock.js'
 import { deskCues, cueClockWords } from './cueRun.js'
 import useRememberedOpen from '../utils/rememberedOpen.js'
-import { CHIP, PANEL, INK, LINE, RADIUS } from './chromeStyle.js'
+import { CHIP, PANEL, INK, LINE } from './chromeStyle.js'
 
 // THE SPACE VIEW FOLLOWS THE SHOW (RIG_BUILD.md §15.6, §16). /{space} — the room as it
 // opens, the one the owner watches a show in — draws the lamps posed by the look that is
@@ -120,7 +120,7 @@ const chipBox = (bare, top) => (bare
     : { ...chipStyle, top })
 const Drop = ({ children }) => <div style={PANEL}>{children}</div>
 
-const previewButton = { font: 'inherit', fontSize: 'var(--di-text-3, 0.76rem)', color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: RADIUS, padding: '0.22rem 0.55rem', minHeight: 32, cursor: 'pointer' }
+const previewButton = { font: 'inherit', fontSize: 'var(--di-text-3, 0.76rem)', color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: '2px', padding: '0.22rem 0.55rem', minHeight: 32, cursor: 'pointer' }
 const buttonStyle = { ...CHIP, textTransform: 'none', letterSpacing: 'normal', fontWeight: 400, maxWidth: 'min(18rem, calc(100vw - 2rem))', textAlign: 'left' }
 
 // The chip's own second hand: "next in N s" counts down once a second. The ROOM does not
