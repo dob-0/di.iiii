@@ -90,9 +90,9 @@ jobs:
             exit 0
           fi
           if [[ $STATE == down ]]; then
-            text="di.iiii is DOWN from outside: $DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
+            text="DOWN from outside:$DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
           else
-            text="di.iiii is back up from outside — $(date -u '+%H:%M UTC')"
+            text="All sites back up from outside —$(date -u '+%H:%M UTC')"
           fi
           curl -sS -m 20 -o /dev/null -w 'telegram %{http_code}\n' \
             --data-urlencode "chat_id=$TG_CHAT" --data-urlencode "text=$text" \
@@ -111,8 +111,9 @@ jobs:
                   --json number,title -q ".[] | select(.title == \"$title\") | .number" | head -n1)
           body="Down from GitHub's runners at $(date -u '+%Y-%m-%d %H:%M UTC'): $DOWN"
           if [[ -n $num ]]; then
-            # One outage is one issue: comment on a new down or a changed down
-            # set, not on every check of the same outage.
+            # One outage is one issue: comment when the state turns to down
+            # (up or unknown -> down), not on every check of the same outage.
+            # A change in WHICH sites are down during one outage is not detected.
             if [[ $PREV != down ]]; then gh issue comment "$num" -R "$GITHUB_REPOSITORY" -b "$body"; fi
           else
             gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"
