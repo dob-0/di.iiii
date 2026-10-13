@@ -213,6 +213,9 @@ function AutoLookAround({ controlsRef, config }) {
     return null
 }
 
+// Edit and Select both transform the selection; Navigate never does.
+const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
+
 function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
@@ -269,7 +272,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
         }
     })
 
-    const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
+    // Edit AND Select move the selection (owner 2026-10-13 13:2x: "in Select I can't move there"): the gizmo
+    // mounts in both; a box-select starts only where no gizmo handle took the pointer (BoxSelect.jsx).
+    const gizmoActive = isPrimary && canTransform(editMode) && gizmoVisible && !isLocked
     const snapping = useSnapModifier()
     useEntityPose(entity, groupRef, isDragging)
 
@@ -344,8 +349,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 <EntityLink entity={entity}>
                     <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
                 </EntityLink>
-                {selected && (
-                    <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]}>
+                {selected && isPrimary && (
+                    <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]} style={{ pointerEvents: 'none' }}>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}
@@ -399,8 +404,8 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                     />
                 </mesh>
                 {editMode === 'edit' && <axesHelper args={[0.4]} />}
-                {selected && (
-                    <Html position={[0, 0.25, 0]} center zIndexRange={[900, 0]}>
+                {selected && entity.id === selectedEntityId && (
+                    <Html position={[0, 0.25, 0]} center zIndexRange={[900, 0]} style={{ pointerEvents: 'none' }}>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}
@@ -453,7 +458,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     const initialPivotRef = useRef(null)
     const isDraggingRef = useRef(false)
     const centroid = useMemo(() => getSelectionCentroid(entities), [entities])
-    const active = editMode === 'edit' && gizmoVisible && entities.length > 1
+    const active = canTransform(editMode) && gizmoVisible && entities.length > 1
     const snapping = useSnapModifier()
 
     useEffect(() => {

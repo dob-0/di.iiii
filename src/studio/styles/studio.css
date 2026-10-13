@@ -94,17 +94,25 @@
     white-space: nowrap;
 }
 
+/* One name over the primary selection only (owner 2026-10-13: seven wrapped pills hid the scene).
+   One line, small, never under the pointer. */
 .studio-selection-pill {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 0 var(--di-space-3);
+    min-height: 22px;
+    max-width: 320px;
+    padding: 0 var(--di-space-2);
     border-radius: 0;
     background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     color: var(--di-text);
     font-size: var(--di-text-3);
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    opacity: 0.9;
 }
 
 .studio-overlay-card {
