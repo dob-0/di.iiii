@@ -52,11 +52,11 @@ import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
-    POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
-    WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
-    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
+    TOUCH_LOOK_SENSITIVITY,
+    WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { dragLookDelta, wheelIntent, gestureDolly, clampPitch } from './walkInput.js'
 import { hasRigLamps } from '../rigbuild/hasRigLamps.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
@@ -459,7 +459,7 @@ function AmbientField({ center }) {
     )
 }
 
-// Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
+// Free-roam walk: WASD + arrows move/turn; desktop drags to look (no pointer lock);
 // mobile uses touch outside the joystick zone for look.
 // Where a walker stands when the space authored no arrival at all. Pure and
 // exported so the choice is testable without mounting a canvas.
@@ -473,14 +473,14 @@ export const centroidSpawn = (center, bounds) => {
 
 // A touch-first device: a coarse primary pointer, or a touch screen with no fine
 // pointer anywhere (some phone browsers / emulations report `pointer: fine` while
-// still delivering touch only). A touch laptop with a mouse stays on pointer-lock.
+// still delivering touch only). A touch laptop with a mouse stays on drag-look.
 export const detectTouchDevice = () => {
     if (typeof window === 'undefined' || !window.matchMedia) return false
     if (window.matchMedia('(pointer: coarse)').matches) return true
     return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -496,8 +496,6 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
     const touchLookRef = useRef(null)
     const touchMoveRef = useRef(null)
     const joyBaseRef = useRef({ x: 0, y: 0 })
-    const onLockChangeRef = useRef(onLockChange)
-    onLockChangeRef.current = onLockChange
     const onPortalReachedRef = useRef(onPortalReached)
     onPortalReachedRef.current = onPortalReached
     const flyRef = useRef(flyMode)
@@ -540,197 +538,70 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         const isTouch = isArActive || detectTouchDevice()
 
         if (!isTouch) {
-            // Desktop: pointer lock
-            const onLockChange = () => {
-                // deadLockMoves/lockEngagedAt reset lives in onMouseMove now
-                // (see sawLocked) — this event lags document.pointerLockElement
-                // by a task, so resetting the dead-streak state here too could
-                // wipe out progress onMouseMove already made on real events.
-                const locked = document.pointerLockElement === el
-                dragLastX = null
-                dragLastY = null
-                el.style.cursor = locked ? 'none' : 'crosshair'
-                onLockChangeRef.current?.(locked)
-            }
-            // ?inputdebug=1 — live readout of what the browser actually
-            // delivers (lock state, movement deltas, element under cursor).
-            // Three Wayland look reports were undiagnosable from injected
-            // input; this shows the user's real event stream on their screen.
-            let debugHud = null
-            if (new URLSearchParams(window.location.search).has('inputdebug')) {
-                debugHud = document.createElement('div')
-                debugHud.style.cssText = 'position:fixed;top:8px;left:8px;z-index:99999;background:rgba(0,0,0,.85);color:#7dff9a;font:12px/1.5 monospace;padding:8px 10px;border-radius:6px;pointer-events:none;white-space:pre'
-                debugHud.textContent = 'inputdebug: waiting for mouse events…'
-                document.body.appendChild(debugHud)
-            }
-            let dbgMoves = 0
-            const dbg = (e) => {
-                if (!debugHud) return
-                dbgMoves++
-                const under = e ? document.elementFromPoint(e.clientX, e.clientY) : null
-                debugHud.textContent =
-                    `lock: ${document.pointerLockElement ? document.pointerLockElement.tagName : 'none'}${lockBroken ? ' (marked broken)' : ''}\n` +
-                    `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  client: ${e ? `${e.clientX},${e.clientY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
-                    `dead-streak: ${deadLockMoves}/${BROKEN_LOCK_DEAD_MOVES}  dragging: ${draggingCanvas}\n` +
-                    `under cursor: ${under ? `${under.tagName}${under.className ? '.' + String(under.className).split(' ')[0] : ''}` : '(locked/none)'}\n` +
-                    `yaw: ${player.yaw.toFixed(2)}  pitch: ${player.pitch.toFixed(2)}`
-            }
-            // Pointer lock can be denied outright (Wayland browsers, iframe
-            // policies, Chrome's cooldown after an Esc release) — dragging on
-            // the canvas must keep working as a look control in that case.
-            let draggingCanvas = false
-            // Denied lock is not the only failure mode: some Wayland setups
-            // grant the lock but deliver dead movement deltas — all zeros, or
-            // a degenerate constant crawl (movementY pinned to 0, movementX
-            // stuck at ±1; seen live via ?inputdebug=1) — so the view freezes
-            // while walking still works. Real looking always produces varied
-            // deltas with vertical jitter within a few events, so count
-            // consecutive dead locked moves; past the threshold, abandon the
-            // lock (and never re-request it) so drag-look takes over.
-            let lockBroken = false
-            let deadLockMoves = 0
-            // Engage-time garbage (see BROKEN_LOCK_SETTLE_MS): deltas inside
-            // the settle window are counted for the dead-streak but never
-            // applied to the view.
-            let lockEngagedAt = 0
-            // Drag-look never reads e.movementX/movementY: the same broken
-            // compositors poison them on unlocked moves too (constant -1,0),
-            // and the visible cursor's clientX/clientY is the one delta
-            // source that cannot lie. Seeded on pointerdown, re-seeded after
-            // a lock release (client coords freeze while locked).
-            let dragLastX = null
-            let dragLastY = null
-            // Mirrors document.pointerLockElement === el, updated inside
-            // onMouseMove itself (see below) rather than only in
-            // onLockChange, so the just-engaged transition is never missed.
-            let sawLocked = false
-            const onMouseMove = (e) => {
-                if (debugHud) dbg(e)
-                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
-                // Read the lock straight off the DOM, not lockedRef: the spec
-                // queues 'pointerlockchange' as its own task, so
-                // pointerLockElement is already set for one or more mousemove
-                // events before onLockChange (and lockedRef) catches up. Those
-                // events fell through to the drag-look branch below instead
-                // of counting toward the dead-streak — quietly burning part
-                // of BROKEN_LOCK_DEAD_MOVES' budget on every engage, which is
-                // why the noisy-lock capture below only sometimes reached the
-                // threshold before running out of replayed events.
-                const isLocked = document.pointerLockElement === el
-                // Same lag applies to onLockChange's lockEngagedAt/
-                // deadLockMoves reset: the settle window must start counting
-                // from the first mousemove that actually observes the lock,
-                // not from whenever the pointerlockchange task happens to
-                // run (which can be after that first move, letting the
-                // engage-time spike straight through the settle check).
-                if (isLocked && !sawLocked) {
-                    deadLockMoves = 0
-                    lockEngagedAt = performance.now()
-                }
-                sawLocked = isLocked
-                if (isLocked) {
-                    if (Math.abs(e.movementX) <= BROKEN_LOCK_DEAD_DELTA_MAX &&
-                        Math.abs(e.movementY) <= BROKEN_LOCK_DEAD_DELTA_MAX) {
-                        if (!lockBroken && ++deadLockMoves >= BROKEN_LOCK_DEAD_MOVES) {
-                            lockBroken = true
-                            document.exitPointerLock()
-                        }
-                    } else {
-                        deadLockMoves = 0
-                    }
-                    if (performance.now() - lockEngagedAt < BROKEN_LOCK_SETTLE_MS) return
-                    if (e.movementX === 0 && e.movementY === 0) return
-                    player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
-                    player.pitch = THREE.MathUtils.clamp(
-                        player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
-                        -pitchLimit,
-                        pitchLimit
-                    )
-                } else if (draggingCanvas) {
-                    // Around a lock release some browsers emit events with
-                    // clientX/Y zeroed or frozen while movementX/Y is healthy
-                    // — the exact inverse of the broken-compositor case. Use
-                    // position deltas when the cursor coords look alive, and
-                    // fall back to movement deltas on the 0,0 glitch.
-                    const glitched = e.clientX === 0 && e.clientY === 0
-                    let dx
-                    let dy
-                    if (glitched || dragLastX === null) {
-                        dx = e.movementX
-                        dy = e.movementY
-                    } else {
-                        dx = e.clientX - dragLastX
-                        dy = e.clientY - dragLastY
-                        if (dx === 0 && dy === 0) {
-                            dx = e.movementX
-                            dy = e.movementY
-                        }
-                    }
-                    if (!glitched) {
-                        dragLastX = e.clientX
-                        dragLastY = e.clientY
-                    }
-                    player.yaw -= dx * DRAG_LOOK_SENSITIVITY
-                    player.pitch = THREE.MathUtils.clamp(
-                        player.pitch - dy * DRAG_LOOK_SENSITIVITY,
-                        -pitchLimit,
-                        pitchLimit
-                    )
-                }
-            }
-            // Scroll never pitches the camera: pixel-mode deltas from high-res
-            // mouse wheels are indistinguishable from trackpad swipes and were
-            // tilting the view into the floor. Instead deltaY dollies forward/
-            // back ("scroll = zoom" toward what you face, consumed in useFrame
-            // through the same bounds clamp) and deltaX still turns, so the
-            // trackpad horizontal look-around survives. ctrlKey = pinch zoom.
-            const onWheel = (e) => {
-                if (e.ctrlKey) return
-                const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1
-                player.yaw -= e.deltaX * scale * TRACKPAD_LOOK_SENSITIVITY
-                if (wheelDollyRef_.current) wheelDollyRef.current -= e.deltaY * scale * WHEEL_DOLLY_SPEED
-            }
-            // Drag state comes from our own down/up pair, not mousemove's
-            // e.buttons — the same broken compositors report buttons: 0 mid-
-            // drag (seen via ?inputdebug=1). Capture keeps the up arriving
-            // even when released off-window; cancel/blur cover the rest.
-            const onPointerDownWithLock = (e) => {
+            // Desktop and touchpad: ONE look mode, drag (Sketchfab Help "Navigation").
+            // No pointer lock: the pointer is never taken from the page, so Esc has
+            // nothing to release. Capture keeps the drag alive off the canvas.
+            let dragging = null
+            const onPointerDown = (e) => {
                 if (e.button !== 0) return
                 try { el.setPointerCapture(e.pointerId) } catch { /* pointer already gone */ }
-                draggingCanvas = true
-                if (e.clientX === 0 && e.clientY === 0) {
-                    dragLastX = null
-                    dragLastY = null
-                } else {
-                    dragLastX = e.clientX
-                    dragLastY = e.clientY
-                }
-                if (document.pointerLockElement === el || lockBroken) return
-                const req = el.requestPointerLock()
-                if (req && typeof req.catch === 'function') {
-                    req.catch(() => { /* denied — drag-look fallback takes over */ })
-                }
+                dragging = { id: e.pointerId, last: e.clientX === 0 && e.clientY === 0 ? null : { x: e.clientX, y: e.clientY } }
+                el.style.cursor = 'grabbing'
             }
-            const onPointerUp = () => { draggingCanvas = false }
-            el.style.cursor = 'crosshair'
-            el.addEventListener('pointerdown', onPointerDownWithLock)
-            el.addEventListener('wheel', onWheel, { passive: true })
-            document.addEventListener('pointerup', onPointerUp)
-            document.addEventListener('pointercancel', onPointerUp)
+            const onPointerMove = (e) => {
+                if (!dragging || dragging.id !== e.pointerId) return
+                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
+                const d = dragLookDelta(dragging.last, e)
+                dragging.last = d.next
+                player.yaw += d.dYaw
+                player.pitch = clampPitch(player.pitch + d.dPitch, pitchLimit)
+            }
+            const onPointerUp = (e) => {
+                if (dragging && e && e.pointerId !== undefined && dragging.id !== e.pointerId) return
+                dragging = null
+                el.style.cursor = 'grab'
+            }
+            // Two-finger scroll: deltaY dollies, deltaX turns. Pinch (ctrlKey) zooms.
+            // Never the page: not passive, so the scroll, browser zoom and the
+            // horizontal back-swipe are cancelled here.
+            const onWheel = (e) => {
+                const w = wheelIntent(e, { dolly: wheelDollyRef_.current })
+                if (w.preventDefault && e.cancelable) e.preventDefault()
+                player.yaw += w.dYaw
+                wheelDollyRef.current += w.dolly
+            }
+            // Safari reports a touchpad pinch as gesture events, not ctrl-wheel.
+            let gestureScale = 0
+            const onGestureStart = (e) => { e.preventDefault(); gestureScale = e.scale || 1 }
+            const onGestureChange = (e) => {
+                e.preventDefault()
+                if (wheelDollyRef_.current) wheelDollyRef.current += gestureDolly(gestureScale, e.scale)
+                gestureScale = e.scale || gestureScale
+            }
+            const onGestureEnd = (e) => { e.preventDefault(); gestureScale = 0 }
+            el.style.cursor = 'grab'
+            el.style.touchAction = 'none'
+            el.addEventListener('pointerdown', onPointerDown)
+            el.addEventListener('pointermove', onPointerMove)
+            el.addEventListener('pointerup', onPointerUp)
+            el.addEventListener('pointercancel', onPointerUp)
+            el.addEventListener('wheel', onWheel, { passive: false })
+            el.addEventListener('gesturestart', onGestureStart)
+            el.addEventListener('gesturechange', onGestureChange)
+            el.addEventListener('gestureend', onGestureEnd)
             window.addEventListener('blur', onPointerUp)
-            document.addEventListener('pointerlockchange', onLockChange)
-            document.addEventListener('mousemove', onMouseMove)
             return () => {
-                if (document.pointerLockElement === el) document.exitPointerLock()
-                if (debugHud) debugHud.remove()
                 el.style.cursor = ''
-                el.removeEventListener('pointerdown', onPointerDownWithLock)
+                el.style.touchAction = ''
+                el.removeEventListener('pointerdown', onPointerDown)
+                el.removeEventListener('pointermove', onPointerMove)
+                el.removeEventListener('pointerup', onPointerUp)
+                el.removeEventListener('pointercancel', onPointerUp)
                 el.removeEventListener('wheel', onWheel)
-                document.removeEventListener('pointerup', onPointerUp)
-                document.removeEventListener('pointercancel', onPointerUp)
+                el.removeEventListener('gesturestart', onGestureStart)
+                el.removeEventListener('gesturechange', onGestureChange)
+                el.removeEventListener('gestureend', onGestureEnd)
                 window.removeEventListener('blur', onPointerUp)
-                document.removeEventListener('pointerlockchange', onLockChange)
-                document.removeEventListener('mousemove', onMouseMove)
             }
         } else {
             // Mobile: floating joystick on the left half (spawns at touch point,
@@ -1581,7 +1452,7 @@ export default function LiveProjectScene({
     // `wheelDolly`: the scroll wheel dollies the walker. The builder's wheel scrolls
     // its hotbar instead, so a wheel turn must not also walk the builder forward.
     wheelDolly = true,
-    // `walkHint`: the locked-walk hint line's words, replacing "WASD · move …" — a
+    // `walkHint`: the walk hint line's words, replacing "WASD · move …" — a
     // surface that adds keys has to be able to say them in the same place.
     walkHint = null
 }) {
@@ -1591,7 +1462,6 @@ export default function LiveProjectScene({
     const retryDocument = fetched.retryDocument
     const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
-    const [isLocked, setIsLocked] = useState(false)
     const [isMobile] = useState(detectTouchDevice)
     // First-visit movement hint: fades on a timer, but dismiss immediately on the
     // first interaction so the ghost-joystick demo never overlaps the real joystick.
@@ -1712,18 +1582,14 @@ export default function LiveProjectScene({
         return () => window.removeEventListener('keydown', onKey)
     }, [walking, showModeControls])
 
-    // Esc is always a way out. While the pointer is locked the browser keeps the first
-    // Esc for itself (it releases the lock and sends the page nothing); the next one
-    // lands here (a keydown that reaches the page means the lock is not holding it) and returns to the previous mode, same as the exit button.
+    // Esc is always a way out: nothing holds the pointer, so the first Esc lands here
+    // and returns to the previous mode, same as the exit button.
     const onExitRef = useRef(onExit)
     onExitRef.current = onExit
-    const lockChangedAtRef = useRef(0)
-    useEffect(() => { lockChangedAtRef.current = performance.now() }, [isLocked])
     useEffect(() => {
         if (!walking || !exitLabel) return undefined
         const onKey = (e) => {
             if (e.key !== 'Escape' || e.repeat || isTypingTarget(e.target)) return
-            if (performance.now() - lockChangedAtRef.current < 300) return
             onExitRef.current?.()
         }
         window.addEventListener('keydown', onKey)
@@ -1988,7 +1854,6 @@ export default function LiveProjectScene({
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
                         vertTouchRef={vertTouchRef}
-                        onLockChange={setIsLocked}
                         flyMode={flyMode}
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
@@ -2148,19 +2013,14 @@ export default function LiveProjectScene({
                         </span>
                     </header>
 
-                    {walking && !isMobile && !isLocked && (
-                        <p className="live-scene-hint live-scene-hint--lock">
-                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
-                        </p>
-                    )}
-                    {walking && !isMobile && isLocked && walkHint ? (
+                    {walking && !isMobile && walkHint ? (
                         <p className="live-scene-hint">{walkHint}</p>
                     ) : null}
-                    {walking && !isMobile && isLocked && !walkHint && (
+                    {walking && !isMobile && !walkHint && (
                         <p className="live-scene-hint">
-                            WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
+                            WASD · move &nbsp;·&nbsp; Drag · look &nbsp;·&nbsp; Scroll · forward / back &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
-                            &nbsp;·&nbsp; ESC · release
+                            {exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>
                     )}
                     {walking && isMobile && !showMoveHint && (
@@ -2168,7 +2028,7 @@ export default function LiveProjectScene({
                             Left thumb · move &nbsp;·&nbsp; Right thumb · look
                         </p>
                     )}
-                    {walking && showMoveHint && (isMobile || !isLocked) && (
+                    {walking && showMoveHint && (
                         <MoveHintVisual isMobile={isMobile} />
                     )}
                 </>

@@ -66,3 +66,12 @@ describe('the seams the jam surface uses stay optional', () => {
         expect(guarded.length).toBeGreaterThanOrEqual(2)
     })
 })
+
+describe('walk look is one mode (drag), never pointer lock', () => {
+    it('LiveProjectScene never requests or listens for a pointer lock', async () => {
+        const { readFileSync } = await import('node:fs')
+        const src = readFileSync(new URL('./LiveProjectScene.jsx', import.meta.url), 'utf8')
+        expect(src).not.toMatch(/requestPointerLock|pointerlockchange|exitPointerLock/)
+        expect(src).toMatch(/passive: false/)
+    })
+})
