@@ -1730,12 +1730,13 @@ export const WIKI_ARTICLES = [
             'On the desk, the panel says what the desk actually holds — how many fixtures are patched, how many scenes are saved, which look is up, whether an effect is running, and whether output is on. That sentence is also the Status port, so a Text panel wired to Status is an honest meter. “Open the desk” opens the desk itself in a new tab.',
             'Master dims the whole rig: whenever it changes, the new level goes out. Value at Channel sets one DMX channel the same way — wire an Oscillator through Range into Value and a lamp breathes on its own. Wires carry 0 to 1, as everywhere on the canvas; the node turns them into DMX bytes.',
             'Scene is the desk\'s own port, and the strongest one: send a scene\'s name — the words you wrote on the desk — or its id, and the whole look is recalled with its fade. One string on a wire does what a hundred Channel and Value pairs could not. A name the node has not seen yet makes it re-read the desk\'s library and try again, so a scene saved a minute ago still fires.',
+            'The same port reaches a project\'s own looks. When the word names no scene on the desk, the node looks among the desk\'s looks — the ones the Cards page put there for this project — and fires the one with that name or id, so a wire carrying “peak” plays the project\'s peak. A scene with the same name still wins, and a word that names neither fires nothing.',
             'Blackout kills the lights the moment it rises, ahead of anything else queued. A Button, a Compare, a Toggle — anything true-or-false — makes a good Blackout. The two rigs differ in one way worth knowing: on a vizzz node, blackout is a single blow and the rig recovers as soon as new levels arrive. On the desk it is a STATE — it stays down until it is lifted — so the node sends the falling edge too, and the lights come back when Blackout goes false.',
             'Nothing is sent for a value that merely stays what it was, and fast wires are paced so neither a small box nor the desk is asked sixty times a second.',
             'Both rigs need a di.iiii running on your own machine, for different reasons. The desk only exists on a local di.iiii (`di up`, or npm run dev) — a hosted diiii.xyz has no desk in it, and the panel says so rather than going quiet. A vizzz box speaks http, and a https page is not allowed to reach it — the panel says that too. On a hosted tab the node is honest and idle; on your own machine it lights the room.'
         ],
-        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'lighting desk', 'scene', 'device', 'performance'],
-        updated: '2026-09-03'
+        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'lighting desk', 'scene', 'look', 'device', 'performance'],
+        updated: '2026-10-13'
     },
     {
         id: 'laser-out-node',

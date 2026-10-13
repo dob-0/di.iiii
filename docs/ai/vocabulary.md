@@ -398,6 +398,36 @@ Still open for the owner (no word is settled here, so nothing changed): the fami
 sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
 node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
 
+## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
+
+The owner, 2026-10-13: the looks (*"the wall"*, *"peak"*) and the Dilijan things get Studio words; he did not pick
+them. These are proposals. No string or identifier changes until he does. Plan:
+`docs/ai/plans/2026-10-13-connected-workflow-words-versions.md` (b).
+
+**A lighting look — proposed: look.** What the rig shows at one moment: each group's level, colour and aim
+(`components.rigLooks.looks[]`). "The wall", "peak", "white cathedral" are looks. A **cue** plays a look, with a fade
+and a hold; the **show** is the cues in order.
+
+| Proposed word | Means, and only this | Why |
+| --- | --- | --- |
+| **look** | One state of the rig, named for what it does to the room. | Already the word on the Cards page, the room's SHOW chip and the Light desk, which has looks as its own content model. |
+| **cue** | One step of the show: a look, its fade, its hold. | Already the word of the cue list and of the desk's runner. |
+| **show** | The cues in order, played on a clock or a desk. | Already the show page `/{space}/show/…` and the SHOW chip. |
+
+Measured against this (a rough grep count of quoted strings, may include a few identifiers): the Studio's scene
+picker says *scene* in 9 strings and *look* in 0, the Scenes deck 21 to 1, the room's cue list 3 to 0, the show page
+3 to 0; the Cards page says *look* in 13 and *scene* in 0, the room's look follower 7 and 0. So today the same thing
+is a **scene** in the Studio and a **look** on the Cards page and in Light. *Scene* already has one job here — the 3D
+place — and a second inside Light (one step of values, beside looks). If the owner keeps *scene* for a look, the
+dictionary row for **scene** must change with it, and Light's own *scene* needs another word.
+
+**The Dilijan things — which ones is not settled; two readings, a word for each.** UNVERIFIED which the owner meant.
+
+| Reading | Today | Proposed |
+| --- | --- | --- |
+| The channel maps the studio's own desk ran on the UPlight rental units at the Sevan festival (Dilijan camp), now in `TESTED_CHANNEL_LISTS` (`src/rigbuild/fixtureTypes.js`, source `SEVAN`) | "TESTED", "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)" | **tested on the unit** — a provenance label, beside *assumed* and *from the datasheet*; never the festival's or the camp's name in a label a visitor of another production reads. |
+| The camp's rooms, `/dilijan/team-1` … | the room's own title "TEAM 1" — data in the space, not code (PROGRESS.md) | Not **team**: the dictionary gives *team* one job (a space's members, 2026-10-08). The children's groups want their own word — **crew** is taken by the rig tools (`/{space}/crew/…`); **group** is the plain candidate. |
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not
