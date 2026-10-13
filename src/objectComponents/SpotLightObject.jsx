@@ -12,6 +12,8 @@ import { beamOpticsOf } from './beamOptics.js'
 import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, nextFrameIn, scanLines } from './laserLine.js'
 import { getServerOffset } from '../rigbuild/serverClock.js'
 import { createLaserLineMaterial, laserLineBeforeRender, laserLineGeometry } from './laserLineMaterial.js'
+import BeamReachProbe from './BeamReachProbe.jsx'
+import { coneRays, coneReach, reachFrom } from './beamReach.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -71,6 +73,8 @@ export default function SpotLightObject({
     const fiberStore = useContext(fiberContext)
     const gl = fiberStore?.getState?.().gl || null
     const atmosphere = useAtmosphere(gl)
+    // a real Canvas (not the markup-only render the tests use): the lamp can look where its beam stops (BeamReachProbe)
+    const inCanvas = Boolean(fiberStore?.getState?.().scene)
     // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
     // light is not mounted at all rather than mounted at zero — three.js pays
     // for a light in every shader whatever its intensity.
@@ -78,9 +82,21 @@ export default function SpotLightObject({
     const cone = fitted ? spotLightCone({ angle, penumbra }) : { angle, penumbra }
     // the drawn beam's length: its own field (beam.length) when the lamp has one — a rig lamp's light has
     // no cutoff (distance 0) since 2026-10-09 — else the light's distance, as before
-    const throwShape = spotBeamShape({ distance: Number(beam?.length) > 0 ? Number(beam.length) : distance, angle, intensity, haze: beam?.haze })
+    // — until the lamp has looked along its CURRENT aim (BeamReachProbe, beamReach.js): then to the first building
+    // surface its axis and rim meet, and its light's cutoff to twice the farthest of them (PHYSICS FIRST, 2026-10-13)
+    const stored = Number(beam?.length) > 0 ? Number(beam.length) : distance
     // a laser drawn as a line source (laserLine.js), not a cone
     const laser = laserOf(beam)
+    const [reach, setReach] = useState(null)
+    // the rim is cast at the wider of the beam's own half-angle and its light's (a rig lamp's fitted cutoff)
+    const rimHalf = laser ? 0 : Math.max(Number(angle) || 0, Number(cone.angle) || 0)
+    const conePlan = reach ? coneReach(reach.hits, { half: rimHalf, stored, distance }) : null
+    const throwShape = spotBeamShape({ distance: conePlan ? conePlan.length : stored, angle, intensity, haze: beam?.haze })
+    const lightDistance = conePlan ? conePlan.distance : distance
+    // a material's clip planes count only with the renderer's local clipping on (SmartView turns it on too, and
+    // gives back what it found — this, once a cone has been cut)
+    const cut = Boolean(reach?.planes?.length)
+    useEffect(() => { if (cut && gl) gl.localClippingEnabled = true }, [cut, gl])
     // A cone that would draw at opacity 0 (haze 0, or a lamp held at 0) is not
     // mounted at all: an additive mesh at 0 adds nothing to the picture and
     // still costs a draw call and fill over the whole throw. It is how a strobe
@@ -123,6 +139,7 @@ export default function SpotLightObject({
 
     return (
         <>
+            {inCanvas ? <BeamReachProbe dirs={laser ? AXIS_ONLY : coneRays(rimHalf)} onReach={setReach} /> : null}
             {strobeHz > 0 ? <StrobeDriver hz={strobeHz} lightRef={lightRef} coneRef={coneRef} intensity={intensity} opacity={throwShape.opacity} /> : null}
             {castsLight ? (
                 <>
@@ -143,7 +160,7 @@ export default function SpotLightObject({
                         position={[0, 0, 0]}
                         color={color}
                         intensity={intensity}
-                        distance={distance}
+                        distance={lightDistance}
                         angle={cone.angle}
                         penumbra={cone.penumbra}
                         decay={decay}
@@ -152,7 +169,7 @@ export default function SpotLightObject({
                 </>
             ) : null}
             {laserLines ? (
-                <LaserLines gl={gl} store={fiberStore} laser={laser} color={color} level={beam?.haze} length={throwShape.length} anisotropy={atmosphere.anisotropy} />
+                <LaserLines gl={gl} store={fiberStore} laser={laser} color={color} level={beam?.haze} length={stored} anisotropy={atmosphere.anisotropy} />
             ) : null}
             {physical ? (
                 <BeamInAir
@@ -189,12 +206,17 @@ export default function SpotLightObject({
                         side={DoubleSide}
                         toneMapped={false}
                         fog={false}
+                        // where the cone meets the building it is cut there (beamReach.js clipPlanesOf)
+                        clippingPlanes={reach?.planes?.length ? reach.planes : null}
                     />
                 </mesh>
             ) : null}
         </>
     )
 }
+
+// a laser's own light: its axis is its line
+const AXIS_ONLY = [[0, -1, 0]]
 
 // The per-frame half of a strobing shutter, mounted only while one strobes.
 function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
@@ -281,17 +303,26 @@ function BeamAirStrobe({ material, values }) {
 // carries it), the flux Km·V(λ)·P per diode, in linear Rec.709 with the out-of-gamut lines desaturated at
 // constant luminance (stated in laserLine.js).
 // A laser with frames in time (laserLine.js §6) draws the frame on at the show's time; without, its static frame as before.
+// Each line (a static beam, each sub-line of a scanned frame) ends at the first building surface along its own
+// direction (BeamReachProbe, beamReach.js); before the first cast, and on a miss, at `length` (capped on a miss).
 function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) {
     const index = useLaserFrameIndex(store, laser.frames)
     const points = index >= 0 && index < laser.frames.list.length ? laser.frames.list[index] : laser.frame
-    const key = JSON.stringify([laser, color, level, length, index])
+    const scanKey = JSON.stringify([points, laser.fieldHalfDeg, color])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
+    const scan = useMemo(() => scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }), [scanKey])
+    const dirs = useMemo(() => scan.map((l) => l.dir), [scan])
+    const [reach, setReach] = useState(null)
+    const fallback = Math.max(Number(length) || 20, 0.5)
+    const lengths = scan.map((_, i) => (reach && reach.hits.length === scan.length ? reachFrom(reach.hits[i]?.t, fallback) : fallback))
+    const key = JSON.stringify([laser, color, level, lengths, index])
     const geometry = useMemo(() => {
         const lvl = Math.min(1, Math.max(0, Number(level ?? 1)))
-        const lines = scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => {
+        const lines = scan.map((l, i) => {
             const { rgb } = laserColourFlux({ mW: laser.mW, nm: laser.nm, drive: l.drive })
-            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale) }
+            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale), length: lengths[i] }
         })
-        return laserLineGeometry(lines, Math.max(Number(length) || 20, 0.5))
+        return laserLineGeometry(lines, fallback)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [key])
     const material = useMemo(() => createLaserLineMaterial(hazeUniformsFor(gl)), [gl])
@@ -300,7 +331,12 @@ function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) 
     material.uniforms.uDiam.value = laser.diameter_mm / 1000
     material.uniforms.uDiv.value = laser.divergence_mrad / 1000
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
-    return <mesh geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+    return (
+        <>
+            {store?.getState?.().scene ? <BeamReachProbe dirs={dirs} onReach={setReach} /> : null}
+            <mesh geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+        </>
+    )
 }
 
 // THE FRAME ON NOW (laserLine.js frameIndexAt): the show's time is the SERVER's (serverClock.js, measured once for the

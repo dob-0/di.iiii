@@ -5,6 +5,7 @@
  * lights each unit by it), a cue list that plays the night by the wall clock, and the views (floor z 38, FOH z 47, the DJ, top).
  *
  *   node scripts/rigbuild/epic-build.mjs --api http://127.0.0.1:4323/serverXR --project moxir-v1-0 --token-file <dummy env> [--out <dir>] [--apply]
+ *     [--hall <hall record>|none]  each lamp's beam.length = its first hit in that hall (hall-reach.mjs; default HALL_FILE)
  *
  * What it writes (and nothing else):
  *   - deletes the copy's old lamps (every rig- spotLight), its hazers and smoke machines (groups) and the PA placeholders;
@@ -57,6 +58,8 @@ import { runnerList } from './show-loop.mjs'
 import { atmosphereOfRig } from '../place/rig-lib.mjs'
 import { laserColourFlux, driveOfHex, laserOf, CUBE_NM } from '../../src/objectComponents/laserLine.js'
 import { laserFramesOf, MATRIX_N, FAN_DEG, FAN_PERIOD_S, FAN_STEPS } from './laser-frames.mjs'
+import { HALL_FILE, hallDimsOf, lampFirstHit } from './hall-reach.mjs'
+import { MIN_REACH, MISS_REACH_CAP } from '../../src/objectComponents/beamReach.js'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -77,10 +80,17 @@ export const candelaOf = (f) => {
     }
 }
 const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30, 'ext-blinder': 25, 'ext-strobe': 20 }
-/** How far the room draws a unit's beam: the rig file's own cast throw to the first thing it meets (MOXIR v2, occlusion_sky.py:
- * `throw_m`, null = open to the far end) when it has one, else the type's reach. The room draws a beam to its light's distance
- * and does not stop it at the steel (spotBeam.js): without this a beam the cast stops at the roof is drawn through it. Pure. */
-export const reachOf = (f) => (f.throw_m !== undefined ? r3(Math.min(Math.max(f.throw_m ?? 120, 1), 120)) : DIST[f.type] || 24)
+/** How far the room draws a unit's beam until it has cast its own (the room re-casts every beam along its CURRENT aim against
+ * the building at run time: src/objectComponents/beamReach.js). With the hall's dims: the first hall surface along the lamp's
+ * rest axis (hall-reach.mjs), PHYSICS FIRST (owner 2026-10-13). Without: the rig file's own cast throw (`throw_m`, MOXIR v2
+ * occlusion_sky.py), else the type's reach. Never more than MISS_REACH_CAP: the old 120 m for a lamp with no throw
+ * (`throw_m: null`, "open to the far end") is what stood over the roof in the owner's screenshot. Pure. */
+export const reachOf = (f, dims = null) => {
+    const hit = dims ? lampFirstHit(f, dims) : null
+    if (hit != null && hit > 0) return r3(Math.min(Math.max(hit, MIN_REACH), MISS_REACH_CAP))
+    if (Number(f.throw_m) > 0) return r3(Math.min(Math.max(Number(f.throw_m), 1), MISS_REACH_CAP))
+    return DIST[f.type] || 24
+}
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1, 'up-la40wf': 1 }
 // A laser line, photometric (2026-10-08 fix: the old 1 004 000 at 0.0105 rad was 68x a cube's real flux into a cone 5x too
@@ -227,7 +237,7 @@ export const positionOf = (f) => {
 }
 
 /** v1.0's entities from the rig file. Pure. */
-export const v1Entities = (rig) => {
+export const v1Entities = (rig, { hall = null } = {}) => {
     const out = []
     for (const f of rig.fixtures) {
         if (isLaserType(f.type)) {
@@ -263,7 +273,7 @@ export const v1Entities = (rig) => {
                 // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
                 // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
                 light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
-                beam: { visible: true, haze: HAZE[f.type] ?? 0.35, length: reachOf(f) },
+                beam: { visible: true, haze: HAZE[f.type] ?? 0.35, length: reachOf(f, hall) },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
             } })
@@ -567,7 +577,11 @@ const main = async () => {
     const ctx = lookFrame(booth.entities)
     if (!ctx) die(`${project}: no stage frame (riser + venue plan) to aim looks in`)
     const old = oldEntities(doc)
-    const ents = v1Entities(rig)
+    // the hall a lamp's first hit is cast against (hall-reach.mjs): --hall <record>, default HALL_FILE; --hall none: the type's reach
+    const hallArg = String(args.hall || HALL_FILE)
+    const hall = hallArg === 'none' ? null : hallDimsOf(hallArg, REPO_ROOT)
+    if (hallArg !== 'none' && !hall) die(`no hall record at ${hallArg} (--hall none to write the types' reaches)`)
+    const ents = v1Entities(rig, { hall })
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
     const cues = cuesOf(rig)
     // --looks-only (2026-10-13): the looks and the cue list from the rig file, NOTHING else — no unit deleted or

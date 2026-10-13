@@ -12,7 +12,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { theCut, cutCount, placesFor, PICK_CAP_KG, table } from './cut-count.mjs'
-import { cuesOf, v1Cues, reachOf } from '../rigbuild/epic-build.mjs'
+import { cuesOf, v1Cues, reachOf, v1Entities, RIG_FILE } from '../rigbuild/epic-build.mjs'
+import { HALL_FILE, hallDimsOf, lampFirstHit } from '../rigbuild/hall-reach.mjs'
+import { MISS_REACH_CAP } from '../../src/objectComponents/beamReach.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repo = path.resolve(here, '..', '..')
@@ -62,10 +64,29 @@ describe('epic-build: a rig file carries its own cues', () => {
         expect(c[1].hold).toBe(20)
         expect(cuesOf({}).length).toBe(v1Cues().length)
     })
-    it("draws a beam to its cast throw when the rig file has one (the room does not stop a beam at the steel)", () => {
+    it("draws a beam to its cast throw when the rig file has one, else its type's reach — never the old 120 m", () => {
         expect(reachOf({ type: 'up-b380f', throw_m: 17.864 })).toBe(17.864)
-        expect(reachOf({ type: 'up-b380f', throw_m: null })).toBe(120)
+        // throw_m null ("open to the far end") was 120 m: the beam the owner saw standing over the roof (2026-10-13)
+        expect(reachOf({ type: 'up-b380f', throw_m: null })).toBe(40)
         expect(reachOf({ type: 'up-b380f' })).toBe(40)
+        expect(reachOf({ type: 'up-b380f', throw_m: 300 })).toBe(MISS_REACH_CAP)
+    })
+    it('with the hall: the first hall surface along the lamp\'s rest axis (PHYSICS FIRST)', () => {
+        const dims = { truss_top_h_m: 13.3, ridge_h_m: 16.5, lantern_w_m: 12 }
+        // straight up from 5 m, off the lantern band: the deck at 13.3; inside it: the glazing at 16.5
+        expect(reachOf({ type: 'up-b380f', p: [20, 5, 0], r: [Math.PI, 0, 0], throw_m: null }, dims)).toBeCloseTo(8.3, 3)
+        expect(reachOf({ type: 'up-b380f', p: [0, 5, 0], r: [Math.PI, 0, 0] }, dims)).toBeCloseTo(11.5, 3)
+        // straight down: the floor
+        expect(reachOf({ type: 'up-pl5403', p: [0, 9, 0], r: [0, 0, 0] }, dims)).toBeCloseTo(9, 3)
+        // every lamp of the epic rig, written with the hall, ends at or before its first hall surface
+        const ents = v1Entities(JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8')), { hall: hallDimsOf(HALL_FILE, repo) })
+        const lamps = ents.filter((e) => e.components.beam?.length)
+        expect(lamps.length).toBeGreaterThan(50)
+        for (const e of lamps) {
+            const t = e.components.transform
+            const hit = lampFirstHit({ p: t.position, r: t.rotation }, hallDimsOf(HALL_FILE, repo))
+            if (hit != null) expect(e.components.beam.length).toBeLessThanOrEqual(hit + 1e-3)
+        }
     })
 })
 

@@ -83,8 +83,12 @@ describe('handlePickClick — every entity\'s click', () => {
         expect(h.onToggleSelect).not.toHaveBeenCalled()
     })
     it('pickUserData marks lamps as bodies and carries the lock', () => {
-        expect(pickUserData({ id: 'l', components: { light: {}, runtime: { locked: true } } })).toEqual({ svEntityId: 'l', svPick: 'body', svLocked: true })
-        expect(pickUserData({ id: 'p', components: {} })).toEqual({ svEntityId: 'p', svPick: 'other', svLocked: false })
+        expect(pickUserData({ id: 'l', components: { light: {}, runtime: { locked: true } } })).toEqual({ svEntityId: 'l', svPick: 'body', svLocked: true, svBuilding: false })
+        expect(pickUserData({ id: 'p', components: {} })).toEqual({ svEntityId: 'p', svPick: 'other', svLocked: false, svBuilding: false })
+    })
+    it('pickUserData tags the building, where a beam stops (beamReach.js)', () => {
+        expect(pickUserData({ id: 'place-hall', type: 'model', components: {} }).svBuilding).toBe(true)
+        expect(pickUserData({ id: 'x', type: 'model', components: { viewRole: 'architecture' } }).svBuilding).toBe(true)
     })
     it('both entity kinds in StudioViewport carry the flags and the one handler', () => {
         const src = fs.readFileSync(path.join(cwd(), 'src/studio/components/StudioViewport.jsx'), 'utf8')
