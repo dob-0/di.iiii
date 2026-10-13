@@ -229,6 +229,9 @@ for f in heads:
         # (right_line_clear.py, ledger N564); no clear place (z 19: conveyor, hopper, blower, tank) -> the floor's edge.
         x_ = -(COL_X - COL_FACE) if s_ < 0 else (EAST_CLEAR[f['p'][2]][0] or HEADS_EAST_X)
         f['p'] = [round(x_, 2), f['p'][1], f['p'][2]]
+        # Owner 10-13 19:1x: 'make the beams straight up so they are easy to edit now' — the side lines start vertical; he aims
+        # them by hand in the Studio (Work light), and the looks are rebuilt from the document (epic-build --looks-only).
+        f['r'] = [-3.1416, 0.0, 0.0]
         f['position'] = f['position'].split('; v2.10')[0] + f'; v2.10 (moxir_v2_8_floor.py 2b): {"on the west column row" if s_ < 0 else "at the dance floor\'s east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery)"}, x {f["p"][0]:+.1f}; same z, same 30 deg tilt in'
     elif f.get('part') == 'plane 1 (behind the DJ)':
         f['p'] = [f['p'][0], f['p'][1], PLANE1_Z]

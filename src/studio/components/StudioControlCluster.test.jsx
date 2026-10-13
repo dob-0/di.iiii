@@ -67,3 +67,25 @@ describe('the Preview button', () => {
         expect(onViewLive).toHaveBeenCalledTimes(1)
     })
 })
+
+// 2026-10-13: "objects move around their anchor point, no way to move an object in the world frame" — the gizmo ran in
+// local space. World is the default (Blender's Global); the Local button switches the gizmo to the object's own axes.
+describe('the Local axes button', () => {
+    it('is off by default (world axes) and asks for local on a click', () => {
+        const onSetGizmoSpace = vi.fn()
+        render(<StudioControlCluster {...base} editMode="edit" gizmoMode="translate" onSetGizmoSpace={onSetGizmoSpace} />)
+        const local = screen.getByRole('button', { name: /^Local$/ })
+        expect(local.getAttribute('aria-pressed')).toBe('false')
+        fireEvent.click(local)
+        expect(onSetGizmoSpace).toHaveBeenCalledWith('local')
+    })
+
+    it('shows pressed and asks for world again when local is on', () => {
+        const onSetGizmoSpace = vi.fn()
+        render(<StudioControlCluster {...base} editMode="edit" gizmoMode="translate" gizmoSpace="local" onSetGizmoSpace={onSetGizmoSpace} />)
+        const local = screen.getByRole('button', { name: /^Local$/ })
+        expect(local.getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(local)
+        expect(onSetGizmoSpace).toHaveBeenCalledWith('world')
+    })
+})

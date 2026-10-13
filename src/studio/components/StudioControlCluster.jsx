@@ -27,6 +27,8 @@ export default function StudioControlCluster({
     selectTool = false,
     gizmoMode,
     onSetGizmoMode,
+    gizmoSpace = 'world',
+    onSetGizmoSpace,
     openPanels,
     onTogglePanel,
     onFullscreen,
@@ -141,6 +143,7 @@ export default function StudioControlCluster({
                                         <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move — G starts it at once, X / Y / Z constrain">Move G</button>
                                         <button className={`scc-btn scc-btn--icon ${gizmoMode === 'rotate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('rotate')} title="Rotate — R starts it at once">Rotate R</button>
                                         <button className={`scc-btn scc-btn--icon ${gizmoMode === 'scale' ? 'active' : ''}`} onClick={() => onSetGizmoMode('scale')} title="Scale — S starts it at once (S is never Select; Select is the tool, B for one box)">Scale S</button>
+                                        <button className={`scc-btn ${gizmoSpace === 'local' ? 'active' : ''}`} aria-pressed={gizmoSpace === 'local'} onClick={() => onSetGizmoSpace?.(gizmoSpace === 'local' ? 'world' : 'local')} title="Local axes — the gizmo follows the object's own axes; off, it moves along the world's (Blender: Transform Orientation, Global / Local)">Local</button>
                                     </>
                                 )}
                             </div>

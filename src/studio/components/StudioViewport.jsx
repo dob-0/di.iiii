@@ -218,7 +218,7 @@ function AutoLookAround({ controlsRef, config }) {
 // Edit and Select both transform the selection; Navigate never does.
 const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
 
-function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, gizmoSpace = 'world', overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
     const highlightRef = useRef(null)
@@ -289,9 +289,11 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
         const group = groupRef.current
         if (!tc || !group || !gizmoActive) return
         tc.attach(group)
-        tc.setSpace('local')
+        // World axes by default (Blender's Global orientation); 'local' follows the object's own axes (owner 10-13: 'no way
+        // to move an object in the world frame').
+        tc.setSpace(gizmoSpace)
         return () => { tc.detach() }
-    }, [gizmoActive])
+    }, [gizmoActive, gizmoSpace])
 
     // Drag events: disable orbit during drag, commit on release
     useEffect(() => {
@@ -373,7 +375,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
     )
 }
 
-function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
+function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, gizmoSpace = 'world', overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
     const groupTimelineRef = useRef(null)
     useEntityPose(entity, groupTimelineRef)
     const t = entity.components?.transform || {}
@@ -429,6 +431,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                         gizmoMode={gizmoMode}
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
+                        gizmoSpace={gizmoSpace}
                         overrideById={overrideById}
                         onSelectEntity={onSelectEntity}
                         onToggleSelectEntity={onToggleSelectEntity}
@@ -450,6 +453,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
             gizmoMode={gizmoMode}
             gizmoAxis={gizmoAxis}
             gizmoVisible={gizmoVisible}
+            gizmoSpace={gizmoSpace}
             overrideTransform={overrideById[entity.id] || null}
             onSelect={onSelectEntity}
             onToggleSelect={onToggleSelectEntity}
@@ -681,6 +685,7 @@ function StudioSceneContent({
     gizmoMode,
     gizmoAxis = null,
     gizmoVisible = true,
+    gizmoSpace = 'world',
     transformOp = null,
     onTransformCommit,
     onTransformCommitMany,
@@ -1123,6 +1128,7 @@ export default function StudioViewport({
     gizmoMode = 'translate',
     gizmoAxis = null,
     gizmoVisible = true,
+    gizmoSpace = 'world',
     transformOp = null,
     setEditMode,
     setGizmoMode,
@@ -1331,6 +1337,7 @@ export default function StudioViewport({
                         gizmoMode={gizmoMode}
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
+                        gizmoSpace={gizmoSpace}
                         transformOp={transformOp}
                         onTransformCommit={onTransformCommit}
                         onTransformCommitMany={onTransformCommitMany}

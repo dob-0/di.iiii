@@ -206,6 +206,7 @@ export default function StudioShell({
         setViewportEditMode(mode)
     }, [])
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
+    const [viewportGizmoSpace, setViewportGizmoSpace] = useState('world')
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
@@ -572,6 +573,7 @@ export default function StudioShell({
         boxSelect: viewportSelectTool && viewportEditMode === 'edit',
         onSelectEntities,
         gizmoMode: viewportGizmoMode,
+        gizmoSpace: viewportGizmoSpace,
         gizmoAxis: viewportGizmoAxis,
         gizmoVisible: viewportGizmoVisible,
         transformOp,
@@ -790,6 +792,8 @@ export default function StudioShell({
                         selectTool={viewportSelectTool && viewportEditMode === 'edit'}
                         gizmoMode={viewportGizmoMode}
                         onSetGizmoMode={selectGizmoMode}
+                        gizmoSpace={viewportGizmoSpace}
+                        onSetGizmoSpace={setViewportGizmoSpace}
                         openPanels={open}
                         onTogglePanel={handleTogglePanel}
                         onFullscreen={handleFullscreen}
