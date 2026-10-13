@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The view bar's studio dress: rectangles (0-2 px) and a 44 px target at phone width (review B5-3).
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import SmartViewBar from './SmartViewBar.jsx'
 
 const presets = [{ id: 'a', label: 'Top', title: 'Top', key: '1' }]
@@ -43,5 +43,28 @@ describe('SmartViewBar studio variant clears what the studio draws over the pane
         const row = screen.getByRole('toolbar')
         expect(row.style.overflowX).toBe('auto')
         expect(row.style.maxWidth).toBeTruthy()
+    })
+})
+
+// 2026-10-13: the owner could not find where to show the walls in the Studio — the viewer's page had the building
+// switches, the Studio bar did not. With `onLayer` the bar carries Roof · Walls · Machines · Outside; `false` hides.
+describe('SmartViewBar building switches', () => {
+    it('draws the four layer switches only when onLayer is given, all shown by default', () => {
+        const { unmount } = render(<SmartViewBar presets={presets} variant="studio" />)
+        expect(screen.queryByText('Walls')).toBeNull()
+        unmount()
+        render(<SmartViewBar presets={presets} variant="studio" onLayer={() => {}} />)
+        for (const label of ['Roof', 'Walls', 'Machines', 'Outside']) {
+            expect(screen.getByText(label).getAttribute('aria-pressed')).toBe('true')
+        }
+    })
+
+    it('a click asks to hide a shown layer and to show a hidden one', () => {
+        const calls = []
+        render(<SmartViewBar presets={presets} variant="studio" layers={{ walls: false }} onLayer={(id, shown) => calls.push([id, shown])} />)
+        expect(screen.getByText('Walls').getAttribute('aria-pressed')).toBe('false')
+        fireEvent.click(screen.getByText('Walls'))
+        fireEvent.click(screen.getByText('Roof'))
+        expect(calls).toEqual([['walls', true], ['roof', false]])
     })
 })

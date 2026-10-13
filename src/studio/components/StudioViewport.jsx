@@ -1179,6 +1179,10 @@ export default function StudioViewport({
         reservedKeys
     })
     const { setPresets, release: releaseView } = sv
+    // The building switches of the Studio bar (Roof · Walls · Machines · Outside): null = everything shown; a host that
+    // passes its own `smartView.layers` (the visitor page) keeps them.
+    const [studioLayers, setStudioLayers] = useState(null)
+    const setStudioLayer = useCallback((id, shown) => setStudioLayers((prev) => ({ ...(prev || {}), [id]: shown })), [])
     const smartViewProps = useMemo(() => (smartOn ? {
         fovRef,
         command: sv.command,
@@ -1187,10 +1191,10 @@ export default function StudioViewport({
         lockInside: Boolean(smartView?.lockInside),
         onBuilding: smartView?.onBuilding,
         onLockPaused: smartView?.onLockPaused,
-        layers: smartView?.layers || null,
+        layers: smartView?.layers || studioLayers,
         onPresets: setPresets,
         onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, setPresets, releaseView])
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, studioLayers, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1388,6 +1392,8 @@ export default function StudioViewport({
                     onXray={sv.setXray}
                     variant={studioBar ? 'studio' : 'visitor'}
                     compact={isPhoneCompact}
+                    layers={studioBar ? (smartView?.layers || studioLayers) : null}
+                    onLayer={studioBar && !smartView?.layers ? setStudioLayer : null}
                 />
             ) : null}
 

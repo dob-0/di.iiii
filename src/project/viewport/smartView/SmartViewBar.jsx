@@ -1,3 +1,4 @@
+import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS } from './smartViewGeometry.js'
 // The view switcher: the six presets and X-ray, one quiet row.
 //
 // Two dresses, both borrowed, none new (feedback: preserve the existing UI):
@@ -89,7 +90,10 @@ const studioButton = (current, compact = false) => ({
     whiteSpace: 'nowrap'
 })
 
-export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false }) {
+// The building switches (Roof · Walls · Machines · Outside) sit in this bar when `onLayer` is given — the Studio's case
+// (owner 2026-10-13: "the floor is hidden but I can't see the place where I turn the walls on and off"); the visitor page
+// draws its own group next to the SceneBar and passes none. `layers[id] === false` hides a layer, anything else shows it.
+export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false, layers = null, onLayer = null }) {
     if (!presets.length) return null
     const studio = variant === 'studio'
     const button = studio ? (current) => studioButton(current, compact) : visitorButton
@@ -116,6 +120,22 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
             >
                 X-ray
             </button>
+            {typeof onLayer === 'function' ? VIEW_LAYER_IDS.map((id) => {
+                const shown = layers?.[id] !== false
+                return (
+                    <button
+                        key={id}
+                        type="button"
+                        aria-pressed={shown}
+                        data-layer={id}
+                        title={`${shown ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                        style={{ ...button(shown), textDecoration: shown ? 'none' : 'line-through' }}
+                        onClick={() => onLayer(id, !shown)}
+                    >
+                        {VIEW_LAYER_LABELS[id]}
+                    </button>
+                )
+            }) : null}
         </div>
     )
 }

@@ -59,3 +59,6 @@ Owner: the right beams still in the middle; check the photos and the open spaces
 
 ## 10-13 18:2x — beams take clicks, the place is a click on empty (N570, N571)
 Owner: 'I can't move the beams', 'you can't deselect'. Cause: beam meshes refused the ray since the laser-line work, so a click on a beam fell through to the hall or the forecourt box, which got selected; nothing ever counted as empty. Now `src/studio/utils/pickPriority.js` decides from every hit: a lamp body beats a beam in front of it, a beam beats what is behind it, a locked entity is never picked, only-locked-under-the-pointer clears the selection. v2-9: place-hall and the three rig-out boxes locked (v1307). Cloud brief for the rest: docs/ai/cloud-briefs/2026-10-13-studio-workflow-sweep.md.
+
+## 10-13 19:0x — the building switches in the Studio bar; lock no longer blocks picking (N570, N573)
+Owner: 'the floor is hidden but I can't see the place where I turn the walls on/off'. The viewer page had Roof · Walls · Machines · Outside next to its SceneBar; the Studio bar never got them. Now `SmartViewBar` draws the four switches when `onLayer` is given (Studio variant; state in StudioViewport, null = all shown; `false` hides). Also: a locked object stays selectable (lock stops moves only), a plain click on the one selected object deselects it; hall + outside boxes unlocked again on v2-9.
