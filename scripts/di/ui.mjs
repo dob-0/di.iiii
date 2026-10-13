@@ -124,7 +124,7 @@ export const ui = {
                 ? (phones ? phonesLine(phones, '  ') : style.dim('  the same link on every machine with di — each opens its own.'))
                 : (prettyUrl && secure
                     ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
-                    // a .localhost name answers on this machine only (RFC 6761); only the room's own name reaches phones
+                    // a .localhost name answers on this machine only (RFC 6761); only the place's own name (di.local under --lan) reaches phones
                     : (prettyUrl ? style.dim(`  ${isLocalhostUrl(prettyUrl) ? 'this machine only.' : 'one address, here and on the phones.'} ${url} answers too.`) : null)),
             !one && why ? oneAddressWhy(why, '  ') : null,
             '',

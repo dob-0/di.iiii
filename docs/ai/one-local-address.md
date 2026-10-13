@@ -1,8 +1,9 @@
 # One local address — `http://diiii.localhost/`
 
-Status: **approved by the owner 2026-10-07, being built.** Draft PRs: di-atlas #57 (the dev-router
-part), di.iiii `feat/one-local-address-2026-10-07` (this file, the server and the CLI).
-Written 2026-10-07. Every claim below carries its source or its measurement, or is marked
+Status (2026-10-13): **approved by the owner 2026-10-07. di-atlas #57 (the dev-router part) landed.**
+The di.iiii part (this file, the server, the CLI, the phones QR code) was opened as PRs #825 and #826 on
+2026-10-07 and is carried to today's dev by `feat/one-local-address-carry-2026-10-13`, which also adds
+D1 and D2 (§7 F). Written 2026-10-07, amended 2026-10-13. Every claim below carries its source or its measurement, or is marked
 **unverified**.
 
 ## 1. The decision
@@ -190,17 +191,44 @@ opens that name gets a padlock, a secure context, the camera and WebXR.
   - It serves the exact name only. Any other Host gets 421, which guards against DNS rebinding.
   - It stands aside by name on `EADDRINUSE` or `EACCES`, and the start never fails over it.
   - `DI_LOCAL_NAME=off` in `~/.di/di.env` turns it off.
-- `di status` prints `open it: http://diiii.localhost/` only when the name was asked and answered
+- `di status` shows `http://diiii.localhost/` only when the name was asked and answered
   as **this** install: the same `machine.id` directly and through :80. Otherwise it prints one dim
   line saying why not. `di open` opens the address under the same rule, and otherwise opens the
-  old address.
+  old address. (Since 2026-10-13 the address leads the first line instead of a separate `open it:`
+  line: §7 F.)
 - **Tests: 27 passed** (`serverXR/src/localName.test.js`, `scripts/di/oneAddress.test.js`).
+
+**F. One address in what di prints, one name before :80 (2026-10-13).** The owner, 2026-10-13:
+*"fix the di.iiii links here in my machine — mine is local.thedi.studio, in others other — fix mine too and
+make only one way to work."* Measured before the change: on aylmo `di status` printed
+`https://local.thedi.studio` (the certificate's name), while a normal install prints
+`http://di.localhost:4000` or `http://localhost:4000`: three names for one thing.
+- **D1. One address in `di status` and `di up`.** When `http://diiii.localhost/` is asked and answered
+  as this install (the machine-id rule above), it is the address:
+  - `di status`: the first line carries it. The certificate's name moves to ONE extra line,
+    `phones and headsets: https://<certificate name>`, only when the install has a certificate (a phone or a
+    headset cannot use a `.localhost` name).
+  - `di up`: the card's first line and its doors (`/tools`, `/spaces`, `/light/`, `/wiki`), the
+    `already running —` line and the browser it opens all use it, with the same one extra line.
+  - Not asked, or not answered as this install: nothing changes except ONE dim line saying why
+    (`http://diiii.localhost/ is not this di.iiii yet: …`). The `open it:` line of #825 is gone because the
+    first line is the address.
+  - `di up --lan` still tells the people in the place the certificate's name (or `di.local`), never a
+    `.localhost` name.
+  - One function decides, `printedAddress` (`scripts/di/state.mjs`), so the commands cannot disagree.
+- **D2. One name before :80 is allowed.** The pretty-name probe asks `diiii.localhost` (it asked
+  `di.localhost`), so a machine that has not been allowed :80 yet prints `http://diiii.localhost:4000`
+  instead of a second name. The same card no longer calls a `.localhost` name an address "on the phones":
+  `*.localhost` means this machine (§6). `dii.localhost` stays only as the router's alias.
+- Tests: `scripts/di/oneAddressPrinted.test.js` (16 tests; the real CLI against an install and a server on a spare port, only the answer from :80 handed in).
 
 ## 8. Rollout order, and what the owner runs
 
 Privileged or tier-writing steps are the owner's. Agents never run them.
 
-1. **Land di-atlas #57.** Review, merge, then on aylmo:
+1. **Land di-atlas #57.** *Status 2026-10-13: landed, and the router forwards.* Measured 2026-10-13 on
+   aylmo: `http://diiii.localhost/` and the install's own address return the same `machine.id`
+   (`c4e961c7…`) from `/serverXR/api/config`. Review, merge, then on aylmo:
    ```
    git -C ~/work/di-atlas pull                       # the router's new code
    sudo systemctl restart dev-router                 # load it (system unit)
@@ -208,13 +236,15 @@ Privileged or tier-writing steps are the owner's. Agents never run them.
    di-show http://diiii.localhost/                   # look at it on your screen
    ```
 2. **On aylmo, before the di.iiii change arrives:** keep :80 for the router, with no race at boot.
+   *Status 2026-10-13: done. `DI_LOCAL_NAME=off` was set on aylmo by the lead (session dob-2e, 2026-10-13).*
    ```
    printf 'DI_LOCAL_NAME=off\n' >> ~/.di/di.env      # the router forwards the name; di's own door stays shut
    ```
 3. **Land the di.iiii PR** to `dev`. aylmo's install follows the dev channel and updates itself.
-   Then:
+   *Status 2026-10-13: carried to today's dev by `feat/one-local-address-carry-2026-10-13` (#825 + #826 +
+   D1 + D2); the owner merges it and closes #825 and #826.* Then:
    ```
-   di status                                         # expect: open it: http://diiii.localhost/
+   di status                                         # expect: first line http://diiii.localhost/, then phones and headsets: https://local.thedi.studio
    ```
 4. **Every other Linux install** (Emilya, Kiara, asuz). This is privileged, once per machine,
    and must be redone after the pinned node is replaced:
@@ -323,8 +353,10 @@ di follows                                        # moxir followed from dev?
 
 ## 9. Owed — the list
 
-1. **Owner:** merge #57, restart `dev-router`, look at `http://diiii.localhost/` on his screen.
-2. **Owner:** `DI_LOCAL_NAME=off` on aylmo, then land the di.iiii PR.
+1. ~~**Owner:** merge #57, restart `dev-router`~~ — landed, forwarding (measured 2026-10-13).
+   **Still owed, the owner:** look at `http://diiii.localhost/` on his screen.
+2. ~~`DI_LOCAL_NAME=off` on aylmo~~ — set by the lead 2026-10-13. **Owner:** merge the carry PR
+   (it replaces #825 and #826).
 3. **Owner, per Linux machine:** grant :80 (`setcap`). **Product call:** should `di up` offer it?
 4. Measure macOS, Windows and Safari (§6).
 5. The guest path:
@@ -338,3 +370,9 @@ di follows                                        # moxir followed from dev?
 9. MOXIR beta v0.9 to dev (E), with the owner's calls (a)–(c).
 10. `docs/ai/vocabulary.md`: the local tier's address is now `http://diiii.localhost/` (amended in
     this change).
+11. D1 covers `di status` and `di up`. Other lines that print this install's address still print the
+    certificate's name or `localhost:<port>`: `di new` and `di open FILE` (the link to the space), and the
+    `url` fields of `di stage` (`scripts/di/stage.mjs`). `printedAddress` makes each a one-line change;
+    whether they belong to "one way" is the owner's call.
+12. `di up` could offer the `setcap` line itself (item 3 above) instead of only printing the reason; the
+    reason today is "nothing answers on port 80", which does not tell a missing permission from a missing door.
