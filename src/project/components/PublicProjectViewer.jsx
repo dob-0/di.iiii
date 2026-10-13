@@ -54,6 +54,8 @@ const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSc
 const RoomRigSteps = lazyWithReload(() => import('../../rigbuild/RoomRigSteps.jsx'), 'room-rig-steps')
 // The room posed by the desk's live look (src/rigbuild/RoomLookFollower.jsx), same rule.
 const RoomLookFollower = lazyWithReload(() => import('../../rigbuild/RoomLookFollower.jsx'), 'room-look-follower')
+// How the view moves (speed, turning): the small Move control in the corner. Lazy because its speed reading comes with three.
+const MoveControl = lazyWithReload(() => import('./MoveControl.jsx'), 'move-control')
 
 // di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
@@ -303,8 +305,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
         rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
-        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, each one 56 px line, all top-right
-        rightLines: state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (hasBuilding ? 3 : 2) : null
+        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, then Move, each one 56 px line, all top-right
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (hasBuilding ? 4 : 3) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
@@ -598,6 +600,21 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     {outputMode ? 'Lite' : 'Full'}
                 </button>
+            ) : null}
+
+            {/* Under Lite / Full, same size: how the view moves (speed, turning). One small button that opens a card; the
+                visitor's own setting on this device, the same one the Studio's Scene window sets. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+                <Suspense fallback={null}>
+                    <MoveControl
+                        buttonStyle={btnBase}
+                        // In the scene bar the card opens under the whole bar (the bar is its anchor, so a wrapped second line, such
+                        // as the dev-copy chip on a phone, never sits under it); in the corner column, under the button.
+                        wrapStyle={sceneBar
+                            ? { display: 'flex', flex: '0 0 auto' }
+                            : abs({ top: `calc(${topClear} + ${hasBuilding ? '10.2rem' : '6.8rem'})`, right: '1rem' })}
+                    />
+                </Suspense>
             ) : null}
         </>
     )

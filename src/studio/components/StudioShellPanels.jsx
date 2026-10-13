@@ -57,6 +57,7 @@ import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
 import { ASSET_ACCEPT, ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
+import MoveSettings from './MoveSettings.jsx'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -975,6 +976,11 @@ export function ProjectPanel({
                 <NumberField label="Zoom" value={world.savedView?.zoom ?? 1} min={0.01} step={0.1} onChange={(v) => onWorldPatch({ savedView: { zoom: v } })} />
                 <NumberField label="Near" value={world.savedView?.near ?? 0.1} min={0.001} step={0.01} onChange={(v) => onWorldPatch({ savedView: { near: v } })} />
                 <NumberField label="Far" value={world.savedView?.far ?? 1000} min={0.01} step={10} onChange={(v) => onWorldPatch({ savedView: { far: v } })} />
+            </CollapsibleSection>
+
+            {/* How the view moves is the person's own setting on this device, not part of the project (navigation/preference.js). */}
+            <CollapsibleSection title="Move">
+                <MoveSettings />
             </CollapsibleSection>
 
             <CollapsibleSection title="Render" defaultOpen={false}>
