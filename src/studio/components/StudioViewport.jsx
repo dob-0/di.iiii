@@ -1,4 +1,4 @@
-import { pickLampBody } from '../utils/selectionTools.js'
+import { movableEntities, pickLampBody } from '../utils/selectionTools.js'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
 import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
@@ -895,11 +895,11 @@ function StudioSceneContent({
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.some((entity) => entity.components?.runtime?.locked !== true) && (
+            {transformOp && movableEntities(selectedEntities).length > 0 && (
                 <ModalTransform
                     op={transformOp}
-                    // A locked object never moves, even when it was selected before it was locked.
-                    selectedEntities={selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true)}
+                    // A locked or hidden object never moves, even when it was selected before it was locked or hidden.
+                    selectedEntities={movableEntities(selectedEntities)}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}

@@ -14,6 +14,10 @@ export const isHiddenEntity = (entity) => entity?.components?.runtime?.visible =
 /** Entities a click or a box may pick: shown and not locked. */
 export const isPickableEntity = (entity) => Boolean(entity) && !isLockedEntity(entity) && !isHiddenEntity(entity)
 
+/** What G/R/S may move out of a selection: shown and not locked. A hidden object stays selected after
+ *  the Objects window hides it (walked 2026-10-13: G then moved it unseen); a locked one never moves. */
+export const movableEntities = (entities = []) => (entities || []).filter(isPickableEntity)
+
 // The rig build's outside and shell boxes (scripts/rigbuild: rig-out-ground, rig-out-road-*,
 // rig-shell-*) are the building's surroundings, not rig.
 const HALL_ID = /^rig-(out|shell)-/
