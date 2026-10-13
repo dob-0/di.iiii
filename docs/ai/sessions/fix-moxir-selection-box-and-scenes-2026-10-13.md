@@ -32,3 +32,11 @@
   (the frame, red floor, breath, the storm): 15 scenes. `epic-build.mjs --looks-only` writes looks + cues only, so the lamps the
   owner and Emily moved by hand stayed (applied to v2-9: 16 looks, 15 cues, 149 entities, the moved tent lamp unchanged;
   backup ~/di-backups/moxir-scratch/2026-10-13-v2-9-before-15-scenes).
+- Owner 16:5x/18:2x "the moving heads are almost in the middle of the stage … the left/right lasers look only at the walls": measured
+  (ledger N558.1) and arranged: the two B380F side lines on the column rows x ±11.5 (hall symmetry; seen from 100 % of a floor
+  grid at eye height, pan 88 % free of columns), plane 1 behind the stage pen at z -9.0, and the six cubes' 36 lines as ONE comb
+  over the dance bay (x -11.5..+11.5 on the entry wall, 0.66 m apart, 9.65 m at the wall, ≥ 9.2 m over the DJ crane; no diagonals
+  to the far side walls). In the script (`moxir_v2_8_floor.py` step 2b + matrix defaults) so the rig regenerates; applied to
+  v2-9 (v928 → v1017) as 89 updateComponent ops on exactly the 18 heads + 36 cube lines, derived from epic-build's own dry run
+  against the live document (no unit re-created; the two 40 W at the door and every hand-moved wash untouched). Backup
+  `~/di-backups/moxir-scratch/2026-10-13-v2-9-before-arrangement/document.json`.

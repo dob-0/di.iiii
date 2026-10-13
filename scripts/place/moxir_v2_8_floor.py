@@ -44,8 +44,8 @@ ap = argparse.ArgumentParser(); ap.add_argument('--repo', required=True)
 ap.add_argument('--src', default='scripts/place/rigs/moxir-v2-7-2026-10-12.json')
 ap.add_argument('--out', default=None); ap.add_argument('--version', default='2.8')
 ap.add_argument('--lasers', default='crane', choices=('crane', 'columns', 'matrix'))
-ap.add_argument('--comb-x', default='-17,6', help='matrix: the comb spans these x (abs, m) on the entry wall, evenly')
-ap.add_argument('--comb-per-cube', type=int, default=4); ap.add_argument('--diag-z', default='20,40', help='matrix: z of the diagonals\' ends on the side walls')
+ap.add_argument('--comb-x', default='-11.5,11.5', help='matrix: the comb spans these x (abs, m) on the entry wall, evenly — the dance bay between the column rows (owner 2026-10-13 18:2x: every line over the audience; was -17,6)')
+ap.add_argument('--comb-per-cube', type=int, default=6); ap.add_argument('--diag-z', default='', help='matrix: z of the diagonals\' ends on the side walls; empty = no diagonals (owner 2026-10-13: "the left/right ones look only at the walls" — all six lines per cube go into the comb)')
 ap.add_argument('--cube-z', default='18,30,42', help='z of the three brackets per side (column pitch 6 m)')
 ap.add_argument('--cube-y', type=float, default=6.0, help='bracket height, m (stage key precedent 6.0)')
 ap.add_argument('--pans', default='-30,-18,-6,6,18,30', help='deg from the heading, + toward the entry (+z)')
@@ -124,7 +124,7 @@ if a.lasers == 'matrix':
     # the floor; the two 40 W from the door cross the comb. Lowest over a dancer: 9.2 m (the entry-wall and crane rules).
     x_lo, x_hi = [float(v) for v in a.comb_x.split(',')]; n_comb = len(cubes) * a.comb_per_cube
     comb_xs = [x_lo + (x_hi - x_lo) * i / (n_comb - 1) for i in range(n_comb)]
-    diag_zs = [float(v) for v in a.diag_z.split(',')]
+    diag_zs = [float(v) for v in a.diag_z.split(',') if v.strip()]
     def aim(p, T):
         d = sym.unit((T[0] - p[0], T[1] - p[1], T[2] - p[2])); L, name, Th = first_hit(p, d); return d, L, name, Th
     def lowest_ok(p, T0):
@@ -203,6 +203,25 @@ for look in rig['looks']:
     base = parts.get('columns') or parts.get('hall steel')
     if base is not None:
         parts.setdefault('red tent left', list(base)); parts.setdefault('red tent right', list(base))
+# --- 2b. the moving heads (owner 2026-10-13 16:5x: "almost in the middle of the stage … left/right as lines as now, check the
+#   audience's look and the blocking … not on the stage"). Measured by the lead (ledger N558.1, floor grid at eye height 1.6 m,
+#   columns r 0.45 at x ±12 pitch 6, deck + PA as boxes): the two side lines were mirrored about the DJ axis (X0 -5.2), so the
+#   right line stood 2.9 m from the hall's centre and the left one outside the west row (seen from 71 % of the floor); plane 1
+#   stood on the stage pen (seen from 51 %). Now: the side lines on the column rows, x = ∓(COL_X - COL_FACE) = ∓11.5 (hall
+#   symmetry; 100 % seen; pan free of columns 88 %), same z and tilt; plane 1 behind the pen at z = PLANE1_Z, same x and aim.
+PLANE1_Z = -9.0
+heads = [f for f in rig['fixtures'] if f['type'] == 'up-b380f']
+assert len(heads) == 18, len(heads)
+for f in heads:
+    if f.get('part') in ('side line left', 'side line right'):
+        s_ = -1 if f['p'][0] < X0 else 1
+        f['p'] = [round(s_ * (COL_X - COL_FACE), 2), f['p'][1], f['p'][2]]
+        f['position'] = f['position'].split('; v2.10')[0] + f'; v2.10 (moxir_v2_8_floor.py 2b): on the {"west" if s_ < 0 else "east"} column row, x {f["p"][0]:+.1f} (hall symmetry, not the DJ axis); same z, same 30 deg tilt in'
+    elif f.get('part') == 'plane 1 (behind the DJ)':
+        f['p'] = [f['p'][0], f['p'][1], PLANE1_Z]
+        f['position'] = f['position'].split('; v2.10')[0] + f'; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z {PLANE1_Z}), behind the DJ, same x and aim'
+rig['heads_2026_10_13'] = {'side_lines_x': [-(COL_X - COL_FACE), COL_X - COL_FACE], 'plane1_z': PLANE1_Z, 'why': 'owner 2026-10-13 16:5x; lead measured N558.1'}
+
 # --- 3. the record -----------------------------------------------------------------------------------------------------------------
 rig['version'] = a.version; rig['date'] = '2026-10-13'; rig['written_by'] = 'scripts/place/moxir_v2_8_floor.py'
 rig['title'] = {'crane': 'MOXIR v2.8 - from the dance floor: the lasers down to the rules from the far crane, the red tent', 'matrix': 'MOXIR v2.8 - a laser matrix over the dance floor from the far crane, the red tent'}.get(a.lasers) or 'MOXIR v2.8 columns try (not asked) - lasers on the column brackets'

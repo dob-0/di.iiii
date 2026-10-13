@@ -644,20 +644,20 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -17.0,
-       9.0,
+       -11.5,
+       9.65,
        53.8
       ],
-      "length_m": 96.607,
+      "length_m": 96.294,
       "r": [
-       -1.5728,
+       -1.5795,
        0.0,
-       -0.086
+       -0.0291
       ],
-      "pan_deg": -4.93,
-      "tilt_deg": 0.11,
+      "pan_deg": -1.67,
+      "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
-      "end_height_m": 9.0,
+      "end_height_m": 9.65,
       "lowest_m": 8.81,
       "over_hand_rule_m": 3.41,
       "family": "comb",
@@ -668,17 +668,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -11.0,
+       -7.56,
        9.65,
        53.8
       ],
-      "length_m": 96.281,
+      "length_m": 96.26,
       "r": [
        -1.5795,
        0.0,
-       -0.0239
+       0.0119
       ],
-      "pan_deg": -1.37,
+      "pan_deg": 0.68,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -692,17 +692,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -5.0,
+       -3.61,
        9.65,
        53.8
       ],
-      "length_m": 96.325,
+      "length_m": 96.388,
       "r": [
        -1.5795,
        0.0,
-       0.0384
+       0.0528
       ],
-      "pan_deg": 2.2,
+      "pan_deg": 3.02,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -716,17 +716,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       1.0,
+       0.33,
        9.65,
        53.8
       ],
-      "length_m": 96.741,
+      "length_m": 96.676,
       "r": [
        -1.5795,
        0.0,
-       0.1004
+       0.0935
       ],
-      "pan_deg": 5.75,
+      "pan_deg": 5.36,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -740,23 +740,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       5.5,
-       20.0
+       4.27,
+       9.65,
+       53.8
       ],
-      "length_m": 68.398,
+      "length_m": 97.124,
       "r": [
-       -1.5178,
+       -1.5795,
        0.0,
-       -0.417
+       0.134
       ],
-      "pan_deg": -23.92,
-      "tilt_deg": -2.77,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 7.68,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      },
      {
@@ -764,23 +764,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       5.5,
-       40.0
+       8.21,
+       9.65,
+       53.8
       ],
-      "length_m": 87.042,
+      "length_m": 97.729,
       "r": [
-       -1.5307,
+       -1.5795,
        0.0,
-       -0.3239
+       0.174
       ],
-      "pan_deg": -18.57,
-      "tilt_deg": -2.18,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 9.97,
+      "tilt_deg": 0.49,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
@@ -854,17 +854,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -16.0,
+       -10.84,
        9.65,
        53.8
       ],
-      "length_m": 96.646,
+      "length_m": 96.319,
       "r": [
        -1.5795,
        0.0,
-       -0.0901
+       -0.0368
       ],
-      "pan_deg": -5.16,
+      "pan_deg": -2.11,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -878,17 +878,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -10.0,
+       -6.9,
        9.65,
        53.8
       ],
-      "length_m": 96.292,
+      "length_m": 96.254,
       "r": [
        -1.5795,
        0.0,
-       -0.028
+       0.0042
       ],
-      "pan_deg": -1.61,
+      "pan_deg": 0.24,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -902,17 +902,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -4.0,
+       -2.96,
        9.65,
        53.8
       ],
-      "length_m": 96.31,
+      "length_m": 96.352,
       "r": [
        -1.5795,
        0.0,
-       0.0343
+       0.0451
       ],
-      "pan_deg": 1.96,
+      "pan_deg": 2.58,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -926,17 +926,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       2.0,
+       0.99,
        9.65,
        53.8
       ],
-      "length_m": 96.702,
+      "length_m": 96.61,
       "r": [
        -1.5795,
        0.0,
-       0.0963
+       0.0859
       ],
-      "pan_deg": 5.52,
+      "pan_deg": 4.92,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -950,23 +950,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       5.5,
-       20.0
+       4.93,
+       9.65,
+       53.8
       ],
-      "length_m": 68.977,
+      "length_m": 97.027,
       "r": [
-       -1.5178,
+       -1.5795,
        0.0,
-       -0.4355
+       0.1264
       ],
-      "pan_deg": -24.98,
-      "tilt_deg": -2.75,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 7.24,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      },
      {
@@ -974,23 +974,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       5.5,
-       40.0
+       8.87,
+       9.65,
+       53.8
       ],
-      "length_m": 87.497,
+      "length_m": 97.603,
       "r": [
-       -1.5307,
+       -1.5795,
        0.0,
-       -0.339
+       0.1665
       ],
-      "pan_deg": -19.44,
-      "tilt_deg": -2.17,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 9.54,
+      "tilt_deg": 0.49,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
@@ -1064,17 +1064,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -13.0,
+       -8.87,
        9.65,
        53.8
       ],
-      "length_m": 96.761,
+      "length_m": 96.427,
       "r": [
        -1.5795,
        0.0,
-       -0.1025
+       -0.0599
       ],
-      "pan_deg": -5.87,
+      "pan_deg": -3.43,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1088,17 +1088,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -7.0,
+       -4.93,
        9.65,
        53.8
       ],
-      "length_m": 96.333,
+      "length_m": 96.271,
       "r": [
        -1.5795,
        0.0,
-       -0.0405
+       -0.019
       ],
-      "pan_deg": -2.32,
+      "pan_deg": -1.09,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1112,7 +1112,7 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -1.0,
+       -0.99,
        9.65,
        53.8
       ],
@@ -1120,9 +1120,9 @@
       "r": [
        -1.5795,
        0.0,
-       0.0218
+       0.022
       ],
-      "pan_deg": 1.25,
+      "pan_deg": 1.26,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1136,17 +1136,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       5.0,
+       2.96,
        9.65,
        53.8
       ],
-      "length_m": 96.594,
+      "length_m": 96.444,
       "r": [
        -1.5795,
        0.0,
-       0.084
+       0.0628
       ],
-      "pan_deg": 4.81,
+      "pan_deg": 3.6,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1160,23 +1160,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       5.5,
-       20.0
+       6.9,
+       9.65,
+       53.8
       ],
-      "length_m": 89.125,
+      "length_m": 96.772,
       "r": [
-       -1.5178,
+       -1.5795,
        0.0,
-       0.793
+       0.1035
       ],
-      "pan_deg": 45.48,
-      "tilt_deg": -2.13,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 5.93,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      },
      {
@@ -1184,23 +1184,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       5.5,
-       40.0
+       10.84,
+       9.65,
+       53.8
       ],
-      "length_m": 104.121,
+      "length_m": 97.258,
       "r": [
-       -1.5307,
+       -1.5795,
        0.0,
-       0.6559
+       0.1439
       ],
-      "pan_deg": 37.6,
-      "tilt_deg": -1.82,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 8.24,
+      "tilt_deg": 0.49,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
@@ -1274,17 +1274,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -15.0,
+       -10.19,
        9.65,
        53.8
       ],
-      "length_m": 96.683,
+      "length_m": 96.349,
       "r": [
        -1.5795,
        0.0,
-       -0.0943
+       -0.0445
       ],
-      "pan_deg": -5.4,
+      "pan_deg": -2.55,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1298,17 +1298,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -9.0,
+       -6.24,
        9.65,
        53.8
       ],
-      "length_m": 96.304,
+      "length_m": 96.254,
       "r": [
        -1.5795,
        0.0,
-       -0.0322
+       -0.0036
       ],
-      "pan_deg": -1.84,
+      "pan_deg": -0.2,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1322,17 +1322,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -3.0,
+       -2.3,
        9.65,
        53.8
       ],
-      "length_m": 96.297,
+      "length_m": 96.321,
       "r": [
        -1.5795,
        0.0,
-       0.0301
+       0.0374
       ],
-      "pan_deg": 1.73,
+      "pan_deg": 2.14,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1346,17 +1346,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       3.0,
+       1.64,
        9.65,
        53.8
       ],
-      "length_m": 96.664,
+      "length_m": 96.549,
       "r": [
        -1.5795,
        0.0,
-       0.0922
+       0.0782
       ],
-      "pan_deg": 5.28,
+      "pan_deg": 4.48,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1370,23 +1370,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       5.5,
-       20.0
+       5.59,
+       9.65,
+       53.8
       ],
-      "length_m": 69.579,
+      "length_m": 96.937,
       "r": [
-       -1.5178,
+       -1.5795,
        0.0,
-       -0.4538
+       0.1188
       ],
-      "pan_deg": -26.03,
-      "tilt_deg": -2.73,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 6.81,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      },
      {
@@ -1394,23 +1394,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -36.4,
-       5.5,
-       40.0
+       9.53,
+       9.65,
+       53.8
       ],
-      "length_m": 87.973,
+      "length_m": 97.482,
       "r": [
-       -1.5307,
+       -1.5795,
        0.0,
-       -0.354
+       0.1589
       ],
-      "pan_deg": -20.3,
-      "tilt_deg": -2.16,
-      "ends_on": "west side wall (x -36.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 9.11,
+      "tilt_deg": 0.49,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
@@ -1484,17 +1484,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -14.0,
+       -9.53,
        9.65,
        53.8
       ],
-      "length_m": 96.721,
+      "length_m": 96.385,
       "r": [
        -1.5795,
        0.0,
-       -0.0984
+       -0.0522
       ],
-      "pan_deg": -5.64,
+      "pan_deg": -2.99,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1508,17 +1508,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -8.0,
+       -5.59,
        9.65,
        53.8
       ],
-      "length_m": 96.317,
+      "length_m": 96.26,
       "r": [
        -1.5795,
        0.0,
-       -0.0363
+       -0.0113
       ],
-      "pan_deg": -2.08,
+      "pan_deg": -0.65,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1532,17 +1532,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -2.0,
+       -1.64,
        9.65,
        53.8
       ],
-      "length_m": 96.286,
+      "length_m": 96.296,
       "r": [
        -1.5795,
        0.0,
-       0.026
+       0.0297
       ],
-      "pan_deg": 1.49,
+      "pan_deg": 1.7,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1556,17 +1556,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       4.0,
+       2.3,
        9.65,
        53.8
       ],
-      "length_m": 96.628,
+      "length_m": 96.494,
       "r": [
        -1.5795,
        0.0,
-       0.0881
+       0.0705
       ],
-      "pan_deg": 5.05,
+      "pan_deg": 4.04,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1580,23 +1580,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       5.5,
-       20.0
+       6.24,
+       9.65,
+       53.8
       ],
-      "length_m": 90.128,
+      "length_m": 96.851,
       "r": [
-       -1.5178,
+       -1.5795,
        0.0,
-       0.8039
+       0.1111
       ],
-      "pan_deg": 46.1,
-      "tilt_deg": -2.1,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 6.37,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      },
      {
@@ -1604,23 +1604,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       5.5,
-       40.0
+       10.19,
+       9.65,
+       53.8
       ],
-      "length_m": 104.981,
+      "length_m": 97.368,
       "r": [
-       -1.5307,
+       -1.5795,
        0.0,
-       0.6665
+       0.1514
       ],
-      "pan_deg": 38.21,
-      "tilt_deg": -1.81,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 8.68,
+      "tilt_deg": 0.49,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
@@ -1694,17 +1694,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -12.0,
+       -8.21,
        9.65,
        53.8
       ],
-      "length_m": 96.803,
+      "length_m": 96.474,
       "r": [
        -1.5795,
        0.0,
-       -0.1066
+       -0.0676
       ],
-      "pan_deg": -6.11,
+      "pan_deg": -3.87,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1718,17 +1718,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -6.0,
+       -4.27,
        9.65,
        53.8
       ],
-      "length_m": 96.35,
+      "length_m": 96.288,
       "r": [
        -1.5795,
        0.0,
-       -0.0446
+       -0.0267
       ],
-      "pan_deg": -2.56,
+      "pan_deg": -1.53,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1742,17 +1742,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       -0.0,
+       -0.33,
        9.65,
        53.8
       ],
-      "length_m": 96.269,
+      "length_m": 96.263,
       "r": [
        -1.5795,
        0.0,
-       0.0177
+       0.0142
       ],
-      "pan_deg": 1.01,
+      "pan_deg": 0.82,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1766,17 +1766,17 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       6.0,
+       3.61,
        9.65,
        53.8
       ],
-      "length_m": 96.561,
+      "length_m": 96.4,
       "r": [
        -1.5795,
        0.0,
-       0.0798
+       0.0552
       ],
-      "pan_deg": 4.57,
+      "pan_deg": 3.16,
       "tilt_deg": 0.5,
       "ends_on": "entry (NW) end wall above the door",
       "end_height_m": 9.65,
@@ -1790,23 +1790,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       5.5,
-       20.0
+       7.56,
+       9.65,
+       53.8
       ],
-      "length_m": 88.133,
+      "length_m": 96.698,
       "r": [
-       -1.5178,
+       -1.5795,
        0.0,
-       0.7819
+       0.0959
       ],
-      "pan_deg": 44.84,
-      "tilt_deg": -2.15,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 5.49,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      },
      {
@@ -1814,23 +1814,23 @@
       "off": false,
       "duty": 1.0,
       "to": [
-       60.4,
-       5.5,
-       40.0
+       11.5,
+       9.65,
+       53.8
       ],
-      "length_m": 103.273,
+      "length_m": 97.155,
       "r": [
-       -1.5307,
+       -1.5795,
        0.0,
-       0.6451
+       0.1363
       ],
-      "pan_deg": 36.99,
-      "tilt_deg": -1.84,
-      "ends_on": "east side wall (x +60.4)",
-      "end_height_m": 5.5,
-      "lowest_m": 5.5,
-      "over_hand_rule_m": 0.1,
-      "family": "diagonal",
+      "pan_deg": 7.81,
+      "tilt_deg": 0.5,
+      "ends_on": "entry (NW) end wall above the door",
+      "end_height_m": 9.65,
+      "lowest_m": 8.81,
+      "over_hand_rule_m": 3.41,
+      "family": "comb",
       "checks": "lowest allowed: hand rule 5.4 m on the side walls, entry wall >= 9.0 m, DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ],
@@ -4542,11 +4542,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up 66 deg, 20 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up ",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up 66 deg, 20 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up ; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
    "p": [
     -7.7,
     0.7,
-    -5.0
+    -9.0
    ],
    "r": [
     2.7453,
@@ -4679,11 +4679,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up 66 deg, 12 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up ",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up 66 deg, 12 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up ; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
    "p": [
     -6.7,
     0.7,
-    -5.0
+    -9.0
    ],
    "r": [
     2.7309,
@@ -4816,11 +4816,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up 66 deg, 4 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up ",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up 66 deg, 4 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up ; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
    "p": [
     -5.7,
     0.7,
-    -5.0
+    -9.0
    ],
    "r": [
     2.7236,
@@ -4953,11 +4953,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up 66 deg, 4 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up 66 deg, 4 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
    "p": [
     -4.7,
     0.7,
-    -5.0
+    -9.0
    ],
    "r": [
     2.7236,
@@ -5090,11 +5090,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up 66 deg, 12 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up 66 deg, 12 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
    "p": [
     -3.7,
     0.7,
-    -5.0
+    -9.0
    ],
    "r": [
     2.7309,
@@ -5227,11 +5227,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up 66 deg, 20 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up",
+   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up 66 deg, 20 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
    "p": [
     -2.7,
     0.7,
-    -5.0
+    -9.0
    ],
    "r": [
     2.7453,
@@ -5369,9 +5369,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the east column row, x +11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    11.5,
     0.7,
     13.0
    ],
@@ -5504,9 +5504,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the east column row, x +11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    11.5,
     0.7,
     19.0
    ],
@@ -5639,9 +5639,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the east column row, x +11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    11.5,
     0.7,
     25.0
    ],
@@ -5774,9 +5774,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the west column row, x -11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    -13.4,
+    -11.5,
     0.7,
     31.0
    ],
@@ -5909,9 +5909,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the west column row, x -11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    -13.4,
+    -11.5,
     0.7,
     37.0
    ],
@@ -6044,9 +6044,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the east column row, x +11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    11.5,
     0.7,
     31.0
    ],
@@ -6179,9 +6179,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the east column row, x +11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    11.5,
     0.7,
     37.0
    ],
@@ -6314,9 +6314,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the east column row, x +11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    11.5,
     0.7,
     43.0
    ],
@@ -6449,9 +6449,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the west column row, x -11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    -13.4,
+    -11.5,
     0.7,
     43.0
    ],
@@ -6584,9 +6584,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the west column row, x -11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    -13.4,
+    -11.5,
     0.7,
     13.0
    ],
@@ -6719,9 +6719,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +19, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the west column row, x -11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    -13.4,
+    -11.5,
     0.7,
     19.0
    ],
@@ -6854,9 +6854,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line left, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): on the west column row, x -11.5 (hall symmetry, not the DJ axis); same z, same 30 deg tilt in",
    "p": [
-    -13.4,
+    -11.5,
     0.7,
     25.0
    ],
@@ -18317,7 +18317,7 @@
  },
  "lasers": {
   "source": "scripts/place/moxir_v2_3_aerial.py",
-  "design": "v2.8 MATRIX: six cubes on the far crane; a comb of 24 lines over the dance floor (4 per cube, interleaved, x -17,6 on the entry wall, 1.0 m apart) at the lowest height the rules allow, plus 2 diagonals per cube to its side wall at 5.5 m; the two UP-LA40WF unchanged (they cross the comb)",
+  "design": "v2.8 MATRIX: six cubes on the far crane; a comb of 36 lines over the dance floor (6 per cube, interleaved, x -11.5,11.5 on the entry wall, 0.66 m apart) at the lowest height the rules allow, plus 0 diagonals per cube to its side wall at 5.5 m; the two UP-LA40WF unchanged (they cross the comb)",
   "previous": "v2.8 crane lines (moxir-v2-8-2026-10-13.json)",
   "tubes": [
    {
@@ -18361,8 +18361,8 @@
      -42.45
     ],
     "to": [
-     -17.0,
-     9.0,
+     -11.5,
+     9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
@@ -18377,7 +18377,7 @@
      -42.45
     ],
     "to": [
-     -11.0,
+     -7.56,
      9.65,
      53.8
     ],
@@ -18393,7 +18393,7 @@
      -42.45
     ],
     "to": [
-     -5.0,
+     -3.61,
      9.65,
      53.8
     ],
@@ -18409,7 +18409,7 @@
      -42.45
     ],
     "to": [
-     1.0,
+     0.33,
      9.65,
      53.8
     ],
@@ -18425,12 +18425,12 @@
      -42.45
     ],
     "to": [
-     -36.4,
-     5.5,
-     20.0
+     4.27,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "1f",
@@ -18441,12 +18441,12 @@
      -42.45
     ],
     "to": [
-     -36.4,
-     5.5,
-     40.0
+     8.21,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "2a",
@@ -18457,7 +18457,7 @@
      -42.45
     ],
     "to": [
-     -16.0,
+     -10.84,
      9.65,
      53.8
     ],
@@ -18473,7 +18473,7 @@
      -42.45
     ],
     "to": [
-     -10.0,
+     -6.9,
      9.65,
      53.8
     ],
@@ -18489,7 +18489,7 @@
      -42.45
     ],
     "to": [
-     -4.0,
+     -2.96,
      9.65,
      53.8
     ],
@@ -18505,7 +18505,7 @@
      -42.45
     ],
     "to": [
-     2.0,
+     0.99,
      9.65,
      53.8
     ],
@@ -18521,12 +18521,12 @@
      -42.45
     ],
     "to": [
-     -36.4,
-     5.5,
-     20.0
+     4.93,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "2f",
@@ -18537,12 +18537,12 @@
      -42.45
     ],
     "to": [
-     -36.4,
-     5.5,
-     40.0
+     8.87,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "3a",
@@ -18553,7 +18553,7 @@
      -42.45
     ],
     "to": [
-     -15.0,
+     -10.19,
      9.65,
      53.8
     ],
@@ -18569,7 +18569,7 @@
      -42.45
     ],
     "to": [
-     -9.0,
+     -6.24,
      9.65,
      53.8
     ],
@@ -18585,7 +18585,7 @@
      -42.45
     ],
     "to": [
-     -3.0,
+     -2.3,
      9.65,
      53.8
     ],
@@ -18601,7 +18601,7 @@
      -42.45
     ],
     "to": [
-     3.0,
+     1.64,
      9.65,
      53.8
     ],
@@ -18617,12 +18617,12 @@
      -42.45
     ],
     "to": [
-     -36.4,
-     5.5,
-     20.0
+     5.59,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "3f",
@@ -18633,12 +18633,12 @@
      -42.45
     ],
     "to": [
-     -36.4,
-     5.5,
-     40.0
+     9.53,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "west side wall (x -36.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "4a",
@@ -18649,7 +18649,7 @@
      -42.45
     ],
     "to": [
-     -14.0,
+     -9.53,
      9.65,
      53.8
     ],
@@ -18665,7 +18665,7 @@
      -42.45
     ],
     "to": [
-     -8.0,
+     -5.59,
      9.65,
      53.8
     ],
@@ -18681,7 +18681,7 @@
      -42.45
     ],
     "to": [
-     -2.0,
+     -1.64,
      9.65,
      53.8
     ],
@@ -18697,7 +18697,7 @@
      -42.45
     ],
     "to": [
-     4.0,
+     2.3,
      9.65,
      53.8
     ],
@@ -18713,12 +18713,12 @@
      -42.45
     ],
     "to": [
-     60.4,
-     5.5,
-     20.0
+     6.24,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "4f",
@@ -18729,12 +18729,12 @@
      -42.45
     ],
     "to": [
-     60.4,
-     5.5,
-     40.0
+     10.19,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "5a",
@@ -18745,7 +18745,7 @@
      -42.45
     ],
     "to": [
-     -13.0,
+     -8.87,
      9.65,
      53.8
     ],
@@ -18761,7 +18761,7 @@
      -42.45
     ],
     "to": [
-     -7.0,
+     -4.93,
      9.65,
      53.8
     ],
@@ -18777,7 +18777,7 @@
      -42.45
     ],
     "to": [
-     -1.0,
+     -0.99,
      9.65,
      53.8
     ],
@@ -18793,7 +18793,7 @@
      -42.45
     ],
     "to": [
-     5.0,
+     2.96,
      9.65,
      53.8
     ],
@@ -18809,12 +18809,12 @@
      -42.45
     ],
     "to": [
-     60.4,
-     5.5,
-     20.0
+     6.9,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "5f",
@@ -18825,12 +18825,12 @@
      -42.45
     ],
     "to": [
-     60.4,
-     5.5,
-     40.0
+     10.84,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "6a",
@@ -18841,7 +18841,7 @@
      -42.45
     ],
     "to": [
-     -12.0,
+     -8.21,
      9.65,
      53.8
     ],
@@ -18857,7 +18857,7 @@
      -42.45
     ],
     "to": [
-     -6.0,
+     -4.27,
      9.65,
      53.8
     ],
@@ -18873,7 +18873,7 @@
      -42.45
     ],
     "to": [
-     -0.0,
+     -0.33,
      9.65,
      53.8
     ],
@@ -18889,7 +18889,7 @@
      -42.45
     ],
     "to": [
-     6.0,
+     3.61,
      9.65,
      53.8
     ],
@@ -18905,12 +18905,12 @@
      -42.45
     ],
     "to": [
-     60.4,
-     5.5,
-     20.0
+     7.56,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    },
    {
     "beam": "6f",
@@ -18921,21 +18921,21 @@
      -42.45
     ],
     "to": [
-     60.4,
-     5.5,
-     40.0
+     11.5,
+     9.65,
+     53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "east side wall (x +60.4)"
+    "ends_on": "entry (NW) end wall above the door"
    }
   ],
   "signed_off": false,
   "desk": "the desk writes 0 to every laser channel until the IEC 60825-1 sign-off (deskLookValues.js laserHeld)",
   "arithmetic": {
    "lines": 36,
-   "comb_lines": 24,
-   "comb_spacing_m": 1.0,
-   "lowest_point_m": 5.5,
+   "comb_lines": 36,
+   "comb_spacing_m": 0.66,
+   "lowest_point_m": 8.81,
    "comb_height_over_the_floor_m": [
     9.2,
     9.65
@@ -26474,5 +26474,13 @@
    "why": "owner 2026-10-12 \"delete this\"",
    "owed": "a place for the desk and the laser E-stop"
   }
- ]
+ ],
+ "heads_2026_10_13": {
+  "side_lines_x": [
+   -11.5,
+   11.5
+  ],
+  "plane1_z": -9.0,
+  "why": "owner 2026-10-13 16:5x; lead measured N558.1"
+ }
 }
