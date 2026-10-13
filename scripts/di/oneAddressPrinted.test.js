@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 
 import { main } from './cli.mjs'
 import { probePrettyLocalName } from './probe.mjs'
-import { ONE_LOCAL_NAME, ownBase, phonesUrl, printedAddress } from './state.mjs'
+import { ONE_LOCAL_NAME, namedFallback, ownBase, phonesUrl, printedAddress } from './state.mjs'
 import { ui } from './ui.mjs'
 
 const answers = vi.hoisted(() => ({ door: null }))
@@ -58,7 +58,7 @@ afterEach(() => {
 const plain = (text) => String(text).replace(/\u001b\[[0-9;]*m/g, '')
 const config = (id) => ({ machine: { id, name: 'm' } })
 const itIsThisDi = { askSelf: async () => config('aaa'), askDoor: async () => ({ status: 200, config: config('aaa') }) }
-const nothingOnPort80 = { askSelf: async () => config('aaa'), askDoor: async () => null }
+const nothingOnPort80 = { askSelf: async () => config('aaa'), askDoor: async () => null, askPretty: async () => null }
 
 // a dot in the path, always (reference: the hidden-directory trap)
 const installedHome = ({ cert = false, port = null } = {}) => {
@@ -133,7 +133,7 @@ describe('ownBase: where a link to one of this install\'s own pages starts', () 
     })
 
     it('another di.iiii on :80 is not this one: the old address, never the one address', async () => {
-        const another = { askSelf: async () => config('aaa'), askDoor: async () => ({ status: 200, config: config('bbb') }) }
+        const another = { askSelf: async () => config('aaa'), askDoor: async () => ({ status: 200, config: config('bbb') }), askPretty: async () => null }
         expect(await link(installedHome({ cert: true }), 443, another)).toBe('https://local.thedi.studio/my-show')
         expect(await link(installedHome(), 4000, another)).toBe('http://localhost:4000/my-show')
     })
@@ -272,11 +272,11 @@ describe('the real `di status` and `di up` on an install', () => {
         expect(lines.join('\n')).not.toMatch(/not this di\.iiii yet/)
     })
 
-    it('status falls back to the old address and says why in ONE line when :80 is silent, or another di', async () => {
+    it('status falls back to the one name with its port (it answers there) and says why in ONE line when :80 is silent, or another di', async () => {
         const { home, port } = await install()
         answers.door = null
         let lines = await run(home, 'status')
-        expect(lines[0]).toContain(`http://localhost:${port}`)
+        expect(lines[0]).toContain(`http://diiii.localhost:${port}`)
         expect(lines.filter((line) => line.includes('is not this di.iiii yet'))).toEqual(['http://diiii.localhost/ is not this di.iiii yet: nothing answers on port 80'])
         answers.door = { status: 200, config: config('bbb') }
         lines = await run(home, 'status')
@@ -291,26 +291,26 @@ describe('the real `di status` and `di up` on an install', () => {
         expect(lines[0]).toMatch(/^already running — http:\/\/diiii\.localhost\//)
         answers.door = null
         const fallback = await run(home, 'up', '--no-open')
-        expect(fallback[0]).toContain(`already running — http://localhost:${port}`)
+        expect(fallback[0]).toContain(`already running — http://diiii.localhost:${port}`)
         expect(fallback.join('\n')).toContain('is not this di.iiii yet: nothing answers on port 80')
     })
 
-    it('di new prints the link to the new space under the one address too, and the old address when it is not judged', async () => {
+    it('di new prints the link to the new space under the one address too, and the one name with its port when it is not judged', async () => {
         const { home, port } = await install()
         answers.door = { status: 200, config: config('aaa') }
         expect((await run(home, 'new', 'my', 'show')).slice(0, 2)).toEqual(['made my-show.', '  http://diiii.localhost/my-show'])
         answers.door = null
-        expect((await run(home, 'new', 'my', 'show')).slice(0, 2)).toEqual(['made my-show.', `  http://localhost:${port}/my-show`])
+        expect((await run(home, 'new', 'my', 'show')).slice(0, 2)).toEqual(['made my-show.', `  http://diiii.localhost:${port}/my-show`])
     })
 
-    it('di open FILE prints the link to the opened space under the one address too, and the old address when it is not judged', async () => {
+    it('di open FILE prints the link to the opened space under the one address too, and the one name with its port when it is not judged', async () => {
         const { home, port } = await install()
         const file = path.join(home, 'my-show.diiii')
         fs.writeFileSync(file, 'the fake server takes any bytes')
         answers.door = { status: 200, config: config('aaa') }
         expect((await run(home, 'open', file)).slice(0, 2)).toEqual(['opened my-show.', '  http://diiii.localhost/my-show'])
         answers.door = null
-        expect((await run(home, 'open', file)).slice(0, 2)).toEqual(['opened my-show.', `  http://localhost:${port}/my-show`])
+        expect((await run(home, 'open', file)).slice(0, 2)).toEqual(['opened my-show.', `  http://diiii.localhost:${port}/my-show`])
     })
 })
 
@@ -341,5 +341,26 @@ describe('every link di prints to its own pages is decided in one place', () => 
         expect(stage).toContain('publicUrl(home, port)')
         expect(stage).not.toContain('ownBase')
         expect(between('const cmdNdi = ', 'const cmdStage = ')).toContain('publicUrl(home, resolvePort(home))')
+    })
+})
+
+describe('one rule for the fallback: a machine without :80 still says ONE thing (owner 2026-10-13: "make only one way to work")', () => {
+    const nameAnswers = { ...nothingOnPort80, askPretty: async () => ONE_LOCAL_NAME }
+
+    it('no certificate, the one name answers on the port → http://diiii.localhost:<port> in status, open, new and open FILE alike', async () => {
+        const home = installedHome()
+        expect((await printedAddress(home, 4000, nameAnswers)).url).toBe('http://diiii.localhost:4000')
+        expect(`${await ownBase(home, 4000, nameAnswers)}/my-show`).toBe('http://diiii.localhost:4000/my-show')
+        expect(await namedFallback(home, 4000, nameAnswers)).toBe('http://diiii.localhost:4000')
+    })
+
+    it('no certificate, the name does not answer → localhost:<port>, as before', async () => {
+        expect(await namedFallback(installedHome(), 4000, { askPretty: async () => null })).toBe('http://localhost:4000')
+    })
+
+    it('a certificate wins, and the name is then not asked at all', async () => {
+        const askPretty = vi.fn(async () => ONE_LOCAL_NAME)
+        expect(await namedFallback(installedHome({ cert: true }), 443, { askPretty })).toBe('https://local.thedi.studio')
+        expect(askPretty).not.toHaveBeenCalled()
     })
 })

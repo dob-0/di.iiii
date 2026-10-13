@@ -14,7 +14,7 @@ import path from 'node:path'
 
 import { writeFileAtomic } from './atomicWrite.mjs'
 import { paths } from './paths.mjs'
-import { ONE_LOCAL_NAME, oneLocalUrl, probeDoorConfig, probeHealth } from './probe.mjs'
+import { ONE_LOCAL_NAME, oneLocalUrl, probeDoorConfig, probeHealth, probePrettyLocalName } from './probe.mjs'
 
 export const DEFAULT_PORT = 4000
 // The one local address (docs/ai/one-local-address.md): the same link on every
@@ -289,14 +289,27 @@ export const phonesUrl = (home, port) => (readCert(home) ? publicUrl(home, port)
  * When http://diiii.localhost/ was asked and answered as THIS install (see
  * oneAddress), that is the address, and the certificate's name — when there is
  * one — is kept for the phones and headsets line. When it was not, the address is
- * what the command printed before (`fallback`, default publicUrl) and `why` says
+ * `fallback` when a command has its own (di up's mDNS name), else namedFallback below, and `why` says
  * what is missing. { url, one, phones, why }
  */
-export const printedAddress = async (home, port, { fallback = null, askSelf, askDoor } = {}) => {
+export const printedAddress = async (home, port, { fallback = null, askSelf, askDoor, askPretty } = {}) => {
     const answer = await oneAddress(home, port, { askSelf, askDoor })
     return answer.url
         ? { url: answer.url, one: true, phones: phonesUrl(home, port), why: null }
-        : { url: fallback || publicUrl(home, port), one: false, phones: null, why: answer.why }
+        : { url: fallback || await namedFallback(home, port, { askPretty }), one: false, phones: null, why: answer.why }
+}
+
+/**
+ * What every command prints when the one local address is not this install
+ * (owner 2026-10-13: "make only one way to work"): the certificate's name when
+ * there is one; else the one local address's own name with the port while :80
+ * is not ours — asked before it is printed, as `di up` always did; else
+ * localhost. One rule, so `di status`, `di up`, `di open`, `di new` and
+ * `di open FILE` never disagree on a machine without :80.
+ */
+export const namedFallback = async (home, port, { askPretty = probePrettyLocalName } = {}) => {
+    if (readCert(home)) return publicUrl(home, port)
+    return (await askPretty(port)) ? nameUrl(ONE_LOCAL_NAME, port) : localUrl(port)
 }
 
 /**
@@ -304,9 +317,9 @@ export const printedAddress = async (home, port, { fallback = null, askSelf, ask
  * `di open FILE` lines that say where the space is. It is the address the
  * other lines lead with, so a person is sent one way: the one local address
  * when it was asked and answered as this install, else what that line printed
- * before (publicUrl: the certificate's name, or localhost:<port>). No trailing
+ * before (namedFallback: the certificate's name, diiii.localhost:<port> or localhost:<port>). No trailing
  * slash, so a path follows it: `${await ownBase(home, port)}/<space>`.
  * `di status` and `di up` say why when it is not the one address; a link line does not repeat that.
  */
-export const ownBase = async (home, port, { askSelf, askDoor } = {}) =>
-    (await printedAddress(home, port, { askSelf, askDoor })).url.replace(/\/+$/, '')
+export const ownBase = async (home, port, { askSelf, askDoor, askPretty } = {}) =>
+    (await printedAddress(home, port, { askSelf, askDoor, askPretty })).url.replace(/\/+$/, '')

@@ -36,3 +36,4 @@
   (§6); a real phone scan of the QR code (#826's owed list).
 - Owed (process): `npm ci` in a di.iiii worktree runs `prepare` (`scripts/install-git-hooks.mjs`), which writes the repo-wide
   `core.hooksPath`; run it as `DI_NO_GIT_HOOKS=1 npm ci` (and `npm --prefix serverXR ci` for the server tests). This belongs in the brief template.
+- 2026-10-13, lead (dob-2e): one fallback for every command, `namedFallback` in `scripts/di/state.mjs` (certificate name, else `diiii.localhost:<port>` when it answers, else localhost), so a machine without :80 prints ONE address in `di status`, `di up`, `di open`, `di new` and `di open FILE`. Red first (3 failed), then 544 passed in 40 files; 4 end-to-end expectations moved to `diiii.localhost:<port>`.

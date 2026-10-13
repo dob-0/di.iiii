@@ -219,8 +219,8 @@ make only one way to work."* Measured before the change: on aylmo `di status` pr
   - `di open`, `di new` and `di open FILE` follow the same rule (2026-10-13, "make only one way to work").
     `di open` prints and opens what `printedAddress` gives. The two lines that say where a space is use
     `ownBase` (`printedAddress` without its trailing slash): `http://diiii.localhost/my-show` when the name is
-    this install, else what they printed before, `https://<certificate name>/my-show` or
-    `http://localhost:<port>/my-show`.
+    this install, else `namedFallback`, the same for every command: `https://<certificate name>/my-show`, else
+    `http://diiii.localhost:<port>/my-show` when the name answers on the port, else `http://localhost:<port>/my-show`.
 - **D2. One name before :80 is allowed.** The pretty-name probe asks `diiii.localhost` (it asked
   `di.localhost`), so a machine that has not been allowed :80 yet prints `http://diiii.localhost:4000`
   instead of a second name. The same card no longer calls a `.localhost` name an address "on the phones":
@@ -378,8 +378,8 @@ di follows                                        # moxir followed from dev?
 11. D1 covers `di status`, `di up`, `di open`, `di new` and `di open FILE`. Left on the certificate's name
     on purpose: the `url` fields and the health check of `di stage` (`scripts/di/stage.mjs`: the projector
     machine's kiosk), the base `di ndi scan` asks (an API address, never printed), and the line `di invite`
-    prints, which is typed on ANOTHER machine. One gap, read from the code and not run: on a machine that may not
-    hold :80 yet, `di up` prints `http://diiii.localhost:<port>` (D2) while `di new` and `di open FILE` print
-    `http://localhost:<port>/<space>`; making those two ask the name as well is a small change, the owner's call.
+    prints, which is typed on ANOTHER machine. The gap where, on a machine that may not hold :80 yet,
+    `di up` printed `http://diiii.localhost:<port>` (D2) while `di new`, `di open FILE` and `di status` printed
+    `http://localhost:<port>` is closed (2026-10-13): one `namedFallback` in `scripts/di/state.mjs` for every command, 3 tests.
 12. `di up` could offer the `setcap` line itself (item 3 above) instead of only printing the reason; the
     reason today is "nothing answers on port 80", which does not tell a missing permission from a missing door.
