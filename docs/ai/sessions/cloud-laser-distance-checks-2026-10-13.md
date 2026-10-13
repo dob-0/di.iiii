@@ -14,6 +14,9 @@
   (25 looks x 2 cube versions + the prefix unit case); with the module's real selector, 108 passed.
 - Laser/versions set (versions, versions-xflat, laserLantern, knownKit, rig-lib, safety [+ laserDistance]):
   before 6 files / 637 tests passed; after 7 files / 745 passed. `eslint` clean on the four files.
+- Wide run, `vitest run scripts shared` (this sandbox): origin/dev 4 failed / 2552 passed (174 files); this branch
+  4 failed / 2660 passed (175 files): +108, the new file. The same 4 fail on both, all in `scripts/di/`
+  (`oneAddressPrinted.test.js`, plus `openFile.test.js` failing to load) — not this change; cause not investigated (UNVERIFIED).
 - UNVERIFIED: any real-world laser safety — 3 m is the picture's floor, not an assessment (unchanged).
   No visual change (no render path touched); not looked at in a browser.
 - Next: owner's call whether this coverage gap earns a `docs/ai/known-fixes.md` row (left out: task scope).
