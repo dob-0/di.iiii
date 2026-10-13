@@ -886,6 +886,51 @@ function CollapsibleSection({ title, children, defaultOpen = true }) {
     )
 }
 
+// VIEWS — the project's view buttons as data (src/project/viewport/smartView/viewData.js; decisions of 2026-10-13):
+// a LIVE view is a button visitors get, a WORK view is only here. A built-in is hidden (it is computed for every
+// room, so it can come back); an added view is removed. `views` comes from useProjectViews (StudioEditor).
+export function ViewsSection({ views }) {
+    const [name, setName] = useState('')
+    if (!views) return null
+    const { rows, production } = views
+    return (
+        <CollapsibleSection title={`Views (${rows.filter((r) => r.live).length} live)`} defaultOpen={false}>
+            <p className="insp-label" data-views-scope={production ? 'production' : 'project'}>
+                {production
+                    ? `Shared by every version of ${production.title} (${production.versions}). Live views are the buttons visitors get; work views stay here.`
+                    : 'Live views are the buttons visitors get; work views stay here.'}
+            </p>
+            {rows.map((row) => (
+                <div key={row.id} className="insp-field" data-view-row={row.id} data-live={String(row.live)}>
+                    {row.hidden ? (
+                        <label className="insp-label">{row.label} · hidden</label>
+                    ) : (
+                        <ToggleField label={`${row.label} · ${row.live ? 'live' : 'work'}`} checked={row.live} onChange={(v) => views.setLive(row.id, v)} />
+                    )}
+                    {row.builtIn ? (
+                        <button type="button" className="scc-btn scc-btn--xs" onClick={() => views.setHidden(row.id, !row.hidden)}>
+                            {row.hidden ? `Show ${row.label}` : `Hide ${row.label}`}
+                        </button>
+                    ) : (
+                        <button type="button" className="scc-btn scc-btn--xs" onClick={() => views.remove(row.id)}>{`Remove ${row.label}`}</button>
+                    )}
+                </div>
+            ))}
+            <div className="insp-field">
+                <label className="insp-label" htmlFor="studio-new-view-name">New view from this camera</label>
+                <input id="studio-new-view-name" className="insp-input" value={name} maxLength={16} placeholder="Name" onChange={(event) => setName(event.target.value)} />
+                <button
+                    type="button"
+                    className="scc-btn"
+                    onClick={() => { if (views.onAddCurrent?.(name)) setName('') }}
+                >
+                    Add this camera
+                </button>
+            </div>
+        </CollapsibleSection>
+    )
+}
+
 export function ProjectPanel({
     document,
     displayName,
@@ -893,7 +938,8 @@ export function ProjectPanel({
     onProjectMetaPatch,
     onWorldPatch,
     onRenderSettingsPatch,
-    onOpenHub
+    onOpenHub,
+    views = null
 }) {
     const world = document.worldState || defaultWorldState
     const render = document.renderSettings || defaultRenderSettings
@@ -969,6 +1015,8 @@ export function ProjectPanel({
                     }))} />
                 </div>
             </CollapsibleSection>
+
+            <ViewsSection views={views} />
 
             <CollapsibleSection title="Default camera" defaultOpen={false}>
                 <NumberField label="FOV" value={world.savedView?.fov ?? 50} min={1} max={170} step={1} onChange={(v) => onWorldPatch({ savedView: { fov: v } })} />

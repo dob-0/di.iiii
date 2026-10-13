@@ -53,6 +53,7 @@ import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import { resolveViews } from '../../project/viewport/smartView/viewData.js'
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
@@ -1175,11 +1176,16 @@ export default function StudioViewport({
     const reservedKeys = useMemo(() => (
         studioBar ? new Set((cues || []).map((c) => c?.key).filter(Boolean).map(String)) : null
     ), [studioBar, cues])
+    // The project's own view list (viewData.js): the Studio bar has every view it keeps, marked live or work;
+    // anywhere else (the visitor's page, the Studio's preview of it) only the live ones.
+    const viewList = document.presentationState?.viewPresets
+    const selectViews = useCallback((presets) => resolveViews(presets, viewList, studioBar ? 'studio' : 'visitor'), [viewList, studioBar])
     const sv = useSmartViewState({
         enabled: smartOn,
         deepLink: Boolean(smartView?.deepLink),
         keysLive: studioBar ? pointerOver : true,
-        reservedKeys
+        reservedKeys,
+        select: selectViews
     })
     const { setPresets, release: releaseView } = sv
     // The building switches of the Studio bar (Roof · Walls · Machines · Outside): null = everything shown; a host that

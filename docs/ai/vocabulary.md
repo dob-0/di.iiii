@@ -37,6 +37,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The lamp you place in a scene still reads Light too, until the owner settles its own word (Lamp is the recommendation). |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
+| **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
