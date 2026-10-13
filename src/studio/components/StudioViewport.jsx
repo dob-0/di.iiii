@@ -530,6 +530,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     useHoldFrames(isXrPresenting, 'xr') // a headset session is the headset's own loop
     const scene = useThree((state) => state.scene)
     const getScene = useCallback(() => scene, [scene])
+    const gl = useThree((state) => state.gl)
+    const getGl = useCallback(() => gl, [gl])
 
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
@@ -553,6 +555,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         orbitSelection: navigation.orbitSelection,
         selectedEntityIds,
         getScene,
+        getGl,
         active: enabled && !isXrPresenting,
     })
 
