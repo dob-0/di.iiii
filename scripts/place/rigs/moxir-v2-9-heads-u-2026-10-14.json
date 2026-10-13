@@ -1,0 +1,162 @@
+{
+ "what": "MOXIR v2.9: the 18 UP-B380F moving heads on a U around the dance floor (the owner sketched it on the Studio Top plan, 2026-10-14 ~02:40, \"i want to moving heads like this ... all 18\"; he said \"yes i like it\" to the plan picture agent-reports-2026-10-13/moxir-lead/u-plan-moving-heads-2026-10-14.png)",
+ "source": "derived, not measured: left side = the left line as it stands (x -22.01, z -8.17..21.83, unchanged); right side = its mirror x +22.0 at the same z (the right line moves; the hall record shows no massing there); top = across behind the DJ at z = first left head - 3.8 = -11.97, x = -22 + 44 k/7 (k 1..6; columns at x +-12 z -12 stay 2.6 m away). All on the floor (y 0.7, as now), straight up (rotation [pi,0,0], as the side lines) - the scenes aim them.",
+ "moves": [
+  {
+   "id": "rig-beam-planes-16",
+   "position": [
+    22.0,
+    0.7,
+    -8.173
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "position": [
+    22.0,
+    0.7,
+    -2.173
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "position": [
+    22.0,
+    0.7,
+    3.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "position": [
+    22.0,
+    0.7,
+    9.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "position": [
+    22.0,
+    0.7,
+    15.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "position": [
+    22.0,
+    0.7,
+    21.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-01",
+   "position": [
+    -15.714,
+    0.7,
+    -11.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "position": [
+    -9.429,
+    0.7,
+    -11.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "position": [
+    -3.143,
+    0.7,
+    -11.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "position": [
+    3.143,
+    0.7,
+    -11.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "position": [
+    9.429,
+    0.7,
+    -11.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "position": [
+    15.714,
+    0.7,
+    -11.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  }
+ ]
+}
