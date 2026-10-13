@@ -49,12 +49,21 @@ describe('applyPivot force (a gesture that just stopped the easing)', () => {
 })
 
 describe('settleForGesture', () => {
-    it('stops an easing camera so the gesture\'s pivot can be set, and leaves a still one alone', () => {
-        let stopped = 0
-        settleForGesture({ active: true, stop: () => { stopped += 1 } })
-        settleForGesture({ active: false, stop: () => { stopped += 1 } })
-        settleForGesture(null)
-        expect(stopped).toBe(1)
+    it('freezes a gliding camera where it is (never jumps to the glide\'s end), and leaves a still one alone', async () => {
+        const THREE = await import('three')
+        const { default: CameraControls } = await import('camera-controls')
+        CameraControls.install({ THREE })
+        const cam = new THREE.PerspectiveCamera(50, 16 / 9, 0.01, 5000)
+        const cc = new CameraControls(cam)
+        cc.setLookAt(0, 0, 0, 0, 0, -10, false); cc.update(0)
+        cc.setLookAt(0, 0, -20, 0, 0, -30, true)
+        for (let i = 0; i < 6; i += 1) cc.update(1 / 60)
+        const mid = cam.position.clone()
+        settleForGesture(cc); cc.update(1 / 60)
+        expect(cam.position.distanceTo(mid)).toBeLessThan(1e-6)
+        expect(cc.getPosition(new THREE.Vector3(), true).distanceTo(mid)).toBeLessThan(1e-6)
+        settleForGesture(cc); settleForGesture(null) // a still one, and none: nothing happens
+        expect(cam.position.distanceTo(mid)).toBeLessThan(1e-6)
     })
 })
 

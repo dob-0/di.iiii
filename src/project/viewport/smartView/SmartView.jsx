@@ -1,3 +1,4 @@
+import { IN_PLACE_DISTANCE } from '../../../studio/navigation/freeMove.js'
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -876,7 +877,8 @@ export default function SmartView({
                 state.freeApplied = true
                 cc.maxPolarAngle = Math.PI
                 cc.maxDistance = Infinity
-                if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? Number.EPSILON
+                // never Number.EPSILON: a radius that small loses the view direction to rounding (review-move F12)
+                if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? IN_PLACE_DISTANCE / 2
                 if (cc.setBoundary) cc.setBoundary()
                 state.boundaryKey = null
                 if ('colliderMeshes' in cc) cc.colliderMeshes = []

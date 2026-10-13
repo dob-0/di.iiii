@@ -14,6 +14,7 @@
 import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
+import { useProgress } from '@react-three/drei'
 import { clientToNdc, contentLargestSide, pickPivot, selectionCenter } from './autoDepth.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
 import { IN_PLACE_DISTANCE, autoSpeed, flyVelocity, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
@@ -60,7 +61,9 @@ export function axisPointAtDepth(camera, point) {
 // camera-controls reported `active` at the start of EVERY gesture, applyPivot refused, Auto Depth never ran and a 240 px
 // right-drag still moved the camera 0.11-0.64 m. applyPivot keeps its own refusal (setOrbitPoint must not run mid-ease).
 export function settleForGesture(cc) {
-    if (cc?.active) cc.stop()
+    if (!cc?.active) return
+    const p = cc.getPosition(new Vector3(), false), t = cc.getTarget(new Vector3(), false)
+    cc.setLookAt(p.x, p.y, p.z, t.x, t.y, t.z, false)
 }
 
 // The frame delta camera-controls may ease over. With frameloop="demand" the first frame of a gesture after a pause carries the
@@ -99,6 +102,21 @@ function announceReading(reading) {
     try { window.dispatchEvent(new CustomEvent(STANDARD_MOVE_SPEED_EVENT, { detail: reading })) } catch { /* no window */ }
 }
 
+// The automatic speed per space (review-move F7): taken once and kept across tool switches. While three's loaders are still
+// busy (drei's progress store, fed by THREE.DefaultLoadingManager) the reading is provisional and is taken again at the next
+// gesture; once loading is idle it is fixed for the visit, so a half-loaded first reading never sticks.
+const autoSpeeds = new WeakMap()
+const loadingNow = () => { try { return Boolean(useProgress.getState?.().active) } catch { return false } }
+export function autoSpeedFor(scene, { read = (sc) => autoSpeed(contentLargestSide(entityRoots(sc))), loading = loadingNow } = {}) {
+    if (!scene) return null
+    const held = autoSpeeds.get(scene)
+    if (held?.fixed) return held.auto
+    const auto = read(scene)
+    if (auto == null) return held?.auto ?? null
+    autoSpeeds.set(scene, { auto, fixed: !loading() })
+    return auto
+}
+
 export function useCameraNavigation({
     controlsRef,
     presetId,
@@ -129,31 +147,42 @@ export function useCameraNavigation({
         // Dev-only trace of every decision (window.__diNavTrace), read by the probes in scripts/nav with NAV_TRACE=1.
         const trace = (entry) => { if (import.meta.env?.DEV) (window.__diNavTrace ||= []).push({ t: Math.round(performance.now()), ...entry }) }
 
-        // The automatic speed is taken once, from the space's size, the first time it has a size; then it is kept, so every
-        // move of this visit has the same speed.
-        let auto = null
-        const speed = () => {
-            if (auto == null && settingsRef.current.speed === 'auto') {
+        // The speed of this gesture: read afresh at each gesture's start (`fresh`), the same for every step of that gesture.
+        // The automatic speed comes from autoSpeedFor: once per space, fixed once loading is idle.
+        let auto = null, current = null
+        const speed = (fresh = false) => {
+            if (!fresh && current != null) return current
+            if (settingsRef.current.speed === 'auto') {
                 const scene = getScene?.()
                 if (import.meta.env?.DEV) window.__diNavScene = scene
-                auto = autoSpeed(scene ? contentLargestSide(entityRoots(scene)) : 0)
-                if (auto != null) trace({ why: 'auto speed taken', auto: +auto.toFixed(3) })
+                const before = auto
+                auto = autoSpeedFor(scene)
+                if (auto != null && auto !== before) trace({ why: 'auto speed taken', auto: +auto.toFixed(3), fixed: Boolean(scene && autoSpeeds.get(scene)?.fixed) })
             }
-            const s = resolveSpeed(settingsRef.current.speed, auto)
-            if (lastReading.auto !== auto || lastReading.speed !== s) announceReading({ auto, speed: s })
-            return s
+            current = resolveSpeed(settingsRef.current.speed, auto)
+            if (lastReading.auto !== auto || lastReading.speed !== current) announceReading({ auto, speed: current })
+            return current
         }
         // A double-click made a surface the turning point; it stays so until another move (wheel, slide, zoom drag).
         let focused = false
 
         const camPos = new Vector3(), viewDir = new Vector3(), point = new Vector3(), goalPos = new Vector3(), goalTarget = new Vector3()
         // The turning point onto the view axis, `distance` ahead; the camera does not move.
+        const offset = new Vector3()
         const placeTurnPoint = (distance) => {
-            const cam = cc.camera
-            cam.updateMatrixWorld()
-            cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
+            if (cc.getFocalOffset(offset, true).lengthSq() > 0) {
+                settleForGesture(cc); cc.update(0)
+                const cam = cc.camera
+                cam.updateMatrixWorld(); cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
+                cc.setFocalOffset(0, 0, 0, false)
+                point.copy(camPos).addScaledVector(viewDir, distance)
+                cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, false)
+                return
+            }
+            cc.getPosition(camPos, true); cc.getTarget(goalTarget, true)
+            viewDir.subVectors(goalTarget, camPos).normalize()
             point.copy(camPos).addScaledVector(viewDir, distance)
-            cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, false)
+            cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, cc.active)
         }
         // Camera and turning point forward (+) or back along the view, from where the controls are heading (their goal), so
         // notches that arrive while a glide is still running add up exactly.
@@ -173,39 +202,59 @@ export function useCameraNavigation({
             return event
         }
 
+        // A slide of dx, dy pixels: camera and turning point move together by the same metres per pixel in every direction, a
+        // plain translation like every other move (camera-controls' truck() goes through its boundary and snapped a turning point
+        // the other moves had carried past it: review-move F8).
+        const slideX = new Vector3(), slideY = new Vector3(), slideD = new Vector3()
+        const slideBy = (dx, dy, s) => {
+            const fov = typeof cc.camera.getEffectiveFOV === 'function' ? cc.camera.getEffectiveFOV() : cc.camera.fov
+            const mpp = slideMetresPerPixel(turnDistance(s, 'point'), fov, element.getBoundingClientRect().height)
+            cc.camera.updateMatrix()
+            slideX.setFromMatrixColumn(cc.camera.matrix, 0); slideY.setFromMatrixColumn(cc.camera.matrix, 1)
+            cc.getPosition(goalPos, true); cc.getTarget(goalTarget, true)
+            slideD.set(0, 0, 0).addScaledVector(slideX, -dx * mpp).addScaledVector(slideY, dy * mpp)
+            goalPos.add(slideD); goalTarget.add(slideD)
+            cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, ease)
+        }
         // The slide and the zoom drag are this hook's own, at the standard speed; camera-controls sees no button for them.
+        const BUTTON_BIT = { 0: 1, 1: 4, 2: 2 }
+        let endDrag = null
         const startDrag = (event, kind) => {
             const pointerId = event.pointerId
+            const bit = BUTTON_BIT[event.button] ?? 0
             let lastX = event.clientX, lastY = event.clientY
-            if (kind === 'zoom') focused = false
+            focused = false
             cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
+            speed(true)
             const onMove = (e) => {
                 if (e.pointerId !== pointerId) return
+                if (bit && (e.buttons & bit) === 0) { onUp(e); return }
                 const dx = e.clientX - lastX, dy = e.clientY - lastY
                 lastX = e.clientX; lastY = e.clientY
                 if (!dx && !dy) return
                 const s = speed()
                 if (kind === 'slide') {
-                    const fov = typeof cc.camera.getEffectiveFOV === 'function' ? cc.camera.getEffectiveFOV() : cc.camera.fov
-                    const mpp = slideMetresPerPixel(turnDistance(s, 'point'), fov, element.getBoundingClientRect().height)
-                    // camera-controls' own drag passes (last - current) to truck(): the same sign here, so it feels the same
-                    cc.truck(-dx * mpp, -dy * mpp, ease)
+                    slideBy(dx, dy, s)
                 } else {
                     moveForward(zoomDragStep(dy, s))
                 }
                 announceMove(e)
             }
             const onUp = (e) => {
-                if (e.pointerId !== pointerId) return
+                if (e && e.pointerId !== pointerId) return
+                endDrag = null
+                window.removeEventListener('blur', onUp)
                 doc.removeEventListener('pointermove', onMove, true)
                 doc.removeEventListener('pointerup', onUp, true)
                 doc.removeEventListener('pointercancel', onUp, true)
-                cc.dispatchEvent({ type: 'controlend', originalEvent: e })
+                cc.dispatchEvent({ type: 'controlend', originalEvent: e || undefined })
                 trace({ action: kind, end: true, distance: +cc.distance.toFixed(3) })
             }
             doc.addEventListener('pointermove', onMove, true)
             doc.addEventListener('pointerup', onUp, true)
             doc.addEventListener('pointercancel', onUp, true)
+            window.addEventListener('blur', onUp)
+            endDrag = () => onUp(null)
             trace({ action: kind, gestureStart: true, speed: +speed().toFixed(3) })
         }
 
@@ -216,12 +265,14 @@ export function useCameraNavigation({
         let flyFrame = 0, flyLast = 0
         const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE'])
         const right = new Vector3(), worldUp = new Vector3(0, 1, 0), delta = new Vector3()
+        const mods = { shift: false, alt: false }
+        const readMods = (event) => { mods.shift = Boolean(event.shiftKey); mods.alt = Boolean(event.altKey) }
         const flyTick = (now) => {
             flyFrame = 0
             if (!held.size || !rightHeld) return
-            const dt = clampUpdateDt(flyLast ? (now - flyLast) / 1000 : 0)
+            const dt = flyLast ? Math.min(Math.max((now - flyLast) / 1000, 0), 0.25) : 0
             flyLast = now
-            const v = flyVelocity(held, speed(), speedModifier({ shift: held.has('Shift'), alt: held.has('Alt') }))
+            const v = flyVelocity(held, speed(), speedModifier(mods))
             cc.getPosition(goalPos, true); cc.getTarget(goalTarget, true)
             viewDir.subVectors(goalTarget, goalPos).normalize()
             right.crossVectors(viewDir, worldUp).normalize()
@@ -229,56 +280,86 @@ export function useCameraNavigation({
             if (delta.lengthSq() > 0) {
                 focused = false
                 goalPos.add(delta); goalTarget.add(delta)
-                cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, false)
+                cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, cc.active)
                 cc.dispatchEvent({ type: 'update' })
             }
             flyFrame = requestAnimationFrame(flyTick)
         }
+        let flying = false
+        const endFlight = () => { if (flying) { flying = false; cc.dispatchEvent({ type: 'controlend' }) } }
         const stopFlying = () => {
-            if (held.size) cc.dispatchEvent({ type: 'controlend' })
+            endFlight()
             held.clear(); rightHeld = false; flyLast = 0
             if (flyFrame) { cancelAnimationFrame(flyFrame); flyFrame = 0 }
         }
         const onFlyKey = (event) => {
             const down = event.type === 'keydown'
-            if (event.key === 'Shift' || event.key === 'Alt') { if (down) held.add(event.key); else held.delete(event.key) }
+            readMods(event)
             if (!rightHeld || !FLY_KEYS.has(event.code)) return
             event.preventDefault(); event.stopImmediatePropagation()
-            if (!down) { held.delete(event.code); return }
-            if (!held.has(event.code) && ![...held].some((k) => FLY_KEYS.has(k))) cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
+            if (!down) { held.delete(event.code); if (![...held].some((k) => FLY_KEYS.has(k))) endFlight(); return }
+            if (!flying) { flying = true; speed(true); cc.dispatchEvent({ type: 'controlstart', originalEvent: event }) }
             held.add(event.code)
             if (!flyFrame) { flyLast = 0; flyFrame = requestAnimationFrame(flyTick) }
         }
         const onPointerUp = (event) => { if (event.button === 2) stopFlying() }
         // A release outside the window may never arrive as pointerup: the next move that shows no right button ends the flight.
-        const onPointerMoveFly = (event) => { if (rightHeld && (event.buttons & 2) === 0) stopFlying() }
+        const onPointerMoveFly = (event) => { readMods(event); if (rightHeld && (event.buttons & 2) === 0) stopFlying() }
+
+        // Touch (review-move F3): spreading two fingers 100 px goes one step forward (the zoom drag's rule) and moving them
+        // together slides at the standard metres per pixel; one finger turns (camera-controls), around the point placed here.
+        const touchPts = new Map()
+        let pinch = null
+        const touchMeasure = () => { const [a, b] = [...touchPts.values()]; return { dist: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 } }
+        const onTouchDown = (event) => {
+            touchPts.set(event.pointerId, { x: event.clientX, y: event.clientY })
+            if (touchPts.size === 1) {
+                settleForGesture(cc)
+                if (!focused) placeTurnPoint(Math.min(Math.max(turnDistance(speed(true), settingsRef.current.turn), cc.minDistance), cc.maxDistance))
+                return
+            }
+            if (touchPts.size === 2) { focused = false; speed(true); pinch = touchMeasure(); cc.dispatchEvent({ type: 'controlstart', originalEvent: event }) }
+        }
+        const onTouchMove = (event) => {
+            if (event.pointerType !== 'touch' || !touchPts.has(event.pointerId)) return
+            touchPts.set(event.pointerId, { x: event.clientX, y: event.clientY })
+            if (touchPts.size !== 2 || !pinch) return
+            const m = touchMeasure(), s = speed()
+            moveForward(zoomDragStep(pinch.dist - m.dist, s)) // fingers apart = forward
+            slideBy(m.cx - pinch.cx, m.cy - pinch.cy, s)
+            pinch = m
+            announceMove(event)
+        }
+        const onTouchUp = (event) => {
+            if (event.pointerType !== 'touch' || !touchPts.delete(event.pointerId)) return
+            if (pinch && touchPts.size < 2) { pinch = null; cc.dispatchEvent({ type: 'controlend', originalEvent: event }) }
+        }
 
         const onPointerDown = (event) => {
             if (!element.contains(event.target)) { trace({ why: 'pointer outside controls element', target: event.target?.tagName, cls: String(event.target?.className || '').slice(0, 60) }); return }
             // pointerType is what the browser reports, not a guess: touch keeps camera-controls' touch gestures.
-            if (event.pointerType === 'touch') return
+            if (event.pointerType === 'touch') { onTouchDown(event); return }
             const name = BUTTON_NAME[event.button]
             if (!name) return
-            if (event.button === 2) rightHeld = true
+            if (event.button === 2) { rightHeld = true; readMods(event) }
             const action = actionFor(preset.id, event.button, { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
             if (action === CC_ACTION.NONE) { cc.mouseButtons[name] = action; return }
-            settleForGesture(cc)
             if (action === CC_ACTION.TRUCK || action === CC_ACTION.SCREEN_PAN || action === CC_ACTION.DOLLY || action === CC_ACTION.ZOOM) {
                 cc.mouseButtons[name] = CC_ACTION.NONE
                 startDrag(event, action === CC_ACTION.DOLLY || action === CC_ACTION.ZOOM ? 'zoom' : 'slide')
                 return
             }
             cc.mouseButtons[name] = action
-            if (action !== CC_ACTION.ROTATE) return
+            if (action !== CC_ACTION.ROTATE) { settleForGesture(cc); return }
             const selected = selectionRef.current
             const scene = getScene?.()
             if (orbitSelection && selected?.length && scene) {
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
-                if (center) { applyPivot(cc, center, { force: true, onAxis: false }); trace({ action: 'turn', source: 'selection' }); return }
+                if (center) { settleForGesture(cc); applyPivot(cc, center, { force: true, onAxis: false }); trace({ action: 'turn', source: 'selection' }); return }
             }
             if (focused) { trace({ action: 'turn', source: 'double-clicked point' }); return }
             // inside the range a viewer's own lock sets (the public viewer's Inside: 2-25 m); the Studio's range is open
-            const d = Math.min(Math.max(turnDistance(speed(), settingsRef.current.turn), cc.minDistance), cc.maxDistance)
+            const d = Math.min(Math.max(turnDistance(speed(true), settingsRef.current.turn), cc.minDistance), cc.maxDistance)
             placeTurnPoint(d)
             trace({ action: 'turn', gestureStart: true, distance: +d.toFixed(3), turn: settingsRef.current.turn })
         }
@@ -289,7 +370,7 @@ export function useCameraNavigation({
             const notches = standardWheelNotches(event)
             if (!notches) return
             focused = false
-            const s = speed()
+            const s = speed(true)
             const metres = wheelStep(notches, s, speedModifier({ shift: event.shiftKey, alt: event.altKey }))
             cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
             moveForward(metres)
@@ -319,6 +400,14 @@ export function useCameraNavigation({
         const limits = { min: cc.minDistance, max: cc.maxDistance }
         cc.minDistance = IN_PLACE_DISTANCE / 2
         cc.maxDistance = Infinity
+        // A button pressed in the middle of another drag (a chord) never runs camera-controls' own slide or zoom: those resting
+        // bindings are NONE, and this hook gives each gesture its action at its own pointerdown (review-move F11). Two fingers too.
+        const OWN = [CC_ACTION.TRUCK, CC_ACTION.SCREEN_PAN, CC_ACTION.DOLLY, CC_ACTION.ZOOM]
+        const restingButtons = { left: cc.mouseButtons.left, middle: cc.mouseButtons.middle, right: cc.mouseButtons.right }
+        for (const name of ['left', 'middle', 'right']) if (OWN.includes(cc.mouseButtons[name])) cc.mouseButtons[name] = CC_ACTION.NONE
+        const restingTwo = cc.touches.two
+        cc.touches.two = CC_ACTION.NONE
+        const onTouchEnd = (event) => onTouchUp(event)
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })
         element.addEventListener('wheel', onWheel, { passive: false })
         doc.addEventListener('contextmenu', onContextMenu, { capture: true })
@@ -327,8 +416,17 @@ export function useCameraNavigation({
         doc.addEventListener('keyup', onFlyKey, { capture: true })
         doc.addEventListener('pointerup', onPointerUp, { capture: true })
         doc.addEventListener('pointermove', onPointerMoveFly, { capture: true })
+        doc.addEventListener('pointermove', onTouchMove, { capture: true })
+        doc.addEventListener('pointerup', onTouchEnd, { capture: true })
+        doc.addEventListener('pointercancel', onTouchEnd, { capture: true })
         window.addEventListener('blur', stopFlying)
         return () => {
+            doc.removeEventListener('pointermove', onTouchMove, { capture: true })
+            doc.removeEventListener('pointerup', onTouchEnd, { capture: true })
+            doc.removeEventListener('pointercancel', onTouchEnd, { capture: true })
+            cc.touches.two = restingTwo
+            for (const name of ['left', 'middle', 'right']) if (cc.mouseButtons[name] === CC_ACTION.NONE && OWN.includes(restingButtons[name])) cc.mouseButtons[name] = restingButtons[name]
+            endDrag?.()
             stopFlying()
             doc.removeEventListener('keydown', onFlyKey, { capture: true })
             doc.removeEventListener('keyup', onFlyKey, { capture: true })
