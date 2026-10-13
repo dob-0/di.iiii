@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 
 import { main } from './cli.mjs'
 import { probePrettyLocalName } from './probe.mjs'
-import { ONE_LOCAL_NAME, phonesUrl, printedAddress } from './state.mjs'
+import { ONE_LOCAL_NAME, ownBase, phonesUrl, printedAddress } from './state.mjs'
 import { ui } from './ui.mjs'
 
 const answers = vi.hoisted(() => ({ door: null }))
@@ -110,6 +110,42 @@ describe('printedAddress: the one address when it is this di, else what was alwa
     it('phonesUrl is the certificate\'s address, or nothing', () => {
         expect(phonesUrl(installedHome(), 4391)).toBeNull()
         expect(phonesUrl(installedHome({ cert: true }), 443)).toBe('https://local.thedi.studio')
+    })
+})
+
+describe('ownBase: where a link to one of this install\'s own pages starts', () => {
+    // The page a person is sent to: <base>/<space>. Three rows, as the owner decided them.
+    const link = async (home, port, asked) => `${await ownBase(home, port, asked)}/my-show`
+
+    it('judged → http://diiii.localhost/<space>, with a certificate or without', async () => {
+        expect(await link(installedHome(), 4000, itIsThisDi)).toBe('http://diiii.localhost/my-show')
+        expect(await link(installedHome({ cert: true }), 443, itIsThisDi)).toBe('http://diiii.localhost/my-show')
+    })
+
+    it('not judged, with a certificate → the certificate\'s name, the port kept off 443', async () => {
+        const home = installedHome({ cert: true })
+        expect(await link(home, 443, nothingOnPort80)).toBe('https://local.thedi.studio/my-show')
+        expect(await link(home, 4443, nothingOnPort80)).toBe('https://local.thedi.studio:4443/my-show')
+    })
+
+    it('not judged, no certificate → http://localhost:4000/<space>', async () => {
+        expect(await link(installedHome(), 4000, nothingOnPort80)).toBe('http://localhost:4000/my-show')
+    })
+
+    it('another di.iiii on :80 is not this one: the old address, never the one address', async () => {
+        const another = { askSelf: async () => config('aaa'), askDoor: async () => ({ status: 200, config: config('bbb') }) }
+        expect(await link(installedHome({ cert: true }), 443, another)).toBe('https://local.thedi.studio/my-show')
+        expect(await link(installedHome(), 4000, another)).toBe('http://localhost:4000/my-show')
+    })
+
+    it('never ends in a slash (a path follows it) and is the address printedAddress gives, nothing of its own', async () => {
+        for (const asked of [itIsThisDi, nothingOnPort80]) {
+            for (const home of [installedHome(), installedHome({ cert: true })]) {
+                const base = await ownBase(home, 4000, asked)
+                expect(base.endsWith('/')).toBe(false)
+                expect(base).toBe((await printedAddress(home, 4000, asked)).url.replace(/\/+$/, ''))
+            }
+        }
     })
 })
 
@@ -206,8 +242,12 @@ describe('the real `di status` and `di up` on an install', () => {
     const install = async () => {
         const port = await listen((req, res) => {
             res.setHeader('content-type', 'application/json')
+            // a POST body is read and dropped; only the answer matters here
+            const reply = (body) => req.on('end', () => res.end(body)).resume()
             if (req.url === '/serverXR/api/health') return res.end('{"ok":true}')
             if (req.url === '/serverXR/api/config') return res.end(JSON.stringify({ config: config('aaa') }))
+            if (req.method === 'POST' && req.url === '/serverXR/api/spaces') return reply('{"space":{"id":"my-show"}}')
+            if (req.method === 'POST' && req.url === '/serverXR/api/spaces/bundle') return reply('{"spaceId":"my-show"}')
             res.statusCode = 404
             return res.end('{}')
         })
@@ -253,5 +293,53 @@ describe('the real `di status` and `di up` on an install', () => {
         const fallback = await run(home, 'up', '--no-open')
         expect(fallback[0]).toContain(`already running — http://localhost:${port}`)
         expect(fallback.join('\n')).toContain('is not this di.iiii yet: nothing answers on port 80')
+    })
+
+    it('di new prints the link to the new space under the one address too, and the old address when it is not judged', async () => {
+        const { home, port } = await install()
+        answers.door = { status: 200, config: config('aaa') }
+        expect((await run(home, 'new', 'my', 'show')).slice(0, 2)).toEqual(['made my-show.', '  http://diiii.localhost/my-show'])
+        answers.door = null
+        expect((await run(home, 'new', 'my', 'show')).slice(0, 2)).toEqual(['made my-show.', `  http://localhost:${port}/my-show`])
+    })
+
+    it('di open FILE prints the link to the opened space under the one address too, and the old address when it is not judged', async () => {
+        const { home, port } = await install()
+        const file = path.join(home, 'my-show.diiii')
+        fs.writeFileSync(file, 'the fake server takes any bytes')
+        answers.door = { status: 200, config: config('aaa') }
+        expect((await run(home, 'open', file)).slice(0, 2)).toEqual(['opened my-show.', '  http://diiii.localhost/my-show'])
+        answers.door = null
+        expect((await run(home, 'open', file)).slice(0, 2)).toEqual(['opened my-show.', `  http://localhost:${port}/my-show`])
+    })
+})
+
+describe('every link di prints to its own pages is decided in one place', () => {
+    const cli = fs.readFileSync(path.join(HERE, 'cli.mjs'), 'utf8')
+    const between = (from, to) => cli.slice(cli.indexOf(from), cli.indexOf(to))
+
+    it('di open asks printedAddress, not a copy of its rule; the browser gets what was printed', () => {
+        const open = between('const cmdOpen = ', 'THE FILE MENU')
+        expect(open).toContain('printedAddress(home, port)')
+        expect(open).not.toMatch(/\boneAddress\(|publicUrl\(/)
+        expect(open).toMatch(/say\(url\)\s+openBrowser\(url\)/)
+    })
+
+    it('di open FILE (running, and stopped) and di new build the link to the space on ownBase', () => {
+        const opened = [...between('const cmdOpenFile = ', 'const cmdNew = ').matchAll(/ui\.opened\(.*\)/g)]
+        const made = [...between('const cmdNew = ', 'const cmdMove = ').matchAll(/ui\.made\(.*\)/g)]
+        const printed = [...opened, ...made].map((match) => match[0])
+        expect(printed.length).toBe(3)
+        for (const line of printed) {
+            expect(line).toContain('await ownBase(home')
+            expect(line).not.toMatch(/publicUrl\(|localUrl\(/)
+        }
+    })
+
+    it('left on the certificate\'s name on purpose: the projector machine\'s kiosk and health, and the base di ndi scan asks', () => {
+        const stage = fs.readFileSync(path.join(HERE, 'stage.mjs'), 'utf8')
+        expect(stage).toContain('publicUrl(home, port)')
+        expect(stage).not.toContain('ownBase')
+        expect(between('const cmdNdi = ', 'const cmdStage = ')).toContain('publicUrl(home, resolvePort(home))')
     })
 })

@@ -298,3 +298,15 @@ export const printedAddress = async (home, port, { fallback = null, askSelf, ask
         ? { url: answer.url, one: true, phones: phonesUrl(home, port), why: null }
         : { url: fallback || publicUrl(home, port), one: false, phones: null, why: answer.why }
 }
+
+/**
+ * Where a link to one of THIS install's own pages starts — the `di new` and
+ * `di open FILE` lines that say where the space is. It is the address the
+ * other lines lead with, so a person is sent one way: the one local address
+ * when it was asked and answered as this install, else what that line printed
+ * before (publicUrl: the certificate's name, or localhost:<port>). No trailing
+ * slash, so a path follows it: `${await ownBase(home, port)}/<space>`.
+ * `di status` and `di up` say why when it is not the one address; a link line does not repeat that.
+ */
+export const ownBase = async (home, port, { askSelf, askDoor } = {}) =>
+    (await printedAddress(home, port, { askSelf, askDoor })).url.replace(/\/+$/, '')

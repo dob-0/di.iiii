@@ -52,7 +52,7 @@ import * as node from './runner-node.mjs'
 import { DEFAULT_UNIT, activeService, installService, removeService, systemdUsable, unitStatus, validUnitName } from './service.mjs'
 import {
     alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    ensureGuestSecrets, lanUrl, localUrl, nameUrl, oneAddress, printedAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, ownBase, printedAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
@@ -376,9 +376,9 @@ const cmdOpen = async (args) => {
     const port = resolvePort(home)
     if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
     // The one local address when it is this di.iiii (asked, see oneAddress);
-    // else the address this install has always opened.
-    const one = await oneAddress(home, port)
-    const url = one.url || publicUrl(home, port)
+    // else the address this install has always opened. printedAddress is the one
+    // function that decides, here as in `di status` and `di up`.
+    const { url } = await printedAddress(home, port)
     say(url)
     openBrowser(url)
 }
@@ -490,7 +490,7 @@ const cmdOpenFile = async (args, file) => {
         const result = await openThroughServer({ home, port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
-            say(ui.opened(opened, `${publicUrl(home, port)}/${opened}`))
+            say(ui.opened(opened, `${await ownBase(home, port)}/${opened}`))
             return
         }
         if (!result.tooLarge) {
@@ -531,7 +531,7 @@ const cmdOpenFile = async (args, file) => {
         process.exitCode = 1
         return
     }
-    say(ui.opened(named, `${localUrl(resolvePort(home))}/${named}`))
+    say(ui.opened(named, `${await ownBase(home, resolvePort(home))}/${named}`))
 }
 
 const cmdNew = async (args) => {
@@ -554,7 +554,7 @@ const cmdNew = async (args) => {
         const body = await response.json().catch(() => ({}))
         if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
         const id = body?.space?.id || name
-        say(ui.made(id, `${publicUrl(home, port)}/${id}`))
+        say(ui.made(id, `${await ownBase(home, port)}/${id}`))
     } catch (error) {
         fail(String(error?.message || error))
         process.exitCode = 1

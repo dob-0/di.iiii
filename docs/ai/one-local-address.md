@@ -216,6 +216,11 @@ make only one way to work."* Measured before the change: on aylmo `di status` pr
   - `di up --lan` still tells the people in the place the certificate's name (or `di.local`), never a
     `.localhost` name.
   - One function decides, `printedAddress` (`scripts/di/state.mjs`), so the commands cannot disagree.
+  - `di open`, `di new` and `di open FILE` follow the same rule (2026-10-13, "make only one way to work").
+    `di open` prints and opens what `printedAddress` gives. The two lines that say where a space is use
+    `ownBase` (`printedAddress` without its trailing slash): `http://diiii.localhost/my-show` when the name is
+    this install, else what they printed before, `https://<certificate name>/my-show` or
+    `http://localhost:<port>/my-show`.
 - **D2. One name before :80 is allowed.** The pretty-name probe asks `diiii.localhost` (it asked
   `di.localhost`), so a machine that has not been allowed :80 yet prints `http://diiii.localhost:4000`
   instead of a second name. The same card no longer calls a `.localhost` name an address "on the phones":
@@ -370,9 +375,11 @@ di follows                                        # moxir followed from dev?
 9. MOXIR beta v0.9 to dev (E), with the owner's calls (a)–(c).
 10. `docs/ai/vocabulary.md`: the local tier's address is now `http://diiii.localhost/` (amended in
     this change).
-11. D1 covers `di status` and `di up`. Other lines that print this install's address still print the
-    certificate's name or `localhost:<port>`: `di new` and `di open FILE` (the link to the space), and the
-    `url` fields of `di stage` (`scripts/di/stage.mjs`). `printedAddress` makes each a one-line change;
-    whether they belong to "one way" is the owner's call.
+11. D1 covers `di status`, `di up`, `di open`, `di new` and `di open FILE`. Left on the certificate's name
+    on purpose: the `url` fields and the health check of `di stage` (`scripts/di/stage.mjs`: the projector
+    machine's kiosk), the base `di ndi scan` asks (an API address, never printed), and the line `di invite`
+    prints, which is typed on ANOTHER machine. One gap, read from the code and not run: on a machine that may not
+    hold :80 yet, `di up` prints `http://diiii.localhost:<port>` (D2) while `di new` and `di open FILE` print
+    `http://localhost:<port>/<space>`; making those two ask the name as well is a small change, the owner's call.
 12. `di up` could offer the `setcap` line itself (item 3 above) instead of only printing the reason; the
     reason today is "nothing answers on port 80", which does not tell a missing permission from a missing door.
