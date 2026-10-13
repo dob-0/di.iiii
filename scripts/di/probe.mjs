@@ -8,6 +8,7 @@
 
 import { execFile, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
@@ -245,3 +246,35 @@ export const probeCanPublishName = async () => quiet(async () => {
     await execFileAsync('avahi-publish', ['--version'], { timeout: NET_TIMEOUT_MS })
     return true
 }, false)
+
+/**
+ * Ask the one local address who it is: GET /serverXR/api/config on loopback
+ * :80 with `Host: diiii.localhost`, the request a browser on this machine
+ * sends for http://diiii.localhost/. Connected by address, not by name: Node
+ * asks the OS resolver, and only some systems map *.localhost (systemd's
+ * nss-myhostname does, to ::1 only; macOS and Windows do not), while every
+ * browser maps it itself. Resolves to { status, config } or null when nothing
+ * answers on :80.
+ */
+export const probeDoorConfig = (name, { port = 80, address = '127.0.0.1', basePath = '/serverXR', request = http.request } = {}) => new Promise((resolve) => {
+    let done = false
+    const finish = (value) => { if (!done) { done = true; resolve(value) } }
+    try {
+        const req = request({ host: address, port, path: `${basePath}/api/config`, headers: { host: name, accept: 'application/json' }, timeout: 2000 }, (res) => {
+            let body = ''
+            res.setEncoding('utf8')
+            res.on('data', (chunk) => { if (body.length < 65536) body += chunk })
+            res.on('end', () => {
+                let config = null
+                try { config = JSON.parse(body)?.config ?? null } catch { /* not di.iiii */ }
+                finish({ status: res.statusCode, config })
+            })
+            res.on('error', () => finish(null))
+        })
+        req.on('timeout', () => { req.destroy(); finish(null) })
+        req.on('error', () => finish(null))
+        req.end()
+    } catch {
+        finish(null)
+    }
+})
