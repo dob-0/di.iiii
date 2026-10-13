@@ -23,7 +23,7 @@ import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
-import { requestWalk, useWalkMode } from '../navigation/useWalkNavigation.js'
+import { UI_TOGGLE_EVENT, requestWalk, useWalkMode } from '../navigation/useWalkNavigation.js'
 import { isJamProject, loadJamAllTools, saveAllTools, saveJamAllTools, useAllTools } from '../utils/jamMode.js'
 import { hallEntityIds, isLockedEntity } from '../utils/selectionTools.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
@@ -95,6 +95,7 @@ const PANEL_ID_MIGRATION = {
 const migratePanelIds = (ids) => (Array.isArray(ids) ? ids.map((id) => PANEL_ID_MIGRATION[id] || id) : ids)
 
 export default function StudioShell({
+    walkBuild = null,
     document,
     // What each layer of the project holds and which are open, from
     // src/project/useProjectLayers.js — null until the real document is here.
@@ -200,6 +201,11 @@ export default function StudioShell({
     const [viewportSelectTool, setViewportSelectTool] = useState(false)
     // Walk / Fly in the cluster (owner, 2026-10-13): the controller lives in the canvas, the buttons only ask it.
     const walkMode = useWalkMode()
+    useEffect(() => {
+        const toggle = () => setUiHidden((v) => !v)
+        globalThis.document.addEventListener(UI_TOGGLE_EVENT, toggle)
+        return () => globalThis.document.removeEventListener(UI_TOGGLE_EVENT, toggle)
+    }, [])
     const setEditModeFromTools = useCallback((mode) => {
         if (mode === 'navigate') setViewportSelectTool(false)
         if (mode === 'select') {
@@ -926,7 +932,9 @@ export default function StudioShell({
                 </>
             )}
 
-            {uiHidden && (
+            {walkBuild ? walkBuild(uiHidden) : null}
+
+            {uiHidden && !walkMode && (
                 <button className="sfp-show-ui-btn" onClick={() => setUiHidden(false)} title="Show UI (H)">
                     ≡
                 </button>

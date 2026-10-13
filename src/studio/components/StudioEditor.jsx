@@ -31,6 +31,7 @@ import useProjectViews from '../hooks/useProjectViews.js'
 import { frameEntities, runViewCommand } from '../utils/viewCommands.js'
 import { resolveViewKey } from '../../utils/viewAxisPose.js'
 import StudioShell from './StudioShell.jsx'
+import StudioWalkBuild from '../walkBuild/StudioWalkBuild.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
 import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetFormats.js'
@@ -1381,6 +1382,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         <>
             <StudioShell
             document={document}
+            walkBuild={(uiHidden) => (
+                <StudioWalkBuild
+                    spaceId={resolvedSpaceId}
+                    projectId={projectId}
+                    document={document}
+                    entities={entities}
+                    applyLocalOps={applyLocalOps}
+                    undo={undo}
+                    redo={redo}
+                    uiHidden={uiHidden}
+                />
+            )}
             layers={layers}
             loading={state.loading}
             loadError={state.loadError}
