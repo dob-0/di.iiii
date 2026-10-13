@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Line } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
+import {
+    pointerOnPivotPlane, pivotOnScreen, grabStep, rotateAxis, rotateEulerAroundWorldAxis,
+    orbitAroundPivot, scaleStep, angleAround, distanceFrom, snapVector, snapScalar,
+} from '../utils/modalMotion.js'
 
 const AXIS_INDEX = { x: 0, y: 1, z: 2 }
 const ALL_INDICES = [0, 1, 2]
@@ -16,15 +21,19 @@ const MODE_LABEL = { translate: 'GRAB', rotate: 'ROTATE', scale: 'SCALE' }
 // scale-factor steps. Snapping rounds the accumulated total, so tapping Ctrl
 // mid-drag snaps the current result instead of just future movement.
 const SNAP_STEP = { translate: 0.5, rotate: Math.PI / 12, scale: 0.1 }
-const snapTo = (value, step) => Math.round(value / step) * step
+
+const wrapAngle = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI
 
 /**
- * V1-parity modal transform. G/R/S sets the mode, X/Y/Z locks the axis, then
- * moving the mouse applies (movementX+movementY)*sensitivity to that axis on
- * every selected entity independently (no shared pivot). Escape/Enter/Space
- * confirms; whatever moved stays. Colored axis line + HUD text give feedback.
+ * Blender's modal transform (owner 2026-10-13: "move … stuck, not like Blender"). G/R/S starts it;
+ * the object follows the cursor at once: grab in the plane through the pivot facing the camera,
+ * X/Y/Z slide along that axis, rotate by the angle the pointer turns around the pivot, scale by the
+ * pointer's distance to the pivot (src/studio/utils/modalMotion.js). Shift = fine, Ctrl = snap,
+ * typed numbers with an axis, click/Enter/Space confirm, Esc cancels. Colored axis line + HUD text.
  */
 export default function ModalTransform({ op, selectedEntities, controlsRef, onPreview, onCommit, onCancel, onStatus }) {
+    const camera = useThree((state) => state.camera)
+    const gl = useThree((state) => state.gl)
     const sessionRef = useRef(null)
     const cbRef = useRef({})
     const [hudLines, setHudLines] = useState([])
@@ -66,8 +75,13 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         )
         let pivot = computePivot()
 
-        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0, numeric: '' }
+        const session = {
+            mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0, numeric: '',
+            // the incremental drag: where the pointer was last, and what has accumulated since rebase
+            last: null, delta: new Vector3(), angle: 0, factor: 1,
+        }
         sessionRef.current = session
+        const canvasRect = () => gl?.domElement?.getBoundingClientRect?.() || { left: 0, top: 0, width: window.innerWidth || 1, height: window.innerHeight || 1 }
 
         // Fold the current values into the base so a mode/axis switch continues
         // from where the drag left off instead of re-deriving from the start.
@@ -78,6 +92,8 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             pivot = computePivot()
             session.total = 0
             session.numeric = ''
+            session.last = null
+            session.delta.set(0, 0, 0); session.angle = 0; session.factor = 1
         }
 
         const buildPreviewMap = () => {
@@ -95,7 +111,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const typed = session.numeric
                 ? ` · ${session.numeric}${session.mode === 'rotate' ? '°' : session.mode === 'scale' ? '×' : ''}`
                 : ''
-            const hint = session.axis ? ' · move mouse or type a value · CTRL snap · ENTER' : ' · pick X / Y / Z / A'
+            const hint = session.axis ? ' · move the mouse or type a value · CTRL snap · SHIFT fine · ENTER' : ' · move the mouse · X / Y / Z lock an axis · CTRL snap · SHIFT fine · ENTER'
             cbRef.current.onStatus?.({
                 text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${typed}${typed ? ' · ENTER' : hint}`
             })
@@ -193,20 +209,61 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             cbRef.current.onPreview?.(buildPreviewMap())
         }
 
-        const handlePointerMove = (event) => {
-            if (!session.axis) return
-            if (session.numeric) {
-                session.numeric = ''
-                reportStatus()
+        // Blender: the drag follows the cursor from where it is — the first move only takes the start.
+        const applyDrag = (snap) => {
+            if (session.mode === 'translate') {
+                const d = snap ? snapVector(session.delta, SNAP_STEP.translate) : session.delta
+                for (const e of session.entities) e.pos = [e.base.pos[0] + d.x, e.base.pos[1] + d.y, e.base.pos[2] + d.z]
+            } else if (session.mode === 'rotate') {
+                const a = snap ? snapScalar(session.angle, SNAP_STEP.rotate) : session.angle
+                const axisVec = rotateAxis(camera, session.axis)
+                for (const e of session.entities) {
+                    e.rot = rotateEulerAroundWorldAxis(e.base.rot, axisVec, a)
+                    if (n > 1) e.pos = orbitAroundPivot(e.base.pos, pivot, axisVec, a)
+                }
+            } else if (session.mode === 'scale') {
+                const f = Math.max(0.01, snap ? snapScalar(session.factor, SNAP_STEP.scale) : session.factor)
+                const indices = session.axis && session.axis !== 'all' ? [AXIS_INDEX[session.axis]] : ALL_INDICES
+                for (const e of session.entities) {
+                    for (const idx of indices) {
+                        e.scale[idx] = Math.max(0.01, e.base.scale[idx] * f)
+                        e.pos[idx] = pivot[idx] + (e.base.pos[idx] - pivot[idx]) * f
+                    }
+                }
             }
-            const sensitivity = event.shiftKey ? 0.002 : 0.02
-            const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
-            if (delta === 0) return
-            session.total += delta
-            const effective = event.ctrlKey || event.metaKey
-                ? snapTo(session.total, SNAP_STEP[session.mode])
-                : session.total
-            applyTotal(effective)
+        }
+        const handlePointerMove = (event) => {
+            if (!camera) return
+            const rect = canvasRect()
+            const x = event.clientX, y = event.clientY
+            const precision = event.shiftKey ? 0.1 : 1
+            if (session.numeric) { session.numeric = ''; reportStatus() }
+            if (!session.last) {
+                const centre = pivotOnScreen(camera, rect, pivot)
+                session.last = {
+                    point: pointerOnPivotPlane(camera, rect, x, y, pivot),
+                    angle: angleAround(centre, x, y),
+                    dist: distanceFrom(centre, x, y),
+                    centre,
+                }
+                return
+            }
+            const last = session.last
+            if (session.mode === 'translate') {
+                const next = pointerOnPivotPlane(camera, rect, x, y, pivot)
+                if (!next || !last.point) return
+                session.delta.add(grabStep(last.point, next, session.axis, precision))
+                last.point = next
+            } else if (session.mode === 'rotate') {
+                const a = angleAround(last.centre, x, y)
+                session.angle += wrapAngle(a - last.angle) * precision
+                last.angle = a
+            } else if (session.mode === 'scale') {
+                const d = distanceFrom(last.centre, x, y)
+                session.factor *= scaleStep(last.dist, d, precision)
+                last.dist = d
+            }
+            applyDrag(event.ctrlKey || event.metaKey)
             session.moved = true
             cbRef.current.onPreview?.(buildPreviewMap())
         }

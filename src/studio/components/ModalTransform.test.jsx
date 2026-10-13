@@ -3,6 +3,16 @@ import { describe, expect, it, vi } from 'vitest'
 import ModalTransform from './ModalTransform.jsx'
 
 vi.mock('@react-three/drei', () => ({ Line: () => null }))
+// The modal reads the camera and the canvas from the Canvas; here a camera 10 m in front of the
+// origin on an 800×600 canvas, so a pointer move has a known world size (modalMotion.test.js).
+vi.mock('@react-three/fiber', async () => {
+    const { PerspectiveCamera } = await import('three')
+    const camera = new PerspectiveCamera(50, 800 / 600, 0.1, 100)
+    camera.position.set(0, 0, 10); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(); camera.updateProjectionMatrix()
+    const gl = { domElement: { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) } }
+    return { useThree: (selector) => selector({ camera, gl }) }
+})
+const PER_PX = (2 * 10 * Math.tan((50 / 2) * Math.PI / 180)) / 600
 
 // With no axis locked the component renders nothing, so it mounts fine under
 // plain react-dom — enough to exercise the modal's lifecycle contract.
@@ -113,5 +123,47 @@ describe('ModalTransform Esc cancels', () => {
 
         expect(onCommit).toHaveBeenCalledTimes(1)
         expect(onCommit.mock.calls[0][0][0].transform.position).toEqual([5, 0, 0])
+    })
+})
+
+describe('the drag follows the cursor at once (Blender; owner 2026-10-13: "stuck, not like Blender")', () => {
+    it('G with no axis: the first move only takes the start, the next moves the object under the cursor', () => {
+        const { onPreview, onCommit } = setup()
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        expect(onPreview).not.toHaveBeenCalled()
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 240 })
+        const p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(100 * PER_PX, 3)
+        expect(p[1]).toBeCloseTo(60 * PER_PX, 3)
+        expect(Math.abs(p[2])).toBeLessThan(1e-6)
+        fireEvent.keyDown(window, { key: 'Enter' })
+        expect(onCommit.mock.calls[0][0][0].transform.position[0]).toBeCloseTo(100 * PER_PX, 3)
+    })
+    it('X locks the axis: the same move keeps only x; Shift makes the next step fine; Ctrl snaps to 0.5', () => {
+        const { onPreview } = setup()
+        fireEvent.keyDown(window, { key: 'x' })
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 240 })
+        let p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(100 * PER_PX, 3); expect(p[1]).toBe(0)
+        fireEvent.pointerMove(window, { clientX: 600, clientY: 240, shiftKey: true })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(110 * PER_PX, 3)
+        fireEvent.pointerMove(window, { clientX: 600, clientY: 241, ctrlKey: true })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0] % 0.5).toBeCloseTo(0, 6)
+    })
+    it('R turns by the angle the pointer makes around the pivot; S scales by the distance ratio', () => {
+        const rotate = setup({ op: { mode: 'rotate', seq: 2 } })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 200 })
+        const r = rotate.onPreview.mock.calls.at(-1)[0].e1.rotation
+        expect(r[2]).toBeCloseTo(Math.PI / 2, 4)
+        rotate.unmount()
+        const scale = setup({ op: { mode: 'scale', seq: 3 } })
+        fireEvent.pointerMove(window, { clientX: 450, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })
+        const sc = scale.onPreview.mock.calls.at(-1)[0].e1.scale
+        expect(sc[0]).toBeCloseTo(2, 6); expect(sc[1]).toBeCloseTo(2, 6); expect(sc[2]).toBeCloseTo(2, 6)
     })
 })
