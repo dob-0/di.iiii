@@ -7208,7 +7208,7 @@
    "act": 3,
    "parts": {
     "laser": [
-     "#e8e4dc",
+     "#00ff00",
      1.0
     ]
    },
@@ -7218,7 +7218,8 @@
      "note": "PREVIS override to see the fan coverage (owner 2026-10-11); the 0.16 cap measured 2026-10-09 (peak.desk_caps) still rules the show desk"
     }
    },
-   "intent": "Only the lasers: the matrix over the dance floor, the hall dark."
+   "intent": "Only the lasers: the matrix over the dance floor, the hall dark.",
+   "laser_colour": "#00ff00"
   },
   {
    "id": "wall",
@@ -7639,7 +7640,7 @@
    "act": 3,
    "parts": {
     "laser": [
-     "#e8e4dc",
+     "#00ff00",
      1.0
     ],
     "red tent left": [
@@ -7655,7 +7656,8 @@
      0.3
     ]
    },
-   "intent": "The laser matrix over a red floor: the tent at half, the lasers full."
+   "intent": "The laser matrix over a red floor: the tent at half, the lasers full.",
+   "laser_colour": "#00ff00"
   },
   {
    "id": "white",
@@ -7787,7 +7789,7 @@
    "act": 3,
    "parts": {
     "laser": [
-     "#e8e4dc",
+     "#00ff00",
      1.0
     ],
     "side line left": [
@@ -7815,7 +7817,8 @@
      1.0
     ]
    },
-   "intent": "The storm: lasers, white side lines and the cut truss at full, the tent red under them."
+   "intent": "The storm: lasers, white side lines and the cut truss at full, the tent red under them.",
+   "laser_colour": "#00ff00"
   },
   {
    "id": "ice-fire",
@@ -8100,7 +8103,7 @@
    "act": 3,
    "parts": {
     "laser": [
-     "#e8e4dc",
+     "#00ff00",
      1.0
     ],
     "red tent left": [
@@ -8127,7 +8130,8 @@
     ],
     "still": 0.0
    },
-   "intent": "The laser roof breathes: it fades down and back up every eight seconds over a low red tent."
+   "intent": "The laser roof breathes: it fades down and back up every eight seconds over a low red tent.",
+   "laser_colour": "#00ff00"
   }
  ],
  "cues": [
