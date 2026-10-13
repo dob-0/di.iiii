@@ -104,7 +104,7 @@ describe('Studio keyboard contract', () => {
     // modal (Blender): every key stops at it. And the help names the buttons and Tab, and Shift+` still starts Fly.
     it('the walk keeps its keys, the help names Walk / Fly and Tab, and Shift+` starts Fly', () => {
         const walk = read('navigation/useWalkNavigation.js')
-        expect(walk).toMatch(/if \(!walk\) return\s*\n(\s*\/\/.*\n)*\s*e\.stopPropagation\(\)/)
+        expect(walk).toMatch(/if \(!walk\) return\s*\n(\s*\/\/.*\n)*\s*e\.stop(Immediate)?Propagation\(\)/) // immediate: also the window's other capture listeners (the standard move, 2026-10-13)
         expect(walk).toMatch(/if \(isWalkToggle\(e\)\) \{ e\.preventDefault\(\); if \(walk\) end\(\); else begin\('fly'\)/)
         const guide = read('utils/studioGuide.js')
         expect(guide).toMatch(/\['Walk \/ Fly buttons'/)
