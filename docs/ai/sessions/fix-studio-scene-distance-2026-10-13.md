@@ -58,3 +58,42 @@ scene-distance mechanism he said yes to. Earlier rounds: docs/ai/sessions/fix-st
   nothing (1 of 3 runs of probe-stick-jump) did not reproduce with the element under the pointer logged; still unexplained.
 - **Owed:** the depth picture is read back synchronously (3 ms median on the event); an asynchronous read
   (`readRenderTargetPixelsAsync`) after each camera change would take it off the wheel. The owner's hands on the Edit tool.
+
+## Round 12 (2026-10-13): four agents in parallel; the review's fixes and the dead pan, measured
+
+The owner asked for multi-agent work. Four agents ran beside each other (reports in ~/work/agent-reports-2026-10-13/studio-nav/):
+review-892 (Opus, 12 findings), dead-pan (Opus), scene-async (Sonnet), sketchfab (Sonnet).
+
+- **Depth picture from the scene's own materials** (review F4-F6): drawn into a target with a DepthTexture, a second pass turns depth
+  into metres, as Blender reads its viewport depth buffer. The Smart View's cut planes and near fade, back faces, cut-outs and
+  see-through glass slots count as the eye sees them. Floor case against a direct ray: 4.89 m vs 4.84 m.
+- **Wheel runs speed up again after a surface** (F1): a run keeps the distance each notch USED; keeping d/1.2 cancelled the allowance
+  and the run crawled at 0.07 m per notch with 30 m behind the wall. The limit is 1.2 per notch of scroll, 1.2^|n| per event (F2).
+  The Blender tool writes a pending pose with `cc.update(0)` before reading the camera (F3). The centre decides only when at least
+  half of it shows something (F7). F8-F11 hardening (one depth camera per page, cube face/mip/info restored, hide inside the try,
+  half-float fallback with a one-time warning, a notch out stops at the controls' range). A drag's picture starts at the camera's
+  own near plane, the wheel's at the contact distance (F12).
+- **The dead Navigate pan was a click** (dead-pan agent): an orbit's left release selected the object under the pointer (r3f sends
+  onClick on a drag release), the Inspector opened over the canvas and the next pan pressed a panel button. The entity onClick now
+  skips drags (`e.delta > 2`), as the group handler below it did. Replay, 10 runs per arm: orbit then pan 10/10 dead before, 0/10
+  after; a plain click still selects 10/10.
+- **Measured after** (MOXIR v1-1, RTX 3080 lane, CPU 86-91 °C, two other sessions linting):
+
+  | check | before (round 11) | after |
+  |---|---|---|
+  | wheel run 40 in + 20 out | 0 dead, worst 1.44x | 0 dead, worst 1.2x |
+  | depth picture per notch, median / p90 / max | 3 / 9.1 / 40.3 ms | 7.1 / 13.7 / 47 ms |
+  | stress 60 s seed 835088540: stuck, dead notches, errors | 0, 0, 0 | 0, 0, 0 |
+  | stress frames over 33 ms | 93 of 3826 | 206 of 3808 |
+  | stress lowest camera | 0.74 m | -3.03 m (under the floor) |
+
+  The cost doubled because the real materials shade (MOXIR has 96 spot lamps); the heat inflates every number in this table and a
+  quiet-machine rerun is owed. Under the floor: the wheel passes any surface it touches and now speeds up behind it, and the floor
+  is a surface; round 11's runs crawled there instead. Whether the floor should stop the wheel is the owner's call (asked).
+- **scene-async** (branch feat/scene-distance-async-2026-10-13, NOT merged): reading the picture asynchronously served 58 of 60
+  notches from a picture taken at the exact pose and cut the wheel handler from a median 9.5 ms to 1.0 ms, but the ~7 ms of drawing
+  moved into the frame, so motion is not smoother. The cost is the draw, not the read. It also found that three leaves
+  PIXEL_PACK_BUFFER bound while an async read waits, which breaks any ordinary readPixels (INVALID_OPERATION 1282).
+- **sketchfab**: Sketchfab never rendered in the lanes (lane 1 refuses its 'high-performance' contexts; lane 2's GPU process
+  crashed twice, crash count 2, do not load Sketchfab there). Its published controls differ from our Navigate in the middle button
+  (pan there, zoom here), Shift/Ctrl + left drag, and a double-click on the background (recentre there).
