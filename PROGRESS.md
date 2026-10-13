@@ -5,6 +5,515 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-10 — main is merged back into dev before the promotion
+
+- main held commits dev did not (old promotion merges, the bundle-symlink hotfix, the CURRENT.md and session-note folds). Left alone, a dev -> main promotion starts from a history where main is not part of dev, which is what made the last promotion need the conflict PRs #799 and #801. This branch merges origin/main into dev once, with no conflict edits.
+- Measured before merging: the main side differs from the common ancestor in ONE file, PROGRESS.md (a 7-line section about main taking dev's CURRENT.md). No file changed on both sides, so there was nothing to resolve. The bundle-symlink hotfix is the same patch on both sides (#656 on dev, #657 on main), line for line in all six files, so "keep both" is one copy and dev already has it. After the merge main is an ancestor of dev, and `git merge-tree` of the branch into main is clean and yields the branch's own tree.
+- NOT done: hotfix #854 (space scope checked on the parsed route) is still an open PR against main, so it is not in this merge; dev has its twin #855 (the same lines). When #854 lands on main, merge main into dev again the same way before promoting. The promotion itself, the `production` approval and the deploy stay the owner's.
+
+## 2026-10-09 — CI runners pinned to ubuntu-24.04 before GitHub moves ubuntu-latest to Ubuntu 26
+
+- GitHub's annotation on every run: "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026" (actions/runner-images#14748), two days after the 17 Oct show. All 21 `ubuntu-latest` uses in 12 workflows and the 2 in `docs/templates/*.yml` now say `ubuntu-24.04`.
+- Measured before the change: ci.yml run 37943811580 (2026-10-09) ran image `ubuntu-24.04` 20261002.596 under `ubuntu-latest`, so the pin changes no runner today. All 14 files parse as YAML.
+- Rule written in `docs/ai/roles/infrastructure-engineer.md` → "Runner Images Are Pinned". Owed: try `ubuntu-26.04` on its own branch after the show; pin `install-matrix.yml`'s `windows-latest` (image `windows-2025-vs2026` today) once the label is confirmed.
+
+## 2026-10-07 — `di login`: a person signs in once per machine, from the terminal
+
+- The owner's ask (2026-10-07): a person who works in the Claude CLI (Taron) and pushes into a space on dev.diiii.xyz should sign in once,
+  not go through the browser for every space.
+- The method is written first in `docs/architecture/CLI_LOGIN.md`: the OAuth device login (RFC 8628) delivering the per-person key of
+  `docs/architecture/SPEC_agent_door.md` §6. The wire format in that file is the contract the three parts are built against.
+- State of this branch: the method and the wire format only. Server, terminal and browser parts follow in this branch; this note is
+  rewritten when they are in, with what was measured and what is not validated.
+
+## 2026-10-08 — `di login`: the three lanes joined in one branch
+
+- Joins `feat/cli-login-2026-10-07` (server), `feat/cli-login-terminal-2026-10-07` (terminal) and `feat/cli-login-page-2026-10-07` (the `/device` page) on current dev (a579b56a). One conflict pair, the page's `/device` next to dev's `/shoot` in `src/RootApp.jsx` and `src/utils/spaceRouting.js`: both kept; the result adds only the login lines (diffed against dev).
+- Measured: a scratch end-to-end run of the three lanes (36 of 37 checks; the one failure was the test script reusing an id) — report `~/di-health/cli-login-e2e-2026-10-08.md`; on this branch 11 test files, 592 tests pass (vitest, 03:36).
+- Changed after that run, the owner's word 10-08: `--to https://host/some/path` (or with a query/fragment) is now refused with a message instead of being cut to the host; test written first and seen failing (the old code made a real request).
+- Owner's decisions 10-08: a terminal key may create spaces (kept, matches the spec); the rate limits stay (10 codes / 10 min and 10 answers / min per address).
+- NOT validated: the real GitHub sign-in round trip back to `/device`, the owner's screen, a phone width, Windows file modes, Taron's machine. Nothing was run against dev.diiii.xyz.
+
+## 2026-10-07 — the browser page that approves a terminal's code
+
+- Lane of `feat/cli-login-2026-10-07`: `/login/device` page (DeviceLoginPage), api client, noindex hook, route reservation, wiki line. Saved as WIP by the session that found the 20:30 freeze; the work was written before it and uncommitted.
+- Measured: the 4 touched test files pass, 395 tests (vitest, 20:42). Not run: full suite, a real browser, a phone width, the real server.
+- Not seen on the owner's screen. Join with the server and terminal lanes in one PR; none is merged.
+
+## 2026-10-07 — `di login`, `di whoami`, `di logout`: the terminal half
+
+- Lane of `feat/cli-login-2026-10-07` (method: `docs/architecture/CLI_LOGIN.md`, RFC 8628 device flow). This branch holds the CLI commands (553e7269).
+- Cut from dev 24b25074. Server half is on the sibling branch; the browser page is on `feat/cli-login-page-2026-10-07`. The three join in one PR; none is merged.
+- Not validated end to end: the three halves have not run together against a real server (owed). Seen on the owner's screen: no.
+
+## 2026-10-07 — one local address: http://diiii.localhost/ opens this machine's di
+
+- The owner's decision of 2026-10-07, written as `docs/ai/one-local-address.md`: on every machine with di, the
+  same link `http://diiii.localhost/` opens that machine's own installed di; joining is `di follow`; devices
+  without di get one HTTPS place address shown as a QR code; dev trees stay at `<tree>.diiii.localhost`.
+- Measured on aylmo (headless Chromium 151 and Firefox 153, no WebGL): `*.diiii.localhost` reached a server bound
+  to 127.0.0.1 only while the OS resolver answers ::1 only — the browser maps the name itself; `isSecureContext`
+  true; a `Secure` cookie kept over plain http. Firefox desktop exposes no `navigator.xr` at all.
+- The server: `serverXR/src/localName.js`, a door on loopback :80 handing requests and upgrades to the main
+  server; exact Host only (421 otherwise); stands aside on EADDRINUSE / EACCES. On only with `DI_LOCAL=1` and
+  `DI_LOCAL_NAME` (set by `di up`; `DI_LOCAL_NAME=off` in di.env turns it off).
+- The CLI: `di status` prints the link and `di open` opens it only when the same `machine.id` answers directly
+  and through :80.
+- The dev-router half is di-atlas PR #57 (bare name → the installed di, found from di's own unit files,
+  loopback clients only).
+- Still undone: the owner merges both and restarts `dev-router`; `setcap` per Linux machine; macOS, Windows and
+  Safari unmeasured; the guest QR panel and the per-place name (plan only); MOXIR beta v0.9 to dev (plan only,
+  owner-run). `openFile.test.js` "di mcp … release version" fails on origin/dev too, not from this branch.
+
+## 2026-10-13 — One local address on every machine: carry #825 + #826 to dev, one name in what di prints
+
+- Owner, 2026-10-13: *"fix the di.iiii links here in my machine — mine is local.thedi.studio, in others other
+  — fix mine too and make only one way to work."* The design is the owner's, decided 2026-10-07: `http://diiii.localhost/`
+  opens THAT machine's own installed di, on every machine; the https name is only for phones and headsets.
+- Carries #825 (`feat/one-local-address-2026-10-07`: the door on loopback :80, the judgement by machine id,
+  `di open`, `di status`, `docs/ai/one-local-address.md`) and #826 (`feat/one-local-address-guest-qr-2026-10-07`:
+  the phones QR code; `uqr` 0.1.3, `jsqr` 1.4.0). Both were 587 commits behind dev. Merged into dev at `bdf29845`
+  (`git merge --no-ff`, the two branches untouched). Conflicts, and what was kept:
+  - `package.json`: dev's lines + `localNameContracts` and `guestAddressContracts` in `test:server-contracts`,
+    `uqr` 0.1.3 and `jsqr` 1.4.0 (exact, as in the dependency-decisions row).
+  - `package-lock.json`: dev's, then `npm install --package-lock-only`; measured against origin/dev: +2 packages (uqr 0.1.3, jsqr 1.4.0 dev-only), none removed, none changed. `npm ci` runs with `DI_NO_GIT_HOOKS=1` in a worktree (see Owed).
+  - `serverXR/src/index.js`: dev's follow-lease start, then the door (`startLocalName`).
+  - `src/copyVocabulary.test.js`: both added files kept.
+- D1 — one address in what di prints. When `http://diiii.localhost/` is judged to be this di (same `machine.id`
+  directly and through :80), `di status` leads with it, and `di up` (its card, its doors, `already running —`, the browser
+  it opens) too. The certificate's name moves to ONE line, `phones and headsets: https://<name>`. Not judged: what was
+  printed before + one dim line why. `printedAddress` in `scripts/di/state.mjs` is the one decision.
+- D2 — one name before :80: the pretty-name probe asks `diiii.localhost`, not `di.localhost`. The card no longer
+  calls a `.localhost` name an address "on the phones".
+- Method: tests first (red on the unchanged code: 15 of 16 failed in `scripts/di/oneAddressPrinted.test.js`), then the change (green). The door on :80 is the one thing a
+  test cannot open, so its answer is handed in; the install, its server and the real CLI (`main()`, `status`, `up`) are real.
+- Tests: the new `scripts/di/oneAddressPrinted.test.js` has 16 tests. Focused set (`scripts/di`, the server and
+  page tests of #825/#826, `src/copyVocabulary.test.js`, `src/utils/deployMode.test.js`, `src/wiki`): 48 files, 616 tests passed.
+  Full suite (`vitest run --maxWorkers=4`, 400 s): 918 files passed, 1 skipped; 10357 tests passed, 2 expected fail, 7 skipped; no failure.
+  `serverXR` needs its own `npm ci` (`serverXR/node_modules`): the first focused run failed 5 tests and 2 files on `Cannot find module 'express'`/`'dotenv'`, which is the missing install, not the change.
+- Live, read-only, against the installed di: `oneAddress(~/.di, 443)` → `{ url: "http://diiii.localhost/", why: null }` and `printedAddress` →
+  `{ url: "http://diiii.localhost/", one: true, phones: "https://local.thedi.studio", why: null }` (installed di `0.4.4-dev.bdf29845`).
+  This tree's `di status` against that install prints `running (node) · 0.4.4-dev.bdf29845 · http://diiii.localhost/ · this machine only · data …`
+  then `phones and headsets: https://local.thedi.studio` (the lead measured the first line as `https://local.thedi.studio` before).
+- Wiki: the "One link opens it" entry says where phones and headsets find their address; `updated` 2026-10-13.
+- Owner: merge this PR, close #825 and #826 (it replaces them). Other Linux machines need :80 once:
+  `pkexec setcap cap_net_bind_service=+ep "$(jq -r .service.node ~/.di/state.json)"`, then `di down && di up`.
+- Owed: the owner's own look at `http://diiii.localhost/` on his screen; `di new`, `di open FILE` and `di stage` still print the
+  certificate's name or `localhost:<port>` (docs/ai/one-local-address.md §9 item 11); macOS, Windows and Safari measurements
+  (§6); a real phone scan of the QR code (#826's owed list).
+- Owed (process): `npm ci` in a di.iiii worktree runs `prepare` (`scripts/install-git-hooks.mjs`), which writes the repo-wide
+  `core.hooksPath`; run it as `DI_NO_GIT_HOOKS=1 npm ci` (and `npm --prefix serverXR ci` for the server tests). This belongs in the brief template.
+- 2026-10-13, lead (dob-2e): one fallback for every command, `namedFallback` in `scripts/di/state.mjs` (certificate name, else `diiii.localhost:<port>` when it answers, else localhost), so a machine without :80 prints ONE address in `di status`, `di up`, `di open`, `di new` and `di open FILE`. Red first (3 failed), then 544 passed in 40 files; 4 end-to-end expectations moved to `diiii.localhost:<port>`.
+
+## 2026-10-07 — Phones & headsets: the place address as a QR code on the local home
+
+- The guest path of the one local address (docs/ai/one-local-address.md §5, D). Devices without di get
+  ONE https address, read from the certificate this machine serves, shown as a QR code. Never mDNS `.local`.
+- Server: `GET /serverXR/api/guest-address` (`serverXR/src/guestAddress.js`, local runtimes only). States
+  `ready` / `not-on-network` / `no-certificate` / `wildcard`. The name is the CN, else the first DNS name
+  (the same rule as `di up --lan`'s dns hook); the port is the listen port; `--lan` is the bind; where the
+  name points is looked up on this machine, cached 30 s. Catalogue entry in `catalogue/entries/platform.js`.
+- Client: a **Phones & headsets** door in the local home's bar (`/#join` opens it):
+  `src/landing/GuestAddressPanel.jsx`, `src/components/QrCode.jsx`, `src/utils/qrCode.js`. The code is
+  drawn only for `ready` with a name that does not point elsewhere. Every other state names the setting
+  (`~/.di/tls/cert.pem`) or the command (`di up --lan`). Says when auth is off (`di up --lan --guests`).
+- QR library: `uqr` 0.1.3 pinned (MIT, zero deps, Nayuki port). `jsqr` 1.4.0 is dev-only, as the
+  decoder in tests. Why: `docs/ai/dependency-decisions.md`.
+- Tests: unit (QR decoded back by jsQR; a mutation that corrupts modules fails it), server unit + a real-server
+  contract (no cert → no address; self-signed cert → its name and port), page tests in jsdom (no WebGL).
+  The screenshot run decoded the QR from the rendered page's pixels, desktop DPR 2 and phone 390×844 DPR 3.
+- Measured on aylmo, read-only, with its real certificate: `https://local.thedi.studio/`. The name resolves
+  to 127.0.0.1 there today (the hook's loopback setting for a start without `--lan`).
+- Owed: scan with a real phone (padlock, camera, WebXR on the Quest); `/<space>` in the code; Light's phone
+  panel on the same address and the same encoder (it still shows `http://<raw IP>`); a per-place name and
+  certificate; the place router's DNS (rebind protection).
+
+## 2026-10-08 — the standby build runs on a Linux aarch64 host (r-di, a Raspberry Pi 3 B+)
+
+- scripts/standby/build-runtime.sh had a pinned Node hash for macOS only. Added a `Linux-aarch64` line (Node 24.19.0, hash from nodejs.org SHASUMS256.txt over HTTPS; the release-keys signature of that file is not yet checked for this line), and a portable sha256 (`shasum` or `sha256sum`).
+- New `CLIENT_DIST=<dir>`: use a dist built elsewhere at the same commit instead of the vite build, because a 905 MB Pi cannot run it. The SPA is plain files, identical on every platform.
+- Measured on r-di: the release for the Mac's prod commit builds in about 80 s (`npm ci --omit=dev`, sharp arm64 binary needs no compiler), 210 MB; the server starts with throwaway secrets and an empty data root, health 200, RSS 99 MB. Run by hand, not yet a service; no prod data yet.
+- Owed: systemd unit on r-di, prod data restore (secrets on the Pi need the owner's yes), cloudflared, failover decision, a test with real data under load.
+
+# feat/studio-lock-keys-2026-10-13
+
+## What was done
+- D1: `lockFromKey` (editKeys.js) + handler in StudioEditor.jsx: L locks selection, Alt+L unlocks all; same batch as the Inspector button.
+- D2: BoxSelect already honoured Shift/Ctrl (boxModeFor). BoxSelect.test.jsx proves plain/Shift/Ctrl drags; no code change.
+- D3: key help is `utils/studioGuide.js` (not StudioControlCluster); wiki article `studio-basics` updated 2026-10-13.
+- D4: lamp bodies (rigbuild/FixtureBodies instancedMesh) had no click handler, so a click selected nothing; `onPick` prop added (RigBodies -> StudioViewport -> `pickLampBody`, locked ignored).
+- Tests: `npx vitest run src/studio src/rigbuild`.
+
+# Session note
+## App and route error boundary (audit H12)
+
+A throw while drawing a panel blanked the whole app: the existing boundaries guard only canvases and scene objects.
+Added `src/components/AppErrorBoundary.jsx` (React docs, "Catching rendering errors with an error boundary"): one around the
+routed surface that resets when the address changes, one around the app root as last resort. The fallback says the view
+stopped, shows the message, offers "Reload this view"; it logs with console.error like the other boundaries.
+Tests: `src/components/AppErrorBoundary.test.jsx`. Seen on a dev copy via di-test-browser with a temporary forced throw (reverted).
+
+## 2026-10-09 — serverXR stops in order on SIGTERM; update snapshots after the stop; health reads the database
+
+- serverXR had no SIGTERM/SIGINT handler: `docker stop` or `systemctl stop` ended it mid-write. `serverXR/src/gracefulShutdown.js` now stops accepting, clears the sweep timers, runs `PRAGMA wal_checkpoint(TRUNCATE)`, closes SQLite and exits 0; a 10 s hard deadline exits 1 and logs why.
+- `serverXR/Dockerfile` names `STOPSIGNAL SIGTERM`; `docker-compose.yml` gets `init: true` (Docker's bundled init, no unpinned apk package) and `stop_grace_period: 15s`. Base image digests unchanged. The root Dockerfile is nginx, untouched. Docker was not usable without sudo on this machine, so the image build is untested.
+- `di update` now stops the server before the safety snapshot, and `snapshotData` writes each `.db` with `VACUUM INTO` (one consistent file, no -wal/-shm) instead of copying a live WAL folder.
+- `/api/health` runs `SELECT 1`; a failing read answers 503 with `ok:false`.
+- Tests: `serverXR/src/gracefulShutdown.test.js`, `scripts/di/updateSafety.test.js`, `serverXR/src/routes/statusRoutes.test.js`.
+
+## 2026-10-09 — CI tests the Node version production runs; every job has a time limit
+
+- `.nvmrc` is now 24 (what both Dockerfiles run, Active LTS) and is the one source: ci, browser-checks, rig-compat, release, deploy-space-code, deploy-vps-dev and publish-cpanel read it through `node-version-file`. `engines` accepts `22.x || 24.x`; a new `node-22-compat` CI job still builds and runs the tests on 22.
+- `scripts/node-version-source.test.js` fails if a Dockerfile's pinned major, `engines` or a workflow literal drifts from `.nvmrc`. Image tag and digest are unchanged.
+- Every workflow job has `timeout-minutes` (about 3x the p95 of the last 25 runs). PR runs of ci, rig-compat and install-matrix cancel superseded pushes; runs on dev/main (deploy gates) never cancel.
+
+## 2026-10-09 — opening a project never writes its document; unknown fields survive a save
+
+- Audit 2026-10-09 (06-data-integrity F3, H2 in the fix list): `readProjectDocument` — behind GET
+  `/api/projects/:id/document`, the space listing and the place routes — normalised `document.json` and wrote it
+  back with no project lock whenever the result differed. Reproduced first: `serverXR/src/projectRead.test.js`
+  failed 3/3 on dev (file rewritten; `timelineState` and an entity's `futureField` gone; 9 of 300 read-vs-save
+  tries lost a committed edit).
+- Now a read normalises in memory only; the normalised form reaches disk with a save, under
+  `withProjectWriteLock`. `normalizeProjectDocument` / `normalizeEntity` in both schema twins carry top-level
+  sections and entity fields this build does not know (`passUnknownFields`; known keys win, `__proto__` never
+  carried). After: 0 of 300 lost, bytes and mtime unchanged by a GET, unknown section and field survive GET + save.
+- The guest-sandbox promote (index.js) leaned on the read's write-back to repoint `projectMeta.spaceId`; it now
+  checks the file and rewrites it under the write lock. The keep-the-room contract test checks the moved file
+  (fails without this change).
+- Two older tests asserted the old behaviour (the read persisting a self-heal / a spaceId repair); they now assert
+  the answer is healed at once and the file on the next save.
+- Still owed (audit F3 fix list): a document-format version in `document.json` that refuses, by name, to rewrite a
+  newer format; a follow handshake comparing builds; unknown keys inside `projectMeta`, `showState`,
+  `performState`, `mappingState`, `windowLayout`, nodes, assets and templates are still dropped (measured).
+  `jsonStore.readJson` still repairs a corrupt file on read (with a `.bak`), unlocked — a separate path.
+
+## 2026-10-09 — a scene write is now one step across servers and crashes, like a project write
+
+- Audit 2026-10-09 data F1: scene writes (POST ops, whole-scene replace, inscriptions) were three separate commits
+  (scene.json, ops, version) behind an in-process lock. Two servers on one data folder: 10–61 answers of 500 per run,
+  scene.json holding objects no acknowledged write made; a crash between ops and version left the space refusing every
+  write after a restart.
+- Fix reuses the project path of PR #728: its proper-lockfile lock moved unchanged into `serverXR/src/dataFolderLock.js`
+  and is now taken by both `projectWrite.js` and the new `serverXR/src/sceneWrite.js`. A scene write stages
+  `scene.json.v<N>.pending` (fsynced), commits op append + version in one BEGIN IMMEDIATE transaction
+  (`spaceStore.commitSceneOps`), then renames it in. Startup and every write finish or drop what a stopped write left;
+  ops above the version go to the new `space_ops_quarantine` table. The follows lease (`follow/lease.js`) is a different
+  thing (who runs the follower) and was not the right lock to reuse.
+- Measured with the audit's own two-server script, 3 runs each: before 5xx = 61 / 10 / 13; after 0 / 0 / 0, with
+  scene_version = max op version = op rows = scene objects = 100 acknowledged writes.
+- Still owed: a reader on another server sees the pre-crash scene until that space's next write (same as projects);
+  a scene.json already ahead of its log from the old code cannot be detected; an older build on the same folder ignores
+  the lock; the sandbox revive path in index.js still writes scene.json and version 1 in two steps (a fresh space, no ops).
+
+## 2026-10-09 — saving a space's meta updates the row in place, no cascade
+
+- Audit 2026-10-09 data F5 (fix H3): `saveSpaceMeta` used `INSERT OR REPLACE INTO spaces`. With foreign keys on,
+  REPLACE deleted the row and the cascade took the space's projects, op logs, shelves, links, invites and domains.
+  A slug held by another space was also a conflict, so REPLACE deleted that other space.
+- Now an UPSERT (`ON CONFLICT(id) DO UPDATE SET`, sqlite.org/lang_upsert.html). `created_at`, `archived_at` and
+  `position` are kept on an existing row; a slug clash fails with a UNIQUE error.
+- Guard: `serverXR/src/spaceStore.metaUpsert.test.js`, 3 of 4 cases seen failing on the old statement.
+- Checked: every other `INSERT OR REPLACE` in serverXR (`migrations`, `space_chat_lines`, `space_chat_pins`)
+  targets a table nothing references; the foreign-key parents are only `spaces`, `projects`, `ai_chats`.
+- Still owed: `POST /api/spaces` checks "exists?" then saves without a lock, so two creates of one name both
+  succeed and the second updates the first one's meta (owner included). It should refuse the second with 409.
+
+## 2026-10-08 — pan and zoom follow the surface under the pointer (Auto Depth for the studio preset)
+
+- Owner: "when I zoom with the scroll it zooms, but when I click right and move left/right it is stuck." Tested like a person with real mouse
+  events on the RTX 3080 (di-test-browser, desktop 3), camera position logged every frame, in Inside, Free and Studio.
+- Measured BEFORE: after the wheel zoomed in, a 240 px right-drag moved the camera 0.11 m (Free, Studio) / 0.64 m (Inside) in a 100 m hall:
+  camera-controls pans in proportion to the distance to its orbit point, which sat 0.35 m away in open air. In the public viewer
+  camera-controls reported `active` at the start of every gesture, so the existing Auto Depth code (which refuses mid-ease) never ran.
+- Fix: the studio preset gets Auto Depth ON for PAN and ZOOM (not rotate: re-pivoting an orbit onto a surface 50 m away swept the camera
+  30 m in a frame, measured); a gesture's start stops any easing (`settleForGesture`) and forces its pivot (`applyPivot(..., {force})`).
+  Buttons unchanged. `mappings.test.js` had pinned `autoDepth: false` as the old literal: changed on purpose, with the reason in the test.
+- Measured AFTER (240 px right-drag, net metres): Inside 0.64 -> 1.13, Studio 0.11 -> 8.84 (pan), Free 0.11 -> 0.20; no frame jumped more than
+  0.03 m (Inside) / 0.22 m (Studio) while panning. Wheel zoom and orbit unchanged in Inside.
+- NOT fixed / found: Free still pans 0.2 m per 240 px when the camera is pressed against a surface at the 0.35 m minimum distance (physically
+  consistent; zoom out); Studio wheel zoom is very fast (25 big notches: ~600 m, 180-215 m in one frame at 500 m); middle-drag does nothing in
+  Inside/Free; Studio opens with three overlapping floating panels over the 3D view and truncated titles. All raised with the owner.
+- Not seen by the owner's hands yet.
+
+## 2026-10-09 — the open-a-file route is matched on the router's parsed path
+
+- `POST /api/spaces/bundle` (open a file) skips the space check. It was recognised by testing `req.originalUrl`,
+  which also carries the query string; it is now recognised from the router's own parsed path (`:spaceId` is
+  `bundle` and nothing follows it). `/api/spaces/bundle/...` (a space called "bundle") never matches.
+- Contract test added in `serverXR/src/httpContracts.test.js` ("limits editor credentials to allowed spaces…").
+- Measured: `test:server-contracts` all pass on this branch; the new case fails on the old code.
+
+## 2026-10-13 — Studio navigation (#885) brought up to dev after the #888 batch
+
+This branch is PR #885 (fix/studio-pan-after-zoom-2026-10-12, "Navigate moves like Sketchfab, Edit exactly like Blender")
+merged with land/batch-2026-10-12 (#888) so it merges into dev without conflicts. No code of its own: the navigation work
+and its measurements are in docs/ai/sessions/fix-studio-pan-after-zoom-2026-10-12.md. The merge had no textual conflicts.
+Checked: vitest src/studio + src/project/viewport, 811 passed, 0 failed. Browser tests NOT run (heat gate).
+
+## 2026-10-12 — the Studio is stuck after a wheel zoom into open air (owner, ledger N511)
+
+## 2026-10-12 measure: does the Auto Depth fix (2e20d44e) remove "zoom in, then right-drag is stuck" in the Studio editor?
+
+Result: NO, not in the case that reproduces the bug. Before (installed di 0.4.4-dev.0dc90bf2, studio preset autoDepth false) and after
+(navfix Vite tree, autoDepth true, read from the live module) give identical numbers to 3 decimals in every scenario that ran.
+
+Method: real mouse events (CDP) on the RTX 3080, di-test-browser, lane 1/2, canvas 1600x900, pointer at canvas centre, wheel notch deltaY -100
+every 150 ms, settle 600 ms, right-drag 240 px / 300 ms / 20 steps, camera read every rAF from camera-controls (found by walking the React fibre
+tree, no app hook, so it works on the production build). Script: scripts/nav/measure-pan-after-zoom.cjs (NAV_URL, NAV_NOTCHES, NAV_AT, NAV_SHOT).
+URL: /moxir/studio/projects/moxir-v1-1 (MOXIR v1.1, 147 objects, real hall; the Studio editor opened with no sign-in). Hall about 100 m long (10-08 note).
+Camera start (-5.2, 1.6, 20), orbit distance 24.2 m.
+
+| scenario | build | zoom m (total) | zoom m/notch | max zoom frame jump m | orbit dist after zoom m | pan m / 240 px | max pan frame jump m |
+|---|---|---|---|---|---|---|---|
+| 12 notches, centre | before | 21.07 | 1.76 | 3.80 | 3.11 | 0.996 | 0.050 |
+| 12 notches, centre | after  | 21.07 | 1.76 | 3.80 | 3.11 | 0.996 | 0.050 |
+| 25 notches, centre | before | 23.84 | 0.95 | 3.80 | 0.399 | 0.128 | 0.006 |
+| 25 notches, centre | after  | 23.84 | 0.95 | 3.80 | 0.399 | 0.128 | 0.006 |
+
+Reading: 12 notches leave the orbit point 3.1 m away, so a 240 px drag pans 1.0 m: proportionate, not stuck. 25 notches leave it at 0.399 m (the
+0.35 m minDistance plus infinityDolly), and the same drag pans 0.128 m: this is the owner's "stuck", and the fix does not change it.
+Pan distance is about 0.32 x orbit distance in both. So the Auto Depth fix helps only when the pivot sits in open air at a distance the surface under
+the pointer would change; here the pointer is over geometry or the pivot is already on it, and nothing moves.
+
+Not measured / limits: (1) an extra run, 12 notches at pointer (0.5, 0.8), started from a different camera (orbit 6.7 m, the editor does not always open
+at the same view) so it is not comparable; its after value was pan 0.117 m at orbit 0.369 m, before value was the 12-notch row above. (2) pointer (0.7, 0.25)
+was over a floating panel: no zoom in either build, invalid. (3) Not the owner's hands or mouse; Chromium on the agent screen, one run per cell
+(the 12-notch centre row repeated 4x for after, 2x for before, identical). (4) No hall bounding box read; 100 m is from the 10-08 note.
+(5) Screenshots after the drag: scratchpad before.png / after.png / before-n25.png / after-n25.png.
+Owed: the real fix for the 25-notch case, e.g. scale pan speed from the distance to the surface under the pointer rather than the clamped orbit
+distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-measure with this script (expected: pan m / 240 px grows from 0.128).
+
+## The cause, and the fix measured (same session, after the table above)
+
+- The dev-only trace (`window.__diNavTrace`, `NAV_TRACE=1`) showed the pan handler firing with 147 entity roots and the pointer
+  ray hitting NOTHING: at the hall's centre the pointer sits on fog / the open length of the hall. Blender's Auto Depth has no
+  answer for a miss (it keeps the previous depth); here the previous depth is camera-controls' 0.35 m clamp, dragged along by
+  `infinityDolly` while zooming into air, so every pan and wheel step was scaled by 0.35–0.4 m. `scripts/nav/probe-pick.cjs`
+  cast rays from the stuck camera along six world axes: floor 4.46 m down, roof 8.89 m up, wall 3.68 m behind, nothing ahead
+  or to the sides (even with every material double-sided). So the miss is geometric, not a raycast fault.
+- Fix (`autoDepth.js fallbackPivot`, used by `useCameraNavigation.js` for PAN and DOLLY): when the pointer ray misses and the
+  orbit point is already closer than the nearest surface around the camera, the pivot is placed that nearest-surface distance
+  along the view ray. Our rule, written down as such; while the orbit point is farther than that surface, Blender's rule holds
+  (depth unchanged) so the approach down a hall is as fast as before.
+- Measured AFTER (MOXIR v1.1 Studio, real mouse on the RTX 3080, 240 px right-drag after N wheel notches at the canvas centre):
+
+| case | pan before | pan after | orbit distance before → after | last wheel notch before → after | max pan frame jump after |
+|---|---|---|---|---|---|
+| 25 notches | 0.128 m | 1.644 m | 0.399 m → 5.13 m | 0.063 m → 0.79 m | 0.082 m |
+| 12 notches | 0.996 m | 1.111 m | 3.11 m → 3.47 m | 0.579 m → 0.64 m | 0.056 m |
+
+  The first notches are identical before and after (3.80, 3.20, 2.70 m). Zoom-in total over 25 notches: 23.8 m → 29.4 m
+  (it keeps moving instead of dying at 6 cm). A first version that used the fallback whenever the ray missed slowed the approach
+  to 0.29 m per notch from the start (7.2 m in 25 notches) and was dropped.
+- Not seen by the owner's hands yet. Rerun: `NAV_TRACE=1 NAV_NOTCHES=25 NAV_URL=<studio url> di-test-browser run scripts/nav/measure-pan-after-zoom.cjs`.
+
+## Owner's hands, round 1 (2026-10-12, moxir-test): "when I look forward and want to go down it is slow"
+
+- Measured first: a down drag and a sideways drag move the SAME (1.113 m per 240 px after 12 notches, both axes), so
+  "slow" is the whole grab in fog, not the direction. The nearest-surface rule alone picks the floor 3.5–4.5 m below
+  the camera: the most cautious depth in a 100 m hall.
+- Rule now (`resolveMissDepth`): on a miss, keep the depth the view last had from a real surface or a framing (Blender's
+  "previous depth"), never the 0.35 m clamp; a larger view distance (framing, zoom-out) is adopted, a smaller one may be
+  the clamp and is not; the nearest surface stays the floor of the answer. 5 unit tests.
+- Measured (12 notches at the centre, then 240 px right-drag): pan 1.113 → 7.747 m; every wheel notch 3.8 m (constant,
+  the framing depth of 24 m re-placed ahead at each quiet burst; before: decaying to 0.58 m by the 12th notch);
+  zoom total 21.1 → 43.8 m; max pan frame jump 0.387 m. Pointer on a surface keeps the exact grab (hit sets the depth).
+- Not measured: the 25-notch run timed out waiting for a test-browser lane (a peer was using lane 2); the 12-notch run
+  shows the rule. Owner's hands next.
+
+## Owner's hands, round 2: "when I zoom and try to move it does not move … why change the numbers, we need to write logic"
+
+- Owner's rule, written to `~/.claude/CLAUDE.md` the same hour: only what he asked; if impossible or in need of a conversation, talk
+  first. What he asked (twice): right-drag moves in the world by the same step at any zoom, a default, and a place in the Studio
+  to set your own.
+- Built (`worldMove.js`, `useCameraNavigation.js`, `mappings.js`, `preference.js`, `NavigationPreferenceControl.jsx`): right drag
+  in the Studio preset is the app's gesture, not camera-controls' pan: camera and orbit point move together by `step / 100 px`
+  with `cc.truck(x, y)`; no distance in the formula. Step = the owner's value (Shortcuts tab, "Move step", metres per 100 px,
+  stored under `di.studio.navigation.moveStep`) or auto = the scene's largest side / 40. Orbit, wheel and touch unchanged.
+  19 new/updated unit tests (60 in the navigation suite + preference control + help dialog).
+- Measured (MOXIR v1.1 Studio, real mouse, RTX 3080, 240 px right-drag): 0 notches 7.889 m · 12 notches 7.889 m · 25 notches
+  7.889 m (auto step 3.287 m per 100 px; before this round: 7.747 / 1.113 / 0.128 m depending on the zoom). Max frame jump
+  0.394 m (20 steps over 300 ms).
+- Left on the branch from the earlier rounds and NOT asked for by the owner: the wheel's miss rules (nearest surface, remembered
+  depth). Raised with him as a question, not decided here.
+- Sterile: the measurement scripts close their page on error too; no stray pages after the runs; the `navfix` stack stays up
+  as `studio-nav-test.diiii.localhost` while the owner tests (ledger N511.4), then `di-dev down navfix`.
+
+## Owner's hands, round 3: "open my Blender, look to the settings, make it like Blender" → "view like sketchfab, edit like blender"
+
+- His Blender (5.2.2 LTS, `~/.config/blender/5.2`, stock "Blender" keymap), read with `blender -b --python`: turntable, Orbit
+  Sensitivity 0.4°/px, Auto Depth ON, Auto Perspective ON, Zoom to Mouse Position OFF, Orbit Around Selection OFF, zoom
+  method Dolly/vertical, no inversions, Emulate 3 Button OFF, Walk mode (2.5 m/s, Shift ×5, eye 1.6 m, no gravity), Smooth
+  View 200 ms. Dump: `/tmp/…/scratchpad/blender-prefs.json` (session-only).
+- Decision (his, in words): the TOOL picks the mouse. **Navigate and the public viewer = Sketchfab** (drag orbit, right-drag
+  pan, wheel zoom toward the pointer, double-click focuses on the surface). **Edit = exactly Blender** (middle orbit, Shift+middle
+  pan, Ctrl+middle zoom, wheel zoom not to the pointer, left selects), "people will not need to learn something new".
+  Unlimited scroll stays ("look to browser you can unlimited scroll"). The fixed-step right-drag move (round 2) is removed:
+  it is in neither.
+- Built: `StudioViewport` picks the preset from `editMode`; Blender's 0.4°/px via `azimuthRotateSpeed = height/900`;
+  `blender.dollyToCursor=false`; `studio.focusOnDoubleClick` (orbit point to the surface under the pointer); the browser's
+  context menu is suppressed over the viewport in both; the Shortcuts tab shows both mouse tables and no radio (the
+  NavigationPreferenceControl and the moveStep preference are gone; `preference.js` keeps orbitSelection).
+- Measured (real mouse, RTX 3080, MOXIR v1.1): Navigate right-drag after 25 notches into fog 7.747 m per 240 px (orbit point
+  0.399 → 24.2 m by the previous-depth rule); Edit Shift+middle pan after 12 notches 7.747 m; Edit middle drag 240 px = 35.67 m
+  chord on a 24.2 m circle = 96° = 0.4°/px (Blender's); context menu suppressed in both tools.
+- Owed, next PR: Auto Perspective (his ON), Walk mode Shift+` with his numbers, the help dialog's rows for Edit's numpad keys.
+
+## Round 4: "not smooth" → "scroll the link you opened, it is stuck" — the deep audit (owner: "read every possible thing")
+
+- Research (Sonnet, web + camera-controls 2.10.1 source): `docs/ai/research/smooth-navigation-2026-10-12.md`. Blender's own source
+  (`view3d_navigate_view_zoom.cc`, main, fetched): a wheel step is `step = 1.2f` applied at once, no Smooth View; drags write the
+  view per mouse move; Zoom to Mouse Position only with `use_cursor_init`. So Edit's instant wheel step already matched Blender.
+- My own probe was wrong for a round: camera-controls `getPosition()` returns the END pose by default (receiveEndValue=true);
+  the probe now logs `cc._camera.position`. With that: dev = 1 frame per notch (3.8 m jump), branch Navigate with
+  draggingSmoothTime 0.125 = 15.7 frames per notch, max frame step 0.385 m.
+- Easing is now per tool (`mappings.js`): Navigate smoothTime 0.25 / draggingSmoothTime 0.125 (camera-controls defaults, a glide;
+  Sketchfab publishes no numbers — stated as such); Edit 0.2 / 0 (Blender: instant drags and wheel; his Smooth View 200 ms for
+  view changes).
+- His tab, read-only sampler during his own test (eDP-2 2560×1440 @ 240 Hz, DPR 1.5, di browser --ozone-platform=x11
+  --use-angle=vulkan on the 3080): rAF median 8.3 ms (120 fps) in every active second, p90 8.4–16.6 ms, worst frames 37, 54
+  and 29 ms in the first three seconds (warm-up), none over 20 ms afterwards. Frame rate is not the stuck.
+- His pivot trace from that test: 25 wheel notches with the pointer on the roof at `distance 0.35` (camera-controls' minDistance
+  clamp), 4 cm per notch. Reproduced (`NAV_POINTER=surface`, 40 notches): before, the last notches 0.053 m each at 0.35 m;
+  after `pickPivot({ beyond: minDistance × 1.5 })` (a surface closer than the clamp is the one we are pressed against, look
+  past it): 5.7–7.2 m per notch, 150.5 m of travel, the camera goes through. Pan after: 7.746 → 17.244 m per 240 px.
+- Owed: the owner's hands on Navigate's glide vs Edit's instant feel; a drag at 120 fps with DPR 1.5 on a 2560×1440 panel is
+  the heaviest case — the render cost per frame on his GPU was not measured (only rAF gaps).
+
+## Round 5: "can we make that will have full freedom to move" → Blender's Walk in the Studio
+
+- `useWalkNavigation.js` (modal, both tools): Shift+` enters (Blender's key), pointer lock, mouse looks at 0.4°/px (his Orbit
+  Sensitivity; Blender's own walk factor is not published — stated), W/S along the look, A/D strafe, Q/E world up/down, Shift ×5
+  (his walk_speed_factor), Alt ×0.25 (ours), 2.5 m/s (his walk_speed), no gravity (his). Esc / Enter / left click keep the place,
+  right click returns to the start (Blender's cancel). camera-controls is paused while walking and re-aimed from the new place with
+  the look depth kept, so orbit continues. Frames are held while walking (renderDemand). Motion = the 10-08 pure `flyMotion.js`
+  (ported with its 12 tests) with a short ramp.
+- Measured (`scripts/nav/measure-walk.cjs`, real keys, RTX 3080): pointer lock on; W for 1 s = 2.451 m (2.5 m/s minus the ramp);
+  Shift+W for 1 s = 12.253 m; 200 px of mouse turned the look to (0.98, 0.12, −0.17); after Esc camera-controls enabled again, target
+  24 m ahead. 7 new unit tests (68 in the navigation suites).
+- Owner's words that led here: "not smooth", "stuck", "full freedom to move omg", and "look deeper: OpenGL / WebGL / GLSL" — the
+  rendering audit runs as a separate report (`docs/ai/research/render-smoothness-audit-2026-10-12.md`).
+
+## Round 6: the rendering side ("look deeper: OpenGL / WebGL / GLSL") — audit + the measured fixes
+
+- Audit (Opus, real GPU, his screen size 1707×960 CSS @ DPR 1.5): `docs/ai/research/render-smoothness-audit-2026-10-12.md`,
+  probe `scripts/nav/measure-render.cjs`. Per frame at full screen: GPU 9.74 ms of which the 96 spot lamps 7.3 ms (48 hidden →
+  5.34 ms; all off → 2.46 ms), beams 0.9–1.3 ms, bloom / SMAA / shadow draw ≤ 0.4 ms each; CPU 4.7–5.3 ms (240 Hz needs < 4.17 ms →
+  his 120 fps); the 12 spot shadow maps redrawn every frame (637 draw calls, 833 k triangles); after ~4 s idle the GPU clock sits at
+  225 MHz and the first frames of a drag took 52–144 ms (his worst frame 54 ms); a look fade's 30 Hz clock keeps re-rendering.
+- Fix 1 — `ShadowsOnDemand` (RenderSettingsEffect.jsx): `shadowMap.autoUpdate=false`, redrawn on a document change, when a
+  casting/receiving mesh arrives or leaves, during a gizmo drag or any hold (timeline, XR, walk). Measured while moving: draw calls
+  637 → 342–403, triangles 833 k → 145–151 k, CPU render 4.7 → 3.8–4.7 ms (wheel 4.0, single notch 3.8).
+- Fix 2 — the pointer arriving over the view kicks frames (StudioViewport, `pointerover` on the canvas): the GPU clock is up before
+  the first drag. Measured, first drawn frames of a drag after 6 s rest: before 78/75/52/52/53 ms; now with the pointer resting on
+  the view 16.5/17.7/17.2/17.8 ms; with the pointer arriving 500 ms early 11.4/11.6/11.7/13.7 ms.
+- Not mine to decide (said to the owner): the 96 lamps are the MOXIR rig's content and 75 % of the GPU frame; a Studio light
+  budget (e.g. Lite's 4 slots while navigating) is his call. Owed: an empty-page frame timer in his di browser on the 240 Hz panel
+  (is 120 fps the X11 layer's cap?); the look-fade clock; CPU per frame below 4.17 ms.
+
+## Round 7: "test yourself as a human" + "do the possible stress test"
+
+- `scripts/nav/walkthrough.cjs`: the journey a person makes (orbit, scroll into fog, pan, scroll at the floor, double-click, right-click,
+  Edit's middle button, walk, orbit again), judged per step by the real camera: net metres, median and max per-frame step, their
+  ratio ("jerk"), stalls > 33 ms, console errors, a screenshot each. `scripts/nav/stress.cjs`: 60 s of rapid mixed input with a stuck
+  detector, finiteness, heap and error checks. `scripts/nav/repro-edit-wheel.cjs`: Edit wheel after a pan, deterministic.
+- Found by the journey and fixed, each measured before/after:
+  1. Scroll at the floor: 2 cm per frame then a 6.9 m jump (jerk 69). Call-level trace: camera-controls' **dolly-to-cursor moves the
+     orbit point toward the cursor in ONE frame while only the radius eases** (`_target` jumped 6.9 m in y inside `update()`). The
+     wheel is now the app's own: Blender's 1.2× step of the depth under the pointer (view3d_navigate_view_zoom.cc), along the pointer
+     ray (Navigate, zoom to mouse) or the view axis (Edit, his preference), eased in Navigate / instant in Edit, through surfaces with
+     the depth at most doubling per notch, zoom-out bounded at far/4 (his 10-08 decision). Floor scroll jerk 69 → 2.3; 25 notches into
+     fog: 2.28 m per notch constant, max frame step 0.30 m, orbit point 20 m (no collapse); 40 notches on a surface: 94 m, through.
+  2. A pivot far off the view axis: camera-controls `setOrbitPoint` (focal offset 8.7 m) moved the camera 6.94 m on the next update.
+     Auto Depth now sets the DEPTH on the view axis (Blender's rule), `setLookAt` with no transition: camera and aim unchanged.
+     Orbit-around-selection keeps the sideways pivot; Sketchfab's double-click re-aims the camera at the point (eased).
+  3. The first frame after a pause carried the whole pause as its delta (~0.7 s) and SmoothDamp finished in one frame: `clampUpdates`
+     limits camera-controls' update delta to 1/15 s.
+  4. After a double-click in Navigate the wheel did nothing: the Studio's own double-click (Quick Insert) opened over the view. Quick
+     Insert is now the Edit tool's; Navigate's double-click focuses (Sketchfab). Esc closes Quick Insert (checked).
+  5. `infinityDolly` at maxDistance pulled the orbit point toward the camera (stuck at 500 m in the stress): the app's wheel needs none.
+- Stress (11–12 rounds × 60 s, several runs): camera always finite, 0 stuck after the test used uncovered canvas points, 0 console
+  errors. NOT clean: stalls > 33 ms (55–225 per run) — a peer's show test was rendering in both test lanes (GPU 50–93 % before my
+  runs), so the stall counts are polluted; the JS heap grew 150 → 240–350 MB per minute of stress with the test's own per-frame
+  logging arrays inside the page, so a leak is NOT shown either way. Both owed: a quiet-GPU rerun and a heap run without logging.
+- Journey, final run (GPU shared): every step's max/median step ratio 1.0–3.2 except double-click-then-scroll 5.6 (the eased re-aim
+  overlapping the first notch); browser menu never shown; no errors; Walk 4.3 m in 1.5 s with a look.
+
+## Round 8: "so moving stress test passed?" — the quiet-GPU rerun found what the polluted one hid
+
+- Owed from round 7 and now done: a stress run with both test lanes empty (GPU 43 % idle, CPU 73 °C). It found **5 stuck rounds**
+  the polluted runs had not: from round 8 the view sat at 656 m and every notch, in or out, was a zero step.
+- The stress is now **seeded** (`NAV_SEED`, mulberry32; the seed is printed) so a run can be repeated, counts camera-controls updates by
+  its `update` event (wrapping `cc.update` is undone by the preset effect on a tool switch — a test artefact that looked like a frozen
+  loop), prints a `ROUND` line per round (distance, far, updates, metres moved) and ends on `about:blank`. Seed 11 reproduced it:
+  10 of 12 rounds stuck at 221.047 m, trace `["wheel", 1, "-", 221.047, 0]`.
+- **Cause 1** (`wheelZoomPlan`): the zoom-out bound (far/4 = 100 m here) clamped the NEW depth whenever it exceeded the bound, so a view
+  already beyond it — a double-click focus or a long drag at depth put it at 221 m — got a zero step for zoom-IN too. The bound now
+  applies to zoom-out only. **Cause 2** (`scripts/nav/probe-ceiling.cjs`): backing out at the centre tilted the camera under the floor;
+  the pointer then grazed the floor's underside at 1.6 m and 60 notches out took a 24 m view to 2.1 m (step 0.32 m, the hit sliding).
+  A zoom-out now never steps from a depth smaller than the view distance (`viewDistance` = `cc.distance`). Zoom-in is unchanged.
+- Measured after, same scripts: ceiling probe 60 out → 100 m (the bound), 5 in → 40.7 m, 20 more → 11.5 m; seed 11: 0 stuck (was 10),
+  seed 22: 0 stuck; camera finite, 0 console errors; stalls > 33 ms per 60 s on the quiet GPU: **10 and 15** of ~3780 frames
+  (polluted runs: 55–225); JS heap over 60 s: 152 → 183 MB and 140 → 181 MB (polluted runs: 150 → 240–350), with only the test's
+  frame-gap array in the page — no leak shown. Navigation unit tests 60/60; eslint clean.
+- Also found and ended: a `scripts/nav/_probe.cjs` node from 13 h earlier (my own, file since deleted) still held test lane 1; the probes
+  `probe-ceiling.cjs` / `probe-where.cjs` now `process.exit` so the CDP socket does not keep node alive after the page closes.
+- Still owed: the lamps budget while navigating (his decision), the 10-08 nav branches, Auto Perspective, Edit numpad rows in help.
+
+## Round 9 (2026-10-13): "still not what I want — stuck, stuck, then it goes hard; new mechanics, not numbers"
+
+- The seeded stress with a per-notch trace (`stress.cjs` now takes `NAV_TRACE=1` for an `ACT` line after every action and
+  `NAV_SHOTS=<dir>` for a picture per round; seed 835088540) showed both halves of what he felt. **Stuck:** zoom-out stopped at the
+  bound of far/4 (100 m: MOXIR v1-1's saved Far is 400), the last 7 of 20 notches out were 0 m. **Goes hard:** a zoom-in with nothing
+  under the pointer took the depth cap of twice the orbit distance, which grows the orbit distance 1.67x per notch, so the steps ran
+  0.62 → 1.04 → 1.73 → 1.86 m and the camera ended under the floor. Both rules were mine (rounds 1–8), neither is Blender's.
+- **The owner's own Blender 5.2.2, measured** (`scripts/nav/blender-wheel-probe.py` on the agent screen, his preferences read live:
+  Zoom to Mouse OFF, Auto Depth ON, Auto Perspective ON, Orbit Around Selection OFF): 20 notches in = 1.2^20 exactly (18.388 → 0.4796 m),
+  the orbit point never moved, the pointer at a corner changed nothing, 120 more notches out ran to 10 861 m (clip end 1000 x 10, one
+  step past), 300 in stopped at 0.001 m. Source read: `view3d_navigate_view_zoom.cc` `view_zoom_apply_step` (step 1.2, soft range
+  `ED_view3d_dist_soft_range_get` = clip end x 10, no clamp), `view3d_navigate.cc` `navigate_pivot_get` (a drag's pivot = the surface
+  under the pointer, else the view centre: `fallback_depth_pt = -rv3d->ofs`), v5.0.0.
+- **Built (his decision: "edit like in Blender, view like Sketchfab"):** `wheelZoomPlan` is now Blender's rule of the ORBIT DISTANCE
+  (1.2 per notch, steps only inside the soft range near clip x 1.5 … far x 10, never a clamp). The Blender tool's wheel reads nothing
+  under the pointer and keeps the orbit point. The Sketchfab tool's wheel still goes toward what is under the pointer (through it when
+  pressed against it), and with nothing there takes the orbit distance. `resolveMissDepth`, `capDepth`, the remembered depth and the
+  nearest-surface floor are gone: a drag with nothing under the pointer keeps the orbit point (Blender). Auto Depth now serves the
+  Blender tool's orbit too (Blender's USER_ZBUF_ORBIT); the Sketchfab tool's orbit keeps its centre (double-click moves it).
+- Measured after, same seed, 60 s quiet run: 12 rounds, 0 stuck, 0 zero-step notches (was 7 of 20), camera never under the floor
+  (min y 0.54 m; was −3 913 m), end-of-round distances 0.5–10.7 m (were pinned at 208 m), 0 errors, stalls 80 of 4181 frames; JS heap
+  155 → 300 MB over 68 s (NOT the 152 → 183 of round 8 — unexplained, owed a check). Walkthrough: every step jerk ≤ 2.2 except
+  "double-click floor then scroll 5" (max 0.95 m frame, probed in `probe-focus-scroll.cjs`, result below). Pan after 25 notches in:
+  0.49 m per 240 px (the depth under the pointer; round 1 fix gave 1.64 m with the remembered depth). Unit tests 415/415, eslint clean.
+- Sketchfab itself: not measured today — its viewer reports "3D/WebGL context error" in the test lane (embed and `probe-sketchfab.cjs`
+  kept for when the lane's GL allows it); its docs publish no zoom rule. The Sketchfab tool is unchanged beyond the shared rules above.
+- Stalls 842 of 1030 frames in one run were another session's lane rendering at the same time (lane 1, `floor-shots.cjs`); the clean
+  rerun gave 80 of 4181. CPU reached 91 °C during the probes; later runs waited for < 83 °C.
+
+## 2026-10-09 — the tier audit no longer calls private work "only on local" when dev was read without its token
+
+- Live re-run of `tier-sync --audit --from local --to dev` after #843 (429 fix): no read was left unreadable (the 429 fix holds), but it exited 1 with "96 difference(s)", every one "only on local". All 96 were private work: dev lists only public spaces (14) to an anonymous reader, only public projects inside them, and answers a private project's document 404 like a missing one. Split: 69 in spaces dev answers 401, 25 private projects in public spaces (moxir 24, main 1), 2 in a space dev answers 404 (`test`, private locally).
+- Fix: a tier read without its token, and not over loopback, is a partial view; private work absent from it goes under "could NOT be read" with status `private`, never missing/extra. Same live run after: exit 2, "INCOMPLETE … 96 private, needing LIVE_API_TOKEN in serverXR/.env.local", "no difference among the documents that could be read". 3 new tests fail on the old code (seen) and pass; tier-sync + start-check tests 98/98.
+- Not changed: `listProjectMetas` (start-check's everyday path) still reads a refused list as empty, and start-check has no partial-view rule yet — owed. A complete audit of private work still needs `LIVE_API_TOKEN` on this box, or the signed-in browser compare.
+- Seen on the way: the `moxir` space is private on local and public on dev (a follow does not carry space visibility — the known follow limit).
+
+## 2026-10-12 — Batch landing of 13 green PRs that were all BEHIND dev
+
+- One batch branch from `origin/dev` (ffbe0c52), each PR merged `--no-ff` (the proven 2026-09-05 route, PR #368): #855 #877 #862 #863
+  #865 #859 #860 #861 #857 #856 #831 #836 #842. Every PR branch was first brought up to date with dev (`gh pr update-branch`), so each
+  one's own CI also ran on the current base.
+- Two merges conflicted and were resolved by hand, mechanically: #857 against #861 in `docs/ai/known-fixes.md` (two rows added at the
+  same line; both kept) and #865 against #862 in 11 workflow files (#865's side taken: `.nvmrc` as the Node source, `timeout-minutes`
+  on every job, concurrency; then #862's runner pin `runs-on: ubuntu-24.04` re-applied over every `ubuntu-latest`).
+- Not in the batch: #885 (conflicts, in another session's worktree), #852 and #838 (conflicts in 11 agent files / 3 viewer files), #854
+  (to main, blocked by its protection rule; #855 is its dev twin and is in here).
+- Fold on dev after the merge, as the batch rule says; the PRs' own session notes stay in place for that fold.
+- CI on the batch (run 38306321674) was red in build-and-test and node-22-compat on ONE test, `gracefulShutdown.test.js` "exits 0":
+  #859's own CI is red on current dev for the same reason — dev's laser SIGTERM handler (60c252fd) re-raises the signal and kills the
+  process mid-stop. Fixed here, not by dropping #859: the lasers stop is the awaited `before` step of the orderly stop, one signal
+  handler, exit 0; `laserShutdownContracts.test.js` expects the orderly exit (the cube still hears output-off twice first). Measured
+  locally with both dependency sets installed: before 1 failed / 7 passed, after 9 passed (one new unit test for `before`). Known-fixes row added.
+
 ## 2026-10-11 — Claude Code setup audited against Anthropic's published practice and fixed
 
 - Why: the owner asked for Claude Code to be "set well" for di.iiii after a day in which 99.96 % of 1.64 B tokens
