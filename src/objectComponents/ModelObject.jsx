@@ -69,6 +69,16 @@ export const disposeObject3D = (root, { materialsOnly = false } = {}) => {
 // scripts/place/hall.py names its zone tape `hall-zone-<id>` (dance, stage, backstage …).
 export const isPlanningMarker = (name) => /^hall-zone-/.test(String(name || ''))
 
+// A model is fetched and parsed here, outside any three loader, so THREE.DefaultLoadingManager (drei's useProgress) never
+// saw it: the camera's automatic speed (useCameraNavigation autoSpeedFor), which waits for loading to be idle, fixed itself
+// while a hall was still downloading (review 2 of the standard move, 2026-10-13). The load is reported to that manager from
+// start to the moment the model is in the scene. Returns the end, safe to call more than once.
+export function reportModelLoad(key, manager = THREE.DefaultLoadingManager) {
+    manager.itemStart(key)
+    let ended = false
+    return () => { if (!ended) { ended = true; manager.itemEnd(key) } }
+}
+
 export default function ModelObject({
     assetRef,
     data,
@@ -84,6 +94,7 @@ export default function ModelObject({
     const [loaded, setLoaded] = useState(null)
     const loadedScene = loaded?.scene || null
     const gl = useThree((state) => state.gl)
+    const endLoadRef = useRef(null)
 
     const effectiveFormat = useMemo(() => {
         if (modelFormat) return modelFormat
@@ -97,6 +108,8 @@ export default function ModelObject({
 
     useEffect(() => {
         let disposed = false
+        const endLoad = reportModelLoad(`model:${assetRef?.id || (typeof data === 'string' ? data : '') || 'unnamed'}`)
+        endLoadRef.current = endLoad
 
         const resolveAssetSource = async (ref, fallbackUrl) => {
             if (ref?.id) {
@@ -177,10 +190,12 @@ export default function ModelObject({
         const handleScene = (scene, animations = []) => {
             if (disposed) return
             registerModelClips(assetRef?.id, animations)
+            if (!scene) endLoad() // with a scene, the load ends once it is mounted (the effect on `loaded` below)
             setLoaded(scene ? { scene, animations } : null)
         }
 
         const handleError = (error) => {
+            endLoad()
             if (disposed) return
             console.warn('[ModelObject] failed to load model:', assetRef?.name || data, error?.message || error)
             setLoaded(null)
@@ -189,6 +204,7 @@ export default function ModelObject({
         const loadModel = async () => {
             const assetSource = await resolveAssetSource(assetRef, data)
             if (!assetSource) {
+                endLoad()
                 setLoaded(null)
                 return
             }
@@ -260,8 +276,12 @@ export default function ModelObject({
 
         return () => {
             disposed = true
+            endLoad()
         }
     }, [assetRef, materialsAssetRef, data, effectiveFormat, gl])
+
+    // The loaded model is in the scene once this render is committed: only then is its load over.
+    useEffect(() => { if (loaded) endLoadRef.current?.() }, [loaded])
 
     // Dispose the previously loaded scene's geometries/materials/textures
     // the moment a new one replaces it (effect cleanup fires just before the

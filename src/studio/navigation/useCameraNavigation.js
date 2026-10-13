@@ -66,6 +66,22 @@ export function settleForGesture(cc) {
     cc.setLookAt(p.x, p.y, p.z, t.x, t.y, t.z, false)
 }
 
+// settleForGesture for a gesture that must place its pivot on a camera at rest (setOrbitPoint, the focal offset's clearing),
+// keeping what is left of a glide that only carries the camera (a wheel notch, a slide, a flight): `place` runs on the settled
+// camera and the rest of the glide is added back, eased. Settling alone cut a notch to whatever it had covered so far (review 2:
+// a Shift notch, then a turn with Orbit Around Selection on, moved 2.6 m instead of 13.6 m).
+export function settleKeepingGlide(cc, place) {
+    if (!cc?.active) { place(); return }
+    const p = cc.getPosition(new Vector3(), false), t = cc.getTarget(new Vector3(), false)
+    const rest = cc.getPosition(new Vector3(), true).sub(p), restT = cc.getTarget(new Vector3(), true).sub(t)
+    const carried = rest.lengthSq() > 0 && rest.distanceTo(restT) <= 1e-6 * Math.max(1, rest.length())
+    settleForGesture(cc); cc.update(0)
+    place()
+    if (!carried) return
+    const gp = cc.getPosition(new Vector3(), true).add(rest), gt = cc.getTarget(new Vector3(), true).add(rest)
+    cc.setLookAt(gp.x, gp.y, gp.z, gt.x, gt.y, gt.z, true)
+}
+
 // The frame delta camera-controls may ease over. With frameloop="demand" the first frame of a gesture after a pause carries the
 // whole pause as its delta (walked through 2026-10-12: ~0.7 s), and SmoothDamp then finishes the ease in that one frame — a 6.9 m
 // snap at the floor, a pop at the start of every gesture after a rest. Clamped to two frames at 30 Hz. Pure.
@@ -171,12 +187,13 @@ export function useCameraNavigation({
         const offset = new Vector3()
         const placeTurnPoint = (distance) => {
             if (cc.getFocalOffset(offset, true).lengthSq() > 0) {
-                settleForGesture(cc); cc.update(0)
-                const cam = cc.camera
-                cam.updateMatrixWorld(); cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
-                cc.setFocalOffset(0, 0, 0, false)
-                point.copy(camPos).addScaledVector(viewDir, distance)
-                cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, false)
+                settleKeepingGlide(cc, () => {
+                    const cam = cc.camera
+                    cam.updateMatrixWorld(); cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
+                    cc.setFocalOffset(0, 0, 0, false)
+                    point.copy(camPos).addScaledVector(viewDir, distance)
+                    cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, false)
+                })
                 return
             }
             cc.getPosition(camPos, true); cc.getTarget(goalTarget, true)
@@ -218,6 +235,7 @@ export function useCameraNavigation({
         }
         // The slide and the zoom drag are this hook's own, at the standard speed; camera-controls sees no button for them.
         const BUTTON_BIT = { 0: 1, 1: 4, 2: 2 }
+        const OWN = [CC_ACTION.TRUCK, CC_ACTION.SCREEN_PAN, CC_ACTION.DOLLY, CC_ACTION.ZOOM]
         let endDrag = null
         const startDrag = (event, kind) => {
             const pointerId = event.pointerId
@@ -314,7 +332,7 @@ export function useCameraNavigation({
         const onTouchDown = (event) => {
             touchPts.set(event.pointerId, { x: event.clientX, y: event.clientY })
             if (touchPts.size === 1) {
-                settleForGesture(cc)
+                // no settle: a glide still running (a pinch's) finishes, as for the mouse turn (review 2: it was cut to 0.67 of 10.9 m)
                 if (!focused) placeTurnPoint(Math.min(Math.max(turnDistance(speed(true), settingsRef.current.turn), cc.minDistance), cc.maxDistance))
                 return
             }
@@ -333,6 +351,8 @@ export function useCameraNavigation({
         const onTouchUp = (event) => {
             if (event.pointerType !== 'touch' || !touchPts.delete(event.pointerId)) return
             if (pinch && touchPts.size < 2) { pinch = null; cc.dispatchEvent({ type: 'controlend', originalEvent: event }) }
+            // a third finger lifted: a new pair, measured afresh (review 2: the old pair's spread and centre made 1 px jump 10.8 m)
+            else if (pinch && touchPts.size === 2) pinch = touchMeasure()
         }
 
         const onPointerDown = (event) => {
@@ -341,6 +361,11 @@ export function useCameraNavigation({
             if (event.pointerType === 'touch') { onTouchDown(event); return }
             const name = BUTTON_NAME[event.button]
             if (!name) return
+            // A second button pressed mid-drag arrives as a pointermove, never a pointerdown, and camera-controls then reads its
+            // binding: every slide or zoom binding is set aside at each press, whoever put it back (StudioViewport's own effect
+            // restores the resting bindings after this hook's, and on every tool switch: review 2, a middle-button chord zoomed
+            // with camera-controls' own dolly, 27.2 m to 7.6 m for 200 px).
+            for (const n of ['left', 'middle', 'right']) if (OWN.includes(cc.mouseButtons[n])) cc.mouseButtons[n] = CC_ACTION.NONE
             if (event.button === 2) { rightHeld = true; readMods(event) }
             const action = actionFor(preset.id, event.button, { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
             if (action === CC_ACTION.NONE) { cc.mouseButtons[name] = action; return }
@@ -355,7 +380,7 @@ export function useCameraNavigation({
             const scene = getScene?.()
             if (orbitSelection && selected?.length && scene) {
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
-                if (center) { settleForGesture(cc); applyPivot(cc, center, { force: true, onAxis: false }); trace({ action: 'turn', source: 'selection' }); return }
+                if (center) { settleKeepingGlide(cc, () => applyPivot(cc, center, { force: true, onAxis: false })); trace({ action: 'turn', source: 'selection' }); return }
             }
             if (focused) { trace({ action: 'turn', source: 'double-clicked point' }); return }
             // inside the range a viewer's own lock sets (the public viewer's Inside: 2-25 m); the Studio's range is open
@@ -402,7 +427,6 @@ export function useCameraNavigation({
         cc.maxDistance = Infinity
         // A button pressed in the middle of another drag (a chord) never runs camera-controls' own slide or zoom: those resting
         // bindings are NONE, and this hook gives each gesture its action at its own pointerdown (review-move F11). Two fingers too.
-        const OWN = [CC_ACTION.TRUCK, CC_ACTION.SCREEN_PAN, CC_ACTION.DOLLY, CC_ACTION.ZOOM]
         const restingButtons = { left: cc.mouseButtons.left, middle: cc.mouseButtons.middle, right: cc.mouseButtons.right }
         for (const name of ['left', 'middle', 'right']) if (OWN.includes(cc.mouseButtons[name])) cc.mouseButtons[name] = CC_ACTION.NONE
         const restingTwo = cc.touches.two
