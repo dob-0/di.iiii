@@ -1,0 +1,321 @@
+{
+  "id": "up-hk1915",
+  "code": "UP-HK1915",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT (size and weight from an EQUIVALENT)",
+  "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+  "model": "UP-HK1915",
+  "modelledOn": null,
+  "product": "UPlight UP-HK1915 'Hawk Eye / Bee Eye', 19 x 15 W RGBW zoom moving head",
+  "category": "moving-head",
+  "modes": [
+    {
+      "name": "21ch",
+      "footprint": 21,
+      "channels": null,
+      "channelsSource": null,
+      "src": "C",
+      "basis": "EXACT"
+    },
+    {
+      "name": "35ch",
+      "footprint": 35,
+      "channels": null,
+      "channelsSource": null,
+      "src": "C",
+      "basis": "EXACT"
+    },
+    {
+      "name": "78ch",
+      "footprint": 78,
+      "channels": null,
+      "channelsSource": null,
+      "src": "C",
+      "basis": "EXACT"
+    },
+    {
+      "name": "92ch",
+      "footprint": 92,
+      "channels": null,
+      "channelsSource": null,
+      "src": "C",
+      "basis": "EXACT"
+    },
+    {
+      "name": "97ch",
+      "footprint": 97,
+      "channels": null,
+      "channelsSource": null,
+      "src": "C",
+      "basis": "EXACT"
+    },
+    {
+      "name": "21ch-assumed",
+      "footprint": 21,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "aux1",
+          "label": "Red fine"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "aux2",
+          "label": "Green fine"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "aux3",
+          "label": "Blue fine"
+        },
+        {
+          "role": "w",
+          "label": "White",
+          "default": 0
+        },
+        {
+          "role": "aux4",
+          "label": "White fine"
+        },
+        {
+          "role": "aux5",
+          "label": "CTO",
+          "cap": {
+            "cto": true
+          }
+        },
+        {
+          "role": "macro",
+          "label": "Macro colour"
+        },
+        {
+          "role": "strobe",
+          "label": "Shutter / strobe",
+          "default": 0,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 3,
+                "open": true
+              },
+              {
+                "from": 4,
+                "to": 203,
+                "strobe": [
+                  1,
+                  20
+                ]
+              },
+              {
+                "from": 204,
+                "to": 255,
+                "strobe": [
+                  8,
+                  8
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine",
+          "default": 0
+        },
+        {
+          "role": "pan",
+          "label": "Pan",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine",
+          "default": 0
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine",
+          "default": 0
+        },
+        {
+          "role": "control",
+          "label": "Function"
+        },
+        {
+          "role": "aux6",
+          "label": "Reset"
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom",
+          "cap": {
+            "zoom": {
+              "from": 0,
+              "to": 255,
+              "deg": [
+                4,
+                60
+              ]
+            }
+          }
+        },
+        {
+          "role": "rotation",
+          "label": "Zoom lens rotation"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "EQUIVALENT",
+        "gradeWhy": "same OEM body (the Clay Paky B-EYE K10 clone): the Aolait manual lists exactly the 21/23/35/78/92/97/99 modes UPlight's own listings give, calls the fixture \"HAWKEYE II\" (UPlight sells \"Hawk Eye\"), and its drawings match UPlight's photos (19 hex lenses, cross of 4 keys on a mono LCD, powerCON in/out, 3-pin DMX). Differs: tilt 270° vs UPlight's 230°, 450 vs 350 W. Researched 2026-09-29",
+        "fixture": "Aolait AL1019WR \"19x15W Bee-Eye LED Beam Wash Zoom\" (19 × 15 W RGBW, zoom 4°–60°)",
+        "url": "https://aolait.com/wp-content/uploads/2020/11/19X15W-Led-Bee-Eye-User-Manual.pdf",
+        "title": "19X15W LED Bee-Eye user manual",
+        "pages": "8 (printed 8/20)",
+        "sha256": "7a0906f76348e49b8fd7833927c7ac30cfc97019cd0b046d2ccf629a6386ef82",
+        "accessed": "2026-09-28",
+        "fill": [
+          "the footprint matches UP-HK1915's published 21ch — the ORDER is the equivalent's",
+          "strobe rates are not printed: 4–203 drawn as 1–20 Hz (ASSUMED); 204–255 random, drawn at 8 Hz",
+          "CTO \"linear colour temperature\": 0 = none, 255 = full warm (ASSUMED direction)",
+          "zoom 0–255 drawn 4°→60° (the type's published range); which end is narrow is ASSUMED",
+          "pan/tilt: DMX centre is home; range 540°/230° (the type's)"
+        ]
+      },
+      "assumed": "ASSUMED from Aolait AL1019WR bee-eye manual p.8 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "21ch",
+  "modesOwed": false,
+  "assumedMode": "21ch-assumed",
+  "power_w": {
+    "value": 350,
+    "src": "C",
+    "basis": "EXACT",
+    "note": "C3 says 300 W"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 15,
+    "src": "OFL-K10",
+    "basis": "EQUIVALENT",
+    "note": "maker listings contradict themselves (12.5 / 6.2 / 10.5 kg)"
+  },
+  "size_mm": {
+    "value": [
+      358,
+      253,
+      494
+    ],
+    "src": "OFL-K10",
+    "basis": "EQUIVALENT",
+    "order": "W x D x H",
+    "note": "Clay Paky A.leda B-EYE K10. The maker's own 325 x 188 x 396 mm (C2, C3) is implausible for a 19-lens head and is not used."
+  },
+  "pan_tilt_deg": {
+    "value": [
+      540,
+      230
+    ],
+    "src": "C, C2",
+    "basis": "EXACT"
+  },
+  "ip": {
+    "value": "IP20",
+    "src": "C",
+    "basis": "EXACT",
+    "note": "INDOOR fixture"
+  },
+  "optics": {
+    "beam_deg": 4,
+    "zoom_deg": [
+      4,
+      60
+    ],
+    "lux": 14000,
+    "at_m": 5,
+    "photometrySrc": "LIRO-L1915Z",
+    "photometryBasis": "EQUIVALENT",
+    "note": "reseller claim, likely all colours at full"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/beeEye.glb",
+    "sidecar": "scripts/place/fixtures/glb/beeEye.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0.12,
+    "tiltY": 0.36,
+    "lensY": 0.496,
+    "sizeAtHome_mm": {
+      "width_x": 370,
+      "depth_z": 250,
+      "height_y": 494
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "C": {
+      "url": "https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html",
+      "what": "UPlight UP-HK1915 'Hawk Eye', maker's site"
+    },
+    "C2": {
+      "url": "https://up-light.en.made-in-china.com/product/pAzRYkbrgSVy/China-Upliht-19X15W-Zoom-LED-Moving-Head-Light-for-Djs.html",
+      "what": "UPlight UP-HK1915, store page"
+    },
+    "LIRO-L1915Z": {
+      "url": "https://lirolighting.en.made-in-china.com/product/qAnRKpNGOMkT/China-19X15W-RGBW-Clay-Paky-Bee-Eye-K10-LED-Moving-Head-Light.html",
+      "what": "LIRO LR-L1915Z, 19 x 15 W RGBW bee-eye (the same Chinese class as UP-HK1915) — photometric equivalent"
+    },
+    "OFL-K10": {
+      "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/fixtures/clay-paky/a-leda-b-eye-k10.json",
+      "what": "Clay Paky A.leda B-EYE K10 in Open Fixture Library (MIT); physical.dimensions are W x H x D"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "beeEye",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-09-28",
+    "sources": [
+      "C",
+      "C2",
+      "LIRO-L1915Z",
+      "OFL-K10"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 8,
+      "equivalent": 3,
+      "assumed": 2,
+      "unknown": 0
+    }
+  }
+}

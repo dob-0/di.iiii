@@ -1,0 +1,623 @@
+{
+  "id": "up-b380f",
+  "code": "UP-B380F",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT",
+  "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+  "model": "UP-B380F",
+  "modelledOn": null,
+  "product": "UPlight UP-B380F, IP65 380 W beam moving head (outdoor)",
+  "category": "moving-head",
+  "modes": [
+    {
+      "name": "16ch",
+      "footprint": 16,
+      "channels": [
+        {
+          "role": "pan",
+          "label": "Pan",
+          "default": 128
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine",
+          "default": 0
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine",
+          "default": 0
+        },
+        {
+          "role": "speed",
+          "label": "Pan/tilt speed"
+        },
+        {
+          "role": "frost",
+          "label": "Frost",
+          "cap": {
+            "frost": {
+              "basis": "ASSUMED — linear, 0 clear … 255 full; the chart states no curve"
+            }
+          }
+        },
+        {
+          "role": "strobe",
+          "label": "Shutter / strobe (255 open, 0-3 dark)",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 3,
+                "open": false
+              },
+              {
+                "from": 255,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "color",
+          "label": "Colour wheel (0 white, 12 colour 1…)",
+          "default": 0
+        },
+        {
+          "role": "gobo",
+          "label": "Gobo (5-89 gobo 1-17, 171+ shake)",
+          "cap": {
+            "gobo": true,
+            "goboSlots": {
+              "from": 5,
+              "to": 89,
+              "count": 17,
+              "basis": "TESTED range; slots DERIVED"
+            },
+            "goboShake": {
+              "from": 171,
+              "basis": "TESTED"
+            }
+          }
+        },
+        {
+          "role": "prism",
+          "label": "Prism 1 insert (128+ in)",
+          "cap": {
+            "prism": true,
+            "prismIn": {
+              "from": 128,
+              "facets": 16,
+              "basis": "TESTED threshold"
+            }
+          }
+        },
+        {
+          "role": "rotation",
+          "label": "Prism 1 rotation",
+          "cap": {
+            "prismRotation": {
+              "prism": 1,
+              "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+            }
+          }
+        },
+        {
+          "role": "aux1",
+          "label": "Prism 2",
+          "cap": {
+            "prism2": {
+              "kind": "honeycomb",
+              "in": {
+                "from": 128
+              },
+              "basis": "ASSUMED — prism 1's threshold"
+            }
+          }
+        },
+        {
+          "role": "aux2",
+          "label": "Prism 2 rotation",
+          "cap": {
+            "prismRotation": {
+              "prism": 2,
+              "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+            }
+          }
+        },
+        {
+          "role": "focus",
+          "label": "Focus"
+        },
+        {
+          "role": "control",
+          "label": "Reset (always 0)",
+          "default": 0
+        }
+      ],
+      "channelsSource": {
+        "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+        "url": null,
+        "licence": null,
+        "basis": "TESTED"
+      },
+      "src": "A",
+      "basis": "EXACT"
+    },
+    {
+      "name": "16ch-assumed",
+      "footprint": 16,
+      "channels": [
+        {
+          "role": "color",
+          "label": "Colour wheel",
+          "default": 0,
+          "cap": {
+            "wheel": [
+              {
+                "from": 0,
+                "to": 4,
+                "name": "Open (white)",
+                "colour": "#ffffff"
+              },
+              {
+                "from": 5,
+                "to": 9,
+                "half": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "from": 10,
+                "to": 14,
+                "name": "Red",
+                "colour": "#c41c1a"
+              },
+              {
+                "from": 15,
+                "to": 19,
+                "half": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "from": 20,
+                "to": 24,
+                "name": "Orange",
+                "colour": "#ed8229"
+              },
+              {
+                "from": 25,
+                "to": 29,
+                "half": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "from": 30,
+                "to": 34,
+                "name": "Aquamarine",
+                "colour": "#7abd82"
+              },
+              {
+                "from": 35,
+                "to": 39,
+                "half": [
+                  3,
+                  4
+                ]
+              },
+              {
+                "from": 40,
+                "to": 44,
+                "name": "Green",
+                "colour": "#05822b"
+              },
+              {
+                "from": 45,
+                "to": 49,
+                "half": [
+                  4,
+                  5
+                ]
+              },
+              {
+                "from": 50,
+                "to": 54,
+                "name": "Light Green",
+                "colour": "#9ec233"
+              },
+              {
+                "from": 55,
+                "to": 59,
+                "half": [
+                  5,
+                  6
+                ]
+              },
+              {
+                "from": 60,
+                "to": 64,
+                "name": "Lavender",
+                "colour": "#8f73ad"
+              },
+              {
+                "from": 65,
+                "to": 69,
+                "half": [
+                  6,
+                  7
+                ]
+              },
+              {
+                "from": 70,
+                "to": 74,
+                "name": "Pink",
+                "colour": "#ed8080"
+              },
+              {
+                "from": 75,
+                "to": 79,
+                "half": [
+                  7,
+                  8
+                ]
+              },
+              {
+                "from": 80,
+                "to": 84,
+                "name": "Yellow",
+                "colour": "#ffed00"
+              },
+              {
+                "from": 85,
+                "to": 89,
+                "half": [
+                  8,
+                  9
+                ]
+              },
+              {
+                "from": 90,
+                "to": 94,
+                "name": "Magenta",
+                "colour": "#e30082"
+              },
+              {
+                "from": 95,
+                "to": 99,
+                "half": [
+                  9,
+                  10
+                ]
+              },
+              {
+                "from": 100,
+                "to": 104,
+                "name": "Cyan",
+                "colour": "#00a6eb"
+              },
+              {
+                "from": 105,
+                "to": 109,
+                "half": [
+                  10,
+                  11
+                ]
+              },
+              {
+                "from": 110,
+                "to": 114,
+                "name": "CTO 260",
+                "colour": "#f5c745"
+              },
+              {
+                "from": 115,
+                "to": 119,
+                "half": [
+                  11,
+                  12
+                ]
+              },
+              {
+                "from": 120,
+                "to": 124,
+                "name": "CTO 190",
+                "colour": "#f5d985"
+              },
+              {
+                "from": 125,
+                "to": 129,
+                "half": [
+                  12,
+                  13
+                ]
+              },
+              {
+                "from": 130,
+                "to": 134,
+                "name": "CTB 8000",
+                "colour": "#96c7b8"
+              },
+              {
+                "from": 135,
+                "to": 139,
+                "half": [
+                  13,
+                  0
+                ]
+              },
+              {
+                "from": 140,
+                "to": 199,
+                "spin": "forward"
+              },
+              {
+                "from": 200,
+                "to": 255,
+                "spin": "reverse"
+              }
+            ]
+          }
+        },
+        {
+          "role": "strobe",
+          "label": "Shutter / strobe",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 0,
+                "open": false
+              },
+              {
+                "from": 1,
+                "to": 50,
+                "open": true
+              },
+              {
+                "from": 51,
+                "to": 240,
+                "strobe": [
+                  1,
+                  25
+                ]
+              },
+              {
+                "from": 241,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "gobo",
+          "label": "Gobo wheel",
+          "cap": {
+            "gobo": true
+          }
+        },
+        {
+          "role": "prism",
+          "label": "Prism",
+          "cap": {
+            "prism": true
+          }
+        },
+        {
+          "role": "rotation",
+          "label": "Prism 1 rotation"
+        },
+        {
+          "role": "aux1",
+          "label": "Prism 2 rotation"
+        },
+        {
+          "role": "frost",
+          "label": "Frost"
+        },
+        {
+          "role": "focus",
+          "label": "Focus"
+        },
+        {
+          "role": "pan",
+          "label": "Pan",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine",
+          "default": 0
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine",
+          "default": 0
+        },
+        {
+          "role": "speed",
+          "label": "Pan/tilt speed"
+        },
+        {
+          "role": "control",
+          "label": "Reset"
+        },
+        {
+          "role": "aux2",
+          "label": "Lamp on/off",
+          "cap": {
+            "lamp": true
+          }
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "searched 2026-09-29 (maker sites pro-uplight.com + uplight.com.cn, 2 made-in-china listings and their 10 description images, OFL, QLC+): no chart for UP-B380F anywhere. The UPlus body differs (finned head vs smooth drum, display on the arm vs the base, 424×367×725 mm 27 kg vs 460×310×690 mm 23 kg, 400 vs 450/500 W) — only the 16-channel count and 540°/270° match. The maker lists ONE mode, 16ch (uplight.com.cn pd45714311)",
+        "fixture": "UPlus Lighting \"380 IP BEAM\" (IP65, 371 W Osram lamp, 2°, pan 540° / tilt 270° 16-bit)",
+        "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+        "title": "\"380 IP BEAM\" user manual",
+        "pages": "6–8",
+        "sha256": "31712c3ae62a1dec0ed39601dd720e90df0eedb75b2ae178dfcce231dccf974a",
+        "accessed": "2026-09-29",
+        "fill": [
+          "colour wheel slots are numbered, not named, in the chart: colours taken in order from the Clay Paky Sharpy wheel (OFL) — ASSUMED",
+          "strobe 51–240 \"slow to fast\": 1–25 Hz from the spec page (\"Strobe: 0-25Hz\", p.4); 5–50 and 241–251 are not in the chart and are drawn open",
+          "pan/tilt: DMX centre (32768) is home — beam straight out of the base (up standing, down hung); the range is the type's 540°/270°",
+          "CH16 lamp on/off is not drawn: the room assumes the lamp struck"
+        ]
+      },
+      "assumed": "ASSUMED from UPlus 380 IP BEAM manual p.6–8 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "16ch",
+  "modesOwed": false,
+  "assumedMode": "16ch-assumed",
+  "power_w": {
+    "value": 500,
+    "src": "A",
+    "basis": "EXACT",
+    "note": "A-CN gives rated 450 W; the higher figure (A) is kept for power planning"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 23,
+    "src": "A",
+    "basis": "EXACT"
+  },
+  "size_mm": {
+    "value": [
+      460,
+      310,
+      690
+    ],
+    "src": "A",
+    "basis": "EXACT",
+    "order": "W x D x H (690 = height, read from the photo)",
+    "note": "A2 also gives 450 x 310 x 690"
+  },
+  "pan_tilt_deg": {
+    "value": [
+      540,
+      270
+    ],
+    "src": "A",
+    "basis": "EXACT"
+  },
+  "ip": {
+    "value": "IP65",
+    "src": "A",
+    "basis": "EXACT"
+  },
+  "optics": {
+    "beam_deg": 1.8,
+    "zoom_deg": null,
+    "lux": 125500,
+    "at_m": 20,
+    "photometrySrc": "SHEHDS-GALAXYJET",
+    "photometryBasis": "EQUIVALENT",
+    "note": "maker's claim, not an independent measurement"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/beam380.glb",
+    "sidecar": "scripts/place/fixtures/glb/beam380.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0.12,
+    "tiltY": 0.37,
+    "lensY": 0.698,
+    "sizeAtHome_mm": {
+      "width_x": 480,
+      "depth_z": 332,
+      "height_y": 708
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "A": {
+      "url": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html",
+      "what": "UPlight UP-B380F, maker's store page"
+    },
+    "A-CN": {
+      "url": "https://www.uplight.com.cn/pd45714311.html",
+      "what": "UPlight UP-B380F on the maker's Chinese site (广州灯王舞台设备有限公司, brand UPLIGHT; linked from pro-uplight.com's language menu) — specs text, no DMX chart; checked 2026-09-29"
+    },
+    "A2": {
+      "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
+      "what": "UPlight UP-B380F, second store page"
+    },
+    "NEREID": {
+      "url": "https://electromarket.co.uk/beamz-pro-nereid380b-outdoor-weatherproof-moving-head-beam-light-380w",
+      "what": "BeamZ Pro Nereid380B, 380 W IP65 beam, 1 deg; 209,000 lx @ 7 m from the beamZ 152.040B listing (manuals.plus), via a search snippet — the low end of the 380 W class bracket"
+    },
+    "OSRAM380": {
+      "url": "https://www.osram.com/ecat/",
+      "what": "Osram eCat, SIRIUS HRI 380 W S PRO (ZMP_4061881): 20,000 lm, 7700 K, Ra 85, 70 V 5 A, 2500 h — values as quoted by a web search 2026-10-09; the product page answered HTTP 500 on a direct fetch, so UNVERIFIED at source. The lamp class of the UP-B380F (\"350XL/380\"); its make is not confirmed"
+    },
+    "SEVAN": {
+      "url": null,
+      "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
+    },
+    "SHEHDS-GALAXYJET": {
+      "url": "https://shehds.com/products/galaxyjet-beam-380w-19r-moving-head-lights-display-stage-effect-lighting-for-dj-disco-stage-performance-stage-concert-wedding",
+      "what": "SHEHDS GalaxyJet 380 W 19R IP65 beam — photometric equivalent for UP-B380F (same class, IP65, 1.8 deg, 160 mm lens)"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "beam380",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-09-29",
+    "sources": [
+      "A",
+      "A-CN",
+      "A2",
+      "NEREID",
+      "OSRAM380",
+      "SEVAN",
+      "SHEHDS-GALAXYJET"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 4,
+      "datasheet": 6,
+      "equivalent": 1,
+      "assumed": 6,
+      "unknown": 0
+    }
+  }
+}

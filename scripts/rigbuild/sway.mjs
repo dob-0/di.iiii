@@ -19,7 +19,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
-import { fileURLToPath } from 'node:url'
+import { loadLibrary } from './library.mjs'
 
 const ON_LINE = new Set(['truss-top', 'truss-header'])
 
@@ -53,7 +53,7 @@ const main = () => {
     const args = parseArgs()
     const rig = readJson(path.resolve(String(args.rig || die('needs --rig <rig file>'))))
     const show = readJson(path.resolve(String(args.show || die('needs --show <show file>'))))
-    const types = readJson(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/rigbuild/types/moxir.json')).types
+    const types = loadLibrary().types
     const m = rig.truss?.motion
     if (!m) { say(`${rig.rig}: not a chain-hung line with motion limits — nothing to check`); return }
     const heads = headsOnLine(rig, types)

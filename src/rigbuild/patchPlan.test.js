@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 import minimalPlan from '../../scripts/place/rigs/moxir-2026-10-17-minimal.patch.json'
 import { addressSetting, artnetOf, expectedRoom, footprintOfName, naturalCompare, planPatch, resolveMode, selectorTest } from './patchPlan.js'
 import { typeById } from './fixtureTypes.js'

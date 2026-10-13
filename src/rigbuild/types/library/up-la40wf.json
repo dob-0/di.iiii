@@ -1,0 +1,315 @@
+{
+  "id": "up-la40wf",
+  "code": "UP-LA40WF",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
+  "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+  "model": "UP-LA40WF",
+  "modelledOn": null,
+  "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
+  "category": "laser",
+  "modes": [
+    {
+      "name": "32ch",
+      "footprint": 32,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Ch 1 output (named dimmer so master/blackout reach it)"
+        },
+        {
+          "role": "c2",
+          "label": "Mode (25 auto, 75 voice, 250 manual graphics)"
+        },
+        {
+          "role": "c3",
+          "label": "Graphic select"
+        },
+        {
+          "role": "c4",
+          "label": "Display mode"
+        },
+        {
+          "role": "c5",
+          "label": "Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)"
+        },
+        {
+          "role": "c6",
+          "label": "X position (64 centre)"
+        },
+        {
+          "role": "c7",
+          "label": "Y position (64 centre)"
+        },
+        {
+          "role": "c8",
+          "label": "Ch 8"
+        },
+        {
+          "role": "c9",
+          "label": "Ch 9"
+        },
+        {
+          "role": "c10",
+          "label": "Ch 10"
+        },
+        {
+          "role": "c11",
+          "label": "Centre rotation (150 slow clockwise)"
+        },
+        {
+          "role": "c12",
+          "label": "Ch 12"
+        },
+        {
+          "role": "c13",
+          "label": "Wave 1"
+        },
+        {
+          "role": "c14",
+          "label": "Wave 2"
+        },
+        {
+          "role": "c15",
+          "label": "Strobe"
+        },
+        {
+          "role": "c16",
+          "label": "Red level (0 brightest)"
+        },
+        {
+          "role": "c17",
+          "label": "Green level (0 brightest)"
+        },
+        {
+          "role": "c18",
+          "label": "Blue level (0 brightest)"
+        },
+        {
+          "role": "c19",
+          "label": "Ch 19"
+        },
+        {
+          "role": "c20",
+          "label": "Graphic 2, ch 20"
+        },
+        {
+          "role": "c21",
+          "label": "Graphic 2, ch 21"
+        },
+        {
+          "role": "c22",
+          "label": "Graphic 2 colour (mirror ch 5)"
+        },
+        {
+          "role": "c23",
+          "label": "Graphic 2, ch 23"
+        },
+        {
+          "role": "c24",
+          "label": "Graphic 2, ch 24"
+        },
+        {
+          "role": "c25",
+          "label": "Graphic 2, ch 25"
+        },
+        {
+          "role": "c26",
+          "label": "Graphic 2, ch 26"
+        },
+        {
+          "role": "c27",
+          "label": "Graphic 2, ch 27"
+        },
+        {
+          "role": "c28",
+          "label": "Graphic 2, ch 28"
+        },
+        {
+          "role": "c29",
+          "label": "Graphic 2, ch 29"
+        },
+        {
+          "role": "c30",
+          "label": "Graphic 2, ch 30"
+        },
+        {
+          "role": "c31",
+          "label": "Graphic 2, ch 31"
+        },
+        {
+          "role": "c32",
+          "label": "Graphic 2, ch 32"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+        "url": null,
+        "licence": null,
+        "basis": "TESTED"
+      },
+      "src": "SEVAN",
+      "basis": "TESTED"
+    },
+    {
+      "name": "11ch-assumed",
+      "footprint": 11,
+      "channels": [
+        {
+          "role": "control",
+          "label": "Mode"
+        },
+        {
+          "role": "aux1",
+          "label": "Pattern"
+        },
+        {
+          "role": "aux2",
+          "label": "Circular movement"
+        },
+        {
+          "role": "aux3",
+          "label": "Y rotation"
+        },
+        {
+          "role": "aux4",
+          "label": "X rotation"
+        },
+        {
+          "role": "aux5",
+          "label": "Horizontal movement"
+        },
+        {
+          "role": "aux6",
+          "label": "Vertical movement"
+        },
+        {
+          "role": "zoom",
+          "label": "Manual zoom"
+        },
+        {
+          "role": "aux7",
+          "label": "Pattern buildup"
+        },
+        {
+          "role": "strobe",
+          "label": "Dot effect / strobe"
+        },
+        {
+          "role": "color",
+          "label": "Colour"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "the unit is identified — UPlight's own page (uplight.com.cn pd48855201) names UP-LA40WF, DMX512/ILDA — but publishes no DMX mode or chart (checked 2026-09-29)",
+        "fixture": "Laserworld CS-1000RGB (an RGB animation laser; the Blue Sea BLLO-RGB40 publishes no chart)",
+        "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/laserworld/cs-1000rgb.json",
+        "title": "Open Fixture Library: Laserworld CS-1000RGB, \"11-channel\"",
+        "pages": "mode \"11-channel\"",
+        "licence": "MIT (Open Fixture Library)",
+        "accessed": "2026-09-29",
+        "fill": [
+          "the laser is not drawn in the room; laser safety (IEC 60825-1, audience scanning) is a separate sign-off"
+        ]
+      },
+      "assumed": "ASSUMED from Laserworld CS-1000RGB 11-channel (Open Fixture Library) — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "32ch",
+  "modesOwed": false,
+  "assumedMode": "11ch-assumed",
+  "power_w": {
+    "value": 1200,
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 35,
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      420,
+      555,
+      235
+    ],
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT",
+    "order": "front W x length x front H (published 555 x 420 x 235 without handle)"
+  },
+  "pan_tilt_deg": null,
+  "ip": {
+    "value": "IP65",
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT"
+  },
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": "BLUESEA",
+    "photometryBasis": "EQUIVALENT",
+    "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed)."
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/laser.glb",
+    "sidecar": "scripts/place/fixtures/glb/laser.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0,
+    "tiltY": 0.33,
+    "lensY": 0.6615,
+    "sizeAtHome_mm": {
+      "width_x": 550,
+      "depth_z": 235,
+      "height_y": 661
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "BLUESEA": {
+      "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html",
+      "what": "Blue Sea BLLO-RGB40, 40 W RGB IP65 laser — equivalent for UP-LA40WF"
+    },
+    "LA-CN": {
+      "url": "https://www.uplight.com.cn/pd48855201.html",
+      "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
+    },
+    "SEVAN": {
+      "url": null,
+      "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "laser",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-09-29",
+    "sources": [
+      "BLUESEA",
+      "LA-CN",
+      "SEVAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 2,
+      "datasheet": 0,
+      "equivalent": 5,
+      "assumed": 2,
+      "unknown": 0
+    }
+  }
+}

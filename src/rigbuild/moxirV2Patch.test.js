@@ -18,7 +18,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 import { artnetOf, expectedRoom, planPatch } from './patchPlan.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))

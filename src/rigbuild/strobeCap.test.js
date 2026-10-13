@@ -7,7 +7,6 @@ vi.mock('./looks.js', async (orig) => {
 })
 
 import { TYPE_LIBRARY } from './types/index.js'
-import TYPES from './types/moxir.json'
 import { MAX_STROBE_HZ, capStrobeHz, lookStrobeHz } from './strobeCap.js'
 import { deskLooksWithValues } from './deskLookValues.js'
 import { decodeDmx, encodeDmx } from './dmxDecode.js'
@@ -15,7 +14,7 @@ import { flashLamps, strobeEnvelope } from './rigFlash.js'
 import { dmxEntities } from './dmxPose.js'
 
 const strobe = { id: 'S1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ffffff', intensity: 5, angle: 0.5 }, beam: { visible: true }, fixture: { type: 'ext-strobe', mode: '4ch-assumed', index: 9 } } }
-const type = TYPES.types.find((t) => t.code === 'EXT-STROBE')
+const type = TYPE_LIBRARY.types.find((t) => t.code === 'EXT-STROBE')
 const mode = type.modes.find((m) => m.name === '4ch-assumed')
 const valuesOf = (cell) => mode.channels.map((c) => cell[c.role] ?? c.default ?? 0)
 const playedHz = (looks) => decodeDmx(mode.channels, valuesOf(looks[0].steps[0].values.F1), type).strobeHz
@@ -83,7 +82,7 @@ describe('the union of every lamp\'s flashes stays within the cap (review A1-3)'
 })
 
 describe('a laser is never lit by a look (runtime gate, review A2-1)', () => {
-    const laserType = TYPES.types.find((t) => t.code === 'UP-LA40WF')
+    const laserType = TYPE_LIBRARY.types.find((t) => t.code === 'UP-LA40WF')
     const laserMode = laserType.modes[0]
     const laser = { id: 'L1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ff0000', intensity: 5, angle: 0.1 }, beam: { visible: true }, fixture: { type: 'up-la40wf', mode: laserMode.name, index: 1 } } }
     const fx = [{ id: 'F1', key: 'x:L1', profile: `UP-LA40WF ${laserMode.name}` }]

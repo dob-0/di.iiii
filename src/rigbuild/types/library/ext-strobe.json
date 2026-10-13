@@ -1,0 +1,178 @@
+{
+  "id": "ext-strobe",
+  "code": "EXT-STROBE",
+  "identified": "EQUIVALENT",
+  "identifiedNote": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+  "maker": null,
+  "model": null,
+  "modelledOn": "Martin Atomic 3000 LED (alternatives on the versions' equipment lines: GLP JDC2 IP, SGM PALCO Z-FX)",
+  "product": "equivalent: Martin Atomic 3000 LED (alternatives on the versions' equipment lines: GLP JDC2 IP, SGM PALCO Z-FX)",
+  "category": "strobe",
+  "modes": [
+    {
+      "name": "4ch",
+      "footprint": 4,
+      "channels": null,
+      "channelsSource": null,
+      "src": "MARTIN-A3K",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "3ch",
+      "footprint": 3,
+      "channels": null,
+      "channelsSource": null,
+      "src": "MARTIN-A3K",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "14ch",
+      "footprint": 14,
+      "channels": null,
+      "channelsSource": null,
+      "src": "MARTIN-A3K",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "4ch-assumed",
+      "footprint": 4,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Intensity"
+        },
+        {
+          "role": "aux1",
+          "label": "Flash duration"
+        },
+        {
+          "role": "speed",
+          "label": "Flash rate",
+          "cap": {
+            "rate": [
+              {
+                "from": 0,
+                "to": 5,
+                "single": true
+              },
+              {
+                "from": 6,
+                "to": 255,
+                "hz": [
+                  0.5,
+                  25
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "role": "control",
+          "label": "Effects"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "no strobe is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
+        "fixture": "Martin Atomic 3000 (its 4-channel mode is the Atomic 3000 LED's \"Atomic 3000 compatible\" mode)",
+        "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/martin/atomic-3000.json",
+        "title": "Open Fixture Library: Martin Atomic 3000, \"4-channel\"",
+        "pages": "mode \"4-channel\"",
+        "licence": "MIT (Open Fixture Library)",
+        "accessed": "2026-09-29",
+        "fill": [
+          "flash rate 6–255 = 0.5–25 Hz and 0–5 = single flash, as OFL gives them; effects (ramps, random) drawn as a plain strobe"
+        ]
+      },
+      "assumed": "ASSUMED from Martin Atomic 3000 4-channel (Open Fixture Library) — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "4ch",
+  "modesOwed": false,
+  "assumedMode": "4ch-assumed",
+  "power_w": {
+    "value": 740,
+    "src": "MARTIN-A3K",
+    "basis": "EQUIVALENT",
+    "note": "maximum; 663 W typical"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 7.8,
+    "src": "MARTIN-A3K",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      425,
+      245,
+      240
+    ],
+    "src": "MARTIN-A3K",
+    "basis": "EQUIVALENT",
+    "order": "W x L x H",
+    "note": "incl. the mounting bracket"
+  },
+  "pan_tilt_deg": null,
+  "ip": {
+    "value": "IP20",
+    "src": "MARTIN-A3K",
+    "basis": "EQUIVALENT"
+  },
+  "optics": {
+    "beam_deg": 60,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": "MARTIN-A3K",
+    "photometryBasis": "EQUIVALENT",
+    "note": "flux from the maker; the angle ASSUMED (see specs.beam_deg), so the candela is a planning figure"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/strobe.glb",
+    "sidecar": "scripts/place/fixtures/glb/strobe.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0,
+    "tiltY": 0.14,
+    "lensY": 0.225,
+    "sizeAtHome_mm": {
+      "width_x": 450,
+      "depth_z": 240,
+      "height_y": 235
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "MARTIN-A3K": {
+      "url": "https://www.martin.com/en/products/atomic-3000-led",
+      "what": "Martin (Harman) Atomic 3000 LED, maker's product page (fetched 2026-09-28): 245 L x 425 W x 240 H mm incl. bracket, 7.8 kg, 180,000 lm max, 740 W max / 663 W typical, 3/4/14 DMX channels, IP20, 228 x 10 W white LEDs 5,700 K; no beam angle published on the page"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "strobe",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "equivalent",
+    "date": "2026-09-29",
+    "sources": [
+      "MARTIN-A3K"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 0,
+      "equivalent": 8,
+      "assumed": 2,
+      "unknown": 0
+    }
+  }
+}

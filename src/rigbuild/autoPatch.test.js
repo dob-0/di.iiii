@@ -7,7 +7,7 @@ import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 import { addressMap, autoPatch, isOffDmx, lampSignature, patchRequest, rigKeyOf, typedMoves, writeBackOps } from './autoPatch.js'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 
 const require = createRequire(import.meta.url)
 const { createDesk } = require('../../serverXR/src/lighting/desk.js')

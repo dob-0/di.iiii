@@ -3,17 +3,55 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { buildLibrary, serialise } from '../../scripts/rigbuild/types.mjs'
-import { footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest } from './fixtureTypes.js'
+import { ALIAS_FILE, LIBRARY_DIR, buildLibrary, libraryFiles } from '../../scripts/rigbuild/types.mjs'
+import { loadLibrary } from '../../scripts/rigbuild/library.mjs'
+import { PROVENANCE_BASES, footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest, valueBasesOf } from './fixtureTypes.js'
 import { isAssumedMode } from './assumedProfiles.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-const committed = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/rigbuild/types/moxir.json'), 'utf8'))
+const committed = loadLibrary()
 
-describe('the MOXIR type library', () => {
-    it('is exactly what the generator makes from the manifest (never edited by hand)', () => {
-        const text = fs.readFileSync(path.join(ROOT, 'src/rigbuild/types/moxir.json'), 'utf8')
-        expect(serialise(buildLibrary())).toBe(text)
+describe('the fixture library (src/rigbuild/types/library/: the starter set)', () => {
+    it('is exactly what the generator makes from the manifest (never edited by hand): one file per type, the index, the alias', () => {
+        const files = libraryFiles(buildLibrary())
+        for (const [file, text] of Object.entries(files)) expect(fs.readFileSync(path.join(ROOT, file), 'utf8'), file).toBe(text)
+        const onDisk = fs.readdirSync(path.join(ROOT, LIBRARY_DIR)).filter((f) => f.endsWith('.json')).map((f) => `${LIBRARY_DIR}/${f}`).sort()
+        expect(onDisk).toEqual(Object.keys(files).filter((f) => f.startsWith(`${LIBRARY_DIR}/`)).sort())
+    })
+
+    it('carries every type\'s provenance: how it is identified, the date its sources were read, which, and how each value was got', () => {
+        expect(committed.types).toHaveLength(13)
+        for (const t of committed.types) {
+            expect(['exact', 'equivalent'], t.id).toContain(t.provenance.identified)
+            expect(t.provenance.date, t.id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+            expect(t.provenance.sources.length, t.id).toBeGreaterThan(0)
+            for (const key of t.provenance.sources) expect(t.sources[key], `${t.id} ${key}`).toBeTruthy()
+            expect(Object.keys(t.provenance.values)).toEqual(PROVENANCE_BASES)
+            expect(Object.values(t.provenance.values).reduce((a, b) => a + b, 0), t.id).toBeGreaterThan(0)
+        }
+        // honest about today: nothing measured by us; tested on the rental units = the channel maps run at Sevan
+        expect(committed.types.filter((t) => t.provenance.values.measured > 0)).toEqual([])
+        expect(committed.types.filter((t) => t.provenance.values.tested > 0).map((t) => t.id).sort()).toEqual(['up-b380f', 'up-la40wf', 'up-pl5403'])
+        expect(valueBasesOf({ a: { basis: 'TESTED' }, b: [{ photometryBasis: 'EQUIVALENT' }], c: { basis: 'ASSUMED — x' }, d: { basis: 'COMPONENT' }, e: { basis: 'MEASURED 2026-11-01' }, sources: { s: { basis: 'EXACT' } } }))
+            .toEqual({ measured: 1, tested: 1, datasheet: 1, equivalent: 1, assumed: 1, unknown: 0 })
+    })
+
+    it('the old file name is an alias nobody here reads: moxir.json holds the same library, and no code names it', () => {
+        expect(JSON.parse(fs.readFileSync(path.join(ROOT, ALIAS_FILE), 'utf8')).types).toEqual(committed.types)
+        // The dated MOXIR design generators (plan row D4, historical) keep the alias; anything else must read the library.
+        const HISTORICAL = new Set(['scripts/place/lights_beta_options.py', 'scripts/place/lights_beta_mix.py', 'scripts/place/occlusion.py'])
+        const readers = []
+        const walk = (dir) => {
+            for (const name of fs.readdirSync(path.join(ROOT, dir))) {
+                if (['node_modules', 'dist', '.git'].includes(name)) continue
+                const rel = `${dir}/${name}`
+                const stat = fs.statSync(path.join(ROOT, rel))
+                if (stat.isDirectory()) walk(rel)
+                else if (/\.(m?js|cjs|jsx|py|sh)$/.test(name) && fs.readFileSync(path.join(ROOT, rel), 'utf8').includes('types/moxir.json')) readers.push(rel)
+            }
+        }
+        for (const dir of ['src', 'scripts', 'shared', 'serverXR/src']) walk(dir)
+        expect(readers.filter((f) => !HISTORICAL.has(f) && f !== 'scripts/rigbuild/types.mjs' && f !== 'src/rigbuild/fixtureTypes.test.js')).toEqual([])
     })
 
     it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), the three other-supplier planning types, and the owner’s LaserCube', () => {

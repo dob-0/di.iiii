@@ -29,6 +29,7 @@ import { billedDays } from '../../src/rigbuild/equipment.js'
 import { powerOf, typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 import { LASER_FIXTURES, linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
 import { clearUnderCab, tieoffCabClashes } from './safety.mjs'
+import { loadLibrary } from './library.mjs'
 
 const DEG = Math.PI / 180
 
@@ -84,13 +85,13 @@ const restAim = (spec, group, v = {}) => {
 // The load is estimated from the type library's weights (the makers' datasheets, or the
 // equivalent's for a planning type) and a truss weight that is itself an ESTIMATE until the
 // supplier's datasheet is in hand. Pure.
-const TYPE_FILE = 'src/rigbuild/types/moxir.json'
+const TYPE_FILE = 'src/rigbuild/types/library/'
 const TRUSS_KG_PER_M = [6, 7] // 290 mm box class; ESTIMATE — the supplier's datasheet is owed
 const ON_LINE = new Set(['truss-header', 'truss-top', 'x-top', 'x-under'])
 export const craneTruss = (spec, groups, classes, key = 'craneTruss') => {
     const t = clone(spec[key])
     if (!t) throw new Error(`no ${key} in the versions file`)
-    const types = readJson(path.join(REPO_ROOT, TYPE_FILE)).types
+    const types = loadLibrary().types
     const kgOf = (code) => types.find((x) => x.code === code)?.weight_kg?.value ?? null
     const lamps = groups.filter((g) => ON_LINE.has(g.mount)).map((g) => {
         const code = classes[g.class].code
@@ -226,7 +227,7 @@ const r1 = (v) => Math.round(v * 10) / 10
 export const craneCut = ({ spec, base, groups, classes }) => {
     const cut = readJson(path.join(REPO_ROOT, spec.craneCut))
     const hall = readJson(path.join(REPO_ROOT, spec.hall))
-    const types = readJson(path.join(REPO_ROOT, TYPE_FILE)).types
+    const types = loadLibrary().types
     const r = cut.rigging
     const th = cut.truss.slope_deg * DEG
     const t = cut.truss.section_m
@@ -371,7 +372,7 @@ const haloBary = (at, side) => {
 }
 export const haloTruss = (v, groups, classes) => {
     const t = clone(v.haloTruss)
-    const types = readJson(path.join(REPO_ROOT, TYPE_FILE)).types
+    const types = loadLibrary().types
     const typeOf = (code) => types.find((x) => x.code === code)
     const side = t.side_m
     const corner = [0, 0, 0]

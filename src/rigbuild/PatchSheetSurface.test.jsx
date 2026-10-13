@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import PatchSheetSurface from './PatchSheetSurface.jsx'
 import { buildPatchSheetPath, getPatchSheetLocationState } from './patchRouting.js'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 
 const doc = {
     projectMeta: { title: 'Hall' },

@@ -26,7 +26,7 @@ const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
 const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
-const types = read('src/rigbuild/types/moxir.json').types
+const types = loadLibrary().types
 const CUT = ['minimal', 'minimal-cut-movers']
 const rigs = Object.fromEntries(CUT.map((id) => [id, read(rigFileOf(spec.set, id))]))
 

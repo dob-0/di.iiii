@@ -25,7 +25,7 @@
  *     90 deg the cone's edge never meets the surface (an open conic) and no ellipse is claimed.
  *   - Illuminance at the spot's centre E = I * cos(incidence) / d^2 (the inverse-square and cosine laws, the
  *     point-by-point method of any lighting handbook, e.g. the IES Lighting Handbook). I = lux * at_m^2 from the
- *     type's `optics` (src/rigbuild/types/moxir.json), scaled by rig-lib `candelaAt` (flux conservation) when the
+ *     type's `optics` (src/rigbuild/types/library/), scaled by rig-lib `candelaAt` (flux conservation) when the
  *     class uses the lamp at another angle than `optics.beam_deg` (the zoom). No lux in the optics -> "no figure".
  *
  * WHAT IT IS NOT: direct light only (no bounce, no haze scattering: the room's beams-in-haze look is a rendering
@@ -51,7 +51,7 @@ import { isMainModule } from '../lib/isMainModule.mjs'
 const DEG = Math.PI / 180
 /**
  * nearFieldM / nearFieldBeamDeg: a narrow lamp (under nearFieldBeamDeg) closer than nearFieldM is in its near field:
- * the front lens (centimetres to tens of centimetres, size NOT in types/moxir.json) is not a point, and I = lux x at_m^2
+ * the front lens (centimetres to tens of centimetres, size NOT in the type library) is not a point, and I = lux x at_m^2
  * holds only beyond the photometric distance. CHOSEN, NOT MEASURED; the row says "near-field: figure not valid".
  */
 export const THRESHOLDS = { wideM: 6, tightM: 0.5, dimLux: 1, nearFieldM: 3, nearFieldBeamDeg: 5 }

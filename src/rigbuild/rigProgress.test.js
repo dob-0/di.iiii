@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 import { rigProgress } from './rigProgress.js'
 
 const lamp = (id, fixture) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, fixture } })
