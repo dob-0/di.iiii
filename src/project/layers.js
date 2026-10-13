@@ -69,6 +69,48 @@ const PICTURE_OUT = 'top.out'
 const list = (value) => (Array.isArray(value) ? value : [])
 const text = (value) => (typeof value === 'string' ? value.trim() : '')
 
+// Bytes of a string as UTF-8, counted by hand so this file and its server twin
+// (shared/layers.cjs) give the same number for the same page.
+const utf8Length = (value) => {
+    let bytes = 0
+    for (let i = 0; i < value.length; i++) {
+        const unit = value.charCodeAt(i)
+        if (unit < 0x80) bytes += 1
+        else if (unit < 0x800) bytes += 2
+        else if (unit >= 0xd800 && unit <= 0xdbff && i + 1 < value.length && (value.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+            bytes += 4
+            i += 1
+        } else bytes += 3
+    }
+    return bytes
+}
+
+// The page's own size: its files when it has them, else its single html.
+const pageSize = (presentation) => {
+    const files = list(presentation.codeFiles)
+    if (files.length) {
+        return files.reduce((sum, file) => sum + (file && typeof file.content === 'string' ? utf8Length(file.content) : 0), 0)
+    }
+    return typeof presentation.codeHtml === 'string' ? utf8Length(presentation.codeHtml) : 0
+}
+
+const assetSize = (asset) => {
+    const size = Number(asset?.size)
+    return Number.isFinite(size) && size > 0 ? size : 0
+}
+
+const mediaAssetId = (entity) => text(entity?.components?.media?.assetId)
+
+// A stage fixture: the rig builder's lamp (src/rigbuild/autoPatch.js isLamp, a
+// typed components.fixture) or a light joined to a fixture of the lighting desk.
+// Measured on 13 real MOXIR documents of 10-09 and 10-13: 1374 of 1374 spots
+// carry a typed fixture, only 96 carry an index.
+const typedFixture = (entity) => {
+    const type = entity?.components?.fixture?.type
+    return typeof type === 'string' && type !== ''
+}
+const stageLamp = (entity) => joinedToFixture(entity) || typedFixture(entity)
+
 // The join the lighting desk reads (src/rigMirror/liveLight.js fixtureIndexOf).
 const joinedToFixture = (entity) => {
     const index = Number(entity?.components?.fixture?.index)
@@ -131,12 +173,28 @@ export function readProjectLayers(document, { loaded = true } = {}) {
     // kind this build does not know yet — except a window.
     const operatorNodes = nodes.filter((node) => !STANDING_NODE_KINDS.has(node?.typeId) && !WINDOW_NODE_KINDS.has(node?.typeId)).length
 
+    // Files (document.assets). The file a picture or a video shows is counted
+    // with that picture or video, not once more as a file; the size is all of them.
+    const images = entities.filter((entity) => entity?.type === 'image')
+    const videos = entities.filter((entity) => entity?.type === 'video')
+    const shown = new Set([...images, ...videos].map(mediaAssetId).filter(Boolean))
+    const held = new Map()
+    list(document?.assets).forEach((asset, index) => {
+        const key = text(asset?.id) || `#${index}`
+        if (!held.has(key)) held.set(key, assetSize(asset))
+    })
+    // A project that builds a page holds its code even with no thing in it.
+    // It is no layer of the room, but it is never "empty".
+    const page = presentation.mode === 'code'
+        || Boolean(text(presentation.codeHtml) || text(presentation.codeUrl) || list(presentation.codeFiles).length)
+
     const counts = {
         objects: entities.length,
         standingNodes,
         things: entities.length + standingNodes,
         lamps: lampObjects.length,
         joinedLamps: lampObjects.filter(joinedToFixture).length,
+        stageLamps: lampObjects.filter(stageLamp).length,
         nodes: operatorNodes,
         wires: edges.length,
         surfaces: list(mapping.surfaces).length,
@@ -145,12 +203,15 @@ export function readProjectLayers(document, { loaded = true } = {}) {
         // A cue that calls a light scene or look (projectSchema.js
         // defaultMappingCue) is the light show already in use from this project.
         lightCues: cues.filter((cue) => text(cue?.lightScene) || text(cue?.lightLook)).length,
+        images: images.length,
+        videos: videos.length,
+        files: [...held.keys()].filter((key) => !shown.has(key)).length,
+        fileBytes: [...held.values()].reduce((sum, size) => sum + size, 0),
+        templates: list(document?.templates).length,
         shared: Boolean(publish.shareEnabled),
         exported: Number(publish.lastExportAt) > 0,
-        // A project that builds a page holds its code even with no thing in it.
-        // It is no layer of the room, but it is never "empty".
-        page: presentation.mode === 'code'
-            || Boolean(text(presentation.codeHtml) || text(presentation.codeUrl) || list(presentation.codeFiles).length)
+        page,
+        pageBytes: page ? pageSize(presentation) : 0
     }
 
     const holds = {
@@ -191,22 +252,55 @@ export const isProjectLoaded = (document, projectId, hasLoaded) =>
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
+const KB = 1024
+
+// A size as the card writes it: bytes, whole kB, then MB and GB with one
+// decimal ("117.4 MB"). 1024-based, like every other size in the product.
+const formatSize = (bytes) => {
+    const n = Math.max(0, Number(bytes) || 0)
+    if (n < KB) return `${Math.round(n)} B`
+    const kb = Math.round(n / KB)
+    if (kb < KB) return `${kb} kB`
+    const mb = Math.round((n / (KB * KB)) * 10) / 10
+    if (mb < KB) return `${mb.toFixed(1)} MB`
+    return `${(n / (KB * KB * KB)).toFixed(1)} GB`
+}
+
 /**
- * The card's one line: "3 things · 2 wires · 1 surface · 1 lamp", or "empty".
- * Lamps are named on their own, so the things counted here are the things
- * that are not lamps; a lamp is still a thing to the rule above.
+ * The card's one line: "53 objects · 74 lamps · 1 surface · 3 files · 3.2 MB",
+ * or "empty" — said only when the project holds nothing at all.
+ *
+ * Words are the dictionary's (docs/ai/vocabulary.md). An object is one thing in
+ * the scene; a lamp is a stage fixture, here a light that carries a fixture (a
+ * typed one from the rig builder, or a join to the lighting desk); a light is a
+ * 3D scene light that carries none. A picture or a
+ * video is counted as one, so it is not an object as well, and its file is not
+ * a file as well. A cue that calls the light desk is a light cue and is counted
+ * once, there. The size is the size of every file the project holds.
  */
 export function describeProjectLayers(counts) {
     if (!counts) return ''
+    const n = (key) => Number(counts[key]) || 0
+    const lamps = Math.min(n('stageLamps'), n('lamps'))
+    const lights = Math.max(0, n('lamps') - lamps)
+    const objects = Math.max(0, n('things') - n('lamps') - n('images') - n('videos'))
     const parts = []
-    const things = (Number(counts.things) || 0) - (Number(counts.lamps) || 0)
-    if (things > 0) parts.push(plural(things, 'thing'))
-    if (counts.nodes > 0) parts.push(plural(counts.nodes, 'node'))
-    if (counts.wires > 0) parts.push(plural(counts.wires, 'wire'))
-    if (counts.surfaces > 0) parts.push(plural(counts.surfaces, 'surface'))
-    if (counts.lamps > 0) parts.push(plural(counts.lamps, 'lamp'))
-    if (!parts.length) return counts.page ? 'a page' : 'empty'
-    return parts.join(' · ')
+    const add = (count, word) => { if (count > 0) parts.push(plural(count, word)) }
+    add(objects, 'object')
+    add(lamps, 'lamp')
+    add(lights, 'light')
+    add(n('nodes'), 'node')
+    add(n('wires'), 'wire')
+    add(n('surfaces'), 'surface')
+    add(Math.max(0, n('cues') - n('lightCues')), 'cue')
+    add(n('lightCues'), 'light cue')
+    add(n('templates'), 'template')
+    if (counts.page) parts.push(n('pageBytes') > 0 ? `page ${formatSize(n('pageBytes'))}` : 'page')
+    add(n('images'), 'image')
+    add(n('videos'), 'video')
+    add(n('files'), 'file')
+    if (n('fileBytes') > 0) parts.push(formatSize(n('fileBytes')))
+    return parts.length ? parts.join(' · ') : 'empty'
 }
 
 export default readProjectLayers
