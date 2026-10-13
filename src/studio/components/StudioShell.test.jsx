@@ -8,7 +8,7 @@ vi.mock('./StudioViewportLayout.jsx', () => ({
 }))
 vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, children }) => <div data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
-    default: ({ gizmoMode }) => <output data-testid="gizmo-mode">{gizmoMode}</output>
+    default: ({ gizmoMode, previewUrl }) => <output data-testid="gizmo-mode" data-preview-url={previewUrl || ''}>{gizmoMode}</output>
 }))
 vi.mock('./StudioQuickInsert.jsx', () => ({ default: () => null }))
 vi.mock('./StudioInspector.jsx', () => ({ default: () => null }))
@@ -153,6 +153,17 @@ describe('StudioShell mobile chrome', () => {
         renderShell({})
         expect(screen.queryByRole('navigation', { name: 'Studio windows' })).not.toBeInTheDocument()
         expect(screen.getByTestId('gizmo-mode')).toBeInTheDocument()
+    })
+})
+
+// The Preview button (owner 2026-10-13): the editor works out the project's VIEW address, the shell carries it.
+describe('StudioShell — the Preview address reaches the control cluster', () => {
+    it('hands previewUrl to the cluster, and nothing when the editor has none', () => {
+        const { unmount } = renderShell({ previewUrl: 'http://diiii.localhost/moxir/v2-9' })
+        expect(screen.getByTestId('gizmo-mode')).toHaveAttribute('data-preview-url', 'http://diiii.localhost/moxir/v2-9')
+        unmount()
+        renderShell({})
+        expect(screen.getByTestId('gizmo-mode')).toHaveAttribute('data-preview-url', '')
     })
 })
 

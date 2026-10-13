@@ -18,6 +18,9 @@ export default function StudioControlCluster({
     projectName,
     onViewLive,
     canViewLive = false,
+    // This project's VIEW page as a visitor opens it (an absolute address, built in StudioEditor from the
+    // space and the project's slug). Null until the ids are known, and then the button is not drawn.
+    previewUrl = null,
     editMode,
     onSetEditMode,
     // Blender's Select Box tool is on (StudioShell viewportSelectTool).
@@ -164,6 +167,15 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
+                                {previewUrl && (
+                                    <button
+                                        className="scc-btn"
+                                        onClick={() => window.open(previewUrl, '_blank', 'noopener')}
+                                        title="Preview — the room as visitors see it (new tab)"
+                                    >
+                                        Preview
+                                    </button>
+                                )}
                                 {!minimal && (
                                     <button className="scc-btn" onClick={onBackToHub} title="Back to projects">← Projects</button>
                                 )}

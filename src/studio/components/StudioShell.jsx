@@ -155,6 +155,7 @@ export default function StudioShell({
     onSaveCurrentCamera,
     onCopyShareLink,
     onViewLive,
+    previewUrl,
     onExportProject,
     exportStatus,
     onImportProjectFile,
@@ -783,6 +784,7 @@ export default function StudioShell({
                         projectName={document?.projectMeta?.title || document?.projectMeta?.id || ''}
                         onViewLive={onViewLive}
                         canViewLive={Boolean(liveProjectState?.isLiveProject)}
+                        previewUrl={previewUrl}
                         editMode={viewportEditMode}
                         onSetEditMode={setEditModeFromTools}
                         selectTool={viewportSelectTool && viewportEditMode === 'edit'}

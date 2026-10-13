@@ -1675,3 +1675,69 @@
     color: rgba(255, 255, 255, 0.35);
     font-variant-numeric: tabular-nums;
 }
+
+/* ─── Scenes picker (ScenePicker.jsx) ─────────────────────────────────
+   A Studio window, not a card of its own: the shell, header, title and fold button of the Objects
+   window (sfp-*, scc-collapse-btn), the cluster's buttons (scc-btn) and the Objects list's rows
+   (spa-list / spa-item). Only the geometry is new. It is docked bottom-left of the viewport, ABOVE
+   the 44 px strip every page keeps free (--di-mode-mark-clearance, modeMark.css). In that strip live
+   the view label ("Perspective", .svl-view-label: bottom 12, left 14), the mode chip and, at the
+   bottom right, the tree chip (treeChip.css), so none of them is covered at any width.
+   Rectangles (--di-radius, 2 px); every target is at least 32 px. */
+.sfp-shell.scene-picker {
+    position: absolute;
+    top: auto;
+    left: var(--di-space-3);
+    bottom: calc(var(--di-mode-mark-clearance, 44px) + var(--di-space-1));
+    z-index: 10;
+    width: 300px;
+    max-width: calc(100% - 2 * var(--di-space-3));
+    max-height: 58vh;
+    pointer-events: auto;
+}
+
+/* Docked, not draggable: the header is not a handle. */
+.scene-picker .sfp-header {
+    cursor: default;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.scene-picker .scc-collapse-btn {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: var(--di-text-3);
+}
+
+.scene-picker .scc-btn {
+    min-height: 32px;
+}
+
+/* The Objects list caps itself at 220 px; here the whole window scrolls, so the list does not. */
+.scene-picker .spa-list {
+    max-height: none;
+    overflow: visible;
+}
+
+.scene-picker .spa-item {
+    min-height: 32px;
+}
+
+.scene-picker__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+/* The one line that says what the scene is, from the floor. May wrap to a second line. */
+.scene-picker__intent {
+    font-size: var(--di-text-2);
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.scene-picker .spa-item.active .scene-picker__intent {
+    color: rgba(var(--di-cyan-rgb), 0.8);
+}
