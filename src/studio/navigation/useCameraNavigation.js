@@ -15,6 +15,7 @@ import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
 import { useProgress } from '@react-three/drei'
+import { modelsLoading } from '../../objectComponents/modelLoads.js'
 import { clientToNdc, contentLargestSide, pickPivot, selectionCenter } from './autoDepth.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
 import { IN_PLACE_DISTANCE, autoSpeed, flyVelocity, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
@@ -119,10 +120,11 @@ function announceReading(reading) {
 }
 
 // The automatic speed per space (review-move F7): taken once and kept across tool switches. While three's loaders are still
-// busy (drei's progress store, fed by THREE.DefaultLoadingManager) the reading is provisional and is taken again at the next
-// gesture; once loading is idle it is fixed for the visit, so a half-loaded first reading never sticks.
+// busy (drei's progress store, fed by THREE.DefaultLoadingManager) or a model is still in flight (modelLoads.js), the reading
+// is provisional and is taken again at the next gesture; once loading is idle it is fixed for the visit, so a half-loaded
+// first reading never sticks.
 const autoSpeeds = new WeakMap()
-const loadingNow = () => { try { return Boolean(useProgress.getState?.().active) } catch { return false } }
+const loadingNow = () => { if (modelsLoading()) return true; try { return Boolean(useProgress.getState?.().active) } catch { return false } }
 export function autoSpeedFor(scene, { read = (sc) => autoSpeed(contentLargestSide(entityRoots(sc))), loading = loadingNow } = {}) {
     if (!scene) return null
     const held = autoSpeeds.get(scene)

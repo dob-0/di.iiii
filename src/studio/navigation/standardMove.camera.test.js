@@ -450,7 +450,7 @@ describe('the standard move, second review', () => {
         act(() => { document.body.dispatchEvent(key('keyup', { key: 'w', code: 'KeyW' })); document.body.dispatchEvent(key('keydown', { key: 'Escape', code: 'Escape' })) })
         expect(walked).toBeGreaterThan(2.5 * 0.85); expect(walked).toBeLessThan(2.5 * 1.05)
     })
-    it('a model still downloading keeps the automatic speed provisional (ModelObject reports its load)', async () => {
+    it('a model still downloading keeps the automatic speed provisional, and no drei Loader starts for it (modelLoads.js)', async () => {
         vi.resetModules()
         vi.doMock('@react-three/fiber', () => ({ useThree: (sel) => sel({ gl: null, invalidate: () => {} }), useFrame: () => {} }))
         vi.doMock('../../storage/assetStore.js', () => ({ getAssetBlob: async () => null, deleteAsset: async () => {} }))
@@ -460,6 +460,9 @@ describe('the standard move, second review', () => {
         vi.stubGlobal('fetch', fetchStub)
         try {
             const { default: ModelObject } = await import('../../objectComponents/ModelObject.jsx')
+            // the same fresh module graph as ModelObject's, so both see one count of models in flight
+            const { autoSpeedFor: autoSpeedNow } = await import('./useCameraNavigation.js')
+            const { useProgress } = await import('@react-three/drei')
             const { createElement } = await import('react')
             const { render } = await import('@testing-library/react')
             const r = render(createElement(ModelObject, { assetRef: { id: 'hall' } }))
@@ -467,12 +470,13 @@ describe('the standard move, second review', () => {
             const scene = new THREE.Scene()
             let size = 1 // the chair that is already in
             const read = () => size / 40
-            expect(autoSpeedFor(scene, { read })).toBeCloseTo(0.025, 9)
+            expect(useProgress.getState().active).toBe(false) // the V1 editor's <Loader/> overlay stays away
+            expect(autoSpeedNow(scene, { read })).toBeCloseTo(0.025, 9)
             size = 100 // the hall arrived
-            expect(autoSpeedFor(scene, { read })).toBeCloseTo(2.5, 9) // taken again: the chair's reading was provisional
+            expect(autoSpeedNow(scene, { read })).toBeCloseTo(2.5, 9) // taken again: the chair's reading was provisional
             const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
             finish({ ok: false, headers: { get: () => '' } }) // the download ends (here in an error): loading is idle again
-            await vi.waitFor(() => { const s = new THREE.Scene(); autoSpeedFor(s, { read: () => 7 }); expect(autoSpeedFor(s, { read: () => 9 })).toBe(7) })
+            await vi.waitFor(() => { const s = new THREE.Scene(); autoSpeedNow(s, { read: () => 7 }); expect(autoSpeedNow(s, { read: () => 9 })).toBe(7) })
             warn.mockRestore()
             r.unmount()
         } finally {

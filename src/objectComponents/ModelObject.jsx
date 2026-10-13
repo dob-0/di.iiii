@@ -15,6 +15,7 @@ import { MODEL_FORMATS, detectModelFormatFromMeta, detectModelFormatFromName } f
 import { registerModelClips } from '../project/viewport/modelClipRegistry.js'
 import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
+import { reportModelLoad } from './modelLoads.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 import { asColor } from '../utils/colorValue.js'
 import { assetFetchCacheMode } from '../utils/contentAddressedAsset.js'
@@ -69,16 +70,6 @@ export const disposeObject3D = (root, { materialsOnly = false } = {}) => {
 // scripts/place/hall.py names its zone tape `hall-zone-<id>` (dance, stage, backstage …).
 export const isPlanningMarker = (name) => /^hall-zone-/.test(String(name || ''))
 
-// A model is fetched and parsed here, outside any three loader, so THREE.DefaultLoadingManager (drei's useProgress) never
-// saw it: the camera's automatic speed (useCameraNavigation autoSpeedFor), which waits for loading to be idle, fixed itself
-// while a hall was still downloading (review 2 of the standard move, 2026-10-13). The load is reported to that manager from
-// start to the moment the model is in the scene. Returns the end, safe to call more than once.
-export function reportModelLoad(key, manager = THREE.DefaultLoadingManager) {
-    manager.itemStart(key)
-    let ended = false
-    return () => { if (!ended) { ended = true; manager.itemEnd(key) } }
-}
-
 export default function ModelObject({
     assetRef,
     data,
@@ -108,7 +99,7 @@ export default function ModelObject({
 
     useEffect(() => {
         let disposed = false
-        const endLoad = reportModelLoad(`model:${assetRef?.id || (typeof data === 'string' ? data : '') || 'unnamed'}`)
+        const endLoad = reportModelLoad() // the camera's automatic speed waits for it (modelLoads.js)
         endLoadRef.current = endLoad
 
         const resolveAssetSource = async (ref, fallbackUrl) => {
