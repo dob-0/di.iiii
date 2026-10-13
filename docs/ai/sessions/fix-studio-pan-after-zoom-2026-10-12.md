@@ -236,3 +236,24 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   kept for when the lane's GL allows it); its docs publish no zoom rule. The Sketchfab tool is unchanged beyond the shared rules above.
 - Stalls 842 of 1030 frames in one run were another session's lane rendering at the same time (lane 1, `floor-shots.cjs`); the clean
   rerun gave 80 of 4181. CPU reached 91 °C during the probes; later runs waited for < 83 °C.
+
+## Round 10 (2026-10-13): "it gets stuck at objects when I move, then jumps" — the cause is the mechanism, not a number
+
+- **Correction to round 9.** `blender-wheel-probe.py` drove `bpy.ops.view3d.zoom` through its exec path, which skips Auto Depth.
+  A real wheel event goes through invoke: `ViewOpsType_zoom` carries `VIEWOPS_FLAG_DEPTH_NAVIGATE | VIEWOPS_FLAG_ZOOM_TO_MOUSE`
+  (view3d_navigate_view_zoom.cc:547, v5.0.0), masked by his preferences to DEPTH only. So in his Blender every wheel notch first moves
+  the orbit point onto the view axis at the depth of the surface under the pointer (`navigate_pivot_get`, view3d_navigate.cc), then
+  scales that distance by 1/1.2. The same flag is on rotate (`ViewOpsType_rotate`) and pan (`ViewOpsType_pan`). The depth is reused
+  only inside a "consecutive gesture", which is a trackpad gesture or NDOF, never a mouse wheel (`WM_event_consecutive_gesture_test`,
+  wm_event_query.cc:365). Round 9's "the wheel never reads the pointer" was wrong for his preferences.
+- Real wheel clicks into his Blender could not be measured: `--enable-event-simulate` events changed nothing, and Blender on the
+  agent screen is not reachable by xdotool. The facts above are from the source only.
+- **`scripts/nav/probe-stick-jump.cjs`** (MOXIR v1-1, both tools): consecutive moves started at orbit distances 24 → 38 → 24 → 2.7 →
+  21 → 10.5 m, because each move takes the depth of whatever is under the pointer when it starts. An Edit orbit after zooming to
+  2.7 m re-pivoted to 21.4 m and swept 1.9 m per frame. Navigate wheel notches with the pointer moving across the rig took depths
+  36 → 23 → 31 → 29 m, so the step changed 6.1 → 3.8 → 5.2 → 4.9 m from one notch to the next. One Navigate right-drag at 94 m moved
+  0.001 m (cause not found yet). 7 of 84 grid picks hit a see-through box (opacity 0.35, depthWrite off) 1.5–5 m in front of what the
+  eye sees.
+- So the owner's "stuck, then jump" is Auto Depth itself in a dense rig: a lamp 1 m away under the pointer makes the next move crawl,
+  the back wall 40 m away makes it fly, and a wheel toward a surface approaches it by 1/1.2 per notch and never passes. Exact Blender
+  does the same. The decision on the mechanism is the owner's; asked 2026-10-13.
