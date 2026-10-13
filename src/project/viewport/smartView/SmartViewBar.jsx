@@ -1,5 +1,5 @@
 import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS } from './smartViewGeometry.js'
-// The view switcher: the six presets and X-ray, one quiet row.
+// The view switcher: the project's views (viewData.js) and X-ray, one quiet row.
 //
 // Two dresses, both borrowed, none new (feedback: preserve the existing UI):
 //   'visitor' — the published room's own chrome: the rig's version row
@@ -99,18 +99,24 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
     const button = studio ? (current) => studioButton(current, compact) : visitorButton
     return (
         <div role="toolbar" aria-label="views" style={studio ? studioRow : visitorRow(compact)} data-smart-view-bar>
-            {presets.map((p) => (
-                <button
-                    key={p.id}
-                    type="button"
-                    aria-pressed={activeId === p.id}
-                    title={p.key ? `${p.title} (${p.key})` : p.title}
-                    style={button(activeId === p.id)}
-                    onClick={() => onPreset?.(p.id)}
-                >
-                    {p.label}
-                </button>
-            ))}
+            {presets.map((p) => {
+                // A work view (viewData.js: `live: false`) is the Studio's only: dashed, and its title says so.
+                const work = studio && p.live === false
+                const title = p.key ? `${p.title} (${p.key})` : p.title
+                return (
+                    <button
+                        key={p.id}
+                        type="button"
+                        aria-pressed={activeId === p.id}
+                        data-live={p.live === undefined ? undefined : String(p.live)}
+                        title={work ? `${title} — work view: visitors do not see it` : title}
+                        style={work ? { ...button(activeId === p.id), borderStyle: 'dashed' } : button(activeId === p.id)}
+                        onClick={() => onPreset?.(p.id)}
+                    >
+                        {p.label}
+                    </button>
+                )
+            })}
             <button
                 type="button"
                 aria-pressed={xray}

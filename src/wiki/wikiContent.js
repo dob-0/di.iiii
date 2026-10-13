@@ -1955,23 +1955,25 @@ export const WIKI_ARTICLES = [
         id: 'smart-view',
         category: 'Spaces & access',
         title: 'Smart view — see into a building from anywhere',
-        summary: 'In a room that has a building in it (a place, like MOXIR\'s hall), the view keeps the room in sight: what stands between you and what you look at fades, from outside the roof and the near walls are cut away, and six views take you straight to the dance floor, the DJ, the plan, a section, the rig or a crane shot. X-ray ghosts the building and leaves the rig solid.',
+        summary: 'In a room that has a building in it (a place, like a scanned hall), the view keeps the room in sight: what stands between you and what you look at fades, from outside the roof and the near walls are cut away, and the project\'s views take you straight to a named camera — eye height in the crowd, the plan, a section, the rig. Each project chooses which views its visitors get. X-ray ghosts the building and leaves the rig solid.',
         body: [
             'It turns on by itself wherever a room holds a building: a place made by the place pipeline, or a model big enough to hold the rest of the room. Every other room is exactly as before.',
             { list: [
                 'In the way: when a wall, a column or a machine stands between the camera and what it looks at, the part of it in front of that point fades (about 85 % gone, as fine dots), and comes back when the view is clear. Only the building fades — never a lamp, a beam or the rig.',
                 'From outside: step the camera out of the building and the roof and the walls facing you are cut away, like a model with its lid off; the haze stands back as far as you are outside, so the inside stays lit. Step back in and it closes again.',
-                'The six views, keys 1–6 or the row at the bottom: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig; a project can carry its own under presentationState.viewPresets.',
+                'Six views are built in, keys 1–6: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig.',
+                'Each project chooses its views, in Studio → Project → Views. A live view is a button visitors get; a work view stays in Studio. A new project starts with two live views, Floor and Top; tick any other to give it to visitors, hide a built-in you never want, or stand the camera where you like and add it as a view of your own (it starts as a work view).',
+                'A project that is one version of a production shares its views with every other version: change them in one and they change in all.',
                 'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges and the roof left out, the rig at full strength — for checking what hangs where and where it points.',
-                'A link can open on a view: add #view-top (or floor, dj, side, rig, crane) to the room\'s address.',
+                'A link can open on a live view: add #view-top (or the id of any other live view) to the room\'s address.',
                 'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.',
                 'Zoom never stops: past the closest the camera may come to the point it circles, the wheel (or a pinch) carries both forward together, so you can scroll your way down the hall.'
             ] },
-            'In Studio the same views and X-ray sit at the top of the viewport and the keys act on the pane under the pointer; a number a cue already uses stays the cue\'s. Studio keeps no camera limits, so you can still look up from under a thing.',
+            'In Studio every view, live and work (a work view has a dashed edge), and X-ray sit at the top of the viewport and the keys act on the pane under the pointer; a number a cue already uses stays the cue\'s. Studio keeps no camera limits, so you can still look up from under a thing.',
             'Walking and flying, the fixed opening shot and headset entry are unchanged.'
         ],
-        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place', 'zoom', 'scroll', 'pinch'],
-        updated: '2026-10-04'
+        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'live view', 'work view', 'production', 'hall', 'place', 'zoom', 'scroll', 'pinch'],
+        updated: '2026-10-13'
     },
     {
         id: 'room-quality-lite-full',

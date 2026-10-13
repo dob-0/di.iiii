@@ -25,6 +25,7 @@ import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRou
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
+import useProjectViews from '../hooks/useProjectViews.js'
 import { frameEntities, runViewCommand } from '../utils/viewCommands.js'
 import { resolveViewKey } from '../../utils/viewAxisPose.js'
 import StudioShell from './StudioShell.jsx'
@@ -1126,6 +1127,19 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }
 
+    // Views as data (src/project/viewport/smartView/viewData.js): live or work, hide a built-in, add this camera.
+    const logViews = useCallback((level, message) => dispatch({ type: 'append-activity', level, message }), [dispatch])
+    const projectViews = useProjectViews({ projectId, document, applyLocalOps, log: logViews })
+    const handleAddCurrentView = (label) => {
+        const snapshot = readCurrentCameraSnapshot(controlsRef, null)
+        if (!snapshot) {
+            logViews('warning', 'No camera to add: open the 3D view first.')
+            return null
+        }
+        return projectViews.addCamera({ position: snapshot.position, target: snapshot.target, fov: snapshot.fov }, label)
+    }
+    const viewsPanel = { ...projectViews, onAddCurrent: handleAddCurrentView }
+
     // The Studio's Preview button: this project's VIEW page, as a visitor opens it (see utils/previewUrl.js).
     const previewUrl = buildStudioPreviewUrl({
         spaceSlug: spaceMeta?.slug,
@@ -1410,6 +1424,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
+            views={viewsPanel}
             onCopyShareLink={handleCopyShareLink}
             onViewLive={handleViewLive}
             previewUrl={previewUrl}

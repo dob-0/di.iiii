@@ -153,6 +153,7 @@ export default function StudioShell({
     onClearLiveProject,
     onMakeSpacePublic,
     onSaveCurrentCamera,
+    views,
     onCopyShareLink,
     onViewLive,
     previewUrl,
@@ -688,7 +689,7 @@ export default function StudioShell({
         ),
         world: (
             <>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} />
             </>
         )
     }
