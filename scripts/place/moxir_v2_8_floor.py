@@ -217,7 +217,7 @@ rig['from_rig'] = a.src
 EMBER, ASH = '#ff3a12', '#e8e4dc'
 # LASER COLOUR RULE (2026-10-13, ledger N559; owner 17:2x: "make lasers too like real lasers - there are not lasers"). A show
 # laser is a pure line of ONE wavelength: it reads saturated, never as a white lamp. Of the cube's three lines the green is the
-# brightest per watt: V(525 nm) 0.79 against 0.03 at 455 nm and 0.25 at 638 nm (CIE photopic V(lambda), laserLine.js vLambda),
+# brightest per watt: V(525 nm) 0.793 against 0.048 at 455 nm and 0.191 at 638 nm (CIE photopic V(lambda), laserLine.js vLambda),
 # so the laser scenes drive the green line alone:
 #   'lasers', 'matrix', 'lasers-breathe', 'storm'  -> full green #00ff00 (drive [0, 1, 0]) on every line, the 40 W pair too;
 #   'peak', 'white' (the owner's "everything on")    -> unchanged: each cube keeps its own colour (v1Looks), as he has seen them;
