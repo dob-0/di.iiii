@@ -209,6 +209,118 @@ describe('the standard move with the real camera-controls', () => {
         expect(r.dot(right)).toBeLessThan(0); expect(Math.abs(r.dot(up))).toBeLessThan(1e-6)
         expect(d.dot(up)).toBeGreaterThan(0); expect(r.length()).toBeCloseTo(d.length(), 6) // the same metres in every direction
     })
+    describe('multi-touch edge cases of the two-finger move', () => {
+        const T = (type, id, x, y = 450) => pe(type, { pointerType: 'touch', pointerId: id, clientX: x, clientY: y, buttons: type === 'pointerup' || type === 'pointercancel' ? 0 : 1 })
+        const down = (el, id, x, y) => act(() => { el.dispatchEvent(T('pointerdown', id, x, y)) })
+        const move = (id, x, y) => act(() => { document.dispatchEvent(T('pointermove', id, x, y)) })
+        const up = (id, x, y) => act(() => { document.dispatchEvent(T('pointerup', id, x, y)) })
+        const cancel = (id, x, y) => act(() => { document.dispatchEvent(T('pointercancel', id, x, y)) })
+        const counted = (cc) => { // camera-controls' own events (no originalEvent) fire per finger down and once at the last lift, so only the hook's own are counted
+            const c = { starts: 0, ends: 0 }; cc.addEventListener('controlstart', (e) => { if (e.originalEvent) c.starts += 1 }); cc.addEventListener('controlend', (e) => { if (e.originalEvent) c.ends += 1 }); return c }
+        const pos = (cc) => cc.getPosition(new V(), true).clone()
+
+        it('a third finger landing and lifting moves nothing by itself, and the pair carries on from where it is', () => {
+            const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+            const c = counted(cc)
+            down(el, 11, 750); down(el, 12, 850)
+            move(11, 700); move(12, 900); settle(cc)
+            const a = pos(cc)
+            down(el, 13, 400, 300)
+            move(13, 380, 280); move(11, 650); move(12, 950) // the pair keeps spreading while three are down
+            up(13, 380, 280); settle(cc)
+            const b = pos(cc)
+            move(11, 650); move(12, 950); settle(cc) // no change in the pair: the lift of the third must not move anything
+            expect(pos(cc).distanceTo(b)).toBeLessThan(1e-6)
+            up(11, 650); up(12, 950); settle(cc)
+            expect(c.starts).toBe(c.ends)
+            expect(pos(cc).distanceTo(a)).toBeLessThan(2 * STEP) // the spread beyond 3 fingers is bounded: no spurious jump
+        })
+        it('when the pair\'s first finger lifts under a third, the new pair does not jump', () => {
+            const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+            down(el, 11, 750); down(el, 12, 850); down(el, 13, 1200, 450)
+            settle(cc)
+            const a = pos(cc)
+            up(11, 750) // pair becomes 12 and 13, 350 px apart where 11 and 12 were 100
+            settle(cc)
+            move(12, 850); move(13, 1200); settle(cc) // nobody moved
+            expect(pos(cc).distanceTo(a)).toBeLessThan(1e-6)
+        })
+        it('one finger lifting mid-pinch ends the pinch, and landing again starts a fresh one with no jump', () => {
+            const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+            const c = counted(cc)
+            down(el, 11, 750); down(el, 12, 850)
+            move(11, 700); move(12, 900); settle(cc)
+            up(11, 700)
+            const a = pos(cc)
+            move(12, 1000); settle(cc) // the lone finger is not a pinch: no forward move from it
+            const lone = pos(cc)
+            down(el, 14, 300)
+            move(12, 1000); move(14, 300); settle(cc) // nothing moved since landing
+            expect(pos(cc).distanceTo(lone)).toBeLessThan(1e-6)
+            move(14, 200); settle(cc) // fingers 100 px further apart: one step
+            expect(pos(cc).distanceTo(lone)).toBeCloseTo(STEP * 1, 0)
+            up(12, 1000); up(14, 200)
+            expect(c.starts).toBe(c.ends)
+            expect(a.distanceTo(lone)).toBeLessThan(STEP * 1.5)
+        })
+        it('a pointercancel ends the pinch like a lift: balanced start and end, and later moves of the lost finger do nothing', () => {
+            const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+            const c = counted(cc)
+            down(el, 11, 750); down(el, 12, 850)
+            move(11, 700); settle(cc)
+            cancel(11, 700); settle(cc)
+            const a = pos(cc)
+            move(11, 100); move(12, 1500); settle(cc)
+            expect(pos(cc).distanceTo(a)).toBeLessThan(1e-6)
+            cancel(12, 850)
+            expect(c.starts).toBe(c.ends)
+            // and a whole new pinch works afterwards
+            const b = pos(cc)
+            down(el, 21, 750); down(el, 22, 850); move(21, 700); move(22, 900); up(21, 700); up(22, 900); settle(cc)
+            expect(pos(cc).distanceTo(b)).toBeCloseTo(STEP, 3)
+        })
+        it('a pinch while a mouse slide is held: the slide keeps its button and both ends balance', () => {
+            const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+            const c = counted(cc)
+            act(() => { el.dispatchEvent(pe('pointerdown', { button: 2, buttons: 2 })) })
+            down(el, 11, 750); down(el, 12, 850)
+            move(11, 700); move(12, 900)
+            up(11, 700); up(12, 900)
+            act(() => { document.dispatchEvent(pe('pointermove', { buttons: 2, clientX: 820 })) })
+            settle(cc)
+            const a = pos(cc)
+            act(() => { document.dispatchEvent(pe('pointermove', { buttons: 2, clientX: 840 })) }); settle(cc)
+            expect(pos(cc).distanceTo(a)).toBeGreaterThan(0) // the mouse slide still follows the mouse
+            act(() => { document.dispatchEvent(pe('pointerup', { button: 2, buttons: 0, clientX: 840 })) })
+            expect(c.starts).toBe(c.ends)
+        })
+        it('a pinch while the right button flies: a finger moving does not end the flight', () => {
+            const { el, cc } = setup({ drag: 0, smooth: 0.2 })
+            act(() => { el.dispatchEvent(pe('pointerdown', { button: 2, buttons: 2 })); document.body.dispatchEvent(key('keydown', { key: 'w', code: 'KeyW' })) })
+            runFrames(10, 1000 / 60, cc)
+            down(el, 11, 750); move(11, 740)
+            const a = pos(cc)
+            runFrames(30, 1000 / 60, cc)
+            expect(pos(cc).distanceTo(a)).toBeGreaterThan(STEP * 0.3) // still flying
+            act(() => { document.body.dispatchEvent(key('keyup', { key: 'w', code: 'KeyW' })); document.dispatchEvent(pe('pointerup', { button: 2, buttons: 0 })) })
+            up(11, 740)
+        })
+        it('a one-finger turn, then a second finger: the turn ends, the pinch is a pinch only, and nothing jumps', () => {
+            const { el, cam, cc } = setup({ drag: 0, smooth: 0.2 })
+            const c = counted(cc)
+            down(el, 11, 750)
+            move(11, 700); settle(cc)
+            const yaw0 = cc.azimuthAngle
+            down(el, 12, 900); settle(cc)
+            const a = pos(cc)
+            move(11, 650); move(12, 950); settle(cc) // 100 px of spread
+            expect(cc.azimuthAngle).toBeCloseTo(yaw0, 6) // the first finger no longer turns
+            expect(pos(cc).distanceTo(a)).toBeCloseTo(STEP, 3)
+            up(11, 650); up(12, 950); settle(cc)
+            expect(cam.position.distanceTo(a)).toBeCloseTo(STEP, 3)
+            expect(c.starts).toBe(c.ends)
+        })
+    })
 })
 
 describe('Inside\'s lock box and the double-click focus', () => {
