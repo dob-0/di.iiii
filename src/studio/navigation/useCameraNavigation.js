@@ -117,6 +117,18 @@ export function autoSpeedFor(scene, { read = (sc) => autoSpeed(contentLargestSid
     return auto
 }
 
+// Inside the public viewer's lock box (SmartView puts it on cc.userData.diLockBox: { min: [x, y, z], max: [x, y, z] }) a move
+// goes only as far as the box lets the camera go, and the turning point goes the same way, so the turning distance stays.
+// Returns the delta to apply (the same object, shortened). Pure.
+export function clampMoveToBox(from, delta, box) {
+    if (!box) return delta
+    for (const [i, k] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
+        const to = Math.min(Math.max(from[k] + delta[k], box.min[i]), box.max[i])
+        delta[k] = to - from[k]
+    }
+    return delta
+}
+
 export function useCameraNavigation({
     controlsRef,
     presetId,
@@ -165,8 +177,9 @@ export function useCameraNavigation({
         }
         // A double-click made a surface the turning point; it stays so until another move (wheel, slide, zoom drag).
         let focused = false
+        const focusPoint = new Vector3()
 
-        const camPos = new Vector3(), viewDir = new Vector3(), point = new Vector3(), goalPos = new Vector3(), goalTarget = new Vector3()
+        const camPos = new Vector3(), viewDir = new Vector3(), point = new Vector3(), goalPos = new Vector3(), goalTarget = new Vector3(), moveDelta = new Vector3()
         // The turning point onto the view axis, `distance` ahead; the camera does not move.
         const offset = new Vector3()
         const placeTurnPoint = (distance) => {
@@ -193,7 +206,9 @@ export function useCameraNavigation({
             const keep = viewDir.length()
             if (!(keep > 0)) return
             viewDir.divideScalar(keep)
-            goalPos.addScaledVector(viewDir, metres); goalTarget.addScaledVector(viewDir, metres)
+            moveDelta.copy(viewDir).multiplyScalar(metres)
+            clampMoveToBox(goalPos, moveDelta, cc.userData?.diLockBox)
+            goalPos.add(moveDelta); goalTarget.add(moveDelta)
             cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, ease)
         }
         // drei redraws the on-demand loop on 'update'; the Studio keeps the view on 'controlend'.
@@ -213,6 +228,7 @@ export function useCameraNavigation({
             slideX.setFromMatrixColumn(cc.camera.matrix, 0); slideY.setFromMatrixColumn(cc.camera.matrix, 1)
             cc.getPosition(goalPos, true); cc.getTarget(goalTarget, true)
             slideD.set(0, 0, 0).addScaledVector(slideX, -dx * mpp).addScaledVector(slideY, dy * mpp)
+            clampMoveToBox(goalPos, slideD, cc.userData?.diLockBox)
             goalPos.add(slideD); goalTarget.add(slideD)
             cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, ease)
         }
@@ -277,6 +293,7 @@ export function useCameraNavigation({
             viewDir.subVectors(goalTarget, goalPos).normalize()
             right.crossVectors(viewDir, worldUp).normalize()
             delta.set(0, 0, 0).addScaledVector(viewDir, v.forward * dt).addScaledVector(right, v.right * dt).addScaledVector(worldUp, v.up * dt)
+            clampMoveToBox(goalPos, delta, cc.userData?.diLockBox)
             if (delta.lengthSq() > 0) {
                 focused = false
                 goalPos.add(delta); goalTarget.add(delta)
@@ -357,6 +374,8 @@ export function useCameraNavigation({
                 const center = selectionCenter(entityRoots(scene, new Set(selected)))
                 if (center) { settleForGesture(cc); applyPivot(cc, center, { force: true, onAxis: false }); trace({ action: 'turn', source: 'selection' }); return }
             }
+            // the focus holds only while its point is still the turning point: the view bar, Frame or a preset moving it ends it
+            if (focused && cc.getTarget(goalTarget, true).distanceTo(focusPoint) > 1e-3) focused = false
             if (focused) { trace({ action: 'turn', source: 'double-clicked point' }); return }
             // inside the range a viewer's own lock sets (the public viewer's Inside: 2-25 m); the Studio's range is open
             const d = Math.min(Math.max(turnDistance(speed(true), settingsRef.current.turn), cc.minDistance), cc.maxDistance)
@@ -392,7 +411,7 @@ export function useCameraNavigation({
             if (!ndc) return
             settleForGesture(cc)
             const hit = pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) })
-            if (hit) { const c = cc.camera.position; cc.setLookAt(c.x, c.y, c.z, hit.x, hit.y, hit.z, true); focused = true }
+            if (hit) { const c = cc.camera.position; cc.setLookAt(c.x, c.y, c.z, hit.x, hit.y, hit.z, true); focused = true; focusPoint.copy(hit) }
             trace({ action: 'focus', hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null })
         }
 

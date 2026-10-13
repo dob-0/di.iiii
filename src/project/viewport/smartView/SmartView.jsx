@@ -873,6 +873,7 @@ export default function SmartView({
         // floor, with no distance cap, boundary or collision, at the standard move's speed (useCameraNavigation). Inside keeps
         // the hall and keeps the camera out of solids, as before.
         if (constraints && cc && !lockRef.current) {
+            if (cc.userData) cc.userData.diLockBox = null
             if (!state.freeApplied) {
                 state.freeApplied = true
                 cc.maxPolarAngle = Math.PI
@@ -892,6 +893,10 @@ export default function SmartView({
             cc.maxDistance = orbitMaxDistance(frame, state.presetDistance)
             // "Inside": the target and the camera both stay in the interior box; otherwise today's limits.
             const lockBox = lockRef.current && !state.lockPaused ? insideBox(frame) : null
+            // The standard move clamps its own moves to this box, camera and turning point together, so a notch out stops at the
+            // wall instead of the camera stopping while its turning point runs on (the direction workflow, 2026-10-13).
+            cc.userData = cc.userData || {}
+            cc.userData.diLockBox = lockBox
             if (state.atPreset) state.startDistance = toTarget
             if (lockBox) cc.maxDistance = Math.min(cc.maxDistance, Math.max(INSIDE_MAX_DISTANCE, state.startDistance))
             if (lockBox) cc.minDistance = INSIDE_MIN_DISTANCE

@@ -210,3 +210,28 @@ describe('the standard move with the real camera-controls', () => {
         expect(d.dot(up)).toBeGreaterThan(0); expect(r.length()).toBeCloseTo(d.length(), 6) // the same metres in every direction
     })
 })
+
+describe('Inside\'s lock box and the double-click focus', () => {
+    it('a move stops at the box with its turning point: the turning distance stays, out as in', async () => {
+        const { clampMoveToBox } = await import('./useCameraNavigation.js')
+        const box = { min: [-10, 0, -50], max: [10, 10, 5] }
+        const d = clampMoveToBox(new V(0, 1.6, 3), new V(0, 0, 5), box)
+        expect(d.z).toBeCloseTo(2, 9) // only to the wall at z 5
+        const { el, cam, cc } = setup({ drag: 0, smooth: 0.2 })
+        cc.userData = { diLockBox: box }
+        const dist0 = cc.distance
+        for (let i = 0; i < 4; i += 1) { act(() => { wheel(el, { deltaY: 100 }) }); settle(cc) } // out, toward the wall at z 5
+        expect(cam.position.z).toBeLessThanOrEqual(5 + 1e-6)
+        expect(cc.distance).toBeCloseTo(dist0, 6) // the turning point stopped with the camera
+    })
+    it('a focus ends when something else moves the turning point (the view bar, Frame)', () => {
+        const scene = new THREE.Scene(); scene.add(entity('wall', [20, 20, 0.2], [0, 1.6, -5]))
+        const { el, cc } = setup({ scene })
+        act(() => { el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, clientX: 800, clientY: 450 })) }); settle(cc)
+        cc.setLookAt(30, 10, 30, 0, 0, 0, false); cc.update(0) // a view command
+        act(() => { el.dispatchEvent(pe('pointerdown', { button: 0, buttons: 1 })) })
+        const endDistance = cc.getTarget(new V(), true).distanceTo(cc.getPosition(new V(), true))
+        expect(endDistance).toBeCloseTo(10 * STEP, 2) // the standard turning point, not the old focus
+        act(() => { document.dispatchEvent(pe('pointerup', { button: 0, buttons: 0 })) })
+    })
+})
