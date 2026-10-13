@@ -71,7 +71,8 @@ const waitFor = async (fn, ms = 5000) => {
 describe('one server, two doors', () => {
     it('serves the same app and the same machine through the door; any other Host gets 421', async () => {
         const s = await start({ DI_LOCAL_NAME: 'diiii.localhost' })
-        expect(await waitFor(() => /answers here/.test(s.log()))).toBe(true)
+        expect(await waitFor(() => /answers here/.test(s.log())),
+            `the door never said "answers here" within 5 s (CI 2026-10-13 failed here once); the server said:\n${s.log().slice(-1200)}`).toBe(true)
         const direct = JSON.parse((await get(s.port, `127.0.0.1:${s.port}`, '/serverXR/api/config')).body)
         const viaDoor = await get(s.doorPort, 'diiii.localhost', '/serverXR/api/config')
         expect(viaDoor.status).toBe(200)
@@ -85,7 +86,8 @@ describe('one server, two doors', () => {
     it('carries Socket.IO through the door (the upgrade reaches the main server\'s engine)', async () => {
         // `localhost` is a .localhost name too, and the only one a Node client resolves on every OS
         const s = await start({ DI_LOCAL_NAME: 'localhost' })
-        expect(await waitFor(() => /answers here/.test(s.log()))).toBe(true)
+        expect(await waitFor(() => /answers here/.test(s.log())),
+            `the door never said "answers here" within 5 s (CI 2026-10-13 failed here once); the server said:\n${s.log().slice(-1200)}`).toBe(true)
         const client = ioClient(`http://localhost:${s.doorPort}`, { path: '/serverXR/socket.io', transports: ['websocket'], reconnection: false, timeout: 5000 })
         cleanups.push(() => client.close())
         const connected = await new Promise((resolve) => {
