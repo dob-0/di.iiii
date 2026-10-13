@@ -103,9 +103,9 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     {
         title: 'Transform',
         rows: [
-            ['G', 'Move (grab) mode'],
-            ['R', 'Rotate mode'],
-            ['S', 'Scale mode'],
+            ['G', 'Move: with a selection the drag starts at once (Blender grab); without, picks the gizmo mode'],
+            ['R', 'Rotate: starts at once with a selection'],
+            ['S', 'Scale: starts at once with a selection (never Select — that is the tool, or B)'],
             ['→ X / Y / Z', 'Constrain axis + start drag'],
             ['→ A', 'All axes (uniform)'],
             ['Shift + drag', 'Fine / slow adjustment'],

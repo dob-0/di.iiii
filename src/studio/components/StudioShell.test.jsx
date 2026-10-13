@@ -45,14 +45,28 @@ describe('StudioShell transform shortcuts', () => {
         ['g', 'translate'],
         ['r', 'rotate'],
         ['s', 'scale'],
-    ])('%s shows the drag-handle gizmo in the matching mode without arming the modal', (key, mode) => {
+    ])('%s with a selection picks the gizmo mode AND starts the transform at once (Blender grab)', (key, mode) => {
         const onStartTransform = vi.fn()
         renderShell({ selectedEntityIds: ['cube-1'], onStartTransform })
 
         fireEvent.keyDown(window, { key })
 
         expect(screen.getByTestId('gizmo-mode')).toHaveTextContent(mode)
-        // G/R/S only switch the gizmo mode — X/Y/Z arms the modal
+        // owner 2026-10-13: "in Select I can't move" — no handle to find, the mouse moves it from the key
+        expect(onStartTransform).toHaveBeenCalledWith(mode, null)
+    })
+
+    it.each([
+        ['g', 'translate'],
+        ['r', 'rotate'],
+        ['s', 'scale'],
+    ])('%s with nothing selected only picks the gizmo mode', (key, mode) => {
+        const onStartTransform = vi.fn()
+        renderShell({ selectedEntityIds: [], onStartTransform })
+
+        fireEvent.keyDown(window, { key })
+
+        expect(screen.getByTestId('gizmo-mode')).toHaveTextContent(mode)
         expect(onStartTransform).not.toHaveBeenCalled()
     })
 

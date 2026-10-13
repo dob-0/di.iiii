@@ -441,6 +441,10 @@ export default function StudioShell({
                 if (modeForKey) {
                     e.preventDefault()
                     selectGizmoMode(modeForKey)
+                    // Blender: G / R / S with a selection start the transform at once — the mouse moves it,
+                    // X / Y / Z constrain, click or Enter confirm, Esc cancels (ModalTransform.jsx). No handle
+                    // to find, so it works with the Select tool on (owner 2026-10-13: "in Select I can't move").
+                    if (selectedEntityIds.length > 0 && onStartTransform && !transformOp) onStartTransform(modeForKey, null)
                 } else if (['x', 'y', 'z'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
