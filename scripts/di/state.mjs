@@ -14,13 +14,12 @@ import path from 'node:path'
 
 import { writeFileAtomic } from './atomicWrite.mjs'
 import { paths } from './paths.mjs'
-import { probeDoorConfig, probeHealth } from './probe.mjs'
+import { ONE_LOCAL_NAME, oneLocalUrl, probeDoorConfig, probeHealth } from './probe.mjs'
 
 export const DEFAULT_PORT = 4000
 // The one local address (docs/ai/one-local-address.md): the same link on every
-// machine with di, opening that machine's own di.iiii.
-export const ONE_LOCAL_NAME = 'diiii.localhost'
-export const oneLocalUrl = (name = ONE_LOCAL_NAME) => `http://${name}/`
+// machine with di, opening that machine's own di.iiii. Defined in probe.mjs.
+export { ONE_LOCAL_NAME, oneLocalUrl }
 
 export const readState = (home) => {
     const p = paths(home)
@@ -275,4 +274,27 @@ export const oneAddress = async (home, port, { askSelf = fetchConfig, askDoor = 
     const name = configured && !['off', '0', 'false', 'no'].includes(configured) ? configured : ONE_LOCAL_NAME
     const [self, door] = await Promise.all([askSelf(apiBase(home, port)), askDoor(name)])
     return judgeOneAddress(self, door, name)
+}
+
+/**
+ * The address for a device that has no di of its own — a phone, a headset, a
+ * guest's laptop: the certificate's name, the only one with a padlock. Null on
+ * an install without a certificate, which has no such address to give.
+ */
+export const phonesUrl = (home, port) => (readCert(home) ? publicUrl(home, port) : null)
+
+/**
+ * ONE address in what di prints (docs/ai/one-local-address.md §7, D1).
+ *
+ * When http://diiii.localhost/ was asked and answered as THIS install (see
+ * oneAddress), that is the address, and the certificate's name — when there is
+ * one — is kept for the phones and headsets line. When it was not, the address is
+ * what the command printed before (`fallback`, default publicUrl) and `why` says
+ * what is missing. { url, one, phones, why }
+ */
+export const printedAddress = async (home, port, { fallback = null, askSelf, askDoor } = {}) => {
+    const answer = await oneAddress(home, port, { askSelf, askDoor })
+    return answer.url
+        ? { url: answer.url, one: true, phones: phonesUrl(home, port), why: null }
+        : { url: fallback || publicUrl(home, port), one: false, phones: null, why: answer.why }
 }

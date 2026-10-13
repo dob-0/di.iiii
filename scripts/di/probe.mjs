@@ -18,6 +18,13 @@ import { isWindows, paths } from './paths.mjs'
 
 const execFileAsync = promisify(execFile)
 
+// The one local address (docs/ai/one-local-address.md): the same link on every
+// machine with di, opening that machine's own di.iiii. Defined here, the layer
+// below state.mjs, so the pretty-name probe below can default to it; state.mjs
+// re-exports both for everything that imports them from there.
+export const ONE_LOCAL_NAME = 'diiii.localhost'
+export const oneLocalUrl = (name = ONE_LOCAL_NAME) => `http://${name}/`
+
 const GHCR_IMAGE = 'dob-0/dii-server'
 const NET_TIMEOUT_MS = 3000
 
@@ -226,10 +233,12 @@ export { NODE_FLOOR, parseVersion, satisfiesFloor }
  *
  * Two of them, and neither needs a root password or a file in /etc:
  *
- *   di.localhost — this machine only. Every current browser and every resolver
- *     that follows RFC 6761 sends *.localhost to loopback, but "every" is not
- *     "all", so it is asked before it is printed. A pretty address that does
- *     not answer is worse than an ugly one that does.
+ *   diiii.localhost — this machine only, and the SAME word as the one local
+ *     address (docs/ai/one-local-address.md): a machine that may not hold :80
+ *     yet still prints the one name, with its port. Every current browser and
+ *     every resolver that follows RFC 6761 sends *.localhost to loopback, but
+ *     "every" is not "all", so it is asked before it is printed. A pretty
+ *     address that does not answer is worse than an ugly one that does.
  *
  *   di.local — the room. Published over mDNS by avahi-publish, which any Linux
  *     desktop with avahi running can do as an ordinary user; phones resolve it
@@ -237,8 +246,8 @@ export { NODE_FLOOR, parseVersion, satisfiesFloor }
  *     network act, and the loopback default is nobody's business but this
  *     machine's.
  */
-export const probePrettyLocalName = async (port, name = 'di.localhost', scheme = 'http') => {
-    const answered = await probeHealth(port, name, '/serverXR', scheme)
+export const probePrettyLocalName = async (port, name = ONE_LOCAL_NAME, scheme = 'http', { ask = probeHealth } = {}) => {
+    const answered = await ask(port, name, '/serverXR', scheme)
     return answered ? name : null
 }
 

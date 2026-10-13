@@ -102,9 +102,9 @@ describe('oneAddress asks both sides', () => {
     })
 })
 
-describe('what status prints', () => {
-    it('the address when it is this di, one dim reason when not', () => {
-        expect(ui.oneAddress({ url: 'http://diiii.localhost/', why: null })).toContain('http://diiii.localhost/')
-        expect(ui.oneAddress({ url: null, why: 'nothing answers on port 80' })).toContain('nothing answers on port 80')
+describe('what status prints when the address is not this di.iiii yet', () => {
+    // When it is, the address leads the first line — scripts/di/oneAddressPrinted.test.js.
+    it('one dim reason', () => {
+        expect(ui.oneAddressWhy('nothing answers on port 80')).toContain('http://diiii.localhost/ is not this di.iiii yet: nothing answers on port 80')
     })
 })

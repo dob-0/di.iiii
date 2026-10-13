@@ -52,7 +52,7 @@ import * as node from './runner-node.mjs'
 import { DEFAULT_UNIT, activeService, installService, removeService, systemdUsable, unitStatus, validUnitName } from './service.mjs'
 import {
     alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    ensureGuestSecrets, lanUrl, localUrl, nameUrl, oneAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, oneAddress, printedAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
@@ -175,7 +175,11 @@ const cmdUp = async (args) => {
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
+    if (await alive(home, port)) {
+        const address = await printedAddress(home, port)
+        say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
+        return
+    }
 
     say(ui.starting())
     try {
@@ -220,7 +224,8 @@ const cmdUp = async (args) => {
     // mDNS for this start, and it is the same word on this laptop and on a
     // phone in the room — so the card leads with it and everything else becomes
     // the fallback nobody has to read out. Without avahi (or without --lan,
-    // where putting a name on the network would be a lie) we try di.localhost,
+    // where putting a name on the network would be a lie) we try diiii.localhost
+    // — the one local address's own name, with the port while :80 is not ours —
     // which costs nothing and is asked before it is printed, and failing that
     // we print localhost like we always did.
     const addresses = lan ? probeLanAddresses() : []
@@ -231,7 +236,15 @@ const cmdUp = async (args) => {
     const scheme = cert ? 'https' : 'http'
     const prettyUrl = pretty ? `${scheme}://${pretty}${port === 80 || port === 443 ? '' : `:${port}`}` : null
 
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl, secure: Boolean(cert) }))
+    // THE address (docs/ai/one-local-address.md): http://diiii.localhost/ when it was
+    // asked and answered as this di.iiii, the same link on every machine with di.
+    // Everything above is then only the fallback, and the certificate's name is the
+    // phones' address — which is why ui.onThisNetwork below keeps `prettyUrl`.
+    const address = await printedAddress(home, port, { fallback: prettyUrl || localUrl(port) })
+    say(ui.running(localUrl(port), summary.names, {
+        spaceCount: summary.count, lan, prettyUrl: address.one ? address.url : prettyUrl, secure: Boolean(cert),
+        one: address.one, phones: address.phones, why: address.why
+    }))
     if (lan) {
         // With a certificate the room gets the padlocked name too — its second
         // name, pointed at tonight's address by the owner's own hook. Without
@@ -249,7 +262,7 @@ const cmdUp = async (args) => {
             guests
         ))
     }
-    if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))
+    if (!args.flags['no-open']) openBrowser(address.url)
     await noticeNewVersion(home)
 }
 
@@ -326,13 +339,19 @@ const cmdStatus = async () => {
     }
     const size = info.mode === 'node' ? humanSize(await dirSize(paths(home).data)) : null
     const reach = await probeReach(home, port)
+    // ONE address in what is printed: the one link every machine with di shares when
+    // it was asked and answered as this di.iiii (the certificate's name then moves to
+    // the phones and headsets line); else what this install has always printed, and why.
+    const address = await printedAddress(home, port)
     say([
         `running (${info.mode})`,
         info.version,
-        publicUrl(home, port),
+        address.url,
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
+    if (address.phones) say(ui.phonesLine(address.phones))
+    if (address.why) say(ui.oneAddressWhy(address.why))
     // Whether the other di.iiii on this network can see this one — asked on
     // the same terms as the bind above (the certificate's name over https,
     // else loopback), never inferred from it: a bind to every interface with
@@ -342,7 +361,6 @@ const cmdStatus = async () => {
     // loopback may give the whole one, so it is asked before settling for it.
     const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
     const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
-    say(ui.oneAddress(await oneAddress(home, port)))
     say(ui.rigVisibility(rig))
     if (svc) say(unit.active ? ui.supervisorLine(svc, unit) : ui.unsupervisedWhileInstalled(svc))
     autoLines()
