@@ -6,7 +6,7 @@ import { currentAuthor } from '../../project/authorship.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
-import { isTypingTarget, undoRedoFromKey } from '../utils/editKeys.js'
+import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
 import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
@@ -852,6 +852,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                             .map((entity) => entity.id)
                     })
                 }
+                return
+            }
+
+            // Lock the selection (L) / unlock everything (Alt+L) -- our own rule (Blender has no lock
+            // key; its hide is H / Alt+H). The same batch as the Inspector button: one Ctrl+Z undoes it.
+            const lockCommand = lockFromKey(event)
+            if (lockCommand && !isTypingTarget(event.target)) {
+                event.preventDefault()
+                if (lockCommand === 'unlock-all') handleUnlockAll()
+                else if (selectedEntities.length) handleSetEntitiesLocked(selectedEntities.map((entity) => entity.id), true)
                 return
             }
 

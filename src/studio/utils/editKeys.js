@@ -28,3 +28,14 @@ export function isTypingTarget(target) {
     const tag = String(target.tagName || '').toLowerCase()
     return tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(target.isContentEditable)
 }
+
+/**
+ * 'lock' | 'unlock-all' | null for a keydown. Our own rule (Blender has no lock key; it hides with
+ * H / Alt+H, so lock follows that pattern): L locks the selection, Alt+L unlocks everything.
+ * Matched by key place as well as letter, so the Armenian layout works. Ctrl/Cmd never (Ctrl+L is the browser's).
+ */
+export function lockFromKey(event) {
+    if (!event || event.ctrlKey || event.metaKey) return null
+    if (!isKey(event, 'l')) return null
+    return event.altKey ? 'unlock-all' : 'lock'
+}

@@ -67,7 +67,7 @@ describe('every type in the library has a body', () => {
 describe('the rooms draw them', () => {
     it('the space view (LiveProjectScene) and the Studio viewport (Studio, plot and cards rooms) mount RigBodies', () => {
         expect(read('src/components/LiveProjectScene.jsx')).toMatch(/<RigBodies entities=\{entities\} \/>/)
-        expect(read('src/studio/components/StudioViewport.jsx')).toMatch(/<RigBodies entities=\{sceneEntities\} \/>/)
+        expect(read('src/studio/components/StudioViewport.jsx')).toMatch(/<RigBodies entities=\{sceneEntities\}[^>]*\/>/)
     })
 
     // known-fixes "Studio blanks while the lamps' bodies load": RigBodies is lazy, and it
@@ -75,7 +75,7 @@ describe('the rooms draw them', () => {
     // so its chunk (and anything under it that suspends) hid or remounted that whole
     // group. Each room gives it a boundary of its own, holding nothing else.
     it('each room gives RigBodies a Suspense boundary of its own', () => {
-        const own = (name) => new RegExp(`<Suspense fallback=\\{null\\}>\\s*<RigBodies entities=\\{${name}\\} \\/>\\s*<\\/Suspense>`)
+        const own = (name) => new RegExp(`<Suspense fallback=\\{null\\}>\\s*<RigBodies entities=\\{${name}\\}[^>]*\\/>\\s*<\\/Suspense>`)
         expect(read('src/studio/components/StudioViewport.jsx')).toMatch(own('sceneEntities'))
         expect(read('src/components/LiveProjectScene.jsx')).toMatch(own('entities'))
         // and the entities' boundary no longer holds it
