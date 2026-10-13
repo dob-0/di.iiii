@@ -31,6 +31,16 @@ describe('Studio keyboard contract', () => {
         }
     })
 
+    // 2026-10-13: Alt+G/R/S clear the transform (Blender). StudioShell's G/R/S branch registers first and
+    // starts a grab, so without an Alt guard Alt+G would start a move AND clear the location.
+    it('Alt+G/R/S clear the transform and never start a grab', () => {
+        const shell = read('components/StudioShell.jsx')
+        expect(shell).toMatch(/if \(!e\.shiftKey && !e\.ctrlKey && !e\.metaKey && !e\.altKey\) \{\s*const modeForKey/)
+        const editor = read('components/StudioEditor.jsx')
+        expect(editor).toMatch(/clearFromKey\(event\)/)
+        expect(read('utils/studioGuide.js')).toMatch(/\['Alt\+G \/ Alt\+R \/ Alt\+S'/)
+    })
+
     it('the help dialog still promises select-all and deselect-all', () => {
         const guide = read('utils/studioGuide.js')
         expect(guide).toMatch(/Select all/i)

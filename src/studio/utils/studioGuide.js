@@ -115,6 +115,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Ctrl + drag', 'Snap: 0.5 m · 15° · 0.1 (gizmo too); Ctrl+Shift snaps to a tenth (5 cm · 1.5° · 0.01)'],
             ['Click · Enter · Space', 'Confirm'],
             ['Esc', 'Cancel'],
+            ['Alt+G / Alt+R / Alt+S', 'Clear location / rotation / scale of the selection (locked objects stay)'],
         ]
     },
     {

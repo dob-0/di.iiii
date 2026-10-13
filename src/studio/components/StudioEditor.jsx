@@ -7,6 +7,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
 import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
@@ -884,6 +885,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 event.preventDefault()
                 if (lockCommand === 'unlock-all') handleUnlockAll()
                 else if (selectedEntities.length) handleSetEntitiesLocked(selectedEntities.map((entity) => entity.id), true)
+                return
+            }
+
+            // Clear Location / Rotation / Scale (Alt+G / Alt+R / Alt+S, Blender): the selection back to
+            // the rest value in one batch (one Ctrl+Z); locked objects are left where they are.
+            const clearCommand = clearFromKey(event)
+            if (clearCommand && !isTypingTarget(event.target)) {
+                event.preventDefault()
+                const ops = clearTransformOps(entities, selectedEntities.map((entity) => entity.id), clearCommand)
+                if (ops.length) applyLocalOps(ops, { activityMessage: `Cleared the ${clearCommand} of ${ops.length} object${ops.length === 1 ? '' : 's'}.` })
                 return
             }
 
