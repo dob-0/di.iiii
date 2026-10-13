@@ -5,10 +5,9 @@ import { Vector3 } from 'three'
 import {
     pointerOnPivotPlane, pivotOnScreen, grabStep, rotateAxis, rotateEulerAroundWorldAxis,
     orbitAroundPivot, scaleStep, angleAround, distanceFrom, snapVector, snapScalar,
+    PLANE_OF_KEY, isPlane, indicesOf,
 } from '../utils/modalMotion.js'
 
-const AXIS_INDEX = { x: 0, y: 1, z: 2 }
-const ALL_INDICES = [0, 1, 2]
 const AXIS_VEC = {
     x: new Vector3(1, 0, 0),
     y: new Vector3(0, 1, 0),
@@ -106,24 +105,28 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
 
         const reportStatus = () => {
             const axisLabel = session.axis
-                ? ` · ${session.axis === 'all' ? 'ALL' : session.axis.toUpperCase()}`
+                ? ` · ${session.axis === 'all' ? 'ALL' : isPlane(session.axis) ? `${session.axis.toUpperCase()} PLANE` : session.axis.toUpperCase()}`
                 : ''
             const typed = session.numeric
                 ? ` · ${session.numeric}${session.mode === 'rotate' ? '°' : session.mode === 'scale' ? '×' : ''}`
                 : ''
-            const hint = session.axis ? ' · move the mouse or type a value · CTRL snap · SHIFT fine · ENTER' : ' · move the mouse · X / Y / Z lock an axis · CTRL snap · SHIFT fine · ENTER'
+            const hint = session.axis ? ' · move the mouse or type a value · CTRL snap · SHIFT fine · ENTER' : ' · move the mouse · X / Y / Z lock an axis · SHIFT+X / Y / Z keep a plane · CTRL snap · SHIFT fine · ENTER'
             cbRef.current.onStatus?.({
                 text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${typed}${typed ? ' · ENTER' : hint}`
             })
             if (session.axis && session.axis !== 'all') {
-                const u = AXIS_VEC[session.axis]
-                setHudLines([{
-                    axis: session.axis,
-                    points: [
-                        [pivot[0] - u.x * LINE_LEN, pivot[1] - u.y * LINE_LEN, pivot[2] - u.z * LINE_LEN],
-                        [pivot[0] + u.x * LINE_LEN, pivot[1] + u.y * LINE_LEN, pivot[2] + u.z * LINE_LEN],
-                    ]
-                }])
+                // one line for an axis, the plane's two for a plane
+                const axes = isPlane(session.axis) ? [...session.axis] : [session.axis]
+                setHudLines(axes.map((axis) => {
+                    const u = AXIS_VEC[axis]
+                    return {
+                        axis,
+                        points: [
+                            [pivot[0] - u.x * LINE_LEN, pivot[1] - u.y * LINE_LEN, pivot[2] - u.z * LINE_LEN],
+                            [pivot[0] + u.x * LINE_LEN, pivot[1] + u.y * LINE_LEN, pivot[2] + u.z * LINE_LEN],
+                        ]
+                    }
+                }))
             } else {
                 setHudLines([])
             }
@@ -168,7 +171,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         // multi-selection turns/grows as one rigid arrangement; a single
         // entity's own position IS the pivot, so it just spins/scales in place.
         const applyTotal = (total) => {
-            const indices = session.axis === 'all' ? ALL_INDICES : [AXIS_INDEX[session.axis]]
+            const indices = indicesOf(session.axis)
             for (const e of session.entities) {
                 if (session.mode === 'translate') {
                     for (const idx of indices) e.pos[idx] = e.base.pos[idx] + total
@@ -182,7 +185,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                     for (const idx of indices) e.rot[idx] = e.base.rot[idx] + total
                     // Orbit positions around the pivot only for a single locked
                     // axis — 'all' has no meaningful orbit axis.
-                    if (session.axis !== 'all' && n > 1) {
+                    if (session.axis !== 'all' && !isPlane(session.axis) && n > 1) {
                         const v = new Vector3(
                             e.base.pos[0] - pivot[0],
                             e.base.pos[1] - pivot[1],
@@ -223,7 +226,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 }
             } else if (session.mode === 'scale') {
                 const f = Math.max(0.01, snap ? snapScalar(session.factor, SNAP_STEP.scale) : session.factor)
-                const indices = session.axis && session.axis !== 'all' ? [AXIS_INDEX[session.axis]] : ALL_INDICES
+                const indices = indicesOf(session.axis)
                 for (const e of session.entities) {
                     for (const idx of indices) {
                         e.scale[idx] = Math.max(0.01, e.base.scale[idx] * f)
@@ -272,7 +275,8 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const lower = event.key?.toLowerCase?.()
             if (lower === 'x' || lower === 'y' || lower === 'z' || lower === 'a') {
                 event.preventDefault(); event.stopImmediatePropagation()
-                const next = lower === 'a' ? 'all' : lower
+                // Shift+X/Y/Z: the plane that leaves that axis out (Blender's axis locking)
+                const next = lower === 'a' ? 'all' : event.shiftKey ? PLANE_OF_KEY[lower] : lower
                 session.axis = session.axis === next ? null : next
                 rebase()
                 reportStatus()

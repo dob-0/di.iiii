@@ -110,6 +110,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['S', 'Scale: starts at once with a selection (never Select — that is the tool, or B)'],
             ['→ X / Y / Z', 'Constrain axis + start drag'],
             ['→ A', 'All axes (uniform)'],
+            ['→ Shift+X / Y / Z', 'Keep a plane: every axis but that one (Shift+Y = along the floor)'],
             ['Shift + drag', 'Fine / slow adjustment'],
             ['Click · Enter · Space', 'Confirm'],
             ['Esc', 'Cancel'],

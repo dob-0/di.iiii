@@ -167,3 +167,28 @@ describe('the drag follows the cursor at once (Blender; owner 2026-10-13: "stuck
         expect(sc[0]).toBeCloseTo(2, 6); expect(sc[1]).toBeCloseTo(2, 6); expect(sc[2]).toBeCloseTo(2, 6)
     })
 })
+
+// Owner 2026-10-13: "no way to move an object in the world frame" — arranging lamps on a floor wants
+// the floor plane: Blender's Shift+Y keeps X and Z and leaves Y out (Axis Locking).
+describe('Shift+X / Shift+Y / Shift+Z keep a plane (Blender: Axis Locking)', () => {
+    it('G Shift+Y slides on the floor: a move up the screen does not lift the object', () => {
+        const { onPreview } = setup()
+        fireEvent.keyDown(window, { key: 'Y', shiftKey: true })
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 240 })
+        const p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(100 * PER_PX, 3)
+        expect(Math.abs(p[1])).toBeLessThan(1e-9)
+    })
+
+    it('S Shift+Z scales X and Y and leaves Z alone', () => {
+        const { onPreview } = setup({ op: { mode: 'scale', seq: 1 } })
+        fireEvent.keyDown(window, { key: 'Z', shiftKey: true })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 600, clientY: 300 })
+        const s = onPreview.mock.calls.at(-1)[0].e1.scale
+        expect(s[0]).toBeCloseTo(2, 3)
+        expect(s[1]).toBeCloseTo(2, 3)
+        expect(s[2]).toBe(1)
+    })
+})

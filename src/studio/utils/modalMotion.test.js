@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import {
-    pointerOnPivotPlane, pivotOnScreen, grabStep, rotateAxis, rotateEulerAroundWorldAxis,
+    pointerOnPivotPlane, pivotOnScreen, grabStep, indicesOf, isPlane, rotateAxis, rotateEulerAroundWorldAxis,
     orbitAroundPivot, scaleStep, angleAround, distanceFrom,
 } from './modalMotion.js'
 
@@ -74,5 +74,17 @@ describe('scale: the ratio of the pointer distance to the pivot', () => {
         expect(scaleStep(d0, d1)).toBeCloseTo(2, 6)
         expect(scaleStep(d0, d1, 0.1)).toBeCloseTo(1.1, 6)
         expect(distanceFrom(centre, 400, 300)).toBe(1)
+    })
+})
+
+describe('a plane constraint keeps two axes (Blender: Shift+X / Y / Z)', () => {
+    it('xz drops the y of the delta and keeps x and z; the indices name the two kept', () => {
+        const d = grabStep(new Vector3(0, 0, 0), new Vector3(1, 2, 3), 'xz')
+        expect([d.x, d.y, d.z]).toEqual([1, 0, 3])
+        expect(indicesOf('xz')).toEqual([0, 2])
+        expect(indicesOf('y')).toEqual([1])
+        expect(indicesOf(null)).toEqual([0, 1, 2])
+        expect(isPlane('xz')).toBe(true)
+        expect(isPlane('x')).toBe(false)
     })
 })
