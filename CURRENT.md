@@ -13,12 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- What and why
-- Copy link gives the address on a space's own domain
-- a follow carries project short names both ways
-- MOXIR hall measured from above: the grid holds (4 × 24 m, 6 m, 18 bays); lanterns 2.8 m short, end walls 0.7 m out
-- Asked
-- …and 41 more notes, each in full in PROGRESS.md
+- main is merged back into dev before the promotion
+- CI runners pinned to ubuntu-24.04 before GitHub moves ubuntu-latest to Ubuntu 26
+- `di login`: a person signs in once per machine, from the terminal
+- `di login`: the three lanes joined in one branch
+- the browser page that approves a terminal's code
+- …and 18 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 
