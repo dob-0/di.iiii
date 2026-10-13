@@ -40,3 +40,27 @@ export const entityInfoOf = (object) => {
     }
     return null
 }
+
+/** The flags every entity's group carries for pickFromHits — a lone object's group and a group entity alike. */
+export const pickUserData = (entity) => ({
+    svEntityId: entity.id,
+    svPick: entity.components?.light || entity.components?.fixture ? 'body' : 'other',
+    svLocked: entity.components?.runtime?.locked === true
+})
+
+// One click handler for every entity's group (walked 2026-10-13: only GROUP entities used the rule, so a top-level
+// lamp's beam still took a click meant for the lamp behind it, a click on the locked place kept the selection, and an
+// orbit drag that ended on a lamp selected it). r3f calls it on the nearest hit's entity first; it decides from every
+// hit under the pointer and stops there, so no entity behind decides again.
+export const handlePickClick = (e, { onSelect, onToggleSelect }) => {
+    if (e.delta > 2) return
+    e.stopPropagation()
+    const picked = pickFromHits(e.intersections)
+    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
+    if (picked === null) {
+        if (!additive) onSelect?.(null)
+        return
+    }
+    if (additive) onToggleSelect?.(picked)
+    else onSelect?.(picked)
+}

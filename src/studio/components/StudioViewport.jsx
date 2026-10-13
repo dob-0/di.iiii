@@ -55,7 +55,7 @@ import { classifyArchitecture } from '../../project/viewport/smartView/smartView
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
-import { pickFromHits } from '../utils/pickPriority.js'
+import { handlePickClick, pickUserData } from '../utils/pickPriority.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
@@ -335,16 +335,11 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
-                // How the smart view finds an entity's object (SmartView.jsx).
-                userData={{ svEntityId: entity.id }}
-                onClick={(e) => {
-                    // Locked: not picked — the click goes on to whatever is behind it.
-                    if (isLocked) return
-                    e.stopPropagation()
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (additive) onToggleSelect?.(entity.id)
-                    else onSelect?.(entity.id)
-                }}
+                // How the smart view finds an entity's object (SmartView.jsx), and what a click weighs (pickPriority.js).
+                userData={pickUserData(entity)}
+                // Every hit under the pointer decides (pickPriority.js): a locked entity is never picked, a lamp
+                // body beats a beam in front of it — the same rule as a group entity's click below.
+                onClick={(e) => handlePickClick(e, { onSelect, onToggleSelect })}
             >
                 {/* Live only where the surface turned links on (a visitor's
                     view mode) — see entityLinkContext.js. */}
@@ -386,21 +381,10 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
-                userData={{ svEntityId: entity.id, svPick: entity.components?.light || entity.components?.fixture ? 'body' : 'other', svLocked: entity.components?.runtime?.locked === true }}
-                onClick={(e) => {
-                    if (e.delta > 2) return
-                    e.stopPropagation()
-                    // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
-                    // beats what is behind it, a locked entity (the place) is never picked — only locked things = click on empty.
-                    const picked = pickFromHits(e.intersections)
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (picked === null) {
-                        if (!additive) onSelectEntity?.(null)
-                        return
-                    }
-                    if (additive) onToggleSelectEntity?.(picked)
-                    else onSelectEntity?.(picked)
-                }}
+                userData={pickUserData(entity)}
+                // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
+                // beats what is behind it, a locked entity (the place) is never picked — only locked things = click on empty.
+                onClick={(e) => handlePickClick(e, { onSelect: onSelectEntity, onToggleSelect: onToggleSelectEntity })}
             >
                 {/* Pivot dot — clickable hit target + visual marker for the group origin */}
                 <mesh>

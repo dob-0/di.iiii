@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { entityInfoOf, pickFromHits } from './pickPriority.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { cwd } from 'node:process'
+import { describe, expect, it, vi } from 'vitest'
+import { entityInfoOf, handlePickClick, pickFromHits, pickUserData } from './pickPriority.js'
 
 // a tiny scene graph: group(entity) → mesh; beams carry beamPick
 const group = (id, { body = false, locked = false } = {}) => ({ userData: { svEntityId: id, svPick: body ? 'body' : 'other', svLocked: locked }, parent: null })
@@ -39,5 +42,45 @@ describe('pickFromHits', () => {
     it('entityInfoOf walks up to the entity group', () => {
         expect(entityInfoOf(beamA)).toEqual({ id: 'lamp-a', body: true, locked: false })
         expect(entityInfoOf({ userData: {}, parent: null })).toBeNull()
+    })
+})
+
+// Walked 2026-10-13 in headless Chromium: only GROUP entities used the rule. A top-level lamp B clicked through
+// lamp A's beam selected A, a click on the locked place kept the selection, an orbit drag ending on a lamp selected it.
+describe('handlePickClick — every entity\'s click', () => {
+    const click = (hits, extra = {}) => ({ intersections: hits, delta: 0, nativeEvent: {}, stopPropagation: vi.fn(), ...extra })
+    const handlers = () => ({ onSelect: vi.fn(), onToggleSelect: vi.fn() })
+    it('a lamp body behind another lamp\'s beam is selected', () => {
+        const h = handlers()
+        handlePickClick(click([hit(beamA), hit(bodyB), hit(hallMesh)]), h)
+        expect(h.onSelect).toHaveBeenCalledWith('lamp-b')
+    })
+    it('only the locked place under the pointer clears the selection', () => {
+        const h = handlers()
+        const e = click([hit(hallMesh)])
+        handlePickClick(e, h)
+        expect(h.onSelect).toHaveBeenCalledWith(null)
+        expect(e.stopPropagation).toHaveBeenCalled()
+    })
+    it('Shift adds the picked lamp, not the beam\'s lamp in front', () => {
+        const h = handlers()
+        handlePickClick(click([hit(beamA), hit(bodyB)], { nativeEvent: { shiftKey: true } }), h)
+        expect(h.onToggleSelect).toHaveBeenCalledWith('lamp-b')
+        expect(h.onSelect).not.toHaveBeenCalled()
+    })
+    it('a drag (orbit) that ends on a lamp selects nothing', () => {
+        const h = handlers()
+        handlePickClick(click([hit(bodyB)], { delta: 30 }), h)
+        expect(h.onSelect).not.toHaveBeenCalled()
+        expect(h.onToggleSelect).not.toHaveBeenCalled()
+    })
+    it('pickUserData marks lamps as bodies and carries the lock', () => {
+        expect(pickUserData({ id: 'l', components: { light: {}, runtime: { locked: true } } })).toEqual({ svEntityId: 'l', svPick: 'body', svLocked: true })
+        expect(pickUserData({ id: 'p', components: {} })).toEqual({ svEntityId: 'p', svPick: 'other', svLocked: false })
+    })
+    it('both entity kinds in StudioViewport carry the flags and the one handler', () => {
+        const src = fs.readFileSync(path.join(cwd(), 'src/studio/components/StudioViewport.jsx'), 'utf8')
+        expect(src.match(/userData=\{pickUserData\(entity\)\}/g)).toHaveLength(2)
+        expect(src.match(/onClick=\{\(e\) => handlePickClick\(e,/g)).toHaveLength(2)
     })
 })
