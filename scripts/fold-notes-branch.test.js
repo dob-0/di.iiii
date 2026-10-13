@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { applyFold, foldBranchName, listNoteFiles, planFold } from './fold-notes-branch.mjs'
+import { applyFold, decide, foldBranchName, listNoteFiles, planFold } from './fold-notes-branch.mjs'
 import { isFoldBranch } from './repo-state-lib.mjs'
 
 const PROGRESS = '# Progress\n\nintro\n\n---\n\n## 2026-01-01 — older entry\n\n- old\n'
@@ -64,5 +64,29 @@ describe('fold-notes-branch', () => {
   it('names its branch the way the docs gate recognises a hand-fold branch', () => {
     expect(foldBranchName(new Date('2026-10-13T12:00:00Z'))).toBe('chore/fold-notes-2026-10-13')
     expect(isFoldBranch(foldBranchName())).toBe(true)
+  })
+
+  describe('decide', () => {
+    it('refuses a dirty tree, even on a fold branch', () => {
+      const d = decide({ branch: 'chore/fold-notes-2026-10-13', dirty: ' M x' })
+      expect(d.action).toBe('refuse')
+      expect(d.reason).toMatch(/dirty/)
+    })
+
+    it('refuses a non-fold branch, and dev without --new', () => {
+      expect(decide({ branch: 'feat/x', dirty: '', wantNew: true }).action).toBe('refuse')
+      expect(decide({ branch: 'dev', dirty: '' }).action).toBe('refuse')
+      expect(decide({ branch: '', dirty: '' }).reason).toMatch(/detached/)
+    })
+
+    it('folds in place on chore/fold-notes-* and land/* branches', () => {
+      expect(decide({ branch: 'chore/fold-notes-2026-10-13', dirty: '' })).toEqual({ action: 'fold', newBranch: false })
+      expect(decide({ branch: 'land/x', dirty: '' })).toEqual({ action: 'fold', newBranch: false })
+    })
+
+    it('--new from clean dev makes a branch; --dry-run does not', () => {
+      expect(decide({ branch: 'dev', dirty: '', wantNew: true })).toEqual({ action: 'fold', newBranch: true })
+      expect(decide({ branch: 'dev', dirty: '', wantNew: true, dryRun: true })).toEqual({ action: 'fold', newBranch: false })
+    })
   })
 })

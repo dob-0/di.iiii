@@ -56,6 +56,20 @@ export const applyFold = (root) => {
 
 export const foldBranchName = (date = new Date()) => `chore/fold-notes-${date.toISOString().slice(0, 10)}`
 
+// The decision, pure: what to do given the branch, the tree state and the flags.
+// Returns { action: 'refuse', reason } | { action: 'fold', newBranch: boolean }.
+export const decide = ({ branch, dirty, wantNew = false, dryRun = false }) => {
+  if (dirty) return { action: 'refuse', reason: 'fold refused: working tree is dirty. Commit, stash, or discard first.' }
+  if (isFoldBranch(branch)) return { action: 'fold', newBranch: false }
+  if (!(wantNew && branch === 'dev')) {
+    return {
+      action: 'refuse',
+      reason: `fold refused: on "${branch || '(detached)'}", not a chore/fold-notes-* or land/* branch. From a clean dev, run with --new; or: git checkout -b ${foldBranchName()}`
+    }
+  }
+  return { action: 'fold', newBranch: !dryRun }
+}
+
 const main = () => {
   const args = process.argv.slice(2)
   const dryRun = args.includes('--dry-run')
@@ -63,21 +77,11 @@ const main = () => {
   const wantNew = args.includes('--new')
   const git = (a) => execFileSync('git', a, { encoding: 'utf8', cwd: defaultRoot }).trim()
 
-  let branch = git(['branch', '--show-current'])
-  if (git(['status', '--porcelain'])) {
-    console.error('fold refused: working tree is dirty. Commit, stash, or discard first.')
+  const branch = git(['branch', '--show-current'])
+  const decision = decide({ branch, dirty: git(['status', '--porcelain']), wantNew, dryRun })
+  if (decision.action === 'refuse') {
+    console.error(decision.reason)
     process.exit(1)
-  }
-  if (!isFoldBranch(branch)) {
-    if (!(wantNew && branch === 'dev')) {
-      console.error(`fold refused: on "${branch || '(detached)'}", not a chore/fold-notes-* branch. From a clean dev, run with --new; or: git checkout -b ${foldBranchName()}`)
-      process.exit(1)
-    }
-    if (!dryRun) {
-      branch = foldBranchName()
-      git(['checkout', '-b', branch])
-      console.log(`On new branch ${branch}.`)
-    }
   }
 
   const plan = planFold(defaultRoot)
@@ -86,6 +90,16 @@ const main = () => {
     return
   }
   console.log(`Folding ${plan.noteFiles.length} session note(s): ${plan.noteFiles.join(', ')}`)
+  if (decision.newBranch) {
+    const name = foldBranchName()
+    try {
+      git(['checkout', '-b', name])
+    } catch {
+      console.error(`fold refused: branch ${name} already exists. Check it out and run without --new.`)
+      process.exit(1)
+    }
+    console.log(`On new branch ${name}.`)
+  }
   if (dryRun) {
     console.log('--dry-run: would update PROGRESS.md and CURRENT.md and delete the note files.')
     console.log('\n--- new CURRENT.md "Last session" ---\n')
