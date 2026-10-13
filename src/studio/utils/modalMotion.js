@@ -112,6 +112,16 @@ export function orbitAroundPivot(pos, pivot, axisVec, angle) {
 /** Scale factor for the step: the ratio of distances, softened by precision (×0.1 pulls the ratio toward 1). */
 export const scaleStep = (prevDist, nextDist, precision = 1) => 1 + (nextDist / prevDist - 1) * precision
 
+/**
+ * The world axis a TYPED rotation turns around (R X 90): the axis itself, never flipped — Blender's
+ * sign convention, so R Z 90 is the same quarter turn from any side. Free or 'all' = the view axis
+ * (toward the viewer: a typed positive angle turns counter-clockwise on screen).
+ */
+export function typedRotateAxis(camera, axis) {
+    if (!axis || axis === 'all') return viewDirection(camera, new Vector3()).negate()
+    return AXIS_VEC[normalAxisOf(axis)].clone()
+}
+
 /** Snap helpers (Ctrl): a vector to a world grid, an angle to 15°, a factor to 0.1. */
 export const snapVector = (v, step) => new Vector3(Math.round(v.x / step) * step, Math.round(v.y / step) * step, Math.round(v.z / step) * step)
 export const snapScalar = (value, step) => Math.round(value / step) * step

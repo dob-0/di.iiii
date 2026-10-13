@@ -5,7 +5,7 @@ import { Vector3 } from 'three'
 import {
     pointerOnPivotPlane, pivotOnScreen, grabStep, rotateAxis, rotateEulerAroundWorldAxis,
     orbitAroundPivot, scaleStep, angleAround, distanceFrom, snapVector, snapScalar,
-    PLANE_OF_KEY, isPlane, indicesOf,
+    PLANE_OF_KEY, isPlane, indicesOf, typedRotateAxis,
 } from '../utils/modalMotion.js'
 
 const AXIS_VEC = {
@@ -182,24 +182,21 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                         e.pos[idx] = pivot[idx] + (e.base.pos[idx] - pivot[idx]) * factor
                     }
                 } else if (session.mode === 'rotate') {
-                    for (const idx of indices) e.rot[idx] = e.base.rot[idx] + total
-                    // Orbit positions around the pivot only for a single locked
-                    // axis — 'all' has no meaningful orbit axis.
-                    if (session.axis !== 'all' && !isPlane(session.axis) && n > 1) {
-                        const v = new Vector3(
-                            e.base.pos[0] - pivot[0],
-                            e.base.pos[1] - pivot[1],
-                            e.base.pos[2] - pivot[2]
-                        ).applyAxisAngle(AXIS_VEC[session.axis], total)
-                        e.pos = [pivot[0] + v.x, pivot[1] + v.y, pivot[2] + v.z]
-                    }
+                    // A typed angle turns around the WORLD axis, the same turn the mouse makes (it used to add
+                    // the number to one Euler component, which is a world turn only for X: R Z 90 on a tilted
+                    // lamp went somewhere else than R Z by mouse). No axis = around the view axis (Blender).
+                    const axisVec = typedRotateAxis(camera, session.axis)
+                    e.rot = rotateEulerAroundWorldAxis(e.base.rot, axisVec, total)
+                    if (n > 1) e.pos = orbitAroundPivot(e.base.pos, pivot, axisVec, total)
                 }
             }
         }
 
         // Typed exact values (Blender-style): degrees for rotate, a scale
         // factor for scale, world units for translate. Mouse movement resumes
-        // control and discards the typed string.
+        // control and discards the typed string. R and S take a number with no
+        // axis too (R 90 turns around the view, S 2 doubles); G still wants an
+        // axis first (G X 2), since a free grab has no one direction to type.
         const applyNumericIfAny = () => {
             const value = parseFloat(session.numeric)
             if (!Number.isFinite(value)) return
@@ -287,7 +284,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 session.axis = null
                 rebase()
                 reportStatus()
-            } else if (session.axis && (/^[0-9.-]$/.test(event.key) || event.key === 'Backspace')) {
+            } else if ((session.axis || session.mode !== 'translate') && (/^[0-9.-]$/.test(event.key) || event.key === 'Backspace')) {
                 event.preventDefault(); event.stopImmediatePropagation()
                 session.numeric = event.key === 'Backspace'
                     ? session.numeric.slice(0, -1)
