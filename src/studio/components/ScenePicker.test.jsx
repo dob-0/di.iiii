@@ -122,7 +122,10 @@ describe('studio.css .scene-picker: where it sits and how big its targets are', 
         const picker = ruleOf(studioCss, '.sfp-shell.scene-picker')
         expect(picker).toMatch(/position:\s*absolute/)
         expect(picker).toMatch(/left:\s*var\(--di-space-3\)/)
-        const stripTop = Number(/bottom:\s*calc\(var\(--di-mode-mark-clearance,\s*(\d+)px\)/.exec(picker)?.[1])
+        // the strip's height is the token on :root (modeMark.css), read there — the rule carries no fallback (spine.test.js)
+        expect(picker).toMatch(/bottom:\s*calc\(var\(--di-mode-mark-clearance\)\s*\+\s*var\(--di-space-1\)\)/)
+        const modeMarkCss = read('..', '..', 'components', 'modeMark.css')
+        const stripTop = Number(/--di-mode-mark-clearance:\s*calc\((\d+)px/.exec(modeMarkCss)?.[1])
         expect(stripTop).toBeGreaterThanOrEqual(44)
         // the view label: bottom 12, one line of 10 px type (~15 px); the tree chip: bottom 10, 10 px type + 2 x 3 px padding + 2 px border = 18 px
         const labelTop = pxOf(ruleOf(studioCss, '.svl-view-label'), 'bottom') + 15
