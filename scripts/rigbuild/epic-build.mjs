@@ -21,6 +21,13 @@
  * and no cube connected, not an emission sign-off. `laserSignedOff` is NOT written.
  * Scratch only: refuses any host but localhost / 127.0.0.1. Reads the document right before writing and sends against its version.
  *
+ * --laser-lines-only (2026-10-13, ledger N559): every laser beam the project ALREADY has (rig-laser-<id>, matched to the rig file)
+ * gets `beam.laser` (laserComponentOf: its share of the unit's diodes in mW, the maker's beam diameter and divergence), so the room
+ * draws it as a line source (laserLine.js, SpotLightObject LaserLines) and no longer as a narrow white cone. It sends ONLY
+ * `updateComponent` merge patches `{ laser }` on component `beam`: no unit deleted or re-created, no aim, colour, level or other
+ * field touched, so lamps moved by hand stay where they are. Refuses when a project beam is not in the rig file. Dry run unless
+ * --apply; back the document up first. Undo: the backup, or the same patch with `laser: null`.
+ *
  * --desk (after --apply, or alone with --desk-only): where a light desk answers (a local stack's /light), the room is drawn
  * FROM THE DESK'S DMX for every patched lamp (useRigLook.js "DMX wins"), so the desk must carry each look WITH its values.
  * The cards page's "send looks" sends empty shells (2026-10-08: every lamp then sat at the desk's idle full white: the glare,
@@ -41,7 +48,7 @@ import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
 import { runnerList } from './show-loop.mjs'
 import { atmosphereOfRig } from '../place/rig-lib.mjs'
-import { laserColourFlux, driveOfHex, CUBE_NM } from '../../src/objectComponents/laserLine.js'
+import { laserColourFlux, driveOfHex, laserOf, CUBE_NM } from '../../src/objectComponents/laserLine.js'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -84,21 +91,67 @@ export const LASER_APERTURE = 0.002
 export const FIXTURES_FILE = 'scripts/place/fixtures/fixtures.json'
 export const cubeVariant = (file = path.join(REPO_ROOT, FIXTURES_FILE)) => JSON.parse(fs.readFileSync(file, 'utf8')).kinds.lasercube.specs.variant_in_use.value
 const CUBE = cubeVariant()
+// OPTICS (2026-10-13, ledger N559): a beam's width and spread, the maker's numbers as fixtures.json keeps them with their source —
+// the cube's 4 mm / 1 mrad (Ultra MK2 Guide v1.2 pp. 11-12, printed for the 6 W and 10 W; the 7.5 W Manual v1.0 prints no optics
+// line: taken as the same, and 1/e vs 1/e2, full vs half angle is not stated), the UP-LA40WF's < 1.3 mrad (Blue Sea BLLO-RGB40, the
+// equivalent unit; no beam diameter published, so none is written and the renderer's 4 mm default draws it — laserLine.js laserOf).
+const opticsOf = (kind) => {
+    const s = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, FIXTURES_FILE), 'utf8')).kinds[kind].specs
+    const out = {}
+    if (Number(s.beam_diameter_mm?.value) > 0) out.diameter_mm = Number(s.beam_diameter_mm.value)
+    if (Number(s.divergence_mrad?.value) > 0) out.divergence_mrad = Number(s.divergence_mrad.value)
+    return out
+}
 /** Lumens in one laser beam of a cube unit (see FLUX above). Pure given the variant. */
 /** The laser types a rig may carry: the cubes (mW per line from the variant in use) and the UPlight UP-LA40WF (fixtures.json kind
  * 'laser': R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm — mapped onto the cube's nearest lines; owner 2026-10-12 05:2x: "we take also
  * 2 lasers from Sevan", the rental units that ran at the Sevan festival). */
 export const LASER_TYPES = {
-    'ext-lc-ultra-mk2': { name: (f) => `LaserCube ${f.id.slice(-1)}`, mW: () => CUBE },
-    'up-la40wf': { name: (f) => `UP-LA40WF ${f.id.slice(-1)}`, mW: () => ({ '445nm': 16000, '455nm': 16000, '520nm': 15000, '525nm': 15000, '638nm': 10000 }) }
+    'ext-lc-ultra-mk2': { name: (f) => `LaserCube ${f.id.slice(-1)}`, mW: () => CUBE, optics: opticsOf('lasercube'),
+        source: `LaserCube Ultra MK2 ${CUBE.name || ''}: diodes per the maker's Manual v1.0 p. 11 (fixtures.json variant_in_use); 4 mm / 1 mrad per the Guide v1.2 pp. 11-12 (printed for 6 W and 10 W, taken for this variant)` },
+    'up-la40wf': { name: (f) => `UP-LA40WF ${f.id.slice(-1)}`, mW: () => ({ '445nm': 16000, '455nm': 16000, '520nm': 15000, '525nm': 15000, '638nm': 10000 }), optics: opticsOf('laser'),
+        source: 'UP-LA40WF: R 10 W 638 / G 15 W 520 / B 16 W 445 nm (fixtures.json kind laser) on the cube lines 638/525/455 nm; < 1.3 mrad (Blue Sea BLLO-RGB40, equivalent); no diameter published (renderer default 4 mm)' }
 }
 export const isLaserType = (type) => Object.prototype.hasOwnProperty.call(LASER_TYPES, type)
+/** The share of a laser unit's diodes that ONE of its beams carries: the beam's duty x the unit's room_flux_share, over its beams
+ * that are on (see FLUX above) — the one split, for the beam's lumens (its light) and its diodes (its drawn line). */
+export const laserBeamShare = (f, b) => {
+    const on = (f.laser?.beams || []).filter((x) => !x.off).length || 1
+    const duty = b?.duty ?? f.laser?.duty ?? 0.45
+    return (duty * (f.laser?.room_flux_share ?? 1)) / on
+}
 export const laserBeamLumens = (f, b, variant = (LASER_TYPES[f.type] || LASER_TYPES['ext-lc-ultra-mk2']).mW()) => {
     const mW = CUBE_NM.map((nm) => Number(variant[`${nm}nm`]) || 0)
     const { lumens } = laserColourFlux({ mW, drive: driveOfHex(f.colour) })
-    const on = (f.laser?.beams || []).filter((x) => !x.off).length || 1
-    const duty = b?.duty ?? f.laser?.duty ?? 0.45
-    return (lumens * duty * (f.laser?.room_flux_share ?? 1)) / on
+    return lumens * laserBeamShare(f, b)
+}
+/** A laser beam's `beam.laser` (laserLine.js laserOf, ledger N559): the beam's share of its unit's diodes in mW at the cube lines
+ * (the 40 W's lines mapped onto them, as LASER_TYPES does), the maker's optics, the rig's ONE exposure number (SCALE: every lamp's
+ * three.js intensity is candela x SCALE, so the line is drawn at the same scale; laserOf's own default), and no frame: one static
+ * line down the entity's -Y, which is where the rig aims the beam. The look's colour is the drive (driveOfHex), at draw time. */
+export const laserComponentOf = (f, b) => {
+    const t = LASER_TYPES[f.type]
+    const v = t.mW()
+    const share = laserBeamShare(f, b)
+    return {
+        mW: CUBE_NM.map((nm) => r3((Number(v[`${nm}nm`]) || 0) * share)),
+        nm: [...CUBE_NM],
+        ...t.optics,
+        sceneScale: SCALE,
+        source: `${t.source}; this line x ${r3(share)} of the unit (duty x room share / lines on), epic-build.mjs laserComponentOf`.slice(0, 500)
+    }
+}
+/** --laser-lines-only: a merge patch `{ laser }` on component `beam` of every rig-laser-* the project already has — nothing else.
+ * `unmatched`: project beams the rig file does not know (they would stay cones); `absent`: rig beams the project does not have. */
+export const laserLineOps = (doc, rig) => {
+    const want = new Map(v1Entities(rig).filter((e) => e.id.startsWith('rig-laser-')).map((e) => [e.id, e.components.beam.laser]))
+    const have = (Array.isArray(doc?.entities) ? doc.entities : []).filter((e) => String(e.id).startsWith('rig-laser-'))
+    const ids = new Set(have.map((e) => e.id))
+    return {
+        ops: have.filter((e) => want.has(e.id)).map((e) => ({ type: 'updateComponent', payload: { entityId: e.id, component: 'beam', patch: { laser: want.get(e.id) } } })),
+        unmatched: have.filter((e) => !want.has(e.id)).map((e) => e.id),
+        absent: [...want.keys()].filter((id) => !ids.has(id))
+    }
 }
 export const laserIntensityOfLumens = (lm) => Math.round((lm / (2 * Math.PI * (1 - Math.cos(LASER_ANGLE)))) * SCALE)
 /** v1.0's laser intensity by colour alone (2 scanned beams per cube, duty 0.45), now from the cube in use. */
@@ -147,7 +200,7 @@ export const v1Entities = (rig) => {
                         transform: { position: f.p, rotation: b.r, scale: [1, 1, 1] },
                         appearance: { color: f.colour, opacity: 1 },
                         light: { color: f.colour, intensity: laserIntensityOfLumens(laserBeamLumens(f, b)), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
-                        beam: { visible: true, haze: 1, aperture: LASER_APERTURE },
+                        beam: { visible: true, haze: 1, aperture: LASER_APERTURE, laser: laserComponentOf(f, b) },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
                         fixture: { type: f.type, unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
                     } })
@@ -229,9 +282,11 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
             let on = null
             if (lk.parts) {
                 // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09: the
-                // lasers' glare share capped per look). Every rig before it holds 1.0, so their rooms do not change.
+                // lasers' glare share capped per look). Every rig before it holds 1.0, so their rooms do not change. A look that
+                // names the lasers' colour (`laser_colour`: the laser colour rule of moxir_v2_8_floor.py, ledger N559, 2026-10-13)
+                // gives it to every line; no rig file before it names one, so their looks do not change.
                 const lv = (pair) => (Number.isFinite(Number(pair?.[1])) ? Math.min(1, Math.max(0, Number(pair[1]))) : 1)
-                if (meta.part === 'laser') on = lk.parts.laser ? [null, lv(lk.parts.laser)] : (lk.parts.cube6a && meta.beam === '6a' ? [null, lv(lk.parts.cube6a)] : null)
+                if (meta.part === 'laser') on = lk.parts.laser ? [lk.laser_colour || null, lv(lk.parts.laser)] : (lk.parts.cube6a && meta.beam === '6a' ? [null, lv(lk.parts.cube6a)] : null)
                 else on = lk.parts[meta.part] || null
             }
             colours[key] = ((on && on[0]) || meta.colour || '#e8e4dc').toLowerCase()
@@ -386,6 +441,35 @@ const main = async () => {
         const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-lasers-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`laser ops: ${out.status} ${out.text.slice(0, 300)}`)
         say(`lasers: ${ops.length / 2} beams at ${laserIntensity('#e8e4dc')} (ash) / ${laserIntensity('#ff3a12')} (ember), half-angle ${LASER_ANGLE} rad → version ${out.body.newVersion}`)
+        return
+    }
+    if (args['laser-lines-only']) {
+        const { ops, unmatched, absent } = laserLineOps(doc, rig)
+        say(`${project} @ v${got.body.version}: laser lines only — ${ops.length} beams get beam.laser (updateComponent beam {laser}); ` +
+            `in the project, not in the rig file: ${unmatched.length}${unmatched.length ? ` (${unmatched.slice(0, 5).join(', ')})` : ''}; in the rig file, not in the project: ${absent.length}`)
+        if (ops.length) say(`  e.g. ${ops[0].payload.entityId}: ${JSON.stringify(ops[0].payload.patch.laser).slice(0, 400)}`)
+        if (args.out) {
+            fs.mkdirSync(String(args.out), { recursive: true })
+            fs.writeFileSync(path.join(String(args.out), `laser-lines-${project}-before.json`), JSON.stringify(got.body))
+            fs.writeFileSync(path.join(String(args.out), `laser-lines-${project}-ops.json`), JSON.stringify(ops, null, 1))
+        }
+        if (unmatched.length || !ops.length) die(`${project}: its laser beams do not match the rig file (${args.rig || RIG_FILE}): nothing written`)
+        if (!args.apply) { say('dry run: nothing written (--apply to write)'); return }
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-laser-lines-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        if (!out.ok) die(`laser line ops: ${out.status} ${out.text.slice(0, 300)}`)
+        const back = await client.get(`/api/projects/${project}/document`)
+        if (!back.ok) die(`read back: ${back.status}`)
+        const d2 = back.body.document
+        const lz = d2.entities.filter((e) => e.id.startsWith('rig-laser-'))
+        const drawn = lz.filter((e) => laserOf(e.components?.beam)).length
+        // every other field of every entity as it was read (a beam's own laser aside): what else changed meanwhile (a hand edit)
+        const bare = (e) => JSON.stringify(e.id.startsWith('rig-laser-') ? { ...e, components: { ...e.components, beam: { ...e.components?.beam, laser: undefined } } } : e)
+        const before = new Map(doc.entities.map((e) => [e.id, bare(e)]))
+        const changed = d2.entities.filter((e) => before.get(e.id) !== bare(e)).map((e) => e.id)
+        if (args.out) fs.writeFileSync(path.join(String(args.out), `laser-lines-${project}-after.json`), JSON.stringify(back.body))
+        say(`written, version ${out.body.newVersion}; read back v${back.body.version}: ${d2.entities.length} entities (before ${doc.entities.length}), ` +
+            `${drawn}/${lz.length} laser beams carry beam.laser; other fields changed since the read: ${changed.length}${changed.length ? ` (${changed.slice(0, 5).join(', ')})` : ''}`)
+        if (d2.entities.length !== doc.entities.length || drawn !== lz.length) die('read back: not every laser beam carries beam.laser, or the entity count moved')
         return
     }
     if (args['mark-only'] || args.apply) {

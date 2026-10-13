@@ -215,6 +215,18 @@ rig['from_rig'] = a.src
 # Six looks on the v2.8/v2.9 parts, in the show's two colours (ember #ff3a12, ash #e8e4dc), each one a single idea seen from
 # the floor; appended to the loop after 'peak' with the loop's own fade/hold. Idempotent: a look already there is left alone.
 EMBER, ASH = '#ff3a12', '#e8e4dc'
+# LASER COLOUR RULE (2026-10-13, ledger N559; owner 17:2x: "make lasers too like real lasers - there are not lasers"). A show
+# laser is a pure line of ONE wavelength: it reads saturated, never as a white lamp. Of the cube's three lines the green is the
+# brightest per watt: V(525 nm) 0.79 against 0.03 at 455 nm and 0.25 at 638 nm (CIE photopic V(lambda), laserLine.js vLambda),
+# so the laser scenes drive the green line alone:
+#   'lasers', 'matrix', 'lasers-breathe', 'storm'  -> full green #00ff00 (drive [0, 1, 0]) on every line, the 40 W pair too;
+#   'peak', 'white' (the owner's "everything on")    -> unchanged: each cube keeps its own colour (v1Looks), as he has seen them;
+#   a laser in an ice scene -> the blue line alone #0000ff; in a fire scene -> the red line alone #ff0000. Today no ice or
+#   fire scene drives the lasers ('ice-fire', 'ice-rings', 'embers' light no laser part).
+# Carried by the look's `laser_colour` (epic-build.mjs v1Looks); applied after step 3b to every look that drives the lasers, and a
+# look that drives them without a line here stops the build.
+GREEN, BLUE, RED = '#00ff00', '#0000ff', '#ff0000'
+LASER_COLOUR = {'lasers': GREEN, 'matrix': GREEN, 'lasers-breathe': GREEN, 'storm': GREEN, 'peak': None, 'white': None}
 # What each scene IS, from the floor, in one line (owner 2026-10-13 15:5x: "scenes that I can understand well"); shown in
 # the pickers as the explanation under the name.
 INTENT = {
@@ -381,6 +393,15 @@ for look, name, fade, hold in MOTION_CUES:
     if look not in have_cues: rig['cues'].append({'look': look, 'name': name, 'fade': fade, 'hold': hold}); have_cues.add(look)
 print(f"looks {len(rig['looks'])} ({sum(1 for l in rig['looks'] if l.get('motion'))} moving), cues {len(rig['cues'])} "
       f"(+{len(MOTION_LOOKS)} colour/motion scenes 2026-10-13; FLAME {FLAME}, ICE {ICE})")
+
+# the laser colour rule (top of step 3) on every look that drives the lasers
+for l in rig['looks']:
+    if 'laser' not in l.get('parts', {}):
+        continue
+    assert l['id'] in LASER_COLOUR, ('a look drives the lasers without a laser colour rule', l['id'])
+    if LASER_COLOUR[l['id']]:
+        l['laser_colour'] = LASER_COLOUR[l['id']]; l['parts']['laser'] = [LASER_COLOUR[l['id']], l['parts']['laser'][1]]
+print('laser colour rule: ' + ', '.join(f"{l['id']} {l.get('laser_colour', 'own')}" for l in rig['looks'] if 'laser' in l.get('parts', {})))
 
 json.dump(rig, open(f'{a.repo}/{a.out}', 'w'), indent=1)
 print(f'wrote {a.out} ({a.lasers}): {len(lines)} lines, {pulled} pulled/unchanged; lowest {rig["lasers"]["arithmetic"]["lowest_point_m"]} m; tent {len(side)} washes at {a.tent:.0f} deg')
