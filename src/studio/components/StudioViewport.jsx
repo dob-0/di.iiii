@@ -17,6 +17,8 @@ import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import ScenePicker from './ScenePicker.jsx'
+import LaserTest from './LaserTest.jsx'
+import { laserUnitsOf } from '../utils/laserTest.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
@@ -217,6 +219,9 @@ function AutoLookAround({ controlsRef, config }) {
     return null
 }
 
+// Alt+click on a laser line selects its whole unit (pickPriority.js); provided inside the Canvas, read by the two entity kinds.
+const UnitSelectContext = createContext(null)
+
 // Edit and Select both transform the selection; Navigate never does.
 const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
 
@@ -226,6 +231,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
     const highlightRef = useRef(null)
     const isDragging = useRef(false)
     const { scene } = useThree()
+    const onSelectUnit = useContext(UnitSelectContext)
     const runtime = entity.components?.runtime || {}
     const isVisible = runtime.visible !== false
     const isLocked = runtime.locked === true
@@ -349,7 +355,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
                 // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a
                 // locked entity is picked (the lock stops moves), the one selected object clicked again deselects —
                 // the same rule as a group entity's click below.
-                onClick={(e) => handlePickClick(e, { onSelect, onToggleSelect, selectedIds: selectedIdSet })}
+                onClick={(e) => handlePickClick(e, { onSelect, onToggleSelect, onSelectUnit, selectedIds: selectedIdSet })}
             >
                 {/* Live only where the surface turned links on (a visitor's
                     view mode) — see entityLinkContext.js. */}
@@ -380,6 +386,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
 
 function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, gizmoSpace = 'world', overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
     const groupTimelineRef = useRef(null)
+    const onSelectUnit = useContext(UnitSelectContext)
     useEntityPose(entity, groupTimelineRef)
     const t = entity.components?.transform || {}
     if (entity.type === 'group') {
@@ -395,7 +402,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
                 // beats what is behind it; a locked entity is picked (the lock stops moves); the one selected object
                 // clicked again deselects.
-                onClick={(e) => handlePickClick(e, { onSelect: onSelectEntity, onToggleSelect: onToggleSelectEntity, selectedIds: selectedIdSet })}
+                onClick={(e) => handlePickClick(e, { onSelect: onSelectEntity, onToggleSelect: onToggleSelectEntity, onSelectUnit, selectedIds: selectedIdSet })}
             >
                 {/* Pivot dot — clickable hit target + visual marker for the group origin */}
                 <mesh>
@@ -675,6 +682,7 @@ function StudioSceneContent({
     selectedEntityIds = [],
     onSelectEntity,
     onToggleSelectEntity,
+    onSelectEntities = null,
     editMode,
     gizmoMode,
     gizmoAxis = null,
@@ -691,10 +699,17 @@ function StudioSceneContent({
     screens = null,
     followLinks = false,
     rigLook = undefined,
+    laserTest = false,
     lookDrawn = false,
     smartView = null,
     graphRoom = null
 }) {
+    // Alt+click on a laser line: every line of its unit (the locked ones stay out), added to the selection with Shift.
+    const onSelectUnit = useMemo(() => (onSelectEntities ? (unitKey, { additive = false } = {}) => {
+        const locked = new Set((document.entities || []).filter((e) => e.components?.runtime?.locked === true).map((e) => e.id))
+        const ids = (laserUnitsOf(document.entities).get(unitKey) || []).filter((id) => !locked.has(id))
+        onSelectEntities(additive ? [...new Set([...selectedEntityIds, ...ids])] : ids)
+    } : null), [document.entities, onSelectEntities, selectedEntityIds])
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -769,6 +784,8 @@ function StudioSceneContent({
     return (
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
+        <UnitSelectContext.Provider value={onSelectUnit}>
+            <LaserTest active={laserTest} entities={document.entities} />
             <RenderSettingsEffect renderSettings={document.renderSettings} />
             <ShadowsOnDemand live={Boolean(transformOp)} changeKey={document} />
             {/* MOXIR's LaserCubes: what the laser server is drawing, as beams (rigbuild/laserView.js) */}
@@ -924,6 +941,7 @@ function StudioSceneContent({
                     onStatus={onTransformStatus}
                 />
             )}
+        </UnitSelectContext.Provider>
         </EntityLinksContext.Provider>
         </LiveTimelineContext.Provider>
     )
@@ -1148,6 +1166,9 @@ export default function StudioViewport({
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
     onRigLook = null,
+    // The Studio's laser test (a work tool, nothing written to the document): every laser unit's field as a square.
+    laserTest = false,
+    onLaserTest = null,
     // The document's entities are the room ALREADY drawn in its look (the public page:
     // RoomLookFollower drew them): draw them as handed, never pose them again.
     lookDrawn = false,
@@ -1350,6 +1371,8 @@ export default function StudioViewport({
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
                         rigLook={rigLook}
+                        laserTest={laserTest}
+                        onSelectEntities={onSelectEntities}
                         lookDrawn={lookDrawn}
                         screens={screens}
                         followLinks={followLinks}
@@ -1389,7 +1412,7 @@ export default function StudioViewport({
             )}
 
             {onRigLook && (
-                <ScenePicker document={document} current={rigLook} onPick={onRigLook} />
+                <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} />
             )}
 
             {transformStatus && (

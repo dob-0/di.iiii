@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { scenesOf } from '../utils/scenesOf.js'
+import { laserUnitsOf } from '../utils/laserTest.js'
 
 // SCENES in the Studio, open by default (owner 2026-10-13 15:5x: "by default make that I can select in
 // edit mode — I can't select a light show and understand how the light will be"). Until now the Studio
@@ -13,10 +14,15 @@ import { scenesOf } from '../utils/scenesOf.js'
 // (sfp-*, scc-collapse-btn), the cluster's buttons (scc-btn) and the Objects list's rows (spa-list /
 // spa-item). Only its geometry is its own (.scene-picker in studio.css): docked bottom-left above the
 // 44 px strip that holds the view label, the mode chip and the tree chip. Rectangles; targets ≥ 32 px.
-export default function ScenePicker({ document, current, onPick }) {
+//
+// LASER TEST (owner 2026-10-13 20:5x), a work tool beside the scenes, shown when the project has laser lines: while on, every
+// laser unit draws its whole scan field as a square on the real surfaces, labelled with its metres (LaserTest.jsx). A
+// button of the Studio's own (scc-btn), nothing written to the project.
+export default function ScenePicker({ document, current, onPick, laserTest = false, onLaserTest = null }) {
     const [open, setOpen] = useState(true)
     const scenes = scenesOf(document)
-    if (!scenes.length) return null
+    const hasLasers = Boolean(onLaserTest) && laserUnitsOf(document?.entities).size > 0
+    if (!scenes.length && !hasLasers) return null
     const following = current === undefined
     const workLight = current === ''
     return (
@@ -56,6 +62,17 @@ export default function ScenePicker({ document, current, onPick }) {
                             >
                                 Work light
                             </button>
+                            {hasLasers && (
+                                <button
+                                    type="button"
+                                    className={`scc-btn ${laserTest ? 'active' : ''}`}
+                                    aria-pressed={laserTest}
+                                    title="Draw each laser's whole scan field as a square on the walls, with its width, height and distance in metres. Nothing is saved"
+                                    onClick={() => onLaserTest(!laserTest)}
+                                >
+                                    Laser test
+                                </button>
+                            )}
                         </div>
                     </div>
                     <div className="scc-section">

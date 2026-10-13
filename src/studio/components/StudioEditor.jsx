@@ -7,6 +7,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { unitMembersOf } from '../utils/laserTest.js'
 import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
 import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
@@ -876,6 +877,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                             .map((entity) => entity.id)
                     })
                 }
+                return
+            }
+
+            // Select grouped (Shift+G, Blender's): every line of the laser unit(s) the selection touches, so the
+            // multi-selection gizmo moves the whole unit by hand (utils/laserTest.js unitMembersOf; Alt+click does it too).
+            if (!meta && !event.altKey && event.shiftKey && (key === 'G' || event.code === 'KeyG')) {
+                event.preventDefault()
+                const current = selectedEntities.map((entity) => entity.id)
+                const grouped = unitMembersOf(entities, current)
+                if (grouped.length !== current.length) dispatch({ type: 'select-entities', entityIds: grouped })
                 return
             }
 

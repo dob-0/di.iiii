@@ -93,6 +93,8 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Shift / Ctrl + Click', 'Add to the selection'],
             ['Click a beam', 'Select its lamp; a lamp body in front of a beam wins'],
             ['Click a locked object', 'Not picked: the click goes through; with only locked things under the pointer, the selection clears'],
+            ['Alt + Click a laser line', 'Select every line of its laser unit (Shift adds); the gizmo then moves the whole unit'],
+            ['Shift+G', 'Select grouped: every line of the laser unit(s) in the selection'],
             ['A', 'Select all'],
             ['Alt+A', 'Deselect all'],
             ['Esc', 'Deselect'],
@@ -146,6 +148,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Numpad 4 / 6 / 8 / 2', 'Orbit 15° (or Shift+Arrows)'],
             ['Home', 'Frame the whole room'],
             ['Numpad .', 'Frame selection'],
+            ['SCENES window → Laser test', 'Draw each laser unit\'s whole scan field as a square on the walls, labelled width × height and distance in metres. Move a unit (Alt+click a line, then G) and its square follows. Nothing is saved'],
         ]
     },
     {
