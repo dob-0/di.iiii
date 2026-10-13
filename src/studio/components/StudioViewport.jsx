@@ -851,6 +851,7 @@ function StudioSceneContent({
                                 gizmoMode={gizmoMode}
                                 gizmoAxis={gizmoAxis}
                                 gizmoVisible={gizmoVisibleEffective && transformableSelectedEntities.length === 1}
+                                gizmoSpace={gizmoSpace}
                                 overrideById={previewById}
                                 onSelectEntity={onSelectEntity}
                                 onToggleSelectEntity={onToggleSelectEntity}
@@ -872,6 +873,7 @@ function StudioSceneContent({
                                 gizmoMode={gizmoMode}
                                 gizmoAxis={gizmoAxis}
                                 gizmoVisible={gizmoVisibleEffective}
+                                gizmoSpace={gizmoSpace}
                                 orbitRef={controlsRef}
                             />
                         </Suspense>
@@ -890,6 +892,7 @@ function StudioSceneContent({
                         gizmoMode={gizmoMode}
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisibleEffective}
+                        gizmoSpace={gizmoSpace}
                         onPreview={setPreviewById}
                         onCommit={onTransformCommitMany}
                         orbitRef={controlsRef}
