@@ -10,6 +10,7 @@
 //      the hall by clicking it); a click on the one selected object again deselects it (the Studio's click handler).
 // The flags come from the scene graph: the entity's group carries userData { svEntityId, svPick, svLocked } and a
 // beam mesh carries userData.beamPick (SpotLightObject.jsx), so nothing here reads the document.
+import { isArchitectureEntity } from '../../project/viewport/smartView/smartViewGeometry.js'
 
 /** The picked entity's id, or null for a click on empty. `infoOf(object)` → { id, body, locked } or null. */
 export const pickFromHits = (hits = [], infoOf = entityInfoOf) => {
@@ -44,7 +45,9 @@ export const entityInfoOf = (object) => {
 export const pickUserData = (entity) => ({
     svEntityId: entity.id,
     svPick: entity.components?.light || entity.components?.fixture ? 'body' : 'other',
-    svLocked: entity.components?.runtime?.locked === true
+    svLocked: entity.components?.runtime?.locked === true,
+    // the building: where a beam stops (objectComponents/beamReach.js)
+    svBuilding: isArchitectureEntity(entity)
 })
 
 // One click handler for every entity's group (walked 2026-10-13: only GROUP entities used the rule, so a top-level

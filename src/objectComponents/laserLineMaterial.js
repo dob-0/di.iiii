@@ -61,6 +61,8 @@ float hgPhaseL(float c, float g) {
     return (1.0 - g2) / (4.0 * PI * pow(max(1.0 + g2 - 2.0 * g * c, 1e-6), 1.5));
 }
 void main() {
+    // no line outside the building (beamReach.js): it stops at the surface, and nothing scatters past it
+    if (hazeOutside(vWorld)) discard;
     vec3 toCam = cameraPosition - vWorld;
     float d = max(length(toCam), 1e-4);
     // the scattering angle: between the light's direction and the direction to the eye
@@ -75,7 +77,8 @@ void main() {
 }
 `
 
-/** One ribbon per line, `stations` steps from the aperture to `length`. Lines: [{ dir, flux: [r,g,b] }]. */
+/** One ribbon per line, `stations` steps from the aperture to its own `line.length` (the first surface it meets,
+ * beamReach.js), else `length`. Lines: [{ dir, flux: [r,g,b], length? }]. */
 export const laserLineGeometry = (lines, length, stations = 48) => {
     const per = (stations + 1) * 2
     const n = lines.length * per
@@ -88,7 +91,7 @@ export const laserLineGeometry = (lines, length, stations = 48) => {
         for (let k = 0; k <= stations; k += 1) {
             // stations closer near the aperture, where the width changes fastest relative to itself
             const t = k / stations
-            const at = length * t * t
+            const at = (Number(line.length) > 0 ? Number(line.length) : length) * t * t
             for (let e = 0; e < 2; e += 1) {
                 const v = li * per + k * 2 + e
                 dir.set(line.dir, v * 3)

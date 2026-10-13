@@ -53,8 +53,18 @@ uniform highp sampler3D uHazeNoise;
 uniform float uPatch;
 uniform vec3 uDrift;
 uniform float uHazeTime;
+uniform float uHazeBoxOn;
+uniform vec3 uHazeBoxMin;
+uniform vec3 uHazeBoxMax;
+
+// outside the building's box (beamReach.js, hazeUniforms setHazeBox); false while no building is known
+bool hazeOutside(vec3 p) {
+    return uHazeBoxOn > 0.5 && (any(lessThan(p, uHazeBoxMin)) || any(greaterThan(p, uHazeBoxMax)));
+}
 
 float hazeSigma(vec3 p) {
+    // no air outside the building: a beam scatters nothing there
+    if (hazeOutside(p)) return 0.0;
     if (uHazeCount == 0 && uPatch <= 0.0) return uFill;
     float n = 0.5;
     if (uPatch > 0.0) n = texture(uHazeNoise, (p - uDrift * uHazeTime) / ${NOISE_TILE_M.toFixed(1)}).r;
@@ -148,6 +158,11 @@ void main() {
 #if BEAM_PART == 1
     // the room is drawn with real bloom (HdrBloom.jsx): the veil steps aside
     if (uGlareOn < 0.5) discard;
+#endif
+#ifndef BEAM_MIRROR
+    // a hull's fragment outside the building draws nothing — its in-scatter is 0 there already, and the glare veil
+    // (which reads the well-mixed haze, not the field) of a beam the roof hides is not seen through the roof
+    if (hazeOutside(vWorld)) discard;
 #endif
     vec3 ro = uCamLocal;
     vec3 rd = normalize(vLocal - ro);
