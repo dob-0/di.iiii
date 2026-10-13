@@ -537,6 +537,13 @@ describe('a followed space stays one space', () => {
     })
     const objectNamed = (scene, id) => (scene?.scene?.objects || []).find(object => object.id === id)?.name
     const update = (id, name, opId) => ({ opId, type: 'updateObject', payload: { objectId: id, patch: { name } } })
+    // A refused write says why, with both servers' logs: a CI-only 409 here
+    // once read "expected 409 to be 200" and nothing else (2026-10-13).
+    const landed = (written, label) => expect(written.status, `${label}: ${JSON.stringify(written.payload)}
+--- hosting log ---
+${hosting.logs()}
+--- following log ---
+${following.logs()}`).toBe(200)
 
     beforeAll(async () => {
         hosting = await startServer()
@@ -559,8 +566,8 @@ describe('a followed space stays one space', () => {
         // they could not see each other. Each side then receives the other's
         // edit AFTER its own, so "last applied" is the other person's edit on
         // each machine — the two rooms would show different names for good.
-        expect((await writeOp(hosting, update('box', 'named on the host', 'op-name-host'))).status).toBe(200)
-        expect((await writeOp(following, update('box', 'named on the follower', 'op-name-follower'))).status).toBe(200)
+        landed(await writeOp(hosting, update('box', 'named on the host', 'op-name-host')), 'the host edit')
+        landed(await writeOp(following, update('box', 'named on the follower', 'op-name-follower')), 'the follower edit')
 
         // No saved cursors here, so this restart would start from now — and a
         // start from now by design carries nothing from the time apart. This
@@ -583,6 +590,52 @@ describe('a followed space stays one space', () => {
             expect(follower.state.converged).toBeGreaterThan(0)
         } finally {
             follower.stop()
+        }
+    })
+
+    // The race behind the CI-only 409 above (dev deploy run 38414913477): stop()
+    // used to leave the read parked on the host open, the host's next edit ended
+    // that park, and the STOPPED follow carried the edit into this install —
+    // moving its version between the test's read of it and its write. A proxy
+    // in front of the host counts the parked reads, so the test knows the park
+    // is out before it stops the follow instead of hoping it is.
+    it('a stopped follow carries nothing, even the edit that ends its parked read', async () => {
+        let parked = 0
+        const proxy = http.createServer((req, res) => {
+            const isPark = /[?&]wait=/.test(req.url)
+            if (isPark) parked += 1
+            let open = isPark
+            const done = () => { if (open) { open = false; parked -= 1 } }
+            // `res` closes when the answer is sent OR the follow hangs up on it.
+            res.on('close', () => { done(); upstream.destroy() })
+            const upstream = http.request({ host: '127.0.0.1', port: hosting.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                res.writeHead(answer.statusCode, answer.headers)
+                answer.pipe(res)
+            })
+            upstream.on('error', () => { done(); res.destroy() })
+            req.pipe(upstream)
+        })
+        await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve))
+        const viaProxy = `http://127.0.0.1:${proxy.address().port}/serverXR`
+        const follower = follow({ remote: side({ base: viaProxy, spaceId: SPACE, token: API_TOKEN }) })
+        try {
+            landed(await writeOp(hosting, addObject('stool', 'op-stool')), 'the stool')
+            await settle('the stool reaching the follower', hasOp(following, 'op-stool'))
+            await settle('the follow parked on the host', async () => parked > 0)
+
+            follower.stop()
+            landed(await writeOp(hosting, addObject('crate', 'op-after-stop')), 'the edit after stop')
+            await settle('the parked read ending', async () => parked === 0)
+            // Give a carry that should not happen every chance to land.
+            const deadline = Date.now() + 2000
+            while (Date.now() < deadline) {
+                expect(opIds(await readOps(following))).not.toContain('op-after-stop')
+                await wait(100)
+            }
+        } finally {
+            follower.stop()
+            proxy.closeAllConnections()
+            await new Promise(resolve => proxy.close(resolve))
         }
     })
 
