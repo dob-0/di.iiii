@@ -211,6 +211,18 @@ export function useCameraNavigation({
             goalPos.add(moveDelta); goalTarget.add(moveDelta)
             cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, ease)
         }
+        // Flight moves the camera at once (a glide behind the keys lagged 0.6 m in a second and drifted on after the keys were
+        // up: measured on the 3080, 2026-10-13). If a wheel glide is running, where it is heading moves by the same delta and it
+        // goes on: nothing jumps and no notch is cut.
+        const curPos = new Vector3(), curTarget = new Vector3(), endPos = new Vector3(), endTarget = new Vector3()
+        const translateAll = (delta) => {
+            cc.getPosition(curPos, false); cc.getTarget(curTarget, false)
+            cc.getPosition(endPos, true); cc.getTarget(endTarget, true)
+            const gliding = curPos.distanceToSquared(endPos) > 1e-12 || curTarget.distanceToSquared(endTarget) > 1e-12
+            curPos.add(delta); curTarget.add(delta)
+            cc.setLookAt(curPos.x, curPos.y, curPos.z, curTarget.x, curTarget.y, curTarget.z, false)
+            if (gliding) { endPos.add(delta); endTarget.add(delta); cc.setLookAt(endPos.x, endPos.y, endPos.z, endTarget.x, endTarget.y, endTarget.z, true) }
+        }
         // drei redraws the on-demand loop on 'update'; the Studio keeps the view on 'controlend'.
         const announceMove = (event) => {
             cc.dispatchEvent({ type: 'update' })
@@ -296,8 +308,7 @@ export function useCameraNavigation({
             clampMoveToBox(goalPos, delta, cc.userData?.diLockBox)
             if (delta.lengthSq() > 0) {
                 focused = false
-                goalPos.add(delta); goalTarget.add(delta)
-                cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, cc.active)
+                translateAll(delta)
                 cc.dispatchEvent({ type: 'update' })
             }
             flyFrame = requestAnimationFrame(flyTick)

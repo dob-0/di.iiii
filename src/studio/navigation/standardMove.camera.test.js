@@ -235,3 +235,17 @@ describe('Inside\'s lock box and the double-click focus', () => {
         act(() => { document.dispatchEvent(pe('pointerup', { button: 0, buttons: 0 })) })
     })
 })
+
+describe('flight moves at once', () => {
+    it('one second of W puts the camera itself one step ahead, and it stops when the key is up', () => {
+        const { el, cam, cc } = setup()
+        const a = cam.position.clone()
+        act(() => { el.dispatchEvent(pe('pointerdown', { button: 2, buttons: 2 })); document.body.dispatchEvent(key('keydown', { key: 'w', code: 'KeyW' })) })
+        runFrames(61, 1000 / 60, cc)
+        act(() => { document.body.dispatchEvent(key('keyup', { key: 'w', code: 'KeyW' })); document.dispatchEvent(pe('pointerup', { button: 2, buttons: 0 })) })
+        const atRelease = cam.position.distanceTo(a)
+        expect(atRelease).toBeGreaterThan(STEP * 0.95); expect(atRelease).toBeLessThan(STEP * 1.05)
+        const b = cam.position.clone(); settle(cc)
+        expect(cam.position.distanceTo(b)).toBeLessThan(1e-3) // no tail after the key is up
+    })
+})
