@@ -12,7 +12,7 @@ import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
 import { clientToNdc, pickPivot, selectionCenter } from './autoDepth.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
-import { createSceneDistance, nextSceneDistance } from './sceneDistance.js'
+import { createAsker, createSceneDistance, nextSceneDistance } from './sceneDistance.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 // A wheel burst is one gesture: pick once, after this much quiet.
@@ -119,10 +119,29 @@ export function useCameraNavigation({
         // The Blender tool's moves take their speed from the scene distance (sceneDistance.js, owner's yes 2026-10-13).
         const sceneDistance = preset.speedFromView ? createSceneDistance() : null
         let lastWheel = null // { pos, distance }: where this wheel left the camera, so the next notch knows it is the same run
-        const measureView = () => {
+        const viewArgs = () => {
             const scene = getScene?.()
-            return sceneDistance?.measure({ gl: getGl?.(), scene, camera: cc.camera, roots: scene ? entityRoots(scene) : [], near: cc.minDistance }) ?? null
+            return { gl: getGl?.(), scene, camera: cc.camera, roots: scene ? entityRoots(scene) : [], near: cc.minDistance }
         }
+        // Where the last measureView got its number (traces): 'peek' = the picture asked for after the last move, ready, no wait;
+        // 'sync' = rendered and read on the spot, the notch waits for the GPU.
+        let via = null
+        const measureView = () => {
+            if (!sceneDistance) return null
+            const peeked = sceneDistance.peek(cc.camera) // undefined: no picture for this pose; null: measured, nothing in view
+            if (peeked !== undefined) { via = 'peek'; return peeked }
+            via = 'sync'
+            return sceneDistance.measure(viewArgs()) ?? null
+        }
+        // The next move's picture is read in the background (sceneDistance.js `request`). It is asked for when the controls have
+        // written the pose a notch gave them (they do that in their next update, not in setLookAt) and when they stop; a drag is
+        // not asked per frame. camera-controls events: 'update', 'rest', 'sleep'.
+        const askedOn = (on) => { if (import.meta.env?.DEV) { const r = window.__diSceneDistanceReads; if (r) r.askedOn[on] = (r.askedOn[on] || 0) + 1 } }
+        const asker = sceneDistance ? createAsker({ getCamera: () => cc.camera, ask: (on) => { askedOn(on); sceneDistance.request(viewArgs()) } }) : null
+        const onControlsUpdate = () => asker.updated()
+        const onControlsRest = () => asker.settled('rest')
+        const onControlsSleep = () => asker.settled('sleep')
+        if (asker) { cc.addEventListener('update', onControlsUpdate); cc.addEventListener('rest', onControlsRest); cc.addEventListener('sleep', onControlsSleep) }
         const viewRange = () => ({ min: cc.minDistance, max: Math.min(cc.maxDistance, cc.camera.far) })
 
         // `gestureStart`: the gesture's own pointerdown/wheel, after settleForGesture stopped any easing: camera-controls still
@@ -147,7 +166,7 @@ export function useCameraNavigation({
                 const measured = measureView()
                 const d = nextSceneDistance({ measured, ...viewRange() })
                 const applied = d ? applyPivot(cc, axisPointAtDepth(cc.camera, cc.camera.getWorldDirection(new Vector3()).multiplyScalar(d).add(cc.camera.position)), { force: gestureStart }) : false
-                trace({ action, gestureStart, source: 'scene distance', measured: measured == null ? null : +measured.toFixed(3), distance: d == null ? null : +d.toFixed(3), applied })
+                trace({ action, gestureStart, source: 'scene distance', via, measured: measured == null ? null : +measured.toFixed(3), distance: d == null ? null : +d.toFixed(3), applied })
                 return
             }
             // Auto Depth (Blender view3d_navigate.cc `navigate_pivot_get`, v5.0.0): the orbit point goes to the depth of the surface
@@ -210,13 +229,14 @@ export function useCameraNavigation({
                 const d = nextSceneDistance({ measured, previous: consecutive ? lastWheel.distance : cc.distance, consecutive, ...viewRange() })
                 if (d) distance = d
                 range = { minDistance: 0, maxDistance: viewRange().max }
-                trace({ action: 'wheel-measure', measured: measured == null ? null : +measured.toFixed(3), consecutive, distance: +distance.toFixed(3) })
+                trace({ action: 'wheel-measure', via, measured: measured == null ? null : +measured.toFixed(3), consecutive, distance: +distance.toFixed(3) })
             }
             const plan = wheelZoomPlan({ distance, notches, ...range })
             if (!plan) { trace({ action: 'wheel', notches, distance: +distance.toFixed(3), step: 0, why: 'outside the soft range' }); return }
             newPos.copy(camPos).addScaledVector(rayDir, plan.step)
             newTarget.copy(newPos).addScaledVector(viewDir, Math.max(plan.newDistance, cc.minDistance))
             if (preset.speedFromView) lastWheel = { pos: newPos.clone(), distance: plan.newDistance > 0 ? Math.max(plan.newDistance, cc.minDistance) : distance }
+            asker?.moved() // the controls write the camera in their next update(): the picture of the new pose is asked for then
             // camera-controls' own wheel used to announce itself; drei invalidates the on-demand loop on 'update' and the Studio
             // saves the camera on 'controlend', so the app's wheel announces the same way (else nothing draws until the next move).
             cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
@@ -249,6 +269,7 @@ export function useCameraNavigation({
         doc.addEventListener('dblclick', onDoubleClick, { capture: true })
         return () => {
             unclamp()
+            if (asker) { cc.removeEventListener('update', onControlsUpdate); cc.removeEventListener('rest', onControlsRest); cc.removeEventListener('sleep', onControlsSleep) }
             sceneDistance?.dispose()
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             element.removeEventListener('wheel', onWheel)

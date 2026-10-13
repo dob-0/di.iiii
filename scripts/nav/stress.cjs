@@ -33,6 +33,7 @@ process.on('unhandledRejection', (e) => { console.log('ERR', String(e).slice(0, 
     await page.waitForSelector('canvas', { timeout: 60000 })
     let ok = false; for (let i = 0; i < 40 && !ok; i++) { ok = await page.evaluate(install); if (!ok) await sleep(500) }
     if (!ok) { console.log('no cc'); await bye(2) }
+    if (process.env.NAV_ASYNC === 'off') await page.evaluate(() => { window.__diSceneDistanceOff = true }) // NAV_ASYNC=off: every move measures on the spot
     await sleep(3000)
     let box = await page.locator('canvas').first().boundingBox()
     const rnd = (a, b) => a + random() * (b - a)

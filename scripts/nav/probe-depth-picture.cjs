@@ -32,6 +32,7 @@ const { chromium } = require('playwright'); const sleep = (ms) => new Promise((r
     const sd = await page.evaluate(() => window.__diSceneDistance); const smp = sd.samples; delete sd.samples; console.log('CASE', label, JSON.stringify({ measured: r.trace?.measured, sd, ...cam }))
     const rows = []; for (let y = 35; y >= 0; y -= 4) { const row = []; for (let x = 0; x < 64; x += 4) { const v = smp[y * 64 + x]; row.push(v > 0 ? String(Math.round(v)).padStart(4) : '   .') } rows.push(row.join('')) } console.log('MAP top row first (if the picture is upright)\n' + rows.join('\n'))
   }
+  await page.evaluate(() => { window.__diSceneDistanceOff = true }) // this probe reads the synchronous picture's samples
   await tool('Edit'); await probe('opening view')
   await tool('Navigate'); const f = P(0.5, 0.8); await page.mouse.move(...f); await page.mouse.dblclick(...f); await sleep(800); for (let i = 0; i < 5; i++) { await page.mouse.wheel(0, -100); await sleep(80) } await sleep(800)
   await tool('Edit'); await probe('after double-click floor + scroll 5 (walkthrough)')
