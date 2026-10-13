@@ -897,6 +897,19 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-02'
     },
     {
+        id: 'laser-test',
+        category: 'Editing',
+        title: 'Laser test: how far a laser throws',
+        summary: 'The SCENES window\'s Laser test draws each laser unit\'s whole scan field as a square on the walls, with its width, height and distance in metres, so you see the throw before you stand in the hall.',
+        body: [
+            'In the Studio, a project with laser lines shows a Laser test button in the SCENES window. While it is on, every laser unit draws the whole of its scan field as a white square where it lands on the room\'s surfaces, and one label says how big it is: width × height in metres, measured between the four corners where they land, then the distance from the unit to the middle of the square. It is a work tool: nothing is written to the project, and turning it off leaves no trace.',
+            'A unit is the lines that belong together: the LaserCube\'s lines share one name up to the last letter. The square starts at the middle of their origins and points where they point on average, and its size is the unit\'s scan field. That field is the half-angle the maker publishes. Where nothing is published it is an assumption, and the project\'s fixture record says so: the LaserCube\'s is read from its ">37°" and the 40 W unit has no published figure, so check both against the unit\'s own menu on site. A corner that finds no wall in reach is left open and the label says so.',
+            'To place a unit by hand, Alt+click any one of its lines (or select a line and press Shift+G) to select every line of the unit, then move it with the usual G or the gizmo. The square and its label follow when you let go.',
+        ],
+        tags: ['studio', 'laser', 'lighting', 'scenes', 'throw', 'previs'],
+        updated: '2026-10-13'
+    },
+    {
         id: 'scenes-that-show-themselves',
         category: 'Editing',
         title: 'Scenes that show themselves',

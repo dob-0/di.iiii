@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it, vi } from 'vitest'
-import { entityInfoOf, handlePickClick, pickFromHits, pickUserData } from './pickPriority.js'
+import { entityInfoOf, handlePickClick, pickFromHits, pickUserData, unitOfHits } from './pickPriority.js'
 
 // a tiny scene graph: group(entity) → mesh; beams carry beamPick
 const group = (id, { body = false, locked = false } = {}) => ({ userData: { svEntityId: id, svPick: body ? 'body' : 'other', svLocked: locked }, parent: null })
@@ -94,5 +94,36 @@ describe('handlePickClick — every entity\'s click', () => {
         const src = fs.readFileSync(path.join(cwd(), 'src/studio/components/StudioViewport.jsx'), 'utf8')
         expect(src.match(/userData=\{pickUserData\(entity\)\}/g)).toHaveLength(2)
         expect(src.match(/onClick=\{\(e\) => handlePickClick\(e,/g)).toHaveLength(2)
+    })
+})
+
+// A laser unit is several beam entities (rig-laser-41a, 41b …): Alt+click on any line picks the unit (laserTest.js), so the
+// multi-selection gizmo moves the whole unit by hand. A plain click keeps the old rule.
+describe('laser unit pick', () => {
+    const lineGroup = (id) => ({ userData: { ...pickUserData({ id, components: { light: {}, beam: { laser: { mW: [1, 1, 1] } } } }) }, parent: null })
+    const lineA = lineGroup('rig-laser-41a')
+    const beamMesh = mesh(lineA, { beamPick: true, noBounds: true })
+    const click = (hits, nativeEvent = {}) => ({ intersections: hits, delta: 0, nativeEvent, stopPropagation: vi.fn() })
+    it('pickUserData names the unit of a laser line, and only of a laser line', () => {
+        expect(pickUserData({ id: 'rig-laser-41b', components: { beam: { laser: { mW: [1] } } } }).svUnit).toBe('rig-laser-41')
+        expect('svUnit' in pickUserData({ id: 'l', components: { light: {} } })).toBe(false)
+        expect(entityInfoOf(beamMesh)).toMatchObject({ id: 'rig-laser-41a', unit: 'rig-laser-41' })
+        expect(unitOfHits([hit(beamMesh)], 'rig-laser-41a')).toBe('rig-laser-41')
+        expect(unitOfHits([hit(bodyB)], 'lamp-b')).toBeNull()
+    })
+    it('Alt+click on a line asks for its whole unit; a plain click still picks the one line', () => {
+        const onSelect = vi.fn(); const onToggleSelect = vi.fn(); const onSelectUnit = vi.fn()
+        handlePickClick(click([hit(beamMesh)], { altKey: true }), { onSelect, onToggleSelect, onSelectUnit })
+        expect(onSelectUnit).toHaveBeenCalledWith('rig-laser-41', { additive: false })
+        expect(onSelect).not.toHaveBeenCalled()
+        handlePickClick(click([hit(beamMesh)]), { onSelect, onToggleSelect, onSelectUnit })
+        expect(onSelect).toHaveBeenCalledWith('rig-laser-41a')
+        expect(onSelectUnit).toHaveBeenCalledTimes(1)
+    })
+    it('Alt+click on something that is no laser line is a plain click', () => {
+        const onSelect = vi.fn(); const onSelectUnit = vi.fn()
+        handlePickClick(click([hit(bodyB)], { altKey: true }), { onSelect, onToggleSelect: vi.fn(), onSelectUnit })
+        expect(onSelect).toHaveBeenCalledWith('lamp-b')
+        expect(onSelectUnit).not.toHaveBeenCalled()
     })
 })

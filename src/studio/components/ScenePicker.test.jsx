@@ -149,3 +149,25 @@ describe('studio.css .scene-picker: where it sits and how big its targets are', 
         expect(Number(/--di-radius:\s*(\d+)px/.exec(baseCss)?.[1])).toBeLessThanOrEqual(2)
     })
 })
+
+describe('ScenePicker: the Laser test button (a work tool, nothing written)', () => {
+    const lasers = { ...document, entities: [...document.entities, { id: 'rig-laser-41a', components: { beam: { laser: { mW: [1, 1, 1] } } } }] }
+    it('shows only when the project has laser lines and a handler, and toggles', () => {
+        const onLaserTest = vi.fn()
+        const { rerender } = render(<ScenePicker document={document} current={undefined} onPick={vi.fn()} laserTest={false} onLaserTest={onLaserTest} />)
+        expect(screen.queryByRole('button', { name: 'Laser test' })).toBeNull()
+        rerender(<ScenePicker document={lasers} current={undefined} onPick={vi.fn()} laserTest={false} onLaserTest={onLaserTest} />)
+        const button = screen.getByRole('button', { name: 'Laser test' })
+        expect(button.getAttribute('aria-pressed')).toBe('false')
+        fireEvent.click(button)
+        expect(onLaserTest).toHaveBeenCalledWith(true)
+        rerender(<ScenePicker document={lasers} current={undefined} onPick={vi.fn()} laserTest onLaserTest={onLaserTest} />)
+        expect(screen.getByRole('button', { name: 'Laser test' }).getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(screen.getByRole('button', { name: 'Laser test' }))
+        expect(onLaserTest).toHaveBeenLastCalledWith(false)
+    })
+    it('a project with lasers but no show still gets the window, for the button', () => {
+        render(<ScenePicker document={{ entities: lasers.entities }} current={undefined} onPick={vi.fn()} laserTest={false} onLaserTest={vi.fn()} />)
+        expect(screen.getByRole('button', { name: 'Laser test' })).toBeInTheDocument()
+    })
+})

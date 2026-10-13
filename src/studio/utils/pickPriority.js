@@ -1,3 +1,5 @@
+import { laserUnitKey, isLaserEntity } from './laserTest.js'
+
 // Which entity a click picks, from the ray's hits in distance order (r3f gives every hit as e.intersections).
 //
 // Owner, 2026-10-13: "I can't move the beams" and "when you finish with a model you can't deselect". Both came from
@@ -6,7 +8,11 @@
 // deselected. Rule now (Blender's click-select, read for a room full of light):
 //   1. a lamp's BODY (an entity with a light or a fixture) wins over any beam in front of it — beams are see-through;
 //   2. a BEAM wins over whatever is behind it (the place, a deck): click the beam, get its lamp;
-//   3. a LOCKED entity (runtime.locked) is picked like any other — the lock stops moves, not looking (the owner inspects
+//   3. UNIT (laser test, owner 2026-10-13 20:5x "I will move the fixtures by hand"): a laser unit is several beam entities
+//      (rig-laser-41a, 41b …), so a plain click moves one line. Alt+click on any line of a unit selects all its lines
+//      (the group carries userData.svUnit, laserTest.js laserUnitKey; the Studio passes onSelectUnit), and the multi-selection
+//      gizmo then moves the whole unit. Shift+G does the same from the keyboard (StudioEditor, "select grouped").
+//   4. a LOCKED entity (runtime.locked) is picked like any other — the lock stops moves, not looking (the owner inspects
 //      the hall by clicking it); a click on the one selected object again deselects it (the Studio's click handler).
 // The flags come from the scene graph: the entity's group carries userData { svEntityId, svPick, svLocked } and a
 // beam mesh carries userData.beamPick (SpotLightObject.jsx), so nothing here reads the document.
@@ -35,7 +41,7 @@ export const entityInfoOf = (object) => {
     let o = object
     while (o) {
         const u = o.userData || {}
-        if (u.svEntityId) return { id: u.svEntityId, body: u.svPick === 'body', locked: u.svLocked === true }
+        if (u.svEntityId) return { id: u.svEntityId, body: u.svPick === 'body', locked: u.svLocked === true, ...(u.svUnit ? { unit: u.svUnit } : {}) }
         o = o.parent
     }
     return null
@@ -47,14 +53,24 @@ export const pickUserData = (entity) => ({
     svPick: entity.components?.light || entity.components?.fixture ? 'body' : 'other',
     svLocked: entity.components?.runtime?.locked === true,
     // the building: where a beam stops (objectComponents/beamReach.js)
-    svBuilding: isArchitectureEntity(entity)
+    svBuilding: isArchitectureEntity(entity),
+    ...(isLaserEntity(entity) ? { svUnit: laserUnitKey(entity) } : {})
 })
+
+/** The unit key of the picked entity, read from the hits (null if it is no laser line). */
+export const unitOfHits = (hits = [], pickedId, infoOf = entityInfoOf) => {
+    for (const hit of hits) {
+        const info = hit?.object ? infoOf(hit.object) : null
+        if (info?.id === pickedId && info.unit) return info.unit
+    }
+    return null
+}
 
 // One click handler for every entity's group (walked 2026-10-13: only GROUP entities used the rule, so a top-level
 // lamp's beam still took a click meant for the lamp behind it, and an orbit drag that ended on a lamp selected it).
 // A plain click on the one selected object again deselects it (owner 10-13: "you can't deselect"); Esc and Alt+A too. r3f calls it on the nearest hit's entity first; it decides from every
 // hit under the pointer and stops there, so no entity behind decides again.
-export const handlePickClick = (e, { onSelect, onToggleSelect, selectedIds = null }) => {
+export const handlePickClick = (e, { onSelect, onToggleSelect, onSelectUnit = null, selectedIds = null }) => {
     if (e.delta > 2) return
     e.stopPropagation()
     const picked = pickFromHits(e.intersections)
@@ -63,7 +79,9 @@ export const handlePickClick = (e, { onSelect, onToggleSelect, selectedIds = nul
         if (!additive) onSelect?.(null)
         return
     }
-    if (additive) onToggleSelect?.(picked)
+    const unit = onSelectUnit && e.nativeEvent?.altKey ? unitOfHits(e.intersections, picked) : null
+    if (unit) onSelectUnit(unit, { additive: Boolean(additive) })
+    else if (additive) onToggleSelect?.(picked)
     else if (selectedIds?.size === 1 && selectedIds.has(picked)) onSelect?.(null)
     else onSelect?.(picked)
 }

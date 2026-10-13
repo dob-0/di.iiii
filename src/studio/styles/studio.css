@@ -1676,6 +1676,19 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* Laser test (LaserTest.jsx): one label per laser unit, at the centre ray's hit. Same face as the transform HUD. */
+.laser-test-label {
+    padding: var(--di-space-1) var(--di-space-3);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-text);
+    font-size: var(--di-text-3);
+    line-height: 1.4;
+    font-family: var(--di-mono);
+    white-space: nowrap;
+}
+
 /* ─── Scenes picker (ScenePicker.jsx) ─────────────────────────────────
    A Studio window, not a card of its own: the shell, header, title and fold button of the Objects
    window (sfp-*, scc-collapse-btn), the cluster's buttons (scc-btn) and the Objects list's rows
