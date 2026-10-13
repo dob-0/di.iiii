@@ -71,3 +71,6 @@ Decision record `docs/ai/decisions/2026-10-13-views-library-words-workflow.md` (
 
 ## 10-13 20:4x — the professional sweep brief
 Owner: one best walk, every device (touchpad!), everything professional. Brief `docs/ai/cloud-briefs/2026-10-13-pro-sweep.md`: his standing decisions, one method (Nielsen heuristics + WCAG 2.2 AA + a device matrix with touchpad wheel/pinch), file ownership for six cloud agents #24–#29.
+
+## 10-13 21:0x — physics check: beams that leave the building (hard rule 'Physics first')
+Owner's screenshot from outside: beams through the roof into the sky. New `scripts/place/physics_check.py` (rest axis against the hall record's walls, floor, roof deck, lantern): 34 leaks (PL5403 at epic-build's 120 m default reach, the 12 upright side lines at their old 18 m). `--fix` set each beam.length to its first hit: v1544 → v1578, 0 leaks. Runtime clipping along a scene's current aim → cloud #31.
