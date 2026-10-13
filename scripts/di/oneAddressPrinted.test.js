@@ -54,6 +54,7 @@ afterEach(() => {
     for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true })
 })
 
+// eslint-disable-next-line no-control-regex
 const plain = (text) => String(text).replace(/\u001b\[[0-9;]*m/g, '')
 const config = (id) => ({ machine: { id, name: 'm' } })
 const itIsThisDi = { askSelf: async () => config('aaa'), askDoor: async () => ({ status: 200, config: config('aaa') }) }
