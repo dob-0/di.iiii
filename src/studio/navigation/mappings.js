@@ -46,13 +46,7 @@ export const NAVIGATION_PRESETS = Object.freeze({
             one: CC_ACTION.ROTATE,
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
-        dollyToCursor: true,
-        // Auto Depth ON (owner, 2026-10-08: "zoom works, but right-drag left/right is stuck"). Measured on the RTX 3080: after the
-        // wheel zoomed in, the orbit point sat 0.35 m from the camera in open air, so a 240 px right-drag moved the camera 0.11 m
-        // (orbit 0.57 m) while the hall is 100 m long. camera-controls pans and orbits in proportion to the distance to that point;
-        // Auto Depth puts the point on the surface under the pointer (Blender manual, Preferences > Navigation > Auto Depth), so a
-        // drag follows what you see. The buttons are unchanged.
-        autoDepth: true,
+        // Moves keep the standard speed (useCameraNavigation, freeMove.js): nothing under the pointer changes them (owner, 2026-10-13).
         focusOnDoubleClick: true,
         // Easing (camera-controls SmoothDamp times, seconds): a glide on drags and wheel like Sketchfab's feel. Sketchfab
         // publishes no numbers; these are camera-controls' defaults (2.10.1), stated as such, not measured against Sketchfab.
@@ -87,15 +81,10 @@ export const NAVIGATION_PRESETS = Object.freeze({
             one: CC_ACTION.ROTATE,
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
-        dollyToCursor: false, // the owner's Blender: Zoom to Mouse Position OFF (2026-10-12)
-        // Every move's speed from the scene distance, not the pixel under the pointer (sceneDistance.js; owner's yes, 2026-10-13).
-        speedFromView: true,
-        // Blender (view3d_navigate_view_zoom.cc, main, read 2026-10-12): a wheel step is `step = 1.2f` applied at once, no
-        // Smooth View; drags write the view per mouse move. So no drag/wheel easing; Smooth View (his 200 ms) only for view
+        // Blender writes the view per mouse move and per wheel notch with no easing; Smooth View (his 200 ms) only for view
         // changes (numpad views, frame), which camera-controls does with smoothTime on setLookAt transitions.
         smoothTime: 0.2,
         draggingSmoothTime: 0,
-        autoDepth: true,
         modifierGestures: true,
         rows: Object.freeze([
             ['Middle drag', 'Orbit'],

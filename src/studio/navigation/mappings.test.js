@@ -9,13 +9,11 @@ const { NONE, ROTATE, TRUCK, DOLLY, TOUCH_DOLLY_TRUCK } = CC_ACTION
 
 describe('studio preset = the bindings Studio shipped before presets', () => {
     // Literal copied from StudioViewport.jsx at origin/dev e5d95ac9 (2026-10-01).
-    it('mouse, touch, dollyToCursor are the old literal; Auto Depth is the one deliberate change', () => {
+    it('mouse and touch are the old literal; the standard move replaced Auto Depth (2026-10-13)', () => {
         const p = NAVIGATION_PRESETS.studio
         expect({ ...p.mouseButtons }).toEqual({ left: 1, middle: 16, right: 2, wheel: 16 })
         expect({ ...p.touches }).toEqual({ one: 1, two: 4096 })
-        expect(p.dollyToCursor).toBe(true)
-        // autoDepth was false in the old literal; turned ON 2026-10-08 on purpose (pan/orbit stuck after a wheel zoom: 0.11 m per 240 px)
-        expect(p.autoDepth).toBe(true)
+        expect(p.autoDepth).toBeUndefined() // the standard move (2026-10-13): nothing under the pointer changes a move
         expect(p.modifierGestures).toBe(false)
         expect(p.focusOnDoubleClick).toBe(true) // Sketchfab's double-click focus (2026-10-12)
         expect([p.smoothTime, p.draggingSmoothTime]).toEqual([0.25, 0.125]) // glide: camera-controls defaults, stated as such
@@ -59,8 +57,7 @@ describe('blender preset (Blender 5.2 manual behaviour)', () => {
     it('wheel zooms like Blender (Zoom to Mouse Position OFF, the owner\'s preference 2026-10-12); touch keeps studio gestures', () => {
         const p = NAVIGATION_PRESETS.blender
         expect(p.mouseButtons.wheel).toBe(DOLLY)
-        expect(p.dollyToCursor).toBe(false)
-        expect(p.autoDepth).toBe(true)
+        expect(p.autoDepth).toBeUndefined() // the standard move (2026-10-13): nothing under the pointer changes a move
         expect({ ...p.touches }).toEqual({ one: ROTATE, two: TOUCH_DOLLY_TRUCK })
     })
 })

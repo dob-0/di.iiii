@@ -1,21 +1,24 @@
-// Applies a navigation preset to a camera-controls instance, per gesture.
-//
-// The 'studio' preset's BUTTONS are still the props StudioViewport passes (nothing is remapped here); this hook runs for it
-// only to move the orbit point to the surface under the pointer (Auto Depth, which the studio preset now has on). Other presets add one capture-phase
-// pointerdown listener (runs before camera-controls' own pointerdown on the
-// element) that sets mouseButtons[button] from actionFor() for the gesture that
-// is starting — camera-controls reads mouseButtons on every pointermove, so the
-// choice holds until the next pointerdown — and, when Auto Depth is on, moves
-// the orbit point to the surface under the pointer (pickPivot).
+// THE STANDARD MOVE for every camera that goes through StudioViewport: both Studio tools (Edit, Navigate) and the public
+// viewer (owner, 2026-10-13: "one standard model where it will be easy to navigate, not connected to the objects around ...
+// the same speed and motion to every side ... you can go everywhere ... settable"). The speed is a setting (freeMove.js),
+// never read from what is under the pointer, near the camera or in view:
+// - the wheel moves the camera and its turning point forward or back by the same metres every notch, through anything;
+// - a slide drag moves both sideways or up and down by the same metres per pixel in every direction;
+// - a zoom drag moves both forward or back, 100 px a step;
+// - a turn drag turns around a point a fixed distance ahead (setting: where you stand); the buttons stay the tool's own
+//   (mappings.js: Edit like Blender, Navigate like Sketchfab);
+// - a double-click on a surface turns the view to it and makes it the turning point until the next move (an explicit choice);
+// - Blender's Orbit Around Selection, when the viewer turns it on, turns around the selection (an explicit choice).
+// camera-controls keeps its own turning and easing; this hook places the turning point at each drag's start (capture-phase
+// pointerdown, before camera-controls' own) and does the wheel, the slide and the zoom drag itself.
 import { useEffect, useRef } from 'react'
 import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
-import { clientToNdc, pickPivot, selectionCenter } from './autoDepth.js'
+import { clientToNdc, contentLargestSide, pickPivot, selectionCenter } from './autoDepth.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
-import { createSceneDistance, nextSceneDistance } from './sceneDistance.js'
+import { IN_PLACE_DISTANCE, autoSpeed, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
-// A wheel burst is one gesture: pick once, after this much quiet.
 
 // Content objects only: Studio tags every entity group with userData.svEntityId
 // (StudioViewport.jsx); grid, gizmo and rig markers carry no such tag.
@@ -75,24 +78,26 @@ export function clampUpdates(cc) {
     return () => { cc.update = original; delete cc.__diClampedUpdate }
 }
 
-// WHEEL ZOOM = Blender's (view3d_navigate_view_zoom.cc `view_zoom_apply_step`, v5.0.0; measured on the owner's Blender 5.2.2,
-// 2026-10-13, scripts/nav/blender-wheel-probe.py: 20 notches = 1.2^20 exactly, the orbit point never moved, the pointer's place
-// made no difference, zoom-out ran past clip end x 10, zoom-in stopped at the orbit point). One notch scales the ORBIT DISTANCE
-// by 1.2 (in: /1.2). The wheel reads nothing under the pointer: the orbit point moves only when a drag starts (Auto Depth). Blender
-// steps only while the distance is inside its soft range (ED_view3d_dist_soft_range_get: up to clip end x 10) and never clamps, so
-// a view outside the range still comes back. Pure: numbers in, numbers out.
-export const WHEEL_STEP_FACTOR = 1.2
-export function wheelZoomPlan({ distance, notches, minDistance = 0, maxDistance = Infinity }) {
-    if (!(distance > 0) || !Number.isFinite(notches) || notches === 0) return null
-    if (notches > 0 && distance <= minDistance) return null
-    if (notches < 0 && distance >= maxDistance) return null
-    // notches > 0 = in; a notch out never leaves the range (review-892 F11: 450 m + one notch gave 540 m past the 500 m limit)
-    const newDistance = notches < 0 ? Math.min(distance * Math.pow(WHEEL_STEP_FACTOR, -notches), maxDistance) : distance * Math.pow(WHEEL_STEP_FACTOR, -notches)
-    return { step: distance - newDistance, newDistance }
+// Wheel notches for the standard move (+ = forward). Chrome on Linux sends Shift+wheel as a sideways scroll (deltaX, deltaY 0),
+// and Shift is the "faster" key: that sideways scroll counts as the wheel. Pure.
+export function standardWheelNotches(event) {
+    const n = wheelNotches(event)
+    if (n) return n
+    if (!event?.shiftKey) return 0
+    const dx = Number(event?.deltaX)
+    if (!Number.isFinite(dx) || dx === 0) return 0
+    const px = event.deltaMode === 1 ? dx * 16 : event.deltaMode === 2 ? dx * 100 : dx
+    return -px / 100
 }
 
-// Does this wheel event zoom in (toward the scene)? camera-controls: negative deltaY dollies in. Pure.
-export const zoomsIn = (event) => Number(event?.deltaY) < 0
+// The page's last automatic speed reading, for the settings panel ("Auto (2.5 m)"). Announced as a window event.
+export const STANDARD_MOVE_SPEED_EVENT = 'di:standard-move-speed'
+let lastReading = { auto: null, speed: null }
+export const getStandardMoveReading = () => lastReading
+function announceReading(reading) {
+    lastReading = reading
+    try { window.dispatchEvent(new CustomEvent(STANDARD_MOVE_SPEED_EVENT, { detail: reading })) } catch { /* no window */ }
+}
 
 export function useCameraNavigation({
     controlsRef,
@@ -101,147 +106,157 @@ export function useCameraNavigation({
     orbitSelection = false,
     selectedEntityIds = null,
     getScene,
-    // The WebGLRenderer, for the scene-distance depth picture (sceneDistance.js). Read at gesture time.
-    getGl,
+    // The standard move's settings (preference.js): 'auto' or metres per notch, and 'point' or 'place'. Read at gesture time.
+    speed: speedSetting = 'auto',
+    turn: turnSetting = 'point',
     // Re-run when the controls mount/unmount (Studio hides them in XR / when disabled).
     active = true,
 }) {
-    // Read at gesture time, so a new selection does not re-register listeners.
+    // Read at gesture time, so a new selection or setting does not re-register listeners.
     const selectionRef = useRef(selectedEntityIds)
     useEffect(() => { selectionRef.current = selectedEntityIds }, [selectedEntityIds])
+    const settingsRef = useRef({ speed: speedSetting, turn: turnSetting })
+    useEffect(() => { settingsRef.current = { speed: speedSetting, turn: turnSetting } }, [speedSetting, turnSetting])
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
-        if (!active || !cc || (preset.id === 'studio' && !preset.autoDepth)) return undefined
+        if (!active || !cc) return undefined
         const element = cc._domElement
         const doc = element?.ownerDocument
         if (!element || !doc) return undefined
         const unclamp = clampUpdates(cc)
-        // The Blender tool's moves take their speed from the scene distance (sceneDistance.js, owner's yes 2026-10-13).
-        const sceneDistance = preset.speedFromView ? createSceneDistance() : null
-        let lastWheel = null // { pos, distance }: where this wheel left the camera, so the next notch knows it is the same run
-        // `near`: where the depth picture starts. The wheel's starts at the contact distance, so it goes through what it touches;
-        // a drag's starts at the camera's own near plane, so it follows what the eye sees (review-892 F12).
-        const measureView = (near) => {
-            const scene = getScene?.()
-            return sceneDistance?.measure({ gl: getGl?.(), scene, camera: cc.camera, roots: scene ? entityRoots(scene) : [], near }) ?? null
-        }
-        const viewRange = () => ({ min: cc.minDistance, max: Math.min(cc.maxDistance, cc.camera.far) })
-
-        // `gestureStart`: the gesture's own pointerdown/wheel, after settleForGesture stopped any easing: camera-controls still
-        // reports `active` for a frame after stop(), and a pivot that waits for it never lands (measured: the first gesture's pivot
-        // was refused, the second's applied).
-        // Dev-only trace of every pivot decision (window.__diNavTrace), read by scripts/nav/measure-pan-after-zoom.cjs
-        // with NAV_TRACE=1: the 2026-10-12 measurement showed the fix changing nothing and this is how it was found.
+        const ease = preset.draggingSmoothTime > 0
+        // Dev-only trace of every decision (window.__diNavTrace), read by the probes in scripts/nav with NAV_TRACE=1.
         const trace = (entry) => { if (import.meta.env?.DEV) (window.__diNavTrace ||= []).push({ t: Math.round(performance.now()), ...entry }) }
-        const pivotAt = (event, action, gestureStart = false) => {
-            const scene = getScene?.()
-            if (import.meta.env?.DEV) window.__diNavScene = scene
-            if (!scene) { trace({ action, gestureStart, why: 'no scene' }); return }
-            const selected = selectionRef.current
-            if (action === CC_ACTION.ROTATE && orbitSelection && selected?.length) {
-                const center = selectionCenter(entityRoots(scene, new Set(selected)))
-                if (center) { applyPivot(cc, center, { force: gestureStart, onAxis: false }); return }
+
+        // The automatic speed is taken once, from the space's size, the first time it has a size; then it is kept, so every
+        // move of this visit has the same speed.
+        let auto = null
+        const speed = () => {
+            if (auto == null && settingsRef.current.speed === 'auto') {
+                const scene = getScene?.()
+                if (import.meta.env?.DEV) window.__diNavScene = scene
+                auto = autoSpeed(scene ? contentLargestSide(entityRoots(scene)) : 0)
+                if (auto != null) trace({ why: 'auto speed taken', auto: +auto.toFixed(3) })
             }
-            // The Blender tool: the orbit point goes onto the view axis at the scene distance, so orbit, pan and the drag zoom move
-            // in proportion to what the view shows, never to the one object under the pointer (sceneDistance.js).
-            if (preset.speedFromView) {
-                lastWheel = null
-                const measured = measureView(cc.camera.near)
-                const d = nextSceneDistance({ measured, ...viewRange() })
-                const applied = d ? applyPivot(cc, axisPointAtDepth(cc.camera, cc.camera.getWorldDirection(new Vector3()).multiplyScalar(d).add(cc.camera.position)), { force: gestureStart }) : false
-                trace({ action, gestureStart, source: 'scene distance', measured: measured == null ? null : +measured.toFixed(3), distance: d == null ? null : +d.toFixed(3), applied })
-                return
+            const s = resolveSpeed(settingsRef.current.speed, auto)
+            if (lastReading.auto !== auto || lastReading.speed !== s) announceReading({ auto, speed: s })
+            return s
+        }
+        // A double-click made a surface the turning point; it stays so until another move (wheel, slide, zoom drag).
+        let focused = false
+
+        const camPos = new Vector3(), viewDir = new Vector3(), point = new Vector3(), goalPos = new Vector3(), goalTarget = new Vector3()
+        // The turning point onto the view axis, `distance` ahead; the camera does not move.
+        const placeTurnPoint = (distance) => {
+            const cam = cc.camera
+            cam.updateMatrixWorld()
+            cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
+            point.copy(camPos).addScaledVector(viewDir, distance)
+            cc.setLookAt(camPos.x, camPos.y, camPos.z, point.x, point.y, point.z, false)
+        }
+        // Camera and turning point forward (+) or back along the view, from where the controls are heading (their goal), so
+        // notches that arrive while a glide is still running add up exactly.
+        const moveForward = (metres) => {
+            if (!metres) return
+            cc.getPosition(goalPos, true); cc.getTarget(goalTarget, true)
+            viewDir.subVectors(goalTarget, goalPos)
+            const keep = viewDir.length()
+            if (!(keep > 0)) return
+            viewDir.divideScalar(keep)
+            goalPos.addScaledVector(viewDir, metres); goalTarget.addScaledVector(viewDir, metres)
+            cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, ease)
+        }
+        // drei redraws the on-demand loop on 'update'; the Studio keeps the view on 'controlend'.
+        const announceMove = (event) => {
+            cc.dispatchEvent({ type: 'update' })
+            return event
+        }
+
+        // The slide and the zoom drag are this hook's own, at the standard speed; camera-controls sees no button for them.
+        const startDrag = (event, kind) => {
+            const pointerId = event.pointerId
+            let lastX = event.clientX, lastY = event.clientY
+            if (kind === 'zoom') focused = false
+            cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
+            const onMove = (e) => {
+                if (e.pointerId !== pointerId) return
+                const dx = e.clientX - lastX, dy = e.clientY - lastY
+                lastX = e.clientX; lastY = e.clientY
+                if (!dx && !dy) return
+                const s = speed()
+                if (kind === 'slide') {
+                    const fov = typeof cc.camera.getEffectiveFOV === 'function' ? cc.camera.getEffectiveFOV() : cc.camera.fov
+                    const mpp = slideMetresPerPixel(turnDistance(s, 'point'), fov, element.getBoundingClientRect().height)
+                    // camera-controls' own drag passes (last - current) to truck(): the same sign here, so it feels the same
+                    cc.truck(-dx * mpp, -dy * mpp, ease)
+                } else {
+                    moveForward(zoomDragStep(dy, s))
+                }
+                announceMove(e)
             }
-            // Auto Depth (Blender view3d_navigate.cc `navigate_pivot_get`, v5.0.0): the orbit point goes to the depth of the surface
-            // under the pointer when a drag starts; nothing there, and the view centre stays where it is (Blender's fallback_depth_pt
-            // is -rv3d->ofs). Orbit, pan and the drag zoom all take it, as in Blender; the Sketchfab tool keeps its orbit centre on
-            // a rotate (double-click moves it).
-            if (!preset.autoDepth || (action === CC_ACTION.ROTATE && preset.id === 'studio')) { trace({ action, gestureStart, why: 'sketchfab orbit or no autoDepth' }); return }
-            const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
-            if (!ndc) { trace({ action, gestureStart, why: 'no ndc' }); return }
-            const roots = entityRoots(scene)
-            // A surface within the clamp distance is the one we are pressed against: look past it (autoDepth.js `beyond`).
-            const beyond = import.meta.env?.DEV && window.__diNavBeyond != null ? window.__diNavBeyond : cc.minDistance * 1.5 // dev: measurement A/B
-            const hit = pickPivot({ camera: cc.camera, ndc, objects: roots, beyond })
-            const applied = hit ? applyPivot(cc, hit, { force: gestureStart }) : false
-            trace({ action, gestureStart, roots: roots.length, ndc: ndc.map((v) => +v.toFixed(3)), hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, applied, kept: !hit, active: cc.active, distance: +cc.distance.toFixed(3) })
+            const onUp = (e) => {
+                if (e.pointerId !== pointerId) return
+                doc.removeEventListener('pointermove', onMove, true)
+                doc.removeEventListener('pointerup', onUp, true)
+                doc.removeEventListener('pointercancel', onUp, true)
+                cc.dispatchEvent({ type: 'controlend', originalEvent: e })
+                trace({ action: kind, end: true, distance: +cc.distance.toFixed(3) })
+            }
+            doc.addEventListener('pointermove', onMove, true)
+            doc.addEventListener('pointerup', onUp, true)
+            doc.addEventListener('pointercancel', onUp, true)
+            trace({ action: kind, gestureStart: true, speed: +speed().toFixed(3) })
         }
 
         const onPointerDown = (event) => {
             if (!element.contains(event.target)) { trace({ why: 'pointer outside controls element', target: event.target?.tagName, cls: String(event.target?.className || '').slice(0, 60) }); return }
-            // pointerType is what the browser reports, not a guess: touch keeps
-            // the touch gestures, only mouse/pen buttons are remapped.
+            // pointerType is what the browser reports, not a guess: touch keeps camera-controls' touch gestures.
             if (event.pointerType === 'touch') return
             const name = BUTTON_NAME[event.button]
             if (!name) return
-            const action = actionFor(preset.id, event.button,
-                { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
+            const action = actionFor(preset.id, event.button, { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
+            if (action === CC_ACTION.NONE) { cc.mouseButtons[name] = action; return }
+            settleForGesture(cc)
+            if (action === CC_ACTION.TRUCK || action === CC_ACTION.SCREEN_PAN || action === CC_ACTION.DOLLY || action === CC_ACTION.ZOOM) {
+                cc.mouseButtons[name] = CC_ACTION.NONE
+                startDrag(event, action === CC_ACTION.DOLLY || action === CC_ACTION.ZOOM ? 'zoom' : 'slide')
+                return
+            }
             cc.mouseButtons[name] = action
-            if (action !== CC_ACTION.NONE) { settleForGesture(cc); pivotAt(event, action, true) }
+            if (action !== CC_ACTION.ROTATE) return
+            const selected = selectionRef.current
+            const scene = getScene?.()
+            if (orbitSelection && selected?.length && scene) {
+                const center = selectionCenter(entityRoots(scene, new Set(selected)))
+                if (center) { applyPivot(cc, center, { force: true, onAxis: false }); trace({ action: 'turn', source: 'selection' }); return }
+            }
+            if (focused) { trace({ action: 'turn', source: 'double-clicked point' }); return }
+            const d = turnDistance(speed(), settingsRef.current.turn)
+            placeTurnPoint(d)
+            trace({ action: 'turn', gestureStart: true, distance: +d.toFixed(3), turn: settingsRef.current.turn })
         }
 
-        const rayDir = new Vector3(), viewDir = new Vector3(), camPos = new Vector3(), newPos = new Vector3(), newTarget = new Vector3()
         const onWheel = (event) => {
             if (!element.contains(event.target)) return
             event.preventDefault()
-            const notches = wheelNotches(event)
+            const notches = standardWheelNotches(event)
             if (!notches) return
-            const cam = cc.camera
-            // camera-controls moves the camera object only in update() (2.10.1): a second notch in the same frame read the old place
-            // and overwrote the first (review-892 F3: 1.00 m moved instead of 1.83 m). The Blender tool's moves are instant, so the
-            // pending pose is written first; the Sketchfab tool eases, and where it is mid-ease is where it is.
-            if (preset.speedFromView) cc.update(0)
-            cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
-            // Blender's soft range: in to the near clip (ED_view3d_dist_soft_min_get, perspective: clip start x 1.5), out to clip end x 10,
-            // and never past the controls' own maxDistance, which would pull the camera back (camera-controls clamps the radius).
-            let range = { minDistance: cam.near * 1.5, maxDistance: Math.min(cc.maxDistance, cam.far * 10) }
-            let hit = null, distance = cc.distance
-            if (preset.dollyToCursor) {
-                // The Sketchfab tool zooms toward what is under the pointer, through it when pressed against it (`beyond`),
-                // along the ray through the pointer; nothing under it, and it is the orbit distance, as in Blender.
-                const scene = getScene?.()
-                const roots = scene ? entityRoots(scene) : []
-                const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
-                hit = ndc && roots.length ? pickPivot({ camera: cam, ndc, objects: roots, beyond: cc.minDistance * 1.5 }) : null
-                if (hit) distance = camPos.distanceTo(hit)
-                if (ndc) rayDir.set(ndc[0], ndc[1], 0.5).unproject(cam).sub(camPos).normalize()
-                else rayDir.copy(viewDir)
-            } else {
-                // The Blender tool (Zoom to Mouse Position OFF, the owner's preference): along the view axis, by Blender's ratio of
-                // the SCENE DISTANCE. Inside one run of notches it changes at most 1.2x per notch; a surface closer than the
-                // contact distance is not in the depth picture, so the wheel goes through it and never stops at it.
-                rayDir.copy(viewDir)
-                const consecutive = Boolean(lastWheel) && camPos.distanceTo(lastWheel.pos) < 1e-3
-                const measured = measureView(Math.max(cc.minDistance, cam.near))
-                // 1.2 per notch of scroll, whatever one event carries (a trackpad's tenth, a fast wheel's three: review-892 F2)
-                const ratio = Math.pow(WHEEL_STEP_FACTOR, Math.abs(notches))
-                const d = nextSceneDistance({ measured, previous: consecutive ? lastWheel.distance : cc.distance, consecutive, ratio, ...viewRange() })
-                if (d) distance = d
-                range = { minDistance: 0, maxDistance: viewRange().max }
-                trace({ action: 'wheel-measure', measured: measured == null ? null : +measured.toFixed(3), consecutive, distance: +distance.toFixed(3) })
-            }
-            const plan = wheelZoomPlan({ distance, notches, ...range })
-            if (!plan) { trace({ action: 'wheel', notches, distance: +distance.toFixed(3), step: 0, why: 'outside the soft range' }); return }
-            newPos.copy(camPos).addScaledVector(rayDir, plan.step)
-            newTarget.copy(newPos).addScaledVector(viewDir, Math.max(plan.newDistance, cc.minDistance))
-            // The distance this notch USED: keeping the post-step distance (d / 1.2) cancelled the 1.2 allowance, and a run could
-            // never speed up again after passing a wall (review-892 F1: 40 notches at 0.07 m with 30 m measured behind it).
-            if (preset.speedFromView) lastWheel = { pos: newPos.clone(), distance }
-            // camera-controls' own wheel used to announce itself; drei invalidates the on-demand loop on 'update' and the Studio
-            // saves the camera on 'controlend', so the app's wheel announces the same way (else nothing draws until the next move).
+            focused = false
+            const s = speed()
+            const metres = wheelStep(notches, s, speedModifier({ shift: event.shiftKey, alt: event.altKey }))
             cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
-            cc.setLookAt(newPos.x, newPos.y, newPos.z, newTarget.x, newTarget.y, newTarget.z, preset.draggingSmoothTime > 0)
-            cc.dispatchEvent({ type: 'update' })
+            moveForward(metres)
+            announceMove(event)
             cc.dispatchEvent({ type: 'controlend', originalEvent: event })
-            trace({ action: 'wheel', notches, hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null, distance: +distance.toFixed(3), step: +plan.step.toFixed(3), newDistance: +plan.newDistance.toFixed(3) })
+            trace({ action: 'wheel', notches: +notches.toFixed(3), metres: +metres.toFixed(3), speed: +s.toFixed(3) })
         }
 
-        // Neither Blender nor Sketchfab ever shows the browser's menu over the view (owner, 2026-10-12: "save image as,
-        // inspect… kidding me"): a right-click on the viewport is the app's.
+        // Neither Blender nor Sketchfab ever shows the browser's menu over the view (owner, 2026-10-12): a right-click on the
+        // viewport is the app's.
         const onContextMenu = (event) => { if (element.contains(event.target)) event.preventDefault() }
 
-        // Sketchfab: double-click a surface and the camera focuses on it (the orbit point moves there).
+        // Sketchfab: double-click a surface and the view turns to it; it is the turning point until the next move.
         const onDoubleClick = (event) => {
             if (!preset.focusOnDoubleClick || !element.contains(event.target)) return
             const scene = getScene?.()
@@ -249,22 +264,27 @@ export function useCameraNavigation({
             const ndc = clientToNdc(event.clientX, event.clientY, element.getBoundingClientRect())
             if (!ndc) return
             settleForGesture(cc)
-            const point = pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) })
-            if (point) { const c = cc.camera.position; cc.setLookAt(c.x, c.y, c.z, point.x, point.y, point.z, true) }
-            trace({ action: 'focus', hit: point ? [point.x, point.y, point.z].map((v) => +v.toFixed(2)) : null })
+            const hit = pickPivot({ camera: cc.camera, ndc, objects: entityRoots(scene) })
+            if (hit) { const c = cc.camera.position; cc.setLookAt(c.x, c.y, c.z, hit.x, hit.y, hit.z, true); focused = true }
+            trace({ action: 'focus', hit: hit ? [hit.x, hit.y, hit.z].map((v) => +v.toFixed(2)) : null })
         }
 
+        // The controls never bend a move for distance: their clamps would pull the camera back toward a range.
+        const limits = { min: cc.minDistance, max: cc.maxDistance }
+        cc.minDistance = IN_PLACE_DISTANCE / 2
+        cc.maxDistance = Infinity
         doc.addEventListener('pointerdown', onPointerDown, { capture: true })
         element.addEventListener('wheel', onWheel, { passive: false })
         doc.addEventListener('contextmenu', onContextMenu, { capture: true })
         doc.addEventListener('dblclick', onDoubleClick, { capture: true })
         return () => {
             unclamp()
-            sceneDistance?.dispose()
+            cc.minDistance = limits.min
+            cc.maxDistance = limits.max
             doc.removeEventListener('pointerdown', onPointerDown, { capture: true })
             element.removeEventListener('wheel', onWheel)
             doc.removeEventListener('contextmenu', onContextMenu, { capture: true })
             doc.removeEventListener('dblclick', onDoubleClick, { capture: true })
         }
-    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene, getGl])
+    }, [active, controlsRef, presetId, ortho, orbitSelection, getScene])
 }

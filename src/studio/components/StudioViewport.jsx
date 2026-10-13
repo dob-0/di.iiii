@@ -42,6 +42,7 @@ import {
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
+import { IN_PLACE_DISTANCE } from '../navigation/freeMove.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
@@ -534,8 +535,6 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     useHoldFrames(isXrPresenting, 'xr') // a headset session is the headset's own loop
     const scene = useThree((state) => state.scene)
     const getScene = useCallback(() => scene, [scene])
-    const gl = useThree((state) => state.gl)
-    const getGl = useCallback(() => gl, [gl])
 
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
@@ -559,7 +558,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         orbitSelection: navigation.orbitSelection,
         selectedEntityIds,
         getScene,
-        getGl,
+        speed: navigation.speed,
+        turn: navigation.turn,
         active: enabled && !isXrPresenting,
     })
 
@@ -638,7 +638,6 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         <CameraControls
             ref={controlsRef}
             makeDefault
-            dollyToCursor={preset.dollyToCursor}
             azimuthRotateSpeed={rotateSpeed}
             polarRotateSpeed={rotateSpeed}
             // Zoom never stops: at minDistance the wheel carries the target forward with the
@@ -647,8 +646,9 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             infinityDolly
             smoothTime={preset.smoothTime}
             draggingSmoothTime={preset.draggingSmoothTime}
-            minDistance={0.35}
-            maxDistance={500}
+            // The standard move (useCameraNavigation): no distance range bends a move; the public viewer's Inside lock sets its own.
+            minDistance={IN_PLACE_DISTANCE / 2}
+            maxDistance={Infinity}
             mouseButtons={bindings.mouseButtons}
             touches={bindings.touches}
             onControlEnd={() => {
