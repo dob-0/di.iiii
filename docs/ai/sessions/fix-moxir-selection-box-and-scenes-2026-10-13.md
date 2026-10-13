@@ -56,3 +56,6 @@
 
 ## 10-13 17:5x — right line per head on the open floor (N564)
 Owner: the right beams still in the middle; check the photos and the open spaces; put them in the right place. New `scripts/place/right_line_clear.py` (every hall box grown by its stated error, the beam cast along the head's rotation, the largest clear x per head, else the floor's edge); step 2b of the rig script uses it: z 13 → x 7.0, z 19 → 3.0 (machine block: conveyor, hopper, blower, tank), z 25 → 6.0, z 31 → 6.0, z 37 → 9.0, z 43 → 8.5. Applied to v2-9 (5 head ops + looks rebuilt). Photos read: 004, 009, 023, the 09-17 walk video.
+
+## 10-13 18:2x — beams take clicks, the place is a click on empty (N570, N571)
+Owner: 'I can't move the beams', 'you can't deselect'. Cause: beam meshes refused the ray since the laser-line work, so a click on a beam fell through to the hall or the forecourt box, which got selected; nothing ever counted as empty. Now `src/studio/utils/pickPriority.js` decides from every hit: a lamp body beats a beam in front of it, a beam beats what is behind it, a locked entity is never picked, only-locked-under-the-pointer clears the selection. v2-9: place-hall and the three rig-out boxes locked (v1307). Cloud brief for the rest: docs/ai/cloud-briefs/2026-10-13-studio-workflow-sweep.md.

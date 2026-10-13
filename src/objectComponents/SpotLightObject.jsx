@@ -172,12 +172,10 @@ export default function SpotLightObject({
                     ref={coneRef}
                     geometry={beamGeometry}
                     position={throwShape.position}
-                    // Never in the way of a click: the cone is as wide as the
-                    // throw, and a selectable one would swallow every pick in
-                    // the Studio for whatever stands inside the beam. Nor in the selection
+                    // Takes a click, but only as the LAST choice: a lamp body behind the cone wins, the place
+                    // behind it loses (Studio pickPriority.js reads userData.beamPick). Not in the selection
                     // box: userData.noBounds (selectionBounds.js) keeps the box on the lamp.
-                    raycast={() => null}
-                    userData={{ noBounds: true }}
+                    userData={{ noBounds: true, beamPick: true }}
                 >
                     <meshBasicMaterial
                         color={color}
@@ -257,7 +255,7 @@ function BeamPart({ gl, part, values }) {
     setBeamAirUniforms(material, values)
     return (
         <>
-            <mesh ref={meshRef} geometry={geometry} material={material} raycast={() => null} userData={{ noBounds: true }} onBeforeRender={beforeBeamRender} />
+            <mesh ref={meshRef} geometry={geometry} material={material} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeBeamRender} />
             {values.strobeHz > 0 ? <BeamAirStrobe material={material} values={values} /> : null}
         </>
     )
@@ -297,7 +295,7 @@ function LaserLines({ gl, laser, color, level = 1, length, anisotropy }) {
     material.uniforms.uDiam.value = laser.diameter_mm / 1000
     material.uniforms.uDiv.value = laser.divergence_mrad / 1000
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
-    return <mesh geometry={geometry} material={material} raycast={() => null} frustumCulled={false} userData={{ noBounds: true }} onBeforeRender={beforeLaserRender} />
+    return <mesh geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
 }
 
 function beforeLaserRender(renderer, scene, camera) {
