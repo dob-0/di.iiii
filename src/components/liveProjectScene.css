@@ -108,6 +108,13 @@
     transition: opacity 0.3s;
 }
 
+.live-scene-hint--lock {
+    opacity: 0.65;
+    font-size: var(--di-text-3);
+    letter-spacing: 0.08em;
+    animation: hint-pulse 2.2s ease-in-out infinite;
+}
+
 .live-scene-hint--touch {
     opacity: 0.55;
     letter-spacing: 0.08em;
@@ -128,6 +135,11 @@
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     white-space: normal;
+}
+
+@keyframes hint-pulse {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 0.3; }
 }
 
 /* Loading overlay */

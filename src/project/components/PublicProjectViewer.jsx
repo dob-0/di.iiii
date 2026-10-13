@@ -695,6 +695,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         title={viewerTitle}
                         entryView={entryView}
                         navMode={navMode}
+                        walkLook="drag"
                         onNavModeChange={setNavMode}
                         topClear={sceneBar && navMode === 'walk' && barH ? `calc(${topClear} + ${barH + 6}px - 1rem)` : chromeClear}
                         isPreview={isPreview}
