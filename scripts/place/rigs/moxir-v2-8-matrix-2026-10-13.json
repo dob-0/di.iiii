@@ -7816,6 +7816,318 @@
     ]
    },
    "intent": "The storm: lasers, white side lines and the cut truss at full, the tent red under them."
+  },
+  {
+   "id": "ice-fire",
+   "title": "Ice and fire (the DJ wall red, the hall ice blue)",
+   "act": 2,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.5
+    ],
+    "hall steel": [
+     "#12d7ff",
+     0.6
+    ],
+    "columns": [
+     "#12d7ff",
+     0.6
+    ],
+    "red tent left": [
+     "#12d7ff",
+     0.5
+    ],
+    "red tent right": [
+     "#12d7ff",
+     0.5
+    ]
+   },
+   "intent": "Ice and fire: the wall behind the DJ burns red, the hall around you goes ice blue."
+  },
+  {
+   "id": "red-wave",
+   "title": "The red wave (along the tent, away from the DJ)",
+   "act": 2,
+   "parts": {
+    "red tent left": [
+     "#ff3a12",
+     1.0
+    ],
+    "red tent right": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.3
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 20,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "intent": "A red wave rolls along the tent, away from the DJ to the back of the hall, one every three seconds."
+  },
+  {
+   "id": "embers",
+   "title": "Embers (the steel sparks in flame and red)",
+   "act": 1,
+   "parts": {
+    "hall steel": [
+     "#ff8d15",
+     1.0
+    ],
+    "columns": [
+     "#ff3a12",
+     1.0
+    ],
+    "red tent left": [
+     "#ff3a12",
+     0.6
+    ],
+    "red tent right": [
+     "#ff3a12",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 20,
+    "depth": 150,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "intent": "Embers: the steel and the columns glow low and spark in flame and red, each lamp on its own, like a fire going down."
+  },
+  {
+   "id": "ice-rings",
+   "title": "Ice rings (out from the DJ, the DJ wall red)",
+   "act": 2,
+   "parts": {
+    "hall steel": [
+     "#12d7ff",
+     1.0
+    ],
+    "columns": [
+     "#12d7ff",
+     1.0
+    ],
+    "red tent left": [
+     "#12d7ff",
+     0.8
+    ],
+    "red tent right": [
+     "#12d7ff",
+     0.8
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 60,
+    "depth": 255,
+    "spatial": "radial-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "intent": "Ice-blue rings run out from the DJ across the hall, one a second; the wall behind the DJ stays red."
+  },
+  {
+   "id": "run",
+   "title": "Run to the DJ (a chase down the white side lines)",
+   "act": 3,
+   "parts": {
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.3
+    ],
+    "red tent left": [
+     "#ff3a12",
+     0.25
+    ],
+    "red tent right": [
+     "#ff3a12",
+     0.25
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 128,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.35
+   },
+   "intent": "The white side beams run toward the DJ, one run every two seconds; the tent glows low red."
+  },
+  {
+   "id": "left-right",
+   "title": "Left, right (the side lines answer each other)",
+   "act": 3,
+   "parts": {
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.3
+    ],
+    "red tent left": [
+     "#ff3a12",
+     0.2
+    ],
+    "red tent right": [
+     "#ff3a12",
+     0.2
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 64,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.35
+   },
+   "intent": "Left, right: the two white side lines answer each other on every beat."
+  },
+  {
+   "id": "flash",
+   "title": "Flash (the whole hall strobes white, 5 s)",
+   "act": 3,
+   "parts": {
+    "hall steel": [
+     "#e8e4dc",
+     1.0
+    ],
+    "columns": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "plane 1 (behind the DJ)": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj back": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     1.0
+    ],
+    "stage key": [
+     "#e8e4dc",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 128,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "intent": "Flash: the whole hall strobes white for five seconds, under three flashes a second."
+  },
+  {
+   "id": "lasers-breathe",
+   "title": "The lasers breathe (over a low red tent)",
+   "act": 3,
+   "parts": {
+    "laser": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent left": [
+     "#ff3a12",
+     0.3
+    ],
+    "red tent right": [
+     "#ff3a12",
+     0.3
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.3
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 30,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "ext-lc-ultra-mk2",
+     "up-la40wf"
+    ],
+    "still": 0.0
+   },
+   "intent": "The laser roof breathes: it fades down and back up every eight seconds over a low red tent."
   }
  ],
  "cues": [
@@ -7908,6 +8220,54 @@
    "name": "the storm",
    "fade": 1,
    "hold": 8
+  },
+  {
+   "look": "ice-fire",
+   "name": "ice and fire",
+   "fade": 2,
+   "hold": 10
+  },
+  {
+   "look": "red-wave",
+   "name": "the red wave",
+   "fade": 2,
+   "hold": 12
+  },
+  {
+   "look": "embers",
+   "name": "embers",
+   "fade": 3,
+   "hold": 12
+  },
+  {
+   "look": "ice-rings",
+   "name": "ice rings",
+   "fade": 2,
+   "hold": 10
+  },
+  {
+   "look": "run",
+   "name": "run to the DJ",
+   "fade": 1,
+   "hold": 10
+  },
+  {
+   "look": "left-right",
+   "name": "left, right",
+   "fade": 1,
+   "hold": 8
+  },
+  {
+   "look": "flash",
+   "name": "flash",
+   "fade": 0,
+   "hold": 5
+  },
+  {
+   "look": "lasers-breathe",
+   "name": "the lasers breathe",
+   "fade": 2,
+   "hold": 16
   }
  ],
  "loop": true,

@@ -275,6 +275,113 @@ for look, name, fade, hold in MORE_CUES:
     if look not in have_cues: rig['cues'].append({'look': look, 'name': name, 'fade': fade, 'hold': hold})
 print(f"looks {len(rig['looks'])}, cues {len(rig['cues'])} (six scenes added 2026-10-13)")
 
+# --- 3b. other colours and moving scenes (owner 2026-10-13 16:3x: "i need to other colorts and animations there also";
+# brief B-2026-10-13-scenes-colour) ----------------------------------------------------------------------------------------------
+# Eight looks, each ONE idea seen from the dance floor; seven MOVE through the existing motion layer: a look's `motion`
+# {mode, bpm, depth, spatial, kinds, still} names a desk effect (serverXR/src/lighting/fx.js), played in the room by
+# src/rigbuild/lookMotion.js. What it can say (code read 2026-10-13): one effect per look, a LEVEL multiplier on every lit lamp
+# of its `kinds` (a lamp at or under `still` holds); 13 modes; spread over the lamps by patch order, across (x), along the
+# hall (y) or out from the DJ table (radial), each reversible ('-'). It cannot pan, tilt or change a colour.
+# PALETTE RULE. The show is ember + ash (owner). Both sit on the fire's own colour line, the blackbody (_fire below:
+# Planck's law, CIE 1931 2 deg observer, sRGB): ember #ff3a12 has the hue of a ~1,000 K glow (nearest: 980 K), ash
+# #e8e4dc is a white near 6,000 K. New colours come only FROM that fire or AGAINST it, two of them:
+#   FLAME = the fire line at 2,000 K (a candle burns at ~1,900 K): the warm step from ember toward ash, for fire scenes.
+#   ICE   = the complement of ember (hue +180 deg, same saturation and value): the strongest contrast to the show's red
+#           (J. Itten, The Art of Color, 1961: complementary and cold-warm contrast; the warm/cool pair of stage light since
+#           S. McCandless, A Method of Lighting the Stage, 1932). ICE is lit only beside ember, never as a mood of its own.
+# At most two hues (plus ash) in one look. New colours go on the UP-PL5403 (RGBW, mixes them); the UP-B380F wheel's 14 slots
+# are unpublished (agent-reports-2026-10-09/devices/fixtures-exact.md:27), so the beams keep ash (open) and ember. Lasers keep
+# their cubes' colours (epic-build v1Looks). Strobe: the engine caps it under 3 Hz (strobeCap.js; WCAG 2.3.1 three-flash
+# threshold), a strobe look holds <= 6 s. Tempi, depths and levels are ASSUMED (no beat sync in the room; the night is busked).
+import colorsys  # noqa: E402
+
+
+def _fire(T):
+    """sRGB hex of a blackbody at T kelvin, brightest channel 1: Planck x CIE 1931 2 deg (Wyman, Sloan & Shirley 2013, JCGT 2(2),
+    multi-lobe fit), XYZ -> linear sRGB (IEC 61966-2-1 D65 matrix), negatives clipped, sRGB transfer curve. 6,500 K -> #fff9fe."""
+    g = lambda l, m, s1, s2: math.exp(-0.5 * ((l - m) / (s1 if l < m else s2)) ** 2)  # noqa: E731
+    X = Y = Z = 0.0
+    for l in range(380, 781, 5):
+        p = l ** -5 / (math.exp(1.4388e7 / (l * T)) - 1)
+        X += p * (1.056 * g(l, 599.8, 37.9, 31.0) + 0.362 * g(l, 442.0, 16.0, 26.7) - 0.065 * g(l, 501.1, 20.4, 26.2))
+        Y += p * (0.821 * g(l, 568.8, 46.9, 40.5) + 0.286 * g(l, 530.9, 16.3, 31.1))
+        Z += p * (1.217 * g(l, 437.0, 11.8, 36.0) + 0.681 * g(l, 459.0, 26.0, 13.8))
+    rgb = [max(0.0, v) for v in (3.2406 * X - 1.5372 * Y - 0.4986 * Z, -0.9689 * X + 1.8758 * Y + 0.0415 * Z, 0.0557 * X - 0.2040 * Y + 1.0570 * Z)]
+    enc = lambda v: 12.92 * v if v <= 0.0031308 else 1.055 * v ** (1 / 2.4) - 0.055  # noqa: E731
+    return '#' + ''.join(f'{round(255 * enc(v / max(rgb))):02x}' for v in rgb)
+
+
+def _complement(hexc):
+    h, s, v = colorsys.rgb_to_hsv(*(int(hexc[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+    return '#' + ''.join(f'{round(255 * c):02x}' for c in colorsys.hsv_to_rgb((h + 0.5) % 1, s, v))
+
+
+FLAME, ICE = _fire(2000), _complement(EMBER)
+assert (FLAME, ICE) == ('#ff8d15', '#12d7ff'), (FLAME, ICE)  # the values the scenes were designed and measured with
+PL, B38, LZ = 'up-pl5403', 'up-b380f', ['ext-lc-ultra-mk2', 'up-la40wf']
+EVERY_LAMP = ('hall steel', 'columns', 'red tent left', 'red tent right', 'plane 1 (behind the DJ)', 'side line left', 'side line right',
+              'cut up', 'cut down', 'dj back', 'dj kicker', 'stage key')
+
+
+def _moves(mode, bpm, spatial, kinds, depth=255, still=0.0):
+    return {'mode': mode, 'bpm': bpm, 'depth': depth, 'spatial': spatial, 'kinds': list(kinds), 'still': still}
+
+
+INTENT.update({
+    'ice-fire': 'Ice and fire: the wall behind the DJ burns red, the hall around you goes ice blue.',
+    'red-wave': 'A red wave rolls along the tent, away from the DJ to the back of the hall, one every three seconds.',
+    'embers': 'Embers: the steel and the columns glow low and spark in flame and red, each lamp on its own, like a fire going down.',
+    'ice-rings': 'Ice-blue rings run out from the DJ across the hall, one a second; the wall behind the DJ stays red.',
+    'run': 'The white side beams run toward the DJ, one run every two seconds; the tent glows low red.',
+    'left-right': 'Left, right: the two white side lines answer each other on every beat.',
+    'flash': 'Flash: the whole hall strobes white for five seconds, under three flashes a second.',
+    'lasers-breathe': 'The laser roof breathes: it fades down and back up every eight seconds over a low red tent.',
+})
+MOTION_LOOKS = [
+    {'id': 'ice-fire', 'title': 'Ice and fire (the DJ wall red, the hall ice blue)', 'act': 2,
+     'parts': {'plane 1 (behind the DJ)': [EMBER, 1.0], 'dj back': [EMBER, 0.5], 'hall steel': [ICE, 0.6], 'columns': [ICE, 0.6],
+               'red tent left': [ICE, 0.5], 'red tent right': [ICE, 0.5]}},
+    {'id': 'red-wave', 'title': 'The red wave (along the tent, away from the DJ)', 'act': 2,
+     'parts': {'red tent left': [EMBER, 1.0], 'red tent right': [EMBER, 1.0], 'plane 1 (behind the DJ)': [EMBER, 0.3]},
+     'motion': _moves('sine', 20, 'y-', [PL])},
+    {'id': 'embers', 'title': 'Embers (the steel sparks in flame and red)', 'act': 1,
+     'parts': {'hall steel': [FLAME, 1.0], 'columns': [EMBER, 1.0], 'red tent left': [EMBER, 0.6], 'red tent right': [EMBER, 0.6]},
+     'motion': _moves('sparkle', 20, 'patch', [PL], depth=150)},
+    {'id': 'ice-rings', 'title': 'Ice rings (out from the DJ, the DJ wall red)', 'act': 2,
+     'parts': {'hall steel': [ICE, 1.0], 'columns': [ICE, 1.0], 'red tent left': [ICE, 0.8], 'red tent right': [ICE, 0.8],
+               'plane 1 (behind the DJ)': [EMBER, 0.8]},
+     'motion': _moves('sine', 60, 'radial-', [PL])},
+    {'id': 'run', 'title': 'Run to the DJ (a chase down the white side lines)', 'act': 3,
+     'parts': {'side line left': [ASH, 1.0], 'side line right': [ASH, 1.0], 'plane 1 (behind the DJ)': [EMBER, 0.3],
+               'red tent left': [EMBER, 0.25], 'red tent right': [EMBER, 0.25]},
+     'motion': _moves('chase', 128, 'y-', [B38], still=0.35)},
+    {'id': 'left-right', 'title': 'Left, right (the side lines answer each other)', 'act': 3,
+     'parts': {'side line left': [ASH, 1.0], 'side line right': [ASH, 1.0], 'plane 1 (behind the DJ)': [EMBER, 0.3],
+               'red tent left': [EMBER, 0.2], 'red tent right': [EMBER, 0.2]},
+     'motion': _moves('bars', 64, 'x', [B38], still=0.35)},
+    {'id': 'flash', 'title': 'Flash (the whole hall strobes white, 5 s)', 'act': 3,
+     'parts': {p: [ASH, 1.0] for p in EVERY_LAMP},
+     'motion': _moves('strobe', 128, 'patch', [PL, B38])},
+    {'id': 'lasers-breathe', 'title': 'The lasers breathe (over a low red tent)', 'act': 3,
+     'parts': {'laser': [ASH, 1.0], 'red tent left': [EMBER, 0.3], 'red tent right': [EMBER, 0.3], 'plane 1 (behind the DJ)': [EMBER, 0.3]},
+     'motion': _moves('breathe', 30, 'patch', LZ, depth=200)},
+]
+# in the loop after 'storm': a calm contrast, three slow moves, the drive, the 5 s flash, the lasers breathing back into cue 1 'lasers'
+MOTION_CUES = [('ice-fire', 'ice and fire', 2, 10), ('red-wave', 'the red wave', 2, 12), ('embers', 'embers', 3, 12),
+               ('ice-rings', 'ice rings', 2, 10), ('run', 'run to the DJ', 1, 10), ('left-right', 'left, right', 1, 8),
+               ('flash', 'flash', 0, 5), ('lasers-breathe', 'the lasers breathe', 2, 16)]
+mode_of = {l['id']: (l.get('motion') or {}).get('mode') for l in MOTION_LOOKS}
+for l in MOTION_LOOKS:
+    l['intent'] = INTENT[l['id']]
+    missing = set(l['parts']) - parts_in_rig
+    assert not missing, (l['id'], missing)
+    if l['id'] not in have: rig['looks'].append(copy.deepcopy(l)); have.add(l['id'])
+for look, name, fade, hold in MOTION_CUES:
+    assert look in have and (mode_of[look] != 'strobe' or hold <= 6), (look, hold)
+    if look not in have_cues: rig['cues'].append({'look': look, 'name': name, 'fade': fade, 'hold': hold}); have_cues.add(look)
+print(f"looks {len(rig['looks'])} ({sum(1 for l in rig['looks'] if l.get('motion'))} moving), cues {len(rig['cues'])} "
+      f"(+{len(MOTION_LOOKS)} colour/motion scenes 2026-10-13; FLAME {FLAME}, ICE {ICE})")
+
 json.dump(rig, open(f'{a.repo}/{a.out}', 'w'), indent=1)
 print(f'wrote {a.out} ({a.lasers}): {len(lines)} lines, {pulled} pulled/unchanged; lowest {rig["lasers"]["arithmetic"]["lowest_point_m"]} m; tent {len(side)} washes at {a.tent:.0f} deg')
 for bid, pan, nm, L, h in lines: print(f'  {bid} pan {pan:+4d} -> {nm} {L:5.1f} m, end {h:.1f} m')
