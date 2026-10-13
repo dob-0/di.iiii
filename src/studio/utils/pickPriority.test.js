@@ -28,13 +28,13 @@ describe('pickFromHits', () => {
     it('a deck alone is picked as before', () => {
         expect(pickFromHits([hit(deckMesh), hit(hallMesh)])).toBe('rig-deck-1')
     })
-    it('only the locked place under the pointer = a click on empty', () => {
-        expect(pickFromHits([hit(hallMesh)])).toBeNull()
+    it('the locked place alone is still picked (lock stops moves, not looking); nothing = null', () => {
+        expect(pickFromHits([hit(hallMesh)])).toBe('place-hall')
         expect(pickFromHits([])).toBeNull()
     })
-    it('a locked lamp\'s beam is not picked', () => {
+    it('a locked lamp\'s beam picks that lamp', () => {
         const lampL = group('lamp-l', { body: true, locked: true })
-        expect(pickFromHits([hit(mesh(lampL, { beamPick: true })), hit(hallMesh)])).toBeNull()
+        expect(pickFromHits([hit(mesh(lampL, { beamPick: true })), hit(hallMesh)])).toBe('lamp-l')
     })
     it('entityInfoOf walks up to the entity group', () => {
         expect(entityInfoOf(beamA)).toEqual({ id: 'lamp-a', body: true, locked: false })

@@ -6,8 +6,8 @@
 // deselected. Rule now (Blender's click-select, read for a room full of light):
 //   1. a lamp's BODY (an entity with a light or a fixture) wins over any beam in front of it — beams are see-through;
 //   2. a BEAM wins over whatever is behind it (the place, a deck): click the beam, get its lamp;
-//   3. a LOCKED entity (runtime.locked — the place, the outside boxes) is never picked; if only locked things are
-//      under the pointer the click is a click on empty → the selection clears.
+//   3. a LOCKED entity (runtime.locked) is picked like any other — the lock stops moves, not looking (the owner inspects
+//      the hall by clicking it); a click on the one selected object again deselects it (the Studio's click handler).
 // The flags come from the scene graph: the entity's group carries userData { svEntityId, svPick, svLocked } and a
 // beam mesh carries userData.beamPick (SpotLightObject.jsx), so nothing here reads the document.
 
@@ -20,10 +20,9 @@ export const pickFromHits = (hits = [], infoOf = entityInfoOf) => {
         const info = infoOf(object)
         if (!info) continue
         if (object.userData?.beamPick) {
-            if (beam === null && !info.locked) beam = info.id
+            if (beam === null) beam = info.id
             continue
         }
-        if (info.locked) continue
         if (info.body) return info.id
         return beam ?? info.id
     }

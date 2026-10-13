@@ -391,14 +391,13 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                     if (e.delta > 2) return
                     e.stopPropagation()
                     // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
-                    // beats what is behind it, a locked entity (the place) is never picked — only locked things = click on empty.
+                    // beats what is behind it. A plain click on the one selected object again deselects it (owner 10-13:
+                    // "you can't deselect" — the place fills the view, so a click rarely misses everything).
                     const picked = pickFromHits(e.intersections)
+                    if (picked === null) return
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (picked === null) {
-                        if (!additive) onSelectEntity?.(null)
-                        return
-                    }
                     if (additive) onToggleSelectEntity?.(picked)
+                    else if (selectedIdSet.size === 1 && selectedIdSet.has(picked)) onSelectEntity?.(null)
                     else onSelectEntity?.(picked)
                 }}
             >
