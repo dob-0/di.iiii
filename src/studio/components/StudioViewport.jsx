@@ -328,6 +328,10 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 // How the smart view finds an entity's object (SmartView.jsx).
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
+                    // The release of a drag is not a click: r3f 8 sends onClick on it, and an orbit selected the object under the
+                    // pointer, so the Inspector opened over the canvas and the next drag pressed a panel button, a "dead" pan
+                    // (dead-pan agent, 2026-10-13: 12 of 12 such presses dead, 0 of 38 on the canvas). Same check as the group below.
+                    if (e.delta > 2) return
                     // Locked: not picked — the click goes on to whatever is behind it.
                     if (isLocked) return
                     e.stopPropagation()

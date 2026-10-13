@@ -92,10 +92,16 @@ describe('wheelZoomPlan: Blender\'s 1.2x step of the orbit distance (measured on
     })
     it('Blender\'s soft range: no step from outside it in the same direction, never a clamp, always a way back', () => {
         expect(wheelZoomPlan({ distance: 10000, notches: -1, maxDistance: 10000 })).toBeNull()
-        expect(wheelZoomPlan({ distance: 9000, notches: -1, maxDistance: 10000 }).newDistance).toBeCloseTo(10800, 6) // one step past, as Blender (probe: 10861 m)
+        // Blender steps once past its range (probe: 10 861 m); ours stops AT the controls' range, which camera-controls' setLookAt
+        // would not clamp (review-892 F11)
+        expect(wheelZoomPlan({ distance: 9000, notches: -1, maxDistance: 10000 }).newDistance).toBe(10000)
         expect(wheelZoomPlan({ distance: 10800, notches: 1, maxDistance: 10000 }).newDistance).toBeCloseTo(9000, 6)
         expect(wheelZoomPlan({ distance: 0.01, notches: 1, minDistance: 0.015 })).toBeNull()
         expect(wheelZoomPlan({ distance: 0.01, notches: -1, minDistance: 0.015 }).newDistance).toBeCloseTo(0.012, 6)
+    })
+    it('a notch out never leaves the range (review-892 F11)', () => {
+        const p = wheelZoomPlan({ distance: 450, notches: -1, maxDistance: 500 })
+        expect(p.newDistance).toBe(500); expect(p.step).toBe(-50)
     })
     it('a trackpad\'s fractional notch is a fractional step', () => {
         expect(wheelZoomPlan({ distance: 24, notches: 0.5 }).newDistance).toBeCloseTo(24 / Math.sqrt(1.2), 6)

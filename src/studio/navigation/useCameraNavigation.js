@@ -86,7 +86,8 @@ export function wheelZoomPlan({ distance, notches, minDistance = 0, maxDistance 
     if (!(distance > 0) || !Number.isFinite(notches) || notches === 0) return null
     if (notches > 0 && distance <= minDistance) return null
     if (notches < 0 && distance >= maxDistance) return null
-    const newDistance = distance * Math.pow(WHEEL_STEP_FACTOR, -notches) // notches > 0 = in
+    // notches > 0 = in; a notch out never leaves the range (review-892 F11: 450 m + one notch gave 540 m past the 500 m limit)
+    const newDistance = notches < 0 ? Math.min(distance * Math.pow(WHEEL_STEP_FACTOR, -notches), maxDistance) : distance * Math.pow(WHEEL_STEP_FACTOR, -notches)
     return { step: distance - newDistance, newDistance }
 }
 
@@ -119,9 +120,11 @@ export function useCameraNavigation({
         // The Blender tool's moves take their speed from the scene distance (sceneDistance.js, owner's yes 2026-10-13).
         const sceneDistance = preset.speedFromView ? createSceneDistance() : null
         let lastWheel = null // { pos, distance }: where this wheel left the camera, so the next notch knows it is the same run
-        const measureView = () => {
+        // `near`: where the depth picture starts. The wheel's starts at the contact distance, so it goes through what it touches;
+        // a drag's starts at the camera's own near plane, so it follows what the eye sees (review-892 F12).
+        const measureView = (near) => {
             const scene = getScene?.()
-            return sceneDistance?.measure({ gl: getGl?.(), scene, camera: cc.camera, roots: scene ? entityRoots(scene) : [], near: cc.minDistance }) ?? null
+            return sceneDistance?.measure({ gl: getGl?.(), scene, camera: cc.camera, roots: scene ? entityRoots(scene) : [], near }) ?? null
         }
         const viewRange = () => ({ min: cc.minDistance, max: Math.min(cc.maxDistance, cc.camera.far) })
 
@@ -144,7 +147,7 @@ export function useCameraNavigation({
             // in proportion to what the view shows, never to the one object under the pointer (sceneDistance.js).
             if (preset.speedFromView) {
                 lastWheel = null
-                const measured = measureView()
+                const measured = measureView(cc.camera.near)
                 const d = nextSceneDistance({ measured, ...viewRange() })
                 const applied = d ? applyPivot(cc, axisPointAtDepth(cc.camera, cc.camera.getWorldDirection(new Vector3()).multiplyScalar(d).add(cc.camera.position)), { force: gestureStart }) : false
                 trace({ action, gestureStart, source: 'scene distance', measured: measured == null ? null : +measured.toFixed(3), distance: d == null ? null : +d.toFixed(3), applied })
@@ -185,6 +188,10 @@ export function useCameraNavigation({
             const notches = wheelNotches(event)
             if (!notches) return
             const cam = cc.camera
+            // camera-controls moves the camera object only in update() (2.10.1): a second notch in the same frame read the old place
+            // and overwrote the first (review-892 F3: 1.00 m moved instead of 1.83 m). The Blender tool's moves are instant, so the
+            // pending pose is written first; the Sketchfab tool eases, and where it is mid-ease is where it is.
+            if (preset.speedFromView) cc.update(0)
             cam.getWorldPosition(camPos); cam.getWorldDirection(viewDir)
             // Blender's soft range: in to the near clip (ED_view3d_dist_soft_min_get, perspective: clip start x 1.5), out to clip end x 10,
             // and never past the controls' own maxDistance, which would pull the camera back (camera-controls clamps the radius).
@@ -206,8 +213,10 @@ export function useCameraNavigation({
                 // contact distance is not in the depth picture, so the wheel goes through it and never stops at it.
                 rayDir.copy(viewDir)
                 const consecutive = Boolean(lastWheel) && camPos.distanceTo(lastWheel.pos) < 1e-3
-                const measured = measureView()
-                const d = nextSceneDistance({ measured, previous: consecutive ? lastWheel.distance : cc.distance, consecutive, ...viewRange() })
+                const measured = measureView(Math.max(cc.minDistance, cam.near))
+                // 1.2 per notch of scroll, whatever one event carries (a trackpad's tenth, a fast wheel's three: review-892 F2)
+                const ratio = Math.pow(WHEEL_STEP_FACTOR, Math.abs(notches))
+                const d = nextSceneDistance({ measured, previous: consecutive ? lastWheel.distance : cc.distance, consecutive, ratio, ...viewRange() })
                 if (d) distance = d
                 range = { minDistance: 0, maxDistance: viewRange().max }
                 trace({ action: 'wheel-measure', measured: measured == null ? null : +measured.toFixed(3), consecutive, distance: +distance.toFixed(3) })
@@ -216,7 +225,9 @@ export function useCameraNavigation({
             if (!plan) { trace({ action: 'wheel', notches, distance: +distance.toFixed(3), step: 0, why: 'outside the soft range' }); return }
             newPos.copy(camPos).addScaledVector(rayDir, plan.step)
             newTarget.copy(newPos).addScaledVector(viewDir, Math.max(plan.newDistance, cc.minDistance))
-            if (preset.speedFromView) lastWheel = { pos: newPos.clone(), distance: plan.newDistance > 0 ? Math.max(plan.newDistance, cc.minDistance) : distance }
+            // The distance this notch USED: keeping the post-step distance (d / 1.2) cancelled the 1.2 allowance, and a run could
+            // never speed up again after passing a wall (review-892 F1: 40 notches at 0.07 m with 30 m measured behind it).
+            if (preset.speedFromView) lastWheel = { pos: newPos.clone(), distance }
             // camera-controls' own wheel used to announce itself; drei invalidates the on-demand loop on 'update' and the Studio
             // saves the camera on 'controlend', so the app's wheel announces the same way (else nothing draws until the next move).
             cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
