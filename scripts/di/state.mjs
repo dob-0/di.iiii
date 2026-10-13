@@ -14,9 +14,12 @@ import path from 'node:path'
 
 import { writeFileAtomic } from './atomicWrite.mjs'
 import { paths } from './paths.mjs'
-import { probeHealth } from './probe.mjs'
+import { ONE_LOCAL_NAME, oneLocalUrl, probeDoorConfig, probeHealth, probePrettyLocalName } from './probe.mjs'
 
 export const DEFAULT_PORT = 4000
+// The one local address (docs/ai/one-local-address.md): the same link on every
+// machine with di, opening that machine's own di.iiii. Defined in probe.mjs.
+export { ONE_LOCAL_NAME, oneLocalUrl }
 
 export const readState = (home) => {
     const p = paths(home)
@@ -228,3 +231,95 @@ export const humanSize = (bytes) => {
     const value = bytes / (1024 ** exponent)
     return `${value >= 10 || exponent === 0 ? Math.round(value) : value.toFixed(1)} ${units[exponent]}`
 }
+
+/**
+ * Is http://diiii.localhost/ THIS install? Asked, never inferred: the same
+ * question goes to the install directly and through the door on :80, and the
+ * answer counts only when both name the same machine id. Whoever holds :80 —
+ * this server's own door, or a dev-router forwarding to it — passes; another
+ * program on :80, or another di.iiii, does not.
+ *
+ * Pure over the two answers so a test can hand it any pair.
+ * Returns { url, why }: url is the address to print, or null and why not.
+ */
+export const judgeOneAddress = (selfConfig, door, name = ONE_LOCAL_NAME) => {
+    const selfId = selfConfig?.machine?.id || null
+    if (!door) return { url: null, why: 'nothing answers on port 80' }
+    if (door.status === 421) return { url: null, why: `port 80 answers, but not for ${name}` }
+    const doorId = door.config?.machine?.id || null
+    if (!doorId) return { url: null, why: `another program answers on port 80 (HTTP ${door.status})` }
+    if (!selfId) return { url: null, why: 'this di.iiii did not say who it is' }
+    if (doorId !== selfId) return { url: null, why: `${name} opens another di.iiii on this machine` }
+    return { url: oneLocalUrl(name), why: null }
+}
+
+const fetchConfig = async (base) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 2000)
+    try {
+        const response = await fetch(`${base}/api/config`, { signal: controller.signal })
+        return response.ok ? ((await response.json())?.config ?? null) : null
+    } catch {
+        return null
+    } finally {
+        clearTimeout(timer)
+    }
+}
+
+/** judgeOneAddress over the live answers. */
+export const oneAddress = async (home, port, { askSelf = fetchConfig, askDoor = probeDoorConfig } = {}) => {
+    // DI_LOCAL_NAME=off turns this server's own door off, not the name: a
+    // dev-router may still forward it here, so the default name is still asked.
+    const configured = String(readEnv(home).DI_LOCAL_NAME || '').trim().toLowerCase()
+    const name = configured && !['off', '0', 'false', 'no'].includes(configured) ? configured : ONE_LOCAL_NAME
+    const [self, door] = await Promise.all([askSelf(apiBase(home, port)), askDoor(name)])
+    return judgeOneAddress(self, door, name)
+}
+
+/**
+ * The address for a device that has no di of its own — a phone, a headset, a
+ * guest's laptop: the certificate's name, the only one with a padlock. Null on
+ * an install without a certificate, which has no such address to give.
+ */
+export const phonesUrl = (home, port) => (readCert(home) ? publicUrl(home, port) : null)
+
+/**
+ * ONE address in what di prints (docs/ai/one-local-address.md §7, D1).
+ *
+ * When http://diiii.localhost/ was asked and answered as THIS install (see
+ * oneAddress), that is the address, and the certificate's name — when there is
+ * one — is kept for the phones and headsets line. When it was not, the address is
+ * `fallback` when a command has its own (di up's mDNS name), else namedFallback below, and `why` says
+ * what is missing. { url, one, phones, why }
+ */
+export const printedAddress = async (home, port, { fallback = null, askSelf, askDoor, askPretty } = {}) => {
+    const answer = await oneAddress(home, port, { askSelf, askDoor })
+    return answer.url
+        ? { url: answer.url, one: true, phones: phonesUrl(home, port), why: null }
+        : { url: fallback || await namedFallback(home, port, { askPretty }), one: false, phones: null, why: answer.why }
+}
+
+/**
+ * What every command prints when the one local address is not this install
+ * (owner 2026-10-13: "make only one way to work"): the certificate's name when
+ * there is one; else the one local address's own name with the port while :80
+ * is not ours — asked before it is printed, as `di up` always did; else
+ * localhost. One rule, so `di status`, `di up`, `di open`, `di new` and
+ * `di open FILE` never disagree on a machine without :80.
+ */
+export const namedFallback = async (home, port, { askPretty = probePrettyLocalName } = {}) => {
+    if (readCert(home)) return publicUrl(home, port)
+    return (await askPretty(port)) ? nameUrl(ONE_LOCAL_NAME, port) : localUrl(port)
+}
+
+/**
+ * Where a link to one of THIS install's own pages starts — the `di new` and
+ * `di open FILE` lines that say where the space is. It is the address the
+ * other lines lead with, so a person is sent one way: the one local address
+ * when it was asked and answered as this install, else what that line printed
+ * before (namedFallback: the certificate's name, diiii.localhost:<port> or localhost:<port>). No trailing
+ * slash, so a path follows it: `${await ownBase(home, port)}/<space>`.
+ * `di status` and `di up` say why when it is not the one address; a link line does not repeat that.
+ */
+export const ownBase = async (home, port, { askSelf, askDoor, askPretty } = {}) =>
+    (await printedAddress(home, port, { askSelf, askDoor, askPretty })).url.replace(/\/+$/, '')

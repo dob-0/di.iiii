@@ -88,15 +88,27 @@ export const followFileLines = (files) => {
 export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
     .map(note => style.dim(`settings: ${note}`))
 
+// The one local address in what di prints (docs/ai/one-local-address.md §7, D1).
+// The certificate's name is not the address any more when the one address is this
+// di.iiii: it is the line for phones and headsets, which cannot use a .localhost name.
+const phonesLine = (url, indent = '') => `${indent}phones and headsets: ${style.cyan(url)}`
+// Only when the one address was asked and not answered as this di.iiii (judgeOneAddress says why).
+const oneAddressWhy = (why, indent = '') => style.dim(`${indent}http://diiii.localhost/ is not this di.iiii yet: ${why}`)
+const isLocalhostUrl = (url) => /^https?:\/\/(?:[^/:]+\.)?localhost(?::\d+)?\/?$/i.test(String(url))
+
 export const ui = {
+    phonesLine,
+    oneAddressWhy,
+
     // What a start prints. It used to be three lines — the address, six space
     // ids and how to stop — and everything else di.iiii can do was a thing you
     // had to already know: the tools room, the lighting desk, the wiki, and
     // above all that phones in the room need `--lan`. A person who has just
     // typed `di up` is exactly the person who does not know those, so they are
     // printed once, here, plainly.
-    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null, secure = false } = {}) => {
-        const base = prettyUrl || url
+    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null, secure = false, one = false, phones = null, why = null } = {}) => {
+        // The one address ends in a slash (http://diiii.localhost/); a door path must not add a second.
+        const base = String(prettyUrl || url).replace(/\/+$/, '')
         // The note column is measured, not guessed: a certificate makes every
         // address longer and a fixed width silently ran the two together.
         const width = Math.max(...['/tools', '/spaces', '/light/', '/wiki'].map(path => `${base}${path}`.length)) + 3
@@ -106,9 +118,15 @@ export const ui = {
             : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
         return [
             `di.iiii is running.  ${style.cyan(prettyUrl || url)}`,
-            prettyUrl && secure
-                ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
-                : (prettyUrl ? style.dim(`  one address, here and on the phones. ${url} answers too.`) : null),
+            // The one address leads and the certificate's name is ONE line for phones and headsets;
+            // otherwise what was always said, and one dim line for why the one address is not here yet.
+            one
+                ? (phones ? phonesLine(phones, '  ') : style.dim('  the same link on every machine with di — each opens its own.'))
+                : (prettyUrl && secure
+                    ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
+                    // a .localhost name answers on this machine only (RFC 6761); only the place's own name (di.local under --lan) reaches phones
+                    : (prettyUrl ? style.dim(`  ${isLocalhostUrl(prettyUrl) ? 'this machine only.' : 'one address, here and on the phones.'} ${url} answers too.`) : null)),
+            !one && why ? oneAddressWhy(why, '  ') : null,
             '',
             door('tools', '/tools', 'every tool, in one room'),
             door('spaces', '/spaces', spacesNote),
@@ -120,8 +138,10 @@ export const ui = {
         ].filter(value => value !== null).join('\n')
     },
 
-    alreadyRunning: (url, reach = null, wantedLan = false) => [
+    alreadyRunning: (url, reach = null, wantedLan = false, { one = false, phones = null, why = null } = {}) => [
         `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,
+        one && phones ? phonesLine(phones, '  ') : null,
+        !one && why ? oneAddressWhy(why, '  ') : null,
         wantedLan && reach && !reach.lan
             ? style.dim(`to let the room in: ${CMD} down, then ${CMD} up --lan`)
             : null

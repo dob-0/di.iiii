@@ -131,6 +131,8 @@ const { registerPlaceRoutes } = require('./routes/placeRoutes')
 // actually are, which is what the place lane has to copy footage out of.
 const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
+const { certificateNames, registerGuestAddressRoute } = require('./guestAddress')
+const { startLocalName } = require('./localName')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
 const { registerMachineRoutes } = require('./machines/routes')
@@ -2931,6 +2933,17 @@ registerConfigRoutes(router, {
   machine: thisMachine
 })
 
+// The place address for devices without di (serverXR/src/guestAddress.js):
+// the certificate this server actually serves, set once https is up below.
+// null until then, and null for good on an install that serves plain http.
+let servedCertificate = null
+registerGuestAddressRoute(router, {
+  getCertificate: () => servedCertificate,
+  port: config.port,
+  listen: describeListenNow,
+  requireAuth: config.requireAuth
+})
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -3173,6 +3186,7 @@ initStorage()
       ? https.createServer({ cert: tlsFiles.cert, key: tlsFiles.key }, app)
       : http.createServer(app)
     if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
+    servedCertificate = tlsFiles ? certificateNames(tlsFiles.cert) : null
 
     initializeSocket(httpServer, {
       ...config,
@@ -3264,6 +3278,10 @@ initStorage()
       followLease.start({ onGain: startFollowsWhenUp, onLose: stopCarrying })
         .catch((error) => logger.warn(`[follow] lease not started: ${error?.message || error}`))
       process.once('exit', () => followLease.stop())
+      // The one local address: http://diiii.localhost/ on loopback :80, a door
+      // into this same server (serverXR/src/localName.js). Personal installs
+      // only; stands aside by name when :80 is taken or not allowed.
+      startLocalName({ mainServer: httpServer, log: (line) => logger.info(line) })
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
       // it, and two seconds is well inside what the CLI promises.

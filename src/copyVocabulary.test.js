@@ -129,6 +129,7 @@ const COPY_FILES = [
     'src/landing/LandingPage.jsx',
     'src/landing/LocalHome.jsx',
     'src/pages/DeviceLoginPage.jsx',
+    'src/landing/GuestAddressPanel.jsx',
     'src/pages/PrivacyPage.jsx',
     'src/pages/TermsPage.jsx',
     'src/project/components/JamSheet.jsx',
