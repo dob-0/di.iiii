@@ -5369,9 +5369,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +3.0; same z, same 30 deg tilt in",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +13, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +7.0; same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    7.0,
     0.7,
     13.0
    ],
@@ -5639,9 +5639,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +3.0; same z, same 30 deg tilt in",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +25, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +6.0; same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    6.0,
     0.7,
     25.0
    ],
@@ -6044,9 +6044,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +3.0; same z, same 30 deg tilt in",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +31, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +6.0; same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    6.0,
     0.7,
     31.0
    ],
@@ -6179,9 +6179,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +3.0; same z, same 30 deg tilt in",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +37, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +9.0; same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    9.0,
     0.7,
     37.0
    ],
@@ -6314,9 +6314,9 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +3.0; same z, same 30 deg tilt in",
+   "position": "v2.7 (moxir_v2_7_lines.py): side line right, 8 m off the DJ axis at z +43, between the side washes; up 60 deg, aimed in over the floor; v2.10 (moxir_v2_8_floor.py 2b): at the dance floor's east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery), x +8.5; same z, same 30 deg tilt in",
    "p": [
-    3.0,
+    8.5,
     0.7,
     43.0
    ],
@@ -26478,9 +26478,39 @@
  "heads_2026_10_13": {
   "side_lines_x": [
    -11.5,
-   3.0
+   {
+    "13.0": 7.0,
+    "19.0": 3.0,
+    "25.0": 6.0,
+    "31.0": 6.0,
+    "37.0": 9.0,
+    "43.0": 8.5
+   }
   ],
   "plane1_z": -9.0,
-  "why": "owner 2026-10-13 16:5x; lead measured N558.1"
+  "right_line_rule": "right_line_clear.py: largest clear x in 3..9 with every massing box grown by its stated error, beam along the head rotation; none -> 3.0",
+  "right_line_blockers": {
+   "13.0": [
+    "lean-to-canopy"
+   ],
+   "19.0": [
+    "blower",
+    "drum-tank",
+    "duct-elbow-hopper",
+    "roller-conveyor"
+   ],
+   "25.0": [
+    "drum-tank",
+    "roller-conveyor"
+   ],
+   "31.0": [
+    "drum-tank"
+   ],
+   "37.0": [],
+   "43.0": [
+    "cyclone-hood-nw"
+   ]
+  },
+  "why": "owner 2026-10-13 16:5x and 17:4x; lead measured N558.1, N564"
  }
 }

@@ -213,6 +213,9 @@ PLANE1_Z = -9.0
 HEADS_EAST_X = 3.0   # the dance floor's east edge (zones.dance x -11..3.5; the roller conveyor at 3.6)
 heads = [f for f in rig['fixtures'] if f['type'] == 'up-b380f']
 assert len(heads) == 18, len(heads)
+import right_line_clear as rlc  # noqa: E402  (scripts/place is on sys.path)
+HALL = f'{a.repo}/scripts/place/rigs/moxir-hall-2026-10-11-v11-show-park-far41.hall.json'
+EAST_CLEAR = rlc.clear_x_by_z(json.load(open(HALL)), [f for f in heads if f.get('part') == 'side line right'], x_min=HEADS_EAST_X, x_max=9.0)
 for f in heads:
     if f.get('part') in ('side line left', 'side line right'):
         s_ = -1 if f['p'][0] < X0 else 1
@@ -221,13 +224,18 @@ for f in heads:
         # and the blower at x 5.8-11 — the owner saw the beams blocked (16:40). The used dance floor ends at the roller
         # conveyor, x 3.6 (dims.zones.dance x -11..3.5), so the right line stands at HEADS_EAST_X = 3.0, the floor's edge,
         # where v2.7 had it; the left line on the west row, x -11.5 (free: the transformer and cabinets sit at z < 4).
-        x_ = -(COL_X - COL_FACE) if s_ < 0 else HEADS_EAST_X
+        # Right line, per head (owner 10-13 17:4x: 'analyze where is the right perfect place'): the largest clear x east of the
+        # floor's edge, every massing box grown by its stated error, the beam cast along the head's own rotation
+        # (right_line_clear.py, ledger N564); no clear place (z 19: conveyor, hopper, blower, tank) -> the floor's edge.
+        x_ = -(COL_X - COL_FACE) if s_ < 0 else (EAST_CLEAR[f['p'][2]][0] or HEADS_EAST_X)
         f['p'] = [round(x_, 2), f['p'][1], f['p'][2]]
         f['position'] = f['position'].split('; v2.10')[0] + f'; v2.10 (moxir_v2_8_floor.py 2b): {"on the west column row" if s_ < 0 else "at the dance floor\'s east edge (the roller conveyor at x 3.6; the east row is under the inclined gallery)"}, x {f["p"][0]:+.1f}; same z, same 30 deg tilt in'
     elif f.get('part') == 'plane 1 (behind the DJ)':
         f['p'] = [f['p'][0], f['p'][1], PLANE1_Z]
         f['position'] = f['position'].split('; v2.10')[0] + f'; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z {PLANE1_Z}), behind the DJ, same x and aim'
-rig['heads_2026_10_13'] = {'side_lines_x': [-(COL_X - COL_FACE), HEADS_EAST_X], 'plane1_z': PLANE1_Z, 'why': 'owner 2026-10-13 16:5x; lead measured N558.1'}
+rig['heads_2026_10_13'] = {'side_lines_x': [-(COL_X - COL_FACE), {str(z): (x or HEADS_EAST_X) for z, (x, _) in EAST_CLEAR.items()}], 'plane1_z': PLANE1_Z,
+                           'right_line_rule': 'right_line_clear.py: largest clear x in 3..9 with every massing box grown by its stated error, beam along the head rotation; none -> 3.0',
+                           'right_line_blockers': {str(z): b for z, (_, b) in EAST_CLEAR.items()}, 'why': 'owner 2026-10-13 16:5x and 17:4x; lead measured N558.1, N564'}
 
 # --- 3. the record -----------------------------------------------------------------------------------------------------------------
 rig['version'] = a.version; rig['date'] = '2026-10-13'; rig['written_by'] = 'scripts/place/moxir_v2_8_floor.py'

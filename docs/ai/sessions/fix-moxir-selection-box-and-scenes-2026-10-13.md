@@ -53,3 +53,6 @@
   left line stays on the west row. Six head moves (v1155 → v1209 with the scenes rebuilt); every right-line beam tested
   against the massing boxes: stands inside nothing, hits nothing within 60 m. The hall's massing is now in the script's
   reasoning (step 2b); the full triangle cast (occlusion_lib.py, the laser-margin run) stays owed.
+
+## 10-13 17:5x — right line per head on the open floor (N564)
+Owner: the right beams still in the middle; check the photos and the open spaces; put them in the right place. New `scripts/place/right_line_clear.py` (every hall box grown by its stated error, the beam cast along the head's rotation, the largest clear x per head, else the floor's edge); step 2b of the rig script uses it: z 13 → x 7.0, z 19 → 3.0 (machine block: conveyor, hopper, blower, tank), z 25 → 6.0, z 31 → 6.0, z 37 → 9.0, z 43 → 8.5. Applied to v2-9 (5 head ops + looks rebuilt). Photos read: 004, 009, 023, the 09-17 walk video.
