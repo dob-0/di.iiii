@@ -1131,6 +1131,7 @@ export default function StudioViewport({
     gizmoVisible = true,
     transformOp = null,
     setEditMode,
+    viewBar = false,
     setGizmoMode,
     onTransformCommit,
     onTransformCommitMany,
@@ -1368,7 +1369,10 @@ export default function StudioViewport({
                 />
             )}
 
-            {setEditMode && controlsRef && (
+            {/* Mounted only where a surface asks for it (`viewBar`). Its gate used to be setEditMode,
+                which no caller passes — so the bar was dead everywhere, the Studio included, while it
+                looked wired (brief 2026-10-13 item 2). */}
+            {viewBar && controlsRef && (
                 <ViewCommandBar
                     onCommand={(command) => runViewCommand(controlsRef.current, command, {
                         entities: document.entities || [],

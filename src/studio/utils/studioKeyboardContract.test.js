@@ -80,4 +80,12 @@ describe('Studio keyboard contract', () => {
         expect(viewport).toMatch(/aria-label="View commands"/)
         expect(viewport).toMatch(/minHeight: 44/)
     })
+
+    // The bar's gate was `setEditMode && controlsRef`, and no caller passes setEditMode: the bar
+    // never mounted anywhere (brief 2026-10-13 item 2). It mounts on an explicit `viewBar` now.
+    it('the view bar mounts on its own prop, not on setEditMode', () => {
+        const viewport = read('components/StudioViewport.jsx')
+        expect(viewport).toMatch(/\{viewBar && controlsRef && \(/)
+        expect(viewport).not.toMatch(/setEditMode && controlsRef/)
+    })
 })
