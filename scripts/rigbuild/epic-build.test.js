@@ -97,3 +97,19 @@ describe('epic-build: a solid an earlier rig file laid is not left behind (MOXIR
         expect(oldEntities(doc).map((e) => e.id).sort()).toEqual(['rig-crane-bar', 'rig-far-crane-z-12-girder-a', 'rig-par-cut-01'])
     })
 })
+
+describe('epic-build: a moving look keeps its motion on the way to the project (MOXIR v2.9 scenes, 2026-10-13)', () => {
+    it('carries `motion` from the rig file through v1Looks and the schema; a still look stays still', async () => {
+        const { normalizeRigLooks } = await import('../../src/shared/projectSchema.js')
+        const file = 'scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json'
+        const v28 = JSON.parse(fs.readFileSync(path.join(repo, file), 'utf8'))
+        const out = normalizeRigLooks(v1Looks(v28, v1Entities(v28), ctx, file))
+        const byId = new Map(out.looks.map((l) => [l.id, l]))
+        expect(byId.get('run').motion).toEqual({ mode: 'chase', bpm: 128, depth: 255, spatial: 'y-', kinds: ['up-b380f'], still: 0.35 })
+        expect(byId.get('lasers-breathe').motion.kinds).toEqual(['ext-lc-ultra-mk2', 'up-la40wf'])
+        expect(byId.get('flash').motion.mode).toBe('strobe')
+        expect(byId.get('ice-fire').motion).toBeUndefined()
+        expect(byId.get('tent').motion).toBeUndefined()
+        expect(out.looks.filter((l) => l.motion).map((l) => l.id)).toEqual(['red-wave', 'embers', 'ice-rings', 'run', 'left-right', 'flash', 'lasers-breathe'])
+    })
+})
