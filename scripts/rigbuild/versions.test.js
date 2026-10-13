@@ -6,7 +6,8 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
-import { LASER_MIN_HEIGHT_M, RIG_PREFIX, buildRig, groupAxis, performerBox, stageFrame } from '../place/rig-lib.mjs'
+import { RIG_PREFIX, buildRig, groupAxis, performerBox, stageFrame } from '../place/rig-lib.mjs'
+import { LASER_MIN_HEIGHT_M, laserDistanceFailures, laserLampsOf } from '../place/laser-distance.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { allVersions, costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
@@ -125,10 +126,8 @@ for (const v of allVersions(spec)) {
             })
 
             it(`${look}: keeps every laser at least ${LASER_MIN_HEIGHT_M} m up and rising, never into the audience plane`, () => {
-                for (const e of lamps.filter((x) => rig.classes[rig.groups.find((g) => x.id.startsWith(`${RIG_PREFIX}${g.id}-`)).class].fixture === 'laser')) {
-                    expect(e.components.transform.position[1]).toBeGreaterThanOrEqual(LASER_MIN_HEIGHT_M)
-                    expect(spotAimDirection(e.components.transform.rotation)[1]).toBeGreaterThanOrEqual(0)
-                }
+                // every laser model, LaserCubes included (laser-distance.mjs; coverage: laserDistance.test.js)
+                expect(laserDistanceFailures(laserLampsOf(lamps, rig, RIG_PREFIX))).toEqual([])
             })
 
             // the browser budget (rig-lib budget.realLights) — unless the version states that every
