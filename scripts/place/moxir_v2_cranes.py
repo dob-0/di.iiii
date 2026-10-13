@@ -1336,7 +1336,7 @@ def build(repo):
     L = rd(repo, LASERS)
     L['setup_sheet'] = R['setup_sheet']
     L['far_wall_openings'] = R['far_wall_openings']
-    L['forty_watt_route_r3'] = FORTY_ROUTE_R3
+    L['forty_watt_route_r3'] = dict(L.get('forty_watt_route_r3') or {}, **FORTY_ROUTE_R3)     # merge: the file's owner_decision / precondition are not in the constant
     L['checks'] = {k: R[k] for k in ('summary', 'beams', 'casts', 'lamp_clearance', 'forty_watt')}
     L['checks']['world'] = {'glb': GLB_V10, 'glb_sha256': GLB_V10_SHA, 'hall': HALL_V10, 'near_crane_z_m': NEAR_Z, 'free_crane_z_m': FREE_Z, 'near_top_m': list(NEAR_TOP),
                             'roof_truss_bottom_m': TRUSS_BOTTOM_LOW, 'pendant_lamps': 'modelled rows z 0..24 + ASSUMED rows z -48..-6, 30..48, from 9.0 m'}
