@@ -6,7 +6,7 @@ description: Venue step 3 — lay the fixed kit out as a rig file against the ha
 # Step 3 — layout (a rig file in `scripts/place/rigs/`)
 
 The output of this step is always a **rig file** — the format `rig.mjs` and
-`epic-build.mjs --rig` read. Pictures and numbers only; nothing is written to a room here.
+`epic-build.mjs --rig` read. Pictures and numbers only; nothing is written to a project here.
 
 | need | script (usage from its header) |
 |---|---|
@@ -33,3 +33,5 @@ UNVERIFIED: these scripts pin MOXIR inputs (GLB sha256, dated rigs, the laser co
 none was re-run while writing this skill.
 
 Next: `venue-render`.
+
+MOXIR is this step's worked case: its production-named scripts are owed a move into di.iiii features (see the index `venue`, "MOXIR is the worked case").

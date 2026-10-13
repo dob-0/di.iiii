@@ -13,8 +13,8 @@ page comes from steps 3–4's JSON — the page itself is layout only.
 | layouts side by side + contact sheet | `python3 -I scripts/place/moxir_v2_page.py --dir <dir>` (reads `v2-layouts.json`, `occlusion/occlusion-sky.json`, `frames/<layout>-<look>-<view>.png`) |
 | the spread / true-look pages | `python3 -I scripts/place/moxir_v2_spread.py page --repo . --out <dir>` · `moxir_v2_true.py page --repo . --out <dir>` |
 | look-probe runs side by side (before / after) | `node scripts/rigbuild/look-compare.mjs --out <dir>/compare.html --run "before=…/probe.json" --run "after=…/probe.json" [--refs …]` |
-| render beside and over the photograph | `python3 scripts/place/compose.py --photo <photo.jpg> --render <shot.png> --out <composite.png> [--side-only]` |
-| one-page site sheet (plan from rig + hall json) | `python3 -B scripts/place/moxir_site_sheet.py [--pdf PATH]` |
+| render beside and over the photograph | `python3 -I scripts/place/compose.py --photo <photo.jpg> --render <shot.png> --out <composite.png> [--side-only]` |
+| one-page site sheet (plan from rig + hall json) | `python3 -I -B scripts/place/moxir_site_sheet.py [--pdf PATH]` |
 
 ## What the review hands back
 
@@ -25,3 +25,5 @@ page comes from steps 3–4's JSON — the page itself is layout only.
 - Record it in the branch's session note (`docs/ai/sessions/<branch>.md`), not CURRENT.md.
 
 UNVERIFIED: none of these commands was run while writing this skill.
+
+MOXIR is this step's worked case: its production-named scripts are owed a move into di.iiii features (see the index `venue`, "MOXIR is the worked case").

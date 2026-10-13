@@ -10,7 +10,7 @@ the stage as built and a 6 m grid; no fixtures, no beams. Oriented as the dance 
 sees it: stage at the top, entry at the bottom, house left on the LEFT.
 
 ```bash
-python3 scripts/place/paint_plan.py --hall <hall.json> --stage <stage-line.json> --out plan.png [--ppm 40]
+python3 -I scripts/place/paint_plan.py --hall <hall.json> --stage <stage-line.json> --out plan.png [--ppm 40]
 #   --full          the whole building, wall to wall (default: the nave only)
 #   --lasers <aerial json>   draw the free crane where the show parks it, the cubes and their lines
 #   --views <rig json>       mark the rig's eye-height views as audience view points
