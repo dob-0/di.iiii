@@ -23,6 +23,7 @@ import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
+import { requestWalk, useWalkMode } from '../navigation/useWalkNavigation.js'
 import { isJamProject, loadJamAllTools, saveAllTools, saveJamAllTools, useAllTools } from '../utils/jamMode.js'
 import { hallEntityIds, isLockedEntity } from '../utils/selectionTools.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
@@ -197,6 +198,8 @@ export default function StudioShell({
     // Blender's Select Box tool (owner 2026-10-12): in Edit, a left drag draws a box and
     // selects what is inside; the Tools row's "Select" button turns it on, Navigate off.
     const [viewportSelectTool, setViewportSelectTool] = useState(false)
+    // Walk / Fly in the cluster (owner, 2026-10-13): the controller lives in the canvas, the buttons only ask it.
+    const walkMode = useWalkMode()
     const setEditModeFromTools = useCallback((mode) => {
         if (mode === 'navigate') setViewportSelectTool(false)
         if (mode === 'select') {
@@ -792,6 +795,8 @@ export default function StudioShell({
                         editMode={viewportEditMode}
                         onSetEditMode={setEditModeFromTools}
                         selectTool={viewportSelectTool && viewportEditMode === 'edit'}
+                        walkMode={walkMode}
+                        onWalk={requestWalk}
                         gizmoMode={viewportGizmoMode}
                         onSetGizmoMode={selectGizmoMode}
                         gizmoSpace={viewportGizmoSpace}

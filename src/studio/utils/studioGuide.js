@@ -136,6 +136,8 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         title: 'View',
         rows: [
             ['Tab / E', 'Toggle Navigate ↔ Edit'],
+            ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Q E down/up. Esc keeps the place, right click returns'],
+            ['Tab (walking)', 'Switch Walk ↔ Fly (Blender: Tab toggles gravity)'],
             ['T', 'Toggle gizmo visibility'],
             ['H', 'Hide / show UI'],
             // Mouse rows follow the chosen navigation preset: viewportMouseRows().
