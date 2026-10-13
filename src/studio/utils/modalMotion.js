@@ -67,19 +67,25 @@ export const indicesOf = (axis) => {
 }
 
 /**
- * One pointer step of a grab. `prev`/`next` are world points on the pivot plane; returns the world
- * delta to add (a Vector3): free or 'all' = the plane delta, an axis = its projection on that axis,
- * a plane ('xz') = the delta with the left-out axis taken away.
+ * A world delta under a constraint: free or 'all' = as it is, an axis = its projection on that axis,
+ * a plane ('xz') = the delta with the left-out axis taken away. Returns a new Vector3.
  */
-export function grabStep(prev, next, axis, precision = 1) {
-    const d = new Vector3().subVectors(next, prev).multiplyScalar(precision)
-    if (!axis || axis === 'all') return d
+export function constrainDelta(d, axis) {
+    if (!axis || axis === 'all') return d.clone()
     if (isPlane(axis)) {
         const n = AXIS_VEC[NORMAL_OF_PLANE[axis]]
-        return d.sub(n.clone().multiplyScalar(d.dot(n)))
+        return d.clone().sub(n.clone().multiplyScalar(d.dot(n)))
     }
     const u = AXIS_VEC[axis]
     return u.clone().multiplyScalar(d.dot(u))
+}
+
+/**
+ * One pointer step of a grab. `prev`/`next` are world points on the pivot plane; returns the world
+ * delta to add (a Vector3), constrained as constrainDelta says.
+ */
+export function grabStep(prev, next, axis, precision = 1) {
+    return constrainDelta(new Vector3().subVectors(next, prev).multiplyScalar(precision), axis)
 }
 
 /**

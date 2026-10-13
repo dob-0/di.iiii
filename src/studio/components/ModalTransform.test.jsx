@@ -154,6 +154,22 @@ describe('the drag follows the cursor at once (Blender; owner 2026-10-13: "stuck
         p = onPreview.mock.calls.at(-1)[0].e1.position
         expect(p[0] % 0.5).toBeCloseTo(0, 6)
     })
+    it('X after a free move puts the WHOLE move on X (Blender): the Y part goes back; X again frees it', () => {
+        const { onPreview } = setup()
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 240 })
+        let p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[1]).toBeCloseTo(60 * PER_PX, 3)
+        fireEvent.keyDown(window, { key: 'x' })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(100 * PER_PX, 3); expect(p[1]).toBe(0)
+        fireEvent.pointerMove(window, { clientX: 520, clientY: 200 })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(120 * PER_PX, 3); expect(p[1]).toBe(0)
+        fireEvent.keyDown(window, { key: 'x' })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(120 * PER_PX, 3); expect(p[1]).toBeCloseTo(100 * PER_PX, 3)
+    })
     it('R turns by the angle the pointer makes around the pivot; S scales by the distance ratio', () => {
         const rotate = setup({ op: { mode: 'rotate', seq: 2 } })
         fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })

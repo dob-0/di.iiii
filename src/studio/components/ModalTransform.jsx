@@ -3,7 +3,7 @@ import { Line } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import {
-    pointerOnPivotPlane, pivotOnScreen, grabStep, rotateAxis, rotateEulerAroundWorldAxis,
+    pointerOnPivotPlane, pivotOnScreen, grabStep, constrainDelta, rotateAxis, rotateEulerAroundWorldAxis,
     orbitAroundPivot, scaleStep, angleAround, distanceFrom, snapVector, snapScalar,
     PLANE_OF_KEY, isPlane, indicesOf, typedRotateAxis, snapStepFor,
 } from '../utils/modalMotion.js'
@@ -212,7 +212,8 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         const applyDrag = (snap, fine = false) => {
             const step = snapStepFor(session.mode, fine)
             if (session.mode === 'translate') {
-                const d = snap ? snapVector(session.delta, step) : session.delta
+                const c = constrainDelta(session.delta, session.axis)
+                const d = snap ? snapVector(c, step) : c
                 for (const e of session.entities) e.pos = [e.base.pos[0] + d.x, e.base.pos[1] + d.y, e.base.pos[2] + d.z]
             } else if (session.mode === 'rotate') {
                 const a = snap ? snapScalar(session.angle, step) : session.angle
@@ -252,7 +253,9 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             if (session.mode === 'translate') {
                 const next = pointerOnPivotPlane(camera, rect, x, y, pivot)
                 if (!next || !last.point) return
-                session.delta.add(grabStep(last.point, next, session.axis, precision))
+                // the FREE move; the constraint applies to the whole of it (applyDrag), so an X pressed mid-move
+                // puts the whole move on X, as Blender does
+                session.delta.add(grabStep(last.point, next, null, precision))
                 last.point = next
             } else if (session.mode === 'rotate') {
                 const a = angleAround(last.centre, x, y)
@@ -275,7 +278,14 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 // Shift+X/Y/Z: the plane that leaves that axis out (Blender's axis locking)
                 const next = lower === 'a' ? 'all' : event.shiftKey ? PLANE_OF_KEY[lower] : lower
                 session.axis = session.axis === next ? null : next
-                rebase()
+                // Blender: the constraint takes the WHOLE move from where it started — G, a free move, then X puts the
+                // object back on the X line through its start. Nothing is re-based here (the Studio walk 2026-10-13,
+                // PR #921, found G then X kept the Y part of the free move).
+                if (session.numeric && (session.axis || session.mode !== 'translate')) applyNumericIfAny()
+                else {
+                    session.numeric = ''
+                    if (session.moved) { applyDrag(false); cbRef.current.onPreview?.(buildPreviewMap()) }
+                }
                 reportStatus()
             } else if (lower === 'g' || lower === 'r' || lower === 's') {
                 event.preventDefault(); event.stopImmediatePropagation()
