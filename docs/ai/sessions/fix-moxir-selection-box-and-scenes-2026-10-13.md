@@ -46,3 +46,10 @@
   (`--comb-x` default). Applied to v2-9 (v1017 → v1088, 71 ops on the 36 cube lines only). Backup
   `~/di-backups/moxir-scratch/2026-10-13-v2-9-before-comb-crowd`. The real-laser look over heads is scanned FANS (sheets of
   light, laserLine.js §4 frames); the rig and epic-build carry static lines only — engine work, owed (N562).
+- Owner 16:40 (screenshot): "there are objects and they will block the light path" — the right head line on the east column row
+  stood under the hall's inclined gallery (massing: x 10-11.6, z 6-40, 3.2-7.4 m), beside the long pipe, the tank and the
+  canopy; my blocking check had columns, deck and PA only. The hall record's `dims.zones.dance` says the used floor is
+  x -11..3.5 (the roller conveyor at 3.6), so the right line stands at x +3.0, the floor's east edge, where v2.7 had it; the
+  left line stays on the west row. Six head moves (v1155 → v1209 with the scenes rebuilt); every right-line beam tested
+  against the massing boxes: stands inside nothing, hits nothing within 60 m. The hall's massing is now in the script's
+  reasoning (step 2b); the full triangle cast (occlusion_lib.py, the laser-margin run) stays owed.
