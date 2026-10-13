@@ -30,6 +30,9 @@ export const WALK_PREFS = Object.freeze({
     pitchLimit: Math.PI / 2 - 0.01,
     accelTime: 0.08,       // Blender's walk has no published ramp; a short one keeps the frame-rate independence of flyStep. ours
     stopTime: 0.06,
+    // The longest frame the walk counts: the flight's (useCameraNavigation, 0.25 s). flyStep's own 0.1 s made a walk below
+    // 10 fps slower (review 2: 1.05 m a second at 5 fps instead of 2.5).
+    maxDt: 0.25,
 })
 
 export const WALK_MODES = Object.freeze(['walk', 'fly'])
@@ -102,6 +105,7 @@ export const walkParams = (held, prefs = WALK_PREFS) => ({
     sprintFactor: held.has('shift') ? prefs.walkSpeedFactor : held.has('alt') ? prefs.slowFactor : 1,
     accelTime: prefs.accelTime,
     stopTime: prefs.stopTime,
+    maxDt: prefs.maxDt,
     wheelStep: 1, // the wheel does not change the walk speed (Blender walk: speed is a preference)
 })
 
@@ -199,7 +203,7 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
             if (!walk) return
             // The walk is modal (Blender): no key reaches the Studio's own shortcuts while it lasts — before this, E (up) and Tab also
             // toggled Navigate/Edit and H hid the panels, because StudioShell listens on window after this capture listener.
-            e.stopPropagation()
+            e.stopImmediatePropagation() // also the window's other capture listeners (the standard move's map, 2026-10-13)
             const action = walkKeyAction(e.code, walk.mode)
             if (action === 'end') { e.preventDefault(); end(); return }
             if (action === 'toggle') { e.preventDefault(); setMode(nextWalkMode(walk.mode)); return }
@@ -222,6 +226,7 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
         }
         const onKeyUp = (e) => {
             if (!walk) return
+            e.stopImmediatePropagation()
             const k = WALK_KEYS[e.code]
             if (k) walk.held.delete(k)
             if (!e.shiftKey) walk.held.delete('shift')

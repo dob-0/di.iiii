@@ -1,3 +1,4 @@
+import { IN_PLACE_DISTANCE } from '../../../studio/navigation/freeMove.js'
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -868,12 +869,34 @@ export default function SmartView({
         }
 
         // --- the camera's limits (a visitor's view) -------------------------------------
-        if (constraints && cc) {
+        // Free (owner, 2026-10-13: "the Free/Inside button decides"): a visitor goes everywhere, through walls and under the
+        // floor, with no distance cap, boundary or collision, at the standard move's speed (useCameraNavigation). Inside keeps
+        // the hall and keeps the camera out of solids, as before.
+        if (constraints && cc && !lockRef.current) {
+            if (cc.userData) cc.userData.diLockBox = null
+            if (!state.freeApplied) {
+                state.freeApplied = true
+                cc.maxPolarAngle = Math.PI
+                cc.maxDistance = Infinity
+                // never Number.EPSILON: a radius that small loses the view direction to rounding (review-move F12)
+                if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? IN_PLACE_DISTANCE / 2
+                if (cc.setBoundary) cc.setBoundary()
+                state.boundaryKey = null
+                if ('colliderMeshes' in cc) cc.colliderMeshes = []
+                state.colliding = false
+                state.collidersSet = null
+            }
+        } else if (constraints && cc) {
+            state.freeApplied = false
             const distance = typeof cc.distance === 'number' ? cc.distance : toTarget
             cc.maxPolarAngle = floorMaxPolar(target.y, distance, frame.floorY, 0.3)
             cc.maxDistance = orbitMaxDistance(frame, state.presetDistance)
             // "Inside": the target and the camera both stay in the interior box; otherwise today's limits.
             const lockBox = lockRef.current && !state.lockPaused ? insideBox(frame) : null
+            // The standard move clamps its own moves to this box, camera and turning point together, so a notch out stops at the
+            // wall instead of the camera stopping while its turning point runs on (the direction workflow, 2026-10-13).
+            cc.userData = cc.userData || {}
+            cc.userData.diLockBox = lockBox
             if (state.atPreset) state.startDistance = toTarget
             if (lockBox) cc.maxDistance = Math.min(cc.maxDistance, Math.max(INSIDE_MAX_DISTANCE, state.startDistance))
             if (lockBox) cc.minDistance = INSIDE_MIN_DISTANCE
