@@ -120,6 +120,9 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
             if (typing(e.target)) return
             if (isWalkToggle(e)) { e.preventDefault(); if (walk) end(); else begin(); return }
             if (!walk) return
+            // While walking the keyboard is the walk's, as Blender's Walk is modal: the Studio's window shortcuts (E the tool,
+            // S the scale gizmo, A select all, Shift+D duplicate) never fire mid-walk (mapped by the move-map agent, 2026-10-13).
+            e.stopImmediatePropagation()
             if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); end(); return }
             const k = WALK_KEYS[e.code]
             if (k) { e.preventDefault(); walk.held.add(k) }
@@ -128,6 +131,7 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
         }
         const onKeyUp = (e) => {
             if (!walk) return
+            e.stopImmediatePropagation()
             const k = WALK_KEYS[e.code]
             if (k) walk.held.delete(k)
             if (!e.shiftKey) walk.held.delete('shift')

@@ -16,7 +16,7 @@ import { CC_ACTION, actionFor, getNavigationPreset } from './mappings.js'
 import { Vector3 } from 'three'
 import { clientToNdc, contentLargestSide, pickPivot, selectionCenter } from './autoDepth.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
-import { IN_PLACE_DISTANCE, autoSpeed, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
+import { IN_PLACE_DISTANCE, autoSpeed, flyVelocity, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 
@@ -209,12 +209,57 @@ export function useCameraNavigation({
             trace({ action: kind, gestureStart: true, speed: +speed().toFixed(3) })
         }
 
+        // Flying: hold the right button over the view and W A S D Q E move at the standard speed, one step a second (Unity's
+        // and Unreal's convention: the keys fly only while the button is held, so the Studio's single-key shortcuts stay theirs).
+        let rightHeld = false
+        const held = new Set()
+        let flyFrame = 0, flyLast = 0
+        const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE'])
+        const right = new Vector3(), worldUp = new Vector3(0, 1, 0), delta = new Vector3()
+        const flyTick = (now) => {
+            flyFrame = 0
+            if (!held.size || !rightHeld) return
+            const dt = clampUpdateDt(flyLast ? (now - flyLast) / 1000 : 0)
+            flyLast = now
+            const v = flyVelocity(held, speed(), speedModifier({ shift: held.has('Shift'), alt: held.has('Alt') }))
+            cc.getPosition(goalPos, true); cc.getTarget(goalTarget, true)
+            viewDir.subVectors(goalTarget, goalPos).normalize()
+            right.crossVectors(viewDir, worldUp).normalize()
+            delta.set(0, 0, 0).addScaledVector(viewDir, v.forward * dt).addScaledVector(right, v.right * dt).addScaledVector(worldUp, v.up * dt)
+            if (delta.lengthSq() > 0) {
+                focused = false
+                goalPos.add(delta); goalTarget.add(delta)
+                cc.setLookAt(goalPos.x, goalPos.y, goalPos.z, goalTarget.x, goalTarget.y, goalTarget.z, false)
+                cc.dispatchEvent({ type: 'update' })
+            }
+            flyFrame = requestAnimationFrame(flyTick)
+        }
+        const stopFlying = () => {
+            if (held.size) cc.dispatchEvent({ type: 'controlend' })
+            held.clear(); rightHeld = false; flyLast = 0
+            if (flyFrame) { cancelAnimationFrame(flyFrame); flyFrame = 0 }
+        }
+        const onFlyKey = (event) => {
+            const down = event.type === 'keydown'
+            if (event.key === 'Shift' || event.key === 'Alt') { if (down) held.add(event.key); else held.delete(event.key) }
+            if (!rightHeld || !FLY_KEYS.has(event.code)) return
+            event.preventDefault(); event.stopImmediatePropagation()
+            if (!down) { held.delete(event.code); return }
+            if (!held.has(event.code) && ![...held].some((k) => FLY_KEYS.has(k))) cc.dispatchEvent({ type: 'controlstart', originalEvent: event })
+            held.add(event.code)
+            if (!flyFrame) { flyLast = 0; flyFrame = requestAnimationFrame(flyTick) }
+        }
+        const onPointerUp = (event) => { if (event.button === 2) stopFlying() }
+        // A release outside the window may never arrive as pointerup: the next move that shows no right button ends the flight.
+        const onPointerMoveFly = (event) => { if (rightHeld && (event.buttons & 2) === 0) stopFlying() }
+
         const onPointerDown = (event) => {
             if (!element.contains(event.target)) { trace({ why: 'pointer outside controls element', target: event.target?.tagName, cls: String(event.target?.className || '').slice(0, 60) }); return }
             // pointerType is what the browser reports, not a guess: touch keeps camera-controls' touch gestures.
             if (event.pointerType === 'touch') return
             const name = BUTTON_NAME[event.button]
             if (!name) return
+            if (event.button === 2) rightHeld = true
             const action = actionFor(preset.id, event.button, { shift: event.shiftKey, ctrl: event.ctrlKey, alt: event.altKey }, { ortho })
             if (action === CC_ACTION.NONE) { cc.mouseButtons[name] = action; return }
             settleForGesture(cc)
@@ -232,7 +277,8 @@ export function useCameraNavigation({
                 if (center) { applyPivot(cc, center, { force: true, onAxis: false }); trace({ action: 'turn', source: 'selection' }); return }
             }
             if (focused) { trace({ action: 'turn', source: 'double-clicked point' }); return }
-            const d = turnDistance(speed(), settingsRef.current.turn)
+            // inside the range a viewer's own lock sets (the public viewer's Inside: 2-25 m); the Studio's range is open
+            const d = Math.min(Math.max(turnDistance(speed(), settingsRef.current.turn), cc.minDistance), cc.maxDistance)
             placeTurnPoint(d)
             trace({ action: 'turn', gestureStart: true, distance: +d.toFixed(3), turn: settingsRef.current.turn })
         }
@@ -277,7 +323,18 @@ export function useCameraNavigation({
         element.addEventListener('wheel', onWheel, { passive: false })
         doc.addEventListener('contextmenu', onContextMenu, { capture: true })
         doc.addEventListener('dblclick', onDoubleClick, { capture: true })
+        doc.addEventListener('keydown', onFlyKey, { capture: true })
+        doc.addEventListener('keyup', onFlyKey, { capture: true })
+        doc.addEventListener('pointerup', onPointerUp, { capture: true })
+        doc.addEventListener('pointermove', onPointerMoveFly, { capture: true })
+        window.addEventListener('blur', stopFlying)
         return () => {
+            stopFlying()
+            doc.removeEventListener('keydown', onFlyKey, { capture: true })
+            doc.removeEventListener('keyup', onFlyKey, { capture: true })
+            doc.removeEventListener('pointerup', onPointerUp, { capture: true })
+            doc.removeEventListener('pointermove', onPointerMoveFly, { capture: true })
+            window.removeEventListener('blur', stopFlying)
             unclamp()
             cc.minDistance = limits.min
             cc.maxDistance = limits.max
