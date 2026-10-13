@@ -1,4 +1,4 @@
-import { pickLampBody } from '../utils/selectionTools.js'
+import { movableEntities, pickLampBody } from '../utils/selectionTools.js'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
 import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
@@ -56,7 +56,7 @@ import { classifyArchitecture } from '../../project/viewport/smartView/smartView
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
-import { pickFromHits } from '../utils/pickPriority.js'
+import { handlePickClick, pickUserData } from '../utils/pickPriority.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
@@ -219,7 +219,7 @@ function AutoLookAround({ controlsRef, config }) {
 // Edit and Select both transform the selection; Navigate never does.
 const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
 
-function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, gizmoSpace = 'world', overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+function SelectableEntity({ entity, assetMap, screens = null, selected, selectedIdSet = null, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, gizmoSpace = 'world', overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
     const highlightRef = useRef(null)
@@ -343,16 +343,12 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
-                // How the smart view finds an entity's object (SmartView.jsx).
-                userData={{ svEntityId: entity.id }}
-                onClick={(e) => {
-                    // Locked: not picked — the click goes on to whatever is behind it.
-                    if (isLocked) return
-                    e.stopPropagation()
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (additive) onToggleSelect?.(entity.id)
-                    else onSelect?.(entity.id)
-                }}
+                // How the smart view finds an entity's object (SmartView.jsx), and what a click weighs (pickPriority.js).
+                userData={pickUserData(entity)}
+                // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a
+                // locked entity is picked (the lock stops moves), the one selected object clicked again deselects —
+                // the same rule as a group entity's click below.
+                onClick={(e) => handlePickClick(e, { onSelect, onToggleSelect, selectedIds: selectedIdSet })}
             >
                 {/* Live only where the surface turned links on (a visitor's
                     view mode) — see entityLinkContext.js. */}
@@ -394,20 +390,11 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
-                userData={{ svEntityId: entity.id, svPick: entity.components?.light || entity.components?.fixture ? 'body' : 'other', svLocked: entity.components?.runtime?.locked === true }}
-                onClick={(e) => {
-                    if (e.delta > 2) return
-                    e.stopPropagation()
-                    // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
-                    // beats what is behind it. A plain click on the one selected object again deselects it (owner 10-13:
-                    // "you can't deselect" — the place fills the view, so a click rarely misses everything).
-                    const picked = pickFromHits(e.intersections)
-                    if (picked === null) return
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (additive) onToggleSelectEntity?.(picked)
-                    else if (selectedIdSet.size === 1 && selectedIdSet.has(picked)) onSelectEntity?.(null)
-                    else onSelectEntity?.(picked)
-                }}
+                userData={pickUserData(entity)}
+                // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
+                // beats what is behind it; a locked entity is picked (the lock stops moves); the one selected object
+                // clicked again deselects.
+                onClick={(e) => handlePickClick(e, { onSelect: onSelectEntity, onToggleSelect: onToggleSelectEntity, selectedIds: selectedIdSet })}
             >
                 {/* Pivot dot — clickable hit target + visual marker for the group origin */}
                 <mesh>
@@ -454,6 +441,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
             assetMap={assetMap}
             screens={screens}
             selected={selectedIdSet.has(entity.id)}
+            selectedIdSet={selectedIdSet}
             isPrimary={entity.id === selectedEntityId}
             editMode={editMode}
             gizmoMode={gizmoMode}
@@ -923,11 +911,11 @@ function StudioSceneContent({
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.some((entity) => entity.components?.runtime?.locked !== true) && (
+            {transformOp && movableEntities(selectedEntities).length > 0 && (
                 <ModalTransform
                     op={transformOp}
-                    // A locked object never moves, even when it was selected before it was locked.
-                    selectedEntities={selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true)}
+                    // A locked or hidden object never moves, even when it was selected before it was locked or hidden.
+                    selectedEntities={movableEntities(selectedEntities)}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
