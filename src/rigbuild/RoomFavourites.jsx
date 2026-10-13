@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShowError, blockOf, chooseCue, cleanName, favouriteButtons, isLiveScene, liveOf } from './showApi.js'
 import { useShowFeed } from './useShowFeed.js'
+import useRememberedOpen from '../utils/rememberedOpen.js'
+import { CHIP, ACTIVE, INK, LINE } from './chromeStyle.js'
 
-// THE TEN FAVOURITE SCENE BUTTONS (were five; owner, 2026-10-09: "10 animated scenes in favorite"), ALWAYS ON SCREEN IN THE ROOM (owner, 2026-10-09: "it's just to see the
-// light shows, and in virtual - like the favourite 5 scene buttons there"). A tap sends that scene to Light
+// THE TEN FAVOURITE SCENE BUTTONS (were five; owner, 2026-10-09: "10 animated scenes in favorite"), IN THE ROOM BEHIND ONE SMALL CONTROL (owner 2026-10-13:
+// "look how many UI things pop up when you first load the view page; they cover the view" - before, the ten bricks stood on the scene from the first frame;
+// now the scene is the page and "Scenes" opens them, remembered for that viewer only, rememberedOpen.js). A tap sends that scene to Light
 // through the SAME POST .../choose as the list and the show page, so the server alone decides who may, the
 // cooldown, the operator's lock; a laser scene is never in the row (the server refuses it, and never stars it).
 // WHICH ten is the operator's, kept on the server with the show's control state (`control.favourites`): every
@@ -11,7 +14,7 @@ import { useShowFeed } from './useShowFeed.js'
 // on a desktop it is one row of ten. Nothing here computes a
 // permission - `you.block` is read. Rectangles, 0-2 px, ember red for the live one, targets >= 44 px.
 export const FAVOURITES_EVENT = 'di:show-answer'
-const EMBER = '#ff3b3b'
+const EMBER = 'var(--di-danger, #f25f5c)'
 // A phone-wide screen wraps ten buttons to 2 x 5; wider screens keep one row. Measured by moxirMotion tests and a real browser.
 const WIDE_QUERY = '(min-width: 720px)'
 const useWide = () => {
@@ -36,6 +39,7 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
     const rowRef = useRef(null)
     const wide = useWide()
     const [lift, setLift] = useState(null)
+    const [open, toggleOpen] = useRememberedOpen('bricks')
     // Sit just above the view bar (Floor / DJ / Top ...), wherever it stands on this screen: measured, never covering it.
     useEffect(() => {
         const place = () => {
@@ -97,7 +101,14 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
     return (
         <div ref={rowRef} data-testid="room-favourites" style={{ ...rowStyle, bottom: lift != null ? lift : bottom }}>
             {notice ? <p role="status" style={noticeStyle}>{notice}</p> : null}
-            <ul aria-label="favourite scenes" data-cols={wide ? 10 : 5} style={{ ...listStyle, gridTemplateColumns: `repeat(${wide ? 10 : 5}, minmax(0, 1fr))` }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button type="button" data-testid="room-favourites-toggle" aria-expanded={open} aria-controls="room-favourites-list" onClick={toggleOpen}
+                    title={open ? 'Hide the scenes' : 'Show the scenes: tap one to change the light'}
+                    style={{ ...CHIP, pointerEvents: 'auto', marginBottom: open ? 4 : 0, color: open ? ACTIVE : INK }}>
+                    Scenes <span aria-hidden="true" style={{ opacity: 0.7 }}>{open ? '▾' : '▴'}</span>
+                </button>
+            </div>
+            {open ? <ul id="room-favourites-list" aria-label="favourite scenes" data-cols={wide ? 10 : 5} style={{ ...listStyle, gridTemplateColumns: `repeat(${wide ? 10 : 5}, minmax(0, 1fr))` }}>
                 {buttons.map((cue) => {
                     const isLive = isLiveScene(cue, live, cues)
                     const disabled = Boolean(cue.laser) || Boolean(block) || sending != null
@@ -106,18 +117,18 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem' }
                         <li key={cue.lookId} style={{ minWidth: 0 }}>
                             <button type="button" disabled={disabled} data-fav={cue.lookId} data-cue={cue.index} aria-current={isLive ? 'true' : undefined} title={name}
                                 onClick={() => choose(cue)}
-                                style={{ ...brickStyle, cursor: disabled ? 'default' : 'pointer', opacity: disabled && !isLive ? 0.55 : 1, borderColor: isLive ? EMBER : 'rgba(255,255,255,0.22)', background: isLive ? 'rgba(255,59,59,0.22)' : 'rgba(10,10,10,0.86)', boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none' }}>
+                                style={{ ...brickStyle, cursor: disabled ? 'default' : 'pointer', opacity: disabled && !isLive ? 0.55 : 1, borderColor: isLive ? EMBER : LINE, background: isLive ? 'rgba(var(--di-danger-rgb, 242, 95, 92), 0.22)' : 'var(--di-scrim-strong, rgba(4, 6, 14, 0.9))', boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none' }}>
                                 <span aria-hidden="true" style={{ display: 'flex', gap: 2 }}>
                                     {(cue.swatch?.length ? cue.swatch.slice(0, 2) : [{ hex: '#000' }]).map((s, i) => (
                                         <span key={i} style={{ width: 12, height: 8, background: s.hex, border: '1px solid rgba(255,255,255,0.3)' }} />
                                     ))}
                                 </span>
-                                <span style={{ fontSize: '0.68rem', fontWeight: isLive ? 700 : 500, lineHeight: 1.15, maxWidth: '100%', overflowWrap: 'anywhere', textAlign: 'center', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{name}</span>
+                                <span style={{ fontSize: 'var(--di-text-2, 0.625rem)', fontWeight: isLive ? 700 : 500, lineHeight: 1.15, maxWidth: '100%', overflowWrap: 'anywhere', textAlign: 'center', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{name}</span>
                             </button>
                         </li>
                     )
                 })}
-            </ul>
+            </ul> : null}
         </div>
     )
 }
@@ -133,15 +144,16 @@ const rowStyle = {
     transform: 'translateX(-50%)',
     zIndex: 19,
     width: 'min(56rem, calc(100vw - 2rem))',
+    pointerEvents: 'none', // the empty width between the control and the bricks belongs to the scene
     color: '#f5f7fa'
 }
-const listStyle = { listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }
+const listStyle = { listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4, pointerEvents: 'auto' }
 const brickStyle = {
     width: '100%',
     minHeight: 48,
     padding: '0.25rem 0.2rem',
     border: '1px solid',
-    borderRadius: 2,
+    borderRadius: '2px',
     color: 'inherit',
     font: 'inherit',
     display: 'flex',
@@ -152,4 +164,4 @@ const brickStyle = {
     touchAction: 'manipulation',
     backdropFilter: 'blur(8px)'
 }
-const noticeStyle = { margin: '0 0 4px', padding: '0.3rem 0.5rem', background: EMBER, color: '#000', fontWeight: 700, fontSize: '0.75rem', borderRadius: 2 }
+const noticeStyle = { pointerEvents: 'auto', margin: '0 0 4px', padding: '0.3rem 0.5rem', background: EMBER, color: '#000', fontWeight: 700, fontSize: 'var(--di-text-3, 0.76rem)', borderRadius: '2px' }

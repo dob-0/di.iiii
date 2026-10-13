@@ -38,6 +38,10 @@ import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, layersParam, parseLayersParam } from
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
+import useAuthSession from '../../hooks/useAuthSession.js'
+import { isSpaceInSessionScope } from '../../utils/sessionScope.js'
+import { visitorChromeOf, canEditSession } from '../../shared/visitorChrome.js'
+import DisplayChip from '../../rigbuild/DisplayChip.jsx'
 import useOutputMode from '../viewport/useOutputMode.js'
 import { outputDocument } from '../viewport/outputMode.js'
 
@@ -259,10 +263,15 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
     // While the desk plays one of the room's looks, the scene draws the lamps as the look
     // poses them (RoomLookFollower); the document itself is never written.
+    // WHAT VISITORS SEE (Studio: Project > What visitors see): the author's switches for this page's own controls, and
+    // Edit in Studio only for a session that can edit here. Everything allowed still starts closed (rememberedOpen.js).
+    const chrome = useMemo(() => visitorChromeOf(document), [document])
+    const session = useAuthSession()
+    const canEdit = canEditSession(session, spaceId || DEFAULT_PROJECT_SPACE_ID, isSpaceInSessionScope)
     const [lookEntities, setLookEntities] = useState(null)
     // The rig's version row (RigVersionSwitch) shows in orbit on a project that is one of
     // a set; the show chip sits under it then, else where the row would be.
-    const rigVersionsShown = state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || []))
+    const rigVersionsShown = state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed && chrome.versions && Boolean(rigVariantOf(document?.entities || []))
     // Output mode (viewport/outputMode.js): everyone but the work machine sees a copy of the
     // room drawn light enough for a phone; the document itself is never written.
     const [outputMode, setOutputMode] = useOutputMode()
@@ -297,26 +306,28 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // The one gate walk mode has: shared by the Walk / Fly button and the
     // arrive-walking effect below.
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
+    // The author may take Walk / Fly (and Inside, Lite) off the page; the gate above still decides arriving walking.
+    const walkButtons = walkGateOpen && chrome.walk
     // The version row and the show chip: on a portrait phone the row gets its own line
     // under Walk / Fly / Sound instead of running under them (rigbuild/rigVersionLayout.js).
     const { rowTop: rigRowTop, chipTop: rigChipTop } = rigChromeTops(topClear, {
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
-        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
+        rightControls: (navMode === 'orbit' && walkButtons) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
         // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, each one 56 px line, all top-right
-        rightLines: state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (hasBuilding ? 3 : 2) : null
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 3 : 2) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
     const rigPlacement = rigVersionPlacement(topClear, {
-        isRigSet: state.status === 'ready' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || [])),
+        isRigSet: state.status === 'ready' && !isPreview && !isEmbed && chrome.versions && Boolean(rigVariantOf(document?.entities || [])),
         navMode,
         rowTop: rigRowTop
     })
     // The row stops before Walk / Fly and Sound instead of running under them.
     const rigRowMaxW = rigRowMaxWidth({
         compact: isPhoneCompact,
-        walk: navMode === 'orbit' && walkGateOpen,
+        walk: navMode === 'orbit' && walkButtons,
         sound: state.status === 'ready' && hasSound && !soundLocked && !isPreview
     })
     // ONE bar at the top of a rig scene in orbit (rigbuild/SceneBar.jsx): versions, Edit in Studio, the SHOW chip on the
@@ -506,6 +517,44 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 : `${spaceLabel || resolvedRouteSpaceId} — di.iiii`)
     )
 
+    // Inside / Free and Lite / Full: drawn in the page's corner column, or (in the scene bar) behind its Display chip.
+    const insideButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && hasBuilding ? (
+                    <button
+                        type="button"
+                        aria-pressed={lockInside && !lockPaused}
+                        title={lockPaused ? 'This view stands outside the building, so the camera is free here' : 'Keep the camera inside the building'}
+                        style={{
+                            ...btnBase,
+                            ...abs({ top: `calc(${topClear} + 3.4rem)`, right: '1rem', minWidth: 104 }),
+                            minHeight: 44,
+                            background: lockInside && !lockPaused ? 'var(--di-cyan-dim, rgba(77, 249, 255, 0.1))' : btnBase.background,
+                            border: `1px solid ${lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : 'var(--di-cyan-border, rgba(77, 249, 255, 0.3))'}`,
+                            color: lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : btnBase.color
+                        }}
+                        onClick={toggleLockInside}
+                    >
+                        {lockInside && !lockPaused ? 'Inside' : 'Free'}
+                    </button>
+                ) : null
+
+    const liteButton = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
+                    <button
+                        type="button"
+                        aria-pressed={!outputMode}
+                        title={outputMode
+                            ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
+                            : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
+                        style={{
+                            ...btnBase,
+                            ...abs({ top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`, right: '1rem', minWidth: 104 }),
+                            minHeight: 44
+                        }}
+                        onClick={() => setOutputMode(!outputMode)}
+                    >
+                        {outputMode ? 'Lite' : 'Full'}
+                    </button>
+                ) : null
+
     const barControls = (
         <>
             {/* Walk mode enters LiveProjectScene, which renders `entities` and
@@ -535,7 +584,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     aria-pressed={soundOn}
                     style={{
                         ...btnBase,
-                        ...abs({ top: topClear, right: navMode === 'orbit' && walkGateOpen ? '9.5rem' : '1rem' }),
+                        ...abs({ top: topClear, right: navMode === 'orbit' && walkButtons ? '9.5rem' : '1rem' }),
                         color: soundOn ? 'var(--di-cyan)' : undefined,
                         borderColor: soundOn ? 'var(--di-cyan)' : undefined,
                     }}
@@ -545,7 +594,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </button>
             ) : null}
 
-            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+            {state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
                 <button
                     type="button"
                     style={{
@@ -558,47 +607,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </button>
             ) : null}
 
-            {/* Directly under Walk / Fly, same size and style: keep the camera inside the building. Orbit mode
-                only (walk is already confined), and only where the room has a building. Paused (shown as
-                Free) while a view whose camera stands outside the building, such as Top or Side, is on. */}
-            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen && hasBuilding ? (
-                <button
-                    type="button"
-                    aria-pressed={lockInside && !lockPaused}
-                    title={lockPaused ? 'This view stands outside the building, so the camera is free here' : 'Keep the camera inside the building'}
-                    style={{
-                        ...btnBase,
-                        ...abs({ top: `calc(${topClear} + 3.4rem)`, right: '1rem', minWidth: 104 }),
-                        minHeight: 44,
-                        background: lockInside && !lockPaused ? 'rgba(77, 249, 255, 0.22)' : overlayButtonStyle.background,
-                        border: `1px solid ${lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : 'rgba(255,255,255,0.14)'}`,
-                        color: lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : overlayButtonStyle.color
-                    }}
-                    onClick={toggleLockInside}
-                >
-                    {lockInside && !lockPaused ? 'Inside' : 'Free'}
-                </button>
-            ) : null}
-
-            {/* Under them, same size: the room's quality. Lite is the output (viewport/outputMode.js),
-                Full the work renderer; the choice is remembered per browser. */}
-            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
-                <button
-                    type="button"
-                    aria-pressed={!outputMode}
-                    title={outputMode
-                        ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
-                        : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
-                    style={{
-                        ...btnBase,
-                        ...abs({ top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`, right: '1rem', minWidth: 104 }),
-                        minHeight: 44
-                    }}
-                    onClick={() => setOutputMode(!outputMode)}
-                >
-                    {outputMode ? 'Lite' : 'Full'}
-                </button>
-            ) : null}
+            {sceneBar ? null : insideButton}
+            {sceneBar ? null : liteButton}
         </>
     )
 
@@ -677,6 +687,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         onBuilding={onBuilding}
                         onLockPaused={onLockPaused}
                         layers={layers}
+                        viewsBar={chrome.views}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'
@@ -694,7 +705,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     onHeight={setBarH}
                     slotRef={setShowSlot}
                     left={<>
-                        {rigVariantOf(document?.entities || []) ? (
+                        {chrome.versions && rigVariantOf(document?.entities || []) ? (
                             <RigVersionSwitch
                                 spaceId={resolvedRouteSpaceId}
                                 projectId={projectId}
@@ -703,30 +714,36 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                 bare
                             />
                         ) : null}
-                        <EditInStudio spaceId={resolvedRouteSpaceId} projectId={projectId} />
+                        {canEdit ? <EditInStudio spaceId={resolvedRouteSpaceId} projectId={projectId} /> : null}
                     </>}
                     right={<>
-                        {navMode === 'orbit' && hasBuilding ? (
-                            <div role="group" aria-label="layers" data-testid="scene-layers" style={{ display: 'flex', alignItems: 'stretch', gap: '2px', flexWrap: 'wrap' }}>
-                                {VIEW_LAYER_IDS.map((id) => (
-                                    <button
-                                        key={id}
-                                        type="button"
-                                        data-testid={`layer-${id}`}
-                                        aria-pressed={layers[id] !== false}
-                                        title={`${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
-                                        onClick={() => toggleLayer(id)}
-                                        style={{
-                                            ...barButtonStyle,
-                                            padding: '0 0.7rem',
-                                            color: layers[id] !== false ? '#f5f7fa' : 'rgba(245,247,250,0.45)',
-                                            textDecoration: layers[id] !== false ? 'none' : 'line-through'
-                                        }}
-                                    >
-                                        {VIEW_LAYER_LABELS[id]}
-                                    </button>
-                                ))}
-                            </div>
+                        {/* Layers, Inside / Free and Lite / Full: one Display chip, closed until a viewer opens it */}
+                        {(navMode === 'orbit' && hasBuilding && chrome.layers) || (insideButton || liteButton) ? (
+                            <DisplayChip>
+                                {navMode === 'orbit' && hasBuilding && chrome.layers ? (
+                                    <div role="group" aria-label="layers" data-testid="scene-layers" style={{ display: 'flex', alignItems: 'stretch', gap: 'var(--di-space-1, 3px)', flexWrap: 'wrap' }}>
+                                        {VIEW_LAYER_IDS.map((id) => (
+                                            <button
+                                                key={id}
+                                                type="button"
+                                                data-testid={`layer-${id}`}
+                                                aria-pressed={layers[id] !== false}
+                                                title={`${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                                                onClick={() => toggleLayer(id)}
+                                                style={{
+                                                    ...barButtonStyle,
+                                                    color: layers[id] !== false ? 'var(--di-text, #fff)' : 'var(--di-text-muted, rgba(255,255,255,0.5))',
+                                                    textDecoration: layers[id] !== false ? 'none' : 'line-through'
+                                                }}
+                                            >
+                                                {VIEW_LAYER_LABELS[id]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : null}
+                                {insideButton}
+                                {liteButton}
+                            </DisplayChip>
                         ) : null}
                         {barControls}
                     </>}
@@ -738,7 +755,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     <RoomLookFollower
                         document={viewDocument}
                         onEntities={setLookEntities}
-                        showChip={!isPreview && !isEmbed}
+                        showChip={!isPreview && !isEmbed && chrome.show}
+                        scenes={!isPreview && !isEmbed && chrome.scenes}
                         top={rigChipTop}
                         bare={sceneBar}
                         slot={showSlot}

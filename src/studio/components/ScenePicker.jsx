@@ -1,8 +1,9 @@
-import { useState } from 'react'
 import { scenesOf } from '../utils/scenesOf.js'
 import { laserUnitsOf } from '../utils/laserTest.js'
+import useRememberedOpen from '../../utils/rememberedOpen.js'
 
-// SCENES in the Studio, open by default (owner 2026-10-13 15:5x: "by default make that I can select in
+// SCENES in the Studio, open by default (a work tool the owner asked for open; the visitors' view page starts clear, owner 2026-10-13
+// 20:21) and a fold is remembered for this viewer only (rememberedOpen.js). Owner 2026-10-13 15:5x: "by default make that I can select in
 // edit mode — I can't select a light show and understand how the light will be"). Until now the Studio
 // followed the show clock and offered no choice. A click shows that scene's light in the viewport while
 // you edit (StudioViewport `rigLook` → useRigLookEntities explicit); "Follow the show" goes back to the
@@ -19,7 +20,7 @@ import { laserUnitsOf } from '../utils/laserTest.js'
 // laser unit draws its whole scan field as a square on the real surfaces, labelled with its metres (LaserTest.jsx). A
 // button of the Studio's own (scc-btn), nothing written to the project.
 export default function ScenePicker({ document, current, onPick, laserTest = false, onLaserTest = null }) {
-    const [open, setOpen] = useState(true)
+    const [open, toggleOpen] = useRememberedOpen('studio-scenes', true)
     const scenes = scenesOf(document)
     const hasLasers = Boolean(onLaserTest) && laserUnitsOf(document?.entities).size > 0
     if (!scenes.length && !hasLasers) return null
@@ -35,7 +36,7 @@ export default function ScenePicker({ document, current, onPick, laserTest = fal
                     aria-expanded={open}
                     aria-label={open ? 'fold' : 'open'}
                     title={open ? 'Fold the scene list' : 'Open the scene list'}
-                    onClick={() => setOpen((o) => !o)}
+                    onClick={toggleOpen}
                 >
                     {open ? '▾' : '▸'}
                 </button>
