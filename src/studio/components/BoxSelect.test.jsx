@@ -52,3 +52,21 @@ describe('BoxSelect modifiers', () => {
         expect(select.mock.calls[0][0]).toEqual(['zzz'])
     })
 })
+
+describe('BoxSelect leaves the middle button to the navigation (Shift pans, Ctrl zooms, plain orbits)', () => {
+    afterEach(() => { cleanup() })
+    it('a Shift+middle press keeps the pan the navigation chose; a left press parks the left button and gives it back', () => {
+        const controls = { mouseButtons: { left: 0, middle: 2 /* TRUCK, as useCameraNavigation set it for Shift */, right: 0, wheel: 16 } }
+        render(<BoxSelect active entities={entities} selectedEntityIds={[]} onSelectEntities={vi.fn()} controlsRef={{ current: controls }} />)
+        fire(host, 'pointerdown', { button: 1, shiftKey: true, clientX: 10, clientY: 10 })
+        expect(controls.mouseButtons.middle).toBe(2)
+        fire(window, 'pointerup', { button: 1, shiftKey: true, clientX: 300, clientY: 300 })
+        expect(controls.mouseButtons.middle).toBe(2)
+        controls.mouseButtons.left = 1 // ROTATE, as if the preset had it
+        fire(host, 'pointerdown', { button: 0, clientX: 10, clientY: 10 })
+        expect(controls.mouseButtons.left).toBe(0)
+        fire(window, 'pointermove', { clientX: 300, clientY: 300 })
+        fire(window, 'pointerup', { clientX: 300, clientY: 300 })
+        expect(controls.mouseButtons.left).toBe(1)
+    })
+})

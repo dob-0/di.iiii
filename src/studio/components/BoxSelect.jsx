@@ -6,7 +6,9 @@
 // whose ORIGIN projects inside is selected — Blender's object-mode box tests the origin too.
 // Shift+drag adds, Ctrl+drag removes. A drag that grabs the gizmo stays a gizmo move; a plain
 // click stays a click (R3F's onClick picks, as before). While the tool is on, the left button
-// never orbits; the middle button orbits (Blender's binding), the wheel zooms, right pans.
+// never orbits; the middle button is the navigation's own (Blender: orbit, Shift pans, Ctrl zooms —
+// chosen per gesture by useCameraNavigation.js, never overwritten here; owner 2026-10-13: "in Select
+// Shift+move does not work" was this file forcing orbit on every middle press), the wheel zooms.
 // Pure parts: ../utils/selectionTools.js.
 import { useEffect, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
@@ -93,10 +95,6 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
         const onPointerDown = (event) => {
             if (event.pointerType === 'touch') return
             const { active: on } = live.current
-            if (on && event.button === 1) {
-                setButtons({ middle: CC_ACTION.ROTATE })
-                return
-            }
             if (event.button !== 0 || event.altKey) return
             if (!on && !armed) return
             start = { x: event.clientX, y: event.clientY, mode: boxModeFor(event) }

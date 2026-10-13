@@ -21,3 +21,6 @@
   when it points away); scale = the ratio of the pointer's distance to the pivot. Incremental, so Shift (×0.1) and Ctrl (snap
   0.5 m / 15° / 0.1) work mid-drag; the first move only takes the start; numeric typing with an axis stays. ModalTransform
   tests mock the Canvas with a known camera; 45 tests pass across modal, shell and maths.
+- Owner 15:3x "in Select mode Shift+move does not work": `BoxSelect.jsx` forced `middle: ROTATE` on every middle press, after
+  `useCameraNavigation` had chosen the gesture's action from the modifiers (Shift = pan, Ctrl = zoom, plain = orbit, Blender).
+  The override is gone; the middle button is the navigation's own in Select too. Test added (4 pass).
