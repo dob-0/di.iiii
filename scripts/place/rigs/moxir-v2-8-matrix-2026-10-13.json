@@ -7217,7 +7217,8 @@
      "fader": 1.0,
      "note": "PREVIS override to see the fan coverage (owner 2026-10-11); the 0.16 cap measured 2026-10-09 (peak.desk_caps) still rules the show desk"
     }
-   }
+   },
+   "intent": "Only the lasers: the matrix over the dance floor, the hall dark."
   },
   {
    "id": "wall",
@@ -7240,7 +7241,8 @@
      "#ff3a12",
      0.3
     ]
-   }
+   },
+   "intent": "The red wall: six beams behind the DJ and the side lines, all ember."
   },
   {
    "id": "lines",
@@ -7275,7 +7277,8 @@
      "#ff3a12",
      0.6
     ]
-   }
+   },
+   "intent": "The white side lines; the hall steel, the columns and the tent low in ember."
   },
   {
    "id": "dark",
@@ -7390,7 +7393,8 @@
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
      "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
-   }
+   },
+   "intent": "One colour, ember, low everywhere: the hall breathes, nothing shouts."
   },
   {
    "id": "peak",
@@ -7530,7 +7534,8 @@
     "v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps",
     "v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps",
     "v2.4 previs: lasers at 1.0 to show the fan (owner 2026-10-11); cap 0.16 stays in desk_caps"
-   ]
+   ],
+   "intent": "Everything on at once: the side lines white, the lasers in, the rest ember."
   },
   {
    "id": "tent",
@@ -7553,7 +7558,8 @@
      "#ff3a12",
      0.1
     ]
-   }
+   },
+   "intent": "The red tent alone: the two fans of side washes meet under the roof."
   },
   {
    "id": "dj",
@@ -7576,7 +7582,8 @@
      "#e8e4dc",
      0.2
     ]
-   }
+   },
+   "intent": "The DJ alone: the red plane behind him and a white kicker, the hall dark."
   },
   {
    "id": "columns",
@@ -7595,7 +7602,8 @@
      "#e8e4dc",
      0.5
     ]
-   }
+   },
+   "intent": "The hall in ash: the columns and the steel white, the floor dark."
   },
   {
    "id": "cut",
@@ -7622,7 +7630,8 @@
      "#ff3a12",
      0.1
     ]
-   }
+   },
+   "intent": "The cut truss in ember, the side lines low: the ceiling is the picture."
   },
   {
    "id": "matrix",
@@ -7645,7 +7654,8 @@
      "#ff3a12",
      0.3
     ]
-   }
+   },
+   "intent": "The laser matrix over a red floor: the tent at half, the lasers full."
   },
   {
    "id": "white",
@@ -7704,7 +7714,108 @@
      "#e8e4dc",
      1.0
     ]
-   }
+   },
+   "intent": "White out for seconds: everything in ash, the lasers in."
+  },
+  {
+   "id": "frame",
+   "title": "The frame (the twelve white side beams alone)",
+   "act": 2,
+   "parts": {
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
+    ]
+   },
+   "intent": "The white frame alone: the twelve B380F side beams, nothing else."
+  },
+  {
+   "id": "red-floor",
+   "title": "Red floor (tent, side lines and the DJ plane in ember)",
+   "act": 2,
+   "parts": {
+    "red tent left": [
+     "#ff3a12",
+     1.0
+    ],
+    "red tent right": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff3a12",
+     0.6
+    ],
+    "side line right": [
+     "#ff3a12",
+     0.6
+    ],
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.5
+    ]
+   },
+   "intent": "The whole floor red: the tent, the side lines and the DJ plane in ember, the walls dark."
+  },
+  {
+   "id": "breath",
+   "title": "Breath (almost dark, a red breath behind the DJ)",
+   "act": 1,
+   "parts": {
+    "plane 1 (behind the DJ)": [
+     "#ff3a12",
+     0.35
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.1
+    ],
+    "stage key": [
+     "#ff3a12",
+     0.15
+    ]
+   },
+   "intent": "Almost dark: a red breath behind the DJ, the back of the stage just lit."
+  },
+  {
+   "id": "storm",
+   "title": "The storm (lasers, white lines and the cut at full over a red tent)",
+   "act": 3,
+   "parts": {
+    "laser": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line left": [
+     "#e8e4dc",
+     1.0
+    ],
+    "side line right": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "red tent left": [
+     "#ff3a12",
+     1.0
+    ],
+    "red tent right": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "intent": "The storm: lasers, white side lines and the cut truss at full, the tent red under them."
   }
  ],
  "cues": [
@@ -7773,6 +7884,30 @@
    "name": "white out",
    "fade": 1,
    "hold": 6
+  },
+  {
+   "look": "frame",
+   "name": "the frame",
+   "fade": 2,
+   "hold": 10
+  },
+  {
+   "look": "red-floor",
+   "name": "red floor",
+   "fade": 2,
+   "hold": 12
+  },
+  {
+   "look": "breath",
+   "name": "breath",
+   "fade": 3,
+   "hold": 14
+  },
+  {
+   "look": "storm",
+   "name": "the storm",
+   "fade": 1,
+   "hold": 8
   }
  ],
  "loop": true,

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import StudioViewport from './StudioViewport.jsx'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
@@ -68,6 +69,9 @@ export default function StudioPresentationSurface({
     // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
     graphRoom = null,
 }) {
+    // The scene the Studio shows while editing (ScenePicker.jsx): undefined = follow the show clock,
+    // '' = work light (no look), an id = that look.
+    const [rigLook, setRigLook] = useState(undefined)
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const isFixedCamera = previewMode === 'fixed-camera'
@@ -158,6 +162,8 @@ export default function StudioPresentationSurface({
     return (
         <StudioViewport
             document={document}
+            rigLook={rigLook}
+            onRigLook={setRigLook}
             selectedEntityId={selectedEntityId}
             selectedEntityIds={selectedEntityIds}
             onSelectEntity={onSelectEntity}

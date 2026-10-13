@@ -215,6 +215,25 @@ rig['from_rig'] = a.src
 # Six looks on the v2.8/v2.9 parts, in the show's two colours (ember #ff3a12, ash #e8e4dc), each one a single idea seen from
 # the floor; appended to the loop after 'peak' with the loop's own fade/hold. Idempotent: a look already there is left alone.
 EMBER, ASH = '#ff3a12', '#e8e4dc'
+# What each scene IS, from the floor, in one line (owner 2026-10-13 15:5x: "scenes that I can understand well"); shown in
+# the pickers as the explanation under the name.
+INTENT = {
+    'lasers': 'Only the lasers: the matrix over the dance floor, the hall dark.',
+    'wall': 'The red wall: six beams behind the DJ and the side lines, all ember.',
+    'lines': 'The white side lines; the hall steel, the columns and the tent low in ember.',
+    'dark': 'One colour, ember, low everywhere: the hall breathes, nothing shouts.',
+    'peak': 'Everything on at once: the side lines white, the lasers in, the rest ember.',
+    'tent': 'The red tent alone: the two fans of side washes meet under the roof.',
+    'dj': 'The DJ alone: the red plane behind him and a white kicker, the hall dark.',
+    'columns': 'The hall in ash: the columns and the steel white, the floor dark.',
+    'cut': 'The cut truss in ember, the side lines low: the ceiling is the picture.',
+    'matrix': 'The laser matrix over a red floor: the tent at half, the lasers full.',
+    'white': 'White out for seconds: everything in ash, the lasers in.',
+    'frame': 'The white frame alone: the twelve B380F side beams, nothing else.',
+    'red-floor': 'The whole floor red: the tent, the side lines and the DJ plane in ember, the walls dark.',
+    'breath': 'Almost dark: a red breath behind the DJ, the back of the stage just lit.',
+    'storm': 'The storm: lasers, white side lines and the cut truss at full, the tent red under them.',
+}
 MORE_LOOKS = [
     {'id': 'tent', 'title': 'The tent (the red fans alone meet under the roof)', 'act': 2,
      'parts': {'red tent left': [EMBER, 1.0], 'red tent right': [EMBER, 1.0], 'hall steel': [EMBER, 0.25], 'dj back': [EMBER, 0.1]}},
@@ -229,9 +248,22 @@ MORE_LOOKS = [
     {'id': 'white', 'title': 'White out (everything in ash, the lasers in)', 'act': 3,
      'parts': {p: [ASH, 1.0] for p in ('laser', 'hall steel', 'columns', 'red tent left', 'red tent right', 'plane 1 (behind the DJ)',
                                        'side line left', 'side line right', 'cut up', 'cut down', 'dj back', 'dj kicker', 'stage key')}},
+    {'id': 'frame', 'title': 'The frame (the twelve white side beams alone)', 'act': 2,
+     'parts': {'side line left': [ASH, 1.0], 'side line right': [ASH, 1.0]}},
+    {'id': 'red-floor', 'title': 'Red floor (tent, side lines and the DJ plane in ember)', 'act': 2,
+     'parts': {'red tent left': [EMBER, 1.0], 'red tent right': [EMBER, 1.0], 'side line left': [EMBER, 0.6], 'side line right': [EMBER, 0.6],
+               'plane 1 (behind the DJ)': [EMBER, 0.5]}},
+    {'id': 'breath', 'title': 'Breath (almost dark, a red breath behind the DJ)', 'act': 1,
+     'parts': {'plane 1 (behind the DJ)': [EMBER, 0.35], 'dj back': [EMBER, 0.1], 'stage key': [EMBER, 0.15]}},
+    {'id': 'storm', 'title': 'The storm (lasers, white lines and the cut at full over a red tent)', 'act': 3,
+     'parts': {'laser': [ASH, 1.0], 'side line left': [ASH, 1.0], 'side line right': [ASH, 1.0], 'cut up': [ASH, 1.0], 'cut down': [ASH, 1.0],
+               'red tent left': [EMBER, 1.0], 'red tent right': [EMBER, 1.0]}},
 ]
+for l in MORE_LOOKS: l['intent'] = INTENT[l['id']]
+for l in rig['looks']: l.setdefault('intent', INTENT.get(l['id'], ''))
 MORE_CUES = [('tent', 'the tent', 2, 12), ('dj', 'the DJ', 2, 10), ('columns', 'the columns', 2, 12),
-             ('cut', 'the cut', 2, 10), ('matrix', 'the matrix', 2, 12), ('white', 'white out', 1, 6)]
+             ('cut', 'the cut', 2, 10), ('matrix', 'the matrix', 2, 12), ('white', 'white out', 1, 6),
+             ('frame', 'the frame', 2, 10), ('red-floor', 'red floor', 2, 12), ('breath', 'breath', 3, 14), ('storm', 'the storm', 1, 8)]
 have = {l['id'] for l in rig['looks']}
 parts_in_rig = {f.get('part') for f in rig['fixtures']}
 for l in MORE_LOOKS:

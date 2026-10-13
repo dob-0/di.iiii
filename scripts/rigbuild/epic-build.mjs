@@ -414,10 +414,13 @@ const main = async () => {
     const ents = v1Entities(rig)
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
     const cues = cuesOf(rig)
-    const ops = [...booth.ops]
-    for (const e of old) ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
-    for (const e of ents) ops.push({ type: 'createEntity', payload: { entity: e } })
-    const bar = rig.solids.find((s) => s.id === 'rig-crowd-barrier')
+    // --looks-only (2026-10-13): the looks and the cue list from the rig file, NOTHING else — no unit deleted or
+    // re-created, so lamps the owner moved by hand in the Studio stay where he put them.
+    const looksOnly = Boolean(args['looks-only'])
+    const ops = looksOnly ? [] : [...booth.ops]
+    if (!looksOnly) for (const e of old) ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
+    if (!looksOnly) for (const e of ents) ops.push({ type: 'createEntity', payload: { entity: e } })
+    const bar = looksOnly ? null : rig.solids.find((s) => s.id === 'rig-crowd-barrier')
     if (bar && doc.entities.some((e) => e.id === 'rig-crowd-barrier')) {
         ops.push({ type: 'updateComponent', payload: { entityId: 'rig-crowd-barrier', component: 'transform', patch: { position: bar.p, scale: bar.s } } })
         if (bar.name && doc.entities.find((e) => e.id === 'rig-crowd-barrier')?.name !== bar.name) ops.push({ type: 'updateEntity', payload: { entityId: 'rig-crowd-barrier', patch: { name: bar.name.slice(0, 200) } } })
@@ -425,12 +428,12 @@ const main = async () => {
     ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigLooks', patch: looks } })
     // No hazer (owner 10-08: "the haze is the 4 smoke machines"): the external hazers come off the rental list, so the cards
     // page stops asking to place 6 of them.
-    const rental = doc.entities.find((e) => e.id === 'rig-show')?.components?.rentalList
+    const rental = looksOnly ? null : doc.entities.find((e) => e.id === 'rig-show')?.components?.rentalList
     if (rental?.items) {
         const items = v1RentalItems(rental, rig)
         if (JSON.stringify(items) !== JSON.stringify(rental.items)) ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rentalList', patch: { ...rental, items } } })
     }
-    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.title
+    if (!looksOnly) ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigVariant', patch: rig.title
         ? { title: String(rig.title).slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
         : rig.version && rig.version !== V1_TITLE
         ? { title: `${rig.version} — the stage at the press end, the epic lights moved to it`.slice(0, 120), summary: String(rig.what || '').slice(0, 300) }
@@ -440,9 +443,9 @@ const main = async () => {
     // a rig file may say its show plays by its own clock (mappingState.showSource 'clock'): a desk that answers on the stack
     // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
     ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
-    ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
-    ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
-    say(`${project} @ v${got.body.version}: delete ${old.length}, create ${ents.length}, ${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
+    if (!looksOnly) ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
+    if (!looksOnly) ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
+    say(`${project} @ v${got.body.version}: ${looksOnly ? 'looks only — ' : `delete ${old.length}, create ${ents.length}, `}${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })
         fs.writeFileSync(path.join(String(args.out), `epic-build-${project}-before.json`), JSON.stringify(got.body))

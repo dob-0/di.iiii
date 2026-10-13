@@ -24,3 +24,11 @@
 - Owner 15:3x "in Select mode Shift+move does not work": `BoxSelect.jsx` forced `middle: ROTATE` on every middle press, after
   `useCameraNavigation` had chosen the gesture's action from the modifiers (Shift = pan, Ctrl = zoom, plain = orbit, Blender).
   The override is gone; the middle button is the navigation's own in Select too. Test added (4 pass).
+- Owner 15:5x "more light-show scenes I can understand; by default I can select in edit mode": the Studio followed the show
+  clock with no way to pick a scene. Now `ScenePicker.jsx` (bottom-left, open by default, folds) lists the cue list with each
+  look's one-line `intent` under its name; a click shows that light in the viewport (`rigLook` state in
+  StudioPresentationSurface → StudioViewport → useRigLookEntities explicit); "Follow the show" = the clock, "Work light" = no look.
+  `scenesOf.js` is the pure join of cues and rig looks (tests). The rig script gives every scene an intent and four more scenes
+  (the frame, red floor, breath, the storm): 15 scenes. `epic-build.mjs --looks-only` writes looks + cues only, so the lamps the
+  owner and Emily moved by hand stayed (applied to v2-9: 16 looks, 15 cues, 149 entities, the moved tent lamp unchanged;
+  backup ~/di-backups/moxir-scratch/2026-10-13-v2-9-before-15-scenes).

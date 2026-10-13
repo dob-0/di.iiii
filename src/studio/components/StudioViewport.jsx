@@ -16,6 +16,7 @@ import { hasRigLamps } from '../../rigbuild/hasRigLamps.js'
 import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
+import ScenePicker from './ScenePicker.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
@@ -1136,6 +1137,7 @@ export default function StudioViewport({
     // A designed look to pose the room by ('' none), overriding the desk's (view C's GO
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
+    onRigLook = null,
     // The document's entities are the room ALREADY drawn in its look (the public page:
     // RoomLookFollower drew them): draw them as handed, never pose them again.
     lookDrawn = false,
@@ -1361,6 +1363,10 @@ export default function StudioViewport({
                         selectedEntities: (document.entities || []).filter((e) => (selectedEntityIds || []).includes(e.id))
                     })}
                 />
+            )}
+
+            {setEditMode && onRigLook && (
+                <ScenePicker document={document} current={rigLook} onPick={onRigLook} />
             )}
 
             {transformStatus && (
