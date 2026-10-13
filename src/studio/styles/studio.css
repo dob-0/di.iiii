@@ -1688,7 +1688,7 @@
     position: absolute;
     top: auto;
     left: var(--di-space-3);
-    bottom: calc(var(--di-mode-mark-clearance, 44px) + var(--di-space-1));
+    bottom: calc(var(--di-mode-mark-clearance) + var(--di-space-1));
     z-index: 10;
     width: 300px;
     max-width: calc(100% - 2 * var(--di-space-3));
@@ -1728,7 +1728,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 0;
 }
 
 /* The one line that says what the scene is, from the floor. May wrap to a second line. */
