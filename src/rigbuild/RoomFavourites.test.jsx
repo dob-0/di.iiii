@@ -18,10 +18,28 @@ const answer = (over = {}) => ({
     ...over
 })
 const respond = (body, status = 200) => Promise.resolve({ ok: status < 400, status, json: async () => body })
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+// the bricks are behind one small control, closed at first load (the scene is the page); the tests of the bricks open it first
+const openBricks = () => window.localStorage.setItem('di.panel.bricks', '1')
+afterEach(() => { cleanup(); vi.restoreAllMocks(); window.localStorage.clear() })
 
 describe('the favourite row', () => {
+    it('is ONE small control at first load; a click opens the bricks and the next visit finds them open', async () => {
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer()))
+        const first = render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        const toggle = await screen.findByTestId('room-favourites-toggle')
+        expect(document.querySelectorAll('[data-fav]').length).toBe(0)
+        expect(toggle.getAttribute('aria-expanded')).toBe('false')
+        expect(parseFloat(toggle.style.borderRadius) || 2).toBeLessThanOrEqual(2)
+        fireEvent.click(toggle)
+        expect(document.querySelectorAll('[data-fav]').length).toBe(5)
+        first.unmount()
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        await screen.findByTestId('room-favourites-toggle')
+        expect(document.querySelectorAll('[data-fav]').length).toBe(5)
+    })
+
     it('shows exactly the server\'s five, marks the live one, and a tap posts the same choose', async () => {
+        openBricks()
         const calls = []
         vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer()) })
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
@@ -36,6 +54,7 @@ describe('the favourite row', () => {
     })
 
     it('ten favourites are ten buttons: one row on a wide screen, two rows of five on a phone', async () => {
+        openBricks()
         const cues = Array.from({ length: 10 }, (_, i) => cue(i, `scene ${i + 1}`))
         const a = answer({ cues, live: { index: 0, n: 10, running: true, loop: false, autoplay: false, nextIndex: -1, nextInMs: null, by: null, missing: 0 } })
         a.control.favourites = cues.map((c) => c.lookId)
@@ -56,6 +75,7 @@ describe('the favourite row', () => {
     })
 
     it('where the server says you watch (or the cooldown runs) every button is disabled', async () => {
+        openBricks()
         vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })))
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await screen.findByText('the black')
@@ -63,6 +83,7 @@ describe('the favourite row', () => {
     })
 
     it('a laser scene is never tappable, even if it were listed', async () => {
+        openBricks()
         const a = answer()
         a.control.favourites = ['rig-l1', 'rig-l2']
         vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(a))
@@ -72,6 +93,7 @@ describe('the favourite row', () => {
     })
 
     it('draws nothing when there are no favourites', async () => {
+        openBricks()
         const a = answer()
         a.control.favourites = []
         vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(a))

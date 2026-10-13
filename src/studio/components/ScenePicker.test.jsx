@@ -149,3 +149,17 @@ describe('studio.css .scene-picker: where it sits and how big its targets are', 
         expect(Number(/--di-radius:\s*(\d+)px/.exec(baseCss)?.[1])).toBeLessThanOrEqual(2)
     })
 })
+
+describe('ScenePicker: folded at first visit (the scene is the page)', () => {
+    it('starts folded, a click opens the list, and the next visit finds it open', () => {
+        window.localStorage.clear()
+        const first = render(<ScenePicker document={document} current={undefined} onPick={vi.fn()} />)
+        expect(screen.queryByText('the tent')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'open' }))
+        expect(screen.getByText('the tent')).toBeInTheDocument()
+        first.unmount()
+        render(<ScenePicker document={document} current={undefined} onPick={vi.fn()} />)
+        expect(screen.getByText('the tent')).toBeInTheDocument()
+        window.localStorage.clear()
+    })
+})

@@ -3,7 +3,8 @@ import { getProjectDocument, submitProjectOps } from '../../project/services/pro
 import { productionViewsOf, versionProjectIds, versionsFromDocument } from '../../shared/productionVersions.js'
 import { rigVariantOf, versionListProjectOf } from '../../rigbuild/rigVariant.js'
 import { addCameraView, removeView, setViewHidden, setViewLive, viewRows } from '../../project/viewport/smartView/viewData.js'
-import { writeViewsEverywhere } from '../../project/viewport/smartView/productionViewsSync.js'
+import { productionChromeOf, visitorChromeOf } from '../../shared/visitorChrome.js'
+import { writeChromeEverywhere, writeViewsEverywhere } from '../../project/viewport/smartView/productionViewsSync.js'
 
 const api = {
     getDocument: (id) => getProjectDocument(id),
@@ -33,7 +34,7 @@ export default function useProjectViews({ projectId, document, applyLocalOps, lo
                 if (!live) return
                 const list = answer?.document ? versionsFromDocument(answer.document) : null
                 setProduction(list?.production
-                    ? { listProjectId, title: list.production.title, views: productionViewsOf(answer.document), projectIds: versionProjectIds(answer.document) }
+                    ? { listProjectId, title: list.production.title, views: productionViewsOf(answer.document), chrome: productionChromeOf(answer.document), projectIds: versionProjectIds(answer.document) }
                     : null)
             })
             .catch(() => { if (live) setProduction(null) })
@@ -60,7 +61,26 @@ export default function useProjectViews({ projectId, document, applyLocalOps, lo
         })
     }, [applyLocalOps, production, projectId, log])
 
+    // What visitors see (visitorChrome.js): the production's choice wins once it has one, else this project's own.
+    const chrome = production?.chrome || visitorChromeOf(document)
+    const setChrome = useCallback((next) => {
+        applyLocalOps({ type: 'setPresentationState', payload: { patch: { visitorChrome: next } } })
+        if (!production) return
+        writeChromeEverywhere({
+            chrome: next,
+            listProjectId: production.listProjectId,
+            projectIds: production.projectIds.filter((id) => id !== projectId),
+            api
+        }).then(({ written, failed }) => {
+            if (failed.length) log?.('warning', `What visitors see saved here; not saved in ${failed.map((f) => `${f.projectId} (${f.error})`).join(', ')}.`)
+            else if (written.length) log?.('info', `What visitors see saved for every version of ${production.title}.`)
+            setNonce((n) => n + 1)
+        })
+    }, [applyLocalOps, production, projectId, log])
+
     return {
+        chrome,
+        setChrome,
         rows,
         production: production ? { title: production.title, versions: production.projectIds.length } : null,
         setLive: (id, live) => change(setViewLive(current, id, live)),

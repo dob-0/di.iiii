@@ -16,6 +16,19 @@ export const WIKI_CATEGORIES = [
 
 export const WIKI_ARTICLES = [
     {
+        id: 'view-page-controls',
+        category: 'Editing',
+        title: 'What visitors see on the view page',
+        summary: 'The view page opens clear: the scene, and a few small controls. You choose which controls exist; a visitor opens the rest.',
+        body: [
+            'A view page starts with nothing covering the scene: one small Versions chip, a SHOW chip, a Scenes control at the bottom and a Display chip. Each is closed; a click opens it, and the page remembers what that visitor opened — on their device only.',
+            'In Studio, Project > “What visitors see” has one switch per part: the Versions chip, the SHOW chip, the scene bricks, Walk / Fly and Lite, the views bar and the layers. Off removes the control from the view page. For a production the choice is shared by every version, like the views. “Edit in Studio” appears only for someone who can edit that space.',
+            'The Studio’s own Scenes window is folded until you open it.'
+        ],
+        tags: ['view page', 'visitors', 'controls', 'studio', 'scenes', 'versions', 'minimal'],
+        updated: '2026-10-13'
+    },
+    {
         id: 'glossary',
         category: 'Getting started',
         title: 'The words, in one place',

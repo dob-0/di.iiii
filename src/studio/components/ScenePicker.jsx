@@ -1,7 +1,8 @@
-import { useState } from 'react'
 import { scenesOf } from '../utils/scenesOf.js'
+import useRememberedOpen from '../../utils/rememberedOpen.js'
 
-// SCENES in the Studio, open by default (owner 2026-10-13 15:5x: "by default make that I can select in
+// SCENES in the Studio, FOLDED by default since 2026-10-13 21:xx ("the scene is the page: every panel starts closed"; what you
+// open is remembered for you only, rememberedOpen.js). It was open by default (owner 2026-10-13 15:5x: "by default make that I can select in
 // edit mode — I can't select a light show and understand how the light will be"). Until now the Studio
 // followed the show clock and offered no choice. A click shows that scene's light in the viewport while
 // you edit (StudioViewport `rigLook` → useRigLookEntities explicit); "Follow the show" goes back to the
@@ -14,7 +15,7 @@ import { scenesOf } from '../utils/scenesOf.js'
 // spa-item). Only its geometry is its own (.scene-picker in studio.css): docked bottom-left above the
 // 44 px strip that holds the view label, the mode chip and the tree chip. Rectangles; targets ≥ 32 px.
 export default function ScenePicker({ document, current, onPick }) {
-    const [open, setOpen] = useState(true)
+    const [open, toggleOpen] = useRememberedOpen('studio-scenes')
     const scenes = scenesOf(document)
     if (!scenes.length) return null
     const following = current === undefined
@@ -29,7 +30,7 @@ export default function ScenePicker({ document, current, onPick }) {
                     aria-expanded={open}
                     aria-label={open ? 'fold' : 'open'}
                     title={open ? 'Fold the scene list' : 'Open the scene list'}
-                    onClick={() => setOpen((o) => !o)}
+                    onClick={toggleOpen}
                 >
                     {open ? '▾' : '▸'}
                 </button>

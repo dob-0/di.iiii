@@ -25,3 +25,9 @@ Owner's answers (2026-10-13 19:5x), his words kept where they decide something.
 
 Means: about $500 of cloud credit on each of the two accounts and the two monthly API credits (ledger N574.1).
 *"Check with the other agents, go work."* Build briefs: cloud routines #17–#19 (ledger N591+).
+7. **The scene is the page (owner, 2026-10-13 21:xx, two screenshots of the view page at first load).** *"Look how many UI things
+   pop up when you first load the view page; they cover the view; make di.iiii minimal, clear by default, users open a window when
+   they need it; it must be di.iiii's own style; and it is not connected to the Studio, not manageable."* → every panel starts
+   closed, one small control opens it, a viewer's opening is remembered for that viewer only; the author chooses in the Studio
+   (Project > "What visitors see", per production, stored with the views) which controls the page has at all; the chrome is in
+   di.iiii's tokens. Rule: `docs/ai/golden_rules.md` "The scene is the page".

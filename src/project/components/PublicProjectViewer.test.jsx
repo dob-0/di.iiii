@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
 import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE, PREVIEW_PAINT_CONFIRMED_KIND } from '../../utils/presentationPreviewDocument.js'
@@ -40,6 +40,8 @@ vi.mock('../services/projectsApi.js', () => ({
 
 const listSpaceContentsMock = vi.fn(async () => [{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
 
+const authState = vi.hoisted(() => ({ session: { requireAuth: false, authenticated: false, role: null, spaces: null } }))
+vi.mock('../../hooks/useAuthSession.js', () => ({ default: () => authState.session }))
 vi.mock('../../hooks/useXrAr.js', () => ({
     default: () => ({
         xrStore: {},
@@ -651,6 +653,64 @@ describe('PublicProjectViewer', () => {
         fireEvent.click(versions)
         expect(screen.getByRole('link', { name: 'B' })).toBeInTheDocument()
         listSpaceContentsMock.mockResolvedValue([{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
+    })
+
+    // THE SCENE IS THE PAGE (owner 2026-10-13): a rig room opens with a few small closed controls, and the author's switches
+    // (presentationState.visitorChrome, set in the Studio under "What visitors see") take each one off.
+    describe('the view page of a rig room: clear by default, the author decides what exists', () => {
+        const rigDocument = (visitorChrome) => ({
+            version: 1,
+            document: {
+                ...sceneDocumentResponse.document,
+                presentationState: { ...sceneDocumentResponse.document.presentationState, ...(visitorChrome ? { visitorChrome } : {}) },
+                entities: [
+                    { id: 'lamp', components: { fixture: { type: 'spot' } } },
+                    { id: 'show', components: { rigVariant: { set: 's', id: 'a', title: 'A', siblings: [{ id: 'a', projectId: 'live-project', title: 'A' }, { id: 'b', projectId: 'p2', title: 'B' }] } } }
+                ]
+            }
+        })
+        const visit = async (visitorChrome) => {
+            window.localStorage.clear()
+            getProjectDocumentMock.mockResolvedValue(rigDocument(visitorChrome))
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+            listSpaceContentsMock.mockResolvedValue([{ id: 'live-project' }, { id: 'p2' }])
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByText('viewer-scene:scene')
+        }
+        it('first load: one Versions chip with its row closed, Walk / Fly, Display closed, nothing else open', async () => {
+            await visit()
+            const chip = await screen.findByTestId('rig-versions-chip')
+            expect(chip.getAttribute('aria-expanded')).toBe('false')
+            expect(screen.queryByRole('link', { name: 'B' })).toBeNull()
+            expect(screen.getByTestId('display-chip').getAttribute('aria-expanded')).toBe('false')
+            expect(screen.queryByTestId('scene-layers')).toBeNull()
+            expect(screen.getByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+            fireEvent.click(chip)
+            expect(await screen.findByRole('link', { name: 'B' })).toBeInTheDocument()
+            expect(window.localStorage.getItem('di.panel.versions')).toBe('1')
+        })
+        it('the versions switch takes the chip away', async () => {
+            await visit({ versions: false })
+            await screen.findByRole('button', { name: 'Walk / Fly' })
+            expect(screen.queryByTestId('rig-versions-chip')).toBeNull()
+        })
+        it('the walk switch takes Walk / Fly and Lite away', async () => {
+            await visit({ walk: false })
+            await screen.findByTestId('rig-versions-chip')
+            expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
+            expect(screen.queryByRole('button', { name: /^(Lite|Full)$/ })).toBeNull()
+        })
+        it('Edit in Studio is offered to a session that can edit, and not to one that cannot', async () => {
+            authState.session = { requireAuth: true, authenticated: true, role: 'editor', spaces: ['main'] }
+            await visit()
+            expect(await screen.findByTestId('edit-in-studio')).toBeInTheDocument()
+            cleanup()
+            authState.session = { requireAuth: true, authenticated: false, role: null, spaces: null }
+            await visit()
+            await screen.findByTestId('rig-versions-chip')
+            expect(screen.queryByTestId('edit-in-studio')).toBeNull()
+            authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }
+        })
     })
 
     // Regression guard: the public viewer is the platform's widest audience and

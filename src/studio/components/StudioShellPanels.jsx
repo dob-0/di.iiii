@@ -57,6 +57,7 @@ import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
 import { ASSET_ACCEPT, ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
+import { VISITOR_PARTS } from '../../shared/visitorChrome.js'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -931,6 +932,25 @@ export function ViewsSection({ views }) {
     )
 }
 
+// WHAT VISITORS SEE — the view page's own controls as data (src/shared/visitorChrome.js), closed by default. One switch per
+// part; the page still starts every allowed panel closed. Saved with the views: shared by every version of a production.
+export function VisitorChromeSection({ views }) {
+    if (!views?.chrome) return null
+    const { chrome, setChrome, production } = views
+    return (
+        <CollapsibleSection title="What visitors see" defaultOpen={false}>
+            <p className="insp-label" data-chrome-scope={production ? 'production' : 'project'}>
+                {production
+                    ? `Shared by every version of ${production.title}. Off removes the control from the view page; on, it starts closed and a visitor opens it.`
+                    : 'Off removes the control from the view page; on, it starts closed and a visitor opens it. Edit in Studio shows only to someone who can edit.'}
+            </p>
+            {VISITOR_PARTS.map((part) => (
+                <ToggleField key={part.id} label={part.label} checked={chrome[part.id] !== false} onChange={(v) => setChrome({ ...chrome, [part.id]: v })} />
+            ))}
+        </CollapsibleSection>
+    )
+}
+
 export function ProjectPanel({
     document,
     displayName,
@@ -1017,6 +1037,7 @@ export function ProjectPanel({
             </CollapsibleSection>
 
             <ViewsSection views={views} />
+            <VisitorChromeSection views={views} />
 
             <CollapsibleSection title="Default camera" defaultOpen={false}>
                 <NumberField label="FOV" value={world.savedView?.fov ?? 50} min={1} max={170} step={1} onChange={(v) => onWorldPatch({ savedView: { fov: v } })} />
