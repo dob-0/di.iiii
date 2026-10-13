@@ -436,6 +436,24 @@ describe('review A3-3 / A4-1: undo and restore refuse when the looks or cues cha
     })
 })
 
+describe('the deck reads the one laser list (2026-10-13): the LaserCube and a project-carried laser are lasers here too', () => {
+    const lightIn = (doc, key) => {
+        const lit = withLookChange(doc, red.lookId, (l) => ({ ...l, levels: { ...l.levels, [key]: 1 } }))
+        return [{ type: 'updateComponent', payload: { entityId: RIG_SHOW_ID, component: 'rigLooks', patch: { looks: lit.entities.find((e) => e.id === RIG_SHOW_ID).components.rigLooks.looks } } }]
+    }
+    const red = named(MIN, 'Red room')
+    it('a LaserCube lit in an unsigned scene is refused — before, the deck knew only up-la40wf', () => {
+        expect(isLaserKey('cube-6a/ext-lc-ultra-mk2')).toBe(true)
+        expect(codeOf(() => guardSceneChange(MIN, lightIn(MIN, 'cube-6a/ext-lc-ultra-mk2'), red.id))).toBe('laser-sign-off')
+    })
+    it('a laser the project carries (rentalList.types, category laser) is refused by type, in a group called "roof"', () => {
+        const doc = JSON.parse(JSON.stringify(MIN))
+        doc.entities.find((e) => e.id === RIG_SHOW_ID).components.rentalList = { items: [{ code: 'ACME-L7', type: 'ofl-acme-l7', ordered: 1 }], types: [{ id: 'ofl-acme-l7', code: 'ACME-L7', category: 'laser' }, { id: 'ofl-acme-par', code: 'ACME-P', category: 'par' }] }
+        expect(codeOf(() => guardSceneChange(doc, lightIn(doc, 'roof/ofl-acme-l7'), red.id))).toBe('laser-sign-off')
+        expect(codeOf(() => guardSceneChange(doc, lightIn(doc, 'roof/ofl-acme-par'), red.id))).toBe('no error')
+    })
+})
+
 describe('review A3-4: a taken fade stays inside its hold', () => {
     it('take theirs with fade 40 on a 12 s hold is refused by the guard', () => {
         const red = named(MIN, 'Red room')

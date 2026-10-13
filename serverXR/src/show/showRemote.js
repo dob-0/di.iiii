@@ -24,11 +24,12 @@
 //            (0..60 s, CROWD_COOLDOWN_MS is the suggested crowd value) for a future crowd mode;
 //            even then the operator himself never waits.
 //   lasers   a cue whose look would light a laser is never fired from here, by anyone
-//            (shared/laserMoments.cjs). A look the server cannot read counts as one.
+//            (shared/laserMoments.cjs) — by TYPE, the library's and the project's own
+//            (rentalList.types, category laser). A look the server cannot read counts as one.
 //
 // No clock and no I/O in this file: `now` is passed in.
 
-const { laserMomentOf } = require('../../../shared/laserMoments.cjs')
+const { laserMomentOf, laserTypeIdsOf } = require('../../../shared/laserMoments.cjs')
 
 const COOLDOWN_MS = 0 // the default: no wait
 const CROWD_COOLDOWN_MS = 10_000 // a suggested wait for the future crowd mode
@@ -120,6 +121,7 @@ const looksOfDocument = (document) => {
  */
 const showCuesOf = (document) => {
   const looks = new Map(looksOfDocument(document).map((l) => [l.id, l]))
+  const laserIds = laserTypeIdsOf(document)
   const cues = Array.isArray(document?.mappingState?.cues) ? document.mappingState.cues : []
   return cues
     .filter((c) => c && typeof c.lightLook === 'string' && c.lightLook)
@@ -130,7 +132,7 @@ const showCuesOf = (document) => {
       const { act, title } = splitActName(cue.name || look?.title || cue.lightLook)
       // A cue whose look is not in the document fires something the server cannot read:
       // it is held like a laser moment, never guessed safe.
-      const laser = look ? laserMomentOf(look) : { reason: 'unread', groups: [] }
+      const laser = look ? laserMomentOf(look, { laserIds }) : { reason: 'unread', groups: [] }
       return {
         index,
         id: String(cue.id || `cue-${index + 1}`).slice(0, 60),

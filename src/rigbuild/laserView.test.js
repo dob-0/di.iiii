@@ -30,3 +30,12 @@ describe('the laser view', () => {
         expect(laserSegments([cube('rig-lasercube-cut-01')], { all: null, byCube: {} }).count).toBe(0)
     })
 })
+
+describe('the laser view reads the one laser list', () => {
+    it('draws the laser types that take frames, and the LaserCube is one of them', async () => {
+        const { FRAME_LASER_TYPES } = await import('./laserView.js')
+        const { LASER_TYPES } = await import('../shared/laserTypes.js')
+        expect(FRAME_LASER_TYPES).toEqual(LASER_TYPES.filter((t) => t.drive === 'frames').map((t) => t.id))
+        expect(FRAME_LASER_TYPES).toContain(LASERCUBE_TYPE)
+    })
+})

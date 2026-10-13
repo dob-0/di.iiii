@@ -11,8 +11,11 @@
 // class. Replace with the measured field when a cube is on site.
 
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
+import { LASER_TYPES } from '../shared/laserTypes.js'
 
 export const LASER_HALF_FIELD_DEG = 30
+/** The laser types that take frames from Laser Out — from di.iiii's one laser list (src/shared/laserTypes.js). */
+export const FRAME_LASER_TYPES = Object.freeze(LASER_TYPES.filter((t) => t.drive === 'frames').map((t) => t.id))
 export const LASERCUBE_TYPE = 'ext-lc-ultra-mk2'
 const DEG = Math.PI / 180
 
@@ -21,7 +24,7 @@ const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a
 
 /** The room's LaserCubes in the order the server numbers them (cube-1 … cube-n): by entity id. Pure. */
 export const laserCubesOf = (entities = []) => entities
-    .filter((e) => e?.type === 'spotLight' && e.components?.fixture?.type === LASERCUBE_TYPE)
+    .filter((e) => e?.type === 'spotLight' && FRAME_LASER_TYPES.includes(e.components?.fixture?.type))
     .sort((a, b) => String(a.id).localeCompare(String(b.id)))
     .map((e, i) => ({ entity: e, cubeId: `cube-${i + 1}` }))
 

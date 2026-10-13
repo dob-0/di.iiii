@@ -15,11 +15,13 @@ import { applyProjectOps } from '../../shared/projectSchema.js'
 import { lookIdOfDesk } from '../looks.js'
 import { showOf, showTimeline } from '../showClock.js'
 import { SceneDeckError } from './errors.js'
+import { LASER_TYPE_IDS, laserTypeIdsOf } from '../../shared/laserTypes.js'
 import { canonicalJson, effectiveLevels } from './hash.js'
 
 export const LOOP_RANGE_S = Object.freeze({ min: 60, max: 90 })
-/** Rental type codes (the part after `/` in a look's group key). ground-movers.mjs isLaser: UP-LA40WF. */
-export const LASER_TYPES = Object.freeze(['up-la40wf'])
+/** Laser type ids (the part after `/` in a look's group key): di.iiii's one list (src/shared/laserTypes.js), the
+ *  same the show page refuses by. Before 2026-10-13 this was ['up-la40wf'] alone and the LaserCubes were invisible here. */
+export const LASER_TYPES = LASER_TYPE_IDS
 /** ground-scenes.mjs BLINDER_GROUP (cob-cut-curtain) is the UP-COB200, the one strobe-capable group. */
 export const BLINDER_TYPES = Object.freeze(['up-cob200'])
 /** The plain marker ground-scenes.mjs writes into a laser look's intent (a look has no sign-off field). */
@@ -33,7 +35,13 @@ const MAX_FADE_S = 60 // showClock.js clamps a fade to 60 s
 const HEX = /^#[0-9a-f]{6}$/i
 
 const typeOfKey = (key) => String(key).split('/')[1] || ''
-export const isLaserKey = (key) => LASER_TYPES.includes(typeOfKey(key))
+/** @param {Set<string>|string[]} [laserIds]  the project's laser ids (laserTypeIdsOf); the library's when absent */
+//  (anything else — the index `.filter(isLaserKey)` passes — reads as absent)
+export const isLaserKey = (key, laserIds) => {
+    const type = typeOfKey(key).toLowerCase()
+    if (laserIds instanceof Set) return laserIds.has(type)
+    return (Array.isArray(laserIds) ? laserIds : LASER_TYPES).includes(type)
+}
 export const isBlinderKey = (key) => BLINDER_TYPES.includes(typeOfKey(key))
 export const spareSceneId = (lookId) => `${SPARE_PREFIX}${lookId}`
 const round3 = (n) => Math.round(n * 1000) / 1000 // normalizeRigLooks keeps 3 decimals (planNum)
@@ -109,9 +117,10 @@ export const guardSceneChange = (document, ops, sceneId) => {
     // to have been in the scene BEFORE the ops: a marker arriving with the change (a file, the other copy) is
     // the data vouching for itself and never counts.
     const checked = sceneId == null ? after.scenes : after.scenes.filter((s) => s.id === sceneId)
+    const laserIds = laserTypeIdsOf(afterDocument)
     for (const now of checked) {
         const was = before.scenes.find((s) => s.id === now.id) || before.scenes.find((s) => s.lookId === now.lookId)
-        const lit = Object.entries(now.levels).filter(([g, v]) => isLaserKey(g) && v > 0).map(([g]) => g)
+        const lit = Object.entries(now.levels).filter(([g, v]) => isLaserKey(g, laserIds) && v > 0).map(([g]) => g)
         const newlyLit = lit.filter((g) => !(was && was.levels[g] > 0))
         if (lit.length && !now.flags.requiresLaserSignOff) {
             throw new SceneDeckError('laser-sign-off', `"${now.name}" would light a laser (${lit.join(', ')}) without ${SIGN_OFF_MARKER}: a Class 4 laser needs a certified laser safety officer first`, { groups: lit })

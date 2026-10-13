@@ -54,6 +54,23 @@ describe('the cue list as the show page shows it', () => {
     expect(cues.map((c) => c.laser)).toEqual([null, 'lit', null, null, 'unread'])
   })
 
+  it('refuses a laser the PROJECT carries by its type, whatever its group is called (the 2026-10-13 safety gap)', () => {
+    // A second production adds its own laser to rentalList.types (rental.js libraryWithShow). Its group is
+    // named for a place ("roof"), not for what hangs there: before 2026-10-13 the server knew only the two
+    // library ids and a group NAME containing "laser", so this cue reached Light.
+    const doc = moxir()
+    const show = doc.entities.find((e) => e.components.rigLooks)
+    show.components.rentalList = { items: [{ code: 'ACME-L7', type: 'ofl-acme-l7', ordered: 1 }], types: [{ id: 'ofl-acme-l7', code: 'ACME-L7', category: 'laser' }, { id: 'ofl-acme-par', code: 'ACME-P', category: 'par' }] }
+    show.components.rigLooks.looks.push(
+      { id: 'roof-burst', title: 'Roof burst', intent: '', aims: {}, colours: {}, levels: { 'roof/ofl-acme-l7': 1 } },
+      { id: 'roof-wash', title: 'Roof wash', intent: '', aims: {}, colours: {}, levels: { 'roof/ofl-acme-par': 1 } }
+    )
+    doc.mappingState.cues.push({ id: 'p2-01', name: 'Roof burst', lightLook: 'rig-roof-burst' }, { id: 'p2-02', name: 'Roof wash', lightLook: 'rig-roof-wash' })
+    const two = showCuesOf(doc)
+    expect(two.find((c) => c.id === 'p2-01').laser).toBe('lit')
+    expect(two.find((c) => c.id === 'p2-02').laser).toBe(null)
+  })
+
   it('draws the swatch from the colours the look lights, most used first, and names them', () => {
     expect(cues[0].swatch).toEqual([{ hex: EMBER, word: 'ember' }, { hex: '#a3200c', word: 'ember' }])
     expect(cues[2].swatch).toEqual([]) // the black lights nothing
