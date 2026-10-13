@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import ScenePicker from './ScenePicker.jsx'
 import { scenesOf } from '../utils/scenesOf.js'
 
@@ -51,5 +54,95 @@ describe('ScenePicker: open by default in the Studio, picks a scene to see its l
         cleanup()
         const { container } = render(<ScenePicker document={{ entities: [] }} />)
         expect(container.innerHTML).toBe('')
+    })
+})
+
+// Owner 2026-10-13 16:3x: "make it suit the Studio style". The picker is drawn with the classes of the
+// Objects window and the control cluster, not with a style of its own.
+describe('ScenePicker: in the Studio\'s own chrome', () => {
+    it('is a Studio window: the Objects window\'s shell, header, title and fold button, and no inline style anywhere', () => {
+        const { container } = render(<ScenePicker document={document} current={undefined} onPick={() => {}} />)
+        const picker = screen.getByTestId('studio-scene-picker')
+        expect(picker).toHaveClass('sfp-shell', 'scene-picker')
+        expect(picker.querySelector('.sfp-header > .sfp-title')).toHaveTextContent('SCENES · 3')
+        expect(picker.querySelector('.sfp-header > button.scc-collapse-btn')).not.toBeNull()
+        expect(picker.querySelector('.sfp-content')).not.toBeNull()
+        expect(container.querySelectorAll('[style]')).toHaveLength(0)
+    })
+    it('draws the two modes as the cluster\'s buttons and the scenes as the Objects list\'s rows; the pressed one is the active one', () => {
+        const { rerender } = render(<ScenePicker document={document} current={undefined} onPick={() => {}} />)
+        const follow = screen.getByRole('button', { name: 'Follow the show' })
+        const work = screen.getByRole('button', { name: 'Work light' })
+        expect(follow).toHaveClass('scc-btn', 'active')
+        expect(work).toHaveClass('scc-btn')
+        expect(work).not.toHaveClass('active')
+        const rows = screen.getByTestId('studio-scene-picker').querySelectorAll('.spa-list > button.spa-item')
+        expect(rows).toHaveLength(3)
+        expect(screen.getByText('the tent').className).toContain('spa-name')
+        expect(screen.getByText(/The red tent alone/).className).toContain('scene-picker__intent')
+        rerender(<ScenePicker document={document} current="tent" onPick={() => {}} />)
+        expect(screen.getByText('the tent').closest('button')).toHaveClass('spa-item', 'active')
+        expect(screen.getByText('the net (lasers only)').closest('button')).not.toHaveClass('active')
+        expect(screen.getByRole('button', { name: 'Follow the show' })).not.toHaveClass('active')
+        rerender(<ScenePicker document={document} current="" onPick={() => {}} />)
+        expect(screen.getByRole('button', { name: 'Work light' })).toHaveClass('active')
+        expect(screen.getByRole('button', { name: 'Work light' }).getAttribute('aria-pressed')).toBe('true')
+    })
+    it('folds to its header like the Objects window does, with the glyph and the state said', () => {
+        render(<ScenePicker document={document} current={undefined} onPick={() => {}} />)
+        const fold = screen.getByRole('button', { name: 'fold' })
+        expect(fold).toHaveTextContent('▾')
+        expect(fold.getAttribute('aria-expanded')).toBe('true')
+        fireEvent.click(fold)
+        const open = screen.getByRole('button', { name: 'open' })
+        expect(open).toHaveTextContent('▸')
+        expect(open.getAttribute('aria-expanded')).toBe('false')
+        expect(screen.getByText('SCENES · 3')).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Follow the show' })).toBeNull()
+    })
+})
+
+// The geometry cannot be seen in jsdom (no layout), so the stylesheet is read, as TreeChip.test.jsx
+// reads treeChip.css. These pin the owner's rules: it must not cover the "Perspective" label or the
+// bottom-right tree ("stack") chip; rectangles, 0–2 px; targets of at least 32 px.
+describe('studio.css .scene-picker: where it sits and how big its targets are', () => {
+    const here = path.dirname(fileURLToPath(import.meta.url))
+    const read = (...parts) => fs.readFileSync(path.resolve(here, ...parts), 'utf8')
+    const studioCss = read('..', 'styles', 'studio.css')
+    const treeChipCss = read('..', '..', 'components', 'treeChip.css')
+    const baseCss = read('..', '..', 'styles', 'base.css')
+    const ruleOf = (css, selector) => {
+        const start = css.indexOf(`\n${selector} {`)
+        if (start < 0) throw new Error(`no rule for ${selector}`)
+        return css.slice(start, css.indexOf('}', start))
+    }
+    const pxOf = (rule, property) => Number(new RegExp(`${property}:\\s*(?:calc\\()?(\\d+(?:\\.\\d+)?)px`).exec(rule)?.[1])
+
+    it('is docked bottom-left, above the 44 px strip that holds the view label and the tree chip', () => {
+        const picker = ruleOf(studioCss, '.sfp-shell.scene-picker')
+        expect(picker).toMatch(/position:\s*absolute/)
+        expect(picker).toMatch(/left:\s*var\(--di-space-3\)/)
+        const stripTop = Number(/bottom:\s*calc\(var\(--di-mode-mark-clearance,\s*(\d+)px\)/.exec(picker)?.[1])
+        expect(stripTop).toBeGreaterThanOrEqual(44)
+        // the view label: bottom 12, one line of 10 px type (~15 px); the tree chip: bottom 10, 10 px type + 2 x 3 px padding + 2 px border = 18 px
+        const labelTop = pxOf(ruleOf(studioCss, '.svl-view-label'), 'bottom') + 15
+        const chipTop = pxOf(ruleOf(treeChipCss, '.tree-chip'), 'bottom') + 18
+        expect(labelTop).toBeLessThan(stripTop)
+        expect(chipTop).toBeLessThan(stripTop)
+        // and the view label stays bottom-left, the chip bottom-right: the strip, not the corner, is what it keeps clear
+        expect(ruleOf(studioCss, '.svl-view-label')).toMatch(/left:\s*14px/)
+        expect(ruleOf(treeChipCss, '.tree-chip')).toMatch(/right:/)
+    })
+    it('keeps every target at 32 px or more', () => {
+        expect(ruleOf(studioCss, '.scene-picker .scc-btn')).toMatch(/min-height:\s*32px/)
+        expect(ruleOf(studioCss, '.scene-picker .spa-item')).toMatch(/min-height:\s*32px/)
+        const fold = ruleOf(studioCss, '.scene-picker .scc-collapse-btn')
+        expect(fold).toMatch(/min-width:\s*32px/)
+        expect(fold).toMatch(/min-height:\s*32px/)
+    })
+    it('is a rectangle: it adds no radius of its own and the Studio\'s radius token is 2 px at most', () => {
+        const section = studioCss.slice(studioCss.indexOf('/* ─── Scenes picker'))
+        expect(section).not.toMatch(/border-radius/)
+        expect(Number(/--di-radius:\s*(\d+)px/.exec(baseCss)?.[1])).toBeLessThanOrEqual(2)
     })
 })

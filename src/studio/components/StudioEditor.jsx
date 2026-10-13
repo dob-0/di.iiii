@@ -11,7 +11,7 @@ import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
-import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, getProject, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { mountRelativeApiUrl } from '../../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../../utils/assetContentType.js'
 import { createStudioProjectBundle, readStudioProjectBundle } from '../../project/transfer/studioProjectBundle.js'
@@ -20,6 +20,7 @@ import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
+import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
@@ -294,6 +295,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         get current() { return paneControlsRef.current?.current ?? null }
     }), [])
     const [spaceMeta, setSpaceMeta] = useState(null)
+    // The project's own record, for its public handle (slug): the Studio's document does not carry it
+    // (projectMeta is { id, spaceId, title, … }). Keyed by id, so a slug is never shown for another project.
+    const [projectRecord, setProjectRecord] = useState(null)
     // Spaces list powers the portal entity's Space dropdown (pick by name instead
     // of typing a raw id). Projects for the chosen space are fetched on demand
     // inside the inspector field itself.
@@ -369,6 +373,24 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             cancelled = true
         }
     }, [resolvedSpaceId])
+
+    useEffect(() => {
+        if (!projectId) return undefined
+        let cancelled = false
+        getProject(projectId)
+            .then((result) => {
+                if (cancelled) return
+                setProjectRecord({ id: projectId, slug: result?.project?.slug || null })
+            })
+            .catch(() => {
+                // Best effort: without the record the Preview button falls back to the permanent /p/{id} address.
+                if (cancelled) return
+                setProjectRecord(null)
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [projectId])
 
     const xr = useXrAr({
         default3DView: document.worldState?.savedView || defaultWorldState.savedView,
@@ -1104,6 +1126,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }
 
+    // The Studio's Preview button: this project's VIEW page, as a visitor opens it (see utils/previewUrl.js).
+    const previewUrl = buildStudioPreviewUrl({
+        spaceSlug: spaceMeta?.slug,
+        spaceId: resolvedSpaceId,
+        projectSlug: projectRecord?.id === projectId ? projectRecord.slug : null,
+        projectId
+    })
+
     const handleViewLive = () => {
         const url = `${window.location.origin}${buildAppSpacePath(resolvedSpaceId)}`
         window.open(url, '_blank', 'noopener,noreferrer')
@@ -1382,6 +1412,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onSaveCurrentCamera={handleSaveCurrentCamera}
             onCopyShareLink={handleCopyShareLink}
             onViewLive={handleViewLive}
+            previewUrl={previewUrl}
             onExportProject={handleExportProject}
             exportStatus={exportStatus}
             onImportProjectFile={handleImportProjectFile}
