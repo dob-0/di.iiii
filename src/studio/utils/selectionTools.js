@@ -59,3 +59,14 @@ export const mergeSelection = (current = [], hits = [], mode = 'set') => {
 }
 
 export const boxModeFor = (event) => (event?.ctrlKey || event?.metaKey) ? 'remove' : event?.shiftKey ? 'add' : 'set'
+
+/** What a click on a lamp's body does (the rig's bodies are not entities' meshes): a locked or
+ *  unknown lamp is ignored so the click passes on; Shift/Ctrl/Meta toggles, else it selects. */
+export const pickLampBody = (entities, id, event, { onSelect, onToggle } = {}) => {
+    const entity = (entities || []).find((e) => e.id === id)
+    if (!entity || entity.components?.runtime?.locked === true) return false
+    const n = event?.nativeEvent || event || {}
+    if (n.ctrlKey || n.metaKey || n.shiftKey) onToggle?.(id)
+    else onSelect?.(id)
+    return true
+}

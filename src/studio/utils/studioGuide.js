@@ -90,10 +90,14 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         title: 'Selection',
         rows: [
             ['Click', 'Select object'],
-            ['Ctrl / Shift + Click', 'Multi-select'],
+            ['Shift / Ctrl + Click', 'Add to the selection'],
             ['A', 'Select all'],
             ['Alt+A', 'Deselect all'],
             ['Esc', 'Deselect'],
+            ['Select tool or B, then drag', 'Box select: plain replaces, Shift adds, Ctrl removes'],
+            ['L', 'Lock the selection (locked objects cannot be picked, boxed or moved)'],
+            ['Alt+L', 'Unlock all (our own keys, Blender has no lock key)'],
+            ['Inspector Lock, outliner padlock', 'Lock from the panels; "Lock the hall" and "Unlock all" sit in Objects'],
         ]
     },
     {
