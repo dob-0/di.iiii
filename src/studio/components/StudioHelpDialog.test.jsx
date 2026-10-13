@@ -30,7 +30,7 @@ describe('StudioHelpDialog', () => {
     it('keeps the complete shortcut reference behind the Shortcuts tab', () => {
         render(<StudioHelpDialog open onClose={vi.fn()} />)
         fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
-        expect(screen.getByText('Move (grab) mode')).toBeInTheDocument()
+        expect(screen.getByText('Move: with a selection the drag starts at once (Blender grab); without, picks the gizmo mode')).toBeInTheDocument()
         expect(screen.getByText('Toggle Navigate ↔ Edit')).toBeInTheDocument()
         expect(screen.getByText('Quick insert')).toBeInTheDocument()
     })
