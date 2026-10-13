@@ -174,6 +174,9 @@ export const DESK_COMMANDS = {
     // something turns it off, so the falling edge has to be sent too.
     blackout: (on) => ({ path: '/master', body: { blackout: Boolean(on) } }),
     recall: (id) => ({ path: '/scenes/recall', body: { id } }),
+    // A look of the desk's own model — the project's looks arrive here as `rig-<look>`
+    // (src/rigbuild/looks.js deskLooks, put on the desk from the Cards page).
+    fire: (id) => ({ path: '/looks/fire', body: { id } }),
 }
 
 export const VIZZZ_COMMANDS = {
@@ -235,6 +238,38 @@ export async function readDeskScenes(base, { fetchImpl = fetch, signal } = {}) {
     } catch {
         return { ok: false, scenes: [] }
     }
+}
+
+// Everything the desk can fire, in its own one list (GET /api/fireable): the looks
+// beside the scenes. Read only when a word is not a scene, so a rig of scenes
+// alone pays nothing for it.
+export async function readDeskLooks(base, { fetchImpl = fetch, signal } = {}) {
+    try {
+        const res = await fetchImpl(`${base}/fireable`, { signal })
+        if (!res?.ok || !answeredJson(res)) return { ok: false, looks: [] }
+        const payload = await res.json()
+        return { ok: true, looks: Array.isArray(payload?.looks) ? payload.looks : [] }
+    } catch {
+        return { ok: false, looks: [] }
+    }
+}
+
+// The project's look a word names, or '' — by the desk's id, by the project's own look id
+// (the desk holds it as `rig-<id>`, cut at 40: src/rigbuild/looks.js deskLookId), or by the
+// title a person reads. Unlike a scene, an unknown word is never sent: firing a look that is
+// not there is a 404, not a re-look.
+const DESK_LOOK_PREFIX = 'rig-'
+export const resolveLookId = (looks, wanted) => {
+    const want = String(wanted ?? '').trim()
+    if (!want) return ''
+    const list = Array.isArray(looks) ? looks : []
+    const ids = new Set(list.map((look) => String(look?.id ?? '')))
+    if (ids.has(want)) return want
+    const prefixed = `${DESK_LOOK_PREFIX}${want}`.slice(0, 40)
+    if (ids.has(prefixed)) return prefixed
+    const lower = want.toLowerCase()
+    const named = list.find((look) => String(look?.name ?? '').trim().toLowerCase() === lower)
+    return named ? String(named.id) : ''
 }
 
 // The Scene wire carries what a person would type: an id, or the name they
