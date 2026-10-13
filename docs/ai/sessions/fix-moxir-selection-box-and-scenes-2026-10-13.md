@@ -65,3 +65,6 @@ Owner: 'the floor is hidden but I can't see the place where I turn the walls on/
 
 ## 10-13 19:3x — beams straight up; world axes by default, a Local button (N574, N575)
 Owner: 'make the beams straight up so they are easy to edit now' → the 12 side-line heads vertical in the rig (step 2b r = [-π, 0, 0]) and on v2-9 (12 ops, v1382), looks rebuilt from the document (v1430: the scenes aim them vertical). 'Objects move around their anchor point, no way to move in the world frame' → the gizmo ran in local space: now world by default, `Local` button in the cluster (StudioShell state → StudioViewport → SelectableEntity tc.setSpace). Tests: cluster +2.
+
+## 10-13 19:5x — the owner's decisions written down (nothing left behind)
+Decision record `docs/ai/decisions/2026-10-13-views-library-words-workflow.md` (views per project, default walk+plan, per production, one fixture library with provenance, viewer loads only the project's types, words owed, connected workflow, versions in one place). Hard rule 'Nothing is left behind' in the owner's CLAUDE.md, memory, brief template, board.
