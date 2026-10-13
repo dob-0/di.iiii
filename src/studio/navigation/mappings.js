@@ -32,7 +32,8 @@ export const NAVIGATION_PRESETS = Object.freeze({
     studio: Object.freeze({
         id: 'studio',
         label: 'Studio',
-        description: 'Drag to orbit, right-drag to pan, scroll to zoom. The default.',
+        // The NAVIGATE tool and the public viewer: like Sketchfab (owner, 2026-10-12: "view like sketchfab, edit like blender").
+        description: 'Drag to orbit, right-drag to pan, scroll to zoom toward the pointer, double-click a surface to focus on it. Like Sketchfab.',
         mouseButtons: Object.freeze({
             left: CC_ACTION.ROTATE,
             middle: CC_ACTION.DOLLY,
@@ -46,19 +47,33 @@ export const NAVIGATION_PRESETS = Object.freeze({
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
         dollyToCursor: true,
-        autoDepth: false,
+        // Auto Depth ON (owner, 2026-10-08: "zoom works, but right-drag left/right is stuck"). Measured on the RTX 3080: after the
+        // wheel zoomed in, the orbit point sat 0.35 m from the camera in open air, so a 240 px right-drag moved the camera 0.11 m
+        // (orbit 0.57 m) while the hall is 100 m long. camera-controls pans and orbits in proportion to the distance to that point;
+        // Auto Depth puts the point on the surface under the pointer (Blender manual, Preferences > Navigation > Auto Depth), so a
+        // drag follows what you see. The buttons are unchanged.
+        autoDepth: true,
+        focusOnDoubleClick: true,
+        // Easing (camera-controls SmoothDamp times, seconds): a glide on drags and wheel like Sketchfab's feel. Sketchfab
+        // publishes no numbers; these are camera-controls' defaults (2.10.1), stated as such, not measured against Sketchfab.
+        smoothTime: 0.25,
+        draggingSmoothTime: 0.125,
         modifierGestures: false,
         rows: Object.freeze([
             ['Drag', 'Orbit'],
             ['Right drag', 'Pan'],
             ['Middle drag', 'Zoom'],
             ['Scroll', 'Zoom (toward the pointer)'],
+            ['Double-click', 'Focus on the surface under the pointer'],
+            ['Shift+`', 'Walk: mouse looks, W A S D move, Q E down/up, Shift faster, Alt slower; Esc keeps the place, right click returns'],
         ]),
     }),
     blender: Object.freeze({
         id: 'blender',
         label: 'Blender',
-        description: 'Middle mouse button moves the view, like Blender. The left button only selects. No middle button? Hold Alt with the left button.',
+        // The EDIT tool: Blender's own buttons and the owner's Blender preferences, read from ~/.config/blender/5.2 on 2026-10-12
+        // (turntable, Auto Depth on, Zoom to Mouse Position OFF, Orbit Around Selection off): nothing new to learn.
+        description: 'Middle mouse button moves the view, exactly like Blender. The left button only selects. No middle button? Hold Alt with the left button.',
         mouseButtons: Object.freeze({
             left: CC_ACTION.NONE,
             middle: CC_ACTION.ROTATE,
@@ -72,7 +87,12 @@ export const NAVIGATION_PRESETS = Object.freeze({
             one: CC_ACTION.ROTATE,
             two: CC_ACTION.TOUCH_DOLLY_TRUCK,
         }),
-        dollyToCursor: true,
+        dollyToCursor: false, // the owner's Blender: Zoom to Mouse Position OFF (2026-10-12)
+        // Blender (view3d_navigate_view_zoom.cc, main, read 2026-10-12): a wheel step is `step = 1.2f` applied at once, no
+        // Smooth View; drags write the view per mouse move. So no drag/wheel easing; Smooth View (his 200 ms) only for view
+        // changes (numpad views, frame), which camera-controls does with smoothTime on setLookAt transitions.
+        smoothTime: 0.2,
+        draggingSmoothTime: 0,
         autoDepth: true,
         modifierGestures: true,
         rows: Object.freeze([
@@ -83,6 +103,7 @@ export const NAVIGATION_PRESETS = Object.freeze({
             ['Alt+Drag', 'Orbit (no middle button)'],
             ['Shift+Alt+Drag', 'Pan (no middle button)'],
             ['Ctrl+Alt+Drag', 'Zoom (no middle button)'],
+            ['Shift+`', 'Walk (Blender): mouse looks, W A S D move, Q E down/up, Shift faster, Alt slower; Esc keeps the place, right click returns'],
         ]),
     }),
 })
@@ -98,7 +119,11 @@ export function getNavigationPreset(id) {
 // The resting mouse bindings for a preset (no modifier held).
 export function mouseButtonsFor(presetId, { ortho = false } = {}) {
     const preset = getNavigationPreset(presetId)
-    return { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
+    const buttons = { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
+    // The wheel is the app's gesture (useCameraNavigation wheelZoom): camera-controls' own dolly-to-cursor moved the orbit point
+    // toward the cursor in one frame while the radius eased (walked through 2026-10-12: a 6.9 m jump on the first notch).
+    buttons.wheel = CC_ACTION.NONE
+    return buttons
 }
 
 // The bindings to HAND camera-controls: fresh, writable copies. The presets

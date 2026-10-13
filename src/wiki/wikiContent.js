@@ -606,6 +606,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'terminal-sign-in',
+        category: 'Spaces & access',
+        title: 'Sign a terminal in, and sign it out',
+        summary: 'di login shows a short code. Type it at /device, approve it, and that terminal acts as you, in your own spaces, until you end it.',
+        body: [
+            'If you work in a terminal — with the di command, or with Claude in a terminal — you can sign it in as yourself once. After that it does not send you to the browser for every space.',
+            { list: [
+                'In the terminal, run di login. It shows a code of eight letters, like BDFG-HJKL.',
+                'In the browser, open /device. Sign in with your account if you are not already. Type the code yourself: it is never pre-filled, and no link carries it.',
+                'Read what is asking: the name the terminal gave itself, when it asked and where from. Approve it only if you just started it yourself. If you did not, press Deny.',
+                'The terminal then says who it is signed in as. If that is not you, run di logout.'
+            ] },
+            'A code works once, for ten minutes.',
+            'A signed-in terminal acts as you in the spaces that are yours, and no further. It cannot open a space to the public, make an invite, delete a project or a space, change a space’s settings, or touch accounts and keys. Those stay in the browser, with you.',
+            'To end a terminal, run di logout in it, or open /device and press Revoke beside it under “Terminals signed in as you”. Signing out of the browser does not end it. A terminal nobody has used for 90 days ends by itself, and none lasts longer than a year.'
+        ],
+        tags: ['terminal', 'cli', 'login', 'di login', 'di logout', 'sign in', 'token', 'claude', 'revoke', 'device'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'public-page-node',
         category: 'Editing',
         title: 'The Public page window',
@@ -821,6 +841,7 @@ export const WIKI_ARTICLES = [
                 '3D models import as .glb/.gltf (including Draco-, Meshopt-, and KTX2-compressed exports), .obj (+.mtl via the Materials picker), .stl, and .fbx. Models with embedded animation clips play them automatically — pick a specific clip, toggle “Play animations”, or set “Animation speed” in the model’s Media section; rigged/skinned characters animate correctly.',
                 'Import an .hdr/.exr panorama and pick it as the Environment map in the Scene window — image-based lighting and reflections apply in the editor and on published pages (this is what makes Metal and Glass presets shine).',
                 'Keyframe animation (Timeline, Objects window): move the playhead, pose the object, press ● Key — two keys make motion. Keys capture position, rotation, scale, and opacity; drag a key diamond to retime it, click to jump, ▶ previews right in the editor, and Duration/Loop shape the cycle. Timelines play automatically on published pages and replace the default idle motion. Every key edit is a normal undo step.',
+                'Select and lock: click picks one, Shift+click adds, A selects all and Alt+A none. The Select tool (or B for one box) draws a box: a plain drag replaces the selection, Shift adds, Ctrl removes; locked and hidden objects never enter. L locks the selection and Alt+L unlocks everything (our own keys — Blender has no lock key), one Ctrl+Z puts it back. You can also lock with the Lock button in the Inspector, the padlock on an outliner row, or Lock the hall in the Objects window.',
                 'Undo / redo with Ctrl+Z / Ctrl+Y — undo reverts only your own last change (a slider drag or a typing burst counts as one step), so working alongside collaborators is safe: their edits are never rolled back by your undo.',
                 'History (Objects window, collapsed at the bottom): a Photoshop-style list of your session’s steps — click any step to jump back or forward to it, or “Session start” to rewind everything. Jumping is just batched undo/redo, so it is equally collaborator-safe.',
                 'Your panel layout is fully remembered — open panels, positions, resized dimensions, and collapsed headers all restore next visit; shrinking the browser window pulls stranded panels back into view. Arrange → Reset returns everything to the default layout.',
@@ -830,7 +851,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-09-23'
+        updated: '2026-10-13'
     },
     {
         id: 'studio-content-model',
@@ -1534,6 +1555,7 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://diiii.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'One link opens it: http://diiii.localhost/ — the same link on every machine with di.iiii, and each one opens its own. A browser treats a .localhost name as safe, so the camera, the microphone and VR work there with no certificate. di status shows the link when it answers as this di.iiii and says why when it does not; di open opens it. On Linux, port 80 needs a one-time permission for di\'s own Node (di logs names it when it is missing). A phone or a headset cannot use this link — localhost always means the device in your hand — so they open the https name on the phones and headsets line that di status and di up print (the name in your certificate), or the address di up --lan shows.',
             'Your work is files. `di save my-show` writes one file — my-show.diiii — holding everything that space is made of: the scene, every edit ever made to it, the projects inside it, the images and models, and its light show — the fixtures, scenes, looks and MIDI map the lighting desk keeps for that space, without the wiring of the machine it was made on, so opening it never sends light at somebody else\'s rig. Copy it to a stick, email it, keep it for ten years; `di open my-show.diiii` puts it back, on this machine or anyone else’s. It is the same idea as a Blender file, with one difference worth knowing: a space is live, so there is nothing to lose by forgetting to save — di.iiii is already keeping it. Saving is how you get a copy you can carry, not how the work survives.',
             'You do not need the terminal for this. Every space on the Spaces page has a Save to file button, and Open a file sits next to + Create — the same file, either way. If a space of that name is already there, di.iiii asks what to call this one instead of refusing.',
             'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
@@ -1561,10 +1583,11 @@ export const WIKI_ARTICLES = [
             'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. It always installs as that ordinary program, never as a container, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) can reach them.',
             'A local space can be linked to one on diiii.xyz: di link connects the two, and di sync compares them — what each side has that the other has not, and whether sending work either way would be safe or refused, as it is when both sides have changed. It only looks: it writes nothing on either side. To carry work between them, use di save and di open, di backup, or Save to file on the Spaces page.',
             'A space can also be shared with another artist\u2019s di.iiii directly, over the same wifi, with no internet and no account in the middle — see \u201cTwo artists, two machines, one space\u201d.',
-            'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
+            'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.',
+            'Phones and headsets in this place: on the local home, the Phones & headsets button (or http://diiii.localhost/#join) shows that https name as a QR code, for a phone, a headset or a guest\u2019s laptop that has no di of its own. It draws the code only when it is real: a certificate is there, this start is di up --lan, and the name points at this machine as this machine looks it up. Otherwise it says which of those is missing and the setting or command that fixes it. Auth is off on a local di.iiii, so whoever scans it can edit; di up --lan --guests gives each guest their own sandbox instead.'
         ],
-        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-10-02'
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate', 'diiii.localhost', 'link', 'address', 'qr', 'phone', 'headset', 'guest'],
+        updated: '2026-10-13'
     },
     {
         id: 'tools-room',
@@ -2040,10 +2063,11 @@ export const WIKI_ARTICLES = [
         body: [
             'A version is a whole rig in its own project: the same hall and the same show, hung differently — fewer lamps, more lamps, movers in a different place. Each version keeps its own equipment list, plot, looks and patch sheet, so changing one never changes another. The versions of one show belong to a set, and a set is only what its projects say they are.',
             'Open any version of a set and a row of names sits at the top of the room, one name per version. The version you are in is the pale one. Tap another and that version opens. The row lists only versions the space really holds and that you are allowed to see: a version that was archived, removed or is private to someone else is never a link, so a tap never lands on "Project not found". It is the same list, in the same order, from every version, so it does not reshuffle as you move between them.',
-            'Old versions (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old versions (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
+            'The scene bar (2026-10-12). On a MOXIR-type scene everything at the top is one strip: the version switch (named v1.1, v1.1 looks, v2.6), Edit in Studio (a link to /space/project/studio), the SHOW chip, and on the right Sound, Walk / Fly, Free, Lite / Full and, on a dev copy, the small red dev-copy chip. The view buttons stay at the bottom in the same style; a scene may name any extra camera (Entrance, Outside) and it joins them after the six.',
+            'Old (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
             'A room with only one version, or one that belongs to no set, shows no row at all. While the list is still being read the row shows only the version you are in, as a label with no links.',
             'For the show. A production keeps one list of its versions in its space, and the list says what each one is: a candidate, a kept copy, a concept, archived, or the one for the show. At most one is for the show, and none is until someone chooses. Members of the space see the row in the list\'s order: the version for the show first, marked "for the show", then the candidates, then the kept copies folded, then the concepts folded; an archived version is not on the row. The row never chooses; a status is set from the terminal (scripts/production/versions.mjs). Anyone who is not a member sees the row as described above.',
-            'Concepts (n). A version kept on purpose as an idea is a concept. It is never deleted and is not on the main row: all the concepts fold behind one button, "Concepts (3)" for three of them, next to "Old versions". Tap it to open them, tap it again to close. A concept you are standing in stays on the row. A concept is not a copy of an older state (that is a kept copy) and not archived (an archived version is not on the row at all). Set from the terminal with versions.mjs, one version or all but the named ones.',
+            'Concepts (n). A version kept on purpose as an idea is a concept. It is never deleted and is not on the main row: all the concepts fold behind one button, "Concepts (3)" for three of them, next to "Old". Tap it to open them, tap it again to close. A concept you are standing in stays on the row. A concept is not a copy of an older state (that is a kept copy) and not archived (an archived version is not on the row at all). Set from the terminal with versions.mjs, one version or all but the named ones.',
             'Walking in the room. In walk mode the top of the screen belongs to the room\'s own header, so the row folds to a single button under it, "Versions · " and the name of the version you are in. Tap it to open the column of versions, tap a name to go there; you do not have to leave walk mode first.',
             'On a phone held upright the row does not fit beside the Walk / Fly and Sound buttons, so it takes a line of its own under them, and the show chip moves down one line. If the names are wider than the screen the row scrolls sideways, with a soft fade on the edge where it goes on. Every name and button is a 44 px tap target. Not yet: the walk-mode button has been checked in tests, not yet on a real phone screen.',
             'What it does not do: it never copies, merges or deletes a version, and it does not tell you which one is better. Making a version, and keeping a copy of one, is done from the terminal with the rig scripts (docs/architecture/RIG_BUILD.md, the versions section).'

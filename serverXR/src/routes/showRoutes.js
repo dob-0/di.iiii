@@ -109,7 +109,8 @@ function registerShowRoutes(router, {
     const spaceId = normalizeSpaceId(req.params.spaceId) || null
     const meta = spaceId ? await loadSpaceMeta(spaceId) : null
     if (!meta) return { status: 404, body: { error: 'Space not found.' } }
-    const segment = String(req.params.projectId || '')
+    const segment = req.params.projectId
+    if (typeof segment !== 'string' || !segment) return { status: 404, body: { error: 'Project not found.' } }   // no id or slug in the route: a refusal, not a guess
     let project = await findProjectById(segment)
     if (!project || project.spaceId !== meta.id) {
       const bySlug = await findProjectBySlug(meta.id, segment)

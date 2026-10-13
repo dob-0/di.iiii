@@ -193,7 +193,7 @@ const SRC_878_IN_TREE = (() => {
     }
 })()
 const b3log = (line) => { if (process.env.MOXIR_B3_OUT) fs.appendFileSync(process.env.MOXIR_B3_OUT, line + '\n') } // numbers for the integration report, only when asked
-const B380F_HALF_DEG = (0.0157 / 2) / D2R
+const B380F_HALF_DEG = 0.0157 / D2R // angle_rad is a HALF angle (epic_plot.py:483): 0.9 deg, datasheet 1.8 deg full
 const segPts = (a, b, step = 0.1) => {
     const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / step))
     return [...Array(n + 1)].map((_, i) => [0, 1, 2].map((k) => a[k] + ((b[k] - a[k]) * i) / n))

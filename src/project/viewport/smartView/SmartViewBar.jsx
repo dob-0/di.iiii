@@ -100,7 +100,7 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
                     key={p.id}
                     type="button"
                     aria-pressed={activeId === p.id}
-                    title={`${p.title} (${p.key})`}
+                    title={p.key ? `${p.title} (${p.key})` : p.title}
                     style={button(activeId === p.id)}
                     onClick={() => onPreset?.(p.id)}
                 >
