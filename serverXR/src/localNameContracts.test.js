@@ -33,7 +33,7 @@ const start = async (extraEnv) => {
     const data = path.join(base, 'data')
     await mkdir(data)
     const doorPort = await getFreePort()
-    const { child, port } = await spawnServerUntilReady({
+    const { child, port, logs } = await spawnServerUntilReady({
         entry: SERVER_ENTRY,
         cwd: base,
         env: {
@@ -43,13 +43,13 @@ const start = async (extraEnv) => {
             DI_RIG: '0', DI_LOCAL_NAME_PORT: String(doorPort), ...extraEnv
         }
     })
-    let out = ''
-    child.stdout.on('data', (d) => { out += d })
     cleanups.push(async () => {
         if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise((r) => { child.once('exit', r); setTimeout(r, 3000) }) }
         await rm(base, { recursive: true, force: true })
     })
-    return { port, doorPort, log: () => out }
+    // logs() is the helper's record of stdout + stderr from the first byte. A listener added here, after
+    // the ready line, missed the door's "answers here" whenever both arrived in one chunk (CI, 2026-10-13).
+    return { port, doorPort, log: () => logs() }
 }
 
 const get = (port, host, p) => new Promise((resolve, reject) => {
@@ -72,7 +72,7 @@ describe('one server, two doors', () => {
     it('serves the same app and the same machine through the door; any other Host gets 421', async () => {
         const s = await start({ DI_LOCAL_NAME: 'diiii.localhost' })
         expect(await waitFor(() => /answers here/.test(s.log())),
-            `the door never said "answers here" within 5 s (CI 2026-10-13 failed here once); the server said:\n${s.log().slice(-1200)}`).toBe(true)
+            `the door never said "answers here" within 5 s; the server said:\n${s.log().slice(-1200)}`).toBe(true)
         const direct = JSON.parse((await get(s.port, `127.0.0.1:${s.port}`, '/serverXR/api/config')).body)
         const viaDoor = await get(s.doorPort, 'diiii.localhost', '/serverXR/api/config')
         expect(viaDoor.status).toBe(200)
@@ -87,7 +87,7 @@ describe('one server, two doors', () => {
         // `localhost` is a .localhost name too, and the only one a Node client resolves on every OS
         const s = await start({ DI_LOCAL_NAME: 'localhost' })
         expect(await waitFor(() => /answers here/.test(s.log())),
-            `the door never said "answers here" within 5 s (CI 2026-10-13 failed here once); the server said:\n${s.log().slice(-1200)}`).toBe(true)
+            `the door never said "answers here" within 5 s; the server said:\n${s.log().slice(-1200)}`).toBe(true)
         const client = ioClient(`http://localhost:${s.doorPort}`, { path: '/serverXR/socket.io', transports: ['websocket'], reconnection: false, timeout: 5000 })
         cleanups.push(() => client.close())
         const connected = await new Promise((resolve) => {
