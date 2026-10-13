@@ -98,4 +98,18 @@ describe('Studio keyboard contract', () => {
         expect(viewport).toMatch(/\{viewBar && controlsRef && \(/)
         expect(viewport).not.toMatch(/setEditMode && controlsRef/)
     })
+
+    // 2026-10-13 (found by reading, while adding Walk / Fly): the walk listens on document in the capture phase but let keys go on
+    // to StudioShell's window listener, so E (fly up) and Tab also toggled Navigate/Edit and H hid the panels mid-walk. The walk is
+    // modal (Blender): every key stops at it. And the help names the buttons and Tab, and Shift+` still starts Fly.
+    it('the walk keeps its keys, the help names Walk / Fly and Tab, and Shift+` starts Fly', () => {
+        const walk = read('navigation/useWalkNavigation.js')
+        expect(walk).toMatch(/if \(!walk\) return\s*\n(\s*\/\/.*\n)*\s*e\.stopPropagation\(\)/)
+        expect(walk).toMatch(/if \(isWalkToggle\(e\)\) \{ e\.preventDefault\(\); if \(walk\) end\(\); else begin\('fly'\)/)
+        const guide = read('utils/studioGuide.js')
+        expect(guide).toMatch(/\['Walk \/ Fly buttons'/)
+        expect(guide).toMatch(/\['Tab \(walking\)', 'Switch Walk ↔ Fly/)
+        const shell = read('components/StudioShell.jsx')
+        expect(shell).toMatch(/onWalk=\{requestWalk\}/)
+    })
 })

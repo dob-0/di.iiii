@@ -65,7 +65,7 @@ export const NAVIGATION_PRESETS = Object.freeze({
             ['Middle drag', 'Zoom'],
             ['Scroll', 'Zoom (toward the pointer)'],
             ['Double-click', 'Focus on the surface under the pointer'],
-            ['Shift+`', 'Walk: mouse looks, W A S D move, Q E down/up, Shift faster, Alt slower; Esc keeps the place, right click returns'],
+            ['Shift+`', 'Fly: mouse looks, W A S D move, Q E down/up, Shift faster, Alt slower; Esc keeps the place, right click returns; Tab walks'],
         ]),
     }),
     blender: Object.freeze({
@@ -103,7 +103,7 @@ export const NAVIGATION_PRESETS = Object.freeze({
             ['Alt+Drag', 'Orbit (no middle button)'],
             ['Shift+Alt+Drag', 'Pan (no middle button)'],
             ['Ctrl+Alt+Drag', 'Zoom (no middle button)'],
-            ['Shift+`', 'Walk (Blender): mouse looks, W A S D move, Q E down/up, Shift faster, Alt slower; Esc keeps the place, right click returns'],
+            ['Shift+`', 'Fly (Blender Walk, gravity off): mouse looks, W A S D move, Q E down/up, Shift faster, Alt slower; Esc keeps the place, right click returns; Tab walks'],
         ]),
     }),
 })

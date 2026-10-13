@@ -125,10 +125,11 @@ export const WIKI_ARTICLES = [
             'The default never changes unless you change it: drag to orbit, right-drag to pan, scroll or middle-drag to zoom toward the pointer. On a touch screen, one finger orbits and two fingers pinch and slide.',
             'If your hands know Blender, open the help with Shift+?, go to Shortcuts, and pick Blender under Mouse navigation. Then the middle mouse button orbits, Shift with the middle button pans, Ctrl with the middle button zooms, and the wheel zooms toward the pointer. The left button no longer moves the view, so it is free for picking things. Without a middle button, hold Alt with the left button: Alt orbits, Shift+Alt pans, Ctrl+Alt zooms. Touch stays the same.',
             'In the Blender setting the view turns, slides and zooms around the surface under the pointer instead of a fixed point in the middle. Tick Orbit around selection to turn around what you selected instead.',
-            'The choice is kept in this browser on this device only. The table under it always shows the mouse keys of the setting you chose. Some desktops take Alt+drag for moving windows; if Alt+drag moves the window instead of the view, use the middle button or change that desktop setting.'
+            'The choice is kept in this browser on this device only. The table under it always shows the mouse keys of the setting you chose. Some desktops take Alt+drag for moving windows; if Alt+drag moves the window instead of the view, use the middle button or change that desktop setting.',
+            'To move through the room like a visitor, press Walk or Fly under Tools. Walk keeps you at eye height above the floor: the mouse looks and W A S D move on the level. Fly is free: W goes where you look and Q / E go down and up (Shift+` starts Fly too, as in Blender). Tab switches between the two while you move. Esc or a left click stops where you are; a right click takes you back to where you started. The pressed button shows which one is on.'
         ],
-        tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences'],
-        updated: '2026-10-01'
+        tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences', 'walk', 'fly'],
+        updated: '2026-10-13'
     },
     {
         id: 'shelves-and-the-trash',
