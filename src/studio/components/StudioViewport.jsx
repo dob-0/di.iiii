@@ -1365,7 +1365,7 @@ export default function StudioViewport({
                 />
             )}
 
-            {setEditMode && onRigLook && (
+            {onRigLook && (
                 <ScenePicker document={document} current={rigLook} onPick={onRigLook} />
             )}
 
