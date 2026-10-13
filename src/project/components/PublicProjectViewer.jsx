@@ -58,6 +58,8 @@ const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSc
 const RoomRigSteps = lazyWithReload(() => import('../../rigbuild/RoomRigSteps.jsx'), 'room-rig-steps')
 // The room posed by the desk's live look (src/rigbuild/RoomLookFollower.jsx), same rule.
 const RoomLookFollower = lazyWithReload(() => import('../../rigbuild/RoomLookFollower.jsx'), 'room-look-follower')
+// How the view moves (speed, turning): the small Move control in the corner. Lazy because its speed reading comes with three.
+const MoveControl = lazyWithReload(() => import('./MoveControl.jsx'), 'move-control')
 
 // di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
@@ -314,8 +316,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
         rightControls: (navMode === 'orbit' && walkButtons) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
-        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, each one 56 px line, all top-right
-        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 3 : 2) : null
+        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, then Move, each one 56 px line, all top-right
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 4 : 3) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
@@ -555,6 +557,20 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </button>
                 ) : null
 
+    // Under Lite / Full: how the view moves (speed, turning) — one small button that opens a card, the visitor's own setting on
+    // this device, the same one the Studio's Scene window sets (the standard move, 2026-10-13). With the scene bar it sits in
+    // DISPLAY with the other rarely-needed switches (the view page starts clear, 2026-10-13 20:21).
+    const moveButton = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
+                    <Suspense fallback={null}>
+                        <MoveControl
+                            buttonStyle={btnBase}
+                            wrapStyle={sceneBar
+                                ? { display: 'flex', flex: '0 0 auto' }
+                                : abs({ top: `calc(${topClear} + ${hasBuilding ? '10.2rem' : '6.8rem'})`, right: '1rem' })}
+                        />
+                    </Suspense>
+                ) : null
+
     const barControls = (
         <>
             {/* Walk mode enters LiveProjectScene, which renders `entities` and
@@ -609,6 +625,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
             {sceneBar ? null : insideButton}
             {sceneBar ? null : liteButton}
+            {sceneBar ? null : moveButton}
         </>
     )
 
@@ -743,6 +760,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                 ) : null}
                                 {insideButton}
                                 {liteButton}
+                                {moveButton}
                             </DisplayChip>
                         ) : null}
                         {barControls}

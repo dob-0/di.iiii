@@ -24,7 +24,7 @@ export const pickFromHits = (hits = [], infoOf = entityInfoOf) => {
     for (const hit of hits) {
         const object = hit?.object
         if (!object) continue
-        const info = infoOf(object)
+        const info = infoOf(object, hit)
         if (!info) continue
         if (object.userData?.beamPick) {
             if (beam === null) beam = info.id
@@ -36,8 +36,15 @@ export const pickFromHits = (hits = [], infoOf = entityInfoOf) => {
     return beam
 }
 
-/** Walks up from a hit object to the entity group that owns it. */
-export const entityInfoOf = (object) => {
+/**
+ * Walks up from a hit object to the entity group that owns it. A lamp body drawn by RigBodies is one instance of a kind's
+ * InstancedMesh with no entity group above it: its lamp is `userData.lampIds[hit.instanceId]` (FixtureBodies.jsx). Without it a
+ * moving head's body never took the click and a beam crossing in front won it (owner 2026-10-14: "the moving heads unselectable,
+ * or when I select it shows in another place" — the click selected a wash 22 m away whose beam crossed the DJ).
+ */
+export const entityInfoOf = (object, hit = null) => {
+    const lampIds = object?.userData?.lampIds
+    if (lampIds && hit?.instanceId != null && lampIds[hit.instanceId] != null) return { id: lampIds[hit.instanceId], body: true, locked: false }
     let o = object
     while (o) {
         const u = o.userData || {}
@@ -60,7 +67,7 @@ export const pickUserData = (entity) => ({
 /** The unit key of the picked entity, read from the hits (null if it is no laser line). */
 export const unitOfHits = (hits = [], pickedId, infoOf = entityInfoOf) => {
     for (const hit of hits) {
-        const info = hit?.object ? infoOf(hit.object) : null
+        const info = hit?.object ? infoOf(hit.object, hit) : null
         if (info?.id === pickedId && info.unit) return info.unit
     }
     return null

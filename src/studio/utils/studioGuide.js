@@ -138,7 +138,9 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         title: 'View',
         rows: [
             ['Tab / E', 'Toggle Navigate ↔ Edit'],
-            ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Q E down/up. Esc keeps the place, right click returns'],
+            ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Space up, Q down. Esc leaves'],
+            ['Building (walking or flying)', 'The hotbar: 1 to 0 pick a slot, E the inventory, left click places where the crosshair aims, right click removes, R turns, Ctrl+Z undoes each'],
+            ['H (walking)', 'Hide every panel but the crosshair; H again brings them back'],
             ['Tab (walking)', 'Switch Walk ↔ Fly (Blender: Tab toggles gravity)'],
             ['T', 'Toggle gizmo visibility'],
             ['H', 'Hide / show UI'],

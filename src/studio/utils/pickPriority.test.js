@@ -127,3 +127,16 @@ describe('laser unit pick', () => {
         expect(onSelectUnit).not.toHaveBeenCalled()
     })
 })
+
+describe('a lamp body drawn by RigBodies (one InstancedMesh per kind) takes the click from a beam in front of it', () => {
+    const beamOf = (id) => ({ object: { userData: { beamPick: true }, parent: { userData: { svEntityId: id, svPick: 'body' } } } })
+    const bodies = { userData: { rigBody: true, lampIds: ['head-1', 'head-2', 'head-3'] } }
+    const floor = { object: { userData: { svEntityId: 'floor', svPick: 'other' } } }
+    it('the instance is its lamp: a wash beam crossing in front no longer wins the moving head behind it', () => {
+        expect(pickFromHits([beamOf('wash-key'), { object: bodies, instanceId: 1 }, floor])).toBe('head-2')
+    })
+    it('an instance with no lamp id is no hit; the beam then picks its lamp, as before', () => {
+        expect(pickFromHits([beamOf('wash-key'), { object: bodies, instanceId: 7 }, floor])).toBe('wash-key')
+        expect(entityInfoOf(bodies, { instanceId: 0 })).toEqual({ id: 'head-1', body: true, locked: false })
+    })
+})

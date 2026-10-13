@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
 import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE, PREVIEW_PAINT_CONFIRMED_KIND } from '../../utils/presentationPreviewDocument.js'
+import { getSpeedPreference, getTurnPreference, resetNavigationPreferenceMemory } from '../../studio/navigation/preference.js'
 
 const {
     syncState,
@@ -595,6 +596,40 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true low:false')
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+    })
+
+    // The standard move's settings (owner, 2026-10-13: "settable in settings that you can set how you want"): one small Move
+    // button with the other corner controls, writing the same per-device preference the Studio's Scene window writes.
+    it('offers Move with the other corner controls outside preview mode, and it sets the move', async () => {
+        resetNavigationPreferenceMemory()
+        try { window.localStorage.clear() } catch { /* no storage */ }
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Move' }))
+        fireEvent.change(screen.getByLabelText('Speed (metres a step)'), { target: { value: '2' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Where you stand' }))
+        expect(getSpeedPreference()).toBe(2)
+        expect(getTurnPreference()).toBe('place')
+        resetNavigationPreferenceMemory()
+        try { window.localStorage.clear() } catch { /* no storage */ }
+    })
+
+    it('has no Move button where there is no navigation (?preview=1)', async () => {
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(screen.queryByRole('button', { name: 'Move' })).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
     })
 
     // Regression guard: the published viewer's default (orbit) view is
