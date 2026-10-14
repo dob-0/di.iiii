@@ -6,7 +6,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { TURN_MODES } from '../../studio/navigation/freeMove.js'
-import { MOVE_HINT, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../../studio/navigation/useMoveSettings.js'
+import { MOVES, moveFor } from '../../studio/navigation/moves.js'
+import { MOVE_HINT, MOVE_LABEL, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../../studio/navigation/useMoveSettings.js'
 
 const CYAN = 'var(--di-cyan, #4df9ff)'
 const lit = { background: 'rgba(77, 249, 255, 0.22)', border: `1px solid ${CYAN}`, color: CYAN }
@@ -42,12 +43,14 @@ const field = {
 }
 const choice = { ...overlayButtonStyle, boxSizing: 'border-box', flex: 1, minHeight: 44, padding: '0 0.5rem', fontFamily: 'inherit', fontSize: '0.85rem', lineHeight: 1.2 }
 
-export default function MoveControl({ buttonStyle = overlayButtonStyle, wrapStyle = { position: 'relative' } }) {
+// `moves` is the list of named moves (moves.js); a test passes a second one. With one move: a heading line, no picker.
+export default function MoveControl({ buttonStyle = overlayButtonStyle, wrapStyle = { position: 'relative' }, moves = MOVES }) {
     const [open, setOpen] = useState(false)
     const wrap = useRef(null)
     const trigger = useRef(null)
     const speedId = useId()
-    const { speed, turn, setSpeed, setTurn, isAuto, auto } = useMoveSettings()
+    const { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto } = useMoveSettings()
+    const current = moveFor(move, moves)
     const speedField = useSpeedField({ speed, setSpeed })
 
     // The card closes on a press anywhere else (a drag in the room, the next button) and on Escape.
@@ -81,6 +84,20 @@ export default function MoveControl({ buttonStyle = overlayButtonStyle, wrapStyl
             </button>
             {open ? (
                 <div role="group" aria-label="Move" style={card}>
+                    {moves.length < 2 ? (
+                        <span style={{ ...caption, color: 'inherit' }}><strong>{current.label}</strong>{' \u00b7 '}{current.about}</span>
+                    ) : (
+                        <>
+                            <div style={row} role="group" aria-label={MOVE_LABEL}>
+                                {moves.map((m) => (
+                                    <button key={m.id} type="button" aria-pressed={current.id === m.id} style={{ ...choice, ...(current.id === m.id ? lit : null) }} onClick={() => setMove(m.id)}>
+                                        {m.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <span style={caption}>{current.about}</span>
+                        </>
+                    )}
                     <label htmlFor={speedId} style={caption}>{SPEED_LABEL}</label>
                     <div style={row}>
                         <input

@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import MoveSettings from './MoveSettings.jsx'
+import { MOVES } from '../navigation/moves.js'
 import {
     SPEED_STORAGE_KEY, TURN_STORAGE_KEY, getSpeedPreference, getTurnPreference, resetNavigationPreferenceMemory, setSpeedPreference, setTurnPreference,
 } from '../navigation/preference.js'
@@ -105,5 +106,20 @@ describe('the Move block (Scene window)', () => {
         // two settings only: the speed and the turn
         expect(screen.getAllByRole('spinbutton')).toHaveLength(1)
         expect(screen.getAllByRole('combobox')).toHaveLength(1)
+    })
+})
+
+describe('the Move row', () => {
+    it('with one move is a plain heading line, no picker', () => {
+        render(<MoveSettings />)
+        expect(screen.getByText('Move 1')).toBeTruthy()
+        expect(screen.getByText(/Auto speed from the size of the place/)).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'Move 1' })).toBeNull()
+    })
+    it('with two moves is a picker of pressed buttons', () => {
+        const moves = [...MOVES, { id: 'move-test', label: 'Move test', since: '2099-01-01', about: 'test only' }]
+        render(<MoveSettings moves={moves} />)
+        expect(screen.getByRole('button', { name: 'Move 1' }).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByRole('button', { name: 'Move test' }).getAttribute('aria-pressed')).toBe('false')
     })
 })
