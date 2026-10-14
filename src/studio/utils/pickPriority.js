@@ -16,6 +16,7 @@ import { laserUnitKey, isLaserEntity } from './laserTest.js'
 //      the hall by clicking it); a click on the one selected object again deselects it (the Studio's click handler).
 // The flags come from the scene graph: the entity's group carries userData { svEntityId, svPick, svLocked } and a
 // beam mesh carries userData.beamPick (SpotLightObject.jsx), so nothing here reads the document.
+import { isSteelEntity } from '../../objectComponents/steelOccluder.js'
 import { isArchitectureEntity } from '../../project/viewport/smartView/smartViewGeometry.js'
 
 /** The picked entity's id, or null for a click on empty. `infoOf(object)` → { id, body, locked } or null. */
@@ -61,6 +62,8 @@ export const pickUserData = (entity) => ({
     svLocked: entity.components?.runtime?.locked === true,
     // the building: where a beam stops (objectComponents/beamReach.js)
     svBuilding: isArchitectureEntity(entity),
+    // solid steel (truss, crane bridge, girder) stops a beam too, without being the building (steelOccluder.js)
+    ...(isSteelEntity(entity) ? { svSteel: true } : {}),
     ...(isLaserEntity(entity) ? { svUnit: laserUnitKey(entity) } : {})
 })
 

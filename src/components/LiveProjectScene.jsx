@@ -67,6 +67,7 @@ import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
+import { isSteelEntity } from '../objectComponents/steelOccluder.js'
 import { isArchitectureEntity } from '../project/viewport/smartView/smartViewGeometry.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
@@ -96,6 +97,7 @@ const tmpLook = new THREE.Vector3()
 const tmpDir = new THREE.Vector3()
 // an architecture entity's group (objectComponents/beamReach.js finds the building by it)
 const BUILDING_TAG = Object.freeze({ svBuilding: true })
+const STEEL_TAG = Object.freeze({ svSteel: true })
 
 // Fly mode's altitude keys. A caller that needs Q and E for something else (the
 // rig builder's hand raises and lowers with them) passes its own set.
@@ -376,7 +378,7 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
     const children = childMap?.get(entity.id) || []
     return (
         // the building is tagged: a beam stops at it (objectComponents/beamReach.js)
-        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale} userData={isArchitectureEntity(entity) ? BUILDING_TAG : undefined}>
+        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale} userData={isArchitectureEntity(entity) ? BUILDING_TAG : isSteelEntity(entity) ? STEEL_TAG : undefined}>
             {/* An enabled link makes the object itself clickable
                 (src/project/viewport/EntityLink.jsx); without one this
                 renders EntityVisual exactly as before. */}

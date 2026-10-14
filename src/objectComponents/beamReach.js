@@ -17,8 +17,12 @@
 //
 // Limits, stated: a laser's line and a spot's axis and rim are cast, not the cone's whole solid angle — a cone
 // meeting two surfaces at once is cut by up to four planes (the flat cone) or by the haze box (the beam in air);
-// the haze box is the building's axis-aligned box, so the air under a pitched roof's eaves counts as inside; the
-// rig's own steel (truss, lamp bodies) does not stop a beam, only the building does.
+// the haze box is the building's axis-aligned box, so the air under a pitched roof's eaves counts as inside.
+//
+// STEEL (2026-10-14): meshes under an entity group tagged `userData.svSteel` (steelOccluder.js isSteelEntity: a truss or
+// tower piece, or an entity flagged components.occluder 'steel') stop a beam like the building does, but are NOT part of
+// the building: they never widen the haze box. A lamp's own mount never stops its own beam: a steel mesh whose box
+// (grown by MOUNT_CLEARANCE) holds the lamp's lens is skipped for that lamp. Lamp bodies stop nothing.
 import { Box3, DoubleSide, Matrix4, Plane, Ray, Raycaster, Vector3 } from 'three'
 import { computeBoundsTree } from 'three-mesh-bvh'
 
@@ -39,6 +43,9 @@ export const SURFACE_GAP = 0.02
 // and nothing lights past twice the throw. Without shadows a lamp's light does not know the wall is there; this is
 // how far it reaches past it.
 export const LIGHT_REACH_FACTOR = 2
+// A steel mesh whose box, grown by this much, holds a lamp's lens is that lamp's own mount (a lamp clamped to a truss, hung
+// from a bridge) and is skipped for it. 0.25 m: past a 290 mm truss section (0.145 m half) and a clamp.
+export const MOUNT_CLEARANCE = 0.25
 // Rim rays: the axis plus this many around the cone's edge.
 export const RIM_RAYS = 8
 // A re-cast at most this often while a lamp moves (a moving look): 15 Hz.
@@ -176,13 +183,20 @@ export const poseChanged = (a, b) => {
 
 const SCAN_MS = 1000
 const perScene = new WeakMap()
+// meshes that are steel (not the building): castFromLamp skips the lamp's own mount among them
+const steelMeshes = new WeakSet()
 
-const isBuildingMesh = (object) => {
-    if (!object.isMesh || object.userData?.svGhost || object.userData?.svEdge) return false
-    if (object.userData?.beamPick || object.userData?.noBounds) return false
-    if (object.userData?.svRole) return true
-    for (let o = object.parent; o; o = o.parent) if (o.userData?.svBuilding) return true
-    return false
+// 'building' | 'steel' | null. The building wins when both tags are up the tree.
+const solidKindOf = (object) => {
+    if (!object.isMesh || object.userData?.svGhost || object.userData?.svEdge) return null
+    if (object.userData?.beamPick || object.userData?.noBounds) return null
+    if (object.userData?.svRole) return 'building'
+    let steel = false
+    for (let o = object.parent; o; o = o.parent) {
+        if (o.userData?.svBuilding) return 'building'
+        if (o.userData?.svSteel) steel = true
+    }
+    return steel ? 'steel' : null
 }
 
 /**
@@ -195,23 +209,33 @@ export const buildingOf = (scene, now = Date.now(), onBox = null) => {
     let state = perScene.get(scene)
     if (state && now - state.at < SCAN_MS) return state
     const meshes = []
-    scene.traverse((o) => { if (isBuildingMesh(o)) meshes.push(o) })
-    const signature = meshes.map((m) => `${m.uuid}:${m.geometry?.uuid}`).join('|')
+    const steel = []
+    scene.traverse((o) => {
+        const kind = solidKindOf(o)
+        if (kind === 'building') meshes.push(o)
+        else if (kind === 'steel') steel.push(o)
+    })
+    const signature = [...meshes, ...steel].map((m) => `${m.uuid}:${m.geometry?.uuid}`).join('|')
     if (state && state.signature === signature) {
         state.at = now
         return state
     }
     let box = null
-    for (const m of meshes) {
+    for (const m of [...meshes, ...steel]) {
         if (!m.geometry) continue
         if (!m.geometry.boundsTree && !m.isInstancedMesh && !m.isSkinnedMesh) {
             try { computeBoundsTree.call(m.geometry) } catch { /* tiny or odd geometry: the plain raycast */ }
         }
         m.updateWorldMatrix(true, false)
+    }
+    // the haze box is the building's: steel never widens it
+    for (const m of meshes) {
+        if (!m.geometry) continue
         const b = new Box3().setFromObject(m)
         if (!b.isEmpty()) box = box ? box.union(b) : b
     }
-    state = { at: now, signature, meshes, box, version: (state?.version || 0) + 1 }
+    steel.forEach((m) => steelMeshes.add(m))
+    state = { at: now, signature, meshes: [...meshes, ...steel], steel: steel.length, box, version: (state?.version || 0) + 1 }
     perScene.set(scene, state)
     onBox?.(box)
     return state
@@ -275,6 +299,15 @@ export const castFirst = (meshes, origin, dir, far = Infinity) => {
     return best
 }
 
+// Is the lamp's lens inside a steel mesh's world box (grown by MOUNT_CLEARANCE)? Then that steel is its own mount.
+const holdsLens = (mesh, point) => {
+    const g = mesh.geometry
+    if (!g) return false
+    if (!g.boundingBox) g.computeBoundingBox()
+    worldBox.copy(g.boundingBox).applyMatrix4(mesh.matrixWorld).expandByScalar(MOUNT_CLEARANCE)
+    return worldBox.containsPoint(point)
+}
+
 const o3 = new Vector3()
 const d3 = new Vector3()
 /**
@@ -286,9 +319,10 @@ const d3 = new Vector3()
 export const castFromLamp = (meshes, matrixWorld, dirs, far = Infinity) => {
     o3.setFromMatrixPosition(matrixWorld)
     const origin = o3.toArray()
+    const solids = meshes.some((m) => steelMeshes.has(m)) ? meshes.filter((m) => !steelMeshes.has(m) || !holdsLens(m, o3)) : meshes
     return dirs.map((d) => {
         d3.set(d[0], d[1], d[2]).transformDirection(matrixWorld)
-        return castFirst(meshes, origin, d3.toArray(), far)
+        return castFirst(solids, origin, d3.toArray(), far)
     })
 }
 
