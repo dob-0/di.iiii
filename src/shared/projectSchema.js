@@ -888,7 +888,7 @@ const lookKey = (value) => (typeof value === 'string' && /^[\w:.-]{1,40}\/[\w.-]
 const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim().toLowerCase() : '')
 // A look may MOVE (docs/architecture/RIG_BUILD.md §11.4, 2026-10-09): `motion` names an effect of the desk's FX engine
 // (serverXR/src/lighting/fx.js FX_MODES - the same words), its tempo, depth, the way it fans across the rig and the
-// lamp kinds it moves. Level and colour only: nothing here can say pan or tilt. src/rigbuild/lookMotion.js plays it.
+// lamp kinds it moves. Level and colour only: nothing here can say pan or tilt (`heads`, below, does). src/rigbuild/lookMotion.js plays it.
 const MOTION_MODES = ['strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar', 'pump', 'breathe', 'pingpong', 'blocks']
 const MOTION_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-']
 const normalizeLookMotion = (value) => {
@@ -905,6 +905,28 @@ const normalizeLookMotion = (value) => {
     kinds,
     // A lamp at or under this level in the look holds still: the readable floor of the look does not flicker.
     still: Math.max(0, Math.min(1, still == null ? 0 : still))
+  }
+}
+
+// A look may MOVE ITS HEADS (2026-10-15): `heads` is the pan/tilt motion of the moving heads the look names, played in the room
+// (src/rigbuild/headMotion.js) and by the desk in DMX (serverXR/src/lighting/headMotion.js, the one definition). A pattern, a
+// period, how far it swings and how it fans across the heads; the fixture types that move ([] = every head of the look). The
+// words are the server file's HEAD_PATTERNS / HEAD_SPATIAL; a test pins the three copies.
+const HEAD_PATTERNS = ['sweep', 'nod', 'circle', 'figure8', 'fan', 'wave', 'cross']
+const HEAD_SPATIAL = ['all', 'alternate', 'left-right', 'ripple']
+const normalizeLookHeads = (value) => {
+  if (!value || typeof value !== 'object' || !HEAD_PATTERNS.includes(value.pattern)) return null
+  const period = planNum(value.period_s)
+  const pan = planNum(value.pan_deg)
+  const tilt = planNum(value.tilt_deg)
+  const kinds = (Array.isArray(value.kinds) ? value.kinds : []).filter((k) => typeof k === 'string' && /^[\w.-]{1,40}$/.test(k)).slice(0, 8)
+  return {
+    pattern: value.pattern,
+    period_s: Math.max(0.5, Math.min(600, period == null ? 8 : period)),
+    pan_deg: Math.max(0, Math.min(270, pan == null ? 30 : pan)),
+    tilt_deg: Math.max(0, Math.min(135, tilt == null ? 20 : tilt)),
+    spatial: HEAD_SPATIAL.includes(value.spatial) ? value.spatial : 'all',
+    kinds
   }
 }
 
@@ -942,7 +964,8 @@ export const normalizeRigLooks = (value) => {
       if (key && n != null) levels[key] = Math.min(1, Math.max(0, n))
     }
     const motion = normalizeLookMotion(look.motion)
-    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(motion ? { motion } : {}) }
+    const heads = normalizeLookHeads(look.heads)
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(motion ? { motion } : {}), ...(heads ? { heads } : {}) }
   }).slice(0, RIG_LOOKS_CAP)
   if (!looks.length) return null
   return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }

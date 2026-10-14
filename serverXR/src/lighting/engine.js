@@ -3,7 +3,8 @@
 
 const { fxActive, fxOrder, fxLevel, beatGrid } = require('./fx');
 const { lfoApply, isGenericChannels } = require('./lfo');
-const { layerValues } = require('./looks');
+const { layerValues, kindAllows } = require('./looks');
+const { headsFrame, headsPose } = require('./headMotion');
 
 // Generic profile library, named the way desks like Daslight name them:
 // the letters are the channel order.
@@ -288,6 +289,9 @@ class Engine {
     // The tempo the operator tapped drives the stack too, not only the FX engine —
     // one clock, so Tap retimes every running look at the same moment.
     const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm, state.fx && state.fx.epoch);
+    // HEAD MOTION (headMotion.js): the live layers' looks that move their heads. Offsets sit on the REST pan/tilt read
+    // below through `val`, so a layer, an LFO or the stored value is still where the head rests. Null when nobody moves.
+    const heads = headsFrame(state, now, kindAllows);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
     // IDENTIFY — "which lamp in this room is fixture 7?". It beats the stack, the LFOs
@@ -323,6 +327,7 @@ class Engine {
         if (lv && lv[role] != null) return lv[role];
         return f.values[role];
       };
+      const headPT = heads && heads.has(f.id) ? headsPose(heads.get(f.id), profile.channels, val) : null;
       const flash = ident(f.id);
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
@@ -345,7 +350,7 @@ class Engine {
           v = dim * 255 * lvl;
         } else if (kind === 'position') {
           const src = lim.swapPT ? (role === 'pan' ? 'tilt' : 'pan') : role;
-          let raw = val(src) ?? 128;
+          let raw = (headPT && headPT[src] != null) ? headPT[src] : (val(src) ?? 128);
           const inv = role === 'pan' ? lim.invertPan : lim.invertTilt;
           if (inv) raw = 255 - raw;
           v = role === 'pan' ? mapRange(raw, lim.panMin, lim.panMax) : mapRange(raw, lim.tiltMin, lim.tiltMax);
@@ -359,7 +364,7 @@ class Engine {
           const base = flash != null ? held * flash : (val(role) ?? ROLE_DEFAULTS[role] ?? 0);
           v = base * (hasDimmerCh ? 1 : lvl * dim);
         } else {
-          v = val(role) ?? ROLE_DEFAULTS[role] ?? 0;   // control and fine pass through
+          v = (headPT && headPT[role] != null) ? headPT[role] : (val(role) ?? ROLE_DEFAULTS[role] ?? 0);   // control and fine pass through
         }
         buf[ch] = clamp8(v);
       });
