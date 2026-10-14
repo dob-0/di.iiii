@@ -52,3 +52,9 @@ fingerprint.
   ends on a space loses the space on the next write. Harmless, but two installs that wrote a mark a
   different number of times can differ in it. The fix (cut, then trim) is owed. The tool models it as the
   normaliser's fixed point.
+
+## 2026-10-14 — refreshed onto dev (record NOT refreshed)
+
+- Merged `origin/dev` (84fc193c): no conflicts.
+- Tests (`scripts/production`): before 41/41 (4 files); after 46 passed / 1 failed (47, 5 files). The failure is this PR's own pin test "pins the files the measurement was made from": six pinned files moved on dev (`scripts/place/rigs/moxir-versions-2026-10-17.json`, `…/moxir-2026-10-17-known-full.json`, `scripts/rigbuild/rentals/moxir-2026-10-17-known-full.json`, `…/moxir-hall-2026-10-02-crane-dj.hall.json`, `scripts/place/fixtures/fixtures.json`, `src/rigbuild/types/moxir.json`).
+- NOT done, on purpose: the record's blobs were not re-pinned. The record claims "git-built equals live"; dev changed the known-full cut itself (flip/unflip, lasers v2, fixture numbers), and the claim can only be re-made by running `rebuild-compare.mjs --record … --api https://dev.diiii.xyz/serverXR` against the dev and local installs. This session has no token and no route to either (dev.diiii.xyz returned no answer). Re-pinning the blobs without that run would make the test green and the claim unmeasured.
