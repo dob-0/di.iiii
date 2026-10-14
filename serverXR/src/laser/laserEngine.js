@@ -246,13 +246,28 @@ const normaliseStillBeams = (list) => (Array.isArray(list) ? list : [])
     .map((b) => ({ x: Number(b?.x), y: Number(b?.y), within: Number(b?.within) > 0 ? Math.min(Number(b.within), 0.1) : GUARD.DEFAULT_STILL_WITHIN }))
     .filter((b) => Number.isFinite(b.x) && Number.isFinite(b.y))
 
-const cubeFrom = (c, i, base = guardsLib.DEFAULT_GUARDS) => ({
-    id: String(c?.id || `cube-${i + 1}`),
-    name: String(c?.name || c?.id || `Cube ${i + 1}`),
-    ip: typeof c?.ip === 'string' && c.ip ? c.ip : null,
-    stillBeams: normaliseStillBeams(c?.stillBeams),
-    guards: guardsLib.normaliseGuards(c?.guards, base)
-})
+// An address laser.json gives that cannot be one cube (broadcast, network, multicast, loopback:
+// laserFind.js cubeAddressProblem) is not used: the cube has no address and the reason is in state.
+// A serial, when the file has one, is checked against what the box at that address answers.
+const cubeFrom = (c, i, base = guardsLib.DEFAULT_GUARDS) => {
+    const given = typeof c?.ip === 'string' && c.ip ? c.ip : null
+    const problem = given ? require('./laserFind').cubeAddressProblem(given) : null
+    const serial = String(c?.serial || '').toLowerCase()
+    return {
+        id: String(c?.id || `cube-${i + 1}`),
+        name: String(c?.name || c?.id || `Cube ${i + 1}`),
+        ip: problem ? null : given,
+        addressRefused: problem,
+        serial: /^[0-9a-f]{12}$/.test(serial) ? serial : null,
+        stillBeams: normaliseStillBeams(c?.stillBeams),
+        guards: guardsLib.normaliseGuards(c?.guards, base)
+    }
+}
+
+// The officer approved a cube's still beams for ONE box. When laser.json names its serial and the box
+// answering that address reports another one (DHCP gave the address to another cube), none apply.
+const serialMismatch = (c) => Boolean(c.serial && c.info?.serial && String(c.info.serial).toLowerCase() !== c.serial)
+const approvedStill = (c) => (serialMismatch(c) ? [] : c.stillBeams)
 
 const readConfig = (dir) => {
     try {
@@ -283,6 +298,7 @@ const createLaserEngine = ({
     setTimeout: later = setTimeout
 } = {}) => {
     const config = readConfig(dataDir)
+    for (const c of config.cubes) if (c.addressRefused) log?.warn?.(`[laser] ${c.id}: laser.json address not used: ${c.addressRefused}`)
     const live = new Map(config.cubes.map((c) => [c.id, {
         ...c,
         lastFrameAt: null,
@@ -364,7 +380,7 @@ const createLaserEngine = ({
         c.prep = prep
         return prep
     }
-    const allowed = (c, spot) => c.stillBeams.some((b) => Math.hypot(spot.x - b.x, spot.y - b.y) <= b.within)
+    const allowed = (c, spot) => approvedStill(c).some((b) => Math.hypot(spot.x - b.x, spot.y - b.y) <= b.within)
     // Still if EITHER the frame as posted OR as optimised is still (round 2, review §3): the
     // optimiser turns the move into a dot into a lit line and adds blank holds to the frame's time,
     // so the optimised list alone let a dot through that the raw frame shows plainly. Never looser
@@ -574,7 +590,6 @@ const createLaserEngine = ({
             armed,
             sim: sim(),
             zone: { ...config.zone },
-            armPhrase: ARM_PHRASE,
             guard: {
                 frameTimeoutMs: GUARD.FRAME_TIMEOUT_MS,
                 linkLostMs: GUARD.LINK_LOST_MS,
@@ -588,6 +603,7 @@ const createLaserEngine = ({
                 id: c.id,
                 name: c.name,
                 ip: c.ip,
+                serial: c.serial,
                 connected: Boolean(c.ip) && c.heardAt !== null && t - c.heardAt <= GUARD.LINK_LOST_MS,
                 armed: armed && c.armed,
                 stop: c.stop ? { reason: c.stop.reason, text: STOP_TEXT[c.stop.reason], detail: c.stop.detail, at: c.stop.at } : null,
@@ -595,7 +611,9 @@ const createLaserEngine = ({
                 info: infoView(c, t),
                 rate: rateOf(c),
                 rateMismatch: rateMismatch(c),
-                stillBeams: c.stillBeams.length,
+                stillBeams: approvedStill(c).length,
+                serialMismatch: serialMismatch(c),
+                addressRefused: c.addressRefused,
                 lastFrameAt: c.lastFrameAt,
                 guards: c.guards,
                 path: pathView(c),
@@ -698,7 +716,8 @@ const createLaserEngine = ({
             if (timer) { stopEvery(timer); timer = null }
             return { ok: true, armed }
         }
-        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: `arming needs the sign-off phrase exactly: "${ARM_PHRASE}"` }
+        // The phrase is never echoed (nor in state()): it is typed by the officer, not copied from a hint.
+        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: 'not armed: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' }
         openSocket()
         const t = now()
         for (const c of live.values()) armCube(c, t)
