@@ -21,6 +21,9 @@ export const WALK_PREFS = Object.freeze({
     pitchLimit: Math.PI / 2 - 0.01,
     accelTime: 0.08,       // Blender's walk has no published ramp; a short one keeps the frame-rate independence of flyStep. ours
     stopTime: 0.06,
+    // The longest frame the walk counts: the flight's (useCameraNavigation, 0.25 s). flyStep's own 0.1 s made a walk below
+    // 10 fps slower (review 2: 1.05 m a second at 5 fps instead of 2.5).
+    maxDt: 0.25,
 })
 
 /** Is this keydown the Blender walk toggle (Shift+`)? Pure. */
@@ -33,6 +36,7 @@ export const walkParams = (held, prefs = WALK_PREFS) => ({
     sprintFactor: held.has('shift') ? prefs.walkSpeedFactor : held.has('alt') ? prefs.slowFactor : 1,
     accelTime: prefs.accelTime,
     stopTime: prefs.stopTime,
+    maxDt: prefs.maxDt,
     wheelStep: 1, // the wheel does not change the walk speed (Blender walk: speed is a preference)
 })
 
@@ -120,6 +124,9 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
             if (typing(e.target)) return
             if (isWalkToggle(e)) { e.preventDefault(); if (walk) end(); else begin(); return }
             if (!walk) return
+            // While walking the keyboard is the walk's, as Blender's Walk is modal: the Studio's window shortcuts (E the tool,
+            // S the scale gizmo, A select all, Shift+D duplicate) never fire mid-walk (mapped by the move-map agent, 2026-10-13).
+            e.stopImmediatePropagation()
             if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); end(); return }
             const k = WALK_KEYS[e.code]
             if (k) { e.preventDefault(); walk.held.add(k) }
@@ -128,6 +135,7 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
         }
         const onKeyUp = (e) => {
             if (!walk) return
+            e.stopImmediatePropagation()
             const k = WALK_KEYS[e.code]
             if (k) walk.held.delete(k)
             if (!e.shiftKey) walk.held.delete('shift')

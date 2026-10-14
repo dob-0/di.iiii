@@ -42,6 +42,7 @@ import {
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
+import { IN_PLACE_DISTANCE } from '../navigation/freeMove.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
@@ -328,6 +329,10 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 // How the smart view finds an entity's object (SmartView.jsx).
                 userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
+                    // The release of a drag is not a click: r3f 8 sends onClick on it, and an orbit selected the object under the
+                    // pointer, so the Inspector opened over the canvas and the next drag pressed a panel button, a "dead" pan
+                    // (dead-pan agent, 2026-10-13: 12 of 12 such presses dead, 0 of 38 on the canvas). Same check as the group below.
+                    if (e.delta > 2) return
                     // Locked: not picked — the click goes on to whatever is behind it.
                     if (isLocked) return
                     e.stopPropagation()
@@ -553,6 +558,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         orbitSelection: navigation.orbitSelection,
         selectedEntityIds,
         getScene,
+        speed: navigation.speed,
+        turn: navigation.turn,
         active: enabled && !isXrPresenting,
     })
 
@@ -631,7 +638,6 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         <CameraControls
             ref={controlsRef}
             makeDefault
-            dollyToCursor={preset.dollyToCursor}
             azimuthRotateSpeed={rotateSpeed}
             polarRotateSpeed={rotateSpeed}
             // Zoom never stops: at minDistance the wheel carries the target forward with the
@@ -640,8 +646,9 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             infinityDolly
             smoothTime={preset.smoothTime}
             draggingSmoothTime={preset.draggingSmoothTime}
-            minDistance={0.35}
-            maxDistance={500}
+            // The standard move (useCameraNavigation): no distance range bends a move; the public viewer's Inside lock sets its own.
+            minDistance={IN_PLACE_DISTANCE / 2}
+            maxDistance={Infinity}
             mouseButtons={bindings.mouseButtons}
             touches={bindings.touches}
             onControlEnd={() => {

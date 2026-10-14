@@ -15,6 +15,7 @@ import { MODEL_FORMATS, detectModelFormatFromMeta, detectModelFormatFromName } f
 import { registerModelClips } from '../project/viewport/modelClipRegistry.js'
 import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
+import { reportModelLoad } from './modelLoads.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 import { asColor } from '../utils/colorValue.js'
 import { assetFetchCacheMode } from '../utils/contentAddressedAsset.js'
@@ -84,6 +85,7 @@ export default function ModelObject({
     const [loaded, setLoaded] = useState(null)
     const loadedScene = loaded?.scene || null
     const gl = useThree((state) => state.gl)
+    const endLoadRef = useRef(null)
 
     const effectiveFormat = useMemo(() => {
         if (modelFormat) return modelFormat
@@ -97,6 +99,8 @@ export default function ModelObject({
 
     useEffect(() => {
         let disposed = false
+        const endLoad = reportModelLoad() // the camera's automatic speed waits for it (modelLoads.js)
+        endLoadRef.current = endLoad
 
         const resolveAssetSource = async (ref, fallbackUrl) => {
             if (ref?.id) {
@@ -177,10 +181,12 @@ export default function ModelObject({
         const handleScene = (scene, animations = []) => {
             if (disposed) return
             registerModelClips(assetRef?.id, animations)
+            if (!scene) endLoad() // with a scene, the load ends once it is mounted (the effect on `loaded` below)
             setLoaded(scene ? { scene, animations } : null)
         }
 
         const handleError = (error) => {
+            endLoad()
             if (disposed) return
             console.warn('[ModelObject] failed to load model:', assetRef?.name || data, error?.message || error)
             setLoaded(null)
@@ -189,6 +195,7 @@ export default function ModelObject({
         const loadModel = async () => {
             const assetSource = await resolveAssetSource(assetRef, data)
             if (!assetSource) {
+                endLoad()
                 setLoaded(null)
                 return
             }
@@ -260,8 +267,12 @@ export default function ModelObject({
 
         return () => {
             disposed = true
+            endLoad()
         }
     }, [assetRef, materialsAssetRef, data, effectiveFormat, gl])
+
+    // The loaded model is in the scene once this render is committed: only then is its load over.
+    useEffect(() => { if (loaded) endLoadRef.current?.() }, [loaded])
 
     // Dispose the previously loaded scene's geometries/materials/textures
     // the moment a new one replaces it (effect cleanup fires just before the
