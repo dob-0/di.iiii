@@ -35,6 +35,12 @@
 //      UNVALIDATED until a real cube has been tested (checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //   8. Server going down (SIGTERM, SIGINT, close): every addressed cube is blanked and sent
 //      output-off twice before the socket closes (shutdown()).
+//   9. THE GALVO AND POWER GUARDS (laserGuards.js, 2026-10-14): every frame, whatever sent it, is
+//      step-limited, corner-held, dwelt and blank-delayed for the cube's rate before it streams; a
+//      new frame is reached by a blank, step-limited bridge; colour is scaled down from 60 °C to
+//      50 % at 75 °C (averaged); every stop — no frame, still beam, link lost, disarm, shutdown —
+//      walks the beam blank to the centre and parks it there BEFORE output-off. The still-beam guard
+//      (7) reads the frame as optimised, so it judges what the cube is actually sent.
 // What software cannot do, said plainly: a galvo that stalls while a figure is being sent is a
 // still beam the server never sees (it only knows what it commanded); a server killed with -9, or a
 // cable pulled, leaves the cube to its own firmware, whose behaviour when the stream stops is not
@@ -43,7 +49,8 @@
 // Config (optional): <dataDir>/laser/laser.json
 //   { "cubes": [{ "id": "cube-1", "name": "Cut 1", "ip": "192.168.1.51",
 //                 "stillBeams": [{ "x": -0.2, "y": 0.4, "within": 0.01 }] }, …],
-//     "zone": { "xMin": -1, "xMax": 1, "yMin": 0, "yMax": 1 }, "dacRate": 30000 }
+//     "zone": { "xMin": -1, "xMax": 1, "yMin": 0, "yMax": 1 }, "dacRate": 30000,
+//     "guards": { "litStep": 0.025, … } }   (and per cube "guards": {…}; keys: laserGuards.js)
 //   stillBeams  the still beams the officer approved for this cube, in the cube's field (x, y -1…1),
 //               each allowed to wander `within` (field units, default 0.01) of its point
 //   dacRate     optional cap on the points per second; without it the cube's own current DAC rate
@@ -56,6 +63,7 @@ const path = require('path')
 const dgram = require('dgram')
 const { ALL_CUBES, normaliseFramePoints } = require('../../../shared/laserFrame.cjs')
 const proto = require('./lasercubeProtocol')
+const guardsLib = require('./laserGuards')
 
 const ARM_PHRASE = 'the laser safety officer has signed off'
 const DEFAULT_ZONE = Object.freeze({ xMin: -1, xMax: 1, yMin: 0, yMax: 1 })
@@ -230,20 +238,23 @@ const normaliseStillBeams = (list) => (Array.isArray(list) ? list : [])
     .map((b) => ({ x: Number(b?.x), y: Number(b?.y), within: Number(b?.within) > 0 ? Math.min(Number(b.within), 0.1) : GUARD.DEFAULT_STILL_WITHIN }))
     .filter((b) => Number.isFinite(b.x) && Number.isFinite(b.y))
 
-const cubeFrom = (c, i) => ({
+const cubeFrom = (c, i, base = guardsLib.DEFAULT_GUARDS) => ({
     id: String(c?.id || `cube-${i + 1}`),
     name: String(c?.name || c?.id || `Cube ${i + 1}`),
     ip: typeof c?.ip === 'string' && c.ip ? c.ip : null,
-    stillBeams: normaliseStillBeams(c?.stillBeams)
+    stillBeams: normaliseStillBeams(c?.stillBeams),
+    guards: guardsLib.normaliseGuards(c?.guards, base)
 })
 
 const readConfig = (dir) => {
     try {
         const raw = JSON.parse(fs.readFileSync(path.join(dir, 'laser.json'), 'utf8'))
-        const cubes = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes.map(cubeFrom) : DEFAULT_CUBES.map(cubeFrom)
-        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null }
+        const base = guardsLib.normaliseGuards(raw.guards)
+        const list = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes : DEFAULT_CUBES
+        const cubes = list.map((c, i) => cubeFrom(c, i, base))
+        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base }
     } catch {
-        return { cubes: DEFAULT_CUBES.map(cubeFrom), zone: normaliseZone(), dacRate: null }
+        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS }
     }
 }
 
@@ -271,6 +282,8 @@ const createLaserEngine = ({
         bufferFree: null, bufferAt: null, sentSince: 0,
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
+        prep: null, playingPrep: null,
+        temp: guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs }),
         stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0 }
     }]))
     const frames = { all: null, byCube: new Map() }
@@ -314,19 +327,48 @@ const createLaserEngine = ({
         const want = config.dacRate || c.info.dacRate || c.info.maxDacRate
         return Math.min(want, c.info.maxDacRate)
     }
+    // The rate a cube's path is planned at: its stream rate, or (sim, no info yet) laser.json's
+    // dacRate, or the 30 kpps the guards were tuned at.
+    const planRate = (c) => rateOf(c) || config.dacRate || guardsLib.REFERENCE_RATE
+    const planOf = (c) => guardsLib.pathPlan(c.guards, planRate(c))
+    // The frame as this cube will draw it (laserGuards.js), and its still beams judged on that.
+    // Kept until the frame or the rate changes; a keep-alive changes neither.
+    const prepared = (c, frame) => {
+        if (!frame) return null
+        const rate = planRate(c)
+        if (c.prep && c.prep.frame === frame && c.prep.rate === rate) return c.prep
+        const plan = guardsLib.pathPlan(c.guards, rate)
+        const opt = guardsLib.optimisePath(frame.points, plan)
+        c.prep = { frame, rate, plan, points: opt.points, stats: opt.stats, still: stillBeams(opt.points) }
+        return c.prep
+    }
     const allowed = (c, spot) => c.stillBeams.some((b) => Math.hypot(spot.x - b.x, spot.y - b.y) <= b.within)
-    const stillOf = (c, frame) => (frame?.still || []).filter((s) => !allowed(c, s))
+    const stillOf = (c, frame) => (prepared(c, frame)?.still || []).filter((s) => !allowed(c, s))
+    const powerOf = (c) => guardsLib.powerScale(c.temp.average(), c.guards)
 
-    // A stop: blank, then output off twice (the spec: send critical commands twice, they are idempotent).
+    // The stop's points (laserGuards.parkPath): blank where the beam is, a blank walk to the centre,
+    // parked there — as ≤140-point messages. Data only; the caller sends output-off after.
+    const parkMessages = (c) => {
+        const pts = guardsLib.parkPath(c.lastPoint, planOf(c))
+        const out = []
+        for (let i = 0; i < pts.length; i += proto.MAX_POINTS_PER_MESSAGE) {
+            out.push(proto.encodeSampleData(pts.slice(i, i + proto.MAX_POINTS_PER_MESSAGE), c.message, c.frameNum))
+            c.message = (c.message + 1) & 0xff
+        }
+        c.lastPoint = [0, 0]
+        c.playingPrep = null
+        return out
+    }
+
+    // A stop: blank and park at the centre, then output off twice (the spec: send critical commands
+    // twice, they are idempotent).
     const stopCube = (c, reason, t, detail = null) => {
         c.stop = { reason, at: t, detail }
         c.stops[reason] = (c.stops[reason] || 0) + 1
         c.stillSince = null
         c.playing = null
         c.index = 0
-        const blank = Array.from({ length: 10 }, () => [c.lastPoint[0], c.lastPoint[1], 0, 0, 0])
-        send(c, proto.encodeSampleData(blank, c.message, c.frameNum), proto.PORT.DATA)
-        c.message = (c.message + 1) & 0xff
+        for (const buf of parkMessages(c)) send(c, buf, proto.PORT.DATA)
         send(c, proto.setOutput(false), proto.PORT.CMD)
         send(c, proto.setOutput(false), proto.PORT.CMD)
         log?.warn?.(`[laser] ${c.id} ${STOP_TEXT[reason]}${detail ? ` (${detail})` : ''}`)
@@ -353,7 +395,15 @@ const createLaserEngine = ({
             if (c.info?.rxBufferSize) free = Math.min(free, c.info.rxBufferSize)
             room = Math.min(perTick, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
         }
-        const next = () => (frame?.points?.length ? frame.points : [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]])
+        // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
+        const next = () => {
+            const prep = prepared(c, frame)
+            if (!prep?.points.length) { c.playingPrep = null; return [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]] }
+            const bridge = c.playingPrep === prep ? [] : guardsLib.bridgePath(c.lastPoint, prep.points[0], prep.plan)
+            c.playingPrep = prep
+            return bridge.length ? bridge.concat(prep.points) : prep.points
+        }
+        const power = powerOf(c)
         while (room > 0) {
             const chunk = []
             while (chunk.length < Math.min(room, proto.MAX_POINTS_PER_MESSAGE)) {
@@ -367,7 +417,7 @@ const createLaserEngine = ({
                 chunk.push(p)
                 c.lastPoint = [p[0], p[1]]
             }
-            send(c, proto.encodeSampleData(chunk, c.message, c.frameNum), proto.PORT.DATA)
+            send(c, proto.encodeSampleData(guardsLib.scaleColour(chunk, power), c.message, c.frameNum), proto.PORT.DATA)
             c.message = (c.message + 1) & 0xff
             c.sentSince += chunk.length
             room -= chunk.length
@@ -381,6 +431,7 @@ const createLaserEngine = ({
         const t = now()
         for (const c of live.values()) {
             if (!c.armed) continue
+            if (c.info) c.temp.sample(t, c.info.temperature)
             if (c.ip && t - (c.heardAt ?? 0) > GUARD.LINK_LOST_MS) {
                 stopCube(c, STOP.LINK_LOST, t)
                 c.armed = false
@@ -408,6 +459,35 @@ const createLaserEngine = ({
     }
 
     const infoView = (c, t) => (c.info ? { ...c.info, ageMs: t - c.infoAt } : null)
+    // What the guards did to the frame this cube is drawing: points in and out, the longest steps,
+    // and how many times a second the figure is drawn at the cube's rate.
+    const pathView = (c) => {
+        const prep = c.prep
+        if (!prep) return null
+        const { plan } = prep
+        return {
+            rate: prep.rate,
+            pointsIn: prep.stats.in,
+            pointsOut: prep.stats.out,
+            framesPerSecond: prep.stats.out ? Math.round((prep.rate / prep.stats.out) * 10) / 10 : null,
+            maxLitStep: prep.stats.maxLitStep,
+            maxBlankStep: prep.stats.maxBlankStep,
+            plan: { litStep: plan.litStep, blankStep: plan.blankStep, startDwell: plan.startDwell, endDwell: plan.endDwell, blankBeforeOn: plan.blankBeforeOn, litAfterOn: plan.litAfterOn, litBeforeOff: plan.litBeforeOff, blankAfterOff: plan.blankAfterOff, parkPoints: plan.parkPoints }
+        }
+    }
+    // The temperature limiter (laserGuards.powerScale): hot at an average ≥ tempEndC.
+    const temperatureView = (c) => {
+        const averageC = c.temp.average()
+        return {
+            lastC: c.info ? c.info.temperature : null,
+            averageC: averageC === null ? null : Math.round(averageC * 10) / 10,
+            samples: c.temp.count(),
+            powerScale: powerOf(c),
+            hot: averageC !== null && averageC >= c.guards.tempEndC,
+            cubeWarning: Boolean(c.info?.temperatureWarning),
+            cubeOverTemperature: Boolean(c.info?.overTemperature)
+        }
+    }
     const state = () => {
         const t = now()
         return {
@@ -421,7 +501,8 @@ const createLaserEngine = ({
                 stillWindowDeg: GUARD.STILL_WINDOW_DEG,
                 stillDwellShare: GUARD.STILL_DWELL_SHARE,
                 stillHoldMs: GUARD.STILL_HOLD_MS,
-                validated: GUARD.VALIDATED
+                validated: GUARD.VALIDATED,
+                path: { ...config.guards, referenceRate: guardsLib.REFERENCE_RATE }
             },
             cubes: [...live.values()].map((c) => ({
                 id: c.id,
@@ -434,7 +515,10 @@ const createLaserEngine = ({
                 info: infoView(c, t),
                 rate: rateOf(c),
                 stillBeams: c.stillBeams.length,
-                lastFrameAt: c.lastFrameAt
+                lastFrameAt: c.lastFrameAt,
+                guards: c.guards,
+                path: pathView(c),
+                temperature: temperatureView(c)
             }))
         }
     }
@@ -456,8 +540,7 @@ const createLaserEngine = ({
         keep(target, {
             points: zoned.points,
             at: now(),
-            lit: zoned.points.some(isLit),
-            still: stillBeams(zoned.points)
+            lit: zoned.points.some(isLit)
         })
         return { ok: true, armed, dropped: clean.dropped, blanked: zoned.blanked, cubes: state().cubes }
     }
@@ -481,14 +564,21 @@ const createLaserEngine = ({
         return { ok: true, armed }
     }
 
-    const offAll = (done) => {
+    // Every addressed cube off: the cubes that were armed first park blank at the centre (their
+    // stream's points), then every one gets output-off twice and buffer answers off. A cube never
+    // armed gets no data point (rule 1), only the off commands. `done` is called once per message;
+    // returns how many there are.
+    const offAll = (wasArmed, done) => {
+        const msgs = []
         for (const c of live.values()) {
             if (!c.ip) continue
-            send(c, proto.setOutput(false), proto.PORT.CMD, done)
-            send(c, proto.setOutput(false), proto.PORT.CMD, done)
-            send(c, proto.enableBufferSizeResponse(false), proto.PORT.CMD, done)
+            if (wasArmed.has(c.id)) for (const buf of parkMessages(c)) msgs.push([c, buf, proto.PORT.DATA])
+            msgs.push([c, proto.setOutput(false), proto.PORT.CMD], [c, proto.setOutput(false), proto.PORT.CMD], [c, proto.enableBufferSizeResponse(false), proto.PORT.CMD])
         }
+        for (const [c, buf, port] of msgs) send(c, buf, port, done)
+        return msgs.length
     }
+    const armedIds = () => new Set(armed ? [...live.values()].filter((c) => c.armed).map((c) => c.id) : [])
 
     const armCube = (c, t) => {
         if (c.armed) return
@@ -498,13 +588,15 @@ const createLaserEngine = ({
         c.stillSince = null
         c.playing = null
         c.index = 0
+        c.playingPrep = null
         send(c, proto.enableBufferSizeResponse(true), proto.PORT.CMD)
+        if (c.guards.sendSetRate && rateOf(c)) send(c, proto.setRate(rateOf(c)), proto.PORT.CMD)
         send(c, proto.setOutput(true), proto.PORT.CMD)
     }
 
     const arm = ({ armed: want, confirm } = {}) => {
         if (want !== true) {
-            if (armed) offAll()
+            if (armed) offAll(armedIds())
             armed = false
             for (const c of live.values()) { c.armed = false; c.stillSince = null; if (c.stop?.reason !== STOP.NO_INFO) c.stop = null }
             if (timer) { stopEvery(timer); timer = null }
@@ -543,6 +635,7 @@ const createLaserEngine = ({
     const shutdown = () => new Promise((resolve) => {
         if (timer) { stopEvery(timer); timer = null }
         if (infoTimer) { stopEvery(infoTimer); infoTimer = null }
+        const wasArmed = armedIds()
         armed = false
         for (const c of live.values()) c.armed = false
         if (!socket) { resolve(); return }
@@ -553,9 +646,11 @@ const createLaserEngine = ({
             if (socket) { try { socket.close() } catch { /* already closed */ } socket = null }
             resolve()
         }
-        let pending = [...live.values()].filter((c) => c.ip).length * 3
-        if (!pending) { finish(); return }
-        offAll(() => { pending -= 1; if (pending <= 0) finish() })
+        if (![...live.values()].some((c) => c.ip)) { finish(); return }
+        let sent = 0
+        let total = Infinity
+        total = offAll(wasArmed, () => { sent += 1; if (sent >= total) finish() })
+        if (sent >= total) finish()
         later(finish, SHUTDOWN_WAIT_MS)
     })
 

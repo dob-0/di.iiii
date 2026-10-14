@@ -9,6 +9,7 @@ import { generateShape, LASER_SHAPES } from '../../../src/project/nodes/laser.sh
 const require = createRequire(import.meta.url)
 const proto = require('./lasercubeProtocol')
 const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, GUARD } = require('./laserEngine')
+const guards = require('./laserGuards')
 
 const fakeSocket = () => {
     const sent = []
@@ -112,6 +113,11 @@ describe('the LaserCube protocol', () => {
         expect(proto.parseFullInfo(infoAnswer({ out: 1, dac: 30000, max: 40000, free: 5800, size: 6000, battery: 77, temp: 31, conn: 2 }))).toEqual({
             firmware: '1.7',
             outputEnabled: true,
+            statusFlags: 1,
+            interlockEnabled: false,
+            temperatureWarning: false,
+            overTemperature: false,
+            packetErrors: 0,
             dacRate: 30000,
             maxDacRate: 40000,
             rxBufferFree: 5800,
@@ -316,20 +322,27 @@ describe('the laser engine', () => {
         expect(opened).toBe(false)
         expect(engine.frames().all).toEqual([[0, 0.5, 1, 1, 1]])
     })
-    it('starts a new frame where the playing one ends, so a figure is never torn', () => {
+    it('starts a new frame where the playing one ends, so a figure is never torn (both as the guards draw them)', () => {
         const { engine, socket } = armedWith(ONE)
         const long = Array.from({ length: 1000 }, (_, i) => [Math.cos(i / 100), 0.5, 1, 0, 0])
+        const plan = guards.pathPlan(guards.DEFAULT_GUARDS, 30000)
+        const longOut = guards.optimisePath(long, plan).points
+        const circleOut = guards.optimisePath(circle, plan).points
         engine.setFrame('all', long)
-        engine.tick() // one tick at 30 kpps: points 0…599
+        engine.tick() // one tick at 30 kpps: the long frame's first 600 points (after the bridge from the centre)
+        const first = dataTo(socket).flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
+        const bridgeIn = guards.bridgePath([0, 0], longOut[0], plan).length
         engine.setFrame('all', circle)
         socket.sent.length = 0
-        engine.tick() // the long frame goes on (600…999), then the circle starts
+        engine.tick() // the long frame goes on to its end, then a bridge, then the circle
         const msgs = dataTo(socket)
         expect(pointsIn(msgs)).toBe(600)
-        expect(msgs[0].buf.readUInt16LE(4)).toBe(proto.toDeviceCoord(long[600][0]))
-        const at400 = msgs.flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))[400]
-        expect(at400).toBe(proto.toDeviceCoord(circle[0][0]))
-        expect([msgs[0].buf[3], msgs.at(-1).buf[3]]).toEqual([0, 2]) // the long one, the circle, the circle again
+        const xs = msgs.flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
+        const rest = longOut.slice(600 - bridgeIn)
+        const bridge = guards.bridgePath(longOut.at(-1), circleOut[0], plan)
+        const want = [...rest, ...bridge, ...circleOut, ...circleOut].slice(0, 600).map((p) => proto.toDeviceCoord(p[0]))
+        expect(first.length).toBe(600)
+        expect(xs).toEqual(want)
     })
 })
 
@@ -396,14 +409,16 @@ describe('the signal-loss stop', () => {
         engine.arm({ armed: true, confirm: ARM_PHRASE })
         expect(engine.state().cubes[0]).toMatchObject({ armed: true, stop: null })
     })
-    it('going down: every cube output-off twice and buffer answers off, then the socket closes', async () => {
+    it('going down: every armed cube parks blank at the centre, then output-off twice and buffer answers off, then the socket closes', async () => {
         const { engine, socket } = armedWith()
         socket.sent.length = 0
         await engine.shutdown()
-        expect(socket.sent.map((s) => [s.ip, ...s.buf])).toEqual([
-            ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x78, 0],
-            ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x78, 0]
+        expect(socket.sent.map((s) => [s.ip, s.port === proto.PORT.DATA ? 'park' : s.buf[0], s.port === proto.PORT.DATA ? litIn([s]) : s.buf[1]])).toEqual([
+            ['10.0.0.51', 'park', 0], ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x78, 0],
+            ['10.0.0.52', 'park', 0], ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x78, 0]
         ])
+        const park = dataTo(socket, '10.0.0.51')[0].buf
+        expect([park.readUInt16LE(park.length - 10), park.readUInt16LE(park.length - 8)]).toEqual([0x800, 0x800])
         expect(socket.closed).toBe(true)
         expect(engine.state().armed).toBe(false)
     })
