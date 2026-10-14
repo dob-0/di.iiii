@@ -120,6 +120,7 @@ export default function PublicProjectSceneSurface({
     title,
     entryView,
     navMode,
+    walkLook = 'lock',
     onNavModeChange,
     topClear = null,
     isPreview,
@@ -222,6 +223,8 @@ export default function PublicProjectSceneSurface({
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                    // the view page walks with one look (drag), never a pointer lock
+                    walkLook={walkLook}
                     topClear={topClear}
                 />
             ) : hasGraph ? (
