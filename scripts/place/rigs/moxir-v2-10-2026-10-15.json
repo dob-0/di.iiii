@@ -6390,14 +6390,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -4.0,
-    7.0,
-    53.3
+    -4.023,
+    6.388,
+    53.424
    ],
    "r": [
-    1.6198,
+    1.6894,
     0.0,
-    0.1815
+    0.112
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
@@ -6438,14 +6438,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    4.0,
-    7.0,
-    53.3
+    3.979,
+    6.387,
+    53.431
    ],
    "r": [
-    1.6198,
+    1.6896,
     0.0,
-    -0.1815
+    -0.2455
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
@@ -18092,45 +18092,47 @@
     "beam": "41",
     "cube": "rig-laser40-1",
     "from": [
-     -4.0,
-     7.0,
-     53.3
+     -4.023,
+     6.388,
+     53.424
     ],
     "to": [
-     8.37,
-     10.3,
-     -14.04
+     3.635,
+     14.448,
+     -14.214
     ],
     "half_fan_deg": 0.0,
     "ends_on": "roof bottom chords (y 10.3)",
     "r": [
-     1.6198,
+     1.6894,
      0.0,
-     0.1815
+     0.112
     ],
-    "length_m": 68.546
+    "length_m": 68.546,
+    "owner_hand": "rotation and place set by the owner in the Studio 2026-10-15 02:18 (ops 859-869); kept as is"
    },
    {
     "beam": "42",
     "cube": "rig-laser40-2",
     "from": [
-     4.0,
-     7.0,
-     53.3
+     3.979,
+     6.387,
+     53.431
     ],
     "to": [
-     -8.37,
-     10.3,
-     -14.04
+     -12.679,
+     14.265,
+     -12.592
     ],
     "half_fan_deg": 0.0,
     "ends_on": "roof bottom chords (y 10.3)",
     "r": [
-     1.6198,
+     1.6896,
      0.0,
-     -0.1815
+     -0.2455
     ],
-    "length_m": 68.546
+    "length_m": 68.546,
+    "owner_hand": "rotation and place set by the owner in the Studio 2026-10-15 02:18 (ops 859-869); kept as is"
    },
    {
     "beam": "1a",

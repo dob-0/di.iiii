@@ -1,0 +1,45 @@
+{
+ "what": "MOXIR v2.10: the two UP-LA40WF lasers as the owner placed and rotated them by hand (02:18, ops 859-869) - kept; and rig-par-planes-34 (line R wash) back on the floor at (7.78, 0.322, 28.11) aimed up: it had been caught in the same rotation (v867: y 1.47, tilted), a floor wash cannot float.",
+ "source": "ops 858-869 of moxir-v2-10; the rig tubes 41/42 updated from his transforms (to = from + direction x the old length)",
+ "moves": [
+  {
+   "id": "rig-laser-41",
+   "position": [
+    -4.096,
+    6.4,
+    53.536
+   ],
+   "rotation": [
+    1.6894,
+    0.0,
+    0.112
+   ]
+  },
+  {
+   "id": "rig-laser-42",
+   "position": [
+    3.906,
+    6.399,
+    53.543
+   ],
+   "rotation": [
+    1.6896,
+    0.0,
+    -0.2455
+   ]
+  },
+  {
+   "id": "rig-par-planes-34",
+   "position": [
+    7.78,
+    0.322,
+    28.11
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  }
+ ]
+}
