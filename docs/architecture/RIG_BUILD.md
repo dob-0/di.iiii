@@ -643,6 +643,13 @@ owed) was drawn white at full by the mirror, which assumed "no colour channel" m
 Such a fixture is now `known: false`, and the lamp keeps its authored light. See the
 known-fixes row and `useLightingMirror.test.jsx`.
 
+**Heads that move (2026-10-15).** A look may carry `heads: { pattern, period_s, pan_deg, tilt_deg, spatial, kinds }`
+(`components.rigLooks.looks[].heads`; patterns sweep, nod, circle, figure8, fan, wave, cross). One pure function,
+`serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port
+`src/rigbuild/headMotion.js` drives the room, both from the server's clock and the look's fire time, so desk and room agree
+(pinned to 0.01 degree by `headMotion.test.js`). Offsets sit on the look's rest aim. From a vertical rest only the tilt
+patterns (nod, wave, circle, figure8) show. Session note: `docs/ai/sessions/feat-looks-heads-motion-2026-10-15.md`.
+
 ### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
 
 The data came from `space-bundle.mjs export moxir` on the local tier, taken after the
