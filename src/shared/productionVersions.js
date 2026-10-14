@@ -8,7 +8,11 @@
 // follow engine merges per entity (an op touches one entity), and only two edits to the SAME version at
 // the same moment fall to the host's copy (followConverge.js).
 //
-// Status is one of four words. At most one version is `for-the-show`; "none chosen" is a valid state.
+// Status is one of five words. At most one version is `for-the-show`; "none chosen" is a valid state.
+// `concept` (2026-10-04): a version kept on purpose as an idea — never deleted, not on the main row, folded
+// under one "Concepts (n)" button. An install whose code predates it does not know the word: its
+// normaliser returns null for the entry, so the version is simply not on that install's row (never promoted,
+// never shown for the show; the project itself is untouched). See the decision note, "Concept".
 // This is the asset-publish model of film and animation pipelines (a published version carries a status,
 // and one approved pointer names the one in use), here as data that travels with the space.
 //
@@ -16,7 +20,7 @@
 // of the two normalisers lives in shared/projectSchema.cjs (the schema is duplicated; schemaSync.test.js
 // and productionVersions.test.js hold the two together).
 
-export const VERSION_STATUSES = Object.freeze(['for-the-show', 'candidate', 'kept-copy', 'archived'])
+export const VERSION_STATUSES = Object.freeze(['for-the-show', 'candidate', 'kept-copy', 'concept', 'archived'])
 export const FOR_THE_SHOW = 'for-the-show'
 export const PRODUCTION_ENTITY_ID = 'production'
 export const VERSION_ENTITY_PREFIX = 'version-'
@@ -85,7 +89,7 @@ export const normalizeProductionMeta = (value) => {
 
 /**
  * The list as a document holds it: { production, entries, problems }. Entries in a stable order
- * (for-the-show, candidates, kept copies, archived; then by project id), so every reader shows the
+ * (for-the-show, candidates, kept copies, concepts, archived; then by project id), so every reader shows the
  * same row. `problems` are the states the list must never be in — two versions for the show (only a
  * merge of two machines' edits can make that), one version id or project listed twice.
  */

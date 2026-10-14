@@ -1,0 +1,395 @@
+{
+ "source": "Esri World Imagery Wayback",
+ "terms": "Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community (Esri World Imagery)",
+ "distinct_at_pin_z18": [
+  {
+   "release": 44873,
+   "title": "World Imagery (Wayback 2023-03-15)",
+   "tile_md5": "66ebe8d5012e3230e822f3db0748187b",
+   "metadata": [
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "60cm Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "1.2m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "2.4m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "4.8m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "9.6m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "19m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "38m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "75m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "150m Resolution Metadata"
+    }
+   ]
+  },
+  {
+   "release": 37965,
+   "title": "World Imagery (Wayback 2024-02-08)",
+   "tile_md5": "1db75eb5969fecceaa95fb683f677883",
+   "metadata": [
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "60cm Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "1.2m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "2.4m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "4.8m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "9.6m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "19m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20201030",
+     "SRC_RES": "0.31",
+     "SRC_ACC": "5",
+     "SRC_DESC": "WV03",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "10/30/2020",
+     "NICE_DESC": "Maxar",
+     "layer": "38m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "75m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "150m Resolution Metadata"
+    }
+   ]
+  },
+  {
+   "release": 27982,
+   "title": "World Imagery (Wayback 2025-04-24)",
+   "tile_md5": "d26789a844783fcf9c6fc6c3e84d09e6",
+   "metadata": [
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "60cm Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "1.2m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "2.4m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "4.8m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "9.6m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "19m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Maxar",
+     "layer": "38m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "75m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "150m Resolution Metadata"
+    }
+   ]
+  },
+  {
+   "release": 22252,
+   "title": "World Imagery (Wayback 2026-01-29)",
+   "tile_md5": "196f748766b72c3e6b258970f196bdd3",
+   "metadata": [
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "60cm Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "1.2m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "2.4m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "4.8m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "9.6m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "19m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "20240822",
+     "SRC_RES": "0.46",
+     "SRC_ACC": "5",
+     "SRC_DESC": "GE01",
+     "NICE_NAME": "Vivid",
+     "SRC_DATE2": "8/22/2024",
+     "NICE_DESC": "Vantor",
+     "layer": "38m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "75m Resolution Metadata"
+    },
+    {
+     "SRC_DATE": "Null",
+     "SRC_RES": "15",
+     "SRC_ACC": "12",
+     "SRC_DESC": "TerraColor NextGen",
+     "NICE_NAME": "TerraColor NextGen",
+     "SRC_DATE2": "Null",
+     "NICE_DESC": "Earthstar Geographics",
+     "layer": "150m Resolution Metadata"
+    }
+   ]
+  }
+ ],
+ "current_metadata": []
+}

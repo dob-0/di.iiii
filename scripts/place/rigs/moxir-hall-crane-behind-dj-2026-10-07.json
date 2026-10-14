@@ -1,0 +1,13 @@
+{
+  "_what": "MOXIR, the cut hung BEHIND the DJ (owner 2026-10-07: \"ok today version is better\" … \"but behind the dj\"): the nave's entry-end crane parks at z 21.0, its bridge 1.5 m behind the riser's back edge (z 22.5), so its front bridle clamps stand 0.68 m clear of it. Layered LAST, after moxir-hall-stage-line-2026-10-07.json (zones kept). The same layer serves the flipped picture-gate copy (moxir-stage-back-flip-2026-10-07.json).",
+  "_source": "scripts/rigbuild/stage-line.mjs behindOptions (z 21.0 / 21.18 / 21.5 / 22.0 compared); a PLAN, the crane's travel, brakes, lock-out and rated load unchecked (rigging sign-off owed).",
+  "source": "plan (the owner's choice (b), 2026-10-07)",
+  "cranes_from_door_m": [
+    33.0,
+    76.2
+  ],
+  "crane_trolley_x_m": [
+    7.6,
+    null
+  ]
+}

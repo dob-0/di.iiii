@@ -32,7 +32,8 @@ const GoogleIcon = () => (
     </svg>
 )
 
-export default function AccountButton({ authState, onLogout }) {
+// `inline`: a cell in a bar, not a float — in the flow, 28px, square (Nodes' one bar, audit §3.3).
+export default function AccountButton({ authState, onLogout, inline = false }) {
     const [anchorEl, setAnchorEl] = useState(null)
     const [providers, setProviders] = useState({ github: false, google: false })
     const [loggingOut, setLoggingOut] = useState(false)
@@ -114,7 +115,12 @@ export default function AccountButton({ authState, onLogout }) {
             <Box
                 className="account-btn-wrapper"
                 onClick={handleOpen}
-                sx={{
+                sx={inline ? {
+                    position: 'static',
+                    display: 'flex',
+                    cursor: 'pointer',
+                    '--di-account-btn-size': 'var(--raw-cell, 28px)'
+                } : {
                     position: 'fixed',
                     // --di-account-btn-bottom (base.css): pages read the same
                     // value to leave room for the button at their end.
@@ -133,7 +139,7 @@ export default function AccountButton({ authState, onLogout }) {
                                 minWidth: 0,
                                 width: 'var(--di-account-btn-size)',
                                 height: 'var(--di-account-btn-size)',
-                                borderRadius: '6px',
+                                borderRadius: 0,
                                 fontSize: 12,
                                 fontWeight: 700,
                                 p: 0,
@@ -159,7 +165,7 @@ export default function AccountButton({ authState, onLogout }) {
                             height: 'var(--di-account-btn-size)',
                             fontSize: 11,
                             fontWeight: 700,
-                            borderRadius: '6px',
+                            borderRadius: 0,
                             background: 'rgba(15,23,34,0.55)',
                             color: 'rgba(255,255,255,0.75)',
                             border: '1px solid rgba(255,255,255,0.1)',
@@ -185,7 +191,7 @@ export default function AccountButton({ authState, onLogout }) {
                         minWidth: 220,
                         background: 'var(--ui-surface)',
                         border: '1px solid var(--ui-border)',
-                        borderRadius: 1.5,
+                        borderRadius: 0,
                         boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
                     }
                 }}

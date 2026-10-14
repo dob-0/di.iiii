@@ -1,11 +1,14 @@
 import { execFileSync, spawn } from 'node:child_process'
-import { readFileSync, statSync } from 'node:fs'
+import { readFileSync, realpathSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
+import { createRequire } from 'node:module'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 import {
+    classifyAttach,
     collectDependencyDrift,
     collectMissingSpaces,
     pagesAlreadyHere,
@@ -14,6 +17,8 @@ import {
     formatSpaceDriftWarning,
 } from './dev-stack-lib.mjs'
 
+const require = createRequire(import.meta.url)
+const { evaluateDataRoot } = require('../serverXR/src/dataRootGuard.js')
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
 const serverRoot = path.join(repoRoot, 'serverXR')
@@ -177,6 +182,7 @@ const wipeAndLaunchBrowser = async (url) => {
 }
 
 const serverEnvFile = await parseEnvFile(path.join(serverRoot, '.env'))
+const serverEnvLocalFile = await parseEnvFile(path.join(serverRoot, '.env.local'))
 const defaultServerPort = Number(serverEnvFile.PORT || 4000)
 const defaultServerBasePath = normalizeBasePath(serverEnvFile.APP_BASE_PATH || '/serverXR')
 const defaultLocalApiBase = `http://localhost:${defaultServerPort}${defaultServerBasePath}`
@@ -213,11 +219,37 @@ if (shouldAutoStartLocalServer) {
     const serverReachable = await canReachHealth(healthUrl)
 
     if (serverReachable) {
-        console.log(`[dev-stack] ServerXR already reachable at ${parsedApiBase.apiBaseUrl}`)
+        const health = await fetch(healthUrl, { signal: AbortSignal.timeout(1500) }).then(r => r.json()).catch(() => null)
+        const ours = (() => { try { return realpathSync(serverRoot) } catch { return serverRoot } })()
+        const verdict = classifyAttach(health, ours)
+        if (!verdict.attach) {
+            console.error(`[dev-stack] Refusing to attach: ${verdict.message}`)
+            process.exit(1)
+        }
+        console.log(`[dev-stack] ServerXR already reachable at ${parsedApiBase.apiBaseUrl} (this checkout's own)`)
     } else {
+        // Same rule serverXR enforces (serverXR/src/dataRootGuard.js), checked here
+        // first so the refusal is one clear message, not a respawning watch loop.
+        // dotenv never overrides, so the effective value is process env, then
+        // .env.local, then .env — the order serverXR itself loads them in.
+        const effective = {
+            ...process.env,
+            DATA_ROOT: process.env.DATA_ROOT || serverEnvLocalFile.DATA_ROOT || serverEnvFile.DATA_ROOT || ''
+        }
+        const verdict = evaluateDataRoot({ env: effective, repoRoot })
+        if (verdict.action === 'refuse') {
+            console.error(`[dev-stack] ${verdict.message.replace(/\n/g, '\n[dev-stack] ')}`)
+            process.exit(1)
+        }
+        // A scratch run gets its own absolute directory outside the checkout, never ./data.
+        const scratchRoot = verdict.action === 'scratch'
+            ? path.join(os.homedir(), '.cache', 'di-dev', path.basename(repoRoot), 'data')
+            : null
+        if (scratchRoot) console.warn(`[dev-stack] SCRATCH database at ${scratchRoot}`)
         console.log(`[dev-stack] Starting ServerXR at ${parsedApiBase.apiBaseUrl}`)
         const serverEnv = {
             ...process.env,
+            ...(scratchRoot ? { DATA_ROOT: scratchRoot } : {}),
             PORT: String(parsedApiBase.port),
             APP_BASE_PATH: parsedApiBase.basePath,
             CORS_ORIGINS: process.env.CORS_ORIGINS || '*'

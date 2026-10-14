@@ -305,7 +305,7 @@ describe('PropertyInspector — the gaps the 2026-10-02 panel audit found', () =
     it('a selected node with nothing to set keeps its name (renamable) and says where its settings are', () => {
         const { container, getByText } = render(<PropertyInspector title="Gear" subtitle="List" onRename={vi.fn()} sections={[]} emptyMessage="Double-click the world or the view to start authoring." />)
         expect(container.querySelector('.raw-property-title-button').textContent).toBe('Gear')
-        expect(getByText(/› on its card opens it/)).toBeTruthy()
+        expect(getByText(/Open it to see everything it holds/)).toBeTruthy()
         expect(container.textContent).not.toMatch(/Double-click the world/)
     })
 
@@ -329,5 +329,25 @@ describe('textareaRows — the box grows with the note', () => {
         expect(textareaRows('')).toBe(4)
         expect(textareaRows('a\nb\nc\nd\ne\nf')).toBe(7)
         expect(textareaRows('x'.repeat(5000))).toBe(16)
+    })
+})
+
+describe('PropertyInspector: Open', () => {
+    // Audit 2026-10-05 §3.5: name, settings, ports, then Open; Delete in the footer.
+    it('comes after the settings and the ports, runs onOpen, and is absent when nothing can be opened', () => {
+        const onOpen = vi.fn()
+        const { container, rerender } = render(
+            <PropertyInspector title="Bar" subtitle="List" sections={[]} showHeaderWhenEmpty onOpen={onOpen} footer={<button type="button">Delete</button>}>
+                <section data-testid="ports">ports</section>
+            </PropertyInspector>
+        )
+        const open = screen.getByRole('button', { name: /^Open/ })
+        expect(open.previousElementSibling).toBe(screen.getByTestId('ports'))
+        expect(container.querySelector('.raw-property-footer').contains(screen.getByRole('button', { name: 'Delete' }))).toBe(true)
+        expect(container.querySelector('.raw-property-empty')).toBeNull()
+        fireEvent.click(open)
+        expect(onOpen).toHaveBeenCalledTimes(1)
+        rerender(<PropertyInspector title="Bar" subtitle="List" sections={[]} showHeaderWhenEmpty />)
+        expect(container.querySelector('.raw-property-open')).toBeNull()
     })
 })

@@ -1,7 +1,29 @@
+import { paintOrder } from '../utils/cardOrder.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
+import { dragClamp, edgePanVelocity } from '../utils/dragClamp.js'
+import {
+    CARD_BODY_FONT_PX,
+    CARD_CONTENT_GROUP_HEIGHT,
+    CARD_CONTENT_LINE_HEIGHT,
+    CARD_WIDTH,
+    HEADER_HEIGHT,
+    LEGIBLE_SCREEN_PX,
+    MIN_CARD_WIDTH,
+    PORT_ROW_HEIGHT,
+    TOP_PICTURE_HEIGHT,
+    TOP_PICTURE_WIDTH,
+    cardContentHeight,
+    cardContentLayout,
+    cardHeight,
+    cardMinHeight,
+    cardPortRows,
+    cardSizeOf,
+    cardWidth,
+    hasCardPicture,
+    summarizeCardContent
+} from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
@@ -10,10 +32,11 @@ import { cardEmptyHint } from '../utils/cardEmptyHint.js'
 import { isTypingTarget, keyHint, matchesKeyId } from '../input/keymap.js'
 import ContextMenu from './ContextMenu.jsx'
 import { useLongPress } from '../utils/useLongPress.js'
+import { openingView } from '../utils/openingView.js'
 import {
-    CONTAINER_TYPE_IDS,
     arePortsCompatible,
     getNodeCardLines,
+    getCardMainField,
     getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
@@ -41,30 +64,11 @@ const GRAPH_FIT_PADDING_PX = 24
 // pixels of a port centre starts a wire instead of a card drag, so grabbing is
 // as forgiving as dropping.
 const PORT_GRAB_RADIUS_PX = 28
-// A fit that lands below this zoom is refused. Fitting a 33-node graph into a
-// 393px phone gives ~0.2, where a whole card is a few pixels across, every
-// control on it is under one fingertip, and no work is possible — an overview
-// nobody can act on is worse than a working view of part of the graph. Below
-// the floor we fit a legible neighbourhood instead and say so.
-const FIT_MIN_USEFUL_ZOOM = 0.34
-// The floor for the re-fit that runs when a docked window changes the free
-// band (a List opening on the right). Measured 2026-10-02 at 1200 × 760: the
-// plain floor let eight cards shrink to 50 % (6–9 px text) beside the docked
-// List. A re-fit the person did not ask for must keep the cards readable; below
-// this it frames the selected card's neighbourhood instead and says how much
-// it shows, the fallback fitGraph already has.
-const DOCK_REFIT_MIN_ZOOM = 0.8
 // Framing ONE node is allowed to magnify, unlike fit-all which caps at 1.
+// A frame never goes below this (a node alone, unreadable, is no frame).
+const FIT_MIN_USEFUL_ZOOM = 0.34
 const FRAME_TARGET_ZOOM = 1
 const FRAME_MAX_ZOOM = 1.6
-// How far fit-all may MAGNIFY a small graph. It used to cap at 1 ("never
-// magnifies"), which on a 2560-wide screen left six cards covering ~9 % of the
-// canvas (owner 2026-10-02: "bad use of the space"). Up to 2 the cards are
-// still cards — text bigger, nothing re-laid out — and a big graph is
-// unaffected, because the fit is the smaller of this and what fits. 1.5 was
-// tried first and still left ~31 % coverage at 2560 × 1340 (measured).
-const FIT_MAX_ZOOM = 2
-
 // Semantic zoom. Below each threshold the card renders less, so that what is
 // left stays legible instead of everything shrinking into an unreadable smear.
 //
@@ -75,13 +79,15 @@ const FIT_MAX_ZOOM = 2
 // detach every wire on the node — the failure would read as a rendering
 // glitch rather than a bug. `graphGeometryIsTierInvariant` in the test file
 // asserts this and must not be deleted.
-const LOD_LABELS = 0.62   // below: drop port labels and the category tag
-const LOD_PORTS = 0.34    // below: drop port rows, mark port positions with ticks
+// Keyed to ON-SCREEN size (audit §3.7): a card's text is CARD_BODY_FONT_PX units
+// tall, so it is 11 screen px — the floor — at 11 / 13 of a zoom.
+const LOD_FULL = LEGIBLE_SCREEN_PX / CARD_BODY_FONT_PX  // below: the summary (title, group names, counts)
+const LOD_SUMMARY = 0.5   // below: the title alone, counter-scaled to stay 11px
 const LOD_BLOCK = 0.18    // below: a solid block, no text at all
 // Stops the markup flickering when a pinch hovers exactly on a threshold.
 const LOD_HYSTERESIS = 0.02
 
-export const LOD_TIERS = ['block', 'header', 'compact', 'full']
+export const LOD_TIERS = ['block', 'header', 'summary', 'full']
 
 /**
  * Which detail tier a card renders at. Pure, exported for tests.
@@ -94,20 +100,10 @@ export const lodTierForZoom = (zoom, previous = null) => {
             : threshold
     )
     if (zoom < bump(LOD_BLOCK)) return 'block'
-    if (zoom < bump(LOD_PORTS)) return 'header'
-    if (zoom < bump(LOD_LABELS)) return 'compact'
+    if (zoom < bump(LOD_SUMMARY)) return 'header'
+    if (zoom < bump(LOD_FULL)) return 'summary'
     return 'full'
 }
-// The door's touch halo only ever extends LEFT, into the gutter between
-// columns. That gutter is 100 graph units (COL 300 minus CARD_WIDTH 200), and a
-// 44-screen-pixel halo is 44/zoom graph units — below this zoom it would reach
-// across into the previous column's output-port strip, and because the door
-// stops propagation the press would enter the wrong node. Below it the door is
-// still there and still clickable; it just has no halo.
-const DOOR_HALO_MIN_ZOOM = 0.44
-// Screen width the door occupies to the left of its card, reserved by the fit
-// so the leftmost card's door is not clipped by the surface's overflow.
-const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -146,6 +142,32 @@ function CardContentLines({ content, top }) {
     )
 }
 
+// The summary tier's body: group names with their row counts, never the rows.
+// It sits in the same box CardContentLines would fill, so nothing moves.
+function CardSummaryLines({ content, top }) {
+    return (
+        <ul className="raw-graph-node-content is-summary" style={{ top }}>
+            {summarizeCardContent(content.lines, content.more).map((line, i) => (
+                <li
+                    key={i}
+                    className="raw-graph-node-content-line is-group"
+                    style={{ height: CARD_CONTENT_GROUP_HEIGHT, lineHeight: `${CARD_CONTENT_GROUP_HEIGHT}px` }}
+                >
+                    {line}
+                </li>
+            ))}
+        </ul>
+    )
+}
+
+// In-card editing: how tall the box is for what is typed, 3 to 12 lines.
+const EDIT_LINE_CHARS = 30
+const editRowsFor = (text) => clamp(
+    String(text || '').split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / EDIT_LINE_CHARS)), 0) + 1,
+    3,
+    12
+)
+
 // The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
 // editor places a panel node's window against it and must not guess.
 const inputPortCenter = (node, portId, scopeNodes = null) => {
@@ -161,9 +183,9 @@ const inputPortCenter = (node, portId, scopeNodes = null) => {
 const outputPortCenter = (node, portId, scopeNodes = null) => {
     const outputs = getNodeOutputs(node, scopeNodes)
     const idx = outputs.findIndex((p) => p.id === portId)
-    if (idx < 0) return { x: node.graphX + CARD_WIDTH, y: node.graphY + HEADER_HEIGHT }
+    if (idx < 0) return { x: node.graphX + cardWidth(node), y: node.graphY + HEADER_HEIGHT }
     return {
-        x: node.graphX + CARD_WIDTH,
+        x: node.graphX + cardWidth(node),
         y: node.graphY + HEADER_HEIGHT + idx * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2
     }
 }
@@ -173,6 +195,8 @@ const buildWirePath = (from, to) => {
     return `M ${from.x} ${from.y} C ${from.x + dx} ${from.y}, ${to.x - dx} ${to.y}, ${to.x} ${to.y}`
 }
 
+const EMPTY_PREVIEW_EDGES = []
+const EMPTY_PREVIEW_NODES = []
 export default function RawGraphSurface({
     // Zen: the zoom controls stop being resident. They are NOT removed — on a
     // touch screen there is no wheel, so they are the only way to zoom, and the
@@ -195,7 +219,7 @@ export default function RawGraphSurface({
     // Skips the auto-fit and starts at a fixed zoom. Only for tests and for
     // callers that restore a saved viewport; normal use fits on mount.
     initialZoom = null,
-    nodes = [],
+    nodes: nodesProp = [],
     edges = [],
     // THE THINGS IN THE ROOM, as cards (src/raw/utils/objectCards.js). A
     // project holds things (Studio's objects) beside its nodes, and this
@@ -253,7 +277,12 @@ export default function RawGraphSurface({
     onDeleteEdge,
     onDeleteNode,
     onMoveNode,
+    onResizeNode,
+    followViewportLive = true,
     onDoubleClick,
+    // Edits a card's one main field in place (a Text's content). Optional: the
+    // read-only wrappers pass none and the card behaves exactly as before.
+    onEditMainValue = null,
     // Kantan Mapper-style active marker: for scope-repeatable types where
     // exactly one "active" result is wanted (world.light/background/grid),
     // isNodeActive(node) says whether this card is the active one and
@@ -276,6 +305,58 @@ export default function RawGraphSurface({
     const containerRef = useRef(null)
     const [pendingWire, setPendingWire] = useState(null)
     const [draggingNodeId, setDraggingNodeId] = useState(null)
+    // The card whose main field is open for typing. The text itself is never
+    // copied here: the box reads and writes node.values, the same value the
+    // side column shows.
+    const [editingId, setEditingId] = useState(null)
+    const pressedSelectedRef = useRef(null)
+    // Whether the press landed on the card's text. Two things made the
+    // target useless: the text list is `pointer-events: none` (the press hits
+    // the card body under it), and the card takes pointer capture on press, so
+    // the click is dispatched at the card anyway. Seen with real pointer input
+    // 2026-10-05: no click ever opened the box. jsdom's fireEvent.click targets
+    // the list directly, which hid it. So it is the press POINT against the
+    // list's rectangle.
+    const pressedContentRef = useRef(false)
+    const pressIsOnContent = (event) => {
+        const list = event.currentTarget.querySelector('.raw-graph-node-content')
+        if (!list) return false
+        const r = list.getBoundingClientRect()
+        return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom
+    }
+    const startEditing = (nodeId) => {
+        const node = nodes.find((n) => n.id === nodeId)
+        if (!onEditMainValue || !node || !getCardMainField(node.typeId)) return false
+        onSelectNode?.(nodeId)
+        setEditingId(nodeId)
+        return true
+    }
+    const stopEditing = (nodeId) => {
+        setEditingId(null)
+        requestAnimationFrame(() => {
+            containerRef.current?.querySelector(`[data-card-id="${nodeId}"]`)?.focus?.({ preventScroll: true })
+        })
+    }
+    useEffect(() => {
+        if (editingId && editingId !== selectedNodeId) setEditingId(null)
+    }, [editingId, selectedNodeId])
+    // Where the held card is NOW, kept here and nowhere else until the pointer
+    // is released: one `updateNode` op per drag, never one per move (measured
+    // 2026-10-05: ~70 mouse moves wrote 255 ops, and each echo of an older op
+    // pulled the card back under the pointer). `nodes` is the document's
+    // nodes with this one position laid over the top.
+    const [dragPos, setDragPos] = useState(null)
+    const dragPosRef = useRef(null)
+    // A card being resized: its size NOW, local until release, exactly like a
+    // held card's position — one `updateNode` on release.
+    const [resizing, setResizing] = useState(null)
+    const [resizePos, setResizePos] = useState(null)
+    const resizeStartRef = useRef(null)
+    // The insets as the drag effect must read them: current at every frame.
+    const contentInsetsRef = useRef(contentInsets)
+    contentInsetsRef.current = contentInsets
+    const bottomInsetRef = useRef(bottomInset)
+    bottomInsetRef.current = bottomInset
     const [isPanning, setIsPanning] = useState(false)
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
@@ -294,6 +375,9 @@ export default function RawGraphSurface({
     // the right-click on touch.
     const [contextMenu, setContextMenu] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
+    // Last pointer position of a card drag (client px), whether a move has
+    // arrived yet (`live`), and the auto-pan clock (`last`).
+    const dragPanRef = useRef({ x: 0, y: 0, live: false, last: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
     const pendingWireRef = useRef(null)
@@ -310,10 +394,10 @@ export default function RawGraphSurface({
     const [panY, setPanY] = useState(60)
     const [zoom, setZoom] = useState(initialZoom ?? 1)
     // viewportRef mirrors pan+zoom synchronously so event handlers always read current values
+    const stageRef = useRef(null)
     const viewportRef = useRef({ panX: 60, panY: 60, zoom: initialZoom ?? 1 })
     // How much of the graph the last fit could show, and why — drives the
     // transient "showing 5 of 33" line rather than silently lying about it.
-    const [fitNotice, setFitNotice] = useState(null)
     // Detail tier, carried in state rather than derived inline so the previous
     // tier is available for hysteresis and the markup does not flicker while a
     // pinch sits on a threshold.
@@ -323,6 +407,39 @@ export default function RawGraphSurface({
     // Everything the view has to hold, both kinds. Only the FIT and the
     // is-this-canvas-empty question use it — wires and ports stay on `nodes`
     // alone, because only nodes have any.
+    const nodes = useMemo(() => {
+        if (!dragPos && !resizePos) return nodesProp
+        return nodesProp.map((node) => {
+            if (dragPos && node.id === dragPos.id) return { ...node, graphX: dragPos.x, graphY: dragPos.y }
+            if (resizePos && node.id === resizePos.id) return { ...node, values: { ...node.values, cardSize: { w: resizePos.w, h: resizePos.h } } }
+            return node
+        })
+    }, [nodesProp, dragPos, resizePos])
+    // While a card is held, only that card changes. The other cards' elements
+    // are built once when the drag starts and handed back as the SAME element
+    // objects every frame, so React skips their whole subtrees instead of
+    // re-rendering all of them per pointer move (P6: at 150 cards the card drag
+    // p95 was 100+ ms in Firefox). Rebuilt if the selection changes mid-drag, and
+    // dropped the moment the card is let go.
+    const frozenCardsRef = useRef(null)
+    if (!draggingNodeId) frozenCardsRef.current = null
+    const frozenCardOr = (node, build) => {
+        if (!draggingNodeId || node.id === draggingNodeId) return build()
+        let frozen = frozenCardsRef.current
+        if (!frozen || frozen.sig !== selectedNodeId || frozen.tier !== tier) {
+            frozen = { sig: selectedNodeId, tier, map: new Map() }
+            frozenCardsRef.current = frozen
+        }
+        const hit = frozen.map.get(node.id)
+        if (hit && hit.node === node) return hit.element
+        const element = build()
+        frozen.map.set(node.id, { node, element })
+        return element
+    }
+    // The document's own nodes: what a drag starts from and what its effect
+    // follows, so a held card moving does not restart the effect every frame.
+    const nodePropById = useMemo(() => new Map(nodesProp.map((node) => [node.id, node])), [nodesProp])
+
     const cardsInView = useMemo(
         () => (objectCards.length ? [...nodes, ...objectCards] : nodes),
         [nodes, objectCards]
@@ -379,18 +496,11 @@ export default function RawGraphSurface({
     }
 
     // Bounding box of a set of nodes, in graph coordinates.
-    //
-    // The left edge includes the door, which hangs OUTSIDE the card. Without
-    // this the leftmost card's door is half off-screen after a fit-all, because
-    // .raw-graph-surface clips overflow and the bounds knew nothing about it.
-    // The door is counter-scaled, so its width in graph units grows as the view
-    // shrinks — hence the division rather than a constant.
-    const doorGutter = () => DOOR_WIDTH_PX / Math.max(viewportRef.current.zoom, FIT_MIN_USEFUL_ZOOM)
     const boundsOf = (subset) => {
         if (!subset.length) return null
-        const minX = Math.min(...subset.map((n) => (n.graphX ?? 0) - doorGutter()))
+        const minX = Math.min(...subset.map((n) => (n.graphX ?? 0)))
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
-        const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
+        const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + cardWidth(n)))
         const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
@@ -475,7 +585,7 @@ export default function RawGraphSurface({
         return cardsInView.filter((node) => {
             const x = (node.graphX ?? 0) * vp.zoom + vp.panX
             const y = (node.graphY ?? 0) * vp.zoom + vp.panY
-            const w = CARD_WIDTH * vp.zoom
+            const w = cardWidth(node) * vp.zoom
             const h = cardHeight(node, portScopeNodes) * vp.zoom
             // Only the free band counts: a card under a docked window is not
             // "shown" (it said 8 of 8 with two behind the List).
@@ -493,123 +603,21 @@ export default function RawGraphSurface({
         )
     }
 
-    // Pull the viewport back onto the content. Centring on one point inside a
-    // large graph leaves a band of empty canvas on whichever side that point is
-    // near — you land looking half at nothing. When the content is larger than
-    // the visible box in an axis, no empty margin is allowed on either side of
-    // that axis; when it is smaller, it stays centred.
-    const clampPanToContent = (bounds) => {
-        const box = visibleBox()
-        if (!box || !bounds) return
-        const vp = viewportRef.current
-        const pad = GRAPH_FIT_PADDING_PX
-        const contentW = bounds.width * vp.zoom
-        const contentH = bounds.height * vp.zoom
-        const visibleH = box.height - Math.max(0, bottomInset)
-
-        let nextPanX = vp.panX
-        let nextPanY = vp.panY
-        const left = bounds.minX * vp.zoom + vp.panX
-        const top = bounds.minY * vp.zoom + vp.panY
-
-        if (contentW > box.width - pad * 2) {
-            if (left > pad) nextPanX = vp.panX - (left - pad)
-            else if (left + contentW < box.width - pad) nextPanX = vp.panX + ((box.width - pad) - (left + contentW))
-        }
-        if (contentW <= box.freeRight - box.freeLeft - pad * 2) {
-            nextPanX = box.centerX - (bounds.minX + bounds.maxX) / 2 * vp.zoom
-        }
-        // The smaller axis was left where centring on the seed put it — on a
-        // 390 × 844 phone the NOPA graph (too wide, short) sat in the lower
-        // half under a blank band (2026-10-03). An axis whose content fits the
-        // FREE band (beside any docked window) is centred in it.
-        if (contentH > visibleH - pad * 2) {
-            if (top > pad) nextPanY = vp.panY - (top - pad)
-            else if (top + contentH < visibleH - pad) nextPanY = vp.panY + ((visibleH - pad) - (top + contentH))
-        }
-        if (contentH <= box.freeBottom - box.freeTop - pad * 2) {
-            nextPanY = box.centerY - (bounds.minY + bounds.maxY) / 2 * vp.zoom
-        }
-        if (nextPanX !== vp.panX || nextPanY !== vp.panY) applyViewport(nextPanX, nextPanY, vp.zoom)
-    }
-
-    // The nodes one edge away from a seed, in either direction. What you want
-    // to see when the whole graph will not fit legibly.
-    const neighbourhoodOf = (seed) => {
-        if (!seed) return []
-        const ids = new Set([seed.id])
-        for (const edge of edges) {
-            if (edge.fromNodeId === seed.id) ids.add(edge.toNodeId)
-            if (edge.toNodeId === seed.id) ids.add(edge.fromNodeId)
-        }
-        return nodes.filter((node) => ids.has(node.id))
-    }
-
-    // Where to look when there is no selection: the graph's entry point — a
-    // node nothing feeds into, topmost-leftmost. For a patch that reads
-    // left-to-right this is where a person would start reading.
-    const entryNode = () => {
-        const fed = new Set(edges.map((edge) => edge.toNodeId))
-        const roots = nodes.filter((node) => !fed.has(node.id))
-        const pool = roots.length ? roots : nodes
-        return [...pool].sort((a, b) => (
-            ((a.graphY ?? 0) - (b.graphY ?? 0)) || ((a.graphX ?? 0) - (b.graphX ?? 0))
-        ))[0] || null
-    }
-
     /**
-     * Fit the graph. Magnifies no further than FIT_MAX_ZOOM — and refuses to drop
-     * below `minZoom` (FIT_MIN_USEFUL_ZOOM unless the caller asks for more, as the
-     * docked-window re-fit does), because an overview too small to act on is
-     * worse than a working view of part of the graph. Below the floor it fits a
-     * legible neighbourhood and says how much it is showing.
-     *
-     * `force` runs the true overview anyway, at whatever zoom that takes.
+     * Fit the graph: everything in view, top-left aligned, 24px in, never
+     * magnified past 100% (openingView.js). There is no floor and no "showing N
+     * of M": what is too small to read answers with fewer words, not with a
+     * partial view (semantic zoom, lodTierForZoom).
      */
-    const fitGraph = ({ force = false, minZoom = FIT_MIN_USEFUL_ZOOM } = {}) => {
+    const fitGraph = ({ everything = false } = {}) => {
         if (!cardsInView.length) return
+        const box = visibleBox()
+        if (!box) return
         const all = withExtraBounds(boundsOf(cardsInView))
-        const overviewZoom = zoomToFitBounds(all, { maxZoom: FIT_MAX_ZOOM })
-        if (overviewZoom === null) return
-
-        if (force || overviewZoom >= minZoom) {
-            applyFitTo(all, overviewZoom)
-            setFitNotice(null)
-            return
-        }
-
-        const seed = nodes.find((node) => node.id === selectedNodeId) || entryNode()
-        if (!seed) {
-            applyFitTo(all, overviewZoom)
-            setFitNotice(null)
-            return
-        }
-
-        // Hold the legible floor and centre a WINDOW onto the graph, rather
-        // than shrinking to fit something. Framing the seed's neighbourhood
-        // does not work in general — a hub node's neighbours can be spread
-        // across the whole graph, so its neighbourhood is no more fittable
-        // than the graph was; and framing the seed alone jumps to 100% and
-        // shows a single card, which is the opposite failure. A fixed legible
-        // zoom centred where you would start reading gives you several cards
-        // you can actually use, and the notice says it is a partial view.
-        const neighbourhood = neighbourhoodOf(seed)
-        const anchor = boundsOf(neighbourhood.length > 1 ? neighbourhood : [seed])
-        const centre = {
-            minX: (anchor.minX + anchor.maxX) / 2,
-            maxX: (anchor.minX + anchor.maxX) / 2,
-            minY: (anchor.minY + anchor.maxY) / 2,
-            maxY: (anchor.minY + anchor.maxY) / 2
-        }
-        applyFitTo(centre, minZoom)
-        clampPanToContent(all)
-        // The clamp is part of this fit, not a person's pan: without this a
-        // window resize took the clamped view for a hand-moved one and never
-        // re-fitted it.
+        const view = openingView({ bounds: all, box, everything, surfaceWidth: containerRef.current?.getBoundingClientRect?.().width, minZoom: GRAPH_MIN_ZOOM, maxZoom: GRAPH_MAX_ZOOM })
+        applyViewport(view.panX, view.panY, view.zoom)
         lastFitViewportRef.current = { ...viewportRef.current }
-
-        // Report honestly: how many cards actually landed on screen.
-        setFitNotice({ shown: countCardsOnScreen(), total: cardsInView.length })
+        lastBoxRef.current = box
     }
 
     // Zoom to the selected node. Unlike fit-all this is ALLOWED to magnify —
@@ -625,7 +633,6 @@ export default function RawGraphSurface({
             FRAME_MAX_ZOOM
         )
         applyFitTo(bounds, nextZoom)
-        setFitNotice(null)
     }
 
     // Fit once per scope. Keyed on the scope's node identity rather than a
@@ -636,16 +643,47 @@ export default function RawGraphSurface({
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
     const scopeKey = cardsInView.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
-    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
+    // The bottom sheet (phone) is part of the key: opening it takes a band off the
+    // canvas, and an untouched view re-fits into what is left, the same rule as
+    // the desktop column giving its width up.
+    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}:${Math.round(bottomInset || 0)}`
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || cardsInView.length === 0) return
         if (!visibleBox()) return
+        // The card heights come from the card font's own metrics. A fit taken
+        // while the font is still arriving measures a fallback and opens at a
+        // different zoom than the next load (audit B7: 141 / 115 / 105 / 105 %).
+        // The fonts effect below runs this fit once they are in.
+        if (document.fonts?.status === 'loading') return
         fitGraph()
         hasFitRef.current = scopeKey
         lastFitInsetsRef.current = insetKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scopeKey])
+
+    // Fit after `document.fonts.ready`, and again if a font lands later while
+    // the view is still where the last fit left it (nobody has moved it).
+    useEffect(() => {
+        const fonts = typeof document !== 'undefined' ? document.fonts : null
+        if (!fonts || initialZoom !== null) return undefined
+        let alive = true
+        const settle = () => {
+            if (!alive || !cardsInView.length || !containerRef.current) return
+            if (hasFitRef.current !== scopeKey) {
+                if (!scopeKey || !visibleBox()) return
+                fitGraphRef.current()
+                hasFitRef.current = scopeKey
+                lastFitInsetsRef.current = insetKey
+            } else if (isViewAtLastFit()) {
+                fitGraphRef.current()
+            }
+        }
+        fonts.ready?.then?.(settle)
+        fonts.addEventListener?.('loadingdone', settle)
+        return () => { alive = false; fonts.removeEventListener?.('loadingdone', settle) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scopeKey, insetKey])
 
     // Windows mount a beat after the graph does, so the first fit runs against
     // the windows that happen to exist YET — on a seeded workspace that was one
@@ -660,9 +698,39 @@ export default function RawGraphSurface({
         if (lastFitInsetsRef.current === insetKey) return
         const untouched = isViewAtLastFit()
         lastFitInsetsRef.current = insetKey
-        if (untouched) fitGraph({ minZoom: DOCK_REFIT_MIN_ZOOM })
+        // With the phone sheet open the whole graph is fitted into the band above
+        // it (an overview), not a legible window onto part of it: a card the
+        // sheet took the room of is never "somewhere else on the canvas".
+        if (untouched) fitGraph(bottomInset > 0 ? { everything: true } : {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
+
+    // The selected card is never left under the bottom sheet: once the sheet
+    // has taken its band, a selected card outside the free band is panned in,
+    // the least that shows it whole (a hand-moved view keeps its zoom).
+    useEffect(() => {
+        if (!selectedNodeId || !(bottomInset > 0)) return undefined
+        const frame = requestAnimationFrame(() => {
+            const box = visibleBox()
+            const root = containerRef.current
+            const el = root?.querySelector?.('.raw-graph-node-card.is-selected')
+            if (!box || !el) return
+            const surface = root.getBoundingClientRect()
+            const r = el.getBoundingClientRect()
+            const top = r.top - surface.top
+            const bottom = r.bottom - surface.top
+            const pad = GRAPH_FIT_PADDING_PX
+            let dy = 0
+            if (bottom > box.freeBottom - pad) dy = box.freeBottom - pad - bottom
+            if (top + dy < box.freeTop + pad) dy = box.freeTop + pad - top
+            if (dy) {
+                const vp = viewportRef.current
+                applyViewport(vp.panX, vp.panY + dy, vp.zoom)
+            }
+        })
+        return () => cancelAnimationFrame(frame)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedNodeId, bottomInset])
 
     // The browser window changes size under an untouched view — a new window
     // opened small and then tiled to half the screen kept the 49 % fit it got
@@ -715,7 +783,7 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (fitSignal === null || fitSignal === lastFitSignalRef.current) return
         lastFitSignalRef.current = fitSignal
-        fitGraph({ force: true })
+        fitGraph()
         hasFitRef.current = scopeKey
         lastFitInsetsRef.current = insetKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -785,11 +853,6 @@ export default function RawGraphSurface({
     }, [cardsInView])
 
     // The fit notice is transient — it reports on one fit, not a state.
-    useEffect(() => {
-        if (!fitNotice) return undefined
-        const id = setTimeout(() => setFitNotice(null), 4000)
-        return () => clearTimeout(id)
-    }, [fitNotice])
 
     // Non-passive wheel listener — cursor-anchored zoom, no scroll
     useEffect(() => {
@@ -1228,57 +1291,155 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (!isDraggingNode) return undefined
         // rAF-gated: raw pointermove can fire far more often than the display
-        // refresh rate (high-poll-rate mice/trackpads), and each call was
-        // committing a document op + re-evaluating the whole node graph --
-        // capping to one commit per animation frame is a real, safe win with
-        // no change in drag responsiveness (2026-07-17 perf audit).
+        // refresh rate, so the held card is redrawn at most once per frame.
+        // The card moves in LOCAL state only (`dragPos`); the document hears
+        // about it once, on release (see `up`).
         let rafId = null
         let pendingPos = null
         const flush = () => {
             rafId = null
             if (!pendingPos) return
-            const { nextX, nextY } = pendingPos
+            dragPosRef.current = { id: draggingNodeId, x: pendingPos.nextX, y: pendingPos.nextY }
             pendingPos = null
-            onMoveNode?.(draggingNodeId, nextX, nextY)
+            setDragPos(dragPosRef.current)
+        }
+        // The pointer and the pan clock live in refs: a pointer held still
+        // at the edge must keep panning without any new pointer event.
+        const drag = dragPanRef
+        let panRaf = null
+        // The part of the canvas a person can see: the element minus any docked
+        // window or panel (contentInsets) and the selection sheet. The card is
+        // kept inside it and the edge pan starts at ITS edge, never at the
+        // window's, so a drag stops before it goes under a panel.
+        const visibleInsets = () => ({
+            left: Math.max(0, contentInsetsRef.current?.left || 0),
+            right: Math.max(0, contentInsetsRef.current?.right || 0),
+            top: Math.max(0, contentInsetsRef.current?.top || 0),
+            bottom: Math.max(0, contentInsetsRef.current?.bottom || 0) + Math.max(0, bottomInsetRef.current || 0)
+        })
+        const visibleRect = () => {
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            if (!rect) return rect
+            const inset = visibleInsets()
+            return { left: rect.left + inset.left, right: rect.right - inset.right, top: rect.top + inset.top, bottom: rect.bottom - inset.bottom }
+        }
+        // Where the card wants to be for the pointer as it is NOW and the
+        // viewport as it is NOW, kept GRAB_PX inside the visible band.
+        const commitWanted = () => {
+            const point = clientPointToGraphPoint(drag.current.x, drag.current.y)
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            const vp = viewportRef.current
+            const wanted = dragClamp(
+                { x: point.x - dragOffsetRef.current.x, y: point.y - dragOffsetRef.current.y },
+                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom, inset: visibleInsets() }
+            )
+            pendingPos = { nextX: wanted.x, nextY: wanted.y }
+        }
+        // Edge auto-pan: while the pointer rests in the band at an edge of the
+        // visible canvas (or past it) the canvas pans and the card follows.
+        const panTick = (now) => {
+            panRaf = null
+            if (!drag.current.live) return
+            const velocity = edgePanVelocity(drag.current, visibleRect())
+            if (!velocity) { drag.current.last = 0; return }
+            const dt = drag.current.last ? Math.min(now - drag.current.last, 50) : 16
+            drag.current.last = now
+            const vp = viewportRef.current
+            applyViewport(vp.panX + velocity.vx * dt / 1000, vp.panY + velocity.vy * dt / 1000, vp.zoom)
+            commitWanted()
+            flush()
+            panRaf = requestAnimationFrame(panTick)
+        }
+        const armPan = () => {
+            if (panRaf === null && edgePanVelocity(drag.current, visibleRect())) {
+                panRaf = requestAnimationFrame(panTick)
+            }
         }
         const move = (event) => {
             if (pinchRef.current) return
-            const node = nodeById.get(draggingNodeId)
-            if (!node) return
-            const point = clientPointToGraphPoint(event.clientX, event.clientY)
-            let nextX = point.x - dragOffsetRef.current.x
-            let nextY = point.y - dragOffsetRef.current.y
-            // Same law as placement: the card and the door hanging off its
-            // left edge stay reachable. A card dragged past the edge used to
-            // leave the canvas entirely, door and all, with no way back
-            // (audit 08-21: card at x:-108, door fully off-screen).
-            const rect = containerRef.current?.getBoundingClientRect?.()
-            if (rect?.width && rect?.height) {
-                const halfCard = CARD_WIDTH / 2
-                const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
-                const bottomRight = clientPointToGraphPoint(rect.right - GRAPH_FIT_PADDING_PX, rect.bottom - GRAPH_FIT_PADDING_PX)
-                const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
-                const maxX = bottomRight.x - halfCard
-                const minY = topLeft.y + HEADER_HEIGHT
-                const maxY = bottomRight.y - HEADER_HEIGHT
-                if (maxX > minX) nextX = clamp(nextX, minX, maxX)
-                if (maxY > minY) nextY = clamp(nextY, minY, maxY)
-            }
-            pendingPos = { nextX, nextY }
+            if (!nodePropById.has(draggingNodeId)) return
+            drag.current.x = event.clientX
+            drag.current.y = event.clientY
+            drag.current.live = true
+            commitWanted()
             if (rafId === null) rafId = requestAnimationFrame(flush)
+            armPan()
         }
+        if (drag.current.live) armPan()
         const up = () => {
+            if (panRaf !== null) { cancelAnimationFrame(panRaf); panRaf = null }
             if (rafId !== null) { cancelAnimationFrame(rafId); flush() }
+            drag.current.live = false
+            drag.current.last = 0
+            // The one op of the drag: only when the card really moved, and
+            // never one identical to where it already is.
+            const final = dragPosRef.current
+            const start = nodePropById.get(draggingNodeId)
+            dragPosRef.current = null
+            if (final && start && (final.x !== start.graphX || final.y !== start.graphY)) {
+                onMoveNode?.(draggingNodeId, final.x, final.y)
+            }
+            setDragPos(null)
             setDraggingNodeId(null)
         }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
+        return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            if (panRaf !== null) cancelAnimationFrame(panRaf)
+            window.removeEventListener('pointercancel', up)
+            window.removeEventListener('pointermove', move)
+            window.removeEventListener('pointerup', up)
+        }
+    }, [isDraggingNode, draggingNodeId, nodePropById, onMoveNode])
+
+    // Resizing from the square handle in a card's bottom-right corner. The
+    // pointer's travel is measured on screen and divided by the zoom, so the
+    // corner stays under the pointer at every zoom. The card changes in local
+    // state while held; the document hears once, on release.
+    useEffect(() => {
+        if (!resizing) return undefined
+        let rafId = null
+        let pending = null
+        const flush = () => {
+            rafId = null
+            if (pending) { setResizePos(pending); pending = null }
+        }
+        const move = (event) => {
+            const start = resizeStartRef.current
+            if (!start) return
+            const node = nodePropById.get(resizing)
+            if (!node) return
+            const zoomNow = viewportRef.current.zoom
+            pending = {
+                id: resizing,
+                w: Math.round(Math.max(MIN_CARD_WIDTH, start.w + (event.clientX - start.x) / zoomNow)),
+                h: Math.round(Math.max(cardMinHeight(node, portScopeNodes), start.h + (event.clientY - start.y) / zoomNow))
+            }
+            resizeStartRef.current.last = pending
+            if (rafId === null) rafId = requestAnimationFrame(flush)
+        }
+        const up = () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            const start = resizeStartRef.current
+            const final = start?.last
+            resizeStartRef.current = null
+            if (final && (final.w !== start.w || final.h !== start.h)) onResizeNode?.(resizing, { w: final.w, h: final.h })
+            setResizePos(null)
+            setResizing(null)
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
         return () => {
             if (rafId !== null) cancelAnimationFrame(rafId)
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
+            window.removeEventListener('pointercancel', up)
         }
-    }, [isDraggingNode, draggingNodeId, nodeById, onMoveNode])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resizing, nodePropById, onResizeNode])
 
     useEffect(() => {
         if (!isPanning) return undefined
@@ -1292,10 +1453,21 @@ export default function RawGraphSurface({
             const ny = panStartRef.current.panY + dy
             viewportRef.current.panX = nx
             viewportRef.current.panY = ny
-            setPanX(nx)
-            setPanY(ny)
+            if (followViewportLive) {
+                setPanX(nx)
+                setPanY(ny)
+            } else {
+                // Nothing outside the canvas follows the pan, so the move goes
+                // straight to the stage's transform: no React render of every
+                // card (and of the whole editor, through onViewportChange) per
+                // pointer move. The state catches up once, on release.
+                const stage = stageRef.current
+                if (stage) stage.style.transform = `translate(${nx}px,${ny}px) scale(${viewportRef.current.zoom})`
+            }
         }
         const up = () => {
+            setPanX(viewportRef.current.panX)
+            setPanY(viewportRef.current.panY)
             setIsPanning(false)
             setIsPanMoving(false)
         }
@@ -1340,16 +1512,14 @@ export default function RawGraphSurface({
         // request to place a node on top of it.
         if (event.target?.closest?.('.raw-graph-object-card')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
-        // Keep the whole card — and the door hanging off its left edge — inside
-        // the part of the canvas you can SEE. Double-tapping near an edge used
-        // to put the new card half off-screen, so the thing you just made was
-        // partly unreachable and its door was clipped away entirely.
+        // Keep the whole card inside the part of the canvas you can SEE.
+        // Double-tapping near an edge used to put the new card half off-screen,
+        // so the thing you just made was partly unreachable.
         const rect = containerRef.current?.getBoundingClientRect?.()
         const clamped = { x: graphPoint.x, y: graphPoint.y }
         if (rect?.width && rect?.height) {
-            // The card is placed CENTRED on this point by the caller, and its
-            // door hangs off the left edge — so the usable band is inset by half
-            // a card plus the door on the left, and half a card on the right.
+            // The card is placed CENTRED on this point by the caller, so the
+            // usable band is inset by half a card on each side.
             const halfCard = CARD_WIDTH / 2
             const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
             // On a coarse pointer the docked inspector is ABOUT to appear
@@ -1363,7 +1533,7 @@ export default function RawGraphSurface({
                 rect.right - GRAPH_FIT_PADDING_PX,
                 rect.bottom - GRAPH_FIT_PADDING_PX - reservedBottom
             )
-            const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
+            const minX = topLeft.x + halfCard
             const maxX = bottomRight.x - halfCard
             const minY = topLeft.y + HEADER_HEIGHT
             const maxY = bottomRight.y - HEADER_HEIGHT
@@ -1404,7 +1574,7 @@ export default function RawGraphSurface({
     const canvasMenuItems = (clientX, clientY) => [
         onDoubleClick ? { id: 'add', label: 'Add a node here', kb: keyHint('add'), run: () => onDoubleClick({ clientX, clientY }) } : null,
         { sep: true },
-        { id: 'fitAll', label: 'Fit everything', kb: keyHint('fitAll'), run: () => fitGraph({ force: true }) },
+        { id: 'fitAll', label: 'Fit everything', kb: keyHint('fitAll'), run: () => fitGraph({ everything: true }) },
         { id: 'frameSelected', label: 'Frame the selected node', kb: keyHint('frameSelected'), disabled: !selectedNodeId, run: () => frameSelection() },
         { id: 'zoom100', label: 'Zoom 100%', kb: keyHint('zoom100'), run: () => updateZoom(1) },
         onLeaveScope ? { id: 'leave', label: 'Leave this level', kb: keyHint('leave'), run: () => onLeaveScope() } : null,
@@ -1413,13 +1583,9 @@ export default function RawGraphSurface({
     ].filter(Boolean)
 
     const cardMenuItems = (node) => {
-        const type = getNodeType(node.typeId)
-        // A place you can be inside (Scene, Geo, Constructor…) is entered; a
-        // window-only node (Text, List…) opens its window. Scene draws as a
-        // window too, so the render kind alone said "Open its window" (seen).
-        const isWindow = type?.render === 'panel-2d' && !CONTAINER_TYPE_IDS.has(node.typeId)
         return [
-            onEnterNode ? { id: 'enter', label: isWindow ? 'Open its window' : 'Go inside', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
+            // One word, one meaning for every kind (audit 2026-10-05 B2).
+            onEnterNode ? { id: 'enter', label: 'Open', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
             onShowReading ? { id: 'reading', label: 'What it reads and gives', hint: 'middle-click', run: () => onShowReading(node.id) } : null,
             activeMarkerTypeIds.includes(node.typeId) && onSetActive ? { id: 'live', label: isNodeActive(node) ? 'Active here' : 'Make this the active one', disabled: isNodeActive(node), run: () => onSetActive(node) } : null,
             { sep: true },
@@ -1486,8 +1652,8 @@ export default function RawGraphSurface({
         if (!isTypingTarget(event.target) && !event.target?.closest?.('.raw-window')) {
             const selected = selectedNodeId && nodeById.has(selectedNodeId) ? selectedNodeId : null
             const act = (fn) => { event.preventDefault(); fn() }
-            if (matchesKeyId(event, 'fitAll')) return act(() => fitGraph({ force: true }))
-            if (matchesKeyId(event, 'frameSelected')) return act(() => (selected ? frameSelection() : fitGraph({ force: true })))
+            if (matchesKeyId(event, 'fitAll')) return act(() => fitGraph({ everything: true }))
+            if (matchesKeyId(event, 'frameSelected')) return act(() => (selected ? frameSelection() : fitGraph({ everything: true })))
             if (matchesKeyId(event, 'zoom100')) return act(() => updateZoom(1))
             if (matchesKeyId(event, 'enter') && selected && onEnterNode) return act(() => onEnterNode(selected))
             if (matchesKeyId(event, 'leave') && onLeaveScope) return act(() => onLeaveScope())
@@ -1505,6 +1671,14 @@ export default function RawGraphSurface({
     const handleNodeKeyDown = (event, nodeId) => {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
+        // Enter opens, the same as a double-click (audit 2026-10-05 B2);
+        // Space selects. A card's main field is typed into by a click on
+        // its text once the card is selected — never by Enter, which has
+        // one meaning.
+        if (event.key === 'Enter' && onEnterNode) {
+            onEnterNode(nodeId)
+            return
+        }
         onSelectNode?.(nodeId)
     }
 
@@ -1604,33 +1778,17 @@ export default function RawGraphSurface({
                 </div>
             ) : null}
             <div className={`raw-graph-zoom-controls${chromeless ? ' is-chromeless' : ''}`}>
-                <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
-                <span className="raw-graph-zoom-value">{Math.round(zoom * 100)}%</span>
-                <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
+                <button type="button" className="raw-zoom-cell raw-zoom-step" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>−</button>
+                <button type="button" className="raw-zoom-cell raw-graph-zoom-value" aria-label="Reset zoom to 100%" title="Reset to 100%" onClick={() => updateZoom(1)}>{Math.round(zoom * 100)}%</button>
+                <button type="button" className="raw-zoom-cell raw-zoom-step" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
                 {/* The button is a request to see EVERYTHING, so it fits all
                     the cards at whatever zoom that takes (Figma's Shift+1 and
                     TouchDesigner's Home do the same). The legible floor stays
-                    for the fits nobody asked for — opening, resizing — which
-                    say "showing N of M" instead. On a phone the floor left
-                    cards off the edge and the button did nothing (NOPA F3). */}
-                <button type="button" aria-label="Fit graph" title="Fit the whole graph" onClick={() => fitGraph({ force: true })}>⤢</button>
-                {selectedNodeId ? (
-                    <button type="button" aria-label="Frame selection" title="Frame the selected node" onClick={frameSelection}>◎</button>
-                ) : null}
+                    for the fits nobody asked for — opening, resizing. The
+                    selection is framed by the F key (the ◎ button went: one
+                    strip, [−] [100%] [+] [Fit], audit §3.8). */}
+                <button type="button" className="raw-zoom-cell raw-zoom-fit" aria-label="Fit graph" title="Fit the whole graph (H)" onClick={() => fitGraph({ everything: true })}>Fit</button>
             </div>
-            {/* Says how much of the graph is on screen when the whole thing
-                would have been too small to work with. Tappable, so the true
-                overview is still one gesture away — the point is to stop
-                silently pretending a 33-node graph fits a phone. */}
-            {fitNotice ? (
-                <button
-                    type="button"
-                    className="raw-graph-fit-notice"
-                    onClick={() => fitGraph({ force: true })}
-                >
-                    showing {fitNotice.shown} of {fitNotice.total} — ⤢ fit all
-                </button>
-            ) : null}
             {cardsInView.length === 0 ? (
                 // A blank workspace opens in ZEN, where there is NO topbar — so
                 // the ⋯ menu, and everything in it, does not exist for the
@@ -1655,7 +1813,8 @@ export default function RawGraphSurface({
             ) : null}
             <div
                 className="raw-graph-stage"
-                style={{ transform: `translate(${panX}px,${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
+                ref={stageRef}
+                style={{ '--raw-zoom': zoom, transform: `translate(${viewportRef.current.panX}px,${viewportRef.current.panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
             >
                     <svg
                         // 1×1, not 100%: the stage collapses to zero height (all
@@ -1708,28 +1867,49 @@ export default function RawGraphSurface({
                             />
                         ) : null}
                     </svg>
-                    {nodes.map((node) => {
+                    {paintOrder(nodes).map((node) => frozenCardOr(node, () => {
                         const inputs = getNodeInputs(node, portScopeNodes)
                         const outputs = getNodeOutputs(node, portScopeNodes)
                         const childCount = childCounts?.get(node.id) || 0
                         // `h` and the card's left/top/width come from the same
                         // geometry the wires use, at EVERY tier. The tier below
                         // only decides what is drawn inside this box.
-                        const h = cardHeight(node, portScopeNodes)
+                        const isEditing = editingId === node.id && Boolean(getCardMainField(node.typeId))
+                        const mainField = isEditing ? getCardMainField(node.typeId) : null
+                        const mainText = mainField ? String(node.values?.[mainField.key] ?? '') : ''
+                        const baseH = cardHeight(node, portScopeNodes)
+                        // The card grows to fit what is typed, but only into free
+                        // space: never past the next card below it in its column.
+                        let editBoxHeight = 0
+                        let editGrow = 0
+                        if (isEditing) {
+                            editBoxHeight = editRowsFor(mainText) * CARD_CONTENT_LINE_HEIGHT + 12
+                            const have = cardContentHeight(node)
+                            const bottom = (node.graphY ?? 0) + baseH
+                            const below = nodes
+                                .filter((other) => other.id !== node.id
+                                    && Math.abs((other.graphX ?? 0) - (node.graphX ?? 0)) < cardWidth(node)
+                                    && (other.graphY ?? 0) >= bottom - 1)
+                                .reduce((min, other) => Math.min(min, other.graphY ?? Infinity), Infinity)
+                            const room = Number.isFinite(below) ? Math.max(0, below - bottom - 8) : Infinity
+                            editGrow = Math.min(Math.max(0, editBoxHeight - have), room)
+                            editBoxHeight = have + editGrow
+                        }
+                        const h = baseH + editGrow
                         const isSelected = node.id === selectedNodeId
                         const typeDef = getNodeType(node.typeId)
-                        const showPorts = tier === 'full' || tier === 'compact'
+                        const showPorts = tier === 'full' || tier === 'summary'
                         const showPortLabels = tier === 'full'
                         return (
                             <div
                                 key={node.id}
-                                className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
+                                className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}${draggingNodeId === node.id ? ' is-held' : ''}`}
                                 data-card-id={node.id}
                                 style={{
                                     position: 'absolute',
                                     left: node.graphX,
                                     top: node.graphY,
-                                    width: CARD_WIDTH,
+                                    width: cardWidth(node),
                                     height: h,
                                     cursor: draggingNodeId === node.id ? 'grabbing' : 'grab',
                                     // One hue per card, handed to the stylesheet, which
@@ -1742,9 +1922,20 @@ export default function RawGraphSurface({
                                 }}
                                 role="button"
                                 tabIndex={0}
-                                onClick={() => onSelectNode?.(node.id)}
+                                onClick={(event) => {
+                                    // A click on the text of a card that was already
+                                    // selected types into it, in the card (#769).
+                                    const wasSelected = pressedSelectedRef.current === node.id
+                                    const onContent = pressedContentRef.current || Boolean(event.target?.closest?.('.raw-graph-node-content'))
+                                    pressedSelectedRef.current = null
+                                    pressedContentRef.current = false
+                                    if (wasSelected && onContent && startEditing(node.id)) return
+                                    onSelectNode?.(node.id)
+                                }}
                                 onPointerDown={(event) => {
                                     if (event.button !== 0) return
+                                    pressedSelectedRef.current = isSelected ? node.id : null
+                                    pressedContentRef.current = pressIsOnContent(event)
                                     // Grabbing a wire is now as forgiving as dropping one.
                                     // A press anywhere on the card that is near an output
                                     // port starts a wire; only the 10px dot did before, so
@@ -1762,56 +1953,36 @@ export default function RawGraphSurface({
                                         x: point.x - node.graphX,
                                         y: point.y - node.graphY
                                     }
+                                    dragPanRef.current = { x: event.clientX, y: event.clientY, live: false, last: 0 }
                                     onSelectNode?.(node.id)
                                     setIsPanning(false)
                                     setDraggingNodeId(node.id)
                                     event.currentTarget.setPointerCapture(event.pointerId)
                                 }}
                                 onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
-                                onDoubleClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
+                                onDoubleClick={(event) => {
+                                    event.stopPropagation()
+                                    onEnterNode?.(node.id)
+                                }}
                             >
-                                {/* The door. Hangs off the card's LEFT edge, counter-scaled so
-                                    it is the same size on screen at every zoom — a control that
-                                    shrinks with the graph is the bug this replaces. Left, not
-                                    in the header, because nearestOutputPort's grab radius is 28
-                                    SCREEN pixels and covers the card's right-hand end once the
-                                    graph is zoomed out, so a door there competes with starting
-                                    a wire. Never gated on having contents: RawEditor routes this
-                                    same control to reopen a closed panel window, and an
-                                    un-enterable empty container is a box that can never be
-                                    filled. */}
-                                {onEnterNode && tier !== 'block' ? (
-                                    <div
-                                        // Tucked: zoomed out, a finger's 44px door is wider
-                                        // than the column gutter and covered the previous
-                                        // column's output ports (audit 2026-10-02, 390×844
-                                        // at 34%). On a touch screen it then shows only on
-                                        // the selected card — tap the card, then its door.
-                                        className={`raw-graph-node-door-anchor${zoom < DOOR_HALO_MIN_ZOOM && !isSelected ? ' is-tucked' : ''}`}
-                                        style={{ transform: `scale(${1 / Math.max(zoom, FIT_MIN_USEFUL_ZOOM)})` }}
-                                    >
-                                        <button
-                                            type="button"
-                                            className={`raw-graph-node-door${childCount > 0 ? ' has-contents' : ''}${zoom >= DOOR_HALO_MIN_ZOOM ? ' has-halo' : ''}`}
-                                            title={childCount > 0
-                                                ? `Enter ${node.label} — holds ${childCount} node${childCount === 1 ? '' : 's'}`
-                                                : `Enter ${node.label}`}
-                                            aria-label={childCount > 0
-                                                ? `Enter ${node.label}, holds ${childCount} node${childCount === 1 ? '' : 's'}`
-                                                : `Enter ${node.label}`}
-                                            onPointerDown={(event) => event.stopPropagation()}
-                                            // The card's own dblclick also enters; without this
-                                            // a double-tap on the door pushes the same scope
-                                            // twice and takes two presses to leave.
-                                            onDoubleClick={(event) => event.stopPropagation()}
-                                            onClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
-                                        >
-                                            {childCount > 0 ? (
-                                                <span className="raw-graph-node-child-count">{childCount}</span>
-                                            ) : null}
-                                            <span aria-hidden="true">›</span>
-                                        </button>
-                                    </div>
+                                {onResizeNode ? (
+                                    <span
+                                        className="raw-graph-node-resize"
+                                        aria-hidden="true"
+                                        title="Drag to resize. Double-click for the automatic size."
+                                        onPointerDown={(event) => {
+                                            if (event.button !== 0) return
+                                            event.stopPropagation()
+                                            event.preventDefault()
+                                            resizeStartRef.current = { x: event.clientX, y: event.clientY, w: cardWidth(node), h: h, last: null }
+                                            onSelectNode?.(node.id)
+                                            setResizing(node.id)
+                                        }}
+                                        onDoubleClick={(event) => {
+                                            event.stopPropagation()
+                                            if (cardSizeOf(node)) onResizeNode(node.id, null)
+                                        }}
+                                    />
                                 ) : null}
                                 <header className="raw-graph-node-header">
                                     {activeMarkerTypeIds.includes(node.typeId) && (
@@ -1827,7 +1998,12 @@ export default function RawGraphSurface({
                                     )}
                                     <span className="raw-graph-node-icon" />
                                     {tier !== 'block' ? (
-                                        <span className="raw-graph-node-label">{getNodeCardTitle(node)}</span>
+                                        <span
+                                            className="raw-graph-node-label"
+                                            // Under the summary tier the title is all that is left, so it
+                                            // is counter-scaled to stay 11px on screen.
+                                            style={tier === 'header' ? { fontSize: `${Math.min(LEGIBLE_SCREEN_PX / zoom, 28)}px` } : undefined}
+                                        >{getNodeCardTitle(node)}</span>
                                     ) : null}
                                     {onOpenInStudio && node.typeId === 'geom.geo' && tier !== 'block' ? (
                                         // The header's own small glyph button (the ● toggle's
@@ -1855,21 +2031,18 @@ export default function RawGraphSurface({
                                             {getNodeFamily(node.typeId)?.label || typeDef?.category || ''}
                                         </span>
                                     ) : null}
-                                    {/* Entering a node used to be double-click only, cued by a
-                                        hover-revealed chevron — so on a phone there was no
-                                        affordance at all and no gesture that reliably worked.
-                                        Containers make that fatal rather than annoying: a
-                                        `studio` node you cannot enter is an empty box. This is
-                                        a real button now, always visible on coarse pointers —
-                                        but not when the card is too small to aim at. */}
-                                    {/* The way in is NOT here any more — see the door on the
-                                        card's left edge below. In the header it lived inside
-                                        the graph's own transform, so at the zoom the auto-fit
-                                        lands an oversized graph on it measured 7x7 screen
-                                        pixels: present in the DOM, unusable in the browser, and
-                                        a DOM-presence test passes anyway. It also sat inside
-                                        nearestOutputPort's 28-screen-pixel grab radius, which
-                                        covers the card's right-hand end at low zoom. */}
+                                    {/* One way in: double-click, Enter, or Open in the
+                                        settings. There is no control on the card for it, so
+                                        a container's card only says how much is inside, as
+                                        plain meta text (audit 2026-10-05 section 3.4). */}
+                                    {childCount > 0 && tier !== 'block' ? (
+                                        <span
+                                            className="raw-graph-node-child-count"
+                                            title={`Holds ${childCount} node${childCount === 1 ? '' : 's'}`}
+                                        >
+                                            {`▸ ${childCount}`}
+                                        </span>
+                                    ) : null}
                                 </header>
                                 {/* This box keeps its exact height at every tier — it is
                                     part of the geometry the wires are drawn from. Only its
@@ -1885,7 +2058,44 @@ export default function RawGraphSurface({
                                     {/* What the card holds — a List's rows under their
                                         groups, a Text's first lines. Below the ports and any
                                         picture, inside the height cardHeight already gave it. */}
-                                    {showPorts && getNodeCardLines(node) ? (
+                                    {tier === 'summary' && !isEditing && getNodeCardLines(node) ? (
+                                        <CardSummaryLines
+                                            content={cardContentLayout(node)}
+                                            top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
+                                                + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0)}
+                                        />
+                                    ) : null}
+                                    {showPorts && isEditing ? (
+                                        <textarea
+                                            className="raw-graph-node-edit"
+                                            aria-label={`${mainField.label} of ${node.label}`}
+                                            data-main-field={mainField.key}
+                                            style={{
+                                                top: cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
+                                                    + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0),
+                                                height: editBoxHeight || undefined
+                                            }}
+                                            value={mainText}
+                                            ref={(el) => { if (el && window.document.activeElement !== el) el.focus({ preventScroll: true }) }}
+                                            onFocus={(event) => {
+                                                const end = event.target.value.length
+                                                event.target.setSelectionRange(end, end)
+                                            }}
+                                            onChange={(event) => onEditMainValue(node.id, mainField.key, event.target.value)}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            onDoubleClick={(event) => event.stopPropagation()}
+                                            onClick={(event) => event.stopPropagation()}
+                                            onBlur={() => setEditingId((current) => (current === node.id ? null : current))}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation()
+                                                if (event.key === 'Escape') {
+                                                    event.preventDefault()
+                                                    stopEditing(node.id)
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    {tier === 'full' && !isEditing && getNodeCardLines(node) ? (
                                         <CardContentLines
                                             content={cardContentLayout(node)}
                                             top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
@@ -1999,7 +2209,7 @@ export default function RawGraphSurface({
                                 </div>
                             </div>
                         )
-                    })}
+                    }))}
                     {/* The things. Same stage, so they pan and zoom with the
                         nodes and read as being in the same place — they ARE
                         in the same project. The node card's own classes, so a
@@ -2015,14 +2225,14 @@ export default function RawGraphSurface({
                                 left: card.graphX,
                                 top: card.graphY,
                                 width: CARD_WIDTH,
-                                height: cardHeight(card, null),
+                                height: card.height || cardHeight(card, null),
                                 cursor: onSelectObject ? 'pointer' : 'default',
                                 ...(card.familyColor ? { '--card-family': card.familyColor } : {})
                             }}
                             role="button"
                             tabIndex={0}
-                            aria-label={`${card.label}, a ${card.typeLabel} in the room${card.holds ? `, holds ${card.holds}` : ''}`}
-                            title={`${card.label} — a thing in the room`}
+                            aria-label={`${card.label}, a ${card.typeLabel} in the scene${card.holds ? `, holds ${card.holds}` : ''}`}
+                            title={`${card.label} — an object in the scene`}
                             onClick={() => onSelectObject?.(card.entityId)}
                             onDoubleClick={(event) => event.stopPropagation()}
                             onKeyDown={(event) => {
@@ -2037,14 +2247,19 @@ export default function RawGraphSurface({
                                     <span className="raw-graph-node-label">{card.label}</span>
                                 ) : null}
                                 {tier === 'full' ? (
-                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>thing</span>
+                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>object</span>
                                 ) : null}
                             </header>
-                            <div style={{ position: 'relative', height: cardHeight(card, null) - HEADER_HEIGHT }}>
-                                {tier === 'full' || tier === 'compact' ? (
+                            <div style={{ position: 'relative', height: (card.height || cardHeight(card, null)) - HEADER_HEIGHT }}>
+                                {tier === 'full' || tier === 'summary' ? (
                                     <span className="raw-graph-node-summary">
                                         {card.holds ? `${card.typeLabel} · holds ${card.holds}` : card.typeLabel}
                                     </span>
+                                ) : null}
+                                {/* What the thing looks like, in the node card's own
+                                    picture slot, below its one line of words. */}
+                                {card.previewNode && (tier === 'full' || tier === 'summary') ? (
+                                    <CardPreview node={card.previewNode} nodes={EMPTY_PREVIEW_NODES} edges={EMPTY_PREVIEW_EDGES} top={26} />
                                 ) : null}
                             </div>
                         </div>

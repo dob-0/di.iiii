@@ -40,4 +40,46 @@ describe('startFollows', () => {
         await writeFollows(dataDir, { b: entry })
         expect([...startFollows({ dataDir, port: 9, log: quiet }).keys()]).toEqual(['b'])
     })
+
+    // Found on the owner's install 2026-10-05: `di follow … --key -` on a follow that
+    // already existed wrote the new key to follows.json, and the running server went on
+    // using the old one (11 of 15 spaces). A restart was only ever triggered by a new
+    // direction. This fails without keying the running follower on its whole entry.
+    it('restarts a running follower when its key, remote or address changes, and only then', async () => {
+        const dataDir = await mkdtemp(path.join(os.tmpdir(), 'di-follows-'))
+        dirs.push(dataDir)
+        const started = []
+        const stopped = []
+        const starter = ({ remote }) => {
+            const index = started.length
+            started.push({ token: remote.token, base: remote.base, address: remote.address })
+            return { stop: () => stopped.push(index), state: {}, wake() {} }
+        }
+        const entry = { remote: 'http://127.0.0.1:9/serverXR', token: 'old-key' }
+        const call = () => startFollows({ dataDir, port: 9, log: quiet, starter })
+
+        await writeFollows(dataDir, { a: entry })
+        call()
+        expect(started.map(s => s.token)).toEqual(['old-key'])
+
+        // The file is touched, nothing in the entry changed: the follower is left alone.
+        await writeFollows(dataDir, { a: { ...entry, followedAt: 'later' } })
+        call()
+        expect(started).toHaveLength(1)
+
+        await writeFollows(dataDir, { a: { ...entry, token: 'new-key' } })
+        call()
+        expect(started.map(s => s.token)).toEqual(['old-key', 'new-key'])
+        expect(stopped).toEqual([0])
+
+        await writeFollows(dataDir, { a: { ...entry, token: 'new-key', address: '100.64.0.2' } })
+        call()
+        expect(started.at(-1)).toMatchObject({ token: 'new-key', address: '100.64.0.2' })
+        expect(stopped).toEqual([0, 1])
+
+        await writeFollows(dataDir, { a: { ...entry, token: 'new-key', address: '100.64.0.2', remote: 'http://127.0.0.1:9/other' } })
+        call()
+        expect(started.at(-1).base).toBe('http://127.0.0.1:9/other')
+        expect(stopped).toEqual([0, 1, 2])
+    })
 })

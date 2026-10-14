@@ -42,7 +42,16 @@ describe('a production version list: the data (decision 2026-10-04)', () => {
         expect(normalizeProductionVersion({ id: 'a', status: 'candidate' })).toBe(null)
         expect(normalizeProductionVersion({ id: 'a', projectId: 'p', status: 'approved' })).toBe(null)
         expect(normalizeProductionVersion({ id: 'a', projectId: 'p', status: 'candidate', fingerprint: 'md5:1' }).fingerprint).toBe(null)
-        expect(VERSION_STATUSES).toEqual(['for-the-show', 'candidate', 'kept-copy', 'archived'])
+        expect(VERSION_STATUSES).toEqual(['for-the-show', 'candidate', 'kept-copy', 'concept', 'archived'])
+    })
+
+    it('concept is a status: kept by both normalisers, ordered after kept copies and before archived, never the show', () => {
+        const c = { id: 'a', projectId: 'p', status: 'concept' }
+        expect(normalizeProductionVersion(c).status).toBe('concept')
+        expect(server.normalizeProductionVersion(c).status).toBe('concept')
+        const doc = listWith([entry('z', 'archived'), entry('c', 'concept'), entry('k', 'kept-copy'), entry('n'), entry('s', 'for-the-show')])
+        expect(versionsFromDocument(doc).entries.map((v) => v.id)).toEqual(['s', 'n', 'k', 'c', 'z'])
+        expect(forTheShow(versionsFromDocument(listWith([entry('c', 'concept')])).entries)).toBe(null)
     })
 
     // The server runs shared/projectSchema.cjs, the browser and the tools src/shared — the two must agree,

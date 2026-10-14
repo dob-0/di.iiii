@@ -82,7 +82,35 @@ describe('versions.mjs — register, list, set-status, remove, put', () => {
         expect((await readList(i, SET)).entries.map((v) => [v.id, v.status])).toEqual([['full-ground', 'for-the-show'], ['minimal', 'candidate']])
     })
 
-    it('refuses a status outside the four', async () => {
+    it('set-status accepts concept, and list shows it', async () => {
+        const i = install()
+        await cli(i, 'register', 'moxir-hall-minimal')
+        await cli(i, '--production', SET, 'set-status', 'minimal', 'concept')
+        expect((await readList(i, SET)).entries.map((v) => [v.id, v.status])).toEqual([['minimal', 'concept']])
+        const { lines } = await cli(i, '--production', SET, 'list')
+        expect(lines.join('\n')).toMatch(/concept \(1\):\n {2}Minimal — simple — minimal/)
+    })
+
+    it('set-status --all-except: dry run writes nothing; then only the candidates not named move; a version for the show must be named', async () => {
+        const i = install()
+        await cli(i, 'register', 'moxir-hall-minimal')
+        await cli(i, 'register', 'moxir-hall-full-ground')
+        await cli(i, 'register', 'moxir-hall-minimal-oldhall-0929')
+        await cli(i, '--production', SET, 'set-status', 'full-ground', 'for-the-show')
+        const writes = i.writes.length
+        // the show is not named: refused, nothing written
+        await expect(cli(i, '--production', SET, 'set-status', '--all-except', 'minimal', 'concept')).rejects.toThrow(/"full-ground" is for the show/)
+        await expect(cli(i, '--production', SET, 'set-status', '--all-except', 'nope,full-ground', 'concept')).rejects.toThrow(/not in the list/)
+        expect(i.writes.length).toBe(writes)
+        const dry = await cli(i, '--dry-run', '--production', SET, 'set-status', '--all-except', 'full-ground', 'concept')
+        expect(dry.lines.join('\n')).toMatch(/1 version → concept \(dry run/)
+        expect(i.writes.length).toBe(writes)
+        const real = await cli(i, '--production', SET, 'set-status', '--all-except', 'full-ground', 'concept')
+        expect(real.r.changed).toEqual(['minimal'])
+        expect((await readList(i, SET)).entries.map((v) => [v.id, v.status])).toEqual([['full-ground', 'for-the-show'], ['minimal-oldhall-0929', 'kept-copy'], ['minimal', 'concept']])
+    })
+
+    it('refuses a status outside the five', async () => {
         const i = install()
         await cli(i, 'register', 'moxir-hall-minimal')
         await expect(cli(i, '--production', SET, 'set-status', 'minimal', 'approved')).rejects.toThrow(/not a status/)

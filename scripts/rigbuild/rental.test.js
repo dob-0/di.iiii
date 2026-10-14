@@ -13,11 +13,11 @@ const strings = ['Moving heads', '380W beam &amp; head', 'UP-B380F', 'PAR &amp; 
 const sharedXml = `<sst>${strings.map((s) => `<si><t>${s}</t></si>`).join('')}<si><r><t>rich </t></r><r><t>run</t></r></si></sst>`
 const priceList = `<worksheet><sheetData>
 <row r="5"><c r="A5" t="s"><v>0</v></c></row>
-<row r="6"><c r="A6" t="s"><v>1</v></c><c r="B6" t="s"><v>2</v></c><c r="D6"><v>18.0</v></c><c r="E6"><v>20000.0</v></c><c r="F6"><f>E6*1.5</f><v>30000</v></c></row>
+<row r="6"><c r="A6" t="s"><v>1</v></c><c r="B6" t="s"><v>2</v></c><c r="D6"><v>18.0</v></c><c r="E6"><v>200.0</v></c><c r="F6"><f>E6*1.5</f><v>300</v></c></row>
 <row r="12"><c r="A12" t="s"><v>3</v></c></row>
-<row r="13"><c r="A13" t="s"><v>4</v></c><c r="B13" t="s"><v>5</v></c><c r="C13" t="inlineStr"><is><t>RGBW &lt;wash&gt;</t></is></c><c r="D13"><v>50</v></c><c r="E13"><v>5000</v></c></row>
+<row r="13"><c r="A13" t="s"><v>4</v></c><c r="B13" t="s"><v>5</v></c><c r="C13" t="inlineStr"><is><t>RGBW &lt;wash&gt;</t></is></c><c r="D13"><v>50</v></c><c r="E13"><v>50</v></c></row>
 </sheetData></worksheet>`
-const priceData = `<worksheet><sheetData><row r="2"><c r="C2"><v>18</v></c><c r="D2"><v>19000</v></c><c r="E2" t="str"><v>UP-B380F</v></c></row></sheetData></worksheet>`
+const priceData = `<worksheet><sheetData><row r="2"><c r="C2"><v>18</v></c><c r="D2"><v>190</v></c><c r="E2" t="str"><v>UP-B380F</v></c></row></sheetData></worksheet>`
 
 const makeXlsx = async () => {
     const zip = new JSZip()
@@ -41,22 +41,26 @@ describe('xlsx.mjs — cell values of an Office Open XML workbook', () => {
     })
     it('reads a formula as its cached value and keeps the formula beside it', () => {
         const cells = readSheetCells(priceList, readSharedStrings(sharedXml))
-        expect(cells.F6).toEqual({ value: 30000, type: 'n', formula: 'E6*1.5' })
+        expect(cells.F6).toEqual({ value: 300, type: 'n', formula: 'E6*1.5' })
         expect(cells.C13.value).toBe('RGBW <wash>')
     })
     it('finds sheets through the workbook relationships, hidden ones too', async () => {
         const wb = await readXlsx(await makeXlsx())
         expect(wb.sheets.map((s) => [s.name, s.state])).toEqual([['Price data', 'hidden'], ['Price list', 'visible']])
-        expect(rowsOf(wb.sheets[1]).find((r) => r.row === 6)).toMatchObject({ A: '380W beam & head', B: 'UP-B380F', D: 18, E: 20000 })
+        expect(rowsOf(wb.sheets[1]).find((r) => r.row === 6)).toMatchObject({ A: '380W beam & head', B: 'UP-B380F', D: 18, E: 200 })
     })
 })
 
 describe('rental.mjs — the rental list from the spreadsheet and the order', () => {
-    it('matches each order line by code, with its stock, rate and cells, and says where it disagrees', async () => {
+    it('matches each order line by code, with its stock and cells, never writes the rate, and says (without the number) where the sheets disagree', async () => {
         const list = rentalListFrom({ workbook: await readXlsx(await makeXlsx()), order, file: '/x/q.xlsx', sha256: 'ab'.repeat(32) })
-        expect(list.items[0]).toMatchObject({ code: 'UP-B380F', type: 'up-b380f', ordered: 18, stock: 18, rate: 20000, label: '380W beam & head' })
+        expect(list.items[0]).toMatchObject({ code: 'UP-B380F', type: 'up-b380f', ordered: 18, stock: 18, label: '380W beam & head' })
         expect(list.items[0].source).toBe('Price list!A6:E6 · ordered as "18x UP-B380F"')
-        expect(list.items[0].note).toMatch(/hidden "Price data" sheet says 19000\/day/)
+        expect(list.items[0].note).toMatch(/hidden "Price data" sheet differs from the visible price list/)
+        // the supplier's rates are read but never written: not one price field, not one number from the sheet
+        expect(list.items[0]).not.toHaveProperty('rate')
+        expect(list.catalogue.some((c) => 'rate' in c)).toBe(false)
+        expect(JSON.stringify(list)).not.toMatch(/"rate"|\b(200|190|50)\b.*AMD/)
         // An order above the house's stock is written and noted, not refused.
         expect(list.items[1]).toMatchObject({ code: 'UP-PL5403', ordered: 60, stock: 50 })
         expect(list.items[1].note).toMatch(/order 60 is above the 50 the house lists/)

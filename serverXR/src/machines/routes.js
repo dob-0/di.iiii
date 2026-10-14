@@ -18,6 +18,7 @@
  * below.
  */
 
+const { onThisMachine: onThisMachineDefault } = require('./onThisMachine')
 const { httpRequest } = require('../httpClient')
 const { viaFollower, isPeerId, serverKey } = require('./hub')
 const { isGuestSubject } = require('../authAccess')
@@ -36,7 +37,8 @@ const isGuestActor = (authState) => Boolean(authState) && (authState.type === 'g
 // peer's name (the client already reads `peer.machineName || peer.machineId.slice(0, 8)`,
 // its existing fallback for "no name was ever given" — a guest sees that same
 // honest shrug, never the name a person picked).
-const redactForGuest = ({ machine, peers }) => ({
+const redactForGuest = ({ machine, peers, ...rest }) => ({
+    ...rest,
     machine: machine ? { ...machine, name: null } : machine,
     peers: (peers || []).map((peer) => ({ ...peer, machineName: null }))
 })
@@ -101,7 +103,8 @@ function registerMachineRoutes(router, {
     canAccessSpace = () => false,
     normalizeSpaceId = (value) => value,
     spaceExists = null,
-    forward = forwardOverHttp
+    forward = forwardOverHttp,
+    onThisMachine = onThisMachineDefault
 }) {
     const requireSpaceEditor = async (req, res, next) => {
         try {
@@ -140,10 +143,13 @@ function registerMachineRoutes(router, {
     router.post('/api/spaces/:spaceId/machines/hello', requireSpaceEditor, (req, res) => {
         const spaceId = req.machineSpaceId
         const me = machine()
-        const { peerId, role = null, devices = [] } = req.body || {}
-        const result = hub.hello(spaceId, { peerId, role, devices, machine: me })
+        const { peerId, role = null, devices = [], projects = null, capture = null } = req.body || {}
+        const away = !onThisMachine(req)
+        const result = hub.hello(spaceId, { peerId, role, devices, projects, capture, away, machine: me })
         if (result.error) return res.status(result.status).json({ error: result.error })
-        const payload = { machine: me, peers: hub.listPeers(spaceId) }
+        // `away`: this page's browser is not on this machine — it must not act
+        // as this machine (onThisMachine.js).
+        const payload = { machine: me, away, peers: hub.listPeers(spaceId) }
         res.json(isGuestActor(getAuthState(req)) ? redactForGuest(payload) : payload)
     })
 
@@ -170,6 +176,11 @@ function registerMachineRoutes(router, {
             // host's — the host listed the stage machine with nothing on it.
             // recordRemotePeers runs cleanDevices over it, as hello does.
             devices: peer?.devices,
+            // Which projects that tab runs and whether it can open a camera,
+            // so a viewer here asks the right tab (hub.cleanProjects).
+            projects: peer?.projects,
+            capture: peer?.capture,
+            away: peer?.away === true,
             scripts: peer?.scripts === true,
             machineId: caller.id,
             machineName: callerName

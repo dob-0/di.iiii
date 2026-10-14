@@ -10,8 +10,18 @@ export const rigVariantOf = (entities = []) => {
     return holder ? holder.components.rigVariant : null
 }
 
-/** The short word a version is called by in the row: its title up to the dash (or its id, never nothing). */
-export const shortTitle = (title, id = '') => String(title || '').split(' — ')[0].trim() || String(id || '')
+/** The short name a version is called by in the row: its title up to the dash, the set's name dropped (or its id, never nothing). */
+export const shortTitle = (title, id = '') => {
+    const t = String(title || '').split(' — ')[0].trim()
+    if (!t) return String(id || '')
+    // One naming style for a numbered version (owner, 2026-10-12): "MOXIR v1.1 · looks" -> "v1.1 looks",
+    // "MOXIR v2.0 · 2.6" -> "v2.6" (a bare number after the version is the build; the build is the name).
+    // The set's own name before the version is dropped; a title with no version token is left as written.
+    const m = /(?:^|\s)(v\d+(?:\.\d+)*)(?:\s*·\s*|\s+)?(.*)$/.exec(t)
+    if (!m) return t
+    const rest = m[2].trim().replace(/\s*·\s*/g, ' ')
+    return /^\d+(?:\.\d+)*$/.test(rest) ? `v${rest}` : `${m[1]}${rest ? ` ${rest}` : ''}`
+}
 
 const byProjectId = (a, b) => (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0)
 
@@ -50,7 +60,7 @@ export const versionListProjectOf = (variant) => (variant?.set ? listProjectIdOf
 
 /**
  * The set as the production's VERSION LIST holds it (docs/architecture/decisions/2026-10-04-production-
- * versions.md): its entries in the list's order (for the show first, then candidates, then kept copies;
+ * versions.md): its entries in the list's order (for the show first, then candidates, then kept copies, then concepts;
  * archived versions are not on the row). Linked only where the space really holds the project for this
  * viewer (`rows`, as setFromRows) — a version the viewer may not see, or that is not on this install,
  * is never a dead link. The current project is always in the row, listed or not. Returns null when the
@@ -69,6 +79,7 @@ const setFromList = (variant, currentProjectId, hrefOf, rows, list) => {
             href: hrefOf(v.projectId),
             current: v.projectId === currentProjectId,
             copy: v.status === 'kept-copy',
+            concept: v.status === 'concept',
             // two "for the show" can only come from a merge of two machines' edits; then neither is marked
             show: v.status === FOR_THE_SHOW && !twoForTheShow
         }))

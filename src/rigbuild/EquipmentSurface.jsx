@@ -105,7 +105,7 @@ export function OrderPart({ eq, title, venue, readOnly, sheetTotals }) {
                                         <td className="n">{l.placed ?? ''}{l.over ? ` (${l.over} over)` : ''}</td>
                                         <td className="rigplot-mono">{l.kind === 'item' ? '—' : l.modeOwed ? 'OWED' : `${l.mode === `${l.footprint}ch` ? '' : `${l.mode} · `}${l.footprint} ch${l.channelsOwed ? ' · list owed' : ''}`}</td>
                                         <td className="n">{l.watts ?? '?'}</td>
-                                        <td className="n">{l.rate != null ? l.rate.toLocaleString('en-GB') : '?'}</td>
+                                        <td className="n">{l.rate != null ? l.rate.toLocaleString('en-GB') : 'private'}</td>
                                         <td className="n">{l.cost != null ? l.cost.toLocaleString('en-GB') : '—'}</td>
                                         <td className="rigequip-src">{l.source}{l.note ? ` · ${l.note}` : ''}{l.flags.filter((f) => FLAG_WORDS[f] && f !== 'channels-owed' && f !== 'mode-owed').map((f) => <b key={f}> · ! {FLAG_WORDS[f]}</b>)}</td>
                                         <td className="rigequip-noprint">{!readOnly && tile?.key ? <button type="button" className="rigcards-btn" onClick={() => eq.skip(tile)} aria-label={`delete ${l.code}`}>delete</button> : null}</td>
@@ -116,7 +116,7 @@ export function OrderPart({ eq, title, venue, readOnly, sheetTotals }) {
                     })}
                 </tbody>
                 <tfoot>
-                    <tr><td colSpan={2}>total</td><td className="n">{t.units}</td><td /><td className="n">{t.placed}</td><td /><td className="n">{(t.watts / 1000).toFixed(1)} kW</td><td className="n">{t.perDay.toLocaleString('en-GB')}</td><td className="n">{t.cost != null ? t.cost.toLocaleString('en-GB') : '—'}</td><td colSpan={2}>{currency}, excl. VAT{t.unpriced.length ? ` · no rate: ${t.unpriced.join(', ')}` : ''}</td></tr>
+                    <tr><td colSpan={2}>total</td><td className="n">{t.units}</td><td /><td className="n">{t.placed}</td><td /><td className="n">{(t.watts / 1000).toFixed(1)} kW</td><td className="n">{t.perDay.toLocaleString('en-GB')}</td><td className="n">{t.cost != null ? t.cost.toLocaleString('en-GB') : '—'}</td><td colSpan={2}>{currency}, excl. VAT{t.unpriced.length ? ` · price private: ${t.unpriced.join(', ')}` : ''}</td></tr>
                 </tfoot>
             </table>
             {/* the phone: the same lines as a list with steppers and a delete button */}
@@ -125,7 +125,7 @@ export function OrderPart({ eq, title, venue, readOnly, sheetTotals }) {
                     const tile = tileOf(l)
                     return (
                         <li key={l.key} className="rigequip-line">
-                            <div className="rigequip-line__head"><b className="rigplot-mono">{l.code}</b><span className="rigplot-mono">{l.cost != null ? money(l.cost, currency) : l.rate != null ? `${l.rate.toLocaleString('en-GB')}/day` : 'no rate'}</span></div>
+                            <div className="rigequip-line__head"><b className="rigplot-mono">{l.code}</b><span className="rigplot-mono">{l.cost != null ? money(l.cost, currency) : l.rate != null ? `${l.rate.toLocaleString('en-GB')}/day` : 'price: private'}</span></div>
                             <div className="rigequip-line__meta">{l.label} · {l.unlisted ? 'not on the list' : FROM_WORDS[l.from]}{l.supplier ? ` (${l.supplier})` : ''}{l.stock != null ? ` · stock ${l.stock}` : ''}{l.placed != null ? ` · ${l.placed} placed` : ''}{l.note ? ` · ${l.note}` : ''}</div>
                             {l.flags.filter((f) => FLAG_WORDS[f] && f !== 'channels-owed').length ? <div className="rigequip-line__meta"><b>! {l.flags.filter((f) => FLAG_WORDS[f] && f !== 'channels-owed').map((f) => FLAG_WORDS[f]).join(' · ')}</b></div> : null}
                             {!readOnly && tile?.key ? (

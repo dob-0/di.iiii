@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import library from '../../src/rigbuild/types/moxir.json'
 import { exactProblems, planDesk } from './desk-plan.mjs'
 
-// desk-plan.mjs (RIG_BUILD.md §19.5): the chosen version goes on its desk at EXACTLY the
+// desk-plan.mjs (RIG_BUILD.md §19.6): the chosen version goes on its desk at EXACTLY the
 // document's addresses, or the plan fails. Run on the desk's own code, offline (no port bound,
 // nothing transmitted), on a throwaway copy of a show.
 

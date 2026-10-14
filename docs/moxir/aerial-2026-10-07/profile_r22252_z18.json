@@ -1,0 +1,996 @@
+{
+ "release": "22252",
+ "zoom": 18,
+ "res_m": 0.25,
+ "center_utm": [
+  469134.28,
+  4472953.73
+ ],
+ "bearing_grid_deg": 144.23,
+ "frame": "u across (azimuth bearing-90, NE+), v along (azimuth bearing, SE+), metres from center_utm",
+ "pin_uv_m": [
+  15.53,
+  25.16
+ ],
+ "across_edges": [
+  {
+   "at_m": -59.9,
+   "sign": "+",
+   "strength": 14.13
+  },
+  {
+   "at_m": -55.47,
+   "sign": "-",
+   "strength": 8.36
+  },
+  {
+   "at_m": -51.53,
+   "sign": "+",
+   "strength": 25.05
+  },
+  {
+   "at_m": -48.26,
+   "sign": "-",
+   "strength": 10.33
+  },
+  {
+   "at_m": -44.4,
+   "sign": "+",
+   "strength": 8.39
+  },
+  {
+   "at_m": -39.87,
+   "sign": "+",
+   "strength": 5.69
+  },
+  {
+   "at_m": -30.11,
+   "sign": "-",
+   "strength": 6.0
+  },
+  {
+   "at_m": -24.5,
+   "sign": "+",
+   "strength": 16.13
+  },
+  {
+   "at_m": -21.98,
+   "sign": "-",
+   "strength": 6.11
+  },
+  {
+   "at_m": -17.39,
+   "sign": "-",
+   "strength": 12.21
+  },
+  {
+   "at_m": -9.02,
+   "sign": "-",
+   "strength": 12.35
+  },
+  {
+   "at_m": -7.67,
+   "sign": "+",
+   "strength": 15.46
+  },
+  {
+   "at_m": -0.95,
+   "sign": "+",
+   "strength": 9.2
+  },
+  {
+   "at_m": 2.32,
+   "sign": "-",
+   "strength": 10.13
+  },
+  {
+   "at_m": 12.77,
+   "sign": "+",
+   "strength": 14.8
+  },
+  {
+   "at_m": 14.92,
+   "sign": "-",
+   "strength": 21.55
+  },
+  {
+   "at_m": 16.35,
+   "sign": "+",
+   "strength": 27.99
+  },
+  {
+   "at_m": 20.36,
+   "sign": "-",
+   "strength": 17.51
+  },
+  {
+   "at_m": 45.81,
+   "sign": "-",
+   "strength": 44.72
+  },
+  {
+   "at_m": 61.49,
+   "sign": "+",
+   "strength": 13.94
+  }
+ ],
+ "along_edges": [
+  {
+   "at_m": -61.49,
+   "sign": "-",
+   "strength": 27.87
+  },
+  {
+   "at_m": -48.84,
+   "sign": "+",
+   "strength": 53.98
+  },
+  {
+   "at_m": -44.94,
+   "sign": "-",
+   "strength": 17.11
+  },
+  {
+   "at_m": -42.36,
+   "sign": "+",
+   "strength": 6.2
+  },
+  {
+   "at_m": -40.63,
+   "sign": "-",
+   "strength": 4.88
+  },
+  {
+   "at_m": -34.08,
+   "sign": "+",
+   "strength": 5.44
+  },
+  {
+   "at_m": -29.49,
+   "sign": "-",
+   "strength": 4.01
+  },
+  {
+   "at_m": -20.71,
+   "sign": "-",
+   "strength": 6.28
+  },
+  {
+   "at_m": -13.38,
+   "sign": "+",
+   "strength": 4.09
+  },
+  {
+   "at_m": -6.67,
+   "sign": "-",
+   "strength": 4.66
+  },
+  {
+   "at_m": -4.12,
+   "sign": "+",
+   "strength": 6.51
+  },
+  {
+   "at_m": -0.62,
+   "sign": "-",
+   "strength": 4.84
+  },
+  {
+   "at_m": 3.82,
+   "sign": "-",
+   "strength": 18.13
+  },
+  {
+   "at_m": 5.29,
+   "sign": "+",
+   "strength": 17.42
+  },
+  {
+   "at_m": 8.39,
+   "sign": "-",
+   "strength": 7.42
+  },
+  {
+   "at_m": 11.04,
+   "sign": "+",
+   "strength": 9.05
+  },
+  {
+   "at_m": 25.9,
+   "sign": "+",
+   "strength": 3.63
+  },
+  {
+   "at_m": 40.33,
+   "sign": "+",
+   "strength": 6.21
+  },
+  {
+   "at_m": 55.63,
+   "sign": "+",
+   "strength": 7.15
+  },
+  {
+   "at_m": 59.41,
+   "sign": "-",
+   "strength": 33.45
+  }
+ ],
+ "strips": {
+  "-48:-30": {
+   "along_edges": [
+    {
+     "at_m": -61.6,
+     "sign": "-",
+     "strength": 41.6
+    },
+    {
+     "at_m": -48.58,
+     "sign": "+",
+     "strength": 65.87
+    },
+    {
+     "at_m": -45.84,
+     "sign": "-",
+     "strength": 18.45
+    },
+    {
+     "at_m": -39.77,
+     "sign": "+",
+     "strength": 6.85
+    },
+    {
+     "at_m": -22.69,
+     "sign": "-",
+     "strength": 8.14
+    },
+    {
+     "at_m": -12.01,
+     "sign": "-",
+     "strength": 11.59
+    },
+    {
+     "at_m": -7.71,
+     "sign": "+",
+     "strength": 7.48
+    },
+    {
+     "at_m": -0.91,
+     "sign": "-",
+     "strength": 7.24
+    },
+    {
+     "at_m": 5.46,
+     "sign": "+",
+     "strength": 22.9
+    },
+    {
+     "at_m": 16.33,
+     "sign": "-",
+     "strength": 6.65
+    },
+    {
+     "at_m": 38.6,
+     "sign": "-",
+     "strength": 9.63
+    },
+    {
+     "at_m": 50.56,
+     "sign": "+",
+     "strength": 8.91
+    },
+    {
+     "at_m": 53.65,
+     "sign": "+",
+     "strength": 14.99
+    },
+    {
+     "at_m": 59.99,
+     "sign": "-",
+     "strength": 69.27
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      12.75,
+      0.051
+     ],
+     [
+      26.25,
+      -0.043
+     ],
+     [
+      20.0,
+      -0.062
+     ],
+     [
+      22.5,
+      -0.083
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 13.161,
+      "pm_m": 1.756,
+      "rel_power": 0.666
+     },
+     {
+      "period_m": 21.474,
+      "pm_m": 26.439,
+      "rel_power": 0.108
+     },
+     {
+      "period_m": 6.716,
+      "pm_m": 0.512,
+      "rel_power": 0.084
+     },
+     {
+      "period_m": 4.886,
+      "pm_m": 0.384,
+      "rel_power": 0.051
+     },
+     {
+      "period_m": 3.895,
+      "pm_m": 0.735,
+      "rel_power": 0.027
+     },
+     {
+      "period_m": 3.175,
+      "pm_m": 0.096,
+      "rel_power": 0.024
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "-19:-10": {
+   "along_edges": [
+    {
+     "at_m": -61.79,
+     "sign": "-",
+     "strength": 35.49
+    },
+    {
+     "at_m": -48.83,
+     "sign": "+",
+     "strength": 93.87
+    },
+    {
+     "at_m": -44.86,
+     "sign": "-",
+     "strength": 80.96
+    },
+    {
+     "at_m": -42.23,
+     "sign": "+",
+     "strength": 38.99
+    },
+    {
+     "at_m": -36.8,
+     "sign": "+",
+     "strength": 25.92
+    },
+    {
+     "at_m": -21.0,
+     "sign": "-",
+     "strength": 32.78
+    },
+    {
+     "at_m": -13.41,
+     "sign": "+",
+     "strength": 27.66
+    },
+    {
+     "at_m": -0.39,
+     "sign": "-",
+     "strength": 25.5
+    },
+    {
+     "at_m": 4.94,
+     "sign": "+",
+     "strength": 27.11
+    },
+    {
+     "at_m": 8.38,
+     "sign": "-",
+     "strength": 58.78
+    },
+    {
+     "at_m": 11.19,
+     "sign": "+",
+     "strength": 42.55
+    },
+    {
+     "at_m": 22.29,
+     "sign": "-",
+     "strength": 31.82
+    },
+    {
+     "at_m": 34.08,
+     "sign": "-",
+     "strength": 42.35
+    },
+    {
+     "at_m": 59.68,
+     "sign": "-",
+     "strength": 34.95
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      11.5,
+      0.336
+     ],
+     [
+      23.75,
+      0.131
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 13.831,
+      "pm_m": 1.521,
+      "rel_power": 0.411
+     },
+     {
+      "period_m": 10.667,
+      "pm_m": 0.661,
+      "rel_power": 0.311
+     },
+     {
+      "period_m": 27.661,
+      "pm_m": 14.4,
+      "rel_power": 0.126
+     },
+     {
+      "period_m": 8.545,
+      "pm_m": 1.116,
+      "rel_power": 0.119
+     },
+     {
+      "period_m": 4.872,
+      "pm_m": 0.32,
+      "rel_power": 0.024
+     },
+     {
+      "period_m": 3.421,
+      "pm_m": 0.114,
+      "rel_power": 0.007
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "-6:1": {
+   "along_edges": [
+    {
+     "at_m": -61.66,
+     "sign": "-",
+     "strength": 48.41
+    },
+    {
+     "at_m": -49.08,
+     "sign": "+",
+     "strength": 62.92
+    },
+    {
+     "at_m": -44.17,
+     "sign": "+",
+     "strength": 15.69
+    },
+    {
+     "at_m": -42.4,
+     "sign": "-",
+     "strength": 22.03
+    },
+    {
+     "at_m": -32.5,
+     "sign": "+",
+     "strength": 15.55
+    },
+    {
+     "at_m": -12.9,
+     "sign": "-",
+     "strength": 12.84
+    },
+    {
+     "at_m": -1.4,
+     "sign": "-",
+     "strength": 23.33
+    },
+    {
+     "at_m": 3.62,
+     "sign": "-",
+     "strength": 18.45
+    },
+    {
+     "at_m": 5.18,
+     "sign": "+",
+     "strength": 34.97
+    },
+    {
+     "at_m": 31.79,
+     "sign": "+",
+     "strength": 15.01
+    },
+    {
+     "at_m": 38.34,
+     "sign": "-",
+     "strength": 24.31
+    },
+    {
+     "at_m": 41.35,
+     "sign": "+",
+     "strength": 13.94
+    },
+    {
+     "at_m": 47.42,
+     "sign": "-",
+     "strength": 19.52
+    },
+    {
+     "at_m": 57.95,
+     "sign": "-",
+     "strength": 27.1
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      9.5,
+      0.096
+     ],
+     [
+      29.0,
+      0.095
+     ],
+     [
+      18.25,
+      -0.125
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 9.714,
+      "pm_m": 0.79,
+      "rel_power": 0.336
+     },
+     {
+      "period_m": 17.548,
+      "pm_m": 2.849,
+      "rel_power": 0.226
+     },
+     {
+      "period_m": 12.458,
+      "pm_m": 5.918,
+      "rel_power": 0.192
+     },
+     {
+      "period_m": 5.037,
+      "pm_m": 0.241,
+      "rel_power": 0.102
+     },
+     {
+      "period_m": 4.329,
+      "pm_m": 0.322,
+      "rel_power": 0.068
+     },
+     {
+      "period_m": 5.57,
+      "pm_m": 1.006,
+      "rel_power": 0.032
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "5:14": {
+   "along_edges": [
+    {
+     "at_m": -61.67,
+     "sign": "-",
+     "strength": 48.67
+    },
+    {
+     "at_m": -49.0,
+     "sign": "+",
+     "strength": 86.65
+    },
+    {
+     "at_m": -45.02,
+     "sign": "-",
+     "strength": 82.62
+    },
+    {
+     "at_m": -42.49,
+     "sign": "+",
+     "strength": 55.9
+    },
+    {
+     "at_m": -34.34,
+     "sign": "+",
+     "strength": 26.93
+    },
+    {
+     "at_m": -10.46,
+     "sign": "-",
+     "strength": 23.93
+    },
+    {
+     "at_m": 3.96,
+     "sign": "-",
+     "strength": 41.35
+    },
+    {
+     "at_m": 8.19,
+     "sign": "-",
+     "strength": 26.49
+    },
+    {
+     "at_m": 11.09,
+     "sign": "+",
+     "strength": 37.08
+    },
+    {
+     "at_m": 16.64,
+     "sign": "+",
+     "strength": 24.94
+    },
+    {
+     "at_m": 21.36,
+     "sign": "-",
+     "strength": 25.86
+    },
+    {
+     "at_m": 40.25,
+     "sign": "+",
+     "strength": 24.5
+    },
+    {
+     "at_m": 50.6,
+     "sign": "+",
+     "strength": 26.2
+    },
+    {
+     "at_m": 58.67,
+     "sign": "-",
+     "strength": 59.11
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      22.75,
+      0.138
+     ],
+     [
+      11.75,
+      0.137
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 14.191,
+      "pm_m": 3.054,
+      "rel_power": 0.395
+     },
+     {
+      "period_m": 26.754,
+      "pm_m": 12.795,
+      "rel_power": 0.247
+     },
+     {
+      "period_m": 10.529,
+      "pm_m": 0.613,
+      "rel_power": 0.232
+     },
+     {
+      "period_m": 7.735,
+      "pm_m": 0.945,
+      "rel_power": 0.032
+     },
+     {
+      "period_m": 8.327,
+      "pm_m": 0.96,
+      "rel_power": 0.031
+     },
+     {
+      "period_m": 4.717,
+      "pm_m": 0.351,
+      "rel_power": 0.03
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "25:43": {
+   "along_edges": [
+    {
+     "at_m": -62.91,
+     "sign": "+",
+     "strength": 16.42
+    },
+    {
+     "at_m": -61.24,
+     "sign": "-",
+     "strength": 44.29
+    },
+    {
+     "at_m": -48.79,
+     "sign": "+",
+     "strength": 80.18
+    },
+    {
+     "at_m": -46.78,
+     "sign": "-",
+     "strength": 19.58
+    },
+    {
+     "at_m": -23.35,
+     "sign": "+",
+     "strength": 8.18
+    },
+    {
+     "at_m": -5.86,
+     "sign": "-",
+     "strength": 12.67
+    },
+    {
+     "at_m": -4.1,
+     "sign": "+",
+     "strength": 8.91
+    },
+    {
+     "at_m": 3.66,
+     "sign": "-",
+     "strength": 26.04
+    },
+    {
+     "at_m": 5.28,
+     "sign": "+",
+     "strength": 27.45
+    },
+    {
+     "at_m": 38.28,
+     "sign": "-",
+     "strength": 11.09
+    },
+    {
+     "at_m": 39.97,
+     "sign": "+",
+     "strength": 14.56
+    },
+    {
+     "at_m": 55.82,
+     "sign": "+",
+     "strength": 14.34
+    },
+    {
+     "at_m": 58.92,
+     "sign": "-",
+     "strength": 75.2
+    },
+    {
+     "at_m": 62.48,
+     "sign": "+",
+     "strength": 8.07
+    }
+   ],
+   "periodicity": {
+    "autocorr_peaks_m_r": [
+     [
+      21.75,
+      -0.029
+     ],
+     [
+      9.0,
+      -0.036
+     ]
+    ],
+    "fft_peaks": [
+     {
+      "period_m": 11.333,
+      "pm_m": 2.19,
+      "rel_power": 0.243
+     },
+     {
+      "period_m": 9.169,
+      "pm_m": 2.78,
+      "rel_power": 0.164
+     },
+     {
+      "period_m": 4.828,
+      "pm_m": 0.251,
+      "rel_power": 0.161
+     },
+     {
+      "period_m": 20.923,
+      "pm_m": 21.448,
+      "rel_power": 0.154
+     },
+     {
+      "period_m": 4.317,
+      "pm_m": 0.934,
+      "rel_power": 0.075
+     },
+     {
+      "period_m": 7.034,
+      "pm_m": 30.762,
+      "rel_power": 0.055
+     }
+    ],
+    "length_m": 102.0
+   }
+  },
+  "v-40:-8": {
+   "across_edges": [
+    {
+     "at_m": -60.68,
+     "sign": "+",
+     "strength": 18.73
+    },
+    {
+     "at_m": -50.37,
+     "sign": "+",
+     "strength": 23.9
+    },
+    {
+     "at_m": -44.01,
+     "sign": "+",
+     "strength": 20.34
+    },
+    {
+     "at_m": -24.45,
+     "sign": "+",
+     "strength": 21.81
+    },
+    {
+     "at_m": -17.69,
+     "sign": "-",
+     "strength": 17.89
+    },
+    {
+     "at_m": -8.95,
+     "sign": "-",
+     "strength": 33.09
+    },
+    {
+     "at_m": -7.4,
+     "sign": "+",
+     "strength": 18.73
+    },
+    {
+     "at_m": -4.47,
+     "sign": "-",
+     "strength": 14.33
+    },
+    {
+     "at_m": 2.28,
+     "sign": "-",
+     "strength": 15.79
+    },
+    {
+     "at_m": 13.06,
+     "sign": "+",
+     "strength": 18.66
+    },
+    {
+     "at_m": 14.91,
+     "sign": "-",
+     "strength": 29.96
+    },
+    {
+     "at_m": 16.36,
+     "sign": "+",
+     "strength": 43.66
+    },
+    {
+     "at_m": 20.25,
+     "sign": "-",
+     "strength": 37.45
+    },
+    {
+     "at_m": 23.52,
+     "sign": "+",
+     "strength": 14.6
+    },
+    {
+     "at_m": 46.03,
+     "sign": "-",
+     "strength": 53.56
+    },
+    {
+     "at_m": 61.36,
+     "sign": "+",
+     "strength": 20.37
+    }
+   ]
+  },
+  "v14:50": {
+   "across_edges": [
+    {
+     "at_m": -59.39,
+     "sign": "+",
+     "strength": 21.97
+    },
+    {
+     "at_m": -55.49,
+     "sign": "-",
+     "strength": 11.17
+    },
+    {
+     "at_m": -51.61,
+     "sign": "+",
+     "strength": 56.24
+    },
+    {
+     "at_m": -47.88,
+     "sign": "-",
+     "strength": 16.58
+    },
+    {
+     "at_m": -38.55,
+     "sign": "-",
+     "strength": 11.16
+    },
+    {
+     "at_m": -24.42,
+     "sign": "+",
+     "strength": 18.32
+    },
+    {
+     "at_m": -20.4,
+     "sign": "+",
+     "strength": 18.6
+    },
+    {
+     "at_m": -17.3,
+     "sign": "-",
+     "strength": 13.75
+    },
+    {
+     "at_m": -7.86,
+     "sign": "+",
+     "strength": 23.54
+    },
+    {
+     "at_m": 4.61,
+     "sign": "-",
+     "strength": 11.77
+    },
+    {
+     "at_m": 12.76,
+     "sign": "+",
+     "strength": 23.45
+    },
+    {
+     "at_m": 14.96,
+     "sign": "-",
+     "strength": 39.93
+    },
+    {
+     "at_m": 16.38,
+     "sign": "+",
+     "strength": 33.27
+    },
+    {
+     "at_m": 42.06,
+     "sign": "+",
+     "strength": 14.11
+    },
+    {
+     "at_m": 45.63,
+     "sign": "-",
+     "strength": 70.85
+    },
+    {
+     "at_m": 62.55,
+     "sign": "+",
+     "strength": 15.21
+    }
+   ]
+  }
+ }
+}

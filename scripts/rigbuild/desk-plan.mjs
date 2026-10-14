@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * desk-plan.mjs — put ONE chosen version of a show on its space's desk, as a NEW show file,
- * planned OFFLINE first. docs/architecture/RIG_BUILD.md §19.5 (the owed rule of §19.4: "only
+ * planned OFFLINE first. docs/architecture/RIG_BUILD.md §19.6 (the owed rule of §19.4: "only
  * the space's chosen version patches onto its desk"); audit docs/ai/audits/moxir-2026-10-05 B1, B2.
  *
  *   # 1. DRY RUN (the default): reads the live show and the project, writes nothing live

@@ -1,155 +1,43 @@
-import { KEYMAP } from '../input/keymap.js'
+import { KEYMAP, keyHint } from '../input/keymap.js'
 
 const MANUAL_PATH = 'docs/raw/USER_MANUAL.md'
 
-// The in-product help's DATA, rewritten 2026-08-20 for the product as it
-// stands: canvas + cards + wires, places you walk into, the scene as a
-// window. Words per docs/ai/vocabulary.md — the copy guard reads this file.
-//
-// The "For Visitors / For Creators" pair that lived here went 2026-09-23 with
-// the old Nodes project list it was written for: a person reads the help
-// inside a project they are already building, and the space's one list
-// (StudioHub) is where they arrive — neither needs a door choosing between
-// looking and building.
-export const GUIDE_SECTIONS = [
-    {
-        id: 'start',
-        label: 'Start',
-        icon: '◎',
-        title: 'Start small',
-        description: 'Double-click (or double-tap) the canvas and type what you want.',
-        callouts: [
-            { icon: '◎', title: 'Make', detail: 'Double-click, type a name' },
-            { icon: '→', title: 'Wire', detail: 'Drag port to port' },
-            { icon: '›', title: 'Enter', detail: 'Step inside a card' }
-        ],
-        controls: [
-            ['Add', 'Double-click or double-tap the canvas'],
-            ['Search', 'Cmd/Ctrl+K, or just type /'],
-            ['Delete', 'Select, then Delete or Backspace'],
-            ['Rename', 'Select, then N or F2 — or click its name in the panel'],
-            ['Duplicate', 'Cmd/Ctrl+D'],
-            ['Undo · Redo', 'Cmd/Ctrl+Z · Cmd/Ctrl+Y'],
-            ['Close', 'Esc closes help']
-        ],
-        steps: [
-            'The canvas starts empty.',
-            'Double-click it and type — Cube is a good first word.',
-            'Every card wears its family colour.',
-            'The palette lists only what really works.'
-        ],
-        tips: [
-            'Best starters: Cube, Geo, Text.',
-            'Lost the toolbar? The palette always offers it back.'
-        ]
-    },
-    {
-        id: 'wire',
-        label: 'Wires',
-        icon: '→',
-        title: 'Wire values into things',
-        description: 'Drag from an output port to an input port.',
-        callouts: [
-            { icon: '◌', title: 'Value', detail: 'Number, Colour, Time' },
-            { icon: '→', title: 'Wire', detail: 'Output to input' },
-            { icon: '◎', title: 'Watch', detail: 'The thing follows the value' }
-        ],
-        controls: [
-            ['Wire', 'Drag a port to a compatible port'],
-            ['Compatible', 'Ports that can take the wire light up'],
-            ['Unwire', 'Click the wire, then Delete'],
-            ['Inspect', 'Select a card — the inspector shows its values']
-        ],
-        steps: [
-            'Make a Colour and a Cube.',
-            'Drag the Colour port onto the Cube.',
-            'Change the colour; the cube follows.',
-            'Time → Sin → Position makes it move.'
-        ],
-        tips: [
-            'While you drag, everything that can take the wire lights up.',
-            'Maths cards (Add, Mix, Clamp) shape a value on its way.'
-        ]
-    },
-    {
-        id: 'places',
-        label: 'Places',
-        icon: '›',
-        title: 'A thing is a place',
-        description: 'Enter a card, build inside it, come back out.',
-        callouts: [
-            { icon: '›', title: 'Enter', detail: 'The › on a card' },
-            { icon: '‹', title: 'Leave', detail: 'Escape, or ‹ at the top' },
-            { icon: '◈', title: 'All the way out', detail: 'The ◈ in the trail' }
-        ],
-        controls: [
-            ['Enter', 'Press › on a card, or double-click it'],
-            ['Leave', 'Escape, the ‹ button, or hardware Back on a phone'],
-            ['Where am I', 'The trail at the top names every level'],
-            ['Doorways', 'An In or Out node inside makes a port on the wall']
-        ],
-        steps: [
-            'Make a Geo — the plain container.',
-            'Press › and build inside it: cubes, a Light, anything.',
-            'Leave — the Geo carries its contents as one thing.',
-            'A Geo inside a Geo works too.'
-        ],
-        tips: [
-            'A place shows only what stands in it.',
-            'The selection dies at the door — what you pick is what you see.'
-        ]
-    },
-    {
-        id: 'scene',
-        label: 'The scene',
-        icon: '◫',
-        title: 'The scene is a window',
-        description: 'The canvas stays flat; the 3D view is something you open.',
-        callouts: [
-            { icon: '◫', title: 'Window', detail: 'A Scene node, sized by its corner' },
-            { icon: '⛶', title: 'Full screen', detail: 'The whole display' },
-            { icon: '⇥', title: '/out', detail: 'A clean page for a projector' }
-        ],
-        controls: [
-            ['Open', "Type Full screen in the palette, or place a Scene node"],
-            ['Size', "Drag the Scene window's corner glyph"],
-            ['Look around', 'Drag orbits — until a Camera is marked ●'],
-            ['Output', 'Copy projector link in the ⋯ menu — a locked, clean view']
-        ],
-        steps: [
-            'Environment sets the wash and sun; Light is a lamp you place.',
-            'Mark a Camera ● and the scene is seen through it.',
-            'Open /out on the show machine and walk away.',
-            'One scene, one sky — the ● Scene window decides.'
-        ],
-        tips: [
-            'The audience cannot move an /out view. That is the point.',
-            'Escape closes the full screen scene when you are at the top.'
-        ]
-    },
-    // Every key and mouse action, written from the ONE table (input/keymap.js),
-    // so this list cannot drift from what the canvas does. `?` opens it.
-    {
-        id: 'keys',
-        label: 'Keys',
-        icon: '⌨',
-        title: 'Keys and mouse',
-        description: 'Letter keys work while the canvas has focus — click it first. Right-click anything for what you can do there.',
-        callouts: [
-            { icon: '⌨', title: 'Keys', detail: 'Click the canvas, then press' },
-            { icon: '☰', title: 'Right-click', detail: 'Or long-press on a phone' },
-            { icon: '?', title: 'This list', detail: 'Press ? any time' }
-        ],
-        controls: KEYMAP.map((row) => [
-            row.does,
-            [row.keys.map((combo) => combo.replace('Ctrl+', 'Cmd/Ctrl+')).join(' · '), row.mouse].filter(Boolean).join(' — ')
-        ]),
-        steps: [],
-        tips: ['Tab is left for moving between buttons, so the keyboard can always get out of the canvas.']
-    }
+// Help is ONE sheet (audit 2026-10-05 §3.9, row 8): no tabs, no steps, nothing
+// that is only true of an empty canvas. Its first line speaks about THIS
+// canvas, counted from the project that is open, so no sentence can contradict
+// what is on screen (it said "The canvas starts empty." over five cards).
+// Keys are read from the one table (input/keymap.js), never typed twice.
+// Words per docs/ai/vocabulary.md — the copy guard reads this file.
+
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`
+
+/** The sheet's first line: what is on THIS canvas, and only what is. */
+export const describeCanvas = ({ nodeCount = 0, wireCount = 0, thingCount = 0 } = {}) => {
+    if (nodeCount === 0 && thingCount === 0) return 'Empty canvas · double-click it and type'
+    const parts = []
+    if (nodeCount > 0) parts.push(plural(nodeCount, 'node', 'nodes'))
+    if (thingCount > 0) parts.push(plural(thingCount, 'object', 'objects'))
+    parts.push(wireCount > 0 ? plural(wireCount, 'wire', 'wires') : 'nothing wired yet')
+    return parts.join(' · ')
+}
+
+const keyName = (combo) => (combo === 'Escape' ? 'Esc' : combo.replace('Ctrl+', 'Ctrl/Cmd+'))
+
+/** The seven lines: Make, Wire, Open, Back, Move, Zoom, Delete. `key` is optional. */
+export const helpLines = () => [
+    { id: 'make', label: 'Make', text: 'Double-click the canvas and type what you want.', key: keyName(keyHint('add')) },
+    { id: 'wire', label: 'Wire', text: 'Drag from an output port to an input port.' },
+    { id: 'open', label: 'Open', text: 'Double-click a card, or select it and press Enter.', key: 'Enter' },
+    { id: 'back', label: 'Back', text: 'Leave one level.', key: keyName(keyHint('escape')) },
+    { id: 'move', label: 'Move', text: 'Drag a card by its title.' },
+    { id: 'zoom', label: 'Zoom', text: `Wheel or pinch. Fit everything, or back to 100%.`, key: `${keyHint('fitAll')} · ${keyHint('zoom100')}` },
+    { id: 'delete', label: 'Delete', text: 'Select a card or a wire, then press the key.', key: keyHint('delete') }
 ]
 
-export const getGuideSection = (sectionId = 'start') =>
-    GUIDE_SECTIONS.find((section) => section.id === sectionId) || GUIDE_SECTIONS[0]
+/** Every key and mouse row, written from the one table. */
+export const helpKeyRows = () => KEYMAP.map((row) => [
+    row.does,
+    [row.keys.map((combo) => combo.replace('Ctrl+', 'Cmd/Ctrl+')).join(' · '), row.mouse].filter(Boolean).join(' — ')
+])
 
 export const getGuideManualPath = () => MANUAL_PATH
