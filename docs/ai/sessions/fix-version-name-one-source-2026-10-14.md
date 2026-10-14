@@ -7,4 +7,4 @@ Branch `fix/version-name-one-source-2026-10-14`, from `fix/moxir-selection-box-a
 - `versionName(title, id, projectId)` in `src/rigbuild/rigVariant.js`: slug `vX-Y` (also `<prefix>-vX-Y`, e.g. `moxir-v2-9`) gives
   the number; words after it come from the stored title; a disagreeing stored number loses (console.warn names both); no
   pattern -> stored label. `versionLinks` adds `name` to every link; `RigVersionSwitch` shows it.
-- Tests: `src/rigbuild/versionName.test.js` (12). UNVERIFIED: the chip on the test copy.
+- Tests: `src/rigbuild/versionName.test.js` (10). UNVERIFIED: the chip on the test copy.
