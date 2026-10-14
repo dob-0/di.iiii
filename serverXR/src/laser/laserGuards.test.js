@@ -146,10 +146,10 @@ describe('the temperature limiter (Wicked ldLaserPowerLimiter)', () => {
 
 // The engine on a fake socket (as laser.test.js), with the guards.
 const ONE = { cubes: [{ id: 'cube-1', ip: '10.0.0.51' }] }
-const infoAnswer = ({ out = 0, temp = 31, minor = 7, flagsByte = null } = {}) => {
+const infoAnswer = ({ out = 0, temp = 31, minor = 7, flagsByte = null, dac = 30000, max = 35000, free = 5800, size = 6000 } = {}) => {
     const b = Buffer.alloc(64)
     b[0] = 0x77; b[3] = 1; b[4] = minor; b[5] = flagsByte ?? out
-    b.writeUInt32LE(30000, 10); b.writeUInt32LE(35000, 14); b.writeUInt16LE(5800, 19); b.writeUInt16LE(6000, 21)
+    b.writeUInt32LE(dac, 10); b.writeUInt32LE(max, 14); b.writeUInt16LE(free, 19); b.writeUInt16LE(size, 21)
     b.writeInt8(temp, 24); b[25] = 2; b[37] = 3; b.write('LaserCube', 38, 'latin1')
     return b
 }
@@ -163,8 +163,9 @@ const armed = (config, info = {}) => {
     const engine = createLaserEngine({ dataDir: dir, createSocket: () => socket, log: null, now: () => clock.t, setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 0 })
     for (const c of config.cubes) handlers.message(infoAnswer(info), { address: c.ip })
     expect(engine.arm({ armed: true, confirm: ARM_PHRASE }).ok).toBe(true)
+    for (const c of config.cubes) handlers.message(Buffer.from([0x8a, 0, 0x70, 0x17]), { address: c.ip }) // the clear is confirmed (R2-1)
     const tick = (ms) => { clock.t += ms; for (const c of config.cubes) handlers.message(Buffer.from([0x80]), { address: c.ip }); engine.alive('all'); engine.tick() }
-    return { engine, sent, tick, clock, data: () => sent.filter((s) => s.port === proto.PORT.DATA).map((s) => s.buf) }
+    return { engine, sent, tick, clock, handlers, data: () => sent.filter((s) => s.port === proto.PORT.DATA).map((s) => s.buf) }
 }
 const pointsOf = (bufs) => bufs.flatMap((b) => Array.from({ length: (b.length - 4) / 10 }, (_, i) => [0, 2, 4, 6, 8].map((k) => b.readUInt16LE(4 + i * 10 + k))))
 // The order on the wire: 'park' for a data message whose every point is blank and whose last is the
@@ -193,21 +194,21 @@ describe('every stop: buffer cleared, beam parked blank at the centre, THEN outp
         const rig = startedOn(circle)
         rig.clock.t += 201
         rig.engine.tick()
-        expect(wire(rig.sent)).toEqual(['141', '141', 'park', '128,0', '128,0'])
+        expect(wire(rig.sent)).toEqual(['141', '141', '138', 'park', '128,0', '128,0'])
         expect(parkSteps(rig)).toBeLessThanOrEqual(0.1 + 2 / 0xfff)
     })
     it('a still beam', () => {
         const rig = startedOn(Array.from({ length: 60 }, () => lit(0.2, 0.5)))
         for (let i = 0; i < 11; i += 1) rig.tick(20)
         const w = wire(rig.sent)
-        expect(w.slice(w.indexOf('park') - 2)).toEqual(['141', '141', 'park', '128,0', '128,0'])
+        expect(w.slice(w.indexOf('park') - 3)).toEqual(['141', '141', '138', 'park', '128,0', '128,0'])
     })
     it('the link lost', () => {
         const rig = startedOn(circle)
         rig.clock.t += 3100
         rig.engine.alive('all')
         rig.engine.tick()
-        expect(wire(rig.sent)).toEqual(['141', '141', 'park', '128,0', '128,0'])
+        expect(wire(rig.sent)).toEqual(['141', '141', '138', 'park', '128,0', '128,0'])
     })
     it('disarm', () => {
         const rig = startedOn(circle)
@@ -314,7 +315,7 @@ describe('config and state', () => {
         expect(cmdsOf(armed(ONE)).some((b) => b[0] === 0x82)).toBe(false)
         expect(cmdsOf(armed({ cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] })).some((b) => b[0] === 0x82)).toBe(false) // nothing asked
         const on = cmdsOf(armed({ dacRate: 30000, cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] }))
-        expect(on).toEqual([[0x78, 1], [0x82, 0x30, 0x75, 0, 0], [0x8d], [0x8d], [0x80, 1]])
+        expect(on).toEqual([[0x78, 1], [0x82, 0x30, 0x75, 0, 0], [0x8d], [0x8d], [0x8a], [0x80, 1]])
     })
 })
 
@@ -389,11 +390,19 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         rig.tick(20)
         expect(rig.engine.state().cubes[0]).toMatchObject({ rate: 30000, rateMismatch: true, path: { rate: 30000 } })
     })
-    it('§7 the cube\'s over-temperature flag stops it (arm again); its warning takes the power to the minimum', () => {
-        const hot = armed(ONE, { flagsByte: 0x08 })
-        hot.engine.setFrame('all', [lit(0, 0.5), lit(0.2, 0.5)])
-        hot.tick(20)
-        expect(hot.engine.state().cubes[0]).toMatchObject({ armed: false, stop: { reason: 'over-temperature' } })
+    it('R2-2 a cube whose over-temperature flag is set is refused at arm (nothing is sent to it); its warning takes the power to the minimum', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-guards-'))
+        fs.writeFileSync(path.join(dir, 'laser.json'), JSON.stringify(ONE))
+        const sent = []
+        const handlers = {}
+        const socket = { send: (buf, port, ip, done) => { sent.push({ buf: Buffer.from(buf), port, ip }); done?.() }, on: (ev, fn) => { handlers[ev] = fn }, bind: () => {}, close: () => {} }
+        const engine = createLaserEngine({ dataDir: dir, createSocket: () => socket, log: null, now: () => 1000000, setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 0 })
+        handlers.message(infoAnswer({ flagsByte: 0x08 }), { address: '10.0.0.51' })
+        sent.length = 0
+        const res = engine.arm({ armed: true, confirm: ARM_PHRASE })
+        expect(res.ok).toBe(false)
+        expect(sent.filter((x) => x.port === proto.PORT.CMD).map((x) => [...x.buf]).some((b) => b[0] === 0x80 && b[1] === 1)).toBe(false)
+        expect(engine.state().cubes[0]).toMatchObject({ armed: false, stop: { reason: 'over-temperature' } })
         const warm = armed(ONE, { flagsByte: 0x04 })
         warm.engine.setFrame('all', [lit(0, 0.5), lit(0.2, 0.5)])
         warm.tick(20)
@@ -408,4 +417,20 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         rig.engine.arm({ armed: true, confirm: ARM_PHRASE })
         expect(rig.engine.state().cubes[0].temperature.samples).toBe(0)
     })
+    it('real-cube fixture: LaserCube Ultra Mk2 fw 1.17 (dacRate 35000, max 35000, rxBufferSize 6000): budget 2333 points, no Laser shape refused', () => {
+        const info = { dac: 35000, max: 35000, free: 6000, size: 6000, minor: 17 }
+        const parsed = proto.parseFullInfo(infoAnswer(info))
+        expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
+        expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
+        expect(LASER_SHAPES.length).toBe(8)
+        for (const shape of LASER_SHAPES) {
+            const rig = armed(ONE, info)
+            rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
+            rig.tick(20)
+            const st = rig.engine.state().cubes[0]
+            expect(st.path?.overBudget, shape).toBeFalsy()
+            expect(st.stop, shape).toBe(null)
+        }
+    })
+
 })

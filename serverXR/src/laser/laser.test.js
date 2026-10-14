@@ -86,6 +86,7 @@ const armedWith = (config = CUBES) => {
     const rig = engineWith(config)
     for (const c of config.cubes) rig.answer(c.ip)
     expect(rig.engine.arm({ armed: true, confirm: ARM_PHRASE }).ok).toBe(true)
+    for (const c of config.cubes) rig.hear(c.ip, [0x8a, 0, 0x70, 0x17]) // the clear is confirmed: 6000 free
     return rig
 }
 
@@ -229,10 +230,11 @@ describe('the laser engine', () => {
         expect(none.engine.arm({ armed: true, confirm: ARM_PHRASE })).toMatchObject({ ok: false, armed: false })
         expect(cmds(none.socket)).not.toContainEqual([0x80, 1])
 
-        const { engine, socket, answer } = engineWith(CUBES)
+        const { engine, socket, answer, hear } = engineWith(CUBES)
         answer('10.0.0.51')
         socket.sent.length = 0
         expect(engine.arm({ armed: true, confirm: ARM_PHRASE })).toMatchObject({ ok: true, armed: true, refused: ['cube-2'] })
+        hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
         expect(socket.sent.filter((s) => s.ip === '10.0.0.52' && s.buf[0] === 0x80)).toEqual([])
         expect(engine.state().cubes[1]).toMatchObject({ armed: false, stop: { reason: 'no-info' } })
         engine.setFrame('all', circle)
@@ -242,6 +244,7 @@ describe('the laser engine', () => {
         // Its info arrives; arming again brings it in.
         answer('10.0.0.52', { ip: [10, 0, 0, 52] })
         engine.arm({ armed: true, confirm: ARM_PHRASE })
+        hear('10.0.0.52', [0x8a, 0, 0x70, 0x17])
         expect(engine.state().cubes[1]).toMatchObject({ armed: true, stop: null })
     })
     it('armed: switches the cubes on, then streams the frame in ≤140-point messages to the data port', () => {
@@ -262,6 +265,7 @@ describe('the laser engine', () => {
             const rig = engineWith(config)
             rig.answer('10.0.0.51', info)
             rig.engine.arm({ armed: true, confirm: ARM_PHRASE })
+            rig.hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
             rig.engine.setFrame('all', circle)
             rig.socket.sent.length = 0
             rig.engine.tick()
@@ -359,8 +363,8 @@ describe('the signal-loss stop', () => {
         const blank = dataTo(socket)
         expect(blank).toHaveLength(1)
         expect(litIn(blank)).toBe(0)
-        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x80, 0], [0x80, 0]])
-        expect(socket.sent.map((s) => s.port)).toEqual([proto.PORT.CMD, proto.PORT.CMD, proto.PORT.DATA, proto.PORT.CMD, proto.PORT.CMD]) // clear ×2, park, then off ×2
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 0], [0x80, 0]])
+        expect(socket.sent.map((s) => s.port)).toEqual([proto.PORT.CMD, proto.PORT.CMD, proto.PORT.CMD, proto.PORT.DATA, proto.PORT.CMD, proto.PORT.CMD]) // clear ×2, ask free, park, then off ×2
         expect(engine.state().cubes[0]).toMatchObject({ armed: true, stop: { reason: 'no-frame' } })
         expect(engine.frames().stopped).toEqual({ 'cube-1': 'no-frame' })
         socket.sent.length = 0
@@ -380,8 +384,16 @@ describe('the signal-loss stop', () => {
         at(10)
         engine.alive('all')
         engine.tick()
-        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x80, 1]])
+        // R2-1: the clear is sent, but NOTHING streams until the cube confirms it (0x8a)
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 1]])
+        expect(dataTo(socket)).toEqual([])
+        hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
+        engine.alive('all')
+        engine.tick()
         expect(litIn(dataTo(socket))).toBeGreaterThan(0)
+        // the first data after a clear starts blank at the park (the bridge from the park point)
+        const first = dataTo(socket)[0].buf
+        expect([first.readUInt16LE(4), first.readUInt16LE(6), first.readUInt16LE(8), first.readUInt16LE(10), first.readUInt16LE(12)]).toEqual([0x800, 0x800, 0, 0, 0])
         expect(engine.state().cubes[0].stop).toBe(null)
     })
     it('a blackout is not a signal loss: nothing lit, nothing to stop', () => {
@@ -436,7 +448,7 @@ describe('the still-beam guard', () => {
         rig.socket.sent.length = 0
         holdStill(rig, dot(), 20)
         expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
-        expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x80, 0], [0x80, 0]])
+        expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 0], [0x80, 0]])
         // The same still frame kept alive: stays off.
         rig.socket.sent.length = 0
         holdStill(rig, dot(), 100)
@@ -444,7 +456,8 @@ describe('the still-beam guard', () => {
         // A circle: back on.
         holdStill(rig, circle, 20)
         expect(rig.engine.state().cubes[0].stop).toBe(null)
-        expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x80, 1]])
+        expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 1]])
+        expect(dataTo(rig.socket)).toEqual([])
     })
     it('a moving figure is never stopped, however long it is held', () => {
         const rig = armedWith(ONE)

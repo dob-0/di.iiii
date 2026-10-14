@@ -58,8 +58,9 @@
 //     "guards": { "litStep": 0.025, … } }   (and per cube "guards": {…}; keys: laserGuards.js)
 //   stillBeams  the still beams the officer approved for this cube, in the cube's field (x, y -1…1),
 //               each allowed to wander `within` (field units, default 0.01) of its point
-//   dacRate     optional cap on the points per second; without it the cube's own current DAC rate
-//               (from its info) is used, never more than its maximum
+//   dacRate     optional REQUEST for the cube's points per second, sent as SET_RATE only with
+//               guards.sendSetRate; di always plans and paces at the rate the cube's own info says it
+//               plays (never above its maximum), and shows rateMismatch when the two differ
 // No file: six cubes cube-1…cube-6 without addresses (the rig's six), sim.
 'use strict'
 
@@ -289,7 +290,7 @@ const createLaserEngine = ({
         bufferFree: null, bufferAt: null, sentSince: 0,
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
-        prep: null, playingPrep: null, guardsKey: JSON.stringify(c.guards),
+        prep: null, playingPrep: null, guardsKey: JSON.stringify(c.guards), clearAt: null, clearConfirmed: false,
         temp: guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs }),
         stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0, [STOP.FRAME_TOO_LONG]: 0, [STOP.OVER_TEMPERATURE]: 0 }
     }]))
@@ -313,6 +314,7 @@ const createLaserEngine = ({
             c.heardAt = t
             if (info) { c.info = info; c.infoAt = t }
             if (free !== null) { c.bufferFree = free; c.bufferAt = t; c.sentSince = 0 }
+            if (free !== null && msg[0] === proto.CMD.GET_BUFFER_FREE && c.clearAt !== null && t >= c.clearAt) c.clearConfirmed = true
         }
     }
     const askInfo = () => { for (const c of live.values()) send(c, proto.getFullInfo(), proto.PORT.CMD) }
@@ -381,11 +383,25 @@ const createLaserEngine = ({
 
     // The ring buffer cleared (CLEAR_RINGBUFFER 0x8d, twice): what was queued before a stop must not
     // play when the output comes back. The free count is full again.
+    // Round 3 (re-review R2-1): the clear goes to the command port and the stream to the data port,
+    // and UDP keeps no order between the two — a data message the cube takes BEFORE the clear would
+    // lose its blank bridge to the clear, and the next one would jump lit from the park. So after a
+    // clear nothing streams until the cube has answered a buffer-free question asked after it (0x8a,
+    // on the same command port, so behind the clear) or, failing an answer, a whole tick later; and
+    // the first data after a clear always starts a fresh pass with the blank bridge from where the
+    // beam was parked.
     const clearBuffer = (c, t) => {
         send(c, proto.clearRingBuffer(), proto.PORT.CMD)
         send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        send(c, proto.getBufferFree(), proto.PORT.CMD)
         if (c.info?.rxBufferSize) { c.bufferFree = c.info.rxBufferSize; c.bufferAt = t; c.sentSince = 0 }
+        c.clearAt = t
+        c.clearConfirmed = false
+        c.playing = null
+        c.index = 0
+        c.playingPrep = null
     }
+    const holdingForClear = (c, t) => c.clearAt !== null && !c.clearConfirmed && t - c.clearAt < TICK_MS
     // The stop's points (laserGuards.parkPath): blank where the beam is, a blank walk to the centre,
     // parked there — as ≤140-point messages. Data only; the caller sends output-off after.
     const parkMessages = (c) => {
@@ -436,6 +452,7 @@ const createLaserEngine = ({
         if (!c.ip) return
         const rate = rateOf(c)
         if (!rate) return
+        if (holdingForClear(c, t)) return
         const prep = prepare(c, frame)
         if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) { c.playing = null; c.index = 0 }
         const perTick = Math.ceil((rate * TICK_MS) / 1000)
@@ -655,6 +672,8 @@ const createLaserEngine = ({
     const armCube = (c, t) => {
         if (c.armed) return
         if (c.ip && !infoUsable(c.info)) { c.stop = { reason: STOP.NO_INFO, at: t, detail: null }; return }
+        // Round 3 (re-review R2-2): a cube that says it is over temperature is not armed at all.
+        if (c.ip && c.info?.overTemperature) { c.stop = { reason: STOP.OVER_TEMPERATURE, at: t, detail: `${c.info.temperature} °C` }; return }
         c.armed = true
         c.stop = null
         c.stillSince = null
@@ -687,7 +706,8 @@ const createLaserEngine = ({
         const refused = [...live.values()].filter((c) => !c.armed).map((c) => c.id)
         if (!sim() && !ready.some((c) => c.ip)) {
             for (const c of ready) c.armed = false
-            return { ok: false, armed, error: `no cube has answered its info question yet (${refused.join(', ')}): nothing armed. Check the cubes are on and on this network, then arm again.`, cubes: state().cubes }
+            const why = [...live.values()].filter((c) => !c.armed && c.ip).map((c) => `${c.id}: ${c.stop?.reason === STOP.OVER_TEMPERATURE ? 'over temperature' : 'no info'}`)
+            return { ok: false, armed, error: `no cube could be armed (${why.join(', ')}): nothing armed. A cube needs to have answered its info question and not be over temperature. Check the cubes are on, cool and on this network, then arm again.`, cubes: state().cubes }
         }
         armed = true
         if (!timer) { timer = every(tick, TICK_MS); timer?.unref?.() }
