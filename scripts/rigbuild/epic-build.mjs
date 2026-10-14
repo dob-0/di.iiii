@@ -371,7 +371,8 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         }
         // A MOVING look keeps its `motion` (MOXIR v2.9 scenes, 2026-10-13): the room plays it (src/rigbuild/lookMotion.js), the
         // schema bounds it (normalizeLookMotion). Before this, only scripts/rigbuild/motion-looks.mjs re-attached it, for v1.1.
-        return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), aims, colours, levels, ...(lk.motion ? { motion: lk.motion } : {}) }
+        // A look with `heads` (moving-head patterns, feat/looks-heads-motion 2026-10-15) keeps it the same way; the schema bounds it (normalizeLookHeads).
+        return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), aims, colours, levels, ...(lk.motion ? { motion: lk.motion } : {}), ...(lk.heads ? { heads: lk.heads } : {}) }
     }
     const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
     return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
