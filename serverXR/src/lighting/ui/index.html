@@ -44,7 +44,7 @@
          and the mappings live with the show over api/midi, so the laptop and the phone
          share one controller layout. Web MIDI itself is still only granted on localhost
          or https - the page says so rather than showing an empty device list. -->
-    <button class="page-tab" data-page="midi" title="MIDI control surface - map a hardware controller to the desk">MIDI</button>
+    <button class="page-tab" data-page="midi" data-cap="midi" title="MIDI control surface - map a hardware controller to the desk">MIDI</button>
   </nav>
   <div class="title"><b>Art-Net Desk</b> <span id="showName" class="muted">— untitled</span></div>
   <!-- The pills and the panic button live outside .title because .title is hidden on a
@@ -82,6 +82,7 @@
 </header>
 
 <div id="statusStrip" class="statusstrip" hidden></div>
+<div id="renderNote" class="statusstrip bad" hidden></div>
 
 <!-- ===================== SETUP ===================== -->
 <main class="page is-active" data-page="setup">
@@ -393,8 +394,8 @@
 
       <!-- Audio: the mic runs in THIS browser and streams levels to the desk.
            The meters are painted from the analyser, not from state polls. -->
-      <div class="pane-head"><h2>Audio</h2><span class="muted" id="audioState">off</span></div>
-      <div class="audiobox">
+      <div class="pane-head" data-cap="audio"><h2>Audio</h2><span class="muted" id="audioState">off</span></div>
+      <div class="audiobox" data-cap="audio">
         <div class="inline pad">
           <button class="sq" id="micBtn">Enable mic</button>
           <span class="beatdot" id="beatDot" title="blinks on the beat"></span>
@@ -620,7 +621,7 @@
     <div class="livestrip" id="liveStrip">
       <div class="ls-tabs">
         <button class="ls-tab is-active" data-ls="fx">FX</button>
-        <button class="ls-tab" data-ls="audio">Audio</button>
+        <button class="ls-tab" data-ls="audio" data-cap="audio">Audio</button>
         <button class="ls-tab" data-ls="set">Set</button>
         <button class="ls-tab" data-ls="layers">Layers</button>
         <button class="ls-tab" data-ls="master">Master</button>
@@ -638,7 +639,7 @@
           </div>
         </div>
         <!-- Audio: the mic runs in this browser, same engine config as the Control rail -->
-        <div class="ls-panel" data-ls="audio">
+        <div class="ls-panel" data-ls="audio" data-cap="audio">
           <div class="ls-row wrap">
             <button class="ls-big" id="tMicBtn">Mic</button>
             <button class="ls-big" id="tAudReact">React</button>
@@ -730,7 +731,7 @@
      reads "safe"), soft takeover (a fader is ignored until it crosses the value the
      desk already holds, so arming never jumps the room), and a coalescing queue that
      merges by route and lets one request be in flight at a time. -->
-<main class="page" data-page="midi">
+<main class="page" data-page="midi" data-cap="midi">
   <div class="midiwrap">
 
     <!-- the gate, and the four things you need to see while mapping -->
@@ -906,8 +907,8 @@
   <div class="popmenu" id="popMenu">
     <button class="popitem" id="miBind">Bind key…</button>
     <button class="popitem" id="bindRemove" hidden>Remove key</button>
-    <button class="popitem" id="miMidi">Bind MIDI pad…</button>
-    <button class="popitem" id="miMidiRemove" hidden>Remove MIDI pad</button>
+    <button class="popitem" id="miMidi" data-cap="midi">Bind MIDI pad…</button>
+    <button class="popitem" id="miMidiRemove" data-cap="midi" hidden>Remove MIDI pad</button>
     <button class="popitem" id="miRename">Rename…</button>
     <button class="popitem" id="miFade">Fade…</button>
     <button class="popitem" id="miRestage">Overwrite with current look</button>
@@ -924,6 +925,7 @@
 <script src="qr.js"></script>
 <script src="from.js"></script>
 <script src="show.js"></script>
+<script src="caps.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
