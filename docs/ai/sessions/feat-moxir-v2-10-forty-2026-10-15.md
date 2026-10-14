@@ -1,0 +1,5 @@
+## 2026-10-15 — MOXIR v2.10: forty washes, the floor washes as six wild DMX lines
+
+- Owner 2026-10-15: Poligraf has 40 UP-PL5403, not 50. `scripts/place/moxir_v2_10_forty.py` turns the v2.9 rig's 14 back-row and 14 red-tent washes into 18 floor washes in 6 lines of 3 (A B C D behind the DJ in the fenced zone, L and R across the floor), each straight up, each line one universe-2 chain (8ch, 24 channels in a row). 10 units removed; cut, key and outside washes unchanged. Output `scripts/place/rigs/moxir-v2-10-2026-10-15.json`; line positions `moxir-v2-10-lines-2026-10-15.json` (D and A last points moved inside the fence).
+- `scripts/place/copy_project.mjs` copies a whole project into a new one on a scratch stack; v2-10 was loaded as a copy of v2-9 + one ops batch + `epic-build.mjs --looks-only`, then `physics_check.py --fix` (6 stale beam lengths) = 0 leaks.
+- Owed: cable runs of the moved units, Art-Net node per chain, desk patch, a look from outside and from the floor, known-full's ordered count (versions file line 1548 is the rental house's package, not edited).
