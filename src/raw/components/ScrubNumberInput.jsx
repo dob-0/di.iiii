@@ -53,6 +53,15 @@ export function roundTo(value, decimals) {
     return Math.round(value * factor) / factor
 }
 
+// What a resting field shows: at most 4 decimals, so a stored -2.0999999999999
+// (float noise from a drag) reads -2.1. The stored value is never touched, and
+// focusing the field shows it exact (handleFocus).
+export function formatDisplayNumber(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return String(value)
+    return String(roundTo(n, 4))
+}
+
 export function clampValue(value, min, max) {
     let next = value
     if (Number.isFinite(min)) next = Math.max(min, next)
@@ -260,7 +269,7 @@ export default function ScrubNumberInput({ value, fallback = 0, min, max, step, 
         commit(next)
     }, [disabled, draft, canonical, step, min, max, commit])
 
-    const displayValue = draft !== null ? draft : String(canonical)
+    const displayValue = draft !== null ? draft : formatDisplayNumber(canonical)
     const hasRange = Number.isFinite(min) && Number.isFinite(max) && max > min
     const fraction = hasRange ? clampValue((canonical - min) / (max - min), 0, 1) : null
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import RigVersionSwitch from './RigVersionSwitch.jsx'
 import { entryOps, productionOps } from '../shared/productionVersions.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
@@ -52,5 +52,28 @@ describe('RigVersionSwitch reads the production\'s version list', () => {
         render(<RigVersionSwitch spaceId="moxir" projectId="moxir-hall-minimal" entities={minimal} />)
         await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(4))
         expect(screen.queryByText('· for the show')).toBe(null)
+    })
+
+    it('concepts fold behind ONE button "Concepts (n)", beside the kept-copies fold, off the main row; a concept you stand in stays shown', async () => {
+        const doc = (() => {
+            let d = normalizeProjectDocument({ entities: [] })
+            d = applyProjectOps(d, productionOps(d, { id: SET, title: 'MOXIR 17.10', space: 'moxir' }))
+            for (const [id, status, title] of [['minimal', 'candidate', 'Minimal — simple'], ['minimal-ground', 'for-the-show', 'Minimal · movers on the ground'], ['full-ground', 'concept', 'Full · movers on the ground'], ['middle', 'concept', 'Middle — the line']]) {
+                d = applyProjectOps(d, entryOps(d, { id, projectId: `moxir-hall-${id}`, title, status }).ops)
+            }
+            return d
+        })()
+        listSpaceContents.mockResolvedValue(rows)
+        getProjectDocument.mockResolvedValue({ document: doc, version: 8 })
+        render(<RigVersionSwitch spaceId="moxir" projectId="moxir-hall-minimal" entities={minimal} />)
+        const fold = await screen.findByRole('button', { name: 'Concepts (2)' })
+        expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Minimal · movers on the ground· for the show', 'Minimal'])
+        expect(screen.getAllByRole('button')).toHaveLength(1)
+        expect(fold.style.minHeight).toBe('44px')
+        expect(fold.style.borderRadius).toBe('2px')
+        fireEvent.click(fold)
+        expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Minimal · movers on the ground· for the show', 'Minimal', 'Full · movers on the ground', 'Middle'])
+        fireEvent.click(fold)
+        expect(screen.getAllByRole('link')).toHaveLength(2)
     })
 })

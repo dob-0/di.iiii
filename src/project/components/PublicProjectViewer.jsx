@@ -33,6 +33,8 @@ import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRout
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
+import SceneBar, { EditInStudio, barButtonStyle } from '../../rigbuild/SceneBar.jsx'
+import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, layersParam, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -52,6 +54,8 @@ const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSc
 const RoomRigSteps = lazyWithReload(() => import('../../rigbuild/RoomRigSteps.jsx'), 'room-rig-steps')
 // The room posed by the desk's live look (src/rigbuild/RoomLookFollower.jsx), same rule.
 const RoomLookFollower = lazyWithReload(() => import('../../rigbuild/RoomLookFollower.jsx'), 'room-look-follower')
+// How the view moves (speed, turning): the small Move control in the corner. Lazy because its speed reading comes with three.
+const MoveControl = lazyWithReload(() => import('./MoveControl.jsx'), 'move-control')
 
 // di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
@@ -87,6 +91,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const [lockPaused, setLockPaused] = useState(false)
     const onBuilding = useCallback((on) => setHasBuilding(Boolean(on)), [])
     const onLockPaused = useCallback((on) => setLockPaused(Boolean(on)), [])
+    // The layers (SceneBar: Roof · Walls · Machines · Outside, owner 2026-10-12 "we need all 3"): all shown unless the
+    // link says otherwise (?layers=walls,machines — the layers shown), and every toggle writes the link back.
+    const [layers, setLayers] = useState(() => parseLayersParam(typeof window !== 'undefined' ? window.location.search : ''))
+    const toggleLayer = useCallback((id) => {
+        setLayers((prev) => {
+            const next = { ...prev, [id]: prev[id] === false }
+            try {
+                const url = new URL(window.location.href)
+                const value = layersParam(next)
+                if (value === null) url.searchParams.delete('layers')
+                else url.searchParams.set('layers', value)
+                window.history.replaceState(window.history.state, '', url)
+            } catch { /* no history (tests) */ }
+            return next
+        })
+    }, [])
     const toggleLockInside = useCallback(() => {
         setLockInside((on) => {
             try { window.localStorage.setItem('di.view.lockInside', on ? '0' : '1') } catch { /* private window */ }
@@ -284,7 +304,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const { rowTop: rigRowTop, chipTop: rigChipTop } = rigChromeTops(topClear, {
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
-        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview)
+        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
+        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, then Move, each one 56 px line, all top-right
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (hasBuilding ? 4 : 3) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
@@ -299,6 +321,14 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         walk: navMode === 'orbit' && walkGateOpen,
         sound: state.status === 'ready' && hasSound && !soundLocked && !isPreview
     })
+    // ONE bar at the top of a rig scene in orbit (rigbuild/SceneBar.jsx): versions, Edit in Studio, the SHOW chip on the
+    // left, the room's own controls (Sound, Walk / Fly, Free, Lite / Full) and the dev-copy chip on the right.
+    const sceneBar = state.status === 'ready' && !isPreview && !isEmbed && roomHasRig
+    const [showSlot, setShowSlot] = useState(null)
+    // The bar's measured height: in walk mode the room's own header (exit, title) sits under it, never behind it.
+    const [barH, setBarH] = useState(0)
+    const btnBase = sceneBar ? barButtonStyle : overlayButtonStyle
+    const abs = (o) => (sceneBar ? {} : { position: 'absolute', zIndex: 20, ...o })
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -478,6 +508,117 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 : `${spaceLabel || resolvedRouteSpaceId} — di.iiii`)
     )
 
+    const barControls = (
+        <>
+            {/* Walk mode enters LiveProjectScene, which renders `entities` and
+                not `nodes`. Offering it on a room built out of nodes ALONE
+                would walk the visitor into a version of it with the work
+                missing — worse than not offering it, because they would read
+                the emptiness as the room rather than as the mode.
+                A graph on its own is no longer the test, because one document
+                carries both lanes: wires, scene and light live in the node
+                editor, and anything that must survive for a visitor is made as
+                an entity. Such a room has a real entity body to walk into, and
+                refusing it there also refused headset entry — Enter VR / Enter
+                AR live inside LiveProjectScene, reachable only through walk.
+                So: hidden only when the graph is all there is.
+                It was also refused to every 'fixed-camera' room, which made an
+                author choose between a composed opening shot and a room anyone
+                could walk — two unrelated things. An authored camera is how the
+                visit STARTS, not a promise they may never move. */}
+            {/* Only where there is something to hear. A sound switch on a
+                silent room promises a sound that is not there — and every room
+                would have carried one. Sits above Walk / Fly rather than beside
+                it so the pair reads as one column of room controls at any
+                width, including a phone. */}
+            {state.status === 'ready' && hasSound && !soundLocked && !isPreview ? (
+                <button
+                    type="button"
+                    aria-pressed={soundOn}
+                    style={{
+                        ...btnBase,
+                        ...abs({ top: topClear, right: navMode === 'orbit' && walkGateOpen ? '9.5rem' : '1rem' }),
+                        color: soundOn ? 'var(--di-cyan)' : undefined,
+                        borderColor: soundOn ? 'var(--di-cyan)' : undefined,
+                    }}
+                    onClick={toggleSound}
+                >
+                    Sound
+                </button>
+            ) : null}
+
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+                <button
+                    type="button"
+                    style={{
+                        ...btnBase,
+                        ...abs({ top: topClear, right: '1rem' }),
+                    }}
+                    onClick={() => setNavMode('walk')}
+                >
+                    Walk / Fly
+                </button>
+            ) : null}
+
+            {/* Directly under Walk / Fly, same size and style: keep the camera inside the building. Orbit mode
+                only (walk is already confined), and only where the room has a building. Paused (shown as
+                Free) while a view whose camera stands outside the building, such as Top or Side, is on. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen && hasBuilding ? (
+                <button
+                    type="button"
+                    aria-pressed={lockInside && !lockPaused}
+                    title={lockPaused ? 'This view stands outside the building, so the camera is free here' : 'Keep the camera inside the building'}
+                    style={{
+                        ...btnBase,
+                        ...abs({ top: `calc(${topClear} + 3.4rem)`, right: '1rem', minWidth: 104 }),
+                        minHeight: 44,
+                        background: lockInside && !lockPaused ? 'rgba(77, 249, 255, 0.22)' : overlayButtonStyle.background,
+                        border: `1px solid ${lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : 'rgba(255,255,255,0.14)'}`,
+                        color: lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : overlayButtonStyle.color
+                    }}
+                    onClick={toggleLockInside}
+                >
+                    {lockInside && !lockPaused ? 'Inside' : 'Free'}
+                </button>
+            ) : null}
+
+            {/* Under them, same size: the room's quality. Lite is the output (viewport/outputMode.js),
+                Full the work renderer; the choice is remembered per browser. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+                <button
+                    type="button"
+                    aria-pressed={!outputMode}
+                    title={outputMode
+                        ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
+                        : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
+                    style={{
+                        ...btnBase,
+                        ...abs({ top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`, right: '1rem', minWidth: 104 }),
+                        minHeight: 44
+                    }}
+                    onClick={() => setOutputMode(!outputMode)}
+                >
+                    {outputMode ? 'Lite' : 'Full'}
+                </button>
+            ) : null}
+
+            {/* Under Lite / Full, same size: how the view moves (speed, turning). One small button that opens a card; the
+                visitor's own setting on this device, the same one the Studio's Scene window sets. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+                <Suspense fallback={null}>
+                    <MoveControl
+                        buttonStyle={btnBase}
+                        // In the scene bar the card opens under the whole bar (the bar is its anchor, so a wrapped second line, such
+                        // as the dev-copy chip on a phone, never sits under it); in the corner column, under the button.
+                        wrapStyle={sceneBar
+                            ? { display: 'flex', flex: '0 0 auto' }
+                            : abs({ top: `calc(${topClear} + ${hasBuilding ? '10.2rem' : '6.8rem'})`, right: '1rem' })}
+                    />
+                </Suspense>
+            ) : null}
+        </>
+    )
+
     return (
         <main
             style={{
@@ -545,13 +686,14 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         entryView={entryView}
                         navMode={navMode}
                         onNavModeChange={setNavMode}
-                        topClear={chromeClear}
+                        topClear={sceneBar && navMode === 'walk' && barH ? `calc(${topClear} + ${barH + 6}px - 1rem)` : chromeClear}
                         isPreview={isPreview}
                         initialCameraView={initialCameraView}
                         xrDefaultMode={xrDefaultMode}
                         lockInside={lockInside}
                         onBuilding={onBuilding}
                         onLockPaused={onLockPaused}
+                        layers={layers}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'
@@ -563,114 +705,50 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </Suspense>
             ) : null}
 
-            {/* Walk mode enters LiveProjectScene, which renders `entities` and
-                not `nodes`. Offering it on a room built out of nodes ALONE
-                would walk the visitor into a version of it with the work
-                missing — worse than not offering it, because they would read
-                the emptiness as the room rather than as the mode.
-                A graph on its own is no longer the test, because one document
-                carries both lanes: wires, scene and light live in the node
-                editor, and anything that must survive for a visitor is made as
-                an entity. Such a room has a real entity body to walk into, and
-                refusing it there also refused headset entry — Enter VR / Enter
-                AR live inside LiveProjectScene, reachable only through walk.
-                So: hidden only when the graph is all there is.
-                It was also refused to every 'fixed-camera' room, which made an
-                author choose between a composed opening shot and a room anyone
-                could walk — two unrelated things. An authored camera is how the
-                visit STARTS, not a promise they may never move. */}
-            {/* Only where there is something to hear. A sound switch on a
-                silent room promises a sound that is not there — and every room
-                would have carried one. Sits above Walk / Fly rather than beside
-                it so the pair reads as one column of room controls at any
-                width, including a phone. */}
-            {state.status === 'ready' && hasSound && !soundLocked && !isPreview ? (
-                <button
-                    type="button"
-                    aria-pressed={soundOn}
-                    style={{
-                        ...overlayButtonStyle,
-                        position: 'absolute',
-                        top: topClear,
-                        right: navMode === 'orbit' && walkGateOpen ? '9.5rem' : '1rem',
-                        zIndex: 20,
-                        color: soundOn ? 'var(--di-cyan)' : undefined,
-                        borderColor: soundOn ? 'var(--di-cyan)' : undefined,
-                    }}
-                    onClick={toggleSound}
-                >
-                    Sound
-                </button>
-            ) : null}
-
-            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
-                <button
-                    type="button"
-                    style={{
-                        ...overlayButtonStyle,
-                        position: 'absolute',
-                        // Clears the surface bar when one is present — a control
-                        // half under the platform's own chrome is worse than no
-                        // chrome at all. The rig's steps row, when there is one, too.
-                        top: topClear,
-                        right: '1rem',
-                        zIndex: 20,
-                    }}
-                    onClick={() => setNavMode('walk')}
-                >
-                    Walk / Fly
-                </button>
-            ) : null}
-
-            {/* Directly under Walk / Fly, same size and style: keep the camera inside the building. Orbit mode
-                only (walk is already confined), and only where the room has a building. Paused (shown as
-                Free) while a view whose camera stands outside the building, such as Top or Side, is on. */}
-            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen && hasBuilding ? (
-                <button
-                    type="button"
-                    aria-pressed={lockInside && !lockPaused}
-                    title={lockPaused ? 'This view stands outside the building, so the camera is free here' : 'Keep the camera inside the building'}
-                    style={{
-                        ...overlayButtonStyle,
-                        position: 'absolute',
-                        top: `calc(${topClear} + 3.4rem)`,
-                        right: '1rem',
-                        zIndex: 20,
-                        minHeight: 44,
-                        minWidth: 104,
-                        background: lockInside && !lockPaused ? 'rgba(77, 249, 255, 0.22)' : overlayButtonStyle.background,
-                        border: `1px solid ${lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : 'rgba(255,255,255,0.14)'}`,
-                        color: lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : overlayButtonStyle.color
-                    }}
-                    onClick={toggleLockInside}
-                >
-                    {lockInside && !lockPaused ? 'Inside' : 'Free'}
-                </button>
-            ) : null}
-
-            {/* Under them, same size: the room's quality. Lite is the output (viewport/outputMode.js),
-                Full the work renderer; the choice is remembered per browser. */}
-            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
-                <button
-                    type="button"
-                    aria-pressed={!outputMode}
-                    title={outputMode
-                        ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
-                        : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
-                    style={{
-                        ...overlayButtonStyle,
-                        position: 'absolute',
-                        top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`,
-                        right: '1rem',
-                        zIndex: 20,
-                        minHeight: 44,
-                        minWidth: 104
-                    }}
-                    onClick={() => setOutputMode(!outputMode)}
-                >
-                    {outputMode ? 'Lite' : 'Full'}
-                </button>
-            ) : null}
+            {sceneBar ? (
+                <SceneBar
+                    top={topClear}
+                    onHeight={setBarH}
+                    slotRef={setShowSlot}
+                    left={<>
+                        {rigVariantOf(document?.entities || []) ? (
+                            <RigVersionSwitch
+                                spaceId={resolvedRouteSpaceId}
+                                projectId={projectId}
+                                entities={document?.entities || []}
+                                mode="row"
+                                bare
+                            />
+                        ) : null}
+                        <EditInStudio spaceId={resolvedRouteSpaceId} projectId={projectId} />
+                    </>}
+                    right={<>
+                        {navMode === 'orbit' && hasBuilding ? (
+                            <div role="group" aria-label="layers" data-testid="scene-layers" style={{ display: 'flex', alignItems: 'stretch', gap: '2px', flexWrap: 'wrap' }}>
+                                {VIEW_LAYER_IDS.map((id) => (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        data-testid={`layer-${id}`}
+                                        aria-pressed={layers[id] !== false}
+                                        title={`${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                                        onClick={() => toggleLayer(id)}
+                                        style={{
+                                            ...barButtonStyle,
+                                            padding: '0 0.7rem',
+                                            color: layers[id] !== false ? '#f5f7fa' : 'rgba(245,247,250,0.45)',
+                                            textDecoration: layers[id] !== false ? 'none' : 'line-through'
+                                        }}
+                                    >
+                                        {VIEW_LAYER_LABELS[id]}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                        {barControls}
+                    </>}
+                />
+            ) : barControls}
 
             {roomHasRig && document && !showCodeView ? (
                 <Suspense fallback={null}>
@@ -679,13 +757,18 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         onEntities={setLookEntities}
                         showChip={!isPreview && !isEmbed}
                         top={rigChipTop}
+                        bare={sceneBar}
+                        slot={showSlot}
+                        spaceId={resolvedRouteSpaceId}
+                        projectId={projectId}
                     />
                 </Suspense>
             ) : null}
 
+
             {/* A rig with versions (RIG_BUILD.md §15): a row of links to its siblings. Shown
                 only on a project that says it is one of a set — every other room is untouched. */}
-            {rigPlacement.mode ? (
+            {rigPlacement.mode && !sceneBar ? (
                 <RigVersionSwitch
                     spaceId={resolvedRouteSpaceId}
                     projectId={projectId}
@@ -693,6 +776,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     top={rigPlacement.top}
                     mode={rigPlacement.mode}
                     maxWidth={rigRowMaxW}
+                    bare={sceneBar}
                 />
             ) : null}
 
@@ -784,6 +868,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 // where, and the way back: the space as it opens (its published project) and everything in it.
 export function MissingProjectCard({ spaceId, projectId }) {
     const linkStyle = { color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', display: 'inline-flex', alignItems: 'center', minHeight: '44px', marginRight: '1.25rem' }
+
     return (
         <div role="alert">
             <strong>There is no project “{projectId}” in {spaceId}.</strong>

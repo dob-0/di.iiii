@@ -6,6 +6,8 @@ import { currentAuthor } from '../../project/authorship.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
+import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
@@ -17,7 +19,7 @@ import { defaultWorldState, normalizeProjectDocument } from '../../shared/projec
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
@@ -337,13 +339,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         // whole-document replace would revert their concurrent edits too
         // (see docs/ai/known-fixes.md).
         const handler = (event) => {
-            const tag = event.target?.tagName?.toLowerCase?.()
-            if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
-            const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
-            const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
-            if (!isUndo && !isRedo) return
+            if (isTypingTarget(event.target)) return
+            // By the key's place as well as its letter: Shift makes it 'Z', and the
+            // Armenian layout makes it '\u0566' — both used to fall through (utils/editKeys.js).
+            const command = undoRedoFromKey(event)
+            if (!command) return
             event.preventDefault()
-            if (isUndo) undo()
+            if (command === 'undo') undo()
             else redo()
         }
         window.addEventListener('keydown', handler)
@@ -708,6 +710,21 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }, { activityMessage: `${nextLocked ? 'Locked' : 'Unlocked'} ${entity.name}.` })
     }
 
+    // Lock / unlock several at once (the Inspector's toggle, "Lock the hall", "Unlock all"):
+    // one batch, so one Ctrl+Z puts it back.
+    const handleSetEntitiesLocked = (ids, locked) => {
+        const ops = lockOps(entities, ids, locked)
+        if (!ops.length) return
+        applyLocalOps(ops, { activityMessage: `${locked ? 'Locked' : 'Unlocked'} ${ops.length} object${ops.length === 1 ? '' : 's'}.` })
+        // A locked object leaves the selection: it can no longer be picked or moved.
+        if (locked) {
+            const out = new Set(ids)
+            dispatch({ type: 'select-entities', entityIds: selectedEntityIds.filter((id) => !out.has(id)) })
+        }
+    }
+    const handleLockHall = () => handleSetEntitiesLocked(hallEntityIds(entities), true)
+    const handleUnlockAll = () => handleSetEntitiesLocked(entities.map((entity) => entity.id), false)
+
     const handleGroupSelected = () => {
         const targets = selectedEntities.length > 1
             ? selectedEntities
@@ -835,6 +852,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                             .map((entity) => entity.id)
                     })
                 }
+                return
+            }
+
+            // Lock the selection (L) / unlock everything (Alt+L) -- our own rule (Blender has no lock
+            // key; its hide is H / Alt+H). The same batch as the Inspector button: one Ctrl+Z undoes it.
+            const lockCommand = lockFromKey(event)
+            if (lockCommand && !isTypingTarget(event.target)) {
+                event.preventDefault()
+                if (lockCommand === 'unlock-all') handleUnlockAll()
+                else if (selectedEntities.length) handleSetEntitiesLocked(selectedEntities.map((entity) => entity.id), true)
                 return
             }
 
@@ -1090,7 +1117,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         const sharePath = isLiveProject
             ? buildAppSpacePath(resolvedSpaceId)
             : buildPublicProjectPath(resolvedSpaceId, projectId)
-        const url = `${window.location.origin}${sharePath}`
+        const url = buildShareUrl({ spaceId: resolvedSpaceId, spaceSlug: spaceMeta?.slug, domain: spaceMeta?.domain, path: sharePath })
         try {
             if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(url)
@@ -1333,6 +1360,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onRenameEntity={insideGeo ? handleRenameGeoChild : handleRenameEntity}
             onToggleEntityVisible={insideGeo ? undefined : handleToggleEntityVisible}
             onToggleEntityLocked={insideGeo ? undefined : handleToggleEntityLocked}
+            onSetEntitiesLocked={insideGeo ? undefined : handleSetEntitiesLocked}
+            onLockHall={insideGeo ? undefined : handleLockHall}
+            onUnlockAll={insideGeo ? undefined : handleUnlockAll}
+            onSelectEntities={insideGeo ? undefined : (entityIds) => dispatch({ type: 'select-entities', entityIds })}
             onReparentEntity={insideGeo ? undefined : handleReparentEntity}
             onViewportDropFiles={importAssetFiles}
             onDuplicateSelected={insideGeo ? undefined : handleDuplicateSelected}

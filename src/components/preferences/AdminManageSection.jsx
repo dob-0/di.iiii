@@ -128,7 +128,7 @@ export default function AdminManageSection({ onStats }) {
     ), [runMutation, loadSpaces])
 
     const removeSpace = useCallback((space) => {
-        if (!window.confirm(`Delete space "${space.label || space.id}" and all its projects? This cannot be undone.`)) return
+        if (!window.confirm(`Delete space "${space.label || space.id}" and all its projects? They go to the Trash for 30 days (Spaces page, Trash, Restore). A permanent space is refused.`)) return
         runMutation(async () => {
             await deleteServerSpace(space.id)
             setSelection({ type: 'root' })

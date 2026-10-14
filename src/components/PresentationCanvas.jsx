@@ -18,7 +18,8 @@ export default function PresentationCanvas({
     const hasUrl = Boolean(url)
     const hasHtml = Boolean(html.trim())
     const previewDocument = useMemo(
-        () => (hasHtml ? buildPresentationPreviewDocument(html) : ''),
+        // the page's own host, as Studio and the public view pass it
+        () => (hasHtml ? buildPresentationPreviewDocument(html, '', typeof window !== 'undefined' ? window.location.origin : '') : ''),
         [hasHtml, html]
     )
     const [previewIssues, setPreviewIssues] = useState([])

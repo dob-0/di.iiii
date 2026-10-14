@@ -15,12 +15,13 @@ import {
     createCollection,
     setProjectShelf,
     listTrash,
+    moveProject,
     restoreProject,
     updateProject,
     updateProjectDocument,
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
-import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
+import { getServerSpace, listServerSpaces, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { describeProjectLayers } from '../../project/layers.js'
@@ -204,6 +205,42 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     // Private: only the space's members see it; to a visitor of a public space
     // it is not there at all (serverXR/src/projectVisibility.js).
     const canSetVisibility = role === 'admin' || Boolean(spaceMeta?.isOwner)
+    // Where a project can go: the other spaces this account owns (an admin: all).
+    // The server checks again — it takes owner-or-admin of BOTH spaces.
+    const [moveTargets, setMoveTargets] = useState([])
+    useEffect(() => {
+        if (!canSetVisibility) { setMoveTargets([]); return undefined }
+        let cancelled = false
+        listServerSpaces()
+            .then((all) => {
+                if (cancelled) return
+                setMoveTargets(all.filter(s => s.id !== spaceId && s.kind !== 'sandbox' && (role === 'admin' || s.isOwner)))
+            })
+            .catch(() => { if (!cancelled) setMoveTargets([]) })
+        return () => { cancelled = true }
+    }, [canSetVisibility, role, spaceId])
+
+    const handleMove = useCallback(async (project, target) => {
+        if (!target) return
+        const where = target.label || target.id
+        if (!window.confirm(`Move "${project.title || project.id}" to "${where}"? Its link keeps working.`)) return
+        try {
+            try {
+                await moveProject(project.id, target.id)
+            } catch (e) {
+                // The one refusal with a way on: it is this space's front door.
+                if (e?.data?.code !== 'is_published') throw e
+                if (!window.confirm(`"${project.title || project.id}" is what this space opens on. Move it and leave the space with no front door?`)) return
+                await moveProject(project.id, target.id, { unpublish: true })
+            }
+            await loadProjects()
+            // after the reload: loading clears the status line on success
+            setStatus(`Moved "${project.title || project.id}" to "${where}".`)
+        } catch (e) {
+            setStatus(e.message || 'could not move that')
+        }
+    }, [loadProjects])
+
     const handleVisibility = useCallback(async (project, visibility) => {
         try {
             await updateProject(project.id, { visibility })
@@ -436,6 +473,17 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                                 <option value="live">live</option>
                                 <option value="archived">archived</option>
                             </select>
+                            {canSetVisibility && moveTargets.length > 0 && (
+                                <select
+                                    className="sh-select"
+                                    aria-label="Move to another space"
+                                    value=""
+                                    onChange={e => handleMove(project, moveTargets.find(s => s.id === e.target.value))}
+                                >
+                                    <option value="">move to…</option>
+                                    {moveTargets.map(s => <option key={s.id} value={s.id}>{s.label || s.id}</option>)}
+                                </select>
+                            )}
                             {canSetVisibility && (
                                 <select
                                     className="sh-select"

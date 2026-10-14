@@ -55,9 +55,20 @@ export const libraryWithShow = (library, entitiesOrList) => {
 export const rentalCounts = ({ entities = [], library: base, list = null }) => {
     const library = libraryWithShow(base, list)
     const placed = new Map()
+    // A LASER draws one light per BEAM (MOXIR v1.0: 6 cubes, 2 beams each = 12 lights), but the rental house sends cubes:
+    // lamps of a laser type that share a unit number are one unit on the list. Before 2026-10-08 the card said
+    // "12 placed · 6 over the order of 6".
+    const laserUnits = new Map()
     for (const e of entities) {
         if (!isLamp(e)) continue
         const t = e.components.fixture.type
+        const unit = e.components.fixture.unit
+        if (Number.isInteger(unit) && typeById(library, t)?.category === 'laser') {
+            const seen = laserUnits.get(t) || new Set()
+            laserUnits.set(t, seen)
+            if (seen.has(unit)) continue
+            seen.add(unit)
+        }
         placed.set(t, (placed.get(t) || 0) + 1)
     }
     const listed = new Set()

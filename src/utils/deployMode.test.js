@@ -7,7 +7,9 @@ describe('resolveDeployMode', () => {
         ['127.0.0.1', MODE_LOCAL],
         ['0.0.0.0', MODE_LOCAL],
         ['::1', MODE_LOCAL],
-        ['di.localhost', MODE_LOCAL],
+        ['diiii.localhost', MODE_LOCAL],
+        // A dev tree of the one local address (docs/ai/one-local-address.md).
+        ['moxir.diiii.localhost', MODE_LOCAL],
         ['aylmo.local', MODE_LOCAL],
         // A bare name with no dot is a LAN or tailnet machine.
         ['aylmo', MODE_LOCAL],

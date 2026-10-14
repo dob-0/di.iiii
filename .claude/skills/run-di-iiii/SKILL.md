@@ -13,6 +13,8 @@ as them, and can hold two of them open side by side.
 
 All paths are relative to the repo root.
 
+**On aylmo: `di-dev up <tree>` (di-atlas tools/di-dev); never a relative `DATA_ROOT`.** serverXR refuses to start in a git checkout with an unset or relative `DATA_ROOT` (absolute path, or `DI_SCRATCH=1` for a throwaway) — `serverXR/src/dataRootGuard.js`.
+
 **Before you start it, look at who already holds `:4000`.** On a machine with a
 local `di` install — the artist's own machine, a stage box — port 4000 is that
 install's LIVE server, serving a wall or a show, and it is started the same way
@@ -21,7 +23,8 @@ down someone's show, silently: the log ends mid-request with no error. Run the
 stack somewhere else instead. The server port follows the API base:
 
 ```bash
-VITE_API_BASE_URL=http://localhost:4360/serverXR npm run dev   # server on 4360
+di-dev up <tree> --api scratch     # aylmo: a throwaway serverXR on a di-dev port (api 4300–4399)
+VITE_API_BASE_URL=http://localhost:4360/serverXR npm run dev   # elsewhere only (CI, a laptop without di-dev)
 ```
 
 `dev-stack.mjs` passes that port to `serverXR` (`PORT`), proxies `/serverXR` to
@@ -65,8 +68,8 @@ it prints anything about a server. A fresh clone cannot run `npm run dev` until
 they exist.
 
 The example env is a working local configuration: port 4000, API under
-`/serverXR`, `REQUIRE_AUTH=true`, and its own data root at `serverXR/data/`
-(created on first boot). A visitor with no account gets a guest session scoped to
+`/serverXR`, `REQUIRE_AUTH=true`, and, in `.env.example`, no `DATA_ROOT` at all —
+set an absolute one (a checkout without it refuses to start). A visitor with no account gets a guest session scoped to
 `open` plus a private sandbox — which is why the driver makes accounts.
 
 If this checkout is meant to share one machine-wide local tier instead, that is
@@ -81,7 +84,21 @@ npm run build          # -> dist/, ~1s warm
 
 ## Run (agent path)
 
-Start the stack and wait for the port rather than sleeping:
+**On aylmo (the owner's machine) the only way to start is `di-dev`** — it owns ports, databases and
+the `*.diiii.localhost` names, and `di-dev ls` / `di-dev doctor` say who holds what:
+
+```bash
+di-dev up <tree>                      # frontend against the installed di; --api scratch for a throwaway serverXR
+di-dev logs <tree>                    # the stack log (-f to follow)
+curl -sf -o /dev/null http://<tree>.diiii.localhost/ && echo up
+di-dev down <tree>                    # stop; --wipe also drops the scratch data
+```
+
+Drive `http://<tree>.diiii.localhost/`; pass it to the driver with `--base`. Browser checks run on
+the agent screen: `di-test-browser up <url>`, `di-test-browser run script.cjs`, `di-test-browser shot`.
+Never `npm run dev`, `nohup`, `systemd-run` or `pkill` on aylmo (CLAUDE.md hard rule, 2026-10-02).
+
+Elsewhere (CI, a laptop without di-dev) start the stack and wait for the port rather than sleeping:
 
 ```bash
 npm run dev > /tmp/di-iiii-dev.log 2>&1 &
@@ -89,7 +106,7 @@ timeout 60 bash -c 'until curl -sf http://localhost:4000/serverXR/api/health >/d
 timeout 60 bash -c 'until curl -sf http://localhost:5173/ >/dev/null; do sleep 1; done'
 ```
 
-**Drive `:5173`, never `:4000`.** Port 4000 serves the last `dist/` build, so it
+**There, drive `:5173`, never `:4000`.** Port 4000 serves the last `dist/` build, so it
 happily answers with code from some previous day; 5173 is the source you just
 edited. On 4000 the API also lives under `/serverXR` — a bare `/api/...` there
 returns Express's own 404 HTML, which reads exactly like a dead server.
@@ -203,7 +220,8 @@ fingerprint, and the same six have to appear on Ann's side.)
 ## Run (human path)
 
 ```bash
-npm run dev     # -> http://localhost:5173/ , Ctrl-C to stop
+di-dev up <tree>     # aylmo -> http://<tree>.diiii.localhost/ ; di-dev down <tree> to stop
+npm run dev          # elsewhere -> http://localhost:5173/ , Ctrl-C to stop
 ```
 
 ## Test

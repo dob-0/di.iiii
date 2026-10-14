@@ -143,6 +143,7 @@ export default function SurfaceBar({
     hidden = false,        // presentation / embed / XR
     float = false,         // the surface below is a full-bleed canvas
     children = null,       // one surface-specific control, at most
+    trail = null,          // where you are inside the project (Nodes: › node, ← Back), after its name
     layers = null,         // inside a project: which layers are open (src/project/layers.js)
 }) {
     // "⚒ All tools", kept in this browser, brings every name back.
@@ -258,6 +259,7 @@ export default function SurfaceBar({
                     <a className="sbar-where sbar-where--project" href={buildStudioProjectPath(project, space)}>{projectLabel || project}</a>
                 </>
             )}
+            {trail}
             <div className="sbar-links" ref={linksRef} style={floor ? { minWidth: floor } : undefined}>
                 {visible.map(d => linkFor(d))}
                 {overflow.length > 0 && (

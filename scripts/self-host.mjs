@@ -60,6 +60,9 @@ if (!fs.existsSync(envPath)) {
     env = /^REQUIRE_AUTH=/m.test(env)
         ? env.replace(/^REQUIRE_AUTH=.*$/m, 'REQUIRE_AUTH=false')
         : env + '\nREQUIRE_AUTH=false\n'
+    // serverXR refuses a relative or unset DATA_ROOT inside a checkout (src/dataRootGuard.js).
+    // A self-host clone IS the install, so say so out loud: an absolute path, chosen here.
+    if (!/^DATA_ROOT=/m.test(env)) env += `\nDATA_ROOT=${path.join(SERVER_DIR, 'data')}\n`
     if (!/^CORS_ORIGINS=/m.test(env)) env += 'CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173\n'
     await fsp.writeFile(envPath, env)
     log('created serverXR/.env (auth off — local self-host defaults)')

@@ -67,7 +67,42 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    still replays from the start — its history is new to the other side. Limit: decided at the first tick, so a
    follow that crashed before saving state starts from now again (no harm: the comparison still protects).
 
-Guards: `follower.test.js`, `followConverge.test.js`, `followIntegration.test.js` ("a followed space stays one
+5. **A new key reaches the running follow (2026-10-05).** `di follow SPACE --from … --key -` on a follow that exists
+   rewrites its entry in `follows.json`; the server watches that file and now restarts the follower whenever the
+   entry's remote, key, address or start changed (before: only a new direction did, so the old key stayed in use until
+   the whole install restarted — 11 of 15 spaces on the owner's install). It resumes from its saved cursors, so a
+   restart loses nothing. Chosen over "the CLI tells the running server" because the file is already the one place
+   the CLI and the server agree on, it works when the install is down, and it needs no second route to guard.
+6. **A remote is stored only when it answers as a di.iiii (2026-10-05).** `resolveBase` accepts an address only if
+   `/api/health` answers JSON with `ok: true` (it asks the `/serverXR` mount twice before trying the bare address), and
+   `checkFollowable` only if the op log answers as an op log. dev.diiii.xyz answers `/api/health` with its web page
+   (200), which used to pass for a di.iiii, so one dropped answer stored the remote WITHOUT `/serverXR` and every stream
+   said "could not read both copies". Now it is refused (`unreachable`) with nothing written.
+7. **A project only the follower holds fills the host's new copy (2026-10-05).** The follow makes the missing project on
+   the host from the listing, empty. Content that is not a stream of ops a follow carries (an import, a restored
+   document, anything written as a whole-work op) never arrived, and the comparison then refused "the host's copy is
+   empty and this one is not". A copy the follow itself just made on the host is remembered (saved in
+   `follow-state`, so a restart does not forget it) and its first comparison writes this copy into it as one
+   `replaceDocument`, once, with no refusal. An empty host the follow did NOT make is still refused (a host that lost its
+   disk). The follow looks again at once after any such write.
+8. **Space settings, host to follower (2026-10-05, `followSettings.js`).** `label`, `isPublic` and `publishedProjectId`
+   (the front door) are compared each pass and every 5 s at most, and the host's are taken through this install's own
+   space PATCH. Host to follower only: the host's PATCH is owner-or-admin-gated (`requireSpaceOwnerOrAdminWrite`) and a
+   sync key is an editor key (SPEC_space_sync_keys.md T2), so a follower does not reach for it; the host is the order of
+   the follow. `isPublic: false` wins on either side: a private host makes this copy private, a public host does NOT
+   make a copy kept private public (`di follows` says so). The front door is set only onto a project that is here and not
+   private (the PATCH route refuses a private one; so do we) and waits until the project arrives. A host's space PATCH
+   now ends the follower's held read (it notes the space's change mark, on the approval-gated path too).
+9. **Files owed after a restart (2026-10-05).** The files chase now starts right after the project lists, BEFORE the
+   room's held read (it used to start after it: a restarted follow owed every unfinished file for up to 20 s, and a di
+   restarted twice in that time never got to them — di.laser: 101 listed, 79 coming, 29 on the host, no line). Every
+   project's document is compared with what each machine holds every 10 min for as long as the follow runs (files settled
+   earlier are asked about again), half-received `.part` files from a killed install are cleared after an hour, and
+   `di follows` prints "N files still coming, of M listed". Not reproduced as one single cause: a two-server restart
+   already resumed on the base; the late start and the once-per-run comparison are the faults found.
+
+Guards: `follower.test.js`, `followConverge.test.js`, `followSettings.test.js`, `index.test.js` (new key),
+`assets.test.js`, `scripts/di/followRemote.test.js` (remote), `followIntegration.test.js` ("a followed space stays one
 space"; "a follow starts from now and never silently erases work only the follower has") — each fails without its fix.
 
 ## Measured
@@ -96,8 +131,9 @@ not wake a follow, so a replacement made there is noticed at the next park end (
 - **Keeping both people's intent** on a same-field conflict (an op-based CRDT with per-field Lamport stamps,
   Kleppmann et al., "Local-first software", 2019). Today the host's value wins.
 - **One remote per space, star only.** A third install follows the host; two followers do not talk to each other.
-- **Not carried:** project deletion, slug renames, later visibility changes, shelf/collection membership, space
-  meta, files placed in the room itself (not in a project).
+- **Not carried:** project deletion, slug renames, later visibility changes of a project, shelf/collection
+  membership, space meta other than label / isPublic / front door (host to follower only: slug, kind, preview image,
+  owner and trusted users are not), follower to host settings, files placed in the room itself (not in a project).
 - **No sync UI and no discovery:** peers are typed URLs (`--at <ip>` for Tailscale); `rig/discovery.js` is not
   wired to follows.
 - **Saved state cost:** up to 5,000 opIds (~200 KB) rewritten after each tick that moved; fine for a room, not

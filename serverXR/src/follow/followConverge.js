@@ -122,18 +122,30 @@ const DIRECTIONS = ['take-host', 'take-mine']
  * holds something the host lacks is refused, so work that exists only here is
  * never erased by a follow start (audit F4).
  */
-const planConverge = ({ kind, projectId = null, local, remote, direction = null }) => {
+const planConverge = ({ kind, projectId = null, local, remote, direction = null, seedHost = false }) => {
     if (!local || !remote) return { refused: 'could not read both copies' }
     const a = kind === 'scene' ? comparableScene(local.body) : comparableProject(local.body, projectId)
     const b = kind === 'scene' ? comparableScene(remote.body) : comparableProject(remote.body, projectId)
     if (stable(a) === stable(b)) return { same: true }
+    const ahead = localOnly(kind, local.body, remote.body)
+    // The host's copy is empty BECAUSE this follow just made it (a project that
+    // existed only here — followPlan's makeMissing — whose content was never an
+    // op a follow carries: an import, a restored document). That is not a host
+    // that lost its disk, and it is not a disagreement: the new copy is waiting
+    // for this one. Fill it, once, with no refusal and no person asked.
+    if (seedHost && !direction && isBlank(kind, remote.body) && !isBlank(kind, local.body)) {
+        if (!Number.isFinite(remote.version)) return { refused: "the host's new copy has no version to write against" }
+        const mine = kind === 'scene'
+            ? { type: 'replaceScene', payload: { scene: local.body } }
+            : { type: 'replaceDocument', payload: { document: local.body } }
+        return { op: { ...mine, clientId: CONVERGE_CLIENT }, baseVersion: remote.version, target: 'remote', direction: null, seeded: true, localOnly: ahead }
+    }
     // An empty host and a full follower is not a disagreement about an edit:
     // it is a host that lost its disk, or was never filled. Overwriting would
     // erase the only copy of the work. Said out loud, never done.
     if (isBlank(kind, remote.body) && !isBlank(kind, local.body) && direction !== 'take-mine') {
         return { refused: "the host's copy is empty and this one is not — not overwriting it; check the host" }
     }
-    const ahead = localOnly(kind, local.body, remote.body)
     if (direction === 'take-mine') {
         if (!Number.isFinite(remote.version)) return { refused: "the host's copy has no version to write against" }
         const mine = kind === 'scene'

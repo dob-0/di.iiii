@@ -21,6 +21,7 @@ describe('PresentationCanvas', () => {
         const frame = screen.getByTitle('Space code preview')
         expect(frame.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
         expect(frame.getAttribute('srcdoc')).toContain('<main>Preview</main>')
+        expect(frame.getAttribute('srcdoc')).toContain(`window.diiPageOrigin = "${window.location.origin}"`)
         // Tabs opened from the preview must escape the sandbox or they inherit
         // an opaque origin and white-screen.
         expect(frame.getAttribute('sandbox')).toContain('allow-popups-to-escape-sandbox')
