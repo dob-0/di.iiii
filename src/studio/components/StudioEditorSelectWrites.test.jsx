@@ -76,10 +76,9 @@ describe('a selection writes nothing (2026-10-14)', () => {
         mount()
         const noisy = { position: lamps[0].components.transform.position, rotation: [3.1415853, 0, -0.5236], scale: [0.9999999, 1.0000001, 1] }
         act(() => shell.onTransformCommit('lamp-0', noisy))
-        act(() => shell.onTransformCommitMany(ids.map((id) => ({ id, transform: noisy }))))
-        // π → 3.1415853 is 7.4e-6 rad, past 1e-6: it is a rotation write by the stated tolerance. The 1e-7
-        // scale noise is what must never be written, alone or beside a real change.
-        expect(sent().filter((op) => op.payload.patch.scale)).toEqual([])
+        act(() => shell.onTransformCommitMany(lamps.map((lamp) => ({ id: lamp.id, transform: { ...noisy, position: lamp.components.transform.position } }))))
+        // π → 3.1415853 is 7.4e-6 rad and the scale noise 1e-7: both inside the 1e-4 tolerance, so nothing is written.
+        expect(sent()).toEqual([])
     })
 
     it('a real move writes exactly the moved entities, with the new values and only the moved fields', () => {

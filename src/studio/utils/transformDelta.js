@@ -9,7 +9,9 @@ import * as THREE from 'three'
 // 2026-10-14 (the lead, a project's op log): selecting lamps — no move — wrote rotation π as 3.1415853
 // and scale 1 as 0.9999999, seven versions running. A selection never writes, and a write carries only
 // the fields the user changed: `transformChange` below is the one choke point every commit goes through.
-export const TRANSFORM_TOLERANCE = Object.freeze({ position: 1e-6, rotation: 1e-6, scale: 1e-6 })
+// The tolerance stays 1e-4 (0.1 mm, 0.006°, 0.01 % scale): the measured re-spelling of π is 7.4e-6 rad (π → 3.1415853),
+// so 1e-6 would still write it as a rotation; 1e-4 is far below any move a person makes (the lead, 2026-10-14).
+export const TRANSFORM_TOLERANCE = Object.freeze({ position: 1e-4, rotation: 1e-4, scale: 1e-4 })
 
 const DEFAULTS = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }
 
