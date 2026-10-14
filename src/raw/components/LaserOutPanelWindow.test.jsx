@@ -40,7 +40,8 @@ describe('LaserOutPanelWindow', () => {
         expect(frames(posts)[0].url).toBe(`${ORIGIN}/laser/api/frame`)
         expect(frames(posts)[0].body.cube).toBe('all')
         // Flattened to the default budget (1000 points, owner 2026-10-14), a blank point at each path's entry.
-        expect(frames(posts)[0].body.points).toHaveLength(1000)
+        // An old Laser shape frame with no budget set plays its own points (review of #934, finding 5).
+        expect(frames(posts)[0].body.points).toHaveLength(5) // its 4 + the blank entry point
         // A new object with the same points: nothing to say.
         view.rerender(panel({ fetchImpl, values: { frame: frameOf(0.5) } }))
         await act(async () => { await vi.advanceTimersByTimeAsync(200) })
@@ -237,13 +238,16 @@ describe('LaserOutPanelWindow: the point budget (frame v2)', () => {
         const view = render(panel({ fetchImpl, values: { frame: v2, budget: 1500 } }))
         await act(async () => { await vi.advanceTimersByTimeAsync(0) })
         await act(async () => { await vi.advanceTimersByTimeAsync(100) })
-        expect(frames(posts).at(-1).body.points).toHaveLength(400)
-        expect(view.container.textContent).toContain('the cube takes 400')
+        // 400 after the guards, 25 % kept for what the guards add when the server has no plan yet.
+        expect(frames(posts).at(-1).body.points).toHaveLength(300)
+        expect(view.container.textContent).toContain('the cube takes 300')
         expect(view.container.textContent).toContain('scans at 75 Hz')
     })
     it('the cap: #931 path.budget first, else 67 ms at the cube\'s rate, the smallest for all', () => {
-        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900 } }, { id: 'b', info: { dacRate: 10000 } }] }, 'all')).toBe(670)
-        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900 } }] }, 'a')).toBe(900)
+        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900 } }, { id: 'b', info: { dacRate: 10000 } }] }, 'all')).toBe(502)
+        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900 } }] }, 'a')).toBe(675)
+        // With a plan, the guards' own in/out ratio.
+        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900, pointsIn: 500, pointsOut: 800 } }] }, 'a')).toBe(562)
         expect(cubeCap({ cubes: [{ id: 'a' }] }, 'a')).toBeNull()
     })
     it('the slider and Auto write the node\'s budget', async () => {

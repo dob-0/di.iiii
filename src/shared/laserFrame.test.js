@@ -112,8 +112,20 @@ describe('frame v2: paths between laser nodes, flattened at Laser Out', () => {
         expect(browser.mergeLaserPaths([v2([open([0, 0], [1, 0])]), v2([], 'kept')]).order).toBe('free')
         expect(browser.mergeLaserPaths([null, 3])).toBeUndefined()
     })
-    it('cleans what it is given: non-finite numbers drop, values clamp, a short "closed" path is open', () => {
+    it('cleans what it is given: a non-finite point splits the path (no lit line across it), values clamp, a split path is open', () => {
         const frame = browser.normaliseLaserPaths(v2([{ p: [0, 0, 1, 0, 0, NaN, 0, 1, 0, 0, 3, 0, 2, 0, 0], closed: true }]))
-        expect(frame.paths[0]).toEqual({ p: [0, 0, 1, 0, 0, 1, 0, 1, 0, 0], closed: false })
+        expect(frame.paths).toEqual([{ p: [0, 0, 1, 0, 0], closed: false }, { p: [1, 0, 1, 0, 0], closed: false }])
+    })
+    it('a bad point between two far points never becomes a lit jump (review of #934, finding 4)', () => {
+        const flat = browser.flattenLaserPaths(v2([{ p: [-1, 0.5, 1, 0, 0, NaN, 0, 1, 0, 0, 1, 0.5, 1, 0, 0] }]), { budget: 64 })
+        const lit = (q) => q[2] + q[3] + q[4] > 0
+        for (let i = 1; i < flat.points.length; i += 1) {
+            const [a, b] = [flat.points[i - 1], flat.points[i]]
+            if (lit(a) && lit(b)) expect(Math.abs(b[0] - a[0])).toBeLessThan(0.5)
+        }
+    })
+    it('a frame it made is not normalised twice', () => {
+        const frame = browser.normaliseLaserPaths(v2([{ p: [0, 0, 1, 0, 0, 0.5, 0, 1, 0, 0] }]))
+        expect(browser.normaliseLaserPaths(frame)).toBe(frame)
     })
 })

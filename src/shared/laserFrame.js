@@ -62,17 +62,24 @@ const pathsFromPoints = (points) => {
     return paths
 }
 
+// A path cleaned; a bad point (NaN, ±Infinity) SPLITS it (review of #934, finding 4): its neighbours
+// are not joined by a lit line across the gap. A split path is never closed. @returns the pieces.
 const cleanPath = (path, room) => {
     const src = Array.isArray(path?.p) ? path.p : []
     const n = Math.min(Math.floor(src.length / 5), room)
-    const p = []
+    const pieces = [[]]
     for (let i = 0; i < n; i += 1) {
         const o = i * 5
-        const v = [num(src[o]), num(src[o + 1]), num(src[o + 2]), num(src[o + 3]), num(src[o + 4])]
-        if (v.some(Number.isNaN)) continue
-        p.push(clamp(v[0], -1, 1), clamp(v[1], -1, 1), clamp(v[2], 0, 1), clamp(v[3], 0, 1), clamp(v[4], 0, 1))
+        const x = num(src[o]); const y = num(src[o + 1]); const r = num(src[o + 2]); const g = num(src[o + 3]); const b = num(src[o + 4])
+        if (Number.isNaN(x) || Number.isNaN(y) || Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+            if (pieces[pieces.length - 1].length) pieces.push([])
+            continue
+        }
+        pieces[pieces.length - 1].push(clamp(x, -1, 1), clamp(y, -1, 1), clamp(r, 0, 1), clamp(g, 0, 1), clamp(b, 0, 1))
     }
-    return { p, closed: Boolean(path?.closed) && p.length >= 15 }
+    const kept = pieces.filter((p) => p.length)
+    const whole = kept.length === 1
+    return kept.map((p) => ({ p, closed: whole && Boolean(path?.closed) && p.length >= 15 }))
 }
 
 /** Is this a laser value (v2 paths, a legacy frame, or a bare points array)? */
@@ -84,7 +91,11 @@ const isLaserValue = (value) => Array.isArray(value)
  * at their blank points into paths drawn as given (order 'kept'). Numbers are made finite and in range;
  * empty paths drop; at most MAX_PATHS paths and MAX_PATH_POINTS points. Pure.
  */
+// Frames this module made: flattenLaserPaths does not normalise them twice (review of #934, finding 1).
+const NORMALISED = new WeakSet()
+
 const normaliseLaserPaths = (value) => {
+    if (value && typeof value === 'object' && NORMALISED.has(value)) return value
     const frame = { kind: 'laser', v: FRAME_VERSION, paths: [], order: 'kept' }
     if (Array.isArray(value)) { frame.paths = pathsFromPoints(value); return frame }
     if (!value || typeof value !== 'object' || value.kind !== 'laser') return frame
@@ -95,11 +106,13 @@ const normaliseLaserPaths = (value) => {
     let room = MAX_PATH_POINTS
     for (const path of value.paths) {
         if (frame.paths.length >= MAX_PATHS || room <= 0) break
-        const clean = cleanPath(path, room)
-        if (!clean.p.length) continue
-        room -= clean.p.length / 5
-        frame.paths.push(clean)
+        for (const clean of cleanPath(path, room)) {
+            if (frame.paths.length >= MAX_PATHS) break
+            room -= clean.p.length / 5
+            frame.paths.push(clean)
+        }
     }
+    NORMALISED.add(frame)
     return frame
 }
 
@@ -227,7 +240,7 @@ const autoBudget = (length, paths) => Math.max(MIN_BUDGET, paths + Math.ceil(len
  */
 const flattenLaserPaths = (value, { budget = DEFAULT_BUDGET, start = null, cap = Infinity } = {}) => {
     const frame = normaliseLaserPaths(value)
-    let list = frame.paths
+    let list = frame.paths.slice()
     const lengthOf = (path) => polyLength(path.p) + (path.closed ? Math.hypot(path.p[0] - path.p[path.p.length - 5], path.p[1] - path.p[path.p.length - 4]) : 0)
     let lengths = list.map(lengthOf)
     const length = lengths.reduce((s, l) => s + l, 0)

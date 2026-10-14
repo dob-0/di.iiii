@@ -160,13 +160,32 @@ const cubeLine = (cube) => {
     return { name, doing, about, cold }
 }
 
+// Content hashes for "did the drawing change" (FNV-1a over the numbers at 1e-4). Pure.
+const mixNumber = (h, v) => Math.imul(h ^ Math.round(v * 10000), 16777619)
+const hashPaths = (frame) => {
+    let h = frame.order === 'free' ? 2166136261 : 2166136263
+    for (const path of frame.paths) {
+        h = mixNumber(h, path.closed ? -7 : -3)
+        for (let i = 0; i < path.p.length; i += 1) h = mixNumber(h, path.p[i])
+    }
+    return `${frame.paths.length}:${h >>> 0}`
+}
+const hashPoints = (points) => {
+    let h = 2166136261
+    for (const q of points) for (let i = 0; i < 5; i += 1) h = mixNumber(h, q[i])
+    return `${points.length}:${h >>> 0}`
+}
+
 // What the server says this cube can take per frame: its own figure (#931 `path.budget`), else 67 ms
-// at the rate the cube reports. The budget is clamped to it so a frame is not refused as too long.
+// at the rate the cube reports. The server's budget counts points AFTER its galvo guards (steps,
+// corner holds, bridges), so the posted points are scaled by the last plan's in/out ratio, and
+// without a plan a 25 % margin is kept (review of #934, finding 2): a capped frame must not stop the cube.
 export const cubeCap = (state, cube) => {
     const cubes = (Array.isArray(state?.cubes) ? state.cubes : []).filter((c) => cube === ALL_CUBES || c?.id === cube)
     const caps = cubes.map((c) => {
-        if (Number.isFinite(c?.path?.budget) && c.path.budget > 0) return c.path.budget
-        if (Number.isFinite(c?.info?.dacRate) && c.info.dacRate > 0) return Math.floor(c.info.dacRate * FRAME_CAP_S)
+        const ratio = c?.path?.pointsIn > 0 && c?.path?.pointsOut > 0 ? Math.min(1, c.path.pointsIn / c.path.pointsOut) : 0.75
+        if (Number.isFinite(c?.path?.budget) && c.path.budget > 0) return Math.floor(c.path.budget * ratio)
+        if (Number.isFinite(c?.info?.dacRate) && c.info.dacRate > 0) return Math.floor(c.info.dacRate * FRAME_CAP_S * 0.75)
         return null
     }).filter((v) => v !== null)
     return caps.length ? Math.min(...caps) : null
@@ -370,12 +389,17 @@ export default function LaserOutPanelWindow({
     // object every evaluation.
     const raw = values?.frame
     const paths = useMemo(() => normaliseLaserPaths(raw), [raw])
-    const pathsKey = useMemo(() => JSON.stringify([paths.order, paths.paths]), [paths])
+    // A numeric hash, not JSON (review of #934: the stringify alone took 3.4 ms a frame for 6 Traces).
+    const pathsKey = useMemo(() => hashPaths(paths), [paths])
     // The budget: a wireable number; 0 (or less) = auto, sized from the drawn length. Clamped to the
     // frame cap and to what the server says the cube takes (cubeCap); the value in effect is shown.
     const asked = Number(values?.budget)
-    const requested = Number.isFinite(asked) && values?.budget !== '' && values?.budget !== null ? asked : DEFAULT_BUDGET
-    const auto = requested <= 0
+    // An old frame (a Laser shape's points) with no budget set plays its own points as before: resampled
+    // to 1000 it would scan ~8x slower and flicker (review of #934, finding 5).
+    const legacy = Boolean(raw) && (Array.isArray(raw) || !Array.isArray(raw?.paths))
+    const budgetSet = values?.budget !== undefined && values?.budget !== '' && values?.budget !== null
+    const requested = Number.isFinite(asked) && budgetSet ? asked : (legacy ? null : DEFAULT_BUDGET)
+    const auto = requested !== null && requested <= 0
     const cap = server.status === SERVER.ANSWERING ? cubeCap(server.state, cube) : null
     // Flatten: nearest-neighbour order from where the last frame ended, then resample to the budget.
     // Recomputed only when the drawing, the budget or the cap change, so a still drawing is not re-sent.
@@ -388,7 +412,7 @@ export default function LaserOutPanelWindow({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathsKey, requested, cap])
     const points = flat.points
-    const pointsKey = useMemo(() => JSON.stringify(points), [points])
+    const pointsKey = useMemo(() => hashPoints(points), [points])
     const blackout = Boolean(values?.blackout)
 
     const canvasRef = useRef(null)
