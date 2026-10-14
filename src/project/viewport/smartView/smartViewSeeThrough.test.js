@@ -70,12 +70,14 @@ describe('layers', () => {
     })
     it('reads and writes ?layers= (absent = all shown)', () => {
         expect(parseLayersParam('')).toEqual(allLayersOn())
-        expect(parseLayersParam('?layers=walls,machines,outside')).toEqual({ roof: false, walls: true, machines: true, outside: true })
-        expect(parseLayersParam('?layers=none')).toEqual({ roof: false, walls: false, machines: false, outside: false })
+        expect(parseLayersParam('?layers=walls,machines,outside,cut')).toEqual({ roof: false, walls: true, machines: true, outside: true, cut: true })
+        expect(parseLayersParam('?layers=none')).toEqual({ roof: false, walls: false, machines: false, outside: false, cut: false })
         expect(layersParam(allLayersOn())).toBe(null)
-        expect(layersParam({ roof: false, walls: true, machines: true, outside: true })).toBe('walls,machines,outside')
-        expect(layersParam({ roof: false, walls: false, machines: false, outside: false })).toBe('none')
-        const round = { roof: true, walls: false, machines: true, outside: false }
+        expect(layersParam({ roof: false, walls: true, machines: true, outside: true, cut: true })).toBe('walls,machines,outside,cut')
+        expect(layersParam({ roof: false, walls: false, machines: false, outside: false, cut: false })).toBe('none')
+        // the whole building from outside (owner 2026-10-15): every group shown, only the cutaway off
+        expect(layersParam({ ...allLayersOn(), cut: false })).toBe('roof,walls,machines,outside')
+        const round = { roof: true, walls: false, machines: true, outside: false, cut: true }
         expect(parseLayersParam(`?layers=${layersParam(round)}`)).toEqual(round)
     })
     it('Roof off holds the roof cut and Walls off all four wall cuts, even with the camera inside', () => {
@@ -90,5 +92,16 @@ describe('layers', () => {
         expect(keptByPlan([frame.bounds.max[0] - 0.5, 3, 0], wallsOff)).toBe(false)
         expect(keptByPlan([0, 3, 0], wallsOff)).toBe(true)
         expect(planWithLayers(inside, frame, allLayersOn())).toEqual(inside)
+    })
+    it('Cut off draws the whole building from outside; Roof/Walls off still cut on top of it', () => {
+        const outside = cutawayPlan([frame.bounds.max[0] + 30, 20, 0], frame)
+        expect(outside.roof).toBe(frame.roofCut)
+        expect(outside.xMax).not.toBe(null)
+        const whole = planWithLayers(outside, frame, { ...allLayersOn(), cut: false })
+        expect(whole).toEqual({ roof: null, xMax: null, xMin: null, zMax: null, zMin: null })
+        expect(keptByPlan([frame.bounds.max[0] - 0.5, frame.roofCut + 1, 0], whole)).toBe(true)
+        const wholeRoofOff = planWithLayers(outside, frame, { ...allLayersOn(), cut: false, roof: false })
+        expect(wholeRoofOff.roof).toBe(frame.roofCut)
+        expect(wholeRoofOff.xMax).toBe(null)
     })
 })

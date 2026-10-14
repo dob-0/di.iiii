@@ -134,7 +134,7 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
                         type="button"
                         aria-pressed={shown}
                         data-layer={id}
-                        title={`${shown ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                        title={id === 'cut' ? `${shown ? 'Whole building: stop cutting' : 'Cut'} the roof and the walls that face you from outside` : `${shown ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
                         style={{ ...button(shown), textDecoration: shown ? 'none' : 'line-through' }}
                         onClick={() => onLayer(id, !shown)}
                     >
