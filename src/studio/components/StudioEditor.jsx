@@ -43,6 +43,7 @@ import { useRigAutoPatch } from '../hooks/useRigAutoPatch.js'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { readGeoIdFromSearch, withGeoQuery } from '../utils/geoScopeAddress.js'
 import { isJamProject } from '../utils/jamMode.js'
+import { movedTransforms, transformChange } from '../utils/transformDelta.js'
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
 import {
     GEO_ADD_TYPES,
@@ -1032,12 +1033,17 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             if (component === 'transform' && isTimelinePreviewPosed(selectedEntity.id)) {
                 setTimelinePreview({ playing: false, hold: false })
             }
+            // A transform edit carries only what moved (transformDelta.js): a re-typed or re-spelled value writes nothing.
+            const patch = component === 'transform'
+                ? transformChange(selectedEntity.components?.transform, nextValue)
+                : nextValue
+            if (!patch) return
             applyLocalOps({
                 type: 'updateComponent',
                 payload: {
                     entityId: selectedEntity.id,
                     component,
-                    patch: nextValue
+                    patch
                 }
             })
             return
@@ -1047,11 +1053,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    // Every gizmo / modal commit passes transformChange against the STORED transform: nothing that did not
+    // move is written, whatever the caller sent (a selection never writes — transformDelta.js).
+    const entitiesRef = useRef(entities)
+    useEffect(() => { entitiesRef.current = document.entities || [] }, [document.entities])
     const handleTransformCommit = useCallback((entityId, transform) => {
         if (!entityId) return
+        const stored = entitiesRef.current.find((entity) => entity.id === entityId)?.components?.transform
+        const patch = transformChange(stored, transform)
+        if (!patch) return
         applyLocalOps({
             type: 'updateComponent',
-            payload: { entityId, component: 'transform', patch: transform }
+            payload: { entityId, component: 'transform', patch }
         })
     }, [applyLocalOps])
 
@@ -1104,8 +1117,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     // per session (once per mode-switch via commitIfMoved), so clearing here
     // would prematurely unmount ModalTransform. Session ends via onCancel→handleTransformCancel.
     const handleTransformCommitMany = useCallback((list) => {
-        const ops = (list || [])
-            .filter((entry) => entry?.id && entry.transform)
+        const ops = movedTransforms(entitiesRef.current, (list || []).filter((entry) => entry?.id && entry.transform))
             .map((entry) => ({
                 type: 'updateComponent',
                 payload: { entityId: entry.id, component: 'transform', patch: entry.transform }

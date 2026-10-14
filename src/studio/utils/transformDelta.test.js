@@ -32,3 +32,22 @@ describe('transformDelta', () => {
         expect(movedTransforms(entities, updates).map((entry) => entry.id)).toEqual(['b'])
     })
 })
+
+describe('transformChange (the commit choke point)', () => {
+    it('is null when nothing moved, even re-spelled', async () => {
+        const { transformChange } = await import('./transformDelta.js')
+        expect(transformChange(stored, respelled)).toBeNull()
+        expect(transformChange(stored, stored)).toBeNull()
+    })
+    it('carries only the fields that moved; the rest keep their stored numbers', async () => {
+        const { transformChange } = await import('./transformDelta.js')
+        expect(transformChange(stored, { ...respelled, position: [4, 5.4, -2.15] })).toEqual({ position: [4, 5.4, -2.15] })
+        expect(transformChange(stored, { ...respelled, scale: [2, 2, 2] })).toEqual({ scale: [2, 2, 2] })
+        expect(transformChange(stored, { ...respelled, rotation: [0, 0, 0] })).toEqual({ rotation: [0, 0, 0] })
+    })
+    it('holds at the 1e-6 edge', async () => {
+        const { transformChange } = await import('./transformDelta.js')
+        expect(transformChange(stored, { position: [3.2 + 5e-7, 5.4, -2.15] })).toBeNull()
+        expect(transformChange(stored, { position: [3.2 + 2e-6, 5.4, -2.15] })).not.toBeNull()
+    })
+})
