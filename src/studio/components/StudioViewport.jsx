@@ -47,7 +47,7 @@ import {
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
-import { IN_PLACE_DISTANCE } from '../navigation/freeMove.js'
+import { MOVE_1_CAMERA } from '../navigation/freeMove.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
@@ -561,7 +561,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Blender turns 0.4° per pixel (its Orbit Sensitivity default, the owner's value); camera-controls turns 360° per
     // viewport height, so the speed is scaled by the height to keep Blender's per-pixel feel in Edit.
     const viewportHeight = useThree((state) => state.size.height)
-    const rotateSpeed = preset.id === 'blender' && viewportHeight > 0 ? viewportHeight / 900 : 1
+    const rotateSpeed = preset.id === 'blender' && viewportHeight > 0 ? viewportHeight / 900 : MOVE_1_CAMERA.rotateSpeed
     const isOrtho = (cameraView?.fov ?? 50) < 20
     // Blender's Walk (Shift+`): the camera is free of any orbit point while walking; frames are held while it lasts.
     const [walking, setWalking] = useState(false)
@@ -663,8 +663,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             smoothTime={preset.smoothTime}
             draggingSmoothTime={preset.draggingSmoothTime}
             // The standard move (useCameraNavigation): no distance range bends a move; the public viewer's Inside lock sets its own.
-            minDistance={IN_PLACE_DISTANCE / 2}
-            maxDistance={Infinity}
+            minDistance={MOVE_1_CAMERA.minDistance}
+            maxDistance={MOVE_1_CAMERA.maxDistance}
             mouseButtons={bindings.mouseButtons}
             touches={bindings.touches}
             onControlEnd={() => {

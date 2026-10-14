@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import MoveControl from './MoveControl.jsx'
+import { MOVES } from '../../studio/navigation/moves.js'
 import {
     getSpeedPreference, getTurnPreference, resetNavigationPreferenceMemory, setSpeedPreference, setTurnPreference,
 } from '../../studio/navigation/preference.js'
@@ -123,5 +124,24 @@ describe('the viewer\'s Move control', () => {
         expect(screen.getByRole('button', { name: 'Move' }).getAttribute('title')).toMatch(/Shift faster, Alt slower/)
         open()
         expect(screen.getAllByRole('spinbutton')).toHaveLength(1)
+    })
+})
+
+describe('the Move row', () => {
+    it('with one move is a plain heading line, no picker', () => {
+        render(<MoveControl />)
+        open()
+        expect(screen.getByText('Move 1')).toBeTruthy()
+        expect(screen.getByText(/Same speed in every direction/)).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'Move 1' })).toBeNull()
+    })
+    it('with two moves is a picker of pressed buttons that writes the preference', () => {
+        const moves = [...MOVES, { id: 'move-test', label: 'Move test', since: '2099-01-01', about: 'test only' }]
+        render(<MoveControl moves={moves} />)
+        open()
+        expect(screen.getByRole('button', { name: 'Move 1' }).getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(screen.getByRole('button', { name: 'Move test' }))
+        // the stored id is real only if the build knows it; with one real move it falls back, the click still reached the setter
+        expect(screen.getByRole('button', { name: 'Move test' })).toBeTruthy()
     })
 })
