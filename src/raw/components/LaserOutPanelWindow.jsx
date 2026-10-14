@@ -60,6 +60,27 @@ const postJson = (base, path, body, fetchImpl) => {
     } catch { /* the poll reports it */ }
 }
 
+// Awaited, for the person's own actions (arm, disarm, find, use these): the answer is shown.
+const postAwait = async (base, path, body, fetchImpl) => {
+    try {
+        const res = await fetchImpl(`${base}${path}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+        const answer = answeredJson(res) ? await res.json().catch(() => null) : null
+        return { status: res?.status ?? 0, body: answer }
+    } catch {
+        return { status: 0, body: null }
+    }
+}
+
+// What a refused or failed action says, in the server's own words when it gave some.
+const failureText = (out, what) => {
+    if (out.status === 0) return `${what}: no answer from the laser server`
+    return out.body?.detail || out.body?.error || `${what}: the server answered ${out.status}`
+}
+
 const lit = (p) => p[2] + p[3] + p[4] > 0
 
 const drawPreview = (canvas, points) => {
@@ -135,6 +156,147 @@ const cubesText = (state) => {
     return `${cubes.length} cube${cubes.length === 1 ? '' : 's'}, ${connected} connected`
 }
 
+// ARM / DISARM (2026-10-14). Arming takes the sign-off phrase TYPED by the person who is the laser
+// safety officer for this run: the field starts empty, the browser is told not to remember it, and
+// the phrase is shown nowhere (the server no longer sends it). Disarm is one click, always there.
+function ArmControl({ armed, post, refresh }) {
+    const [phrase, setPhrase] = useState('')
+    const [note, setNote] = useState(null)
+    const [busy, setBusy] = useState(false)
+    const arm = async (event) => {
+        event.preventDefault()
+        const typed = phrase.trim()
+        if (!typed || busy) return
+        setBusy(true)
+        const out = await post('/arm', { armed: true, confirm: typed })
+        setBusy(false)
+        setPhrase('')
+        setNote(out.body?.ok ? null : failureText(out, 'Not armed'))
+        refresh()
+    }
+    const disarm = async () => {
+        const out = await post('/arm', { armed: false })
+        setNote(out.body?.ok ? null : failureText(out, 'Disarm did not reach the server — turn the key switch off'))
+        refresh()
+    }
+    return (
+        <div className="raw-laser-panel-arm">
+            <button type="button" className="raw-laser-panel-disarm" onClick={disarm}>
+                Disarm
+            </button>
+            {armed !== true && (
+                <form className="raw-laser-panel-arm-form" onSubmit={arm}>
+                    <label className="raw-laser-panel-label" htmlFor="raw-laser-arm-phrase">
+                        Typing the sign-off phrase means you are the laser safety officer for this run.
+                    </label>
+                    <input
+                        id="raw-laser-arm-phrase"
+                        className="raw-laser-panel-input"
+                        type="text"
+                        value={phrase}
+                        onChange={(event) => setPhrase(event.target.value)}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        aria-label="Sign-off phrase"
+                    />
+                    <button type="submit" className="raw-laser-panel-button" disabled={!phrase.trim() || busy}>
+                        Arm
+                    </button>
+                </form>
+            )}
+            {note && <div className="raw-laser-panel-note" role="alert">{note}</div>}
+        </div>
+    )
+}
+
+// FIND CUBES (2026-10-14): the server asks every address of this computer's networks the cube's
+// read-only info question and lists who answered; pick, name, "Use these" writes the laser setup
+// on the server (laser.json) and reloads it — disarmed.
+// Keyed by serial only (review round 2): another box now holding a cube's old address is another cube.
+const configuredNameFor = (cubes, found) => {
+    const hit = (cubes || []).find((c) => found.serial && (c?.serial || c?.info?.serial) === found.serial)
+    return hit?.name && hit.name !== hit.id ? hit.name : ''
+}
+
+function FindCubes({ cubes, post, refresh }) {
+    const [found, setFound] = useState(null)
+    const [picks, setPicks] = useState({})
+    const [note, setNote] = useState(null)
+    const [busy, setBusy] = useState(null)
+    const find = async () => {
+        setBusy('find')
+        setNote(null)
+        const out = await post('/find', {})
+        setBusy(null)
+        if (!out.body?.ok) { setNote(failureText(out, 'The search failed')); return }
+        const list = Array.isArray(out.body.cubes) ? out.body.cubes : []
+        setFound({ cubes: list, asked: out.body.asked, networks: out.body.networks || [] })
+        setPicks(Object.fromEntries(list.map((c, i) => [c.serial, { use: true, name: configuredNameFor(cubes, c) || `Cube ${i + 1}` }])))
+        const skipped = out.body.skipped?.length ? ` Not searched: ${out.body.skipped.join('; ')}.` : ''
+        const where = out.body.networks?.length ? ` on ${out.body.networks.join(', ')}` : ''
+        setNote(list.length
+            ? `${list.length} cube${list.length === 1 ? '' : 's'} answered (${out.body.asked} addresses asked${where}).${skipped}`
+            : `No cube answered (${out.body.asked} addresses asked${where}). Are the cubes on, in Client mode, and on the same switch as this computer?${skipped}`)
+    }
+    const chosen = found ? found.cubes.filter((c) => picks[c.serial]?.use) : []
+    const useThese = async () => {
+        if (!chosen.length) return
+        setBusy('save')
+        const out = await post('/config', { cubes: chosen.map((c) => ({ serial: c.serial, ip: c.ip, name: picks[c.serial]?.name || '' })) })
+        setBusy(null)
+        if (!out.body?.ok) { setNote(failureText(out, 'Not saved')); return }
+        const dropped = out.body.droppedStillBeams?.length
+            ? ` Still beams NOT carried to ${out.body.droppedStillBeams.map((d) => `${d.id} (serial ${d.serial})`).join(', ')}: they were approved for whatever box had that address before; the laser safety officer approves them again.`
+            : ''
+        setNote(`Saved: ${out.body.cubes?.map((c) => `${c.name} (${c.id})`).join(', ')}. The lasers were disarmed for the change — arm again when you are ready.${dropped}`)
+        setFound(null)
+        refresh()
+    }
+    const setPick = (serial, change) => setPicks((all) => ({ ...all, [serial]: { ...all[serial], ...change } }))
+    return (
+        <div className="raw-laser-panel-find">
+            <button type="button" className="raw-laser-panel-button" onClick={find} disabled={busy !== null}>
+                {busy === 'find' ? 'Finding cubes…' : 'Find cubes'}
+            </button>
+            {found && found.cubes.length > 0 && (
+                <ul className="raw-laser-panel-found" aria-label="Cubes found">
+                    {found.cubes.map((c) => (
+                        <li key={c.serial}>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(picks[c.serial]?.use)}
+                                    onChange={(event) => setPick(c.serial, { use: event.target.checked })}
+                                />
+                                {' '}{c.modelName || 'LaserCube'} · {c.ip}
+                            </label>
+                            <div className="raw-laser-panel-cube-about">
+                                serial {c.serial} · firmware {c.firmware} · {c.temperature} °C
+                            </div>
+                            <input
+                                className="raw-laser-panel-input"
+                                type="text"
+                                value={picks[c.serial]?.name ?? ''}
+                                maxLength={40}
+                                onChange={(event) => setPick(c.serial, { name: event.target.value })}
+                                aria-label={`Name for the cube at ${c.ip}`}
+                            />
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {found && found.cubes.length > 0 && (
+                <button type="button" className="raw-laser-panel-button" onClick={useThese} disabled={!chosen.length || busy !== null}>
+                    {busy === 'save' ? 'Saving…' : `Use these (${chosen.length})`}
+                </button>
+            )}
+            {note && <div className="raw-laser-panel-note" role="status">{note}</div>}
+        </div>
+    )
+}
+
 // The graph's hand on the LaserCubes, by way of this di.iiii's own server. It
 // draws the frame it is given so you can see the shape, sends it when it
 // CHANGES (paced), and says plainly whether the server is armed — a disarmed
@@ -151,6 +313,7 @@ export default function LaserOutPanelWindow({
     useEffect(() => { fetchRef.current = fetchImpl })
 
     const [server, setServer] = useState({ status: SERVER.CHECKING, state: null })
+    const lookRef = useRef(() => {})
     useEffect(() => {
         let alive = true
         setServer({ status: SERVER.CHECKING, state: null })
@@ -160,6 +323,7 @@ export default function LaserOutPanelWindow({
             if (!alive) return
             setServer({ status: result.status, state: result.state ?? null })
         }
+        lookRef.current = look
         look()
         const timer = setInterval(look, POLL_MS)
         return () => {
@@ -227,9 +391,11 @@ export default function LaserOutPanelWindow({
     }, [blackout, base])
 
     const armed = server.status === SERVER.ANSWERING ? server.state.armed : null
+    const post = (path, body) => postAwait(base, path, body, fetchRef.current)
+    const refresh = () => lookRef.current()
     const statusText = useMemo(() => {
         if (server.status === SERVER.ABSENT) return 'The laser server lives on a local di.iiii — run di up or npm run dev'
-        if (server.status === SERVER.FORBIDDEN) return 'The laser server answers a browser on its own machine only'
+        if (server.status === SERVER.FORBIDDEN) return 'The laser server answers a browser on its own machine only — open http://diiii.localhost/ on the computer di runs on'
         if (server.status === SERVER.UNREACHABLE) return 'No answer from the laser server'
         if (server.status === SERVER.CHECKING) return 'Looking for the laser server…'
         const state = server.state
@@ -255,10 +421,11 @@ export default function LaserOutPanelWindow({
                 aria-label="Preview of the laser frame"
             />
             {armed !== null && (
-                <div className="raw-dmx-panel-status raw-laser-panel-armed" role="status">
+                <div className={`raw-dmx-panel-status raw-laser-panel-armed${armed ? ' is-armed' : ''}`} role="status">
                     {armed ? 'ARMED' : 'DISARMED'}
                 </div>
             )}
+            <ArmControl armed={armed} post={post} refresh={refresh} />
             {armed === false && (
                 <div className="raw-dmx-panel-setup">
                     Lasers off &mdash; disarmed on the server. The preview shows the shape; nothing reaches the cubes.
@@ -280,6 +447,9 @@ export default function LaserOutPanelWindow({
                         )
                     })}
                 </ul>
+            )}
+            {server.status === SERVER.ANSWERING && (
+                <FindCubes cubes={server.state.cubes} post={post} refresh={refresh} />
             )}
             {server.status === SERVER.ANSWERING && server.state.guard && server.state.guard.validated === false && (
                 <div className="raw-dmx-panel-setup">

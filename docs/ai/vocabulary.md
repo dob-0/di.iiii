@@ -38,6 +38,11 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
 | **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
+| **master clock** | The one loop of beats a project keeps running; every LFO follows it unless it picks another clock. Added 2026-10-14. |
+| **clock** | A loop that counts beats at a tempo. A project has one master clock and may add more; the `/light` desk's clock and tap are an optional source for it, not its leader. Added 2026-10-14. |
+| **cube group** | A named set of LaserCubes (for example "left", "right") that a graph can address as one. Lives in the project, not in `laser.json`. Added 2026-10-14. |
+| **draw mode** | How a laser node draws a shape: outline (its silhouette, the default), wireframe (every edge) or points. Added 2026-10-14. |
+| **point budget** | How many points one laser frame may use per cube; set by a wire, an on-screen control or automatically from path length, and never above the server's frame cap. Added 2026-10-14. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
