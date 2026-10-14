@@ -88,6 +88,14 @@ export const followFileLines = (files) => {
 export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
     .map(note => style.dim(`settings: ${note}`))
 
+/**
+ * What a follow says about its projects' own lives (trash, restore, rename,
+ * move — serverXR/src/follow/followProjects.js): only what it did not carry,
+ * and why. A refusal to empty this copy is said in yellow.
+ */
+export const followProjectLines = (projects) => (Array.isArray(projects?.notes) ? projects.notes : [])
+    .map(note => (/not carried/.test(note) ? style.yellow(`projects: ${note}`) : style.dim(`projects: ${note}`)))
+
 // The one local address in what di prints (docs/ai/one-local-address.md §7, D1).
 // The certificate's name is not the address any more when the one address is this
 // di.iiii: it is the line for phones and headsets, which cannot use a .localhost name.
@@ -263,7 +271,7 @@ export const ui = {
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
+            return [line, ...followSettingsLines(state.settings), ...followProjectLines(state.projects), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         })].join('\n')
     },
 
