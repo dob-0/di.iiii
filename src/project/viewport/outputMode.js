@@ -16,8 +16,12 @@
 // The document is never written: the room draws a copy.
 //
 // WHO GETS WHICH: `?quality=full|lite` in the address wins, then the viewer's own choice
-// (the Full/Lite button, remembered for this tab), else Lite (owner 2026-10-08: Lite is the
-// default; full HQ only when asked).
+// (the Full/Lite button, remembered for this tab), else: a desktop with a real GPU (a fine
+// pointer, a hardware WebGL renderer) starts in FULL; a phone or tablet (coarse pointer) and
+// a software renderer (SwiftShader, llvmpipe) start in Lite. Owner 2026-10-15, looking at the
+// dev room in Lite ("why this much ugly" → "so fix"); before that, 2026-10-08, Lite was the
+// default everywhere ("full HQ only when needed") — that rule stays for every device that
+// cannot carry Full.
 
 export const OUTPUT_POOL_SLOTS = 4
 export const OUTPUT_STORAGE_KEY = 'di.view.quality'
@@ -25,17 +29,18 @@ export const OUTPUT_STORAGE_KEY = 'di.view.quality'
 const QUALITY_RE = /(?:^|[?&])quality=(full|lite)(?:&|$)/i
 
 /** Is the room drawn as the output (true) or at full work quality (false)? */
-export const outputModeWanted = ({ search = '', stored = null, coarse = false, workMachine = false } = {}) => {
+export const outputModeWanted = ({ search = '', stored = null, coarse = false, workMachine = false, softwareGl = false } = {}) => {
     const asked = QUALITY_RE.exec(String(search || ''))?.[1]?.toLowerCase()
     const pick = asked || (stored === 'full' || stored === 'lite' ? stored : null)
     if (pick) return pick === 'lite'
-    // LITE BY DEFAULT, EVERYWHERE (owner, 2026-10-08: "make the Lite version the default; full HQ only when needed"): the
-    // work machine with a mouse starts in Lite too, and Full is the button (remembered for this tab only, useOutputMode.js).
-    // `coarse` and `workMachine` are kept in the signature for the callers and the record of the old rule.
-    void coarse
+    // Full on a desktop with a real GPU, Lite on a phone (coarse pointer) or a software renderer (owner 2026-10-15).
+    // `workMachine` is kept in the signature for the callers and the record of the 2026-10-04 rule (local = full).
     void workMachine
-    return true
+    return Boolean(coarse || softwareGl)
 }
+
+/** Is this WebGL renderer string a software one (no GPU: SwiftShader, llvmpipe, Mesa's software rasterizer)? */
+export const isSoftwareRenderer = (renderer = '') => /swiftshader|llvmpipe|softpipe|software|mesa offscreen|basic render/i.test(String(renderer || ''))
 
 /** The room's render settings as the output draws them. */
 export const outputRenderSettings = (renderSettings = {}) => {

@@ -2013,7 +2013,7 @@ export const WIKI_ARTICLES = [
         title: 'Lite and Full — a room light enough for a phone',
         summary: 'A published room is drawn two ways. Full is the work renderer: every lamp a real light, shadows, bloom, the floor\'s reflection. Lite is what everyone else sees: the same room following the same desk, light enough for a phone. The Full / Lite button under Walk / Fly switches between them.',
         body: [
-            'Who gets which, by itself: a phone or a tablet, and anyone opening the room from another address, gets Lite. The machine the room is made on, with a mouse, gets Full. The button changes it and this browser remembers the choice; ?quality=lite or ?quality=full in the address wins over both.',
+            'Who gets which, by itself: a desktop with a real graphics card starts in Full; a phone or a tablet, and a machine with no graphics card (a software renderer), start in Lite (since 2026-10-15; before, every visit started in Lite). The button changes it and this browser remembers the choice; ?quality=lite or ?quality=full in the address wins over both.',
             { list: [
                 'Lite keeps every beam and its lens, and the haze — the light you see in the air.',
                 'The light falling on the room comes from four real lights that follow the lamps that matter most in the look that plays, so the floor and the walls still answer the show.',
