@@ -106,7 +106,9 @@ export const titleTotals = (sheet) => {
     const p = sheet.power
     return {
         channels: sheet.universes.map((u) => `U${u.universe} ${u.channels}`).join(' · ') || 'nothing patched',
-        power: `${(p.totalW / 1000).toFixed(1)} kW · ${p.circuits.length} circuits`,
+        // CONNECTED: every placed lamp at its datasheet maximum at once. A show's RUNNING draw (its looks' levels, the
+        // duties) is lower and is the design's own number (MOXIR v1.0: moxir_v1.py power()); the two were read as one (2026-10-08).
+        power: `${(p.totalW / 1000).toFixed(1)} kW connected (datasheet max) · ${p.circuits.length} circuits`,
         circuits: `load alone ≥ ${p.minCircuitsByLoad} × ${p.circuit.amps} A`,
         fixtures: `${sheet.totals.lamps} fixtures · ${sheet.totals.patched} patched`
     }

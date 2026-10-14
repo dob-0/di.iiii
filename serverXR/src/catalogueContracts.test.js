@@ -46,7 +46,10 @@ beforeAll(async () => {
     VIEWER_API_TOKEN: VIEWER,
     AUTH_SESSION_SECRET: 'catalogue-session-secret',
     REQUIRE_AUTH: 'true',
-    CORS_ORIGINS: '*'
+    CORS_ORIGINS: '*',
+    // The Telegram routes register only when a bot secret is set. Set one, so
+    // they are walked and must be described like every other route.
+    TELEGRAM_LOGIN_SECRET: 'catalogue-telegram-secret'
   }
   delete env.API_TOKEN
   delete env.SPACES_DIR

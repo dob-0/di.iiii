@@ -87,6 +87,7 @@ export const FAMILY_BY_TYPE = {
     'device.ptz.osc': 'bring-in',
     // make — things you conjure into the space
     'geom.cube': 'make',
+    'laser.shape': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -174,6 +175,7 @@ export const FAMILY_BY_TYPE = {
     // changes is what a stranger receives, not what the graph makes.
     'view.publish': 'send-out',
     'device.dmx.out': 'send-out',
+    'device.laser.out': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -223,10 +225,16 @@ export const getNodeCardSummary = (node) => {
 // pure function of the node and never of the font.
 export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
 
-export const getNodeCardLines = (node) => {
+// The one field a card shows and lets you edit in place (Enter or a
+// double-click on its text). The side column keeps everything else. Both write
+// node.values[key] — one value, no second copy (owner, 2026-10-05).
+export const CARD_MAIN_FIELD = { 'view.text': { key: 'content', label: 'Content' } }
+export const getCardMainField = (typeId) => CARD_MAIN_FIELD[typeId] || null
+
+export const getNodeCardLines = (node, { unlimited = false } = {}) => {
     if (!node) return null
     if (node.typeId === 'view.list') {
-        const max = CARD_CONTENT_MAX_LINES['view.list']
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.list']
         const items = (Array.isArray(node.values?.items) ? node.values.items : [])
             .filter((it) => String(it?.text || '').trim())
         if (!items.length) return null
@@ -255,7 +263,7 @@ export const getNodeCardLines = (node) => {
         return { lines, more: items.length - shown }
     }
     if (node.typeId === 'view.text') {
-        const max = CARD_CONTENT_MAX_LINES['view.text']
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.text']
         const text = String(node.values?.content ?? node.values?.text ?? '')
         const all = text.split('\n').map((line) => line.trim()).filter(Boolean)
         if (!all.length) return null
@@ -820,6 +828,32 @@ export const NODE_TYPES = {
         // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
         defaultFrame: { width: 340, height: 330 },
+    },
+
+    'device.laser.out': {
+        id: 'device.laser.out',
+        label: 'Laser Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['laser', 'lasers', 'lasercube', 'cube', 'beam', 'show', 'ilda', 'stage', 'blackout', 'preview'],
+        inputs: [
+            // The frame from a Laser node (or anything that makes the same
+            // shape of object); the panel draws it and sends it on change.
+            { id: 'frame',    type: 'any',    label: 'Frame' },
+            // 'all' or one cube's id, as the server names them.
+            { id: 'cube',     type: 'string', label: 'Cube', default: 'all' },
+            // `any`, the DMX Out idiom: a Button, a Compare, a Toggle.
+            { id: 'blackout', type: 'any',    label: 'Blackout' },
+        ],
+        outputs: [
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        // panel-2d: the preview of the shape is the point, and "disarmed" and
+        // "no server" are normal states that each need somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 360 },
     },
 
     'device.midi.out': {
@@ -2095,6 +2129,36 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    'laser.shape': {
+        id: 'laser.shape',
+        label: 'Laser',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'beam', 'draw', 'frame', 'lasercube'],
+        inputs: [
+            // One of: circle, line, square, triangle, star, wave, fan, spiral.
+            { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
+            { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
+            // Where the shape sits up the cube's field, -1..1. 0.5 keeps a size-0.5 shape wholly in
+            // the upper half — the server blanks every point below the cube's own aim (the keep-in
+            // zone, serverXR/src/laser), so a shape at 0 loses its lower half.
+            { id: 'height',   type: 'number', label: 'Height',   default: 0.5 },
+            // Turns, not degrees: 0.25 is a quarter turn, the Oscillator's unit.
+            { id: 'rotation', type: 'number', label: 'Rotation', default: 0 },
+            { id: 'spin',     type: 'number', label: 'Spin',     default: 0 },
+            { id: 'colour',   type: 'color',  label: 'Colour',   default: '#00ff40' },
+            // Brightness 0..1 — Sound's volume wired here makes the shape breathe.
+            { id: 'level',    type: 'number', label: 'Level',    default: 1 },
+            { id: 'points',   type: 'number', label: 'Points',   default: 120 },
+        ],
+        outputs: [
+            { id: 'frame', type: 'any', label: 'Frame' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'signal.lfo': {
         id: 'signal.lfo',
         label: 'Oscillator',
@@ -2856,6 +2920,11 @@ export const NODE_TYPES = {
         id: 'agent.keeper',
         label: 'Keeper',
         category: 'agent',
+        // "Keeper" is the rite's word for it, not the one anyone searches with.
+        // Without these, typing "local llm", "llama" or "openai" in the palette
+        // found nothing and the node might as well not exist. Same words as the
+        // keeper-node article's tags (src/wiki/wikiContent.js).
+        keywords: ['local', 'llm', 'llama', 'llama.cpp', 'ollama', 'openai', 'model', 'ai', 'offline', 'keeper'],
         runtime: 'web',
         singleton: false,
         inputs: [

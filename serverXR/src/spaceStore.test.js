@@ -61,6 +61,28 @@ describe('spaceStore kind', () => {
         expect(await reapingStore.loadSpaceMeta('drop')).toBeNull()
     })
 
+    it('never reaps a space this machine follows, however idle, and says what it removed', async () => {
+        const followed = new Set(['followed'])
+        const reapingStore = createSpaceStore({
+            spacesDir: tmpDir,
+            blankScene: { objects: [] },
+            defaultTtlMs: 1,
+            sandboxTtlMs: 1,
+            keptSpaceIds: () => [...followed]
+        })
+        await reapingStore.upsertSpaceMeta('followed', { kind: 'normal', permanent: false, touch: false })
+        await reapingStore.upsertSpaceMeta('idle', { kind: 'normal', permanent: false, touch: false })
+        await new Promise((r) => setTimeout(r, 5))
+        expect(await reapingStore.pruneSpaces()).toEqual(['idle'])
+        expect(await reapingStore.loadSpaceMeta('followed')).not.toBeNull()
+        expect(await reapingStore.loadSpaceMeta('idle')).toBeNull()
+
+        // Unfollowed, it is an ordinary idle space again.
+        followed.clear()
+        expect(await reapingStore.pruneSpaces()).toEqual(['followed'])
+        expect(await reapingStore.loadSpaceMeta('followed')).toBeNull()
+    })
+
     it('reaps idle sandboxes on the shorter sandbox TTL while normal spaces of the same age survive', async () => {
         const reapingStore = createSpaceStore({
             spacesDir: tmpDir,

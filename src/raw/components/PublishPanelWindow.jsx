@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getServerSpace } from '../../services/serverSpaces.js'
-import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
 
 // The body of the `view.publish` panel node — what a visitor to the public
 // page gets. Deliberately NOT Studio's PublishPanel imported across the lane
@@ -67,7 +67,9 @@ export default function PublishPanelWindow({
     // otherwise the honest link is the per-project one, which resolves for any
     // project of a public space.
     const path = isLive ? buildAppSpacePath(spaceId) : buildPublicProjectPath(spaceId, projectId)
-    const publicUrl = typeof window === 'undefined' ? path : `${window.location.origin}${path}`
+    const publicUrl = typeof window === 'undefined'
+        ? path
+        : buildShareUrl({ spaceId, spaceSlug: space?.slug, domain: space?.domain, path })
 
     const handleCopy = useCallback(() => {
         const done = (ok) => { setCopied(ok ? 'copied' : 'failed'); setTimeout(() => setCopied(false), 1800) }

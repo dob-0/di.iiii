@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import http from 'node:http'
 import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
@@ -254,6 +255,31 @@ describe('a space that lives on two di.iiii at once', () => {
         await settle('the follower edit reaching the host', hasOp(hosting, 'op-follower-chair'))
         expect(objectIds(await readScene(hosting))).toContain('chair')
     })
+
+    // A short name chosen on one machine reaches the other with no human in between
+    // (2026-10-08: the MOXIR links). Both directions, over the real wire.
+    it('carries a project short name set on either side to the other', async () => {
+        const listing = async (server) => (await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })).json()).projects || []
+        const slugOn = (server, id) => async () => (await listing(server)).find(row => row.id === id)?.slug || false
+        const make = (server, id) => fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: id, title: id }) })
+        const patch = (server, id, slug) => fetch(`${server.baseUrl}/api/projects/${id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ slug }) })
+
+        expect((await make(hosting, 'slug-proj-up')).status).toBeLessThan(300)
+        expect((await make(hosting, 'slug-proj-down')).status).toBeLessThan(300)
+        const arrived = (id) => async () => (await listing(following)).some(row => row.id === id)
+        await settle('the projects reaching the follower', arrived('slug-proj-up'))
+        await settle('the projects reaching the follower', arrived('slug-proj-down'))
+
+        // follower -> host
+        expect((await patch(following, 'slug-proj-up', 'brief-up')).status).toBe(200)
+        follower.wake()
+        expect(await settle('the follower short name reaching the host', slugOn(hosting, 'slug-proj-up'))).toBe('brief-up')
+
+        // host -> follower
+        expect((await patch(hosting, 'slug-proj-down', 'brief-down')).status).toBe(200)
+        follower.wake()
+        expect(await settle('the host short name reaching the follower', slugOn(following, 'slug-proj-down'))).toBe('brief-down')
+    }, 150_000)
 
     it('converges when both sides edit at the same version at the same moment', async () => {
         // Both write against the version they are looking at, which is the
@@ -1139,4 +1165,318 @@ describe('an edit made the instant a follow starts is carried', () => {
         expect(objectIds(await readScene(following))).toContain('first-host')
         expect(objectIds(await readScene(hosting))).toContain('first-follower')
     })
+})
+
+// Gap 5 (2026-10-05, seen on the owner's install: 5 projects in space `open`).
+// A project that exists only on the follower is made EMPTY on the host from the
+// listing. Its content is not a stream of ops a follow carries (it came in as a
+// whole document: an import, a restore), so the host's new copy stayed empty and
+// the comparison refused: "the host's copy is empty and this one is not".
+describe('a project only the follower holds fills the host\'s new copy, with no refusal', () => {
+    let hosting = null
+    let following = null
+    const ONLY = 'only-here'
+    const document = { entities: [{ id: 'chair', name: 'chair' }, { id: 'table', name: 'table' }], nodes: [{ id: 'n1' }], assets: [] }
+    const warned = []
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: ONLY, title: 'Only Here' })
+        })
+        expect(made.status).toBe(201)
+        const put = await fetch(`${following.baseUrl}/api/projects/${ONLY}/document`, {
+            method: 'PUT', headers: authHeaders, body: JSON.stringify(document)
+        })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    const entityIds = async (server) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${ONLY}/document`, { headers: authHeaders })
+        if (response.status !== 200) return []
+        return ((await response.json()).document?.entities || []).map(entity => entity.id).sort()
+    }
+
+    it('writes this copy into the host\'s empty one, once, and says nothing is wrong', async () => {
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} }
+        })
+        try {
+            await settle('the host holding the follower\'s project, with its content', async () => {
+                const ids = await entityIds(hosting)
+                return ids.length === 2 ? ids : false
+            }, { timeout: 15_000 })
+            expect(await entityIds(hosting)).toEqual(['chair', 'table'])
+            // nothing refused, nothing owed
+            await settle('the follow saying nothing is wrong', () => follower.state.lastError === null, { timeout: 10_000 })
+            expect(warned.filter(line => /empty and this one is not/.test(line))).toEqual([])
+            // and the copy on this side is the one it was
+            expect(await entityIds(following)).toEqual(['chair', 'table'])
+        } finally {
+            follower.stop()
+        }
+    })
+})
+
+// Gap 4 (2026-10-05): label, isPublic and the front door (publishedProjectId)
+// differed between dev and the local install for the same space. Host to
+// follower, never more public (followSettings.js).
+describe('a follow carries the space\'s own settings from the host, and never makes it more public', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const FRONT = 'front-door'
+
+    const patchSpace = async (server, body) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify(body) })
+        expect(response.status).toBe(200)
+    }
+    const spaceOf = async (server) => (await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}`, { headers: authHeaders })).json()).space
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: FRONT, title: 'Front' })
+        })
+        expect(made.status).toBe(201)
+        await patchSpace(hosting, { label: 'The Laser Room', publishedProjectId: FRONT, isPublic: false })
+        // this copy was made public on its own
+        await patchSpace(following, { isPublic: true })
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('takes the host\'s label and front door, and a private host makes this copy private', async () => {
+        const mine = await settle('the settings arriving', async () => {
+            const space = await spaceOf(following)
+            return space.label === 'The Laser Room' && space.publishedProjectId === FRONT ? space : false
+        }, { timeout: 20_000 })
+        expect(mine.isPublic).toBe(false)
+    })
+
+    it('does not make a private copy public because the host is', async () => {
+        await patchSpace(hosting, { isPublic: true })
+        // Settings are looked at on each pass, and a host's settings change does
+        // not end the held read, so this may take up to one park (20 s).
+        await settle('the follow saying why', () => (follower.state.settings?.notes || []).some(note => /left private/.test(note)), { timeout: 32_000 })
+        expect((await spaceOf(following)).isPublic).toBe(false)
+    })
+
+    it('carries a changed label later, and clears the front door when the host does', async () => {
+        await patchSpace(hosting, { label: 'Laser, renamed', publishedProjectId: null })
+        const mine = await settle('the change arriving', async () => {
+            const space = await spaceOf(following)
+            return space.label === 'Laser, renamed' && !space.publishedProjectId ? space : false
+        }, { timeout: 20_000 })
+        expect(mine.isPublic).toBe(false)
+    })
+})
+
+// Gap 3 (2026-10-05, di.laser): the document listed 101 files, the follow said
+// "79 files still coming", di was restarted twice and afterwards the host held
+// 29 with nothing said. A restart forgot what was owed; the files named by a
+// document the follow never saw ops for are only known from the listing.
+describe('an interrupted file transfer is resumed after a restart, and says what is owed', () => {
+    let hosting = null
+    let following = null
+    const PIECE = 'laser-show'
+    const COUNT = 6
+    const bytesOf = (seed) => Buffer.from(Array.from({ length: 50_000 }, (_, i) => (i * seed + 3) % 256))
+    const files = []
+
+    const holds = async (server, id) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/assets/${id}/meta`, { headers: authHeaders })).status === 200
+    const heldCount = async (server) => (await Promise.all(files.map(file => holds(server, file.id)))).filter(Boolean).length
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        // The project and its files exist on the follower only, named in its document.
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        for (let n = 1; n <= COUNT; n += 1) {
+            const bytes = bytesOf(n * 7)
+            const form = new FormData()
+            form.append('asset', new Blob([bytes], { type: 'video/mp4' }), `clip-${n}.mp4`)
+            const uploaded = await fetch(`${following.baseUrl}/api/projects/${PIECE}/assets`, { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form })
+            expect(uploaded.status).toBe(200)
+            files.push((await uploaded.json()).asset)
+        }
+        const document = { entities: [], nodes: [], assets: files.map(file => ({ ...file, url: '' })) }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { method: 'PUT', headers: authHeaders, body: JSON.stringify(document) })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries what the first run did not, after a restart, and shows it in the follow\'s state', async () => {
+        let uploads = 0
+        let saved = null
+        const first = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} },
+            onSave: (state) => { saved = state },
+            // Two files cross, then the install is "restarted" with the rest still owed.
+            files: { backoffMs: [200, 200, 200], io: { request: httpRequest, download: httpDownloadToFile, upload: async (...args) => { uploads += 1; if (uploads > 2) return new Promise(() => {}); return httpUploadFile(...args) } } }
+        })
+        await settle('two files having crossed', async () => (await heldCount(hosting)) === 2, { timeout: 20_000 })
+        first.stop()
+        expect(await heldCount(hosting)).toBe(2)
+
+        const second = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} },
+            saved,
+            // slowed a little, so what is still owed can be seen while it is owed
+            files: { backoffMs: [200, 200, 200], io: { request: httpRequest, download: httpDownloadToFile, upload: async (...args) => { await wait(500); return httpUploadFile(...args) } } }
+        })
+        try {
+            // Said while it is owed, in the state `di follows` prints …
+            await settle('the restart saying what is owed', () => second.state.files.listed === COUNT && second.state.files.missing > 0, { timeout: 10_000 })
+            // … and carried.
+            // Before the first park on the quiet room (20 s), not after it.
+            await settle('every listed file on the host', async () => (await heldCount(hosting)) === COUNT, { timeout: 12_000 })
+            await settle('nothing owed any more', () => second.state.files.pending === 0 && second.state.files.missing === 0, { timeout: 10_000 })
+        } finally {
+            second.stop()
+        }
+    })
+})
+
+// 2026-10-09, aylmo: the other di.iiii sat behind a Cloudflare tunnel that was
+// down, and every request was answered 530 for hours; the files went on being
+// asked about one by one, thousands of times a minute. Here a small server
+// stands where the tunnel's edge would, on the host's own port, and answers 530
+// to everything; then the host comes back on that port with its disk. The
+// chase's own first wait is set to a minute, so files crossing within seconds
+// of the host's return can only be the op loop telling it (noteAnswered).
+describe('a follow whose other side stops answering waits as one, and carries once it is back', () => {
+    let hosting = null
+    let following = null
+    let edge = null
+    let port = null
+    let dataRoot = null
+    const PIECE = 'hall'
+    const COUNT = 3
+    const bytesOf = (seed) => Buffer.from(Array.from({ length: 40_000 }, (_, i) => (i * seed + 11) % 256))
+    const files = []
+
+    const holds = async (server, id) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/assets/${id}/meta`, { headers: authHeaders })).status === 200
+    const heldCount = async (server) => (await Promise.all(files.map(file => holds(server, file.id)))).filter(Boolean).length
+
+    /** Answers 530 to everything, as Cloudflare does for a tunnel with nothing behind it (error 1033). */
+    const standInEdge = (onPort) => new Promise((resolve, reject) => {
+        const asks = []
+        const server = http.createServer((req, res) => {
+            asks.push(req.url)
+            req.resume()
+            res.writeHead(530, { 'Content-Type': 'text/html' })
+            res.end('<html><body>error code: 1033</body></html>')
+        })
+        server.on('error', reject)
+        server.listen(onPort, '127.0.0.1', () => resolve({ server, asks }))
+    })
+    const closeEdge = async () => {
+        if (!edge) return
+        edge.server.closeAllConnections()
+        await new Promise(resolve => edge.server.close(resolve))
+        edge = null
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        // The project and its files exist on the follower only, named in its document.
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        for (let n = 1; n <= COUNT; n += 1) {
+            const form = new FormData()
+            form.append('asset', new Blob([bytesOf(n * 13)], { type: 'video/mp4' }), `hall-${n}.mp4`)
+            const uploaded = await fetch(`${following.baseUrl}/api/projects/${PIECE}/assets`, { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form })
+            expect(uploaded.status).toBe(200)
+            files.push((await uploaded.json()).asset)
+        }
+        const document = { entities: [], nodes: [], assets: files.map(file => ({ ...file, url: '' })) }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { method: 'PUT', headers: authHeaders, body: JSON.stringify(document) })
+        expect(put.status).toBe(200)
+
+        // The host goes away, and something answers 530 in its place.
+        port = hosting.port
+        dataRoot = hosting.dataRoot
+        await hosting.stop({ keepData: true })
+        hosting = null
+        edge = await standInEdge(port)
+    })
+
+    afterAll(async () => {
+        await closeEdge()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('says so once, asks nothing more while it waits, downloads nothing — and carries every file on the op loop\'s first answer', async () => {
+        const lines = { warn: [], info: [] }
+        let downloads = 0
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: `http://127.0.0.1:${port}/serverXR`, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: (line) => lines.warn.push(line), info: (line) => lines.info.push(line) },
+            files: {
+                backoffMs: [200, 200, 200],
+                waitFirstMs: 60_000,
+                io: { request: httpRequest, upload: httpUploadFile, download: async (...args) => { downloads += 1; return httpDownloadToFile(...args) } }
+            }
+        })
+        // The chase's own asks: documents, files, and its one small question.
+        const chaseAsks = () => edge.asks.filter(url => /\/document$|\/assets\/|\/api\/health$/.test(url)).length
+        try {
+            await settle('the follower saying, once, that the other side is not answering', () => lines.warn.some(line => /not answering \(530\)/.test(line)), { timeout: 15_000 })
+            const askedWhenItSaidSo = chaseAsks()
+            await wait(4000)
+            expect(chaseAsks()).toBe(askedWhenItSaidSo)
+            expect(askedWhenItSaidSo).toBeLessThanOrEqual(3)
+            expect(downloads).toBe(0)
+
+            // Same port, same disk: the host is back.
+            await closeEdge()
+            hosting = await startServer({ port, dataRoot })
+            // The chase's own next ask is still most of a minute away.
+            await settle('every file on the host, well before the chase\'s own minute is up', async () => (await heldCount(hosting)) === COUNT, { timeout: 25_000 })
+            expect(lines.warn.filter(line => /not answering \(530\)/.test(line))).toHaveLength(1)
+            expect(lines.warn.filter(line => /could not be carried/.test(line))).toEqual([])
+            expect(lines.info.filter(line => /answers again/.test(line))).toHaveLength(1)
+        } finally {
+            follower.stop()
+        }
+    }, 60_000)
 })

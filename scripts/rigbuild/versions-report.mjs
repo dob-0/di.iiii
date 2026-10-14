@@ -17,6 +17,7 @@ import { moxirDocument, patchMoxir } from './moxir.mjs'
 import { loadLibrary } from './library.mjs'
 import { patchCsv, powerCsv, renderSheetHtml, sheetModel } from '../../src/rigbuild/sheet.js'
 import { libraryWithShow, RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
+import { readPrivatePrices, specWithPrivatePrices, withPrivatePrices } from './privatePrices.mjs'
 import { allVersions, costing, powerOfList, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 
 export const DEFAULT_HALL = 'scripts/place/rigs/moxir-hall-2026-09-28.hall.json'
@@ -27,6 +28,8 @@ export const report = async ({ out, hallFile = null, only = null }) => {
     const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
     const baseLibrary = loadLibrary()
+    // the supplier's rates: only from the owner's private file (DI_PRIVATE_PRICES), never from the repo
+    const prices = readPrivatePrices()
     const all = []
     // `only`: the version ids to report (a comparison variant alone, say); default every version,
     // variant and candidate (the halo's report used --only; the X's report took them all)
@@ -47,8 +50,8 @@ export const report = async ({ out, hallFile = null, only = null }) => {
             id: v.id, title: v.title, summary: v.summary, set: spec.set,
             rigFile: rigFileOf(spec.set, v.id), rentalFile: rentalFileOf(spec.set, v.id),
             fixtures: built.summary.fixtures, effects: built.summary.effects, real: built.summary.real,
-            lines: list.items.map((i) => ({ code: i.code, label: i.label, ordered: i.ordered, rate: i.rate ?? null, from: i.from || 'rental', note: i.note || '' })),
-            cost: costing({ spec, list }),
+            lines: list.items.map((i) => ({ code: i.code, label: i.label, ordered: i.ordered, rate: withPrivatePrices(list, prices).items.find((x) => x.code === i.code)?.rate ?? null, from: i.from || 'rental', note: i.note || '' })),
+            cost: costing({ spec: specWithPrivatePrices(spec, prices), list: withPrivatePrices(list, prices) }),
             power: { ...powerOfList(list, library), placedW: sheet.power.totalW, circuits: sheet.power.circuits.length, minCircuitsByLoad: sheet.power.minCircuitsByLoad, circuitLimitW: sheet.power.circuit.limitW },
             universes: sheet.universes.map((u) => ({ universe: u.universe, lamps: u.lamps, channels: u.channels, free: u.free })),
             patch: { lamps: sheet.totals.lamps, patched: sheet.totals.patched, channels: sheet.totals.channels, deskFixtures: patched.deskFixtures, flags: sheet.flagCounts, modeOwed: sheet.rows.filter((row) => (row.flags || []).includes('mode-unknown')).map((row) => row.code).reduce((m, c) => ({ ...m, [c]: (m[c] || 0) + 1 }), {}) },
@@ -63,8 +66,9 @@ export const report = async ({ out, hallFile = null, only = null }) => {
         fs.writeFileSync(path.join(dir, 'patch-sheet.html'), renderSheetHtml(sheet, { title: `${rig.rig} — patch sheet (PROPOSAL)`, space: 'moxir', project: `moxir-hall-${v.id}`, generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC', source: `${r.rigFile}; patched on a throwaway desk by scripts/rigbuild/versions-report.mjs.` }))
         fs.writeFileSync(path.join(dir, 'patch.csv'), patchCsv(sheet))
         fs.writeFileSync(path.join(dir, 'power.csv'), powerCsv(sheet))
-        const best = r.cost.options.find((o) => o.id === r.cost.best)
-        say(`${v.id.padEnd(8)} ${r.fixtures} lamps · à la carte ${r.cost.options[0].perDay.toLocaleString('en')} AMD/day · best ${best.label}: ${best.perDay.toLocaleString('en')} · ${(r.power.watts / 1000).toFixed(1)} kW · U ${r.universes.map((u) => `${u.universe}:${u.channels}ch`).join(' ')} · patched ${r.patch.patched}/${r.patch.lamps}`)
+        const best = r.cost.best ? r.cost.options.find((o) => o.id === r.cost.best) : null
+        const money = (n) => (n == null ? 'price: private' : `${n.toLocaleString('en')} AMD/day`)
+        say(`${v.id.padEnd(8)} ${r.fixtures} lamps · à la carte ${money(r.cost.options[0].perDay)} · best ${best ? `${best.label}: ${money(best.perDay)}` : 'price: private'} · ${(r.power.watts / 1000).toFixed(1)} kW · U ${r.universes.map((u) => `${u.universe}:${u.channels}ch`).join(' ')} · patched ${r.patch.patched}/${r.patch.lamps}`)
         all.push(r)
     }
     fs.writeFileSync(path.join(out, 'versions.json'), `${JSON.stringify(all, null, 2)}\n`)

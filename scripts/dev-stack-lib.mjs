@@ -140,3 +140,24 @@ export const collectMissingSpaces = (localIds, tiers) => {
     }
     return missing
 }
+
+// `npm run dev` may attach to a server already answering on its API base only if
+// that server is THIS checkout's. Anything else — the installed di, another
+// tree's stack — owns a database this vite would then edit (2026-10-02: the
+// stray-database class). `health` is the parsed /api/health body; a server too
+// old to say whose it is counts as not ours. Paths compare as given: the caller
+// resolves symlinks on its own side first.
+export const classifyAttach = (health, serverRoot) => {
+    const theirs = health && typeof health.serverRoot === 'string' ? health.serverRoot : ''
+    if (theirs && theirs === serverRoot) return { attach: true }
+    const who = theirs
+        ? `a server from ${theirs}${health.dataRoot ? ` (database ${health.dataRoot})` : ''}`
+        : 'a server that does not say whose it is (installed di or an older tree)'
+    return {
+        attach: false,
+        message: `the port is held by ${who}, not by this checkout (${serverRoot}). `
+            + 'Attaching would edit a database this tree does not own. '
+            + 'Use another port (VITE_API_BASE_URL=http://localhost:<free port>/serverXR), `di-dev up <tree>` on aylmo, '
+            + 'or `di down` the owner yourself. Nothing was started or stopped.'
+    }
+}

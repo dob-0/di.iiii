@@ -126,7 +126,7 @@ function ogHtml({ url, title, description, image }) {
 </head><body><a href="${u}">${t}</a></body></html>`
 }
 
-function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin }) {
+function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin, spaceIdForHost = null }) {
   // Express 5's router (path-to-regexp v8) rejects a bare '*' — it throws at
   // REGISTRATION, so this would not have failed a request, it would have stopped
   // serverXR from booting at all. Named wildcard, and params.splat is an array.
@@ -149,16 +149,24 @@ function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOr
     try {
       const splat = req.params.splat
       const path = String(Array.isArray(splat) ? splat.join('/') : (splat || '')).replace(/^\/+/, '')
-      const segments = path.split('/').filter(Boolean)
+      // A space on its own domain (SPEC_space_own_domain.md): yokozo.xyz/x is
+      // diiii.xyz/taronx/x. The card is looked up as the space path, but its
+      // address stays the domain the link was shared on — and SITE_ORIGIN,
+      // which names the platform, must not override it.
+      const forwardedHost = String(req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim().replace(/:\d+$/, '')
+      const hostSpaceId = (typeof spaceIdForHost === 'function' && forwardedHost) ? spaceIdForHost(forwardedHost) : null
+      const segments = hostSpaceId
+        ? [hostSpaceId, ...path.split('/').filter(Boolean)]
+        : path.split('/').filter(Boolean)
       const handle = segments[0] || ''
-      const origin = publicOrigin(req, siteOrigin)
+      const origin = hostSpaceId ? publicOrigin(req, '') : publicOrigin(req, siteOrigin)
       const url = `${origin}/${path}`
 
       // A reserved top-level page — checked before any space lookup, since
       // none of these words can ever BE a space (RESERVED_PROJECT_SLUGS /
       // reservedSegments.cjs) and asking would only cost a round trip to
       // learn what is already known.
-      const staticPage = STATIC_PAGES[handle.toLowerCase()]
+      const staticPage = hostSpaceId ? null : STATIC_PAGES[handle.toLowerCase()]
       if (staticPage) {
         return res.type('html').send(ogHtml({
           url: origin ? `${origin}/${handle}` : undefined,

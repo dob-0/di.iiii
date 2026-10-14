@@ -14,3 +14,9 @@ dev.diiii.xyz or on a phone; run `npm run verify:surfaces -- --base https://dev.
   `RigVersionSwitch.list.test.jsx` (row with the route answering).
 - **Not done:** no wiki entry (no new words a person reads); a version whose project is a draft still appears in the route (the row
   already intersects with `/contents`, which drops drafts).
+
+## 2026-10-14 — refreshed onto dev
+
+- Merged `origin/dev` (84fc193c). One conflict: `docs/ai/known-fixes.md` (both entries kept); no code conflicts.
+- Tests (`httpContracts`, `projectContracts`, `src/rigbuild`, `src/project/services`): before 1381/1381 (93 files); after 1747/1747 (124 files; the larger count is dev's added tests in those paths).
+- UNVERIFIED: nothing looked at in a browser (no visual change in this refresh).

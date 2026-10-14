@@ -1,0 +1,690 @@
+{
+ "set": "moxir-lights-beta-mix-2026-10-08-blocking",
+ "title": "MOXIR beta v0.9: the mixed light plot after the BLOCKING pass (permanent things taken into account)",
+ "writtenAt": "2026-10-08",
+ "status": "PROPOSAL, pictures only, nothing built. The 2026-10-07 mix (commit c33b3d4b, moxir-lights-beta-mix-2026-10-07.json, kept unchanged as the copy before) with the changes the blocking pass (scripts/place/occlusion.py, every beam cast against the hall GLB's 55 000 triangles + the rig's solids) asks for. Every change is listed in \"changes\" with its reason and measure.",
+ "owner": [
+  "2026-10-07: \"so let's replace all lights again\"",
+  "2026-10-07: \"no laser — not on the truss\"",
+  "2026-10-07 (lasers): \"idk, advise the best places — use the place right, don't overload, but also keep the cool stage thing; I sent examples to di.bo, analyse those and advise\"",
+  "2026-10-07 (the rest): \"idk, we need to mix\"",
+  "2026-10-08: \"the analysis is good but not enough — the place has permanent things and blocking areas, take them into account\""
+ ],
+ "references": {
+  "where": "/mnt/data/footage/inbox/2026-10-06/ (di.bo, the owner's chat, messages 930-933, 2026-10-06 23:11 UTC). Third-party footage of other events: analysis only, never published. Numbered as the 10-07 pages numbered them (the inbox manifest's order n 28-31).",
+  "videos": {
+   "1": "AQMihbdPjmBZbkTTxevuvva_6nnLzyRdfKecnI_C90g0pwoXXcpG1nJb2zznHz4.mp4 (msg 933, 52.6 s, 1276x720)",
+   "2": "AQO_81CR2_tFLPN51sdc2azj_fE0YTnP3AypQzDwDbRSGN7Puw_7o6_sfMnV0dxx.mp4 (msg 931, 14.6 s, 1276x718)",
+   "3": "AQMpi9eG91arqzGBgwvemmnJ4qy8_68sbzOSj0aTXekrwyAzVxWgzxWWbVAdVqF0Es3TwcB.mp4 (msg 932, 16.9 s, 1276x718)",
+   "4": "AQP8if3u5OJ3U4HapabTKSVsn7JjFQ6hYw_ZJuFHLnQmKgx7KJUBMEccxXdnTDvlXXV.mp4 (msg 930, 32.1 s, 720x1280)"
+  },
+  "stills": "~/Downloads/moxir/stage/refs/ (the owner's eyes only)"
+ },
+ "frame": "hall frame: metres, Y up, +x house right (the audience's right facing the DJ), +z toward the entry. Riser x -1.37..1.63, z 22.5..24.5, 0.4 m; the truss hangs in the plane z 21.0; crane girders z 19.55..20.25 and 21.75..22.45, bottom 7.95 m (ASSUMED).",
+ "rules_kept": [
+  "only the fixtures on the order: 50 UP-PL5403, 18 UP-B380F, 6 LaserCube Ultra MK2, 6 hazers, 4 smoke; no new type (counts checked)",
+  "moving heads on the ground, mount face <= 0.7 m (owner 2026-09-30); statics on the truss; the truss, crane, booth and PA do not move",
+  "NO laser on the truss (owner 2026-10-07)",
+  "every laser ray: mounted >= 3 m, rising, >= 3 m over any floor people stand on, ending on the SOLID roof deck (never a lantern's glass), >= 0.3 m from steel, chain or hoist past its own 0.6 m mount (rig-lib LASER_MIN_HEIGHT_M, audit A-03)",
+  "no ground mover's beam through the dance zone under 2.5 m; no narrow beam through the DJ; no audience eye in any lamp's cone (front-row lux stated)",
+  "in the show, no more than 3 fixture groups burn at once (from the references, counted on the stills)"
+ ],
+ "groups": [
+  {
+   "name": "the X (truss)",
+   "ids": [
+    "rig-par-cut-x-01",
+    "rig-par-cut-x-02",
+    "rig-par-cut-x-03",
+    "rig-par-cut-x-04",
+    "rig-par-cut-x-05",
+    "rig-par-cut-x-06"
+   ],
+   "layer": "B",
+   "look": [
+    "core"
+   ],
+   "aim": {
+    "rule": "point",
+    "target": [
+     0.13,
+     2.6,
+     21.0
+    ]
+   },
+   "colour": "#ff2a1a",
+   "why": "stays on the truss; re-aimed so the two ends of the slash cross in the truss's own plane at 2.6 m, just over the DJ's head as the floor sees it (option A). Every beam stays in the plane z 21, so no eye is in it."
+  },
+  {
+   "name": "the curtain (truss)",
+   "ids": [
+    "rig-par-cut-curtain-01",
+    "rig-par-cut-curtain-02",
+    "rig-par-cut-curtain-03",
+    "rig-par-cut-curtain-04",
+    "rig-par-cut-curtain-05",
+    "rig-par-cut-curtain-06",
+    "rig-par-cut-curtain-07"
+   ],
+   "layer": "B",
+   "look": [
+    "core",
+    "ref4"
+   ],
+   "aim": {
+    "rule": "down"
+   },
+   "colour": "#eef3ff",
+   "why": "stays: straight down at z 21, 1.5 m behind the riser: the lit wall under the slash that the DJ stands in front of (option B's sheet, the silhouette's background)."
+  },
+  {
+   "name": "the bridge-up PARs (truss top)",
+   "ids": [
+    "rig-par-cut-bridge-01",
+    "rig-par-cut-bridge-02",
+    "rig-par-cut-bridge-03",
+    "rig-par-cut-bridge-04"
+   ],
+   "layer": "B",
+   "look": [
+    "core"
+   ],
+   "aim": {
+    "rule": "up"
+   },
+   "colour": "#eef3ff",
+   "why": "stay on the truss top; straight up through the 1.5 m gap between the crane girders (option B): the wall carries on above the bridge into the roof."
+  },
+  {
+   "name": "the backlight fan (floor, behind the riser)",
+   "ids": [
+    "rig-beam380-backstage-01",
+    "rig-beam380-backstage-02",
+    "rig-beam380-backstage-03",
+    "rig-beam380-backstage-04",
+    "rig-beam380-backstage-05",
+    "rig-beam380-backstage-06",
+    "rig-beam380-backstage-07"
+   ],
+   "layer": "A",
+   "look": [
+    "core",
+    "ref4",
+    "ref3"
+   ],
+   "positions": [
+    [
+     -3.15,
+     0.7,
+     22.1
+    ],
+    [
+     -2.1,
+     0.7,
+     22.1
+    ],
+    [
+     -1.05,
+     0.7,
+     22.1
+    ],
+    [
+     0.0,
+     0.7,
+     22.1
+    ],
+    [
+     1.05,
+     0.7,
+     22.1
+    ],
+    [
+     2.1,
+     0.7,
+     22.1
+    ],
+    [
+     3.15,
+     0.7,
+     22.1
+    ]
+   ],
+   "aim": {
+    "rule": "point",
+    "target": [
+     0.13,
+     10.0,
+     23.6
+    ]
+   },
+   "colour": "#ffffff",
+   "why": "MOVED from z -1.5 (24 m behind the DJ, behind the press) to the floor strip 0.4 m behind the riser (option A's row; the roller conveyor starts at x 3.6). Home aim = video 4's one meeting point: all seven meet 10 m up, over the DJ, passing in front of the front girder and behind the DJ's body. Movers, so the fan, comb and mirrored looks are cues, not moves."
+  },
+  {
+   "name": "the spine (floor, behind the truss)",
+   "ids": [
+    "rig-beam380-lighthouse-01"
+   ],
+   "layer": "A",
+   "look": [
+    "ref1"
+   ],
+   "positions": [
+    [
+     0.13,
+     0.7,
+     20.55
+    ]
+   ],
+   "aim": {
+    "rule": "up"
+   },
+   "colour": "#ffffff",
+   "why": "MOVED from z -48 (70 m behind the DJ) to the DJ's axis behind the truss: one vertical beam up through the bridge gap, the single backlight cone of video 1. 0.3 m from the truss face, 0.3 m from the back girder."
+  },
+  {
+   "name": "the halo PARs (floor, behind the riser)",
+   "ids": [
+    "rig-par-neighbour-01",
+    "rig-par-neighbour-02",
+    "rig-par-columns-06",
+    "rig-par-neighbour-03",
+    "rig-par-neighbour-04"
+   ],
+   "layer": "A",
+   "look": [
+    "core"
+   ],
+   "positions": [
+    [
+     -2.8,
+     0.3,
+     21.55
+    ],
+    [
+     -1.35,
+     0.3,
+     21.55
+    ],
+    [
+     0.13,
+     0.3,
+     21.55
+    ],
+    [
+     1.6,
+     0.3,
+     21.55
+    ],
+    [
+     3.05,
+     0.3,
+     21.55
+    ]
+   ],
+   "aim": {
+    "rule": "lean",
+    "deg": 20,
+    "toward": "house"
+   },
+   "colour": "#b0000c",
+   "why": "MOVED: the 4 neighbour PARs from the neighbouring spans (x +-35, half of them hidden by columns) and one house-right column PAR (z 18, under the lower duct; its first new place, lighting the blower, was hidden from the floor by PA R) to the floor between the truss and the beam row, symmetric about the DJ. Tilted 20 deg toward the house from vertical: a deep-red glow in the haze over and behind the DJ (video 1's glow from behind the booth, video 4's low glow); his head stays outside every cone, and no eye is in their field."
+  },
+  {
+   "name": "the press crown (floor, in front of the press)",
+   "ids": [
+    "rig-par-press-cut-01",
+    "rig-par-press-cut-02",
+    "rig-par-press-cut-03",
+    "rig-par-press-sides-01",
+    "rig-par-press-sides-02"
+   ],
+   "layer": "A",
+   "look": [
+    "core"
+   ],
+   "positions": [
+    [
+     -1.8,
+     0.3,
+     9.0
+    ],
+    [
+     -1.1,
+     0.3,
+     9.0
+    ],
+    [
+     -0.4,
+     0.3,
+     9.0
+    ],
+    [
+     0.3,
+     0.3,
+     9.0
+    ],
+    [
+     1.0,
+     0.3,
+     9.0
+    ]
+   ],
+   "aim": {
+    "rule": "targets",
+    "targets": [
+     [
+      0.4,
+      5.0,
+      2.6
+     ],
+     [
+      1.0,
+      5.0,
+      2.6
+     ],
+     [
+      1.6,
+      5.0,
+      2.6
+     ],
+     [
+      2.2,
+      5.0,
+      2.6
+     ],
+     [
+      2.8,
+      5.0,
+      2.6
+     ]
+    ]
+   },
+   "colour": "#eef3ff",
+   "why": "MOVED out of the press pedestal and side cabinets (4 sat inside v8 machinery boxes) to the free floor 6 m in front of the press, x < 2 so the press side cabinets do not cut their light; aimed at the crown (4.2-5.6 m), the one part of the press the floor sees over the DJ's head and under the truss. The factory's machine as the deep layer of the silhouette. 2026-10-08 blocking pass: the row slid 0.4 m to house left (x -1.8..1.0): from x 1.4 the press-sides-02 beam clipped the press side cabinets (x 2-5, top 1.6 m) at 2.0 m, 2 of its 9 rays (16 % of the beam area)."
+  },
+  {
+   "name": "the side shafts (column bases)",
+   "ids": [
+    "rig-par-columns-01",
+    "rig-par-columns-02",
+    "rig-par-columns-03",
+    "rig-par-columns-04",
+    "rig-par-columns-05",
+    "rig-par-columns-07",
+    "rig-par-columns-09",
+    "rig-par-columns-10",
+    "rig-par-columns-11",
+    "rig-par-columns-12",
+    "rig-par-columns-13",
+    "rig-par-columns-14",
+    "rig-par-columns-15",
+    "rig-par-columns-16"
+   ],
+   "layer": "hall",
+   "look": [],
+   "aim": {
+    "rule": "lean",
+    "deg": 34,
+    "toward": "axis"
+   },
+   "colour": "#b0000c",
+   "why": "stay at the column bases, re-aimed: leaned 34 deg in toward the nave, so the 15 deg cone passes under the pipe racks' inner edge (x 10) on house right instead of lighting their underside at 3 m; mirrored on house left. Two rows of raked red shafts frame the floor (video 4's side combs, in MOXIR red)."
+  },
+  {
+   "name": "the machine reveal (house right)",
+   "ids": [
+    "rig-par-columns-08"
+   ],
+   "layer": "hall",
+   "look": [],
+   "positions": [
+    [
+     9.5,
+     0.3,
+     29.3
+    ]
+   ],
+   "aim": {
+    "rule": "targets",
+    "targets": [
+     [
+      9.5,
+      1.8,
+      28.0
+     ]
+    ]
+   },
+   "colour": "#eef3ff",
+   "why": "MOVED: at z 24 the house-right column base is inside the drum tank's footprint. It now lights the drum tank's face from the side aisle: the machines on the right revealed in one piece, the hall's own asymmetry. (Its z 18 twin went to the halo: the blower is hidden from the floor behind PA R.)"
+  },
+  {
+   "name": "the vista (far columns)",
+   "ids": [
+    "rig-par-vista-01",
+    "rig-par-vista-02",
+    "rig-par-vista-03",
+    "rig-par-vista-04",
+    "rig-par-vista-05",
+    "rig-par-vista-06",
+    "rig-par-vista-07",
+    "rig-par-vista-08"
+   ],
+   "layer": "hall",
+   "look": [],
+   "aim": {
+    "rule": "keep"
+   },
+   "why": "kept as they are: the far columns z -12..-48 uplit, seen beside the truss (8 of 8 lit points seen from the floor, 10-07 report): the hall going on behind the stage."
+  },
+  {
+   "name": "the column arch (floor, column rows)",
+   "ids": [
+    "rig-beam380-columns-01",
+    "rig-beam380-columns-02",
+    "rig-beam380-columns-03",
+    "rig-beam380-columns-04",
+    "rig-beam380-columns-05",
+    "rig-beam380-columns-06",
+    "rig-beam380-columns-07",
+    "rig-beam380-columns-08",
+    "rig-beam380-columns-09",
+    "rig-beam380-columns-10"
+   ],
+   "layer": "C",
+   "look": [
+    "ref3",
+    "ref2"
+   ],
+   "positions": [
+    [
+     -7.6,
+     0.7,
+     25.2
+    ],
+    [
+     7.6,
+     0.7,
+     25.2
+    ],
+    [
+     -9.6,
+     0.7,
+     30.0
+    ],
+    [
+     9.6,
+     0.7,
+     30.0
+    ],
+    [
+     -9.6,
+     0.7,
+     36.0
+    ],
+    [
+     9.6,
+     0.7,
+     36.0
+    ],
+    [
+     -9.6,
+     0.7,
+     42.0
+    ],
+    [
+     9.6,
+     0.7,
+     42.0
+    ],
+    [
+     -9.6,
+     0.7,
+     48.0
+    ],
+    [
+     9.6,
+     0.7,
+     48.0
+    ]
+   ],
+   "aim": {
+    "rule": "crossz",
+    "target_x": 0.13,
+    "y": 10.0
+   },
+   "colour": "#ffffff",
+   "why": "option C's crossing column beams, kept as the crowd element: each pair meets over the axis at 11 m in its own plane, a row of pointed arches down the floor (video 2's arch, drawn from the floor). MOVED 0.8 m in from x +-10.4 to +-9.6 so a vertical comb look clears the pipe racks (x >= 10); the z 24 pair (house right was inside the drum tank) moved to z 25.2, x +-7.6, beside the pit. No eye in any cone; every beam > 2.5 m over the dance zone. 2026-10-08 blocking pass: the crossing moved DOWN from 11.0 to 10.0 m: at 11 m it sat inside the space frame's bottom chord (10.8-11.04 m), and the 8 pairs on the z 30-48 grid lines lost 8-22 % of their beam to the chord running along x in their own plane before they met."
+  },
+  {
+   "name": "lasers: the bridge pair",
+   "ids": [
+    "rig-lasercube-cut-01",
+    "rig-lasercube-cut-02"
+   ],
+   "layer": "laser",
+   "look": [
+    "ref1"
+   ],
+   "positions": [
+    [
+     -2.6,
+     7.45,
+     22.8
+    ],
+    [
+     2.6,
+     7.45,
+     22.8
+    ]
+   ],
+   "mount": "crane bridge, FRONT girder (z 21.75..22.45, bottom 7.95 m ASSUMED): a girder clamp and a 0.5 m drop arm forward of the girder face, cube at 7.45 m, 0.35 m in front of the girder. Not on the truss.",
+   "aim": {
+    "rule": "laser",
+    "target": [
+     [
+      11.0,
+      13.35,
+      38.0
+     ],
+     [
+      -11.0,
+      13.35,
+      38.0
+     ]
+    ],
+    "fan_az_deg": 8,
+    "fan_el_deg": 1.5
+   },
+   "colour": "#3cff3c",
+   "why": "the stage end, high: the beams are born above the DJ's head and fly over the crowd toward the entry, so everyone facing the DJ looks back along them (haze scatters forward: brightest seen from in front). The two cross over the pit at about 8.8 m and land on the solid deck strips beside lantern 1 (|x| > 6)."
+  },
+  {
+   "name": "lasers: the column pair",
+   "ids": [
+    "rig-lasercube-cut-03",
+    "rig-lasercube-cut-04"
+   ],
+   "layer": "laser",
+   "look": [
+    "ref1"
+   ],
+   "positions": [
+    [
+     -11.25,
+     5.2,
+     24.0
+    ],
+    [
+     11.25,
+     5.2,
+     24.0
+    ]
+   ],
+   "mount": "the z 24 column pair (stage line), a column clamp 0.35 m off the inner face at 5.2 m: 0.7 m over pipe-rack-3's top (4.5 m) on house right, 1.86 m under the crane runway. Not on the truss.",
+   "aim": {
+    "rule": "laser",
+    "target": [
+     [
+      10.0,
+      13.35,
+      41.0
+     ],
+     [
+      -10.0,
+      13.35,
+      41.0
+     ]
+    ],
+    "fan_az_deg": 5,
+    "fan_el_deg": 1.5
+   },
+   "colour": "#3cff3c",
+   "why": "video 1's web: beams from the sides of the stage end cross over the middle of the floor (about 9.6 m up at z 33) and land on the far deck strip. With the bridge pair: two X's, a web over the crowd, never lower than the 3 m rule."
+  },
+  {
+   "name": "lasers: not hung",
+   "ids": [
+    "rig-lasercube-cut-05",
+    "rig-lasercube-cut-06"
+   ],
+   "layer": "spare",
+   "look": [],
+   "spare": true,
+   "why": "NOT HUNG: kept in their cases as hot spares (or returned). A third pair's only free places are the back columns (z 36-48), behind most of the crowd, where the beams are seen side-on or from behind and read dim; four sources already make two X's on a 10.7 x 22 m floor."
+  },
+  {
+   "name": "hazers",
+   "ids": [
+    "rig-hazer-back-01",
+    "rig-hazer-back-02",
+    "rig-hazer-hall-01",
+    "rig-hazer-hall-02",
+    "rig-hazer-hall-03",
+    "rig-hazer-hall-04"
+   ],
+   "layer": "air",
+   "look": [],
+   "positions": [
+    [
+     -4.5,
+     0.23,
+     19.8
+    ],
+    [
+     2.8,
+     0.23,
+     19.8
+    ],
+    [
+     -10.6,
+     0.23,
+     33.0
+    ],
+    [
+     10.6,
+     0.23,
+     33.0
+    ],
+    [
+     -10.6,
+     0.23,
+     45.0
+    ],
+    [
+     10.6,
+     0.23,
+     45.0
+    ]
+   ],
+   "why": "two behind the truss where the backlight beams are (from the old booth, 19 m behind; one was inside the press cabinets); four at the column rows between the beam pairs, z 33 and 45, mirrored (hall-04 was 1.4 m outside the entry wall). Even haze, not thick: beams need haze along their whole length."
+  },
+  {
+   "name": "smoke",
+   "ids": [
+    "rig-smoke-01",
+    "rig-smoke-02",
+    "rig-smoke-03",
+    "rig-smoke-04"
+   ],
+   "layer": "air",
+   "look": [],
+   "positions": [
+    [
+     -4.2,
+     0.1,
+     22.9
+    ],
+    [
+     5.2,
+     0.1,
+     22.9
+    ],
+    [
+     -10.6,
+     0.1,
+     39.0
+    ],
+    [
+     10.6,
+     0.1,
+     39.0
+    ]
+   ],
+   "why": "two bursts behind the PA stacks either side of the booth (smoke rolling through the backlight = the silhouette's moments), two at the floor's sides; smoke-04 was outside the entry wall."
+  }
+ ],
+ "looks_note": "the cue states drawn on the page are defined in scripts/place/lights_beta_mix.py LOOKS (positions never change between looks; only aims, colours and which groups burn)",
+ "changes": [
+  {
+   "group": "the press crown (floor, in front of the press)",
+   "ids": [
+    "rig-par-press-cut-01",
+    "rig-par-press-cut-02",
+    "rig-par-press-cut-03",
+    "rig-par-press-sides-01",
+    "rig-par-press-sides-02"
+   ],
+   "what": "move: the row of 5 slides 0.4 m house left, x -1.4..1.4 -> -1.8..1.0, same targets on the crown",
+   "why": "press side cabinets cut the lower edge of the outermost beam at 2.0 m"
+  },
+  {
+   "group": "the column arch (floor, column rows)",
+   "ids": [
+    "rig-beam380-columns-01",
+    "rig-beam380-columns-02",
+    "rig-beam380-columns-03",
+    "rig-beam380-columns-04",
+    "rig-beam380-columns-05",
+    "rig-beam380-columns-06",
+    "rig-beam380-columns-07",
+    "rig-beam380-columns-08",
+    "rig-beam380-columns-09",
+    "rig-beam380-columns-10"
+   ],
+   "what": "re-aim: crossing point y 11.0 -> 10.0 m (x 0.13, each pair in its own z plane)",
+   "why": "space frame bottom chord at 10.8 m in the beam plane (z 30, 36, 42, 48 are space-frame grid lines)"
+  },
+  {
+   "group": "the column arch (floor, column rows)",
+   "ids": [
+    "rig-beam380-columns-01",
+    "rig-beam380-columns-02"
+   ],
+   "look": "ref3",
+   "what": "cue ref3 (video 3, mirrored red): the pit pair splays 8 deg out from vertical, not 18 deg",
+   "why": "at 18 deg the house-right beam (x 7.6, z 25.2) runs into the drum tank (x 8-11, top 3 m) 0.4 m away: 100 % of it blocked. At 8 deg it passes the tank's top edge at 3.25 m"
+  }
+ ],
+ "look_overrides": {
+  "ref3": {
+   "the column arch (floor, column rows)": {
+    "aim": {
+     "rule": "splay",
+     "deg": 8,
+     "fwd_deg": 8
+    }
+   }
+  }
+ }
+}

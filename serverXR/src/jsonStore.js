@@ -28,8 +28,60 @@ async function writeJson(filePath, data) {
   await ensureDir(path.dirname(filePath))
   const serialized = JSON.stringify(data, null, 2)
   const tempPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`
-  await fsp.writeFile(tempPath, serialized)
-  await fsp.rename(tempPath, filePath)
+  try {
+    await fsp.writeFile(tempPath, serialized)
+    await fsp.rename(tempPath, filePath)
+  } catch (error) {
+    // A failed write (a full disk is the usual one) must not leave its half-written temp file behind: the next
+    // attempt would find even less room, and nothing ever sweeps these.
+    await fsp.rm(tempPath, { force: true }).catch(() => {})
+    throw error
+  }
+}
+
+// fsync(2) on a directory makes a rename inside it durable. Linux and macOS
+// allow it on a read-only handle; Windows refuses to open a directory at all,
+// and NTFS journals the rename itself, so there it is skipped.
+async function syncDir(dirPath) {
+  let handle
+  try {
+    handle = await fsp.open(dirPath, 'r')
+    await handle.sync()
+  } catch (error) {
+    if (!['EISDIR', 'EPERM', 'EACCES', 'EINVAL', 'ENOTSUP'].includes(error?.code)) throw error
+  } finally {
+    await handle?.close().catch(() => {})
+  }
+}
+
+// writeJson, made durable: the bytes reach the disk (fsync) before the rename,
+// and the rename reaches the disk (fsync of the directory) before this returns.
+// Without the first, a power cut after the rename can leave a zero-length file
+// in place of a good one; without the second, the rename itself can be lost.
+// The order is the one POSIX gives for an atomic, durable replace: write a
+// temp file, fsync it, rename it over, fsync the directory (rename(2) and
+// fsync(2), POSIX.1-2017; SQLite's "Atomic Commit In SQLite",
+// https://sqlite.org/atomiccommit.html, flushes the file and its directory
+// for the same reason).
+// Used where a database commit is ordered after the file (sceneWrite.js).
+async function writeJsonDurable(filePath, data) {
+  await ensureDir(path.dirname(filePath))
+  const serialized = JSON.stringify(data, null, 2)
+  const tempPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`
+  let handle
+  try {
+    handle = await fsp.open(tempPath, 'w')
+    await handle.writeFile(serialized)
+    await handle.sync()
+    await handle.close()
+    handle = null
+    await fsp.rename(tempPath, filePath)
+    await syncDir(path.dirname(filePath))
+  } catch (error) {
+    await handle?.close().catch(() => {})
+    await fsp.rm(tempPath, { force: true }).catch(() => {})
+    throw error
+  }
 }
 
 async function readJson(filePath, fallback = null) {
@@ -61,5 +113,7 @@ module.exports = {
   ensureDir,
   tryRecoverJson,
   readJson,
-  writeJson
+  syncDir,
+  writeJson,
+  writeJsonDurable
 }

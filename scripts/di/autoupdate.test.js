@@ -37,6 +37,11 @@ describe('the timer unit text', () => {
         expect(service).toContain('Environment=DI_HOME=/home/x/.di')
         expect(service).toContain('ExecStart=/home/x/.di/bin/di autoupdate run')
     })
+    it('puts the node that enabled it first on PATH, so systemd never picks /usr/bin/node (10-05: di stayed down after every update)', () => {
+        const { service: s } = unitTexts({ home: '/home/x/.di', shim: '/home/x/.di/bin/di', nodeDir: '/home/x/.local/opt/node-v22/bin' })
+        expect(s).toContain('Environment=PATH=/home/x/.local/opt/node-v22/bin:/usr/local/bin:/usr/bin:/bin')
+        expect(service).toMatch(/^Environment=PATH=[^:\n]+:\/usr\/local\/bin/m)
+    })
 })
 
 describe('on / off', () => {

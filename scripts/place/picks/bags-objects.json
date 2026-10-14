@@ -1,0 +1,21 @@
+{
+  "what": "Pixel picks of fixed metal objects behind the white bulk bags, MOXIR hall. Read by eye on gridded crops (954 t3.6 at 1.9x, 023 at 1.25x); read error about +-8 px in 954, +-15 px in 023 (ultra-wide, not undistorted).",
+  "views": {"954": "954-FXT51128-t03.6.jpg (X-T5 video frame, 2048x1080)", "023": "023-file_101.jpg (Galaxy S24 ultra-wide, 2992x3071, the press end looking +z)"},
+  "features": {
+    "duct-elbow-axis (-x end of the lower duct, where it turns down)": {"954-FXT51128-t03.6": [1108, 578], "023-file_101": [915, 2395]},
+    "hopper-cone-bottom under the elbow": {"954-FXT51128-t03.6": [1108, 652], "023-file_101": [885, 2615]},
+    "blower-housing-top": {"954-FXT51128-t03.6": [1405, 642], "023-file_101": [470, 2392]}
+  },
+  "floor": {
+    "blower-pedestal-front-base": {"954-FXT51128-t03.6": [1430, 830]},
+    "blower-housing-floor-left": {"954-FXT51128-t03.6": [1300, 815]},
+    "canopy-post-front-foot": {"954-FXT51128-t03.6": [1652, 832]},
+    "brown-cabinet-front-foot": {"954-FXT51128-t03.6": [1720, 790]},
+    "bag-7-front-foot (movable, check)": {"954-FXT51128-t03.6": [1050, 878]},
+    "cone-chute-foot": {"954-FXT51128-t03.6": [1108, 760]}
+  },
+  "lines": {
+    "lower-duct-axis": {"954-FXT51128-t03.6": [[1160, 578], [1820, 576]], "023-file_101": [[30, 2378], [780, 2378]]},
+    "upper-duct-axis": {"954-FXT51128-t03.6": [[1140, 488], [1780, 486]]}
+  }
+}

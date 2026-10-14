@@ -88,7 +88,7 @@ describe('what `di up --lan` does', () => {
         // A docker install that is up would otherwise be told "on this network
         // too" — the container binds 0.0.0.0, the compose publishes 127.0.0.1.
         const refused = up.indexOf("runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker())")
-        const alreadyRunning = up.indexOf('if (await alive(home, port)) { say(ui.alreadyRunning(')
+        const alreadyRunning = up.indexOf('say(ui.alreadyRunning(')
         expect(refused).toBeGreaterThan(-1)
         expect(alreadyRunning).toBeGreaterThan(-1)
         expect(refused).toBeLessThan(alreadyRunning)
@@ -148,8 +148,10 @@ describe('status and where ask the server which bind is in force', () => {
         expect(cli.split('probeListen(').length - 1).toBe(2)
         // open-file, update and restore each ask before their stop; status, where and
         // the already-running branch of up ask to report the reach; invite asks
-        // so the line it prints names an address the other machine can reach.
-        expect(cli.split('probeReach(home, ').length - 1).toBe(7)
+        // so the line it prints names an address the other machine can reach;
+        // `service install` and `service remove` ask before they hand the
+        // server over, so a `--lan` start comes back as one.
+        expect(cli.split('probeReach(home, ').length - 1).toBe(9)
     })
 })
 

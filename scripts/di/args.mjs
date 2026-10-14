@@ -20,6 +20,9 @@ export const parseArgs = (argv) => {
         if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
+        // `di move PROJECT --to SPACE [--token -]`
+        if (name === 'to') { args.flags.to = argv[++i]; continue }
+        if (name === 'token') { args.flags.token = argv[++i]; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
         // `di stage join` — which mapping, which Chromium, what this machine
@@ -29,6 +32,8 @@ export const parseArgs = (argv) => {
         if (name === 'name') { args.flags.name = argv[++i]; continue }
         // `di ndi scan --url http://localhost:4390` — a di.iiii other than this install.
         if (name === 'url') { args.flags.url = argv[++i]; continue }
+        // `di login --tier dev --label "my laptop"`, `di mcp --tier dev --base URL`
+        if (name === 'tier' || name === 'label' || name === 'base') { args.flags[name] = argv[++i]; continue }
         // `di open file.diiii --force --accept-loss 76` — the exact number of
         // media items a forced replace removes, passed to space-bundle.mjs.
         if (name === 'accept-loss') { args.flags['accept-loss'] = argv[++i]; continue }
