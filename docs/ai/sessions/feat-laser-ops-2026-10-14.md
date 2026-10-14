@@ -27,3 +27,26 @@ Limits, owed:
   documented behaviour, not measured on PONYO.
 - A cube on a different /24 than the laptop is not found.
 - Through a dev proxy with xfwd (Vite, `di-dev up`) arming is refused by design; use the installed di's own address.
+
+### Round 2 — security fixes from the review (2026-10-14, ~15:00–16:00)
+
+- **Own page only** (`localRuntimeGuard.js` `requireOwnPage`, on every laser POST: arm, disarm, frame, alive, find,
+  config, blackout): Host must be this machine's own name (localhost, 127.0.0.1, [::1], diiii.localhost,
+  *.diiii.localhost, DI_LOCAL_NAME, a named HOST; the interface addresses only with DI_ALLOW_LAN_DEVICES=1) and Origin,
+  or Referer, same-origin with it (scheme included); no Origin and no Referer only from a loopback peer. Named 403s:
+  `foreign host`, `cross-site request`, `no origin`. Method: OWASP CSRF Prevention Cheat Sheet, "verifying origin with
+  standard headers". Closes the review's CSRF (dev cors() answers any Origin) and DNS-rebinding (foreign Host) repros.
+- **Proxied** = Forwarded, any X-Forwarded-*, X-Real-IP, X-Client-IP, Via, CF-Connecting-IP, True-Client-IP,
+  Tailscale-User-Login.
+- **Stops**: Disarm and Blackout follow ONE rule, `STOPS_FROM_REMOTE = false` in `laserRoutes.js` (local-only, as strict
+  as Arm) until the owner decides (ledger N644.2); one-line change.
+- **Serial**: Use these carries stillBeams only on a serial match; an address-only match keeps id and name, drops the
+  still beams and names them (`droppedStillBeams`, shown in the panel). The engine also drops a cube's still beams
+  while the box at its address reports another serial (`serialMismatch` in state). The panel proposes names by serial
+  only.
+- **Addresses**: Find cubes sweeps RFC 1918 only (10/8, 172.16/12, 192.168/16) and lists what it skipped (Tailscale/CGNAT
+  100.64/10, link-local, public). laser.json and Use these refuse broadcast, network, multicast/reserved and loopback
+  (127.0.0.x only with the test flag `DI_LASER_TEST_LOOPBACK=1`); a refused laser.json address is not used and
+  `addressRefused` says why. Public unicast addresses are still accepted in laser.json (not in the brief).
+- Not done (not in the round-2 brief): the sweep's socket error after answers is still dropped, not a warning
+  (review #6); a Windows sweep test; fsync on the laser.json write.

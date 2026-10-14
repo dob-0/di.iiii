@@ -8,7 +8,7 @@
 // read: no output, no points (lasercubeProtocol.js, the protocol spec it cites).
 //
 // Where: a UNICAST sweep, one question to every host address .1–.254 of each local IPv4 /24 this
-// machine holds (os.networkInterfaces). Broadcast got no answer from the Ultra Mk2 cubes on aylmo's
+// machine holds in private space, RFC 1918 (os.networkInterfaces; localNetworks says what is skipped). Broadcast got no answer from the Ultra Mk2 cubes on aylmo's
 // cable network (owner's brief, 2026-10-14), so it is not used. A /24 is swept even when the
 // interface's own mask is wider: 254 one-byte packets is the bound that keeps the sweep short and
 // polite on a venue network. Pure Node dgram — no shell, no arp, no ping — so it runs the same on
@@ -33,24 +33,75 @@ const isIPv4 = (s) => {
     return Boolean(m) && m.slice(1).every((o) => Number(o) <= 255)
 }
 
+const octets = (ip) => String(ip).split('.').map(Number)
+
+/** RFC 1918 private space: 10/8, 172.16/12, 192.168/16. */
+const isPrivateIPv4 = (ip) => {
+    if (!isIPv4(ip)) return false
+    const [a, b] = octets(ip)
+    return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
+}
+
+/** What kind of network an interface address is on, for the sweep's "skipped" list. Pure. */
+const networkKind = (ip) => {
+    const [a, b] = octets(ip)
+    if (isPrivateIPv4(ip)) return 'private'
+    if (a === 100 && b >= 64 && b <= 127) return 'Tailscale/CGNAT (100.64/10)'
+    if (a === 169 && b === 254) return 'link-local (169.254/16)'
+    if (a === 127) return 'loopback'
+    return 'public'
+}
+
+// The test flag: DI_LASER_TEST_LOOPBACK=1 lets tests stand fake cubes on 127.0.0.x. Never set on a
+// machine that drives real cubes; read at call time so a test can set it and unset it.
+const loopbackCubesAllowed = () => process.env.DI_LASER_TEST_LOOPBACK === '1'
+
 /**
- * Every local IPv4 /24 this machine holds (loopback, link-local 169.254 and duplicates left out). Pure
- * given the interface table. @returns {{ name: string, address: string, prefix: string }[]}
+ * Why `ip` cannot be a real cube's address, or null when it can. A cube is one unicast host:
+ * broadcast (255.255.255.255, x.x.x.255), network (0.0.0.0/8, x.x.x.0), multicast (224/4, and the
+ * reserved 240/4) and loopback (127/8) are refused. x.x.x.0 and .255 are refused on every mask: the
+ * sweep only ever finds .1–.254, so a cube outside that range was typed, not found. 127.0.0.x is
+ * allowed only under the test flag. Pure apart from the flag.
+ */
+const cubeAddressProblem = (ip) => {
+    if (!isIPv4(ip)) return `"${String(ip ?? '').slice(0, 40)}" is not an IPv4 address`
+    const [a, , , d] = octets(ip)
+    if (a === 127) {
+        if (loopbackCubesAllowed() && ip.startsWith('127.0.0.') && d >= 1 && d <= 254) return null
+        return `${ip} is this computer itself (loopback), not a cube`
+    }
+    if (a >= 224 && a <= 239) return `${ip} is a multicast address, not one cube`
+    if (a >= 240) return `${ip} is a broadcast or reserved address, not one cube`
+    if (a === 0) return `${ip} is a network address, not one cube`
+    if (d === 255) return `${ip} is a broadcast address, not one cube`
+    if (d === 0) return `${ip} is a network address, not one cube`
+    return null
+}
+
+/**
+ * Every local IPv4 /24 this machine holds in PRIVATE space (RFC 1918: 10/8, 172.16/12, 192.168/16).
+ * Everything else is left out and listed in `skipped` (review round 2, 2026-10-14): the Tailscale/
+ * CGNAT range 100.64/10 (on aylmo that was 254 packets to tailnet peers), link-local 169.254/16,
+ * loopback and public addresses (a VPS or a venue uplink: 254 packets to strangers). Pure given the
+ * interface table. @returns {{ name: string, address: string, prefix: string }[]} with a `skipped`
+ * property: { name, address, kind }[]
  */
 const localNetworks = (interfaces = os.networkInterfaces()) => {
     const seen = new Set()
     const out = []
+    const skipped = []
     for (const [name, list] of Object.entries(interfaces || {})) {
         for (const a of list || []) {
             const family = a?.family === 4 ? 'IPv4' : a?.family
             if (family !== 'IPv4' || a.internal || !isIPv4(a.address)) continue
-            if (a.address.startsWith('169.254.') || a.address.startsWith('127.')) continue
+            if (!isPrivateIPv4(a.address)) { skipped.push({ name, address: a.address, kind: networkKind(a.address) }); continue }
             const prefix = a.address.split('.').slice(0, 3).join('.')
             if (seen.has(prefix)) continue
             seen.add(prefix)
             out.push({ name, address: a.address, prefix })
         }
     }
+    Object.defineProperty(out, 'skipped', { value: skipped, enumerable: false })
     return out
 }
 
@@ -148,6 +199,8 @@ const sweep = ({
     })
 })
 
+const skippedOf = (networks) => (networks.skipped || []).map((s) => `${s.address} (${s.name}): ${s.kind}, not searched`)
+
 /**
  * Find cubes on this machine's networks (or on `targets`, for tests and a named network).
  * @returns {Promise<{ ok, asked, cubes, networks, error? }>}
@@ -159,11 +212,11 @@ const findCubes = async ({ interfaces, targets, ...rest } = {}) => {
         const selfAssigned = Object.values(interfaces || os.networkInterfaces()).flat().some((a) => !a?.internal && String(a?.address || '').startsWith('169.254.'))
         const error = selfAssigned
             ? 'this computer has only a self-assigned address (169.254…): nothing on the cable hands out addresses. Use a router, or on Windows turn on Internet Connection Sharing for the Ethernet adapter, then Find cubes again.'
-            : 'this computer has no IPv4 network to search: plug the cable into the switch with the cubes, wait for an address, then Find cubes again.'
-        return { ok: false, asked: 0, cubes: [], networks, error }
+            : 'this computer has no private IPv4 network (10…, 172.16–31…, 192.168…) to search: plug the cable into the switch with the cubes, wait for an address, then Find cubes again.'
+        return { ok: false, asked: 0, cubes: [], networks, skipped: skippedOf(networks), error }
     }
     const out = await sweep({ targets: list, ...rest })
-    return { ...out, networks: networks.map((n) => `${n.prefix}.0/24 (${n.name})`) }
+    return { ...out, networks: networks.map((n) => `${n.prefix}.0/24 (${n.name})`), skipped: skippedOf(networks) }
 }
 
-module.exports = { findCubes, sweep, localNetworks, sweepTargets, isIPv4, explain, SWEEP_WAIT_MS }
+module.exports = { findCubes, sweep, localNetworks, sweepTargets, isIPv4, isPrivateIPv4, networkKind, cubeAddressProblem, explain, SWEEP_WAIT_MS }

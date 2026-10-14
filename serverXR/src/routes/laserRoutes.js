@@ -1,6 +1,13 @@
 const path = require('path')
 const express = require('express')
-const { requireLocalRuntime, requireSameMachine } = require('../localRuntimeGuard')
+const { requireLocalRuntime, requireSameMachine, requireOwnPage } = require('../localRuntimeGuard')
+
+// THE STOPS — Disarm ({ armed: false }) and Blackout follow ONE rule. Whether a remote viewer may stop
+// the lasers is the owner's open decision (ledger N644.2). Until he decides, both are local-only, as
+// strict as Arm (requireSameMachine). true = both answer anyone the local runtime answers
+// (requireLocalRuntime, mounted below). The one-line change is this constant.
+const STOPS_FROM_REMOTE = false
+const stopGate = STOPS_FROM_REMOTE ? (req, res, next) => next() : requireSameMachine
 
 // One sweep at a time, and a pause after each: a sweep is 254 packets a network, and a button
 // pressed twice must not make it 508 (laserFind.js).
@@ -25,9 +32,12 @@ const FIND_GAP_MS = 5000
 //   POST /laser/api/config     { cubes: [{ serial, ip, name }, …] } — write laser.json (laserConfig.js)
 //                              and reload: the engine is disarmed and closed first, then rebuilt
 //                              from the new file on the next request. No restart.
-// Who may call what (2026-10-14): GET state and frames, and blackout, answer as before
-// (requireLocalRuntime). Arm, frame, alive, find and config answer only a browser on this same
-// machine with no proxy in between (requireSameMachine), unless DI_ALLOW_LAN_DEVICES=1.
+// Who may call what (2026-10-14, review round 2): GET state and frames answer as before
+// (requireLocalRuntime). EVERY POST first passes requireOwnPage: Host is one of this machine's own
+// names and Origin (or Referer) is that same origin, so no other website and no rebound name can
+// drive a cube. Arm, frame, alive, find and config then answer only a browser on this same machine
+// with no proxy in between (requireSameMachine), unless DI_ALLOW_LAN_DEVICES=1. Disarm and blackout
+// follow STOPS_FROM_REMOTE (above).
 function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, now = Date.now } = {}) {
   const laserDir = path.join(dataDir, 'laser')
   let engine = null
@@ -52,6 +62,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   let lastFindAt = -Infinity
 
   const router = express.Router()
+  router.use((req, res, next) => (req.method === 'GET' || req.method === 'HEAD' ? next() : requireOwnPage(req, res, next)))
   router.use(express.json({ limit: '512kb' }))
   router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().state()) })
   router.get('/api/frames', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().frames()) })
@@ -63,8 +74,9 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     const out = getEngine().alive(req.body?.cube)
     res.status(out.ok ? 200 : 400).json(out)
   })
-  router.post('/api/blackout', (req, res) => res.json(getEngine().blackout()))
-  router.post('/api/arm', requireSameMachine, (req, res) => {
+  router.post('/api/blackout', stopGate, (req, res) => res.json(getEngine().blackout()))
+  // Arming is the strict gate; disarming is a stop and takes the stops' rule.
+  router.post('/api/arm', (req, res, next) => (req.body?.armed === true ? requireSameMachine : stopGate)(req, res, next), (req, res) => {
     const out = getEngine().arm(req.body || {})
     res.status(out.ok ? 200 : 403).json(out)
   })
@@ -100,7 +112,8 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     if (!saved.ok) { res.status(400).json(saved); return }
     const { wasArmed } = await reload()
     log?.warn?.(`[laser] cubes set from the panel (${saved.config.cubes.map((c) => `${c.id} ${c.ip}`).join(', ')}); ${wasArmed ? 'DISARMED for the reload' : 'disarmed'}`)
-    res.json({ ok: true, disarmed: true, wasArmed, file: saved.file, cubes: saved.config.cubes, state: getEngine().state() })
+    if (saved.dropped?.length) log?.warn?.(`[laser] still beams NOT carried (matched by address, not serial; approve again): ${saved.dropped.map((d) => `${d.id} ${d.ip}`).join(', ')}`)
+    res.json({ ok: true, disarmed: true, wasArmed, file: saved.file, cubes: saved.config.cubes, droppedStillBeams: saved.dropped || [], state: getEngine().state() })
   })
 
   for (const mount of mountPaths) app.use(mount, requireLocalRuntime, router)

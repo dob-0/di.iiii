@@ -214,8 +214,9 @@ function ArmControl({ armed, post, refresh }) {
 // FIND CUBES (2026-10-14): the server asks every address of this computer's networks the cube's
 // read-only info question and lists who answered; pick, name, "Use these" writes the laser setup
 // on the server (laser.json) and reloads it — disarmed.
+// Keyed by serial only (review round 2): another box now holding a cube's old address is another cube.
 const configuredNameFor = (cubes, found) => {
-    const hit = (cubes || []).find((c) => (c?.info?.serial && c.info.serial === found.serial) || c?.ip === found.ip)
+    const hit = (cubes || []).find((c) => found.serial && (c?.serial || c?.info?.serial) === found.serial)
     return hit?.name && hit.name !== hit.id ? hit.name : ''
 }
 
@@ -233,10 +234,11 @@ function FindCubes({ cubes, post, refresh }) {
         const list = Array.isArray(out.body.cubes) ? out.body.cubes : []
         setFound({ cubes: list, asked: out.body.asked, networks: out.body.networks || [] })
         setPicks(Object.fromEntries(list.map((c, i) => [c.serial, { use: true, name: configuredNameFor(cubes, c) || `Cube ${i + 1}` }])))
+        const skipped = out.body.skipped?.length ? ` Not searched: ${out.body.skipped.join('; ')}.` : ''
         const where = out.body.networks?.length ? ` on ${out.body.networks.join(', ')}` : ''
         setNote(list.length
-            ? `${list.length} cube${list.length === 1 ? '' : 's'} answered (${out.body.asked} addresses asked${where}).`
-            : `No cube answered (${out.body.asked} addresses asked${where}). Are the cubes on, in Client mode, and on the same switch as this computer?`)
+            ? `${list.length} cube${list.length === 1 ? '' : 's'} answered (${out.body.asked} addresses asked${where}).${skipped}`
+            : `No cube answered (${out.body.asked} addresses asked${where}). Are the cubes on, in Client mode, and on the same switch as this computer?${skipped}`)
     }
     const chosen = found ? found.cubes.filter((c) => picks[c.serial]?.use) : []
     const useThese = async () => {
@@ -245,7 +247,10 @@ function FindCubes({ cubes, post, refresh }) {
         const out = await post('/config', { cubes: chosen.map((c) => ({ serial: c.serial, ip: c.ip, name: picks[c.serial]?.name || '' })) })
         setBusy(null)
         if (!out.body?.ok) { setNote(failureText(out, 'Not saved')); return }
-        setNote(`Saved: ${out.body.cubes?.map((c) => `${c.name} (${c.id})`).join(', ')}. The lasers were disarmed for the change — arm again when you are ready.`)
+        const dropped = out.body.droppedStillBeams?.length
+            ? ` Still beams NOT carried to ${out.body.droppedStillBeams.map((d) => `${d.id} (serial ${d.serial})`).join(', ')}: they were approved for whatever box had that address before; the laser safety officer approves them again.`
+            : ''
+        setNote(`Saved: ${out.body.cubes?.map((c) => `${c.name} (${c.id})`).join(', ')}. The lasers were disarmed for the change — arm again when you are ready.${dropped}`)
         setFound(null)
         refresh()
     }

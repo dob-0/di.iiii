@@ -2,11 +2,16 @@
 //
 // The engine reads <dataDir>/laser/laser.json (laserEngine.js, its header has the format). This
 // writes it, so nobody edits JSON by hand at a jam:
-//   - IDS ARE KEPT BY SERIAL. A cube the file already holds with the same serial keeps its id (and
-//     its officer-approved stillBeams), so a new DHCP address never renames it and a graph's
+//   - EVERYTHING IS KEYED BY SERIAL. A cube the file already holds with the same serial keeps its id
+//     and its officer-approved stillBeams, so a new DHCP address never renames it and a graph's
 //     "cube-2" keeps meaning the same box. A cube in the file without a serial yet (written by hand)
-//     is matched once by its address and gets the serial from then on. A new cube takes the lowest
-//     free cube-N.
+//     is matched once by its address for its id and name ONLY: its stillBeams are dropped and named
+//     in `dropped`, because the box now answering at that address may be another cube, aimed
+//     elsewhere (review round 2, 2026-10-14). The officer approves them again. A new cube takes the
+//     lowest free cube-N. (At run time the engine drops a cube's stillBeams when the box answering
+//     its address reports another serial, laserEngine.js.)
+//   - Addresses are one unicast host each: broadcast, network, multicast and loopback are refused
+//     (laserFind.js cubeAddressProblem; 127.0.0.x only under the test flag).
 //   - What the file says besides the cubes (zone, dacRate) is kept as it is.
 //   - The write is atomic (a temp file, then rename) and the file before it is kept beside it as
 //     laser.json.prev — the one-step undo.
@@ -14,7 +19,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { isIPv4 } = require('./laserFind')
+const { cubeAddressProblem } = require('./laserFind')
 
 const MAX_CUBES = 16
 const MAX_NAME = 40
@@ -46,7 +51,8 @@ const validatePicked = (cubes) => {
         const serial = String(c?.serial ?? '').toLowerCase()
         const ip = String(c?.ip ?? '')
         if (!SERIAL.test(serial)) return { ok: false, error: `cube ${i + 1}: the serial must be the 12 hex digits the cube answered with` }
-        if (!isIPv4(ip)) return { ok: false, error: `cube ${i + 1}: "${ip}" is not an IPv4 address` }
+        const problem = cubeAddressProblem(ip)
+        if (problem) return { ok: false, error: `cube ${i + 1}: ${problem}` }
         if (serials.has(serial)) return { ok: false, error: `the serial ${serial} is picked twice` }
         if (ips.has(ip)) return { ok: false, error: `the address ${ip} is picked twice` }
         serials.add(serial)
@@ -71,6 +77,7 @@ const mergeConfig = (existing, picked) => {
     }
     const matches = picked.map((p) => {
         const m = matchOf(p)
+        if (m) m.__bySerial = String(m.serial || '').toLowerCase() === p.serial
         if (m) { claimed.add(m); if (m.id) used.add(String(m.id)) }
         return m
     })
@@ -80,14 +87,20 @@ const mergeConfig = (existing, picked) => {
         used.add(`cube-${n}`)
         return `cube-${n}`
     }
+    const dropped = []
     const cubes = picked.map((p, i) => {
         const m = matches[i]
         const id = m?.id ? String(m.id) : nextId()
         const cube = { id, name: p.name || cleanName(m?.name) || id, ip: p.ip, serial: p.serial }
-        if (Array.isArray(m?.stillBeams) && m.stillBeams.length) cube.stillBeams = m.stillBeams
+        const beams = Array.isArray(m?.stillBeams) && m.stillBeams.length ? m.stillBeams : null
+        if (beams && m.__bySerial) cube.stillBeams = beams
+        else if (beams) dropped.push({ id, serial: p.serial, ip: p.ip, stillBeams: beams.length })
         return cube
     })
-    return { ...existing, cubes }
+    for (const m of matches) if (m) delete m.__bySerial
+    const config = { ...existing, cubes }
+    Object.defineProperty(config, 'dropped', { value: dropped, enumerable: false })
+    return config
 }
 
 /** Write <dir>/laser.json atomically, keeping the previous file as laser.json.prev. */
@@ -107,7 +120,7 @@ const saveCubes = (dir, cubes) => {
     if (!checked.ok) return checked
     const config = mergeConfig(readRaw(dir), checked.picked)
     const file = writeConfig(dir, config)
-    return { ok: true, config, file }
+    return { ok: true, config, file, dropped: config.dropped }
 }
 
 module.exports = { saveCubes, mergeConfig, validatePicked, readRaw, writeConfig, MAX_CUBES }
