@@ -183,3 +183,72 @@ describe('the cost per frame', () => {
         }
     })
 })
+
+// STEEL (owner, 2026-10-14): "nothing passes through a wall, roof, floor - or steel". A crane bridge and a truss are
+// separate entities, tagged svSteel by what they are (steelOccluder.js); they stop a beam like the building and are
+// not the building (the haze box stays the hall's).
+const steelBox = (scene, { p, size }) => {
+    const g = new Group()
+    g.userData.svSteel = true
+    const m = new Mesh(new BoxGeometry(...size), new MeshBasicMaterial())
+    m.position.set(...p)
+    g.add(m)
+    scene.add(g)
+    scene.updateMatrixWorld(true)
+    return m
+}
+describe('solid steel stops a beam', () => {
+    // a crane bridge across the hall: 30 m (x) × 0.7 × 1.0 m, at y 8, z 3.2
+    const sceneWithBridge = () => {
+        const scene = hallScene()
+        steelBox(scene, { p: [0, 8, 3.2], size: [30, 0.7, 1.0] })
+        forgetBuilding(scene)
+        return scene
+    }
+    it('a beam aimed through the bridge stops at it; one beside it passes to the wall', () => {
+        const building = buildingOf(sceneWithBridge(), 0)
+        expect(building.steel).toBe(1)
+        // a lamp at y 4, z 3.2 aimed straight up: the bridge underside is at y 7.65, the roof at 12
+        const up = castFromLamp(building.meshes, lampAt([0, 4, 3.2], [Math.PI, 0, 0]), [[0, -1, 0]])
+        expect(up[0].t).toBeCloseTo(3.65, 4)
+        // the same lamp 2 m to the side (z 5.2, clear of the 1 m bridge): the roof
+        const beside = castFromLamp(building.meshes, lampAt([0, 4, 5.2], [Math.PI, 0, 0]), [[0, -1, 0]])
+        expect(beside[0].t).toBeCloseTo(8, 4)
+        // and the reach drawn from it
+        expect(coneReach(up, { half: 0, stored: 120 }).length).toBeCloseTo(3.65 - SURFACE_GAP, 4)
+    })
+    it('steel is not the building: the haze box is the hall\'s, the mesh list holds both', () => {
+        const scene = hallScene()
+        steelBox(scene, { p: [0, 30, 0], size: [2, 1, 2] })   // steel outside the hall
+        forgetBuilding(scene)
+        const building = buildingOf(scene, 0)
+        expect(building.box.max.y).toBeCloseTo(12, 4)
+        expect(building.meshes).toHaveLength(2)
+    })
+    it('a lamp hung on a truss is not stopped by that truss; the same truss stops a lamp not on it', () => {
+        const scene = hallScene()
+        // a truss run along x, 0.29 m section, at y 9 z 0
+        steelBox(scene, { p: [0, 9, 0], size: [20, 0.29, 0.29] })
+        forgetBuilding(scene)
+        const building = buildingOf(scene, 0)
+        // the lamp's lens 0.2 m under the truss centre: aimed up THROUGH its own mount, it meets the roof (12), not the truss
+        const hung = castFromLamp(building.meshes, lampAt([0, 8.8, 0], [Math.PI, 0, 0]), [[0, -1, 0]])
+        expect(hung[0].t).toBeCloseTo(3.2, 4)
+        // aimed along the truss, from inside it: the end wall, not the truss it hangs on
+        const along = castFromLamp(building.meshes, lampAt([0, 8.8, 0], [0, 0, -Math.PI / 2]), [[0, -1, 0]])
+        expect(along[0].t).toBeCloseTo(20, 4)
+        // a lamp 3 m under the truss, not on it: stopped by it
+        const free = castFromLamp(building.meshes, lampAt([0, 6, 0], [Math.PI, 0, 0]), [[0, -1, 0]])
+        expect(free[0].t).toBeCloseTo(2.855, 3)
+    })
+    it('a mesh not tagged stops nothing (a lamp body)', () => {
+        const scene = hallScene()
+        const body = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial())
+        body.position.set(0, 8, 0)
+        scene.add(body)
+        scene.updateMatrixWorld(true)
+        forgetBuilding(scene)
+        const building = buildingOf(scene, 0)
+        expect(castFromLamp(building.meshes, lampAt([0, 4, 0], [Math.PI, 0, 0]), [[0, -1, 0]])[0].t).toBeCloseTo(8, 4)
+    })
+})

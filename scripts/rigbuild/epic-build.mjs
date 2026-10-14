@@ -22,6 +22,9 @@
  * and no cube connected, not an emission sign-off. `laserSignedOff` is NOT written.
  * Scratch only: refuses any host but localhost / 127.0.0.1. Reads the document right before writing and sends against its version.
  *
+ * --tag-steel-only (2026-10-14): the project's existing steel (matched to the rig file's solids; steelTagOps) gets `occluder {kind:'steel'}`
+ * so a beam stops at it. updateComponent only, nothing created/moved/deleted; dry run unless --apply; new builds set the flag themselves.
+ *
  * --laser-lines-only (2026-10-13, ledger N559): every laser beam the project ALREADY has (rig-laser-<id>, matched to the rig file)
  * gets `beam.laser` (laserComponentOf: its share of the unit's diodes in mW, the maker's beam diameter and divergence), so the room
  * draws it as a line source (laserLine.js, SpotLightObject LaserLines) and no longer as a narrow white cone. It sends ONLY
@@ -60,6 +63,7 @@ import { laserColourFlux, driveOfHex, laserOf, CUBE_NM } from '../../src/objectC
 import { laserFramesOf, MATRIX_N, FAN_DEG, FAN_PERIOD_S, FAN_STEPS } from './laser-frames.mjs'
 import { HALL_FILE, hallDimsOf, lampFirstHit } from './hall-reach.mjs'
 import { MIN_REACH, MISS_REACH_CAP } from '../../src/objectComponents/beamReach.js'
+import { isSteelEntity, OCCLUDER_COMPONENT, STEEL_KIND } from '../../src/objectComponents/steelOccluder.js'
 
 export const RIG_FILE = 'scripts/place/rigs/moxir-epic-2026-10-08.json'
 const SCALE = 0.02          // the rig's one exposure number (moxir rig files photometry.sceneScale): three.js intensity = candela x 0.02
@@ -236,6 +240,31 @@ export const positionOf = (f) => {
     return lean == null ? `named v1 ${f.id}` : `named v1 ${sharedKey(f, lean)}`
 }
 
+/** Is a rig-file solid structural steel — a beam of light stops on it (beamReach.js, steelOccluder.js)? By what it is: a
+ * truss or tower KIND, an explicit `steel: true` in the file, or a structural word in its id (truss, girder, steel, tower,
+ * crane, beam, pipe, scaffold) — the words say what the piece is, not whose production it is. A deck, a speaker, a barrier
+ * and a hoist's chain are not. Pure. */
+const STEEL_WORDS = new Set(['truss', 'girder', 'steel', 'tower', 'crane', 'beam', 'pipe', 'scaffold'])
+export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
+    String(s.id || '').split('-').some((w) => STEEL_WORDS.has(w)))
+const STEEL_FLAG = Object.freeze({ kind: STEEL_KIND })
+
+/** --tag-steel-only: `updateComponent` occluder {kind:'steel'} on the entities a project ALREADY has that are steel and not yet
+ * flagged (matched to the rig file's solids by id; catalogue truss/tower pieces need none). Nothing created, moved or deleted. Pure. */
+export const steelTagOps = (doc, rig) => {
+    const solids = new Map((rig.solids || []).filter(isSteelSolid).map((s) => [s.id, s]))
+    const have = Array.isArray(doc.entities) ? doc.entities : []
+    const ops = []
+    const already = []
+    for (const e of have) {
+        if (!solids.has(e.id)) continue
+        if (isSteelEntity(e)) { already.push(e.id); continue }
+        ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: OCCLUDER_COMPONENT, patch: { ...STEEL_FLAG } } })
+    }
+    const absent = [...solids.keys()].filter((id) => !have.some((e) => e.id === id))
+    return { ops, already, absent }
+}
+
 /** v1.0's entities from the rig file. Pure. */
 export const v1Entities = (rig, { hall = null } = {}) => {
     const out = []
@@ -278,15 +307,15 @@ export const v1Entities = (rig, { hall = null } = {}) => {
                 fixture
             } })
     }
-    const box = (id, name, p, s, color, opacity = 1, roughness = 0.9) => ({ id, type: 'box', name, parentId: null,
+    const box = (id, name, p, s, color, opacity = 1, roughness = 0.9, steel = false) => ({ id, type: 'box', name, parentId: null,
         components: { transform: { position: p, rotation: [0, 0, 0], scale: s }, appearance: { color, opacity, textureAssetId: null, roughness, metalness: 0.05, emissive: '#000000', emissiveIntensity: 1 },
-            primitive: { shape: 'box', size: [1, 1, 1] }, animation: { mode: 'static', speed: 1, amplitude: 1 } } })
+            primitive: { shape: 'box', size: [1, 1, 1] }, animation: { mode: 'static', speed: 1, amplitude: 1 }, ...(steel ? { [OCCLUDER_COMPONENT]: { ...STEEL_FLAG } } : {}) } })
     for (const s of rig.solids) {
         if (s.id === 'rig-crowd-barrier') continue
         const ghost = s.id.startsWith('rig-shell-')          // the building's ghost shell (outer walls, roof): seen through (owner 2026-10-12)
         const color = ghost ? '#9aa0a6' : s.id === 'rig-ash-wall' ? '#070707' : s.id.startsWith('rig-pa-') ? '#202226' : '#6f7378'
         const size = s.kind === 'tower' ? [0.29, r3(6 * s.s[1]), 0.29] : s.s
-        out.push(box(s.id, s.name.slice(0, 200), s.p, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85))   // box(…, opacity, roughness)
+        out.push(box(s.id, s.name.slice(0, 200), s.p, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85, !ghost && isSteelSolid(s)))   // box(…, opacity, roughness, steel)
     }
     return out
 }
@@ -498,6 +527,29 @@ const main = async () => {
         const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-lasers-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`laser ops: ${out.status} ${out.text.slice(0, 300)}`)
         say(`lasers: ${ops.length / 2} beams at ${laserIntensity('#e8e4dc')} (ash) / ${laserIntensity('#ff3a12')} (ember), half-angle ${LASER_ANGLE} rad → version ${out.body.newVersion}`)
+        return
+    }
+    if (args['tag-steel-only']) {
+        // 2026-10-14: the steel flag on a project that was built before it (beams stop at the rig's steel, steelOccluder.js).
+        // updateComponent only, on entities the project already has: nothing created, moved or deleted. Dry run unless --apply.
+        const { ops, already, absent } = steelTagOps(doc, rig)
+        say(`${project} @ v${got.body.version}: tag steel only — ${ops.length} entities get occluder {kind:'steel'}; already steel: ${already.length}; ` +
+            `steel in the rig file, not in the project: ${absent.length}${absent.length ? ` (${absent.slice(0, 5).join(', ')})` : ''}`)
+        for (const op of ops.slice(0, 8)) say(`  ${op.payload.entityId}`)
+        if (args.out) {
+            fs.mkdirSync(String(args.out), { recursive: true })
+            fs.writeFileSync(path.join(String(args.out), `tag-steel-${project}-before.json`), JSON.stringify(got.body))
+            fs.writeFileSync(path.join(String(args.out), `tag-steel-${project}-ops.json`), JSON.stringify(ops, null, 1))
+        }
+        if (!args.apply) { say('dry run: nothing written (--apply to write; back the document up first; undo: the backup, or the same ops with occluder null)'); return }
+        if (!ops.length) { say('nothing to tag'); return }
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-tag-steel-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        if (!out.ok) die(`tag steel ops: ${out.status} ${out.text.slice(0, 300)}`)
+        const back = await client.get(`/api/projects/${project}/document`)
+        if (!back.ok) die(`read back: ${back.status}`)
+        const tagged = ops.filter((op) => isSteelEntity(back.body.document.entities.find((e) => e.id === op.payload.entityId))).length
+        say(`written, version ${out.body.newVersion}; read back v${back.body.version}: ${tagged}/${ops.length} flagged, ${back.body.document.entities.length} entities (before ${doc.entities.length})`)
+        if (tagged !== ops.length || back.body.document.entities.length !== doc.entities.length) die('read back: not every steel entity carries the flag, or the entity count moved')
         return
     }
     if (args['laser-lines-only']) {

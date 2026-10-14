@@ -6,7 +6,8 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { RIG_FILE, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps } from './epic-build.mjs'
+import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
+import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -215,5 +216,38 @@ describe('epic-build: the laser colour rule reaches the looks (MOXIR v2.9, ledge
         const own = Object.entries(now.get('peak').colours).filter(([k]) => isLaser(k)).map(([, c]) => c)
         expect(own.filter((c) => c === '#e8e4dc').length).toBe(26)
         expect(own.filter((c) => c === '#ff3a12').length).toBe(12)
+    })
+})
+
+describe('epic-build: solid steel stops a beam (2026-10-14)', () => {
+    const solids = [
+        { id: 'rig-far-crane-z-12-girder-a', kind: 'box' }, { id: 'rig-crane-bar', kind: 'box' }, { id: 'rig-hoist-1-steel', kind: 'box' },
+        { id: 'rig-tower-cube6', kind: 'tower' }, { id: 'rig-line-1', kind: 'truss-3m' }, { id: 'x', kind: 'box', steel: true },
+        { id: 'rig-pa-l', kind: 'box' }, { id: 'rig-deck-1', kind: 'deck-2x1' }, { id: 'rig-crowd-barrier', kind: 'box' }, { id: 'rig-hoist-1-chain', kind: 'box' }
+    ]
+    it('what counts as steel: by kind, flag or structural word; a speaker, deck, barrier and chain are not', () => {
+        expect(solids.filter(isSteelSolid).map((s) => s.id)).toEqual(['rig-far-crane-z-12-girder-a', 'rig-crane-bar', 'rig-hoist-1-steel', 'rig-tower-cube6', 'rig-line-1', 'x'])
+    })
+    it('a new build flags its steel boxes and only those', () => {
+        const rig = { fixtures: [], solids: solids.map((s) => ({ ...s, p: [0, 0, 0], s: [1, 1, 1], name: s.id })) }
+        const out = v1Entities(rig)
+        const flagged = out.filter(isSteelEntity).map((e) => e.id)
+        expect(flagged).toEqual(['rig-far-crane-z-12-girder-a', 'rig-crane-bar', 'rig-hoist-1-steel', 'rig-tower-cube6', 'rig-line-1', 'x'])
+    })
+    it('--tag-steel-only: updateComponent on existing, unflagged steel only; nothing created or deleted', () => {
+        const rig = { solids }
+        const doc = { entities: [
+            { id: 'rig-crane-bar', components: {} }, { id: 'rig-far-crane-z-12-girder-a', components: { occluder: { kind: 'steel' } } },
+            { id: 'rig-pa-l', components: {} }, { id: 'rig-line-1', components: { piece: { kind: 'truss-3m' } } }
+        ] }
+        const { ops, already, absent } = steelTagOps(doc, rig)
+        expect(ops).toEqual([{ type: 'updateComponent', payload: { entityId: 'rig-crane-bar', component: 'occluder', patch: { kind: 'steel' } } }])
+        expect(already.sort()).toEqual(['rig-far-crane-z-12-girder-a', 'rig-line-1'])
+        expect(absent).toEqual(['rig-hoist-1-steel', 'rig-tower-cube6', 'x'])
+    })
+    it('the real rig file: every flagged solid is structural', () => {
+        const rig = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../..', RIG_FILE), 'utf8'))
+        const ids = (rig.solids || []).filter(isSteelSolid).map((s) => s.id)
+        expect(ids.every((id) => !/-pa-|barrier|foh|deck|shell|out-|ash-wall|dj-table/.test(id))).toBe(true)
     })
 })
