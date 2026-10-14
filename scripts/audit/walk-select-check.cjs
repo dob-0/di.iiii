@@ -26,9 +26,11 @@ const dragOn = async (page, fx0, fy0, fx1, fy1, steps = 12) => {
             await page.goto(process.env.CHECK_VIEW, { waitUntil: 'domcontentloaded' })
             await page.waitForSelector('canvas', { timeout: 60000 }); await sleep(9000)
             out('view.chip', await page.evaluate(() => (document.body.innerText.match(/Versions\s*·[^\n]*/i) || ['-'])[0].slice(0, 90)))
-            const walk = page.getByRole('button', { name: /^walk$/i }).first()
+            const walk = page.getByRole('button', { name: /^walk( \/ fly)?$/i }).first()
             if (await walk.count()) {
-                await walk.click(); await sleep(2500)
+                await walk.click(); await sleep(1500)
+                const item = page.getByRole('button', { name: /^walk$/i }).first() // the Walk / Fly toggle may open a choice
+                if (await item.count()) { await item.click(); await sleep(1500) }
                 const before = await page.evaluate(() => { const p = window.__diiWalkerRef?.current; return p ? [p.yaw, p.pitch] : null })
                 await dragOn(page, 0.45, 0.5, 0.6, 0.42); await sleep(800)
                 const after = await page.evaluate(() => { const p = window.__diiWalkerRef?.current; return p ? [p.yaw, p.pitch] : null })
