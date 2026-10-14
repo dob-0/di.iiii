@@ -9,6 +9,7 @@
 // unconfirmed on a real Ultra MK2 until the owed real cube test (its checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //   UDP ports   45456 alive (pings) · 45457 commands · 45458 point data
 //   commands    0x77 get full info · 0x78 enable the buffer-free answer on data · 0x80 output on/off
+//               0x82 set the DAC rate (optional, off by default) · 0x8d clear the ring buffer
 //               0x8a ask the ring buffer's free sample count · 0xa9 sample data
 //   sample data [0xa9, 0x00, message number 0-255, frame number 0-255] then up to 140 points
 //               (to stay under a typical MTU), each 10 bytes little-endian: x, y, r, g, b as u16
@@ -18,7 +19,7 @@
 'use strict'
 
 const PORT = Object.freeze({ ALIVE: 45456, CMD: 45457, DATA: 45458 })
-const CMD = Object.freeze({ GET_FULL_INFO: 0x77, ENABLE_BUFFER_SIZE_RESPONSE: 0x78, SET_OUTPUT: 0x80, GET_BUFFER_FREE: 0x8a, SAMPLE_DATA: 0xa9 })
+const CMD = Object.freeze({ GET_FULL_INFO: 0x77, ENABLE_BUFFER_SIZE_RESPONSE: 0x78, SET_OUTPUT: 0x80, SET_RATE: 0x82, GET_BUFFER_FREE: 0x8a, CLEAR_RINGBUFFER: 0x8d, SAMPLE_DATA: 0xa9 })
 const MAX_POINTS_PER_MESSAGE = 140
 const POINT_BYTES = 10
 const MAX_VALUE = 0xfff
@@ -34,6 +35,24 @@ const setOutput = (on) => Buffer.from([CMD.SET_OUTPUT, on ? 1 : 0])
 const enableBufferSizeResponse = (on) => Buffer.from([CMD.ENABLE_BUFFER_SIZE_RESPONSE, on ? 1 : 0])
 const getBufferFree = () => Buffer.from([CMD.GET_BUFFER_FREE])
 const getFullInfo = () => Buffer.from([CMD.GET_FULL_INFO])
+/**
+ * CLEAR_RINGBUFFER (0x8d): drop every point the cube has queued. One byte, as Wicked Lasers' own
+ * driver sends it (libLaserdockCore laserdocklib LaserDockNetworkDevice.cpp:22, 1007-1012); the TD
+ * script defines it too. What the cube does with it while playing: UNVALIDATED on an Ultra MK2.
+ */
+const clearRingBuffer = () => Buffer.from([CMD.CLEAR_RINGBUFFER])
+/**
+ * SET_RATE (0x82): the cube's DAC rate, points a second, as a signed 32-bit little-endian number
+ * after the command byte — as the TouchDesigner LaserCube script sends it (NairoDorian/
+ * Laser-Cube-TouchDesigner LASER_CUBE_SCRIPT setRate: bytes([0x82]) + struct.pack('<l', rate)).
+ * Sent only when laser.json asks for it (guards.sendSetRate); UNVALIDATED on an Ultra MK2.
+ */
+const setRate = (rate) => {
+    const buf = Buffer.alloc(5)
+    buf[0] = CMD.SET_RATE
+    buf.writeInt32LE(Math.max(0, Math.min(0x7fffffff, Math.round(rate))), 1)
+    return buf
+}
 
 /**
  * One sample-data message: at most MAX_POINTS_PER_MESSAGE points of the frame ([x, y, r, g, b]).
@@ -72,15 +91,35 @@ const CONNECTION_TYPES = Object.freeze({ 0: 'unknown', 1: 'USB', 2: 'Ethernet', 
 /**
  * The cube's answer to GET_FULL_INFO (0x77), or null when the message is not one. The spec's table
  * (offsets in bytes; u16/u32 little-endian):
- *   0 echo 0x77 · 3 firmware major · 4 firmware minor · 5 output enabled · 10 current DAC rate (u32)
+ *   0 echo 0x77 · 3 firmware major · 4 firmware minor · 5 status flags · 10 current DAC rate (u32)
  *   14 maximum DAC rate (u32) · 19 RX buffer free (u16) · 21 RX buffer size (u16) · 23 battery %
  *   24 temperature · 25 connection type · 26-31 serial number · 32-35 IP · 37 model number
  *   38… model name, NUL-terminated, never past byte 63
- * Two readings the spec leaves open, kept as it writes them: the temperature has no unit (°C
- * assumed, unconfirmed), and the connection type is said to be at offset 25 in the table but
- * "the first byte of the serial number at offset 26" in the prose — the table's offset 25 is read.
+ * BYTE 5 IS A SET OF FLAGS, NOT A BOOLEAN (fixed 2026-10-14; before, any non-zero byte read as
+ * "output enabled", so a disarmed cube reporting 2 — the interlock bit — showed outputEnabled=true).
+ * Read as Wicked Lasers' own driver reads it (libLaserdockCore 3rdparty/laserdocklib/src/
+ * LaserDockNetworkDevice.cpp:348-365, GPL-3.0, read 2026-10-14; the same in nannou's lasercube-core
+ * status.rs:3-27, MIT): bit 0 output enabled; firmware ≥ 0.13: bit 1 interlock enabled, bit 2
+ * temperature warning, bit 3 over-temperature, bits 4-7 packet errors; firmware ≤ 0.12: bit 3
+ * interlock, bit 4 temperature warning, bit 5 over-temperature. The temperature (byte 24) is a SIGNED
+ * byte in °C (LaserDockNetworkDevice.cpp:436, int8_t → TemperatureUpdated(degC)). Real cubes, read
+ * 2026-10-14 (two Ultra MK2 7.5 W, firmware 1.17): the one armed then disarmed answered byte 5 = 2,
+ * the one never armed 0; its answer starts 77 00 00 01 11 02, so firmware 1.17 sits at bytes 3-4 and
+ * the flags at 5, as here (the TouchDesigner script's '<xxBB?5x' reads bytes 2-4, one byte early). Bit
+ * 0 clear = output off: PROVEN by the maker's own parse. That bit 1 means "interlock enabled" is the
+ * maker's name for it; why it is set only after an arm is NOT known (a latch? the interlock read only
+ * once output was enabled?) — UNVALIDATED until a cube is read with its interlock open and closed. The connection type
+ * is the table's offset 25 (the spec's prose says 26; Wicked's driver reads 25 too, :443).
  * Pure.
  */
+/** The status byte's flags by firmware version (see parseFullInfo). Pure. */
+const statusFlagsOf = (flags, major, minor) => {
+    const v013 = major > 0 || minor >= 13
+    return v013
+        ? { interlockEnabled: (flags & 0x02) !== 0, temperatureWarning: (flags & 0x04) !== 0, overTemperature: (flags & 0x08) !== 0, packetErrors: (flags >> 4) & 0x0f }
+        : { interlockEnabled: (flags & 0x08) !== 0, temperatureWarning: (flags & 0x10) !== 0, overTemperature: (flags & 0x20) !== 0, packetErrors: 0 }
+}
+
 const parseFullInfo = (msg) => {
     if (!Buffer.isBuffer(msg) || msg.length < FULL_INFO_MIN_BYTES || msg[0] !== CMD.GET_FULL_INFO) return null
     const end = Math.min(msg.length, FULL_INFO_BYTES)
@@ -89,13 +128,15 @@ const parseFullInfo = (msg) => {
     const modelName = msg.subarray(38, nameEnd).toString('latin1').replace(/[^\x20-\x7e]/g, '').trim()
     return {
         firmware: `${msg[3]}.${msg[4]}`,
-        outputEnabled: msg[5] !== 0,
+        outputEnabled: (msg[5] & 0x01) !== 0,
+        statusFlags: msg[5],
+        ...statusFlagsOf(msg[5], msg[3], msg[4]),
         dacRate: msg.readUInt32LE(10),
         maxDacRate: msg.readUInt32LE(14),
         rxBufferFree: msg.readUInt16LE(19),
         rxBufferSize: msg.readUInt16LE(21),
         batteryPercent: msg[23],
-        temperature: msg[24],
+        temperature: msg.readInt8(24),
         connectionType: CONNECTION_TYPES[msg[25]] || `unknown (${msg[25]})`,
         serial: msg.subarray(26, 32).toString('hex'),
         ip: [...msg.subarray(32, 36)].join('.'),
@@ -106,6 +147,6 @@ const parseFullInfo = (msg) => {
 
 module.exports = {
     PORT, CMD, MAX_POINTS_PER_MESSAGE, POINT_BYTES, MAX_VALUE, FULL_INFO_BYTES,
-    toDeviceCoord, toDeviceColour, setOutput, enableBufferSizeResponse, getBufferFree, getFullInfo,
-    encodeSampleData, parseBufferFree, parseFullInfo
+    toDeviceCoord, toDeviceColour, setOutput, setRate, clearRingBuffer, enableBufferSizeResponse, getBufferFree, getFullInfo,
+    encodeSampleData, parseBufferFree, parseFullInfo, statusFlagsOf
 }
