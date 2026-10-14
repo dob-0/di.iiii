@@ -9,10 +9,13 @@ import { STANDARD_MOVE_SPEED_EVENT, getStandardMoveReading } from './useCameraNa
 import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 
 export const TURN_LABELS = Object.freeze({ point: 'Around a point ahead', place: 'Where you stand' })
+export const MOVE_LABEL = 'Move'
 export const SPEED_LABEL = 'Speed (metres a step)'
 // Shown as a hint, never as a setting: Shift x5 and Alt /5 are fixed (freeMove.js SPEED_FACTOR).
 // The keys are joined with no-break spaces so a line never ends inside them.
 export const MOVE_HINT = 'Wheel: forward and back. Shift faster, Alt slower. Hold the right button and press W\u00a0A\u00a0S\u00a0D\u00a0Q\u00a0E to fly.'
+// The Help panel's words for the default move.
+export const MOVE_HELP_NOTE = 'Move 1 (default): the same speed in every direction, the speed set from the size of the place.'
 
 // What typed text means as a speed: metres in range, or null when it is not a usable number (the setting then stays as it is). Pure.
 export function parseSpeedText(text) {
@@ -56,11 +59,11 @@ export function useStandardMoveReading() {
     return reading
 }
 
-// The preference plus the automatic reading: { speed, turn, setSpeed, setTurn, isAuto, auto }.
+// The preference plus the automatic reading: { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto }.
 export function useMoveSettings() {
-    const { speed, turn, setSpeed, setTurn } = useNavigationPreference()
+    const { speed, turn, move, setSpeed, setTurn, setMove } = useNavigationPreference()
     const { auto } = useStandardMoveReading()
-    return { speed, turn, setSpeed, setTurn, isAuto: speed === 'auto', auto }
+    return { speed, turn, move, setSpeed, setTurn, setMove, isAuto: speed === 'auto', auto }
 }
 
 // The speed field: empty is Auto, a number is that many metres. Typing writes at once (the house number fields do the same);

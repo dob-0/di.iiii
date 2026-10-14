@@ -2,14 +2,34 @@
 // device, like the rest of the view settings a person makes for himself; the viewer's own Move control writes the same two.
 // Speed: empty is Auto (the space's size, shown as "Auto · 2.5 m"), a number is metres a wheel step. Turn: around a point
 // ahead, or where you stand. Shift and Alt only scale the wheel, so they are a hint, not a setting.
-import { MOVE_HINT, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../navigation/useMoveSettings.js'
+import { MOVE_HINT, MOVE_LABEL, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../navigation/useMoveSettings.js'
 import { TURN_MODES } from '../navigation/freeMove.js'
+import { MOVES, moveFor } from '../navigation/moves.js'
 
-export default function MoveSettings() {
-    const { speed, turn, setSpeed, setTurn, isAuto, auto } = useMoveSettings()
+// `moves` is the list of named moves (moves.js); a test passes a second one. With one move: a heading line, no picker.
+export default function MoveSettings({ moves = MOVES }) {
+    const { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto } = useMoveSettings()
     const field = useSpeedField({ speed, setSpeed })
+    const current = moveFor(move, moves)
     return (
         <>
+            <div className="insp-field" data-testid="move-row">
+                {moves.length < 2 ? (
+                    <div className="insp-label"><strong>{current.label}</strong>{' \u00b7 '}{current.about}</div>
+                ) : (
+                    <>
+                        <span className="insp-label">{MOVE_LABEL}</span>
+                        <div className="scc-buttons" role="group" aria-label={MOVE_LABEL}>
+                            {moves.map((m) => (
+                                <button key={m.id} type="button" className={`scc-btn${current.id === m.id ? ' active' : ''}`} aria-pressed={current.id === m.id} onClick={() => setMove(m.id)}>
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="insp-label">{current.about}</div>
+                    </>
+                )}
+            </div>
             <div className="insp-field">
                 <label className="insp-label" htmlFor="studio-move-speed">{SPEED_LABEL}</label>
                 <div className="scc-buttons">

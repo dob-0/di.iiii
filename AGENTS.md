@@ -48,6 +48,7 @@ Compressed; the full version is the operating contract.
 - Ask at most 2 clarifying questions, then proceed with the safest bounded interpretation. Confirm first only for irreversible or expensive actions.
 - Lock goal, scope, non-goals and done criteria before acting; never silently expand scope.
 - End every task with: **summary** (2–4 lines), **changed files** (one-line reason each), **validation** (commands + pass/fail), **risks** (concrete only).
+- Movement: never change Move 1; a new behaviour is a new move (`src/studio/navigation/moves.js`, `docs/ai/decisions/2026-10-14-move-1.md`).
 - Shipped a user-facing change? Update the Wiki in the same change: `src/wiki/wikiContent.js` (bump `updated`).
 - Fixed a bug? The same change ships a `docs/ai/known-fixes.md` entry AND a regression guard (test or executable contract). The fix alone is not "done".
 - Verified it? Not until you looked at it in a real browser, desktop **and** phone (see Validation). A screenshot you never opened is not verification.

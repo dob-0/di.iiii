@@ -79,3 +79,12 @@ export function flyVelocity(keys, speed, modifier = 1) {
     const axis = (plus, minus) => (keys.has(plus) ? 1 : 0) - (keys.has(minus) ? 1 : 0)
     return { forward: axis('KeyW', 'KeyS') * v, right: axis('KeyD', 'KeyA') * v, up: axis('KeyE', 'KeyQ') * v }
 }
+
+// Move 1's camera-controls options that StudioViewport hands to <CameraControls> besides the mouse maps and the preset's
+// easing (mappings.js 'studio': smoothTime 0.25, draggingSmoothTime 0.125). One frozen object; values as they have always been.
+export const MOVE_1_CAMERA = Object.freeze({
+    rotateSpeed: 1,
+    infinityDolly: true,
+    minDistance: IN_PLACE_DISTANCE / 2,
+    maxDistance: Infinity,
+})
