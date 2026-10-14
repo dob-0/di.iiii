@@ -4,7 +4,7 @@ import { versionsFromDocument } from '../shared/productionVersions.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import useRememberedOpen from '../utils/rememberedOpen.js'
 import { CHIP, PANEL } from './chromeStyle.js'
-import { rigVariantOf, shortTitle, versionLinks, versionListProjectOf } from './rigVariant.js'
+import { rigVariantOf, versionLinks, versionListProjectOf } from './rigVariant.js'
 
 // THE VERSION SWITCH in the space view (RIG_BUILD.md §15). Owner, 2026-09-28: three
 // versions of MOXIR's rig — minimal, middle, full — to choose between by looking.
@@ -117,7 +117,7 @@ export const splitVersions = (links) => {
 function VersionLink({ l, curRef }) {
     return (
         <a ref={l.current ? curRef : undefined} href={l.href} aria-current={l.current ? 'page' : undefined} title={`${l.summary || l.title}${l.show ? ' — for the show' : ''}`} style={linkStyle(l.current)}>
-            {shortTitle(l.title, l.id)}
+            {l.name}
             {l.show ? <span data-show="true" style={{ marginLeft: '0.4rem', opacity: 0.72, fontSize: '0.8rem' }}>· for the show</span> : null}
         </a>
     )
@@ -195,7 +195,7 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
         return (
             <nav aria-label="rig versions" style={{ ...rowStyle, top, position: 'fixed', zIndex: 30, flexDirection: 'column', maxHeight: `calc(100vh - ${top} - 1rem)` }}>
                 <button type="button" aria-expanded={menuOpen} aria-controls="rig-walk-versions" onClick={toggleMenu} style={{ ...buttonStyle, maxWidth: '100%', minWidth: 0 }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? shortTitle(current.title, current.id) : ''}`}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? current.name : ''}`}</span>
                 </button>
                 {menuOpen ? <div id="rig-walk-versions" style={columnStyle}>{items}</div> : null}
             </nav>
@@ -208,7 +208,7 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
             <nav aria-label="rig versions" data-bare="true" style={{ position: 'relative', minWidth: 0, flex: '0 1 auto' }}>
                 <button type="button" data-testid="rig-versions-chip" aria-expanded={menuOpen} aria-controls="rig-bar-versions" onClick={toggleMenu}
                     title="The versions of this production" style={{ ...CHIP, maxWidth: 'min(16rem, calc(100vw - 2rem))' }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? shortTitle(current.title, current.id) : ''}`}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? current.name : ''}`}</span>
                     <span aria-hidden="true" style={{ opacity: 0.7 }}>{menuOpen ? '▾' : '▸'}</span>
                 </button>
                 {menuOpen ? <div id="rig-bar-versions" style={{ ...PANEL, minWidth: 'min(16rem, calc(100vw - 2rem))', display: 'flex', flexDirection: 'column' }}>{items}</div> : null}
