@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Canvas } from '@react-three/fiber'
+import Canvas from './GuardedCanvas.jsx'
 import * as THREE from 'three'
 import Experience from '../Experience.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'

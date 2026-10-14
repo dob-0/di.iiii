@@ -16,8 +16,8 @@
 // The document is never written: the room draws a copy.
 //
 // WHO GETS WHICH: `?quality=full|lite` in the address wins, then the viewer's own choice
-// (the Full/Lite button, remembered per browser), else lite unless this is the work
-// machine with a fine pointer.
+// (the Full/Lite button, remembered for this tab), else Lite (owner 2026-10-08: Lite is the
+// default; full HQ only when asked).
 
 export const OUTPUT_POOL_SLOTS = 4
 export const OUTPUT_STORAGE_KEY = 'di.view.quality'
@@ -29,7 +29,12 @@ export const outputModeWanted = ({ search = '', stored = null, coarse = false, w
     const asked = QUALITY_RE.exec(String(search || ''))?.[1]?.toLowerCase()
     const pick = asked || (stored === 'full' || stored === 'lite' ? stored : null)
     if (pick) return pick === 'lite'
-    return Boolean(coarse) || !workMachine
+    // LITE BY DEFAULT, EVERYWHERE (owner, 2026-10-08: "make the Lite version the default; full HQ only when needed"): the
+    // work machine with a mouse starts in Lite too, and Full is the button (remembered for this tab only, useOutputMode.js).
+    // `coarse` and `workMachine` are kept in the signature for the callers and the record of the old rule.
+    void coarse
+    void workMachine
+    return true
 }
 
 /** The room's render settings as the output draws them. */

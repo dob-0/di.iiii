@@ -177,6 +177,7 @@ describe('CLIENT_DIR set: one process serves both the API and the app', () => {
 
         expect(response.status).toBe(404)
         expect(await response.text()).not.toContain(SPA_MARKER)
+        expect(response.headers.get('cache-control')).toBe('no-store')
     })
 })
 

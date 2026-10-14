@@ -77,6 +77,19 @@ export const getSocketConfigForRuntime = ({
     }
   }
 
+  // Dev with no API base: the page's own origin, which Vite proxies to the
+  // backend (/serverXR, ws: true). It used to dial localhost:4000 directly,
+  // past the proxy — so a second dev stack (VITE_PROXY_API_TARGET on another
+  // port) sent its HTTP to its own server and its socket to whatever ran on
+  // 4000, and a phone on the wifi dialled its OWN localhost. Seen 2026-10-02.
+  if (isDev && locationOrigin) {
+    return {
+      serverUrl: locationOrigin,
+      path: '/serverXR/socket.io',
+      auth: authToken ? { token: authToken } : undefined
+    }
+  }
+
   if (isDev) {
     const hostname = resolveLoopbackHostname('localhost')
     return {

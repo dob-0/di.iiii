@@ -4,9 +4,7 @@ import {
     STUDIO_SHORTCUT_SECTIONS,
     viewportMouseRows
 } from '../utils/studioGuide.js'
-import { getNavigationPreset } from '../navigation/mappings.js'
-import { useNavigationPreference } from '../navigation/preference.js'
-import NavigationPreferenceControl from './NavigationPreferenceControl.jsx'
+import { MOVE_HELP_NOTE } from '../navigation/useMoveSettings.js'
 import '../styles/studio-help.css'
 
 // Pure-CSS diagrams, one per guide section — same approach as Raw's
@@ -58,7 +56,6 @@ function GuideDiagram({ sectionId }) {
 export default function StudioHelpDialog({ open, onClose, initialMode = 'basics' }) {
     const [mode, setMode] = useState(initialMode)
     const [sectionId, setSectionId] = useState('move')
-    const navigation = useNavigationPreference()
 
     useEffect(() => {
         if (!open) return
@@ -153,21 +150,19 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                     </>
                 ) : (
                     <div className="sh-help-shortcuts">
-                        <NavigationPreferenceControl
-                            preset={navigation.preset}
-                            orbitSelection={navigation.orbitSelection}
-                            onPresetChange={navigation.setPreset}
-                            onOrbitSelectionChange={navigation.setOrbitSelection}
-                        />
-                        <div className="sh-help-shortcut-group">
-                            <div className="sh-help-shortcut-title">Mouse · {getNavigationPreset(navigation.preset).label}</div>
-                            {viewportMouseRows(navigation.preset).map(([key, desc]) => (
-                                <div key={key} className="sh-help-shortcut-row">
-                                    <code>{key}</code>
-                                    <span>{desc}</span>
-                                </div>
-                            ))}
-                        </div>
+                        <p className="sh-help-shortcut-note">The tool picks the mouse: Navigate moves like Sketchfab, Edit exactly like Blender.</p>
+                        <p className="sh-help-shortcut-note">{MOVE_HELP_NOTE}</p>
+                        {['studio', 'blender'].map((id) => (
+                            <div key={id} className="sh-help-shortcut-group">
+                                <div className="sh-help-shortcut-title">Mouse · {id === 'studio' ? 'Navigate (like Sketchfab)' : 'Edit (like Blender)'}</div>
+                                {viewportMouseRows(id).map(([key, desc]) => (
+                                    <div key={key} className="sh-help-shortcut-row">
+                                        <code>{key}</code>
+                                        <span>{desc}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
                         {STUDIO_SHORTCUT_SECTIONS.map((group) => (
                             <div key={group.title} className="sh-help-shortcut-group">
                                 <div className="sh-help-shortcut-title">{group.title}</div>

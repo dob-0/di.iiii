@@ -13,7 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a space on its own domain (yokozo.xyz shows taronx), set up by the server
+- main is merged back into dev before the promotion
+- CI runners pinned to ubuntu-24.04 before GitHub moves ubuntu-latest to Ubuntu 26
+- `di login`: a person signs in once per machine, from the terminal
+- `di login`: the three lanes joined in one branch
+- the browser page that approves a terminal's code
+- …and 18 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 

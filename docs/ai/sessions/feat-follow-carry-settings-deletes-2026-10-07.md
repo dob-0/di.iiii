@@ -14,3 +14,10 @@
 - Tests: 17 rule tests, 10 new two-server tests plus one existing test rewritten to wait for the pairing instead of
   racing the follow's next pass (#760). Full follow integration file 46/46 twice, project contracts 147/147.
 - Measured on loopback: each kind crosses in 8–38 ms once a follow is settled. A machine-to-machine run is owed.
+
+## 2026-10-14 — refreshed onto dev
+
+- Merged `origin/dev` (84fc193c). Six conflicts, all both-intents: `follower.js` (project-life carry + dev's slug carry and `chase.noteAnswered()`; both `projects` and `slugs` in the state), `projectRoutes.js` (dev's `withProjectLock` around the rename's document write + this PR's `tellFollows`), `ui.mjs`, `followFiles.test.js`, `followIntegration.test.js`, `known-fixes.md` (both sides kept).
+- The merge made one existing follow test fail 4/4 in a full-file run: a stopped follow applied the edit its parked read returned. Fixed in `stop()` and after the read (known-fixes entry).
+- Tests (`serverXR/src/follow`, `scripts/di`, `projectContracts`): before 574/574 (44 files); after 720 passed, 4 failed (724) — all `scripts/di/oneAddressPrinted.test.js`, which fails identically on origin/dev in this container (`*.localhost` names). UNVERIFIED: that file's behaviour on a real machine.
+- UNVERIFIED: slug carry and project-life carry running together on a real two-machine follow (only loopback tests).

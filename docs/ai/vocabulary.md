@@ -36,6 +36,12 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
 | **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The lamp you place in a scene still reads Light too, until the owner settles its own word (Lamp is the recommendation). |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
+| **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
+| **master clock** | The one loop of beats a project keeps running; every LFO follows it unless it picks another clock. Added 2026-10-14. |
+| **clock** | A loop that counts beats at a tempo. A project has one master clock and may add more; the `/light` desk's clock and tap are an optional source for it, not its leader. Added 2026-10-14. |
+| **cube group** | A named set of LaserCubes (for example "left", "right") that a graph can address as one. Lives in the project, not in `laser.json`. Added 2026-10-14. |
+| **draw mode** | How a laser node draws a shape: outline (its silhouette, the default), wireframe (every edge) or points. Added 2026-10-14. |
+| **point budget** | How many points one laser frame may use per cube; set by a wire, an on-screen control or automatically from path length, and never above the server's frame cap. Added 2026-10-14. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -297,7 +303,7 @@ The owner, plainly: "we have not staging anymore." The word leaves our language 
 
 | Tier | Is | Address |
 | --- | --- | --- |
-| **local** | your machine | `localhost` (the router: `dii.localhost:8088`) |
+| **local** | your machine | `http://diiii.localhost/` — this machine's installed di, the same link on every machine (amended 2026-10-07, `docs/ai/one-local-address.md`); dev trees at `http://<tree>.diiii.localhost/` |
 | **dev** | the rehearsal server, built from branch `dev` | `https://dev.diiii.xyz` |
 | **prod** | the live site, built from branch `main` | `https://diiii.xyz` |
 

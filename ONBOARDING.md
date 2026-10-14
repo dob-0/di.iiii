@@ -22,7 +22,7 @@ inline.
 | Tool | Why | Windows (winget) | macOS (brew) |
 | --- | --- | --- | --- |
 | **Git** | clone / commit / push | `winget install Git.Git` | `brew install git` |
-| **Node 22.x** (24 also works) | runs client + server | `winget install OpenJS.NodeJS.LTS` | `brew install node` |
+| **Node 24.x** (`.nvmrc`; 22.x also supported) | runs client + server | `winget install OpenJS.NodeJS.LTS` | `brew install node` |
 | **GitHub CLI (`gh`)** | auth, open PRs, sync with upstream | `winget install GitHub.cli` | `brew install gh` |
 
 Verify:
@@ -66,8 +66,8 @@ npm install
 npm --prefix serverXR install
 ```
 
-> Node 24 prints an `EBADENGINE` warning (engines ask for 22.x). It's only a
-> warning; the app runs. To silence it: `npm install --engine-strict=false`.
+> `.nvmrc` pins the Node version CI and the Docker images use (24, Active LTS);
+> `engines` accepts 22.x and 24.x, and CI also runs the suite on 22.
 
 ## 5. Create the local server env
 

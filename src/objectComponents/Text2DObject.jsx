@@ -153,7 +153,9 @@ function TypewriterText({ block, reveal, opacity }) {
     useFrame((state) => {
         if (startRef.current === null) startRef.current = state.clock.elapsedTime
         const elapsed = state.clock.elapsedTime - startRef.current
-        const { line, chars } = typewriterState(elapsed, lineLengths, reveal)
+        const { line, chars, done } = typewriterState(elapsed, lineLengths, reveal)
+        // On-demand loop (Studio): the reveal asks for frames until it has finished (a looping one never does).
+        if (!done || reveal?.loop === true) state.invalidate()
 
         block.entries.forEach((entry, index) => {
             if (index < line) drawLine(entry, entry.length)

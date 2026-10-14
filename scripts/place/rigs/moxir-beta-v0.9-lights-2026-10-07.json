@@ -1,0 +1,2223 @@
+{
+ "snapshot": "moxir-beta-v0.9-lights-2026-10-07",
+ "what": "Every fixture of MOXIR beta v0.9 (position, rotation, colour, cone) and every hung or standing rig solid (truss pieces, rigging, decks, table, PA, barrier), read back from the scratch copy. The input of scripts/place/lights_beta_options.py, so the light options can be redrawn from git without the scratch server.",
+ "source": {
+  "server": "scratch serverXR of the di-dev tree moxir-flip (http://localhost:4323/serverXR), read only",
+  "project": "moxir-known-full-stage-back (title 'MOXIR beta v0.9')",
+  "document_version": 61,
+  "read": "2026-10-07, GET /api/projects/moxir-known-full-stage-back/document"
+ },
+ "frame": "hall frame: metres, Y up, +x = house right (the audience's right facing the DJ), +z toward the entry. Rotations are three.js Euler XYZ in radians; a spot light's unrotated beam points down (-Y), src/project/viewport/spotLightAim.js. Primitive boxes are base-anchored (position = middle of the base, scale = size), scripts/rigbuild/footprints.mjs rayObb.",
+ "fixtures": [
+  {
+   "id": "rig-par-cut-x-01",
+   "type": "up-pl5403",
+   "position": "truss header",
+   "p": [
+    -5.687,
+    3.38,
+    21
+   ],
+   "r": [
+    3.141593,
+    0,
+    1.481504
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-x-02",
+   "type": "up-pl5403",
+   "position": "truss header",
+   "p": [
+    -5.204,
+    3.508,
+    21
+   ],
+   "r": [
+    3.141593,
+    0,
+    1.501374
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-x-03",
+   "type": "up-pl5403",
+   "position": "truss header",
+   "p": [
+    -4.721,
+    3.634,
+    21
+   ],
+   "r": [
+    3.141593,
+    0,
+    1.526338
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-x-04",
+   "type": "up-pl5403",
+   "position": "truss header",
+   "p": [
+    2.807,
+    5.654,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    -1.117513
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-x-05",
+   "type": "up-pl5403",
+   "position": "truss header",
+   "p": [
+    3.289,
+    5.786,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    -1.137211
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-x-06",
+   "type": "up-pl5403",
+   "position": "truss header",
+   "p": [
+    3.771,
+    5.917,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    -1.153263
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-bridge-01",
+   "type": "up-pl5403",
+   "position": "truss top",
+   "p": [
+    -4.508,
+    4.502,
+    21.016
+   ],
+   "r": [
+    -2.837137,
+    0,
+    -1.02191
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-bridge-02",
+   "type": "up-pl5403",
+   "position": "truss top",
+   "p": [
+    -3.061,
+    4.885,
+    21.017
+   ],
+   "r": [
+    -2.801875,
+    0,
+    -1.067809
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-bridge-03",
+   "type": "up-pl5403",
+   "position": "truss top",
+   "p": [
+    0.992,
+    5.907,
+    21.018
+   ],
+   "r": [
+    -2.654575,
+    0,
+    1.197426
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-bridge-04",
+   "type": "up-pl5403",
+   "position": "truss top",
+   "p": [
+    2.443,
+    6.289,
+    21.018
+   ],
+   "r": [
+    -2.564311,
+    0,
+    1.246709
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-01",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    -3.86,
+    3.784,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-02",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    -2.894,
+    4.042,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-03",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    -1.928,
+    4.301,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-04",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    -0.962,
+    4.56,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-05",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    0.004,
+    4.819,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-06",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    0.969,
+    5.078,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-cut-curtain-07",
+   "type": "up-pl5403",
+   "position": "named par cut curtain",
+   "p": [
+    1.935,
+    5.337,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-01",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    6
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-02",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    6
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-03",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    12
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-04",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    12
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-05",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    18
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-06",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    18
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-07",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    24
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-08",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    24
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-09",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    30
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-10",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    30
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-11",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    36
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-12",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    36
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-13",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    42
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-14",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    42
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-15",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    -11.157,
+    0.31,
+    48
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-columns-16",
+   "type": "up-pl5403",
+   "position": "column uplight",
+   "p": [
+    11.157,
+    0.31,
+    48
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-press-cut-01",
+   "type": "up-pl5403",
+   "position": "backdrop floor",
+   "p": [
+    0.5,
+    0.309,
+    3.534
+   ],
+   "r": [
+    2.991541,
+    0,
+    0
+   ],
+   "colour": "#ffffff",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-press-cut-02",
+   "type": "up-pl5403",
+   "position": "backdrop floor",
+   "p": [
+    1.5,
+    0.309,
+    3.534
+   ],
+   "r": [
+    2.991541,
+    0,
+    0
+   ],
+   "colour": "#ffffff",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-press-cut-03",
+   "type": "up-pl5403",
+   "position": "backdrop floor",
+   "p": [
+    2.5,
+    0.309,
+    3.534
+   ],
+   "r": [
+    2.991541,
+    0,
+    0
+   ],
+   "colour": "#ffffff",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-press-sides-01",
+   "type": "up-pl5403",
+   "position": "named par press sides",
+   "p": [
+    0.05,
+    0.31,
+    3.542
+   ],
+   "r": [
+    3.060283,
+    0,
+    0
+   ],
+   "colour": "#ffffff",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-press-sides-02",
+   "type": "up-pl5403",
+   "position": "named par press sides",
+   "p": [
+    3.25,
+    0.309,
+    3.534
+   ],
+   "r": [
+    2.98697,
+    0,
+    0
+   ],
+   "colour": "#ffffff",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-01",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    -11.157,
+    0.31,
+    -12
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-02",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    11.157,
+    0.31,
+    -12
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-03",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    -11.157,
+    0.31,
+    -24
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-04",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    11.157,
+    0.31,
+    -24
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-05",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    -11.157,
+    0.31,
+    -36
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-06",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    11.157,
+    0.31,
+    -36
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-07",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    -11.157,
+    0.31,
+    -48
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-vista-08",
+   "type": "up-pl5403",
+   "position": "named par vista",
+   "p": [
+    11.157,
+    0.31,
+    -48
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-neighbour-01",
+   "type": "up-pl5403",
+   "position": "named par neighbour",
+   "p": [
+    -35.157,
+    0.31,
+    18
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-neighbour-02",
+   "type": "up-pl5403",
+   "position": "named par neighbour",
+   "p": [
+    35.157,
+    0.31,
+    18
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-neighbour-03",
+   "type": "up-pl5403",
+   "position": "named par neighbour",
+   "p": [
+    -35.157,
+    0.31,
+    30
+   ],
+   "r": [
+    3.141593,
+    0,
+    -0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-par-neighbour-04",
+   "type": "up-pl5403",
+   "position": "named par neighbour",
+   "p": [
+    35.157,
+    0.31,
+    30
+   ],
+   "r": [
+    3.141593,
+    0,
+    0.070693
+   ],
+   "colour": "#ff8a2a",
+   "angle_rad": 0.1309
+  },
+  {
+   "id": "rig-beam380-backstage-01",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    -4.5,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-backstage-02",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    -3,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-backstage-03",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    -1.5,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-backstage-04",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    0,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-backstage-05",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    1.5,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-backstage-06",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    3,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-backstage-07",
+   "type": "up-b380f",
+   "position": "backdrop floor",
+   "p": [
+    4.5,
+    0.698,
+    -1.5
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-01",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    -10.4,
+    0.698,
+    24
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-02",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    10.4,
+    0.698,
+    24
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-03",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    -10.4,
+    0.698,
+    30
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-04",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    10.4,
+    0.698,
+    30
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-05",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    -10.4,
+    0.698,
+    36
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-06",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    10.4,
+    0.698,
+    36
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-07",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    -10.4,
+    0.698,
+    42
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-08",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    10.4,
+    0.698,
+    42
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-09",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    -10.4,
+    0.698,
+    48
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-columns-10",
+   "type": "up-b380f",
+   "position": "column bases",
+   "p": [
+    10.4,
+    0.698,
+    48
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#e8efff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-beam380-lighthouse-01",
+   "type": "up-b380f",
+   "position": "named beam380 lighthouse",
+   "p": [
+    0,
+    0.698,
+    -48
+   ],
+   "r": [
+    3.141593,
+    0,
+    0
+   ],
+   "colour": "#eef3ff",
+   "angle_rad": 0.0157
+  },
+  {
+   "id": "rig-lasercube-cut-01",
+   "type": "ext-lc-ultra-mk2",
+   "position": "truss top",
+   "p": [
+    -5.843,
+    3.979,
+    21.11
+   ],
+   "r": [
+    -2.106135,
+    0,
+    0.188035
+   ],
+   "colour": "#27ff4a",
+   "angle_rad": 0.0105
+  },
+  {
+   "id": "rig-lasercube-cut-02",
+   "type": "ext-lc-ultra-mk2",
+   "position": "truss top",
+   "p": [
+    -3.92,
+    4.494,
+    21.112
+   ],
+   "r": [
+    -2.080904,
+    0,
+    0.115915
+   ],
+   "colour": "#27ff4a",
+   "angle_rad": 0.0105
+  },
+  {
+   "id": "rig-lasercube-cut-03",
+   "type": "ext-lc-ultra-mk2",
+   "position": "truss top",
+   "p": [
+    -1.998,
+    5.009,
+    21.113
+   ],
+   "r": [
+    -2.054937,
+    0,
+    0.040347
+   ],
+   "colour": "#27ff4a",
+   "angle_rad": 0.0105
+  },
+  {
+   "id": "rig-lasercube-cut-04",
+   "type": "ext-lc-ultra-mk2",
+   "position": "truss top",
+   "p": [
+    -0.076,
+    5.524,
+    21.113
+   ],
+   "r": [
+    -2.028243,
+    0,
+    -0.037842
+   ],
+   "colour": "#27ff4a",
+   "angle_rad": 0.0105
+  },
+  {
+   "id": "rig-lasercube-cut-05",
+   "type": "ext-lc-ultra-mk2",
+   "position": "truss top",
+   "p": [
+    1.846,
+    6.038,
+    21.113
+   ],
+   "r": [
+    -2.000829,
+    0,
+    -0.117628
+   ],
+   "colour": "#27ff4a",
+   "angle_rad": 0.0105
+  },
+  {
+   "id": "rig-lasercube-cut-06",
+   "type": "ext-lc-ultra-mk2",
+   "position": "truss top",
+   "p": [
+    3.768,
+    6.552,
+    21.111
+   ],
+   "r": [
+    -1.972708,
+    0,
+    -0.197844
+   ],
+   "colour": "#27ff4a",
+   "angle_rad": 0.0105
+  },
+  {
+   "id": "rig-hazer-back-01",
+   "type": "ext-hazer",
+   "position": "booth back",
+   "p": [
+    -4.5,
+    0.235,
+    3.95
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-hazer-back-02",
+   "type": "ext-hazer",
+   "position": "booth back",
+   "p": [
+    4.5,
+    0.235,
+    3.95
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-hazer-hall-01",
+   "type": "ext-hazer",
+   "position": "nave columns",
+   "p": [
+    -10.6,
+    0.235,
+    7.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-hazer-hall-02",
+   "type": "ext-hazer",
+   "position": "nave columns",
+   "p": [
+    -10.6,
+    0.235,
+    25.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-hazer-hall-03",
+   "type": "ext-hazer",
+   "position": "nave columns",
+   "p": [
+    10.6,
+    0.235,
+    37.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-hazer-hall-04",
+   "type": "ext-hazer",
+   "position": "nave columns",
+   "p": [
+    10.6,
+    0.235,
+    55.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-smoke-01",
+   "type": "up-yz31p",
+   "position": "nave columns",
+   "p": [
+    -10.6,
+    0.1,
+    7.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-smoke-02",
+   "type": "up-yz31p",
+   "position": "nave columns",
+   "p": [
+    -10.6,
+    0.1,
+    25.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-smoke-03",
+   "type": "up-yz31p",
+   "position": "nave columns",
+   "p": [
+    10.6,
+    0.1,
+    37.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  },
+  {
+   "id": "rig-smoke-04",
+   "type": "up-yz31p",
+   "position": "nave columns",
+   "p": [
+    10.6,
+    0.1,
+    55.2
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "colour": null,
+   "angle_rad": null
+  }
+ ],
+ "solids": [
+  {
+   "id": "rig-line-1",
+   "name": "truss line (hung from the crane bridge, sloped)",
+   "p": [
+    -5.588,
+    3.78,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0.261799
+   ],
+   "s": [
+    1,
+    1,
+    1
+   ],
+   "kind": "truss-3m"
+  },
+  {
+   "id": "rig-line-2",
+   "name": "truss line (hung from the crane bridge, sloped)",
+   "p": [
+    -2.69,
+    4.557,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0.261799
+   ],
+   "s": [
+    1,
+    1,
+    1
+   ],
+   "kind": "truss-3m"
+  },
+  {
+   "id": "rig-line-3",
+   "name": "truss line (hung from the crane bridge, sloped)",
+   "p": [
+    0.207,
+    5.333,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0.261799
+   ],
+   "s": [
+    1,
+    1,
+    1
+   ],
+   "kind": "truss-3m"
+  },
+  {
+   "id": "rig-line-4",
+   "name": "truss line (hung from the crane bridge, sloped)",
+   "p": [
+    3.105,
+    6.11,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0.261799
+   ],
+   "s": [
+    1,
+    1,
+    1
+   ],
+   "kind": "truss-3m"
+  },
+  {
+   "id": "rig-deck-1",
+   "name": "DJ riser \u2014 one step: 3 \u00d7 StageDex Topline deck 2 \u00d7 1 m on 40",
+   "p": [
+    -0.872,
+    0,
+    23.49
+   ],
+   "r": [
+    0,
+    1.570593,
+    0
+   ],
+   "s": [
+    1,
+    0.4,
+    1
+   ],
+   "kind": "deck-2x1"
+  },
+  {
+   "id": "rig-deck-2",
+   "name": "DJ riser \u2014 one step: 3 \u00d7 StageDex Topline deck 2 \u00d7 1 m on 40",
+   "p": [
+    0.1277,
+    0,
+    23.5
+   ],
+   "r": [
+    0,
+    1.570593,
+    0
+   ],
+   "s": [
+    1,
+    0.4,
+    1
+   ],
+   "kind": "deck-2x1"
+  },
+  {
+   "id": "rig-deck-3",
+   "name": "DJ riser \u2014 one step: 3 \u00d7 StageDex Topline deck 2 \u00d7 1 m on 40",
+   "p": [
+    1.128,
+    0,
+    23.49
+   ],
+   "r": [
+    0,
+    1.570593,
+    0
+   ],
+   "s": [
+    1,
+    0.4,
+    1
+   ],
+   "kind": "deck-2x1"
+  },
+  {
+   "id": "rig-dj-table",
+   "name": "DJ table 1.8 x 0.8 m, 0.95 m high",
+   "p": [
+    0.128,
+    0.4,
+    23.89
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.8,
+    0.95,
+    0.8
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-crowd-barrier",
+   "name": "Crowd barrier 14.14 m, 1.3 m pit (the stage line, 2026-10-07",
+   "p": [
+    0.0003,
+    0,
+    25.79
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    14.14,
+    1.1,
+    0.08
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-bridle-a",
+   "name": "Bridle leg, pick 1/3 (u -5.75 m) (rigging: a beam clamp on t",
+   "p": [
+    -6.592,
+    4.512,
+    21
+   ],
+   "r": [
+    -0.224263,
+    0,
+    0
+   ],
+   "s": [
+    0.05,
+    3.372,
+    0.05
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-bridle-b",
+   "name": "Bridle leg, pick 1/3 (u -5.75 m) (rigging: a beam clamp on t",
+   "p": [
+    -6.592,
+    4.512,
+    21
+   ],
+   "r": [
+    0.224263,
+    0,
+    0
+   ],
+   "s": [
+    0.05,
+    3.372,
+    0.05
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-clamp-a",
+   "name": "Beam clamp, pick 1/3 (u -5.75 m) (rigging: on the back girde",
+   "p": [
+    -6.592,
+    7.8,
+    20.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.12,
+    0.15,
+    0.14
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-clamp-b",
+   "name": "Beam clamp, pick 1/3 (u -5.75 m) (rigging: on the audience-s",
+   "p": [
+    -6.592,
+    7.8,
+    21.75
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.12,
+    0.15,
+    0.14
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1",
+   "name": "Chain hoist chain hoist 500 kg, D8 Plus (planned on the CHAI",
+   "p": [
+    -6.592,
+    4.162,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.25,
+    0.29,
+    0.2
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-chain",
+   "name": "Hoist chain and round sling, pick 1/3 (u -5.75 m) (rigging)",
+   "p": [
+    -6.592,
+    3.662,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.03,
+    0.5,
+    0.03
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-steel",
+   "name": "Safety steel, pick 1/3 (u -5.75 m) (rigging: secondary, top ",
+   "p": [
+    -6.472,
+    3.662,
+    21
+   ],
+   "r": [
+    -0.179299,
+    0,
+    0
+   ],
+   "s": [
+    0.035,
+    4.205,
+    0.035
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-1-steel-clamp",
+   "name": "Safety steel clamp, pick 1/3 (u -5.75 m) (rigging: its own c",
+   "p": [
+    -6.472,
+    7.8,
+    20.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.08,
+    0.15,
+    0.1
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-bridle-a",
+   "name": "Bridle leg, pick 2/3 (u -0.5 m) (rigging: a beam clamp on th",
+   "p": [
+    -1.52,
+    5.871,
+    21
+   ],
+   "r": [
+    -0.370775,
+    0,
+    0
+   ],
+   "s": [
+    0.05,
+    2.07,
+    0.05
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-bridle-b",
+   "name": "Bridle leg, pick 2/3 (u -0.5 m) (rigging: a beam clamp on th",
+   "p": [
+    -1.52,
+    5.871,
+    21
+   ],
+   "r": [
+    0.370775,
+    0,
+    0
+   ],
+   "s": [
+    0.05,
+    2.07,
+    0.05
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-clamp-a",
+   "name": "Beam clamp, pick 2/3 (u -0.5 m) (rigging: on the back girder",
+   "p": [
+    -1.52,
+    7.8,
+    20.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.12,
+    0.15,
+    0.14
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-clamp-b",
+   "name": "Beam clamp, pick 2/3 (u -0.5 m) (rigging: on the audience-si",
+   "p": [
+    -1.52,
+    7.8,
+    21.75
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.12,
+    0.15,
+    0.14
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2",
+   "name": "Chain hoist chain hoist 500 kg, D8 Plus (planned on the CHAI",
+   "p": [
+    -1.52,
+    5.521,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.25,
+    0.29,
+    0.2
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-chain",
+   "name": "Hoist chain and round sling, pick 2/3 (u -0.5 m) (rigging)",
+   "p": [
+    -1.52,
+    5.021,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.03,
+    0.5,
+    0.03
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-steel",
+   "name": "Safety steel, pick 2/3 (u -0.5 m) (rigging: secondary, top c",
+   "p": [
+    -1.4,
+    5.021,
+    21
+   ],
+   "r": [
+    -0.26358,
+    0,
+    0
+   ],
+   "s": [
+    0.035,
+    2.879,
+    0.035
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-2-steel-clamp",
+   "name": "Safety steel clamp, pick 2/3 (u -0.5 m) (rigging: its own cl",
+   "p": [
+    -1.4,
+    7.8,
+    20.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.08,
+    0.15,
+    0.1
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-bridle-a",
+   "name": "Bridle leg, pick 3/3 (u 5.25 m) (rigging: a beam clamp on th",
+   "p": [
+    4.034,
+    7.359,
+    21
+   ],
+   "r": [
+    -1.039222,
+    0,
+    0
+   ],
+   "s": [
+    0.05,
+    0.87,
+    0.05
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-bridle-b",
+   "name": "Bridle leg, pick 3/3 (u 5.25 m) (rigging: a beam clamp on th",
+   "p": [
+    4.034,
+    7.359,
+    21
+   ],
+   "r": [
+    1.039222,
+    0,
+    0
+   ],
+   "s": [
+    0.05,
+    0.87,
+    0.05
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-clamp-a",
+   "name": "Beam clamp, pick 3/3 (u 5.25 m) (rigging: on the back girder",
+   "p": [
+    4.034,
+    7.8,
+    20.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.12,
+    0.15,
+    0.14
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-clamp-b",
+   "name": "Beam clamp, pick 3/3 (u 5.25 m) (rigging: on the audience-si",
+   "p": [
+    4.034,
+    7.8,
+    21.75
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.12,
+    0.15,
+    0.14
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3",
+   "name": "Chain hoist chain hoist 500 kg, D8 Plus (planned on the CHAI",
+   "p": [
+    4.034,
+    7.009,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.25,
+    0.29,
+    0.2
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-chain",
+   "name": "Hoist chain and round sling, pick 3/3 (u 5.25 m) (rigging)",
+   "p": [
+    4.034,
+    6.509,
+    21
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.03,
+    0.5,
+    0.03
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-steel",
+   "name": "Safety steel, pick 3/3 (u 5.25 m) (rigging: secondary, top c",
+   "p": [
+    4.154,
+    6.509,
+    21
+   ],
+   "r": [
+    -0.526282,
+    0,
+    0
+   ],
+   "s": [
+    0.035,
+    1.493,
+    0.035
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-hoist-3-steel-clamp",
+   "name": "Safety steel clamp, pick 3/3 (u 5.25 m) (rigging: its own cl",
+   "p": [
+    4.154,
+    7.8,
+    20.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.08,
+    0.15,
+    0.1
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-tieoff-hl",
+   "name": "Tie-off hl: house-left (LOW) end, level at its own height (3",
+   "p": [
+    -7.037,
+    3.392,
+    21
+   ],
+   "r": [
+    -1.571628,
+    0,
+    0.989189
+   ],
+   "s": [
+    0.025,
+    5.461,
+    0.025
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-tieoff-hr",
+   "name": "Tie-off hr: house-right (HIGH) end down to the nave column a",
+   "p": [
+    4.554,
+    6.498,
+    21
+   ],
+   "r": [
+    -2.110805,
+    0,
+    -1.11002
+   ],
+   "s": [
+    0.025,
+    7.866,
+    0.025
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-pa-l-subs",
+   "name": "PA L \u2014 PLACEHOLDER: 2 \u00d7 L-Acoustics KS28 (1.34 \u00d7 0.55 \u00d7 0.71",
+   "p": [
+    -5.4,
+    0,
+    24.141
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.34,
+    1.1,
+    0.719
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-pa-l-tops",
+   "name": "PA L \u2014 PLACEHOLDER: 3 \u00d7 L-Acoustics KARA II ground-stacked (",
+   "p": [
+    -5.4,
+    1.1,
+    24.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.733,
+    0.756,
+    0.5
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-pa-r-subs",
+   "name": "PA R \u2014 PLACEHOLDER: 2 \u00d7 L-Acoustics KS28 (1.34 \u00d7 0.55 \u00d7 0.71",
+   "p": [
+    5.4,
+    0,
+    24.141
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.34,
+    1.1,
+    0.719
+   ],
+   "kind": "box"
+  },
+  {
+   "id": "rig-pa-r-tops",
+   "name": "PA R \u2014 PLACEHOLDER: 3 \u00d7 L-Acoustics KARA II ground-stacked (",
+   "p": [
+    5.4,
+    1.1,
+    24.25
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.733,
+    0.756,
+    0.5
+   ],
+   "kind": "box"
+  }
+ ]
+}
