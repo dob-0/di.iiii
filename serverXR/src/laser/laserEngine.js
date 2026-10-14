@@ -46,6 +46,13 @@
 //      frame budget (67 ms of points at the cube's rate, ≤ its buffer) is refused (frame-too-long);
 //      a dark frame cuts the lit pass at once; the path is planned at the rate the cube says it
 //      plays; the cube's over-temperature flag stops it, its warning drops the power to the minimum.
+//  10. ONE LASER OUT PER CUBE, ARMED ONE BY ONE (2026-10-14, the TouchDesigner-style Laser Out): each
+//      Out names its cube by address; the server checks the address answers the info question
+//      (0x77), adds the cube keyed by serial (upsertCube) and gives that Out the cube (a claim,
+//      CLAIM_TTL_MS, renewed by its frames, keep-alives and checks). Another Out's frames, arm or
+//      address on a claimed cube are refused. arm({ cube }) switches ONE cube on or off; the sign-off
+//      phrase is asked on the first ON of a run (after a start, a reload or a disarm-all) and the
+//      run stays signed off until the next disarm-all. Every guard above applies per cube as before.
 // What software cannot do, said plainly: a galvo that stalls while a figure is being sent is a
 // still beam the server never sees (it only knows what it commanded); a server killed with -9, or a
 // cable pulled, leaves the cube to its own firmware, whose behaviour when the stream stops is not
@@ -78,6 +85,9 @@ const TICK_MS = 20
 const BUFFER_MARGIN = 200
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
+// A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
+// (the editor closed, the tab gone) frees the cube for another Out.
+const CLAIM_TTL_MS = 10000
 
 // THE GUARDS' NUMBERS — chosen 2026-10-09 against ~/work/agent-reports-2026-10-09/devices/lasers-exact.md.
 // All UNVALIDATED until tested on a real cube (the checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
@@ -299,7 +309,7 @@ const createLaserEngine = ({
 } = {}) => {
     const config = readConfig(dataDir)
     for (const c of config.cubes) if (c.addressRefused) log?.warn?.(`[laser] ${c.id}: laser.json address not used: ${c.addressRefused}`)
-    const live = new Map(config.cubes.map((c) => [c.id, {
+    const liveEntry = (c) => ({
         ...c,
         lastFrameAt: null,
         info: null, infoAt: null, heardAt: null,
@@ -309,13 +319,19 @@ const createLaserEngine = ({
         prep: null, playingPrep: null, guardsKey: JSON.stringify(c.guards), clearAt: null, clearConfirmed: false,
         temp: guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs }),
         stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0, [STOP.FRAME_TOO_LONG]: 0, [STOP.OVER_TEMPERATURE]: 0 }
-    }]))
+    })
+    const live = new Map(config.cubes.map((c) => [c.id, liveEntry(c)]))
     const frames = { all: null, byCube: new Map() }
     let armed = false
+    // Signed off for this run: the phrase was typed since the engine started or the last disarm-all.
+    // Never written anywhere, never survives a restart (rule 1).
+    let signedOff = false
+    // cube id -> { out, at }: which Laser Out sends to that cube (rule 10).
+    const claims = new Map()
     let socket = null
     let timer = null
     let infoTimer = null
-    const sim = () => !config.cubes.some((c) => c.ip)
+    const sim = () => ![...live.values()].some((c) => c.ip)
 
     const send = (cube, buf, port, done) => {
         if (!socket || !cube.ip) { done?.(); return }
@@ -346,6 +362,19 @@ const createLaserEngine = ({
         infoTimer?.unref?.()
     }
     const framesFor = (id) => frames.byCube.get(id) || frames.all
+    const claimOf = (id, t = now()) => {
+        const claim = claims.get(id)
+        return claim && t - claim.at <= CLAIM_TTL_MS ? claim : null
+    }
+    // Another Out holds this cube: the refusal's words, or null. A request without an Out (the
+    // panel's old cube input, a script) is "another" too once an Out holds the cube.
+    const heldByOther = (id, out) => {
+        const claim = claimOf(id)
+        if (!claim || (out && claim.out === String(out))) return null
+        const c = live.get(id)
+        return `${c?.name || id} (${id}${c?.ip ? ` at ${c.ip}` : ''}) is already driven by another Laser Out — one Out per cube. Give this Out another cube's address, or delete the other Out.`
+    }
+    const touchClaim = (id, out) => { if (out && live.has(id) && !heldByOther(id, out)) claims.set(id, { out: String(out), at: now() }) }
 
     // The rate the cube PLAYS (round 2, review §6): its last info answer (info.dacRate), never above
     // its maximum. laser.json's dacRate is a REQUEST: sent as SET_RATE only with guards.sendSetRate,
@@ -588,6 +617,7 @@ const createLaserEngine = ({
         const t = now()
         return {
             armed,
+            signedOff,
             sim: sim(),
             zone: { ...config.zone },
             guard: {
@@ -606,6 +636,7 @@ const createLaserEngine = ({
                 serial: c.serial,
                 connected: Boolean(c.ip) && c.heardAt !== null && t - c.heardAt <= GUARD.LINK_LOST_MS,
                 armed: armed && c.armed,
+                claimedBy: claimOf(c.id, t)?.out ?? null,
                 stop: c.stop ? { reason: c.stop.reason, text: STOP_TEXT[c.stop.reason], detail: c.stop.detail, at: c.stop.at } : null,
                 stops: { ...c.stops },
                 info: infoView(c, t),
@@ -622,18 +653,23 @@ const createLaserEngine = ({
         }
     }
 
+    // A frame for 'all' replaces every cube's own frame except those a Laser Out holds (rule 10).
     const keep = (target, frame) => {
-        if (target === ALL_CUBES) { frames.all = frame; frames.byCube.clear() } else frames.byCube.set(target, frame)
-        for (const c of live.values()) if (target === ALL_CUBES || c.id === target) c.lastFrameAt = frame.at
+        if (target === ALL_CUBES) {
+            frames.all = frame
+            for (const id of [...frames.byCube.keys()]) if (!claimOf(id)) frames.byCube.delete(id)
+        } else frames.byCube.set(target, frame)
+        for (const c of live.values()) if (target === ALL_CUBES ? !claimOf(c.id) : c.id === target) c.lastFrameAt = frame.at
     }
     const targetOf = (cube) => (cube == null || cube === '' ? ALL_CUBES : String(cube))
     const unknown = (target) => (target !== ALL_CUBES && !live.has(target) ? `no cube "${target}" (cubes: ${[...live.keys()].join(', ')})` : null)
 
     /** Keep a frame for every cube ('all') or one; the zone applied. Never sends by itself. */
-    const setFrame = (cube, points) => {
+    const setFrame = (cube, points, out = null) => {
         const target = targetOf(cube)
-        const error = unknown(target)
+        const error = unknown(target) || (target === ALL_CUBES ? null : heldByOther(target, out))
         if (error) return { ok: false, error }
+        if (target !== ALL_CUBES) touchClaim(target, out)
         const clean = normaliseFramePoints(points)
         const zoned = applyZone(clean.points, config.zone)
         keep(target, {
@@ -650,10 +686,11 @@ const createLaserEngine = ({
     }
 
     /** The editor's keep-alive: the frame it holds is still wanted. Refreshes the frame's time only. */
-    const alive = (cube) => {
+    const alive = (cube, out = null) => {
         const target = targetOf(cube)
-        const error = unknown(target)
+        const error = unknown(target) || (target === ALL_CUBES ? null : heldByOther(target, out))
         if (error) return { ok: false, error }
+        if (target !== ALL_CUBES) touchClaim(target, out)
         const frame = target === ALL_CUBES ? frames.all : frames.byCube.get(target)
         if (!frame) return { ok: true, armed, kept: false }
         frame.at = now()
@@ -672,10 +709,10 @@ const createLaserEngine = ({
     // stream's points), then every one gets output-off twice and buffer answers off. A cube never
     // armed gets no data point (rule 1), only the off commands. `done` is called once per message;
     // returns how many there are.
-    const offAll = (wasArmed, done) => {
+    const offAll = (wasArmed, done, only = null) => {
         const msgs = []
         for (const c of live.values()) {
-            if (!c.ip) continue
+            if (!c.ip || (only && !only.has(c.id))) continue
             if (wasArmed.has(c.id)) {
                 msgs.push([c, proto.clearRingBuffer(), proto.PORT.CMD], [c, proto.clearRingBuffer(), proto.PORT.CMD])
                 for (const buf of parkMessages(c)) msgs.push([c, buf, proto.PORT.DATA])
@@ -708,10 +745,49 @@ const createLaserEngine = ({
         send(c, proto.setOutput(true), proto.PORT.CMD)
     }
 
-    const arm = ({ armed: want, confirm } = {}) => {
+    // ONE cube on or off (rule 10). Off is always allowed and always sent. On needs: the cube known
+    // and addressed, not held by another Out, the run signed off (the phrase now, or earlier in this
+    // run), and the cube's own answer (armCube's checks).
+    const armOne = ({ armed: want, cube, confirm, out }) => {
+        const c = live.get(String(cube))
+        if (!c) return { ok: false, armed, error: `no cube "${cube}" (cubes: ${[...live.keys()].join(', ')})` }
+        if (want !== true) {
+            const wasOn = armed && c.armed
+            offAll(new Set(wasOn ? [c.id] : []), undefined, new Set([c.id]))
+            c.armed = false
+            c.stillSince = null
+            if (c.stop?.reason !== STOP.NO_INFO) c.stop = null
+            if (![...live.values()].some((x) => x.armed)) {
+                armed = false
+                if (timer) { stopEvery(timer); timer = null }
+            }
+            if (wasOn) log?.warn?.(`[laser] ${c.id} OFF`)
+            return { ok: true, armed, cube: c.id, cubeArmed: false, signedOff }
+        }
+        const held = heldByOther(c.id, out)
+        if (held) return { ok: false, armed, error: `not on: ${held}` }
+        if (!c.ip) return { ok: false, armed, error: `not on: ${c.id} has no address — give the Laser Out its cube's IP` }
+        if (!signedOff && confirm !== ARM_PHRASE) {
+            return { ok: false, armed, needsPhrase: true, error: confirm ? 'not on: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' : 'not on: the first ON of a run takes the sign-off phrase' }
+        }
+        openSocket()
+        const t = now()
+        armCube(c, t)
+        if (!c.armed) return { ok: false, armed, error: `not on: ${c.id}: ${c.stop?.reason === STOP.OVER_TEMPERATURE ? 'the cube reports over-temperature' : 'the cube has not answered its info question — is it on and on this network?'}` }
+        signedOff = true
+        armed = true
+        touchClaim(c.id, out)
+        if (!timer) { timer = every(tick, TICK_MS); timer?.unref?.() }
+        log?.warn?.(`[laser] ${c.id} ON (${c.ip})`)
+        return { ok: true, armed, cube: c.id, cubeArmed: true, signedOff }
+    }
+
+    const arm = ({ armed: want, confirm, cube, out } = {}) => {
+        if (cube != null && cube !== '' && cube !== ALL_CUBES) return armOne({ armed: want, cube, confirm, out })
         if (want !== true) {
             if (armed) offAll(armedIds())
             armed = false
+            signedOff = false
             for (const c of live.values()) { c.armed = false; c.stillSince = null; if (c.stop?.reason !== STOP.NO_INFO) c.stop = null }
             if (timer) { stopEvery(timer); timer = null }
             return { ok: true, armed }
@@ -729,9 +805,55 @@ const createLaserEngine = ({
             return { ok: false, armed, error: `no cube could be armed (${why.join(', ')}): nothing armed. A cube needs to have answered its info question and not be over temperature. Check the cubes are on, cool and on this network, then arm again.`, cubes: state().cubes }
         }
         armed = true
+        signedOff = true
         if (!timer) { timer = every(tick, TICK_MS); timer?.unref?.() }
         log?.warn?.(`[laser] ARMED (${sim() ? 'sim: no cube addresses, nothing is sent' : `${ready.filter((c) => c.ip).length} cubes`}${refused.length ? `; not armed, no info: ${refused.join(', ')}` : ''})`)
         return { ok: true, armed, refused, cubes: state().cubes }
+    }
+
+    // A Laser Out's address checked (rule 10): may this Out take the cube with this serial at this
+    // address? null when it may, else the refusal. Nothing changes.
+    const canTake = ({ serial, ip, out }) => {
+        const bySerial = [...live.values()].find((c) => c.serial === serial)
+        if (bySerial) {
+            const held = heldByOther(bySerial.id, out)
+            if (held) return held
+            if (bySerial.armed && bySerial.ip !== ip) return `${bySerial.id} (serial ${serial}) is ON at ${bySerial.ip}: switch it OFF before moving it to ${ip}`
+        }
+        const atIp = [...live.values()].find((c) => c.ip === ip && c !== bySerial)
+        if (atIp?.armed) return `${atIp.id} at ${ip} is ON: switch it OFF first`
+        if (atIp) { const held = heldByOther(atIp.id, out); if (held) return held }
+        return null
+    }
+
+    /**
+     * Add or move a cube found at a Laser Out's address, keyed by serial, without a reload: the other
+     * cubes keep running. `cube` is the entry laserConfig.upsertCube wrote; `info` the 0x77 answer
+     * that was just read from that address. Call canTake first. Returns the cube's id.
+     */
+    const upsertCube = (cube, info, out) => {
+        const fresh = cubeFrom(cube, live.size, config.guards)
+        if (!fresh.ip) return { ok: false, error: fresh.addressRefused || 'no address' }
+        const t = now()
+        // Whoever else had this address does not any more: that box is this cube now.
+        for (const c of live.values()) {
+            if (c.id !== fresh.id && c.ip === fresh.ip) { c.ip = null; c.info = null; c.heardAt = null; c.armed = false }
+        }
+        let c = live.get(fresh.id)
+        if (!c) { c = liveEntry(fresh); live.set(fresh.id, c) }
+        if (c.ip !== fresh.ip) { c.info = null; c.infoAt = null; c.heardAt = null; c.stop = null }
+        Object.assign(c, { name: fresh.name, ip: fresh.ip, serial: fresh.serial, stillBeams: fresh.stillBeams })
+        if (infoUsable(info)) { c.info = info; c.infoAt = t; c.heardAt = t }
+        touchClaim(c.id, out)
+        openSocket()
+        send(c, proto.getFullInfo(), proto.PORT.CMD)
+        return { ok: true, id: c.id }
+    }
+    // The live cube at an address that answered within the link window, with its info: a Laser Out's
+    // 3-second check needs no new question for a cube the engine already hears.
+    const heardAt = (ip) => {
+        const t = now()
+        return [...live.values()].find((c) => c.ip === ip && c.info?.serial && c.heardAt !== null && t - c.heardAt <= GUARD.LINK_LOST_MS) || null
     }
 
     /** What the room's laser view and the editor read: the kept frames, armed or not, and which cubes are stopped. */
@@ -774,7 +896,7 @@ const createLaserEngine = ({
     // question starts, so the cubes' info is there by the time anyone arms.
     openSocket()
 
-    return { state, setFrame, alive, blackout, arm, frames: framesView, close: shutdown, shutdown, tick }
+    return { state, setFrame, alive, blackout, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
 }
 
-module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP }
+module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, CLAIM_TTL_MS }
