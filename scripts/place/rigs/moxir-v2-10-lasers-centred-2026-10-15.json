@@ -1,0 +1,500 @@
+{
+ "what": "MOXIR v2.10 lasers centred and complementary to the lights (owner 02:03): the 6 LaserCubes back on the back crane girder top (hall z -42.45, y 8.81) in the owner's row (01:31, step 1.37 m) centred on x 0 like the wash figure; the 36-line comb to the entry wall above the door re-laid centred on x 0 (x -5.075..5.075, 0.29 m, interleaved, y 9.65, z 53.8); the two UP-LA40WF cross lines mirrored on x 0 (ends \u00b18.37 on the roof bottom chords at z -14.04).",
+ "source": "scripts/place/rigs/moxir-v2-10-2026-10-15.json lasers.tubes + scripts/place/rigs/moxir-v2-10-lasers-centred-2026-10-15.spec.json",
+ "moves": [
+  {
+   "id": "rig-laser-41",
+   "position": [
+    -4.073,
+    7.012,
+    53.412
+   ],
+   "rotation": [
+    1.6198,
+    0.0,
+    0.1815
+   ]
+  },
+  {
+   "id": "rig-laser-42",
+   "position": [
+    3.927,
+    7.012,
+    53.412
+   ],
+   "rotation": [
+    1.6198,
+    0.0,
+    -0.1815
+   ]
+  },
+  {
+   "id": "rig-laser-1a",
+   "position": [
+    -3.498,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0171
+   ]
+  },
+  {
+   "id": "rig-laser-1b",
+   "position": [
+    -3.498,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0009
+   ]
+  },
+  {
+   "id": "rig-laser-1c",
+   "position": [
+    -3.498,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.019
+   ]
+  },
+  {
+   "id": "rig-laser-1d",
+   "position": [
+    -3.498,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0371
+   ]
+  },
+  {
+   "id": "rig-laser-1e",
+   "position": [
+    -3.498,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0551
+   ]
+  },
+  {
+   "id": "rig-laser-1f",
+   "position": [
+    -3.498,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0731
+   ]
+  },
+  {
+   "id": "rig-laser-2a",
+   "position": [
+    -2.128,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0284
+   ]
+  },
+  {
+   "id": "rig-laser-2b",
+   "position": [
+    -2.128,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0103
+   ]
+  },
+  {
+   "id": "rig-laser-2c",
+   "position": [
+    -2.128,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0078
+   ]
+  },
+  {
+   "id": "rig-laser-2d",
+   "position": [
+    -2.128,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0259
+   ]
+  },
+  {
+   "id": "rig-laser-2e",
+   "position": [
+    -2.128,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0439
+   ]
+  },
+  {
+   "id": "rig-laser-2f",
+   "position": [
+    -2.128,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0619
+   ]
+  },
+  {
+   "id": "rig-laser-3a",
+   "position": [
+    0.612,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0508
+   ]
+  },
+  {
+   "id": "rig-laser-3b",
+   "position": [
+    0.612,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0327
+   ]
+  },
+  {
+   "id": "rig-laser-3c",
+   "position": [
+    0.612,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0146
+   ]
+  },
+  {
+   "id": "rig-laser-3d",
+   "position": [
+    0.612,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0034
+   ]
+  },
+  {
+   "id": "rig-laser-3e",
+   "position": [
+    0.612,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0215
+   ]
+  },
+  {
+   "id": "rig-laser-3f",
+   "position": [
+    0.612,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0396
+   ]
+  },
+  {
+   "id": "rig-laser-4a",
+   "position": [
+    1.982,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0619
+   ]
+  },
+  {
+   "id": "rig-laser-4b",
+   "position": [
+    1.982,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0439
+   ]
+  },
+  {
+   "id": "rig-laser-4c",
+   "position": [
+    1.982,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0259
+   ]
+  },
+  {
+   "id": "rig-laser-4d",
+   "position": [
+    1.982,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0078
+   ]
+  },
+  {
+   "id": "rig-laser-4e",
+   "position": [
+    1.982,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0103
+   ]
+  },
+  {
+   "id": "rig-laser-4f",
+   "position": [
+    1.982,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0284
+   ]
+  },
+  {
+   "id": "rig-laser-5a",
+   "position": [
+    -0.758,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0396
+   ]
+  },
+  {
+   "id": "rig-laser-5b",
+   "position": [
+    -0.758,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0215
+   ]
+  },
+  {
+   "id": "rig-laser-5c",
+   "position": [
+    -0.758,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0034
+   ]
+  },
+  {
+   "id": "rig-laser-5d",
+   "position": [
+    -0.758,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0146
+   ]
+  },
+  {
+   "id": "rig-laser-5e",
+   "position": [
+    -0.758,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0327
+   ]
+  },
+  {
+   "id": "rig-laser-5f",
+   "position": [
+    -0.758,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0508
+   ]
+  },
+  {
+   "id": "rig-laser-6a",
+   "position": [
+    3.352,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0731
+   ]
+  },
+  {
+   "id": "rig-laser-6b",
+   "position": [
+    3.352,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0551
+   ]
+  },
+  {
+   "id": "rig-laser-6c",
+   "position": [
+    3.352,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0371
+   ]
+  },
+  {
+   "id": "rig-laser-6d",
+   "position": [
+    3.352,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.019
+   ]
+  },
+  {
+   "id": "rig-laser-6e",
+   "position": [
+    3.352,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    -0.0009
+   ]
+  },
+  {
+   "id": "rig-laser-6f",
+   "position": [
+    3.352,
+    8.822,
+    -42.338
+   ],
+   "rotation": [
+    -1.5795,
+    0.0,
+    0.0171
+   ]
+  }
+ ]
+}

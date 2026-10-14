@@ -2,7 +2,7 @@
  "snapshot": "moxir-v2-1-2026-10-10",
  "version": "2.10",
  "title": "MOXIR v2.10 - forty washes: the floor washes as 6 wild lines of 3, each one DMX chain",
- "what": "v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines (A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: \"there are 40 washes\", \"we pick from the poligraf 40 washes\", \"make it wild and as a lines and use the area not hard that we can connect dmx\". Source: scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) and line A last point (-32.7,-32.7) moved to (-27.0,-31.5) to stay in the fence (lead decision 2026-10-15; 1 m inside x -27.7). | 2026-10-15 01:40: 15 floor washes + 6 cube positions = the owner's hand arrangement, straightened (see moxir-v2-10-owner-arrangement-2026-10-15.json).",
+ "what": "v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines (A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: \"there are 40 washes\", \"we pick from the poligraf 40 washes\", \"make it wild and as a lines and use the area not hard that we can connect dmx\". Source: scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) and line A last point (-32.7,-32.7) moved to (-27.0,-31.5) to stay in the fence (lead decision 2026-10-15; 1 m inside x -27.7). | 2026-10-15 01:40: 15 floor washes + 6 cube positions = the owner's hand arrangement, straightened (see moxir-v2-10-owner-arrangement-2026-10-15.json). | 02:05 swap: the 6 beams in the washes' front row (z -5.21), the 6 front-row washes on the third rung as a crossbar of 8 (z -28.98) - owner's decision on the compare page.",
  "written_by": "scripts/place/moxir_v2_8_floor.py",
  "date": "2026-10-15",
  "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
@@ -619,14 +619,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -8.7,
+    -3.425,
     8.81,
     -42.45
    ],
    "r": [
-    -1.778,
+    -1.5795,
     0.0,
-    1.0378
+    0.028
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -829,14 +829,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -7.3,
+    -2.055,
     8.81,
     -42.45
    ],
    "r": [
-    -1.7,
+    -1.5795,
     0.0,
-    0.6243
+    0.0168
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -1039,14 +1039,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -3.1,
+    -0.685,
     8.81,
     -42.45
    ],
    "r": [
-    -1.7,
+    -1.5795,
     0.0,
-    -0.6243
+    0.0056
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -1249,14 +1249,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -5.9,
+    0.685,
     8.81,
     -42.45
    ],
    "r": [
-    -1.6778,
+    -1.5795,
     0.0,
-    0.2083
+    -0.0056
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0105,
@@ -1459,14 +1459,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -4.5,
+    2.055,
     8.81,
     -42.45
    ],
    "r": [
-    -1.6778,
+    -1.5795,
     0.0,
-    -0.2083
+    -0.0168
    ],
    "colour": "#ff3a12",
    "angle_rad": 0.0105,
@@ -1669,14 +1669,14 @@
    "layer": "lines",
    "status": "used",
    "p": [
-    -1.7,
+    3.425,
     8.81,
     -42.45
    ],
    "r": [
-    -1.778,
+    -1.5795,
     0.0,
-    -1.0378
+    -0.028
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0105,
@@ -2287,11 +2287,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line C (moxir_v2_10_fo",
    "p": [
     2.143,
     0.31,
-    -5.322
+    -29.092
    ],
    "r": [
     3.1416,
@@ -2435,11 +2435,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_fo",
    "p": [
     -1.997,
     0.31,
-    -5.322
+    -29.092
    ],
    "r": [
     3.1416,
@@ -2509,11 +2509,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line B (moxir_v2_10_fo",
    "p": [
-    10.433,
+    14.573,
     0.31,
-    -5.322
+    -29.092
    ],
    "r": [
     3.1416,
@@ -3499,11 +3499,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_fo",
    "p": [
-    -10.287,
+    -14.427,
     0.31,
-    -5.322
+    -29.092
    ],
    "r": [
     3.1416,
@@ -3573,11 +3573,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_fo",
    "p": [
     -6.147,
     0.31,
-    -5.322
+    -29.092
    ],
    "r": [
     3.1416,
@@ -3647,11 +3647,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_fo",
    "p": [
     6.293,
     0.31,
-    -5.322
+    -29.092
    ],
    "r": [
     3.1416,
@@ -3943,11 +3943,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up 66 deg, 20 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up ; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m left of the axis; up 66 deg, 20 deg outward. v2.5 g",
    "p": [
-    -15.6405,
-    0.6884,
-    -11.0818
+    -10.287,
+    0.688,
+    -5.322
    ],
    "r": [
     3.1416,
@@ -4080,11 +4080,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up 66 deg, 12 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up ; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m left of the axis; up 66 deg, 12 deg outward. v2.5 g",
    "p": [
-    -9.3555,
-    0.6884,
-    -11.0818
+    -6.147,
+    0.688,
+    -5.322
    ],
    "r": [
     3.1416,
@@ -4217,11 +4217,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up 66 deg, 4 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up ; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m left of the axis; up 66 deg, 4 deg outward. v2.5 ga",
    "p": [
-    -3.0695,
-    0.6884,
-    -11.0818
+    -1.997,
+    0.688,
+    -5.322
    ],
    "r": [
     3.1416,
@@ -4354,11 +4354,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up 66 deg, 4 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 0.5 m right of the axis; up 66 deg, 4 deg outward. v2.5 g",
    "p": [
-    3.2165,
-    0.6884,
-    -11.0818
+    2.143,
+    0.688,
+    -5.322
    ],
    "r": [
     3.1416,
@@ -4491,11 +4491,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up 66 deg, 12 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 1.5 m right of the axis; up 66 deg, 12 deg outward. v2.5 ",
    "p": [
-    9.5025,
-    0.6884,
-    -11.0818
+    6.293,
+    0.688,
+    -5.322
    ],
    "r": [
     3.1416,
@@ -4628,11 +4628,11 @@
    "layer": "beams",
    "status": "used",
    "moments": [],
-   "position": "v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up 66 deg, 20 deg outward. v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up; v2.10 (moxir_v2_8_floor.py 2b): off the stage pen (z -9.0), behind the DJ, same x and aim",
+   "position": "SWAP 2026-10-15 02:05 (owner: 'i think better'): v2.5 gathered layout (moxir_v2_5_gathered.py): plane 1, the fan row behind the DJ at z -5.0, 2.5 m right of the axis; up 66 deg, 20 deg outward. v2.5 ",
    "p": [
-    15.7875,
-    0.6884,
-    -11.0818
+    10.433,
+    0.688,
+    -5.322
    ],
    "r": [
     3.1416,
@@ -6397,7 +6397,7 @@
    "r": [
     1.6198,
     0.0,
-    0.1036
+    0.1815
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
@@ -6445,7 +6445,7 @@
    "r": [
     1.6198,
     0.0,
-    -0.2573
+    -0.1815
    ],
    "colour": "#e8e4dc",
    "angle_rad": 0.0013,
@@ -18097,12 +18097,18 @@
      53.3
     ],
     "to": [
-     3.01,
+     8.37,
      10.3,
      -14.04
     ],
     "half_fan_deg": 0.0,
-    "ends_on": "roof bottom chords (y 10.3)"
+    "ends_on": "roof bottom chords (y 10.3)",
+    "r": [
+     1.6198,
+     0.0,
+     0.1815
+    ],
+    "length_m": 68.546
    },
    {
     "beam": "42",
@@ -18113,588 +18119,810 @@
      53.3
     ],
     "to": [
-     -13.74,
+     -8.37,
      10.3,
      -14.04
     ],
     "half_fan_deg": 0.0,
-    "ends_on": "roof bottom chords (y 10.3)"
+    "ends_on": "roof bottom chords (y 10.3)",
+    "r": [
+     1.6198,
+     0.0,
+     -0.1815
+    ],
+    "length_m": 68.546
    },
    {
     "beam": "1a",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -8.7,
+     -3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -10.0,
+     -5.075,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0171
+    ],
+    "length_m": 96.268
    },
    {
     "beam": "1b",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -8.7,
+     -3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -8.29,
+     -3.335,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0009
+    ],
+    "length_m": 96.254
    },
    {
     "beam": "1c",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -8.7,
+     -3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -6.57,
+     -1.595,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.019
+    ],
+    "length_m": 96.271
    },
    {
     "beam": "1d",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -8.7,
+     -3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -4.86,
+     0.145,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0371
+    ],
+    "length_m": 96.32
    },
    {
     "beam": "1e",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -8.7,
+     -3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -3.14,
+     1.885,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0551
+    ],
+    "length_m": 96.4
    },
    {
     "beam": "1f",
     "cube": "rig-lasercube-cut-01",
     "from": [
-     -8.7,
+     -3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -1.43,
+     3.625,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0731
+    ],
+    "length_m": 96.512
    },
    {
     "beam": "2a",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -7.3,
+     -2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -9.71,
+     -4.785,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0284
+    ],
+    "length_m": 96.292
    },
    {
     "beam": "2b",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -7.3,
+     -2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -8.0,
+     -3.045,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0103
+    ],
+    "length_m": 96.259
    },
    {
     "beam": "2c",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -7.3,
+     -2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -6.29,
+     -1.305,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0078
+    ],
+    "length_m": 96.257
    },
    {
     "beam": "2d",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -7.3,
+     -2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -4.57,
+     0.435,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0259
+    ],
+    "length_m": 96.286
    },
    {
     "beam": "2e",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -7.3,
+     -2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -2.86,
+     2.175,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0439
+    ],
+    "length_m": 96.347
    },
    {
     "beam": "2f",
     "cube": "rig-lasercube-cut-02",
     "from": [
-     -7.3,
+     -2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -1.14,
+     3.915,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0619
+    ],
+    "length_m": 96.439
    },
    {
     "beam": "3a",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -5.9,
+     0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -9.43,
+     -4.205,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0508
+    ],
+    "length_m": 96.378
    },
    {
     "beam": "3b",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -5.9,
+     0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -7.71,
+     -2.465,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0327
+    ],
+    "length_m": 96.305
    },
    {
     "beam": "3c",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -5.9,
+     0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -6.0,
+     -0.725,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0146
+    ],
+    "length_m": 96.264
    },
    {
     "beam": "3d",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -5.9,
+     0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -4.29,
+     1.015,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0034
+    ],
+    "length_m": 96.254
    },
    {
     "beam": "3e",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -5.9,
+     0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -2.57,
+     2.755,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0215
+    ],
+    "length_m": 96.276
    },
    {
     "beam": "3f",
     "cube": "rig-lasercube-cut-04",
     "from": [
-     -5.9,
+     0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -0.86,
+     4.495,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0396
+    ],
+    "length_m": 96.329
    },
    {
     "beam": "4a",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     -4.5,
+     2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -9.14,
+     -3.915,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0619
+    ],
+    "length_m": 96.439
    },
    {
     "beam": "4b",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     -4.5,
+     2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -7.43,
+     -2.175,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0439
+    ],
+    "length_m": 96.347
    },
    {
     "beam": "4c",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     -4.5,
+     2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -5.71,
+     -0.435,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0259
+    ],
+    "length_m": 96.286
    },
    {
     "beam": "4d",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     -4.5,
+     2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -4.0,
+     1.305,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0078
+    ],
+    "length_m": 96.257
    },
    {
     "beam": "4e",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     -4.5,
+     2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -2.29,
+     3.045,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0103
+    ],
+    "length_m": 96.259
    },
    {
     "beam": "4f",
     "cube": "rig-lasercube-cut-05",
     "from": [
-     -4.5,
+     2.055,
      8.81,
      -42.45
     ],
     "to": [
-     -0.57,
+     4.785,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0284
+    ],
+    "length_m": 96.292
    },
    {
     "beam": "5a",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     -3.1,
+     -0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -8.86,
+     -4.495,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0396
+    ],
+    "length_m": 96.329
    },
    {
     "beam": "5b",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     -3.1,
+     -0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -7.14,
+     -2.755,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0215
+    ],
+    "length_m": 96.276
    },
    {
     "beam": "5c",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     -3.1,
+     -0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -5.43,
+     -1.015,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0034
+    ],
+    "length_m": 96.254
    },
    {
     "beam": "5d",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     -3.1,
+     -0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -3.71,
+     0.725,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0146
+    ],
+    "length_m": 96.264
    },
    {
     "beam": "5e",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     -3.1,
+     -0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -2.0,
+     2.465,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0327
+    ],
+    "length_m": 96.305
    },
    {
     "beam": "5f",
     "cube": "rig-lasercube-cut-03",
     "from": [
-     -3.1,
+     -0.685,
      8.81,
      -42.45
     ],
     "to": [
-     -0.29,
+     4.205,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0508
+    ],
+    "length_m": 96.378
    },
    {
     "beam": "6a",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     -1.7,
+     3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -8.57,
+     -3.625,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0731
+    ],
+    "length_m": 96.512
    },
    {
     "beam": "6b",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     -1.7,
+     3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -6.86,
+     -1.885,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0551
+    ],
+    "length_m": 96.4
    },
    {
     "beam": "6c",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     -1.7,
+     3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -5.14,
+     -0.145,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0371
+    ],
+    "length_m": 96.32
    },
    {
     "beam": "6d",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     -1.7,
+     3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -3.43,
+     1.595,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.019
+    ],
+    "length_m": 96.271
    },
    {
     "beam": "6e",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     -1.7,
+     3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -1.71,
+     3.335,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     -0.0009
+    ],
+    "length_m": 96.254
    },
    {
     "beam": "6f",
     "cube": "rig-lasercube-cut-06",
     "from": [
-     -1.7,
+     3.425,
      8.81,
      -42.45
     ],
     "to": [
-     -0.0,
+     5.075,
      9.65,
      53.8
     ],
     "half_fan_deg": 1.008,
-    "ends_on": "entry (NW) end wall above the door"
+    "ends_on": "entry (NW) end wall above the door",
+    "r": [
+     -1.5795,
+     0.0,
+     0.0171
+    ],
+    "length_m": 96.268
    }
   ],
   "signed_off": false,

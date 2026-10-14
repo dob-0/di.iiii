@@ -1,0 +1,67 @@
+{
+ "what": "MOXIR v2.10 lasers centred and complementary to the lights (owner 02:03): the 6 LaserCubes back on the back crane girder top (hall z -42.45, y 8.81) in the owner's row (01:31, step 1.37 m) centred on x 0 like the wash figure; the 36-line comb to the entry wall above the door re-laid centred on x 0 (x -5.075..5.075, 0.29 m, interleaved, y 9.65, z 53.8); the two UP-LA40WF cross lines mirrored on x 0 (ends \u00b18.37 on the roof bottom chords at z -14.04).",
+ "offset": [
+  -0.073,
+  0.012,
+  0.112
+ ],
+ "cubes": {
+  "rig-lasercube-cut-01": [
+   -3.425,
+   8.81,
+   -42.45
+  ],
+  "rig-lasercube-cut-02": [
+   -2.055,
+   8.81,
+   -42.45
+  ],
+  "rig-lasercube-cut-03": [
+   -0.685,
+   8.81,
+   -42.45
+  ],
+  "rig-lasercube-cut-04": [
+   0.685,
+   8.81,
+   -42.45
+  ],
+  "rig-lasercube-cut-05": [
+   2.055,
+   8.81,
+   -42.45
+  ],
+  "rig-lasercube-cut-06": [
+   3.425,
+   8.81,
+   -42.45
+  ]
+ },
+ "comb": {
+  "x0": -5.075,
+  "step": 0.29,
+  "n": 36,
+  "y": 9.65,
+  "z": 53.8,
+  "order": [
+   "rig-lasercube-cut-01",
+   "rig-lasercube-cut-02",
+   "rig-lasercube-cut-03",
+   "rig-lasercube-cut-04",
+   "rig-lasercube-cut-05",
+   "rig-lasercube-cut-06"
+  ]
+ },
+ "to": {
+  "41": [
+   8.37,
+   10.3,
+   -14.04
+  ],
+  "42": [
+   -8.37,
+   10.3,
+   -14.04
+  ]
+ }
+}
