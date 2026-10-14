@@ -6,8 +6,9 @@
 // Speed; Blender's own Walk and Fly navigation: one speed, Shift faster, Alt slower — the owner's Blender 5.2.2: Walk 2.5 m/s,
 // speed factor 5, read from his preferences on 2026-10-12). Nothing under the pointer, near the camera or in view changes a move.
 // OUR choices, written down as such and settable: the automatic speed is the space's largest side / 40 (MOXIR's 100 m hall:
-// 2.5 m a wheel notch), taken once when the space is first moved in and then kept; the turning point sits 10 steps ahead; 100 px
-// of a zoom drag is one step; flying covers one step per second.
+// 2.5 m a wheel notch), read again at each move while the space still loads and fixed for the visit once it is in
+// (useCameraNavigation autoSpeedFor); the turning point sits 10 steps ahead; 100 px of a zoom drag is one step; flying covers
+// one step per second.
 export const SPEED_FACTOR = 5
 export const AUTO_SPEED_DIVISOR = 40
 export const TURN_DISTANCE_STEPS = 10
