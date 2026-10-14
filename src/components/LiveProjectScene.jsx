@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
+import Canvas from './GuardedCanvas.jsx'
 import { Grid, OrbitControls, Text, Billboard } from '@react-three/drei'
 import { TROIKA_FONT_URL } from '../project/viewport/troikaFont.js'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
@@ -19,6 +20,7 @@ import {
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 import { ensureGuestSession } from '../services/guestSession.js'
 import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
+import { outputRenderSettings } from '../project/viewport/outputMode.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
 import TorusObject from '../objectComponents/TorusObject.jsx'
@@ -31,6 +33,7 @@ import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
 import SpotLightObject from '../objectComponents/SpotLightObject.jsx'
+import { lampIsFitted } from '../objectComponents/spotBeam.js'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import useRoomSound from '../hooks/useRoomSound.js'
 import { roomHasSound } from '../utils/roomSound.js'
@@ -252,7 +255,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={Boolean(entity.components?.fixture)} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={lampIsFitted(entity.components)} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}
@@ -1530,6 +1533,8 @@ export default function LiveProjectScene({
     // `entitiesOverride`: the entities to draw instead of the loaded document's — the
     // room as a desk look poses it (PublicProjectSceneSurface). Null: the document's own.
     entitiesOverride = null,
+    // output mode (project/viewport/outputMode.js): the walk drawn light enough for a phone
+    outputMode = false,
     title = '',
     // --- Four optional seams, added for the jam surface (JamSurface.jsx).
     // Every one of them defaults to exactly what this component did before,
@@ -1847,7 +1852,11 @@ export default function LiveProjectScene({
     // top of the authored range — this is a first-person camera in continuous
     // motion, and a phone that renders it at 2x drops frames where the arrival
     // still frame would not.
-    const renderSettings = doc?.renderSettings || {}
+    const savedRenderSettings = doc?.renderSettings
+    const renderSettings = useMemo(
+        () => (outputMode ? outputRenderSettings(savedRenderSettings) : (savedRenderSettings || {})),
+        [outputMode, savedRenderSettings]
+    )
     // Shadows from the room: off unless this space asked for them. Walk mode
     // and the arrival frame read the same switch (shadowCasting.js).
     const shadowCasting = resolveShadowCasting(renderSettings)

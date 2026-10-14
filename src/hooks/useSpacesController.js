@@ -58,7 +58,8 @@ export function useSpacesController({
                 isOwner: typeof space.isOwner === 'boolean' ? space.isOwner : (existing.isOwner !== false),
                 publishedProjectId: typeof space.publishedProjectId === 'string' && space.publishedProjectId.trim()
                     ? space.publishedProjectId.trim()
-                    : (existing.publishedProjectId || null)
+                    : (existing.publishedProjectId || null),
+                domain: typeof space.domain === 'string' && space.domain ? space.domain : null
             })
         })
         return Array.from(map.values()).sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
@@ -216,7 +217,8 @@ export function useSpacesController({
     }, [])
 
     const handleCopySpaceLink = useCallback(async (spaceIdentifier) => {
-        const url = getSpaceShareUrl(spaceIdentifier)
+        const domain = spaces.find((space) => space.id === spaceIdentifier)?.domain || ''
+        const url = getSpaceShareUrl(spaceIdentifier, domain)
         try {
             await navigator.clipboard.writeText(url)
             return true

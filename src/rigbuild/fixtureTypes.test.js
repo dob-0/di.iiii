@@ -16,11 +16,19 @@ describe('the MOXIR type library', () => {
         expect(serialise(buildLibrary())).toBe(text)
     })
 
-    it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), and the three other-supplier planning types', () => {
+    it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), the three other-supplier planning types, and the owner’s LaserCube', () => {
         expect(committed.types.map((t) => t.code).filter((c) => c.startsWith('UP-')).sort()).toEqual(
             ['UP-250BSW', 'UP-B380F', 'UP-COB200', 'UP-HK1915', 'UP-LA40WF', 'UP-PL5403', 'UP-Q108S', 'UP-YH600F', 'UP-YZ31P'])
-        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(['EXT-BLINDER', 'EXT-HAZER', 'EXT-STROBE'])
-        for (const t of committed.types.filter((x) => x.code.startsWith('EXT-'))) expect(t.identified).toBe('EQUIVALENT')
+        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(['EXT-BLINDER', 'EXT-HAZER', 'EXT-LC-ULTRA-MK2', 'EXT-STROBE'])
+        // The planning types are modelled on an equivalent; the LaserCube (2026-10-04) is the
+        // owner's own unit, identified EXACTLY from its maker's page and manual.
+        for (const t of committed.types.filter((x) => x.code.startsWith('EXT-'))) {
+            expect(t.identified).toBe(t.code === 'EXT-LC-ULTRA-MK2' ? 'EXACT' : 'EQUIVALENT')
+        }
+        const cube = typeById(committed, 'EXT-LC-ULTRA-MK2')
+        expect(cube.modes.map((m) => m.footprint)).toEqual([16])
+        expect(cube.modes[0].channels.map((c) => c.role)).toContain('dimmer')
+        expect(cube.modes[0].channelsSource.basis).toBe('EXACT')
     })
 
     it('carries the published footprints and invents none', () => {
@@ -66,7 +74,8 @@ describe('the MOXIR type library', () => {
         expect(co2.identified).toBe('EQUIVALENT')
         expect(co2.maker).toBe(null)
         expect(co2.modelledOn).toMatch(/MagicFX/)
-        expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(162)
+        expect(typeById(committed, 'UP-PL5403').power_w.value).toBe(162) // the rating, kept as published
+        expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(200) // what it draws: the stated supply (audit A-05)
         expect(typeById(committed, 'UP-PL5403').power_w).toMatchObject({ basis: 'EXACT', src: 'D-CN' })
     })
 })

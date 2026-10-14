@@ -42,7 +42,7 @@ export default function useSmartViewState({ enabled = true, deepLink = false, ke
         if (!enabled || !deepLink || hashApplied.current || !presets.length || typeof window === 'undefined') return
         hashApplied.current = true
         const id = parseViewHash(window.location.hash)
-        if (id) choose(id)
+        if (id && presets.some((p) => p.id === id)) choose(id)
     }, [enabled, deepLink, presets, choose])
 
     useEffect(() => {

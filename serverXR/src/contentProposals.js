@@ -39,7 +39,7 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { promisify } = require('node:util')
-const { isValidAssetId } = require('./assetHash')
+const { hashFileSha256, isSha256AssetId, isValidAssetId } = require('./assetHash')
 const { getProjectPaths } = require('./projectStore')
 const { countOp, emptyCounts, describeCounts } = require('./spaceHistory')
 const { actorFromAuthState, publicActor } = require('./opActor')
@@ -68,6 +68,20 @@ const sha256File = (file) => new Promise((resolve, reject) => {
 
 // Regular files only. A tar can carry a symlink named like a document or a
 // blob; following it would read (or later serve) something outside the bundle.
+// A content address is a promise about the bytes behind it. Every other way a
+// file enters a store named by sha256 checks that promise (the upload route,
+// the follow carry and its hash-pinned PUT). A proposal is applied with
+// copyIfMissing, which never replaces a file that is already there — so a file
+// whose bytes are not its name would stand in for the real one, for every
+// project that names it later, including a later upload of the real bytes
+// (de-duplicated onto it). Refused whole, like a path outside the file.
+const assertNamedByItsBytes = async (file, id) => {
+  if (!isSha256AssetId(id)) return // a legacy id names no hash: nothing to check
+  if ((await hashFileSha256(file)) !== String(id).toLowerCase()) {
+    throw proposalError(400, 'A file inside does not match its name, so the whole file was refused.')
+  }
+}
+
 const isRegularFile = async (file) => {
   try { return (await fsp.lstat(file)).isFile() } catch { return false }
 }
@@ -151,6 +165,7 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
           const m = await readJsonSafe(full)
           if (m && typeof m === 'object') assets[name.slice(0, -5)] = m
         } else if (isValidAssetId(name)) {
+          await assertNamedByItsBytes(full, name)
           assetFiles.push(name)
         }
       }
@@ -169,12 +184,18 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
 
     const blobs = []
     for (const name of await listDir(path.join(dir, 'blobs'))) {
-      if (isValidAssetId(name) && await isRegularFile(path.join(dir, 'blobs', name))) blobs.push(name)
+      const full = path.join(dir, 'blobs', name)
+      if (!isValidAssetId(name) || !(await isRegularFile(full))) continue
+      await assertNamedByItsBytes(full, name)
+      blobs.push(name)
     }
     const spaceAssets = []
     for (const name of await listDir(path.join(dir, 'space', 'assets'))) {
       const id = name.endsWith('.json') ? name.slice(0, -5) : name
-      if (isValidAssetId(id) && await isRegularFile(path.join(dir, 'space', 'assets', name))) spaceAssets.push(name)
+      const full = path.join(dir, 'space', 'assets', name)
+      if (!isValidAssetId(id) || !(await isRegularFile(full))) continue
+      if (!name.endsWith('.json')) await assertNamedByItsBytes(full, id)
+      spaceAssets.push(name)
     }
 
     return { dir, cleanup, manifest, space, scene, sceneOpIds, projects, blobs, spaceAssets }

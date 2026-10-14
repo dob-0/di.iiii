@@ -34,6 +34,13 @@ describe('copy-version: a version kept as a labelled copy (RIG_BUILD §15.11)', 
         const [, keep] = copiedEntities([lamp, show], { from: 'p', to: 'q', label: 'old', suffix: 'old' })
         expect(keep.components.rigVariant.siblings).toEqual(show.components.rigVariant.siblings)
     })
+
+    it('takes the copy\'s own version id when given (a copy of a copy would pass the 48-character cap)', () => {
+        const show = { id: 'rig-show', components: { rigVariant: { set: 's', id: 'known-full-ponyo-10-04-flip-only-10-07-stage24', title: 'Known · full — x' } } }
+        const [s] = copiedEntities([show], { from: 'p', to: 'q', label: 'the show', suffix: 'show', id: 'known-full-show-2026-10-07' })
+        expect(s.components.rigVariant).toMatchObject({ id: 'known-full-show-2026-10-07', copyOf: { projectId: 'p', id: 'known-full-ponyo-10-04-flip-only-10-07-stage24' } })
+        expect(copiedEntities([show], { from: 'p', to: 'q', label: 'l', suffix: 'show' })[0].components.rigVariant.id.length).toBeGreaterThan(48)
+    })
 })
 
 // ---- --adopt: give an existing copy its mark back ------------------------------------------------
@@ -292,5 +299,8 @@ describe('copy-version: review B2 — wrong version, lost mark, mistyped flag', 
         expect(unknownArgs({ _: [], adopt: true, 'dry-run': true, to: 'x' })).toEqual([])
         expect(unknownArgs({ _: [], adopt: true, dryrun: true })).toEqual(['--dryrun'])
         expect(unknownArgs({ _: ['—dry-run'], adopt: true })).toEqual(['—dry-run'])
+        // a copy from another install (2026-10-04): the source's address and token are known flags
+        expect(unknownArgs({ _: [], 'from-api': 'http://ponyo:4100/serverXR', 'from-token-file': 'x', to: 'y' })).toEqual([])
+        expect(unknownArgs({ _: [], fromapi: 'x' })).toEqual(['--fromapi'])
     })
 })

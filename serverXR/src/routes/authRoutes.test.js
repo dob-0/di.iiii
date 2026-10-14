@@ -279,3 +279,53 @@ describe('POST /api/auth/telegram/whoami', () => {
         expect(res.body.spaces).toEqual([{ id: 'dilijan', label: null }])
     })
 })
+
+// ── di.bo acting as a person: the mint ────────────────────────────────────
+//
+// The key half of the act-token feature. The request half (what the token can
+// reach) is proven over real HTTP in httpContracts.test.js; here, the three
+// ways the mint must say no before anything is issued.
+describe('POST /api/auth/telegram/act-token', () => {
+    const handlerFor = ({ findUser, upsertUserImpl } = {}) => {
+        const routes = {}
+        const record = (method) => (path, ...handlers) => { routes[`${method} ${path}`] = handlers }
+        registerAuthRoutes({ routes, get: record('get'), post: record('post'), use: () => {} }, {
+            config: {
+                ...baseConfig,
+                oauth: { ...baseConfig.oauth, telegram: { enabled: true, loginSecret: 'bot-secret', botUsername: '', actTokenTtlMs: 15 * 60 * 1000 } }
+            },
+            createAuthSessionValue: vi.fn(),
+            setAuthSessionCookie: vi.fn(),
+            findUser,
+            upsertUserImpl
+        })
+        return routes['post /api/auth/telegram/act-token'][0]
+    }
+    const call = async (handler, { secret = 'bot-secret', body = {} } = {}) => {
+        const res = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this }, json(payload) { this.body = payload; return this } }
+        await handler({ get: (name) => (name === 'x-telegram-login-secret' ? secret : undefined), body }, res, (e) => { throw e })
+        return res
+    }
+
+    it('refuses without the bot secret, and never looks the person up', async () => {
+        const findUser = vi.fn()
+        for (const secret of ['wrong', '', null, 'bot-secre', 'bot-secret ']) {
+            const res = await call(handlerFor({ findUser }), { secret, body: { telegramId: '207260649' } })
+            expect(res.statusCode).toBe(401)
+        }
+        expect(findUser).not.toHaveBeenCalled()
+    })
+
+    it('refuses a telegram id that is not a number', async () => {
+        const res = await call(handlerFor({ findUser: vi.fn() }), { body: { telegramId: '../1' } })
+        expect(res.statusCode).toBe(400)
+    })
+
+    it('answers 404 for an id with no account, and never creates one', async () => {
+        const upsertUserImpl = vi.fn()
+        const res = await call(handlerFor({ findUser: () => null, upsertUserImpl }), { body: { telegramId: '404404404' } })
+        expect(res.statusCode).toBe(404)
+        expect(res.body).toEqual({ bound: false })
+        expect(upsertUserImpl).not.toHaveBeenCalled()
+    })
+})

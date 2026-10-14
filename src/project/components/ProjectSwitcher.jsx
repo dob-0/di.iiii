@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
-import { buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
+import { buildPublicProjectPath, buildShareUrl, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import { listProjects } from '../services/projectsApi.js'
+import { getServerSpace } from '../../services/serverSpaces.js'
 
 // Known hierarchies for specific spaces, front door first. Unlisted ids keep
 // the server's order (most-recently-touched) and sort after every listed id.
@@ -128,6 +129,7 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
     const [pillHover, setPillHover] = useState(false)
     const [projects, setProjects] = useState(null)
     const [copiedId, setCopiedId] = useState(null)
+    const [space, setSpace] = useState(null)
     const rootRef = useRef(null)
 
     // Vanity link (docs/architecture/SPEC_space_urls_and_portability.md) when
@@ -137,7 +139,7 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
         const path = project.slug
             ? buildVanityProjectPath(spaceId, project.slug)
             : buildPublicProjectPath(spaceId, project.id)
-        const url = `${window.location.origin}${path}`
+        const url = buildShareUrl({ spaceId, spaceSlug: space?.slug, domain: space?.domain, path })
         navigator.clipboard?.writeText(url).then(() => {
             setCopiedId(project.id)
             setTimeout(() => setCopiedId((current) => (current === project.id ? null : current)), 1500)
@@ -161,6 +163,16 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
             cancelled = true
         }
     }, [open, projects, spaceId])
+
+    // The space's own domain, when it has one, so Copy link gives that address.
+    useEffect(() => {
+        if (!open || space || !spaceId) return undefined
+        let cancelled = false
+        getServerSpace(spaceId)
+            .then((meta) => { if (!cancelled) setSpace(meta) })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [open, space, spaceId])
 
     useEffect(() => {
         if (!open) return undefined

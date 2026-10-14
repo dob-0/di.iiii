@@ -40,6 +40,69 @@ export const PREVIEW_READY_MESSAGE = 'dii:preview-ready'
 // stub says so instead, and the card draws its own line.
 export const PREVIEW_STUB_MESSAGE = 'dii:preview-stub'
 
+// The message a preview iframe posts once it has painted: a small JPEG still
+// of its own canvas ({ type, spaceId, poster: 'data:image/jpeg;...' }). The
+// host (SpaceHub's SpaceCardPreview) shows the still and tears the frame
+// down, so a grid of N cards holds a fixed few live WebGL contexts instead of
+// N. Same method as any many-previews grid: a picture per card, live only
+// where the pointer is.
+export const PREVIEW_POSTER_MESSAGE = 'dii:preview-poster'
+const POSTER_WIDTH = 512
+const POSTER_HEIGHT = 288
+const POSTER_QUALITY = 0.72
+// Give the scene a moment after "painted" so the still is the scene and not
+// its first frame of fog.
+const POSTER_SETTLE_MS = 700
+
+// A WebGL canvas without preserveDrawingBuffer only holds its pixels inside
+// the task that drew them, so a still taken later reads back black. A preview
+// frame is a low-power thumbnail with a static camera, so keeping the buffer
+// costs nothing visible there. Applied only to `?preview=1` documents inside
+// a frame, before the app creates its first canvas.
+export function enablePreviewPosterBuffer(win) {
+    const proto = win?.HTMLCanvasElement?.prototype
+    if (!proto || proto.__diiPosterPatched) return false
+    const original = proto.getContext
+    proto.getContext = function patchedGetContext(type, attrs) {
+        if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
+            return original.call(this, type, { ...(attrs || {}), preserveDrawingBuffer: true })
+        }
+        return original.call(this, type, attrs)
+    }
+    proto.__diiPosterPatched = true
+    return true
+}
+
+// The largest canvas in the document drawn cover-fit into a 16:9 JPEG, or
+// null when there is none or it is all black (a context that has not drawn).
+export function capturePreviewPoster(doc) {
+    try {
+        const canvases = [...doc.querySelectorAll('canvas')].filter((c) => c.width > 16 && c.height > 16)
+        if (!canvases.length) return null
+        canvases.sort((a, b) => b.width * b.height - a.width * a.height)
+        const source = canvases[0]
+        const out = doc.createElement('canvas')
+        out.width = POSTER_WIDTH
+        out.height = POSTER_HEIGHT
+        const ctx = out.getContext('2d')
+        if (!ctx) return null
+        const k = Math.max(POSTER_WIDTH / source.width, POSTER_HEIGHT / source.height)
+        const w = source.width * k
+        const h = source.height * k
+        ctx.drawImage(source, (POSTER_WIDTH - w) / 2, (POSTER_HEIGHT - h) / 2, w, h)
+        const px = ctx.getImageData(0, 0, POSTER_WIDTH, POSTER_HEIGHT).data
+        let lit = 0
+        for (let i = 0; i < px.length; i += 64) {
+            if (px[i] + px[i + 1] + px[i + 2] > 24) lit += 1
+        }
+        // under 1 % lit sample points: black or empty, not a picture
+        if (lit < (px.length / 64) * 0.01) return null
+        return out.toDataURL('image/jpeg', POSTER_QUALITY)
+    } catch {
+        return null
+    }
+}
+
 // A preview surface is painted when the app's one loading screen is gone AND
 // something that actually draws is in the document: a WebGL canvas (every
 // scene renderer) or an iframe (a code-mode published page, which is an
@@ -61,11 +124,11 @@ const PAINT_GIVE_UP_MS = 30000
 // inserted on is the frame BEFORE the renderer has drawn into it.
 const PAINT_STABLE_FRAMES = 2
 
-const postToPreviewHost = (type, spaceId) => {
+const postToPreviewHost = (type, spaceId, extra = null) => {
     if (typeof window === 'undefined') return false
     if (window.parent === window) return false
     try {
-        window.parent.postMessage({ type, spaceId }, window.location.origin)
+        window.parent.postMessage({ type, spaceId, ...(extra || {}) }, window.location.origin)
         return true
     } catch {
         return false
@@ -93,6 +156,7 @@ export function watchPreviewPaint({ spaceId = '', doc = null, win = null } = {})
     const w = win || (typeof window !== 'undefined' ? window : null)
     if (!w || w.parent === w) return () => {}
     if (!isPreviewRequest()) return () => {}
+    enablePreviewPosterBuffer(w)
     const d = doc || w.document
     const raf = typeof w.requestAnimationFrame === 'function'
         ? w.requestAnimationFrame.bind(w)
@@ -108,6 +172,10 @@ export function watchPreviewPaint({ spaceId = '', doc = null, win = null } = {})
             if (stable >= PAINT_STABLE_FRAMES) {
                 stopped = true
                 signalPreviewReady(spaceId)
+                w.setTimeout(() => {
+                    const poster = capturePreviewPoster(d)
+                    if (poster) postToPreviewHost(PREVIEW_POSTER_MESSAGE, spaceId, { poster })
+                }, POSTER_SETTLE_MS)
                 return
             }
         } else {

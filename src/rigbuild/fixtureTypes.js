@@ -160,7 +160,7 @@ const modeName = (footprint) => `${footprint}ch`
 const modesOf = (kind) => {
     const spec = kind.specs?.dmx_channels
     const list = Array.isArray(spec?.value) ? spec.value.filter((n) => Number.isInteger(n) && n > 0) : []
-    const sources = [TESTED_CHANNEL_LISTS[kind.code], OFL_CHANNEL_LISTS[kind.code]].filter(Boolean)
+    const sources = [TESTED_CHANNEL_LISTS[kind.code], MAKER_CHANNEL_LISTS[kind.code], OFL_CHANNEL_LISTS[kind.code]].filter(Boolean)
     const real = list.map((footprint) => {
         const entry = sources.find((s) => s.modes?.[footprint]) || null
         const listed = entry ? entry.modes[footprint] : null
@@ -182,6 +182,44 @@ const modesOf = (kind) => {
 const realModes = (modes) => modes.filter((m) => !isAssumedMode(m))
 
 const MAKER_UPLIGHT = 'UPlight Stage Equipment (Guangzhou) Co., Ltd.'
+
+// Channel lists from the MAKER's own manual for this very model (basis EXACT). The
+// LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, pp. 57-59): the default 16-channel profile
+// selects cues of an SD-card playlist (page × cue) and scales, moves, rotates and
+// recolours them. Ch 5 (Fader) is named dimmer so master and blackout reach it; ch 1 at
+// 0-31 is the cube's own blackout, its default. At MOXIR the cubes run OFF DMX (streamed
+// from di Raw over the network, owner 2026-10-04): this is the reference, not the patch.
+const LASERCUBE_MK2_MANUAL = {
+    fixture: 'Wicked Lasers LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, DMX/Art-Net channel layout)',
+    basis: 'EXACT',
+    url: 'https://www.laseros.com/manual-mk2.pdf',
+    licence: null
+}
+export const MAKER_CHANNEL_LISTS = {
+    'EXT-LC-ULTRA-MK2': {
+        ...LASERCUBE_MK2_MANUAL,
+        modes: {
+            16: [
+                laserChannel(1, 'Access mode (0-31 blackout, 33-95 basic 4 ch, 97-159 standard 8, 161-223 extended 12, 225-255 full 16)'),
+                laserChannel(2, 'Page (9 pages of 48 cues)'),
+                laserChannel(3, 'Cue select (0-31 blackout, then cues 1-48)'),
+                laserChannel(4, 'Speed (0-15 100 %, 17-31 pause, 33… 25 % … 128 100 % … 255 200 %)'),
+                { role: 'dimmer', label: 'Fader (named dimmer so master/blackout reach it)' },
+                laserChannel(6, 'Scale (zero … full size)'),
+                laserChannel(7, 'X size (0 −full, 128 zero, 255 +full)'),
+                laserChannel(8, 'Y size (0 −full, 128 zero, 255 +full)'),
+                laserChannel(9, 'Rotation (0 … 360°)'),
+                { ...laserChannel(10, 'X position (128 centre)'), default: 128 },
+                { ...laserChannel(11, 'Y position (128 centre)'), default: 128 },
+                laserChannel(12, 'Reserved'),
+                laserChannel(13, 'Scan rate (0-31 default 35K pps, 33-223 6K-29K, 225+ 30K)'),
+                laserChannel(14, 'Reserved'),
+                laserChannel(15, 'Recolour (0-31 off, 33-223 hue sweep, 225+ white)'),
+                laserChannel(16, 'Reserved')
+            ]
+        }
+    }
+}
 
 // The manifest's own words decide identity: an EXACT kind is the maker's model; a
 // NOT FOUND kind is a rental label modelled on a named equivalent, and its maker is
@@ -252,6 +290,8 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             modesOwed: realModes(modes).length === 0,
             assumedMode: modes.find(isAssumedMode)?.name || null,
             power_w: sourced(kind.specs?.power_w),
+            // the mains draw where the maker states one beside the rating (a LED PAR: 162 W rated, 200 W supply)
+            supply_w: sourced(kind.specs?.supply_w),
             weight_kg: sourced(kind.specs?.weight_kg),
             size_mm: sourced(kind.specs?.size_mm),
             pan_tilt_deg: sourced(kind.specs?.pan_tilt_deg),
@@ -260,6 +300,8 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             // A hazer's or fog machine's output, what the room's haze is worked out from
             // (src/objectComponents/hazeField.js). Null on every lamp.
             fluid_ml_per_min: sourced(kind.specs?.fluid_ml_per_min),
+            // each emitter's CIE 1931 xy and lumens at full, when a source gives them (dmxDecode.js emitterMix)
+            ...(kind.emitters ? { emitters: kind.emitters } : {}),
             nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
             model3d: {
                 glb: `${glbDir}/${kindKey}.glb`,
@@ -307,9 +349,15 @@ export const modeOf = (type, name) => {
 
 export const footprintOf = (type, name) => modeOf(type, name)?.footprint ?? null
 
+// What a lamp draws from the mains, for circuits and totals: the maker's SUPPLY power where it states
+// one beside the rating, else the rating. Planning on the rating put 16 PARs (2592 W rated, 3200 W at
+// supply) on one 16 A circuit over its 2944 W limit (audit A-05, 2026-10-05).
 export const powerOf = (type) => {
-    const w = Number(type?.power_w?.value)
-    return Number.isFinite(w) && w >= 0 ? w : null
+    for (const v of [type?.supply_w?.value, type?.power_w?.value]) {
+        const w = Number(v)
+        if (v != null && Number.isFinite(w) && w >= 0) return w
+    }
+    return null
 }
 
 /**

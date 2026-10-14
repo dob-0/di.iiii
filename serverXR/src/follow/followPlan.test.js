@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
+const { accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
 
 const op = (id) => ({ opId: id, type: 'updateEntity', payload: {}, version: 1 })
 
@@ -90,5 +90,38 @@ describe('what a follow refuses to carry', () => {
         expect(moreToCarry(many.slice(0, BATCH), new Set())).toBe(false)
         // and what is already carried does not count towards the next batch
         expect(moreToCarry(many, new Set(many.map(o => o.opId)))).toBe(false)
+    })
+
+    it('steps a cursor past a whole-work op, even one an older log left with no opId', () => {
+        const ops = [
+            { opId: 'a', type: 'createEntity', version: 1 },
+            { type: 'replaceDocument', version: 2 },
+            { opId: 'b', type: 'createEntity', version: 3 }
+        ]
+        expect(accountedThrough(ops, new Set(['a', 'b']), 3)).toBe(3)
+        // …but never past an ordinary op it has not accounted for.
+        expect(accountedThrough(ops, new Set(['a']), 3)).toBe(2)
+        expect(accountedThrough([{ type: 'replaceDocument', version: 1 }, { opId: 'c', type: 'createEntity', version: 2 }], new Set(), 2)).toBe(1)
+    })
+})
+
+describe('failureDelay — a refused stream is left alone longer each time', () => {
+    const { failureDelay, describeWriteFailure, isStuckRefusal } = require('./followPlan.js')
+
+    it('doubles from 5 s and stops at 5 minutes', () => {
+        expect([1, 2, 3, 4].map(count => failureDelay(count))).toEqual([5000, 10_000, 20_000, 40_000])
+        expect(failureDelay(20)).toBe(300_000)
+    })
+
+    it('only a server error counts as stuck — a conflict or no answer is the loop\'s ordinary business', () => {
+        expect(isStuckRefusal(500)).toBe(true)
+        expect(isStuckRefusal(503)).toBe(true)
+        expect(isStuckRefusal(409)).toBe(false)
+        expect(isStuckRefusal(0)).toBe(false)
+    })
+
+    it('says when it will try again and that the rest keeps following', () => {
+        const text = describeWriteFailure({ stream: { kind: 'project', projectId: 'test', key: 'project:test' }, direction: 'in', status: 500, error: 'Server error', retryInMs: 20_000 })
+        expect(text).toBe("this di.iiii refused the other side's changes to project test (HTTP 500: Server error) (see this server's log) — trying again in 20 s; the rest of the space keeps following")
     })
 })

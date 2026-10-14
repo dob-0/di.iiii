@@ -31,7 +31,12 @@
  *   3. load-plot.mjs with the version's typed, patched document (versions-report.mjs):
  *      the truss and decks as pieces, every lamp and effect;
  *   4. the show's entity: the equipment list, the looks (looks.mjs), the rigVariant — ops;
- *   5. the default look's wash (rig.mjs --wash-only).
+ *   5. the default look's wash (rig.mjs --wash-only);
+ *   6. the hall's own project joins the set as "as ordered";
+ *   7. the version is LISTED in the production's version list (scripts/production/versionList.mjs,
+ *      docs/architecture/decisions/2026-10-04-production-versions.md): a candidate when new, its status
+ *      kept when already listed, its rig file pinned by blob. `--mark` lists too (a listed version keeps
+ *      its making and is re-fingerprinted). The version row reads that list, not `rigVariant.siblings`.
  * `--look` writes the look's poses from the rig file (rig-lib buildRig: aims, colours
  * AND levels — reversible, because the nominal comes from the rig file, not the document)
  * and re-bakes the wash for it. For previews and renders; the desk plays looks without it.
@@ -50,6 +55,8 @@ import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 import { findVersion, projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
+import { fileBlob, productionTitleOf, recordMadeVersion } from '../production/versionList.mjs'
+import { codeRecordOf } from '../production/derive.mjs'
 
 const args = parseArgs()
 const readTokenFile = (file) => {
@@ -142,13 +149,29 @@ const main = async () => {
         say(`${from}: marked "${spec.ordered.id}" in the set`)
     }
 
+    // The production's version list (docs/architecture/decisions/2026-10-04-production-versions.md): a
+    // version is listed in the same step that makes it — candidate when new, its status kept when listed.
+    // The rig file is pinned by its blob as read now, so the audit can say when the code moved on.
+    const listVersion = (projectId, versionId, { remade = true } = {}) => {
+        const code = codeRecordOf(spec, versionId)
+        return recordMadeVersion({
+            client, api, tokenFile, space, production: spec.set, title: productionTitleOf(spec, spec.set), codeList: VERSIONS_FILE,
+            projectId, id: versionId, tool: 'load-version.mjs', madeFrom: code.madeFrom,
+            rig: code.rigFile ? { file: code.rigFile, blob: fileBlob(code.rigFile) } : null, remade, log: say
+        }).catch((error) => die(error.message))
+    }
+
     // --mark: write only which version each project is (this one and the hall's own).
     if (args.mark) {
         const doc = await client.get(`/api/projects/${project}/document`)
         if (!doc.ok) die(`reading ${project}: ${doc.status}`)
         await send(variantOps(doc.body.document.entities, variantOf(spec, id, from)), 'the version mark')
         say(`${project}: marked "${id}" in the set`)
-        if (!isVariant(spec, id) && !args['no-mark-from']) await markFrom()
+        await listVersion(project, id, { remade: false })
+        if (!isVariant(spec, id) && !args['no-mark-from']) {
+            await markFrom()
+            await listVersion(from, spec.ordered.id, { remade: false })
+        }
         return
     }
 
@@ -247,6 +270,10 @@ const main = async () => {
     // (a candidate built beside the set leaves the hall's project untouched)
     if (isVariant(spec, id)) say(`${project}: a comparison variant — ${from} and the set's projects are left as they are`)
     else if (!args['no-mark-from']) await markFrom()
+
+    // 7. listed in the production's version list, in this same step (and the hall's own, when step 6 marked it)
+    await listVersion(project, id)
+    if (!isVariant(spec, id) && !args['no-mark-from']) await listVersion(from, spec.ordered.id, { remade: false })
 }
 
 if (isMainModule(import.meta.url)) {

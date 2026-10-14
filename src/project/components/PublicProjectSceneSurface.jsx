@@ -128,9 +128,13 @@ export default function PublicProjectSceneSurface({
     canOfferXrEntry = false,
     // the lamps as the desk's live look poses them (RoomLookFollower), or null
     posedEntities = null,
+    // output mode (viewport/outputMode.js): the room drawn light enough for a phone
+    outputMode = false,
     lockInside = false,
     onBuilding,
-    onLockPaused
+    onLockPaused,
+    // the scene bar's layer toggles: { roof, walls, machines, outside } (smartViewGeometry.parseLayersParam)
+    layers = null
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
@@ -196,12 +200,15 @@ export default function PublicProjectSceneSurface({
     })
 
     // The "Inside" toggle (PublicProjectViewer) and its two reports travel with the smart view's settings.
-    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused }), [smartView, lockInside, onBuilding, onLockPaused])
+    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused, layers }), [smartView, lockInside, onBuilding, onLockPaused, layers])
 
     return (
         <>
             {navMode === 'walk' ? (
                 <LiveProjectScene
+                    // a new renderer on a quality switch: antialias is fixed when the context is made
+                    key={outputMode ? 'lite' : 'full'}
+                    outputMode={outputMode}
                     projectId={projectId}
                     spaceId={spaceId}
                     // Walk/Fly keeps the look the desk is playing: the walk scene loads its own
@@ -222,7 +229,12 @@ export default function PublicProjectSceneSurface({
                 />
             ) : (
                 <StudioViewport
+                    key={outputMode ? 'lite' : 'full'}
                     document={document}
+                    // the document's entities are then the room as RoomLookFollower drew it in the
+                    // look that plays: drawn as handed, never posed again (a second pose drew
+                    // every look level squared, MOXIR 2026-10-09)
+                    lookDrawn={Boolean(posedEntities)}
                     selectedEntityId={null}
                     onSelectEntity={null}
                     cursors={{}}

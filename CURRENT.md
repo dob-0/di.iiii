@@ -13,12 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the desk's Touch page plays looks and the cue list
-- a followed space stays one space: no lost edits, copies agree, restarts resume
-- Studio stands inside a Geo
-- MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
-- MOXIR previs: the haze worked out from the hazers, real beam fall-off, real bloom
-- …and 27 more notes, each in full in PROGRESS.md
+- main is merged back into dev before the promotion
+- CI runners pinned to ubuntu-24.04 before GitHub moves ubuntu-latest to Ubuntu 26
+- `di login`: a person signs in once per machine, from the terminal
+- `di login`: the three lanes joined in one branch
+- the browser page that approves a terminal's code
+- …and 18 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 

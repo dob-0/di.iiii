@@ -190,7 +190,9 @@ const LANES = [
     },
     {
         name: 'the Nodes project canvas',
-        body: () => document.querySelector('.raw-topbar.is-seeded'),
+        // The tools live in the bar's slot while the bar is up (audit row 5), in the
+        // old header where it is not.
+        body: () => document.querySelector('.raw-bar-tools, .raw-topbar.is-seeded'),
         render: () => renderNodes()
     },
     {
@@ -316,13 +318,17 @@ describe('a presentation draws no bar', () => {
         expect(bars()).toHaveLength(0)
     })
 
-    it('the Nodes topbar makes room for the bar only while the bar is there', async () => {
+    it('the Nodes tools are in the bar while it is there, and in the header only when it is not', async () => {
         renderNodes()
         await waitFor(() => expect(bars()).toHaveLength(1))
-        expect(document.querySelector('.raw-topbar').classList.contains('is-under-sbar')).toBe(true)
+        // One bar: the tools are its cells and there is no second header.
+        expect(document.querySelector('.raw-topbar')).toBeNull()
+        expect(document.querySelector('nav[aria-label="di.iiii"] .raw-bar-tools')).toBeTruthy()
         fireEvent.click(screen.getByRole('button', { name: /^Scene/ }))
         await waitFor(() => expect(bars()).toHaveLength(0))
-        expect(document.querySelector('.raw-topbar').classList.contains('is-under-sbar')).toBe(false)
+        // The bar is gone (the room is full screen), so the header carries the way back.
+        expect(document.querySelector('.raw-topbar')).toBeTruthy()
+        expect(document.querySelector('.raw-topbar .raw-bar-tools')).toBeNull()
     })
 
     it('/{space}/map/{project}/out draws no bar', async () => {

@@ -161,3 +161,28 @@ stays on even-LTS.
 
 **Re-check when:** Node 26 enters Active LTS (Oct 2026) — then take both PRs
 together (root + serverXR images must move in the same deploy).
+
+---
+
+## `uqr` 0.1.3 (QR codes) and `jsqr` 1.4.0 (test-only) — TAKEN 2026-10-07
+
+**What for.** The phones-and-headsets panel on the local home draws this
+machine's https place address as a QR code (`src/utils/qrCode.js`,
+`src/landing/GuestAddressPanel.jsx`, docs/ai/one-local-address.md D).
+
+**Why `uqr`, pinned exact.** MIT; zero dependencies; ESM; 79 KB unpacked;
+unjs, last release 2026-04-03. It is a port of Project Nayuki's QR Code
+generator — the reference implementation of ISO/IEC 18004 that most libraries
+check themselves against — and its LICENSE carries Nayuki's copyright.
+Compared: `qrcode` 1.5.4 (MIT, last release 2024-08, pulls `pngjs`, `yargs`,
+`dijkstrajs` into a browser bundle that needs none of them);
+`qrcode-generator` 2.0.4 (MIT, 2025-08, 556 KB). The hand-written encoder in
+`serverXR/src/lighting/ui/qr.js` stays for Light's phone panel for now: it is
+fixed at version 3 (42 bytes), which a space path outgrows. Moving Light onto
+`uqr` is owed (one copy).
+
+**Why `jsqr`, dev only.** Apache-2.0. An independent reader: the tests draw the
+code the way the page does and decode it back (`src/utils/qrCode.test.js`).
+Last release 2021; acceptable for a test oracle, not shipped.
+
+**Re-check when:** `uqr` publishes a security advisory, or Light moves onto it.

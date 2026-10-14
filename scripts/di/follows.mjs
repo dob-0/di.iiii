@@ -22,6 +22,43 @@ export const FORMAT = 'di.follows'
 
 const filePath = (dataDir) => path.join(dataDir, 'follows.json')
 
+/**
+ * The file is there but is not a follows file (a crash mid-write, a hand edit).
+ * Reading it as "follows nothing" is fine for `di follows`; WRITING over it is
+ * not — that would drop every other follow and its key, which is shown once.
+ */
+export class FollowsCorruptError extends Error {
+    constructor(file, copy) {
+        super(`${file} is not readable as a follows file; kept as it is (copy: ${copy || 'none'})`)
+        this.code = 'FOLLOWS_CORRUPT'
+        this.file = file
+        this.copy = copy
+    }
+}
+
+/** 'absent' | 'ok' | 'corrupt', with the follows when ok. */
+export const inspectFollows = (dataDir) => {
+    let raw
+    try { raw = fs.readFileSync(filePath(dataDir), 'utf8') } catch { return { state: 'absent', follows: {} } }
+    try {
+        const parsed = JSON.parse(raw)
+        if (parsed && parsed.format === FORMAT && parsed.follows && typeof parsed.follows === 'object') {
+            return { state: 'ok', follows: parsed.follows }
+        }
+    } catch { /* fall through */ }
+    return { state: 'corrupt', follows: {} }
+}
+
+/** The follows to change, or a refusal that leaves the bad file and a .corrupt copy. */
+const followsForWrite = (dataDir) => {
+    const found = inspectFollows(dataDir)
+    if (found.state !== 'corrupt') return found.follows
+    const copy = `${filePath(dataDir)}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`
+    let kept = null
+    try { fs.copyFileSync(filePath(dataDir), copy); fs.chmodSync(copy, 0o600); kept = copy } catch { /* the original is still there */ }
+    throw new FollowsCorruptError(filePath(dataDir), kept)
+}
+
 export const readFollows = (dataDir) => {
     try {
         const parsed = JSON.parse(fs.readFileSync(filePath(dataDir), 'utf8'))
@@ -34,16 +71,23 @@ export const readFollows = (dataDir) => {
 
 const writeFollows = async (dataDir, follows) => {
     await fsp.mkdir(dataDir, { recursive: true })
-    await fsp.writeFile(
-        filePath(dataDir),
-        `${JSON.stringify({ format: FORMAT, version: 1, follows }, null, 2)}\n`,
-        { mode: 0o600 }
-    )
+    const file = filePath(dataDir)
+    const tmp = `${file}.${process.pid}.tmp`
+    const handle = await fsp.open(tmp, 'w', 0o600)
+    try {
+        await handle.writeFile(`${JSON.stringify({ format: FORMAT, version: 1, follows }, null, 2)}
+`)
+        await handle.chmod(0o600)
+        await handle.sync()
+    } finally {
+        await handle.close()
+    }
+    await fsp.rename(tmp, file)
     return follows
 }
 
-export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null }) => {
-    const follows = readFollows(dataDir)
+export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
+    const follows = followsForWrite(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
         token: token || null,
@@ -53,7 +97,13 @@ export const addFollow = async (dataDir, spaceId, { remote, token, label = null,
         // out entirely when there is none, not written as null: a record with
         // no pin must serialise byte-identically to one from before this
         // existed (scripts/di/follows.test.js holds that line).
-        ...(address ? { address } : {})
+        ...(address ? { address } : {}),
+        // `--take-host` / `--take-mine`: spent by the server on the first
+        // comparison of each stream, then cleared. `start: 'replay'` is the
+        // explicit `--replay`; absent means start from now. Both absent when
+        // unset (serverXR/src/follow/followStore.js keeps the same shape).
+        ...(direction ? { direction } : {}),
+        ...(start === 'replay' ? { start } : {})
     }
     return writeFollows(dataDir, follows)
 }
@@ -64,13 +114,17 @@ export const addFollow = async (dataDir, spaceId, { remote, token, label = null,
  * leave` promises the file it hands back is the file it found.
  */
 export const setFollow = async (dataDir, spaceId, entry) => {
-    const follows = readFollows(dataDir)
+    const follows = followsForWrite(dataDir)
     follows[spaceId] = entry
     return writeFollows(dataDir, follows)
 }
 
 export const removeFollow = async (dataDir, spaceId) => {
-    const follows = readFollows(dataDir)
+    const follows = followsForWrite(dataDir)
+    // The follower's cursors go with the follow: a later follow of the same
+    // space must start from nothing, not resume from where it stopped.
+    // (The server refuses to re-save them once the follow is gone.)
+    await fsp.rm(path.join(dataDir, 'follow-state', `${encodeURIComponent(spaceId)}.json`), { force: true })
     if (!follows[spaceId]) return { follows, removed: false }
     delete follows[spaceId]
     await writeFollows(dataDir, follows)

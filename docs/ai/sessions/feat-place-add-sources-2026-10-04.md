@@ -40,3 +40,9 @@ known where media.json has the sha256.
 Run findings (dev, 2026-10-04): (1) the server takes only image/ video/ audio/ model/ + json, pdf, zip, gzip, text/plain, octet-stream for a listed
 extension: csv/md/html declared text/plain, MVR/GDTF (ZIP containers) application/zip; (2) uploads are limited to 60 per 10 min per session (HTTP 429
 "retry in Ns"): the tool waits and retries; a re-run skips what is there by name. 133 assets in moxir-documents (132 + PROVENANCE.md), private, visitor 404.
+
+## 2026-10-14 — refreshed onto dev
+
+- Merged `origin/dev` (84fc193c). One conflict, a modify/delete: dev had folded and deleted this session note; kept this branch's note (the push hook wants it) and extended it. No code conflicts.
+- Tests: `scripts/place/add-files.test.js` 20 passed before, 20 passed after; the wider `scripts/place` filter went 203 passed + 4 skipped (14 files) before to 464 passed + 2 expected-fail + 47 skipped (35 files) after, the extra files being dev's.
+- UNVERIFIED: nothing looked at in a browser (no visual change in this refresh).

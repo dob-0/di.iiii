@@ -1,3 +1,4 @@
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 import { forwardRef, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import JSZip from 'jszip'
 
@@ -56,6 +57,7 @@ import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
 import { ASSET_ACCEPT, ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
+import MoveSettings from './MoveSettings.jsx'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -64,6 +66,18 @@ const formatTimestamp = (value) => {
     } catch {
         return String(value)
     }
+}
+
+
+// The outliner's lock mark: a small padlock, shut and full strength when locked,
+// open and faint when not (owner 2026-10-12: "there is no lock button").
+function LockMark({ locked }) {
+    return (
+        <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true" focusable="false" style={{ display: 'block' }}>
+            <rect x="1" y="5.5" width="8" height="6" fill={locked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1" />
+            <path d={locked ? 'M2.5 5.5V2.5H7.5V5.5' : 'M2.5 5.5V2.5H7.5V3.5'} fill="none" stroke="currentColor" strokeWidth="1" />
+        </svg>
+    )
 }
 
 export function PanelHeader({ title, onClose, action = null }) {
@@ -527,7 +541,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
                         </div>
                     )}
                     <p className="sfp-empty">
-                        <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
+                        <a className="sfp-link" href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
                     </p>
                 </CollapsibleSection>
             )}
@@ -574,9 +588,18 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                     />
                 </div>
             ) : (
-                <button
+                <div
                     className={`spa-item${selected ? ' active' : ''}`}
+                    role="button"
+                    tabIndex={0}
                     aria-pressed={selected}
+                    onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            event.currentTarget.click()
+                        }
+                    }}
                     style={{
                         ...(depth > 0 ? { paddingLeft: depth * 14 + 8 } : {}),
                         ...(dropTarget ? { outline: '1px dashed currentColor', outlineOffset: -1 } : {})
@@ -647,10 +670,10 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                             style={locked ? undefined : { opacity: 0.55 }}
                             onClick={(e) => { e.stopPropagation(); onToggleEntityLocked(entity.id) }}
                         >
-                            {locked ? '■' : '□'}
+                            <LockMark locked={locked} />
                         </button>
                     )}
-                </button>
+                </div>
             )}
             {isGroup && expanded && children.map((child) => (
                 <StructureRow
@@ -747,6 +770,7 @@ const clampNumber = (value, min, max) => {
 }
 
 function NumberBox({ value, onChange, min, max, step = 1 }) {
+    const [draft, setDraft] = useState(null)
     const bump = (dir) => {
         const current = Number.isFinite(Number(value)) ? Number(value) : 0
         onChange(clampNumber(parseFloat((current + dir * step).toFixed(10)), min, max))
@@ -756,13 +780,16 @@ function NumberBox({ value, onChange, min, max, step = 1 }) {
             <input
                 type="number"
                 className="insp-input insp-num-input"
-                value={value}
+                value={draft ?? formatNumberDisplay(value)}
                 min={min}
                 max={max}
                 step={step}
+                onFocus={(event) => setDraft(event.target.value)}
+                onBlur={() => setDraft(null)}
                 onChange={(event) => {
+                    setDraft(event.target.value)
                     const next = Number(event.target.value)
-                    if (Number.isFinite(next)) onChange(clampNumber(next, min, max))
+                    if (event.target.value !== '' && Number.isFinite(next)) onChange(clampNumber(next, min, max))
                 }}
             />
             <div className="insp-num-arrows">
@@ -949,6 +976,11 @@ export function ProjectPanel({
                 <NumberField label="Zoom" value={world.savedView?.zoom ?? 1} min={0.01} step={0.1} onChange={(v) => onWorldPatch({ savedView: { zoom: v } })} />
                 <NumberField label="Near" value={world.savedView?.near ?? 0.1} min={0.001} step={0.01} onChange={(v) => onWorldPatch({ savedView: { near: v } })} />
                 <NumberField label="Far" value={world.savedView?.far ?? 1000} min={0.01} step={10} onChange={(v) => onWorldPatch({ savedView: { far: v } })} />
+            </CollapsibleSection>
+
+            {/* How the view moves is the person's own setting on this device, not part of the project (navigation/preference.js). */}
+            <CollapsibleSection title="Move">
+                <MoveSettings />
             </CollapsibleSection>
 
             <CollapsibleSection title="Render" defaultOpen={false}>

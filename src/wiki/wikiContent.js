@@ -146,6 +146,35 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'shoot-sheet',
+        category: 'Spaces & access',
+        title: 'The shoot sheet: one link for a film crew',
+        summary: 'A shoot day on one page — call times, outfits and a tick per prop — that the whole crew edits through a single link, no accounts.',
+        body: [
+            'A shoot sheet lives at /shoot/ followed by a long code. The code is the key: whoever has the link can tick a prop as ready, write a note under it ("Ani brings it", "it is in the van"), add a link to where it can be bought or printed, and add a prop that was missing. Nobody signs in, so share the link only with the crew.',
+            'Actors are listed in the order they arrive. Each one has a call time, a costume photo, the outfit and the sounds they make, and their props as pictures you tap to tick. "Actor has everything" ticks all of an actor\'s props at once.',
+            'Every phone with the sheet open checks for changes every few seconds, so a tick made on one phone shows on the others without reloading. The top corner says Saved or, if the connection drops, that the last change was not saved.',
+            'The plan and its photos are written onto the server by whoever runs the shoot (scripts/shoot-sheet-push.mjs), never into this public repository. A sheet only exists for a key the server has been told about; any other code answers "No shoot sheet here."'
+        ],
+        tags: ['shoot', 'film', 'crew', 'call sheet', 'props', 'checklist', 'share', 'link'],
+        updated: '2026-10-07'
+    },
+    {
+        id: 'delete-a-space-and-the-trash',
+        category: 'Spaces & access',
+        title: 'Delete a space, the Trash, and moving a project',
+        summary: 'Deleting a space moves it, with its projects, to the Trash for 30 days; Restore brings it back whole. Permanent and front-room spaces are never deleted.',
+        body: [
+            'On the Spaces page, Manage on a space card has Delete. It does not delete yet: it opens a box that says what goes — how many projects and how much space on disk — and that the space goes to the Trash for 30 days. Move to Trash is the only button that does anything.',
+            'The Trash button appears on the Spaces page once something is in it. Each row shows how many projects went with the space and how many days are left. Restore brings the space back with exactly the projects that went with it; a project you had deleted on its own earlier stays in that project trash. Delete forever… asks twice and is the only way the files go before the 30 days are up.',
+            'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
+            'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door.',
+            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.'
+        ],
+        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'your-space-your-word',
         category: 'Spaces & access',
         title: 'Your space, your word: owners and trusted people',
@@ -187,13 +216,16 @@ export const WIKI_ARTICLES = [
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
             'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'WHICH PAGE ANSWERS. A camera that runs on another machine is opened by a page on THAT machine that has the same project open — a projector page showing a different project cannot send it. Open Nodes from your own machine\'s di (localhost), not from the other machine\'s address: a page over plain http from another machine cannot open any camera, and the Camera In card then says so instead of staying black. A browser that opens another machine\'s di by its address is a VISITOR there: the Desk says so, it lists none of that machine\'s devices, and that machine\'s operators reach it as pictures.',
             'WHEN BOTH CHANGE THE SAME THING. Edits to different things always reach both machines. If two people change the same thing at the same moment — both move one box — both machines settle on the HOST\'s version (the install that ran `di invite`), and the other change is undone; a restore point is kept first. A follow also remembers where it was, so a restart picks up without sending old edits again.',
-            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
+            'THE SPACE\'S OWN SETTINGS come from the host: its name, whether it is public, and which project is its front door. A host that keeps the space private makes your copy private; a public host never makes a copy you kept private public — `di follows` says so. A project only you hold is copied whole to the host the first time the two are compared. To give an existing follow a new key, run `di follow` again with `--key -` — it takes effect while di runs.',
+            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. If the other machine stops answering, its files wait for it as one: the log says so once, and once more when it answers again; meanwhile di asks it one small question at growing intervals, at most every five minutes, and downloads nothing, and the files cross on its first answer. After a restart it checks again what the project lists against what the other machine holds, and carries what is missing; `di follows` says how many files are still coming, out of how many are listed. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
+            'TWO di.iiii ON ONE MACHINE, ONE DATA FOLDER. When the installed di and a second server (a dev stack) open the same data folder, only one of them carries the follows and the machine links; the other says which one (`di follows` names its pid and port) and takes over by itself within seconds if that one stops. Edits through either server to the same project are kept in order — the slower one is told to retry, never given an error.',
             'SEND OUT puts a picture on the network so OTHER programs can use it — Resolume, OBS, a media server, somebody else\'s rig, or a machine that cannot run the patch. End a chain in a Send Out, give it a name, and that name appears as a source on the local network for anything that speaks NDI to pick up. No name means it sends nothing, which is the default. Between two linked di.iiii machines you do not need this at all: the patch itself travels and the wall draws it natively, at better quality than any encoding. It needs the NDI runtime installed on the machine that sends — di.iiii never ships it, and the operator says so plainly when it is missing. NDI\u00ae is a registered trademark of Vizrt NDI AB.',
             'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
         tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock', 'send', 'ndi', 'resolume', 'obs'],
-        updated: '2026-10-01'
+        updated: '2026-10-09'
     },
     {
         id: 'vj-deck-and-clip-in',
@@ -443,10 +475,11 @@ export const WIKI_ARTICLES = [
             'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
             'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free. A room with many lamps still gets shadows: the twelve lamps putting the most light into the room at that moment throw them (fewer on a phone whose graphics chip has fewer slots), and they move to the next lamps up as a look changes.',
             'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.',
-            'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.'
+            'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.',
+            'THE SAME AIR FOR EVERYTHING. The haze dims what you see through it the way it dims the beams: a wall across a hazed hall keeps only part of its light, less the farther it is, so depth reads as it does in a real room. A lamp\'s light falls off with the square of the distance all the way, with no cut-off; its beam keeps its own drawn length. A laser is drawn as what it is \u2014 a line a few millimetres wide, as bright as the power of its colours makes it in that haze \u2014 never a wide cone. A room can also work its haze out from a single machine in a big hall: thick around the machine, thin across the hall. That is an estimate from published numbers, and the room says so until the haze is measured.'
         ],
-        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'air', 'exposure', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
-        updated: '2026-09-29'
+        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'air', 'exposure', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render', 'laser', 'fog'],
+        updated: '2026-10-09'
     },
     {
         id: 'the-rig',
@@ -571,6 +604,26 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['account', 'sign in', 'google', 'github', 'local', 'offline', 'install'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'terminal-sign-in',
+        category: 'Spaces & access',
+        title: 'Sign a terminal in, and sign it out',
+        summary: 'di login shows a short code. Type it at /device, approve it, and that terminal acts as you, in your own spaces, until you end it.',
+        body: [
+            'If you work in a terminal — with the di command, or with Claude in a terminal — you can sign it in as yourself once. After that it does not send you to the browser for every space.',
+            { list: [
+                'In the terminal, run di login. It shows a code of eight letters, like BDFG-HJKL.',
+                'In the browser, open /device. Sign in with your account if you are not already. Type the code yourself: it is never pre-filled, and no link carries it.',
+                'Read what is asking: the name the terminal gave itself, when it asked and where from. Approve it only if you just started it yourself. If you did not, press Deny.',
+                'The terminal then says who it is signed in as. If that is not you, run di logout.'
+            ] },
+            'A code works once, for ten minutes.',
+            'A signed-in terminal acts as you in the spaces that are yours, and no further. It cannot open a space to the public, make an invite, delete a project or a space, change a space’s settings, or touch accounts and keys. Those stay in the browser, with you.',
+            'To end a terminal, run di logout in it, or open /device and press Revoke beside it under “Terminals signed in as you”. Signing out of the browser does not end it. A terminal nobody has used for 90 days ends by itself, and none lasts longer than a year.'
+        ],
+        tags: ['terminal', 'cli', 'login', 'di login', 'di logout', 'sign in', 'token', 'claude', 'revoke', 'device'],
+        updated: '2026-10-07'
     },
     {
         id: 'public-page-node',
@@ -735,6 +788,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'space-own-domain',
+        category: 'Spaces & access',
+        title: 'Your space on your own domain',
+        summary: 'Type a domain you own into the space, add one DNS record, and that domain shows your space. You keep editing on di.iiii.',
+        body: [
+            'Open Manage on your space card on the Spaces page (/studio) and choose Own domain. Type the domain, for example yokozo.xyz, and press Add domain. Only the space\'s owner (or an admin) can do this, and only for a public space.',
+            'The panel then shows the record to add at the company that runs your domain\'s DNS: a CNAME pointing your domain at domains.diiii.xyz, and sometimes a TXT record that proves the domain is yours. A bare domain (yokozo.xyz rather than www.yokozo.xyz) needs a DNS provider that can flatten a CNAME at the root, such as Cloudflare.',
+            'Nothing else is needed. di.iiii checks every two minutes and switches the domain on by itself once the record is in place and the certificate is issued; Check now asks straight away. A domain that never gets its record is let go after 7 days, so nobody can hold someone else\'s name.',
+            'Once it is live, yourdomain.com shows the space and yourdomain.com/<project> shows that project, exactly as on di.iiii, with your domain staying in the address bar. It is the same space, not a copy: what you change on di.iiii shows on your domain at once.',
+            'Editing stays on di.iiii. Opening the editor, the admin page or sign-in on your domain takes you to the same place on di.iiii, where your session lives.',
+            'Add www.yourdomain.com as a second domain if you want both. Remove takes a domain off the space at once. A space can have up to 3 domains.',
+            'Once a domain is live, Copy link and the share buttons for a public space or one of its projects give the address on your domain (yourdomain.com/<project>) instead of the di.iiii one; the di.iiii addresses keep working, and editor links stay on di.iiii.'
+        ],
+        tags: ['domain', 'custom domain', 'own domain', 'dns', 'publishing', 'owner', 'spaces'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'space-ownership',
         category: 'Spaces & access',
         title: 'Who owns a space, and how to hand one over',
@@ -771,6 +841,7 @@ export const WIKI_ARTICLES = [
                 '3D models import as .glb/.gltf (including Draco-, Meshopt-, and KTX2-compressed exports), .obj (+.mtl via the Materials picker), .stl, and .fbx. Models with embedded animation clips play them automatically — pick a specific clip, toggle “Play animations”, or set “Animation speed” in the model’s Media section; rigged/skinned characters animate correctly.',
                 'Import an .hdr/.exr panorama and pick it as the Environment map in the Scene window — image-based lighting and reflections apply in the editor and on published pages (this is what makes Metal and Glass presets shine).',
                 'Keyframe animation (Timeline, Objects window): move the playhead, pose the object, press ● Key — two keys make motion. Keys capture position, rotation, scale, and opacity; drag a key diamond to retime it, click to jump, ▶ previews right in the editor, and Duration/Loop shape the cycle. Timelines play automatically on published pages and replace the default idle motion. Every key edit is a normal undo step.',
+                'Select and lock: click picks one, Shift+click adds, A selects all and Alt+A none. The Select tool (or B for one box) draws a box: a plain drag replaces the selection, Shift adds, Ctrl removes; locked and hidden objects never enter. L locks the selection and Alt+L unlocks everything (our own keys — Blender has no lock key), one Ctrl+Z puts it back. You can also lock with the Lock button in the Inspector, the padlock on an outliner row, or Lock the hall in the Objects window.',
                 'Undo / redo with Ctrl+Z / Ctrl+Y — undo reverts only your own last change (a slider drag or a typing burst counts as one step), so working alongside collaborators is safe: their edits are never rolled back by your undo.',
                 'History (Objects window, collapsed at the bottom): a Photoshop-style list of your session’s steps — click any step to jump back or forward to it, or “Session start” to rewind everything. Jumping is just batched undo/redo, so it is equally collaborator-safe.',
                 'Your panel layout is fully remembered — open panels, positions, resized dimensions, and collapsed headers all restore next visit; shrinking the browser window pulls stranded panels back into view. Arrange → Reset returns everything to the default layout.',
@@ -780,7 +851,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-09-23'
+        updated: '2026-10-13'
     },
     {
         id: 'studio-content-model',
@@ -1039,6 +1110,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'dev-copy-label',
+        category: 'For developers',
+        title: 'Which copy is this tab?',
+        summary: 'A tab running a developer copy of di.iiii wears a small label at the bottom right: "dev copy · <tree>".',
+        body: [
+            'A developer copy is di.iiii run from a git checkout (a "tree") by the di-dev tool, so a change can be tried without touching your real di. It looks the same as your real di, so it says so: a small label at the bottom right of every surface reads "dev copy · <tree> · your di\'s data", with the checkout\'s name.',
+            { list: [
+                'your di\'s data — the copy shows your real di\'s spaces and projects, and what you change there is saved there.',
+                'SCRATCH data, thrown away (red) — the copy has its own throwaway data; nothing done in it is kept.'
+            ] },
+            'Your installed di and the live sites never show this label. Hover it for the one-sentence explanation.'
+        ],
+        tags: ['dev copy', 'tree', 'checkout', 'di-dev', 'developers'],
+        updated: '2026-10-02'
+    },
+    {
         id: 'license-and-openness',
         category: 'For developers',
         title: 'License & openness',
@@ -1103,6 +1190,24 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['github', 'sync', 'developers', 'deploy'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'unsaved-changes',
+        category: 'Editing',
+        title: 'When the server does not answer',
+        summary: 'Your changes wait in this browser, the page says how many, and they are sent when the server is back.',
+        body: [
+            'Every change you make to a project in Studio or Nodes is sent to the server that holds it. If that server does not answer — a local install that was stopped, a laptop that lost its network — a bar across the top of the page says so: “Not saved — server unreachable · 3 changes waiting”. Keep working if you like; the count follows.',
+            { list: [
+                'The waiting changes are kept in this browser, so a reload or a closed tab does not lose them. When the project is opened again and the server answers, they are sent, and the bar goes away.',
+                'Changes the server already has are not sent twice.',
+                'While changes are waiting, leaving the page asks first.',
+                'They are kept at this address only. The same project opened at another address (127.0.0.1 instead of local.thedi.studio, say) is another browser store and does not see them — come back to the address you worked at.',
+                'If the server at this address turns out to hold another copy of the project (an older or different database), the changes are not sent to it. They stay in this browser and the project’s activity list says so.'
+            ] }
+        ],
+        tags: ['save', 'saving', 'not saved', 'offline', 'server', 'reload', 'sync', 'local'],
+        updated: '2026-10-07'
     },
     {
         id: 'google-drive-import',
@@ -1318,12 +1423,31 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-02'
     },
     {
+        id: 'nodes-settings-column-and-inside',
+        category: 'Editing',
+        title: 'Nodes: the settings column and inside a node',
+        summary: 'Select a card and its column opens on the right — name, settings, ports with their live values, Open, and Delete at the bottom. Open a node and you see what it is made of at once: a List as a table, a Text as text, code as inputs, lines and outputs.',
+        body: [
+            'The right side of Nodes holds one thing at a time, beside the canvas and never over it: the selected card’s settings, the Outliner, Chat, Help, or a card’s reading (what it is made of). Opening one replaces whatever was there, and the canvas gives up the width and re-fits.',
+            { list: [
+                'The column opens a moment after a click, once a double-click can no longer be on its way, so a double-click always goes inside instead of landing in the column.',
+                'The column, top to bottom: the node’s name (click it, or press F2, to rename) and its kind; its settings, when it has any beyond what is typed in the card; its ports, each with what is in it now and where it is wired from or to; Open; and Delete, pinned to the bottom. It is never empty. A Text’s words are typed in its card: click the text of a selected Text card.',
+                'Open — double-click the card, press Enter, or the Open button — goes inside, every time. A container (Scene, Geo, Kiosk…) shows the nodes in it. A List opens as an editable table, a Text as a text editor, each with its ports down the sides. A maths, value or logic node opens as its inputs, its own settings above the platform’s lines that work it out (read-only — they are the same code for every project), and its outputs. A Cube or another shape shows what you placed in it above and its code below. A tool (Outliner, Library, Webcam…) fills the canvas.',
+                'The strip under the bar says where you are: ← Back, the node’s name, its kind and its counts. Escape goes back too.',
+                'On a phone the column is a sheet at the bottom, with Open first and Delete at the foot.'
+            ] }
+        ],
+        tags: ['nodes', 'raw', 'settings', 'inside', 'editing'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'raw-windows-travel-with-the-canvas',
         category: 'Editing',
         title: 'Panel windows: travelling with the canvas, or pinned to the screen',
-        summary: 'An unpinned panel window (Scene, Text, Image, List) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
+        summary: 'An unpinned panel window (Scene, Image, Browser, Monitor) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
         body: [
-            'A panel node — Text, Scene, Image, List, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
+            'Text and List have no window any more, on a computer or a phone: the card is where you read them and opening one is where you edit it (see “Nodes: the settings column and inside a node”).',
+            'A panel node — Scene, Image, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
@@ -1334,7 +1458,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-02'
+        updated: '2026-10-05'
     },
     {
         id: 'raw-on-a-phone',
@@ -1431,6 +1555,7 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://diiii.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'One link opens it: http://diiii.localhost/ — the same link on every machine with di.iiii, and each one opens its own. A browser treats a .localhost name as safe, so the camera, the microphone and VR work there with no certificate. di status shows the link when it answers as this di.iiii and says why when it does not; di open opens it. On Linux, port 80 needs a one-time permission for di\'s own Node (di logs names it when it is missing). A phone or a headset cannot use this link — localhost always means the device in your hand — so they open the https name on the phones and headsets line that di status and di up print (the name in your certificate), or the address di up --lan shows.',
             'Your work is files. `di save my-show` writes one file — my-show.diiii — holding everything that space is made of: the scene, every edit ever made to it, the projects inside it, the images and models, and its light show — the fixtures, scenes, looks and MIDI map the lighting desk keeps for that space, without the wiring of the machine it was made on, so opening it never sends light at somebody else\'s rig. Copy it to a stick, email it, keep it for ten years; `di open my-show.diiii` puts it back, on this machine or anyone else’s. It is the same idea as a Blender file, with one difference worth knowing: a space is live, so there is nothing to lose by forgetting to save — di.iiii is already keeping it. Saving is how you get a copy you can carry, not how the work survives.',
             'You do not need the terminal for this. Every space on the Spaces page has a Save to file button, and Open a file sits next to + Create — the same file, either way. If a space of that name is already there, di.iiii asks what to call this one instead of refusing.',
             'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
@@ -1449,6 +1574,7 @@ export const WIKI_ARTICLES = [
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, whether the room can reach it, and how much space your work takes',
+                'di service install — on Linux, hands the server to systemd: it starts at login and is started again within seconds if it ever stops without being asked (a crash, a stray kill). di down still stops it for good; di service remove undoes it',
                 'di up --lan — answers on this wifi too, so a phone in the room can open it (the lighting desk’s Touch page, for one). Auth is off on a local di.iiii, so this means anyone on that network can edit — di up says so every time, and it lasts for that start only: the next di up is back to this machine alone',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing',
                 'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
@@ -1457,10 +1583,11 @@ export const WIKI_ARTICLES = [
             'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. It always installs as that ordinary program, never as a container, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) can reach them.',
             'A local space can be linked to one on diiii.xyz: di link connects the two, and di sync compares them — what each side has that the other has not, and whether sending work either way would be safe or refused, as it is when both sides have changed. It only looks: it writes nothing on either side. To carry work between them, use di save and di open, di backup, or Save to file on the Spaces page.',
             'A space can also be shared with another artist\u2019s di.iiii directly, over the same wifi, with no internet and no account in the middle — see \u201cTwo artists, two machines, one space\u201d.',
-            'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
+            'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.',
+            'Phones and headsets in this place: on the local home, the Phones & headsets button (or http://diiii.localhost/#join) shows that https name as a QR code, for a phone, a headset or a guest\u2019s laptop that has no di of its own. It draws the code only when it is real: a certificate is there, this start is di up --lan, and the name points at this machine as this machine looks it up. Otherwise it says which of those is missing and the setting or command that fixes it. Auth is off on a local di.iiii, so whoever scans it can edit; di up --lan --guests gives each guest their own sandbox instead.'
         ],
-        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-09-23'
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate', 'diiii.localhost', 'link', 'address', 'qr', 'phone', 'headset', 'guest'],
+        updated: '2026-10-13'
     },
     {
         id: 'tools-room',
@@ -1513,10 +1640,10 @@ export const WIKI_ARTICLES = [
         title: 'The Keeper: a language model as a node',
         summary: 'Point a Keeper node at a model — one on this machine, or a box on the same network — and its answer becomes a value the rest of the graph can use.',
         body: [
-            'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
+            'Add a Keeper from the palette (category Agent — or search for local, llm or llama) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
             'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine, and it works with no internet at all — which is the situation it was built for.',
             { list: [
-                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. Anything with a path is used as given.',
+                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. An OpenAI base URL, the address ending in /v1 that llama.cpp, vLLM and LM Studio give their clients (http://127.0.0.1:8090/v1), is completed to its chat route too. Anything with a longer path is used as given.',
                 'Model — the model name that server knows, for example qwen3.',
                 'System — an optional instruction that shapes every answer.'
             ] },
@@ -1525,7 +1652,7 @@ export const WIKI_ARTICLES = [
             'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
         ],
         tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama', 'llama.cpp'],
-        updated: '2026-09-11'
+        updated: '2026-10-07'
     },
     {
         id: 'the-toybox',
@@ -1609,6 +1736,42 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-03'
     },
     {
+        id: 'laser-out-node',
+        category: 'Editing',
+        title: 'Laser and Laser Out — draw for the LaserCubes',
+        summary: 'The Laser node draws a shape; Laser Out shows it in a small preview and sends it to the LaserCubes through this di.iiii.',
+        body: [
+            'Add a Laser node and pick a shape: circle, line, square, triangle, star, wave, fan or spiral. Size is 0 to 1, Rotation is in turns (0.25 is a quarter turn), and Spin turns the shape on its own, in turns per second. Colour is the beam colour, Level is its brightness from 0 to 1 — wire a Sound’s volume into Level and the shape breathes with the music. Points is how many points trace the shape.',
+            'Wire the Laser’s Frame into a Laser Out node. Laser Out draws the frame in a small square preview, so you can see the shape before it goes anywhere, and sends it to the lasers whenever it changes — at most 25 times a second. Cube is “all” to drive every cube, or one cube’s name to drive just that one.',
+            'The server holds the lasers DISARMED until a laser safety officer has signed off, by typing the sign-off phrase into Laser Out and pressing Arm; Disarm sits above it, one click (see “Drive LaserCubes from your di”). While it is disarmed, Laser Out says so plainly — “Lasers off — disarmed on the server” — and nothing reaches the cubes, however the graph is wired. The preview still shows the shape, so you can build the whole show disarmed.',
+            'Laser Out also shows how many cubes the server knows and how many are connected, and whether the server is simulating them. Blackout kills the beams the moment it rises — a Button, a Compare or a Toggle makes a good Blackout — and the frame that was queued is dropped, not sent after it.',
+            'The preview shades the lower half of the field red behind a dashed line: the server blanks every point below the cube’s own aim (its keep-in zone), so no beam can point lower than the cube, toward the crowd. Height lifts a shape up the field — its default, 0.5, keeps a shape of size 0.5 wholly above the line.',
+            'Under the preview Laser Out lists every cube: what it is doing (armed, ready, simulated, stopped and why) and what the cube said about itself — model, firmware, points per second it plays and its maximum, its buffer, its temperature, how it is connected, its address and serial number. A cube that has never answered is not armed, even with the sign-off; a cube under the maker’s 10 °C floor is marked.',
+            'Two stops work by themselves while the lasers are armed. If no frame reaches a cube for 200 ms — the editor closed, the tab hidden, the network gone — the cube is blanked and switched off; it comes back on with the next frame. If a frame holds the beam still (a dot, or one spot taking half the frame), for 200 ms, the cube is blanked too, unless the laser safety officer listed that still beam for that cube. Both numbers are still to be tested on a real cube. Laser Out keeps a held frame alive by itself; keep the editor in front during a show.',
+            'The 3D view of a room with LaserCubes draws what the laser server holds, as beams from each cube (cube 1 is the first LaserCube of the rig, and so on), so a drawing can be judged in the hall before show day. It does not yet draw a stopped cube dark.',
+            'The laser server only exists on a local di.iiii (`di up`, or npm run dev). On a hosted tab Laser Out is honest and idle, and says it cannot find the laser server.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'beam', 'show', 'device', 'performance', 'safety', 'blackout'],
+        updated: '2026-10-14'
+    },
+    {
+        id: 'drive-lasercubes',
+        category: 'Editing',
+        title: 'Drive LaserCubes from your di',
+        summary: 'Cable the cubes and your computer together, find the cubes from Laser Out, arm, play, disarm — no terminal and no files to edit.',
+        body: [
+            'This works on the di installed on your own computer (Windows, macOS or Linux), opened in a browser on that same computer at http://diiii.localhost/. Arming, sending frames, choosing cubes and the stops (Disarm, Blackout) answer only to that browser, and only to di\'s own page in it: a phone, another laptop, a link through a proxy or another website open in the same browser can watch, but cannot arm or drive the cubes.',
+            'CABLE. Plug every cube and your computer into one network switch or router with Ethernet cables. Set each cube to Client mode, so it joins that network instead of making its own. Something on the network has to hand out addresses: a router does. With a plain switch and no router, your computer gets an address starting 169.254 and Find cubes says so; on Windows, turning on Internet Connection Sharing for the Ethernet adapter makes the computer hand out the addresses itself.',
+            'FIND CUBES. Add a Laser Out node and press Find cubes. di asks every address of your computer\'s private networks (addresses starting 10., 172.16–31. or 192.168.; a VPN like Tailscale and public addresses are skipped and listed) the cube\'s read-only question — what are you? — and lists the cubes that answered: model, address, serial, firmware, temperature. Nothing is lit by asking. Tick the cubes you want, give each a name, and press Use these. The cubes are kept by their serial number, so a cube that comes back tomorrow on a new address keeps its name and its place in your graph. The still beams your laser safety officer approved stay with that serial too: a different cube that now has an old cube\'s address never gets them. Using new cubes always disarms first.',
+            'If the search says your computer refused to send, a firewall is blocking di: on Windows, open Windows Security, then Firewall, then Allow an app through the firewall, and allow Node.js or di on Private networks. If no cube answers, check the cube is on, in Client mode and on the same switch, then search again (one search at a time, a few seconds apart).',
+            'ARM. The laser safety officer for this run types the sign-off phrase into the field and presses Arm. Typing it is that person saying they are the officer and the room is safe. The phrase is not shown anywhere in di, and the field starts empty every time. A cube that never answered is not armed.',
+            'DISARM. The red Disarm button is always at the top of Laser Out: one click switches every cube\'s output off. Blackout clears the frames; Disarm stops the cubes.',
+            'THE REAL STOP is the key switch on each cube (and the interlock or E-stop, where you have one). Disarm is software and needs the computer and the cable to be working; the key switch does not. Keep a hand near it for the whole run.'
+        ],
+        tags: ['laser', 'lasercube', 'arm', 'disarm', 'find cubes', 'network', 'windows', 'safety', 'device', 'performance', 'show'],
+        updated: '2026-10-14'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
@@ -1622,6 +1785,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['room', 'space', 'jam', 'placement', 'build zones', 'photos', 'arrange'],
         updated: '2026-09-03'
+    },
+    {
+        id: 'nodes-one-bar',
+        category: 'Editing',
+        title: 'Nodes: one bar, one Help sheet, one opening view',
+        summary: 'The node canvas has one 40-pixel bar, a ? for Help, your account as its last square, and a canvas that opens the same way every time.',
+        body: [
+            'On a project\'s node canvas the tools sit in the same bar as every other surface — there is no second toolbar under it, and the project is named once. On the right, in one style of small square cells: Scene, the node count (it opens the outliner), Chat, ? (Help) and ⋯. Your account is the last square of the bar; it no longer floats over the canvas. Standing inside a node, the bar shows ← Back (Esc) and where you are. Projects, Spaces and the Wiki are in the ⋯ menu.',
+            'Help is one sheet, with no tabs. Press ? or the ? cell. Its first line is about the canvas you have open — “5 nodes · nothing wired yet” — followed by seven lines: Make, Wire, Open, Back, Move, Zoom, Delete. Every key on it is read from the canvas\'s own key table, and “Every key and mouse action” lists the rest.',
+            'The zoom strip is one small row at the bottom left: − 100% + Fit. Press the percentage to return to 100%; H fits everything, F frames the selected node. On a touch screen it is Fit alone, because you pinch.',
+            'The canvas opens with every card in view, the first card 24 pixels from the top-left corner, and never larger than 100%. It waits for the card font to arrive, so the same project opens at the same zoom every time. Card text is 13 units; when the zoom would make it smaller than 11 pixels on screen the card shows a summary instead (its title, each group\'s name and row count), and below half size just its title. A fit therefore always shows every card — there is no “showing 3 of 5”.'
+        ],
+        tags: ['nodes', 'raw', 'bar', 'help', 'zoom', 'fit', 'account', 'canvas', 'opening view'],
+        updated: '2026-10-05'
     },
     {
         id: 'raw-zen-workspace',
@@ -1803,13 +1980,33 @@ export const WIKI_ARTICLES = [
                 'The six views, keys 1–6 or the row at the bottom: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig; a project can carry its own under presentationState.viewPresets.',
                 'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges and the roof left out, the rig at full strength — for checking what hangs where and where it points.',
                 'A link can open on a view: add #view-top (or floor, dj, side, rig, crane) to the room\'s address.',
-                'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.'
+                'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.',
+                'Zoom never stops: past the closest the camera may come to the point it circles, the wheel (or a pinch) carries both forward together, so you can scroll your way down the hall.'
             ] },
             'In Studio the same views and X-ray sit at the top of the viewport and the keys act on the pane under the pointer; a number a cue already uses stays the cue\'s. Studio keeps no camera limits, so you can still look up from under a thing.',
             'Walking and flying, the fixed opening shot and headset entry are unchanged.'
         ],
-        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place'],
-        updated: '2026-09-29'
+        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place', 'zoom', 'scroll', 'pinch'],
+        updated: '2026-10-04'
+    },
+    {
+        id: 'room-quality-lite-full',
+        category: 'Spaces & access',
+        title: 'Lite and Full — a room light enough for a phone',
+        summary: 'A published room is drawn two ways. Full is the work renderer: every lamp a real light, shadows, bloom, the floor\'s reflection. Lite is what everyone else sees: the same room following the same desk, light enough for a phone. The Full / Lite button under Walk / Fly switches between them.',
+        body: [
+            'Who gets which, by itself: a phone or a tablet, and anyone opening the room from another address, gets Lite. The machine the room is made on, with a mouse, gets Full. The button changes it and this browser remembers the choice; ?quality=lite or ?quality=full in the address wins over both.',
+            { list: [
+                'Lite keeps every beam and its lens, and the haze — the light you see in the air.',
+                'The light falling on the room comes from four real lights that follow the lamps that matter most in the look that plays, so the floor and the walls still answer the show.',
+                'Lite leaves out shadows, bloom, the floor\'s reflection and edge smoothing, and draws at one pixel per screen pixel.',
+                'Your saved room is never changed: Lite draws a copy.'
+            ] },
+            'Measured on a laptop\'s built-in graphics, a 70-lamp room: Full still had nothing on screen after a minute of preparing its shaders; Lite drew the hall and the beams in seconds and ran at over 200 frames a second at phone size.',
+            'The real lights never depend on this: the desk sends DMX from the server on its own clock, whatever any screen is doing.'
+        ],
+        tags: ['lite', 'full', 'quality', 'phone', 'mobile', 'performance', 'fps', 'lag', 'slow', 'shadows', 'bloom', 'output', 'visitor', 'moxir', 'rig', 'room'],
+        updated: '2026-10-04'
     },
     {
         id: 'rig-show-loop',
@@ -1859,6 +2056,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-30'
     },
     {
+        id: 'rig-show-page',
+        category: 'Spaces & access',
+        title: 'The show page — everyone sees the cue, and the team chooses it',
+        summary: 'A page for a phone in the hall: the cue that is on, what comes next and when, and every cue of the show as a big card. Tap one and it goes to Light; every open page shows the change within a second, with who chose it.',
+        body: [
+            'Open it at /{space}/show/{project} — the project\'s id or its short name. It is a plain page with no 3D, so it opens fast on a phone; "see the room" opens the room itself.',
+            'At the top: the cue that is on, its act, the next cue and how long until it comes, and who chose it. Under it, the cues as cards grouped by act, each with its colours (ember, ash) as small squares.',
+            'Tap a card and that cue goes to Light, the lighting desk on the local di.iiii, which keeps playing the list from there. One choice every 10 seconds for everybody, so a room full of phones does not fight over it. You can type your name at the bottom; it is shown when you choose.',
+            'Who may choose is the operator\'s setting: TEAM (the members of this space — the default), EVERYONE (anyone who can see the show, a guest on a phone too) or OPERATOR ONLY. The operator is the space\'s owner, an admin, or the person at the machine. Everyone else sees the setting\'s effect, not the switch.',
+            'In the room itself, five favourite scene buttons stay on screen above the view bar: tap one and the light show changes to that scene and holds. The operator picks the five with the star on each scene in the SHOW list; everyone sees the same five. Laser scenes are never favourites.',
+            'A laser moment is never fired from this page, by anyone: its card says "laser moment — operator only". The operator fires it from the cards page or Light, after the laser safety sign-off.',
+            'On a di.iiii where sign-in is off, everyone who opens the page counts as the operator; for a night with guests, start it with di up --lan --guests. On a hosted di.iiii there is no Light: the page shows the show playing by its own clock, and there is nothing to choose.'
+        ],
+        tags: ['show', 'cue', 'cues', 'choose', 'phone', 'remote', 'light', 'operator', 'team', 'guests', 'laser', 'live', 'moxir', 'favourites', 'scene buttons'],
+        updated: '2026-10-09'
+    },
+    {
         id: 'rig-version-switch',
         category: 'Spaces & access',
         title: 'Rig versions — the row that switches between them',
@@ -1866,14 +2080,17 @@ export const WIKI_ARTICLES = [
         body: [
             'A version is a whole rig in its own project: the same hall and the same show, hung differently — fewer lamps, more lamps, movers in a different place. Each version keeps its own equipment list, plot, looks and patch sheet, so changing one never changes another. The versions of one show belong to a set, and a set is only what its projects say they are.',
             'Open any version of a set and a row of names sits at the top of the room, one name per version. The version you are in is the pale one. Tap another and that version opens. The row lists only versions the space really holds and that you are allowed to see: a version that was archived, removed or is private to someone else is never a link, so a tap never lands on "Project not found". It is the same list, in the same order, from every version, so it does not reshuffle as you move between them.',
-            'Old versions (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old versions (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
+            'The scene bar (2026-10-12). On a MOXIR-type scene everything at the top is one strip: the version switch (named v1.1, v1.1 looks, v2.6), Edit in Studio (a link to /space/project/studio), the SHOW chip, and on the right Sound, Walk / Fly, Free, Lite / Full and, on a dev copy, the small red dev-copy chip. The view buttons stay at the bottom in the same style; a scene may name any extra camera (Entrance, Outside) and it joins them after the six.',
+            'Old (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
             'A room with only one version, or one that belongs to no set, shows no row at all. While the list is still being read the row shows only the version you are in, as a label with no links.',
+            'For the show. A production keeps one list of its versions in its space, and the list says what each one is: a candidate, a kept copy, a concept, archived, or the one for the show. At most one is for the show, and none is until someone chooses. Members of the space see the row in the list\'s order: the version for the show first, marked "for the show", then the candidates, then the kept copies folded, then the concepts folded; an archived version is not on the row. The row never chooses; a status is set from the terminal (scripts/production/versions.mjs). Anyone who is not a member sees the row as described above.',
+            'Concepts (n). A version kept on purpose as an idea is a concept. It is never deleted and is not on the main row: all the concepts fold behind one button, "Concepts (3)" for three of them, next to "Old". Tap it to open them, tap it again to close. A concept you are standing in stays on the row. A concept is not a copy of an older state (that is a kept copy) and not archived (an archived version is not on the row at all). Set from the terminal with versions.mjs, one version or all but the named ones.',
             'Walking in the room. In walk mode the top of the screen belongs to the room\'s own header, so the row folds to a single button under it, "Versions · " and the name of the version you are in. Tap it to open the column of versions, tap a name to go there; you do not have to leave walk mode first.',
             'On a phone held upright the row does not fit beside the Walk / Fly and Sound buttons, so it takes a line of its own under them, and the show chip moves down one line. If the names are wider than the screen the row scrolls sideways, with a soft fade on the edge where it goes on. Every name and button is a 44 px tap target. Not yet: the walk-mode button has been checked in tests, not yet on a real phone screen.',
             'What it does not do: it never copies, merges or deletes a version, and it does not tell you which one is better. Making a version, and keeping a copy of one, is done from the terminal with the rig scripts (docs/architecture/RIG_BUILD.md, the versions section).'
         ],
-        tags: ['rig', 'versions', 'version', 'switch', 'old versions', 'copy', 'walk', 'phone', 'moxir', 'minimal', 'full', 'set', 'room', 'compare'],
-        updated: '2026-09-30'
+        tags: ['rig', 'versions', 'version', 'switch', 'old versions', 'copy', 'walk', 'phone', 'moxir', 'minimal', 'full', 'set', 'room', 'compare', 'for the show', 'production', 'status', 'candidate', 'archived'],
+        updated: '2026-10-04'
     },
     {
         id: 'rig-patch-sheet-flags',

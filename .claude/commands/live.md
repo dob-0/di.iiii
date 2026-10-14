@@ -1,25 +1,17 @@
 ---
-allowed-tools: Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(docker ps:*), Bash(curl:*), Bash(lsof:*)
-description: Pre-show or pre-demo readiness check for live performance or exhibition
+description: Pre-show or pre-demo readiness check — git state, local stacks, own di, dev tier
+allowed-tools: Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(di-dev ls:*), Bash(curl:*)
 ---
 
 ## Context
 
 - Branch: !`git branch --show-current`
-- Uncommitted changes: !`git status --short`
-- Last commit: !`git log --oneline -1`
-- Docker: !`docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "docker not running"`
-- Backend (4000): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/health 2>/dev/null || echo "unreachable"`
-- Frontend (5173): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 2>/dev/null || echo "unreachable"`
-- Full stack (8080): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "unreachable"`
+- Working tree: !`git status --short | head -15`
+- Last commits: !`git log --oneline -5`
+- Local stacks (aylmo, di-dev): !`di-dev ls 2>&1 | head -20`
+- Own installed di: !`curl -s -o /dev/null -m 5 -w "%{http_code}" http://diiii.localhost/`
+- Dev tier: !`curl -s -o /dev/null -m 8 -w "%{http_code}" https://dev.diiii.xyz/`
 
 ## Task
 
-Report readiness for a live show or exhibition demo:
-
-1. **Git state** — warn if on wrong branch or if there are uncommitted changes that could affect behavior
-2. **Services** — which are up, which are down
-3. **Go / No-go** — one clear verdict with any blockers listed
-4. If anything is down, suggest the exact command to start it
-
-Keep it short. This is a pre-show check, not a debug session.
+Report **Go / No-go** in at most 10 lines: is the tree clean and on a task branch, which local stacks run and at which `*.diiii.localhost` address, do the own di and the dev tier answer 200. If something is missing, name the one command that fixes it (`di-dev up <tree>`, `di-dev doctor`). Never start a server yourself with `npm run dev`, `npx vite` or a bare port.

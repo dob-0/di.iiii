@@ -81,7 +81,7 @@ describe('a strobe draws no cone (the guard: "no strobe cone mesh")', () => {
     it('every room that draws lamps passes them through the flash pass (useRigLook)', () => {
         expect(read('./useRigLook.js')).toMatch(/flashEntities\(blended, library\)/)
         expect(read('./RigBodies.jsx')).toMatch(/<RigFlashes entities=\{entities\} \/>/)
-        expect(read('../project/components/PublicProjectViewer.jsx')).toMatch(/<RoomLookFollower\s+document=\{document\}/)
+        expect(read('../project/components/PublicProjectViewer.jsx')).toMatch(/<RoomLookFollower\s+document=\{(?:document|viewDocument)\}/)
     })
 })
 

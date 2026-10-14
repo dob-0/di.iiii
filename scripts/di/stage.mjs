@@ -328,7 +328,7 @@ export const joinPlan = ({ home, spaceId, from, at = null, project = null, brows
  */
 export const joinStage = async ({
     home, spaceId, from, key = null, at = null, into = null,
-    project = null, browser = null, lan = false, name = null, run = runStep
+    project = null, browser = null, lan = false, name = null, insecure = false, run = runStep
 }) => {
     const sp = stagePaths(home)
     const port = resolvePort(home)
@@ -336,7 +336,7 @@ export const joinStage = async ({
     const chosenBrowser = browser || findBrowser(browserCandidates(process.platform))
     if (!chosenBrowser) return { ok: false, reason: 'no-browser' }
 
-    const followed = await followSpace({ home, spaceId, from, key, into, address: at, port })
+    const followed = await followSpace({ home, spaceId, from, key, into, address: at, port, insecure })
     if (!followed.ok) return { ok: false, reason: 'follow', why: followed.reason }
 
     const installed = []

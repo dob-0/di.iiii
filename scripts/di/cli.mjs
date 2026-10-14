@@ -49,9 +49,10 @@ import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKe
 import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, readNdiScan, removeNdi, verifyNdi, watchNdiScanFeed } from './ndi.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
+import { DEFAULT_UNIT, activeService, installService, removeService, systemdUsable, unitStatus, validUnitName } from './service.mjs'
 import {
     alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    ensureGuestSecrets, lanUrl, localUrl, nameUrl, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, ownBase, printedAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
@@ -65,6 +66,9 @@ import {
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
 } from './stage.mjs'
 import { parseArgs } from './args.mjs'
+import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
+import * as autoupdate from './autoupdate.mjs'
+import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
 const HOME = () => {
@@ -171,7 +175,11 @@ const cmdUp = async (args) => {
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
+    if (await alive(home, port)) {
+        const address = await printedAddress(home, port)
+        say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
+        return
+    }
 
     say(ui.starting())
     try {
@@ -216,7 +224,8 @@ const cmdUp = async (args) => {
     // mDNS for this start, and it is the same word on this laptop and on a
     // phone in the room — so the card leads with it and everything else becomes
     // the fallback nobody has to read out. Without avahi (or without --lan,
-    // where putting a name on the network would be a lie) we try di.localhost,
+    // where putting a name on the network would be a lie) we try diiii.localhost
+    // — the one local address's own name, with the port while :80 is not ours —
     // which costs nothing and is asked before it is printed, and failing that
     // we print localhost like we always did.
     const addresses = lan ? probeLanAddresses() : []
@@ -227,7 +236,15 @@ const cmdUp = async (args) => {
     const scheme = cert ? 'https' : 'http'
     const prettyUrl = pretty ? `${scheme}://${pretty}${port === 80 || port === 443 ? '' : `:${port}`}` : null
 
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl, secure: Boolean(cert) }))
+    // THE address (docs/ai/one-local-address.md): http://diiii.localhost/ when it was
+    // asked and answered as this di.iiii, the same link on every machine with di.
+    // Everything above is then only the fallback, and the certificate's name is the
+    // phones' address — which is why ui.onThisNetwork below keeps `prettyUrl`.
+    const address = await printedAddress(home, port, { fallback: prettyUrl || localUrl(port) })
+    say(ui.running(localUrl(port), summary.names, {
+        spaceCount: summary.count, lan, prettyUrl: address.one ? address.url : prettyUrl, secure: Boolean(cert),
+        one: address.one, phones: address.phones, why: address.why
+    }))
     if (lan) {
         // With a certificate the room gets the padlocked name too — its second
         // name, pointed at tonight's address by the owner's own hook. Without
@@ -245,7 +262,7 @@ const cmdUp = async (args) => {
             guests
         ))
     }
-    if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))
+    if (!args.flags['no-open']) openBrowser(address.url)
     await noticeNewVersion(home)
 }
 
@@ -308,19 +325,33 @@ const cmdStatus = async () => {
     const info = runner.describe(home)
     const healthy = await alive(home, port)
 
+    // Asked of systemd when it keeps this install up: "not running" alone
+    // hides the one case that will not fix itself — a unit systemd gave up on.
+    const svc = info.mode === 'node' ? activeService(home) : null
+    const unit = svc ? unitStatus(svc) : null
+    const autoLines = () => { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(style.dim(l)) }
+
     if (!healthy) {
         say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
+        if (svc) say(ui.supervisorLine(svc, unit))
+        autoLines()
         return
     }
     const size = info.mode === 'node' ? humanSize(await dirSize(paths(home).data)) : null
     const reach = await probeReach(home, port)
+    // ONE address in what is printed: the one link every machine with di shares when
+    // it was asked and answered as this di.iiii (the certificate's name then moves to
+    // the phones and headsets line); else what this install has always printed, and why.
+    const address = await printedAddress(home, port)
     say([
         `running (${info.mode})`,
         info.version,
-        publicUrl(home, port),
+        address.url,
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
+    if (address.phones) say(ui.phonesLine(address.phones))
+    if (address.why) say(ui.oneAddressWhy(address.why))
     // Whether the other di.iiii on this network can see this one — asked on
     // the same terms as the bind above (the certificate's name over https,
     // else loopback), never inferred from it: a bind to every interface with
@@ -331,6 +362,8 @@ const cmdStatus = async () => {
     const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
     const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
     say(ui.rigVisibility(rig))
+    if (svc) say(unit.active ? ui.supervisorLine(svc, unit) : ui.unsupervisedWhileInstalled(svc))
+    autoLines()
 }
 
 const cmdOpen = async (args) => {
@@ -342,8 +375,12 @@ const cmdOpen = async (args) => {
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
     if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
-    say(publicUrl(home, port))
-    openBrowser(publicUrl(home, port))
+    // The one local address when it is this di.iiii (asked, see oneAddress);
+    // else the address this install has always opened. printedAddress is the one
+    // function that decides, here as in `di status` and `di up`.
+    const { url } = await printedAddress(home, port)
+    say(url)
+    openBrowser(url)
 }
 
 /**
@@ -453,7 +490,7 @@ const cmdOpenFile = async (args, file) => {
         const result = await openThroughServer({ home, port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
-            say(ui.opened(opened, `${publicUrl(home, port)}/${opened}`))
+            say(ui.opened(opened, `${await ownBase(home, port)}/${opened}`))
             return
         }
         if (!result.tooLarge) {
@@ -494,7 +531,7 @@ const cmdOpenFile = async (args, file) => {
         process.exitCode = 1
         return
     }
-    say(ui.opened(named, `${localUrl(resolvePort(home))}/${named}`))
+    say(ui.opened(named, `${await ownBase(home, resolvePort(home))}/${named}`))
 }
 
 const cmdNew = async (args) => {
@@ -517,7 +554,59 @@ const cmdNew = async (args) => {
         const body = await response.json().catch(() => ({}))
         if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
         const id = body?.space?.id || name
-        say(ui.made(id, `${publicUrl(home, port)}/${id}`))
+        say(ui.made(id, `${await ownBase(home, port)}/${id}`))
+    } catch (error) {
+        fail(String(error?.message || error))
+        process.exitCode = 1
+    }
+}
+
+/**
+ * `di move PROJECT --to SPACE` — move a project into another space.
+ *
+ * Through the server's own route (POST /api/projects/:id/move), never the
+ * database: the server owns who may do it (an admin, or the owner of both
+ * spaces), what a clash is, and the all-or-nothing order of the files and the
+ * row. Here by default means THIS install; `--from URL` aims it at another
+ * di.iiii, with a token read from DI_TOKEN or from stdin (`--token -`), never
+ * from an argument that a process list would show.
+ */
+const cmdMove = async (args) => {
+    const project = args._[1]
+    const to = args.flags.to
+    const from = args.flags.from
+    if (!project || !to || to === true) {
+        fail(`which project, and into which space? — ${CMD} move my-project --to other-space  (add --dry-run to look first)`)
+        process.exitCode = 1
+        return
+    }
+    let base
+    const headers = { 'Content-Type': 'application/json' }
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        // stdin, else DI_TOKEN, else the login `di login` stored for that very address
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    const dryRun = Boolean(args.flags['dry-run'])
+    try {
+        const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
+        })
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) { fail(body?.error || `could not move "${project}" (${response.status})`); process.exitCode = 1; return }
+        say(dryRun
+            ? `would move "${body.projectId}" from ${body.fromSpaceId} into ${body.toSpaceId} — nothing changed (--dry-run)`
+            : `moved "${body.projectId}" from ${body.fromSpaceId} into ${body.toSpaceId} — the stable link is ${body.stableLink}`)
+        if (body.wasPublished) say(`  ${body.fromSpaceId} no longer shows it as its front door`)
     } catch (error) {
         fail(String(error?.message || error))
         process.exitCode = 1
@@ -697,6 +786,9 @@ const cmdUninstall = async (args) => {
         if (left.ok) say(ui.stageLeft(left.done, false))
     }
     if (isInstalled(home)) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+    // The systemd unit lives outside DI_HOME too, and names this install's
+    // `current` — left behind it would restart nothing, forever, at every login.
+    if (readState(home).service) { try { await removeService({ home }) } catch { /* reported by systemctl itself */ } }
 
     // credentials.json holds live editor keys — secrets are not "your work"
     // and must not outlive the install that minted their links
@@ -719,6 +811,13 @@ const cmdUpdate = async (args) => {
     if (!requireInstalled(home)) return
     const verbose = Boolean(args.flags.verbose)
     const from = installedVersion(home)
+    // --channel for this run; otherwise the one `di channel` remembered.
+    const channel = args.flags.channel || readState(home).channel || DEFAULT_CHANNEL
+    if (!isChannel(channel)) {
+        fail(`no such channel: ${channel} — one of ${CHANNELS.join(', ')}`)
+        process.exitCode = 1
+        return
+    }
 
     if (args.flags.rollback) {
         // Going back to a build that cannot read the data it is going back TO
@@ -745,9 +844,18 @@ const cmdUpdate = async (args) => {
         // --from is the venue case: a machine with no network, an artifact on a
         // USB stick. It skips the feed entirely, and with it the "is this newer"
         // question — someone who names a file has chosen that file.
-        release = args.flags.from
-            ? await releaseFromFile(args.flags.from)
-            : await latestRelease()
+        if (args.flags.from) {
+            release = await releaseFromFile(args.flags.from)
+        } else if (channel === 'dev') {
+            // The dev channel is the hub's own commit, not "newest": an install
+            // must not run ahead of or behind dev.diiii.xyz.
+            const picked = await devRelease({ hub: hubUrl(readState(home)), installed: from })
+            if (picked.current) { say(ui.upToDate(from)); return }
+            if (!picked.release) { say(picked.pending); return }
+            release = picked.release
+        } else {
+            release = await latestRelease()
+        }
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
@@ -757,7 +865,9 @@ const cmdUpdate = async (args) => {
     // A machine can be AHEAD of the release feed — a build installed from a
     // file, an rc, a test install. "Not the same version" is not "newer", and
     // walking someone backwards is not an update.
-    if (!args.flags.from && !isNewerVersion(release.version, from) && !args.flags.force) {
+    // Dev builds are matched to the hub by commit, not ordered by version: the
+    // hub moving back is a move the channel must follow.
+    if (!args.flags.from && channel !== 'dev' && !isNewerVersion(release.version, from) && !args.flags.force) {
         say(ui.aheadOfRelease(from, release.version))
         return
     }
@@ -799,24 +909,36 @@ const cmdUpdate = async (args) => {
         if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
     }
 
-    // Before the flip, not after: if this update moves the schema, `--rollback`
-    // alone cannot undo it, so the way back has to exist first.
-    const dataSchema = dataSchemaVersion(home)
-    const nextSchema = buildSchemaVersion(staged.partialDir)
-    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
-    if (movesSchema) {
-        const snapshot = await snapshotData({ home, label: `before-${release.version}` })
-        if (snapshot) say(ui.snapshotTaken(snapshot))
-    }
-
     const runner = runnerFor(home)
     const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
+    // After the server has stopped (its last write is in the file), before the flip:
+    // if this update moves the schema, `--rollback` alone cannot undo it, so the
+    // way back has to exist first.
+    const dataSchema = dataSchemaVersion(home)
+    const nextSchema = buildSchemaVersion(staged.partialDir)
+    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
+    if (movesSchema) {
+        try {
+            const snapshot = await snapshotData({ home, label: `before-${release.version}` })
+            if (snapshot) say(ui.snapshotTaken(snapshot))
+        } catch (error) {
+            // No way back, so no update: the old version is still `current`; bring it back up.
+            await fsp.rm(staged.partialDir, { recursive: true, force: true }).catch(() => {})
+            fail(`could not save a snapshot of your work first — nothing has been changed: ${String(error.message || error)}`)
+            say(ui.updateFailed(from))
+            process.exitCode = 1
+            if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+            return
+        }
+    }
+
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })
 
+    await writeState(home, { lastUpdate: { at: new Date().toISOString(), from, to: release.version, channel: args.flags.from ? 'file' : channel } })
     say(ui.updated(from, release.version))
     if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
 }
@@ -919,7 +1041,7 @@ const cmdMcp = async (args) => {
     const entry = candidates.find((p) => fs.existsSync(p))
     if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
     const port = resolvePort(HOME(), args.flags?.port)
-    const child = spawn(process.execPath, [entry, '--base', `http://localhost:${port}/serverXR`], { stdio: 'inherit' })
+    const child = spawn(process.execPath, [entry, ...mcpArgs({ flags: args.flags, port })], { stdio: 'inherit' })
     await new Promise((resolve) => child.on('exit', resolve))
 }
 
@@ -1037,9 +1159,20 @@ const cmdFollow = async (args) => {
         return
     }
 
+    // The answer to a refusal, never a default (audit F4): at most one.
+    const takeHost = Boolean(args.flags['take-host'])
+    const takeMine = Boolean(args.flags['take-mine'])
+    if (takeHost && takeMine) { fail(ui.followBothDirections()); process.exitCode = 1; return }
+    // `--from-now` is the default start, accepted so it can be said out loud;
+    // `--replay` is the old one — read both logs from the beginning.
+    if (args.flags['from-now'] && args.flags.replay) { fail(ui.followBothStarts()); process.exitCode = 1; return }
+
     say(ui.checkingFollow())
     const result = await followSpace({
-        home, spaceId, from, key, into: args.flags.into, address: at, port: resolvePort(home)
+        home, spaceId, from, key, into: args.flags.into, address: at, port: resolvePort(home),
+        direction: takeHost ? 'take-host' : (takeMine ? 'take-mine' : null),
+        start: args.flags.replay ? 'replay' : 'now',
+        insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
         sayFollowRefusal(result.reason, { spaceId, url: from }, at)
@@ -1058,16 +1191,24 @@ const cmdFollows = async () => {
     const live = await fetch(`${apiBase(home, port)}/api/follows`)
         .then(response => (response.ok ? response.json() : null))
         .catch(() => null)
-    say(ui.followList(follows, live?.follows || []))
+    say(ui.followList(follows, live?.follows || [], live))
 }
 
-/** `di unfollow <space>` — stop carrying edits. Nothing here is deleted. */
+/** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */
 const cmdUnfollow = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const spaceId = args._[1]
     if (!spaceId) { fail(`which space? — ${CMD} unfollow their-space`); process.exitCode = 1; return }
-    const { removed } = await removeFollow(paths(home).data, spaceId)
+    let removed
+    try {
+        ;({ removed } = await removeFollow(paths(home).data, spaceId))
+    } catch (error) {
+        if (error?.code !== 'FOLLOWS_CORRUPT') throw error
+        fail(ui.followRefused('corrupt', spaceId))
+        process.exitCode = 1
+        return
+    }
     say(removed ? ui.unfollowed(spaceId) : ui.notFollowing(spaceId))
 }
 
@@ -1267,7 +1408,8 @@ const cmdStage = async (args) => {
             home, ...plan,
             key: await readKeyFlag(args),
             into: args.flags.into,
-            lan: Boolean(args.flags.lan)
+            lan: Boolean(args.flags.lan),
+            insecure: Boolean(args.flags.insecure)
         })
         if (!result.ok) {
             if (result.reason === 'no-browser') fail(ui.stageNoBrowser())
@@ -1327,8 +1469,136 @@ const cmdStage = async (args) => {
     process.exitCode = 1
 }
 
+/**
+ * `di service` — hand the installed server to systemd, so it is restarted
+ * whenever it dies. Everything it does is in service.mjs; this routes, prints
+ * and sets the exit code.
+ */
+const cmdService = async (args) => {
+    const home = HOME()
+    const what = args._[1] || 'status'
+
+    if (what === 'install') {
+        if (!requireInstalled(home)) return
+        if (readState(home).mode === 'docker') { fail(ui.serviceNotInDocker()); process.exitCode = 1; return }
+        const name = typeof args.flags.name === 'string' ? args.flags.name : DEFAULT_UNIT
+        if (!validUnitName(name)) { fail(ui.serviceBadName(name)); process.exitCode = 1; return }
+        const existing = readState(home).service?.name
+        if (existing && existing !== name) { fail(ui.serviceOtherName(existing)); process.exitCode = 1; return }
+        if (!systemdUsable()) { fail(ui.serviceNoSystemd()); process.exitCode = 1; return }
+
+        // The hand-over: a server this install started detached is stopped
+        // and started again under the unit, on the same terms (`--lan` asked
+        // of the running server, like update and restore do). Seconds down,
+        // once, and from then on systemd holds it.
+        const port = resolvePort(home)
+        const wasRunning = await alive(home, port)
+        const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
+        if (wasRunning) { try { await node.stop({ home }) } catch { /* already down */ } }
+
+        let svc
+        try {
+            svc = await installService({
+                home,
+                name,
+                node: node.nodeBinary(home),
+                serverEnv: node.serverEnv({ home, port, base: node.unitBaseEnv(home) })
+            })
+        } catch (error) {
+            fail(String(error.message || error))
+            process.exitCode = 1
+            if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+            return
+        }
+        say(ui.serviceInstalled(svc, wasRunning))
+        if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+        return
+    }
+
+    if (what === 'remove') {
+        if (!readState(home).service) { say(ui.serviceNone()); return }
+        // Asked before the unit goes: removing the supervisor is not a request
+        // to stop di.iiii, so a running server comes back, unsupervised.
+        const port = resolvePort(home)
+        const wasRunning = isInstalled(home) && await alive(home, port)
+        const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
+        const svc = await removeService({ home })
+        say(svc ? ui.serviceRemoved(svc) : ui.serviceNone())
+        if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+        return
+    }
+
+    if (what === 'status') {
+        const svc = activeService(home)
+        if (!svc) {
+            say(readState(home).service ? `${ui.serviceNone()} ${style.dim(`(state.json names ${readState(home).service.name}, but its unit file or systemd is missing)`)}` : ui.serviceNone())
+            return
+        }
+        say(ui.serviceStatus(svc, unitStatus(svc)))
+        return
+    }
+
+    fail(`${CMD} service install | remove | status`)
+    process.exitCode = 1
+}
+
+const cmdChannel = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const wanted = args._[1]
+    if (!wanted) {
+        say(`channel ${readState(home).channel || DEFAULT_CHANNEL}  (${CHANNELS.join(' | ')})`)
+        return
+    }
+    if (!isChannel(wanted)) {
+        fail(`no such channel: ${wanted} — one of ${CHANNELS.join(', ')}`)
+        process.exitCode = 1
+        return
+    }
+    await writeState(home, { channel: wanted })
+    say(`channel ${wanted} — ${wanted === 'dev' ? 'this install follows the build dev.diiii.xyz serves' : 'this install follows published releases'}. apply it now with: ${CMD} update`)
+}
+
+const cmdAutoupdate = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const action = args._[1] || 'status'
+    if (action === 'run') {
+        // The timer's job. One log line, always; exit 1 only when it failed.
+        const { outcome, detail } = await autoupdate.runAutoUpdate({
+            home,
+            update: ({ channel }) => new Promise((resolve) => {
+                const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'update', '--channel', channel], { stdio: ['ignore', 'pipe', 'pipe'] })
+                let output = ''
+                child.stdout.on('data', (d) => { output += d })
+                child.stderr.on('data', (d) => { output += d })
+                child.on('error', (e) => resolve({ code: 1, output: String(e.message) }))
+                child.on('exit', (code) => resolve({ code, output }))
+            })
+        })
+        say(`${outcome} ${detail}`)
+        if (outcome === 'failed') process.exitCode = 1
+        return
+    }
+    if (action === 'status') { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(l); return }
+    if (action !== 'on' && action !== 'off') {
+        fail(`${CMD} autoupdate on | off | status`)
+        process.exitCode = 1
+        return
+    }
+    if (!autoupdate.supported()) { say(autoupdate.unsupportedText()); process.exitCode = 1; return }
+    if (action === 'off') { await autoupdate.disable(); say('automatic updates off — timer and units removed.'); return }
+    const result = await autoupdate.enable({ home })
+    if (!result.ok) { fail(`could not install the timer: ${result.why}`); process.exitCode = 1; return }
+    say(`automatic updates on — every ${autoupdate.EVERY_MINUTES} minutes, channel ${readState(home).channel || DEFAULT_CHANNEL}. log: ${autoupdate.logFile(home)}`)
+    say(style.dim('  to run with nobody logged in:  loginctl enable-linger $USER'))
+}
+
 const COMMANDS = {
+    channel: cmdChannel,
+    autoupdate: cmdAutoupdate,
     up: cmdUp,
+    service: cmdService,
     invite: cmdInvite,
     follow: cmdFollow,
     stage: cmdStage,
@@ -1346,6 +1616,7 @@ const COMMANDS = {
     new: cmdNew,
     save: cmdSave,
     spaces: cmdSpaces,
+    move: cmdMove,
     link: cmdLink,
     sync: cmdSync,
     update: cmdUpdate,
@@ -1354,6 +1625,9 @@ const COMMANDS = {
     keeper: cmdKeeper,
     ndi: cmdNdi,
     mcp: cmdMcp,
+    login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    logout: (args) => runLogout(args),
+    whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }
 

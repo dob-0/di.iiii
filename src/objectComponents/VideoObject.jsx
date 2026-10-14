@@ -4,6 +4,7 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
+import { useHoldFrames } from '../studio/utils/renderDemand.jsx'
 import useRoomSound from '../hooks/useRoomSound.js'
 import {
     attachPositionalVideoSound,
@@ -133,6 +134,8 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
         }
     }, [sourceUrl, muted, volume, loop, exclusive, instanceToken])
 
+    // A picture that is playing changes every frame: under Studio's on-demand loop the room keeps drawing.
+    useHoldFrames(Boolean(state.texture), 'video')
     return state
 }
 

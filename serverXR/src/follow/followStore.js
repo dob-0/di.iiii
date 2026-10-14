@@ -32,15 +32,45 @@ const readFollows = (dataDir) => {
     }
 }
 
+// A file that is there but unreadable must not be written over: reading it as
+// {} and saving would drop every other follow and its key. Keep it, keep a copy.
+const followsForWrite = (dataDir) => {
+    let raw
+    try { raw = fs.readFileSync(filePath(dataDir), 'utf8') } catch { return {} }
+    try {
+        const parsed = JSON.parse(raw)
+        if (parsed && parsed.format === FORMAT && parsed.follows && typeof parsed.follows === 'object') return parsed.follows
+    } catch { /* fall through */ }
+    const copy = `${filePath(dataDir)}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`
+    try { fs.copyFileSync(filePath(dataDir), copy); fs.chmodSync(copy, 0o600) } catch { /* original stays */ }
+    const error = new Error(`${filePath(dataDir)} is not readable as a follows file; kept as it is`)
+    error.code = 'FOLLOWS_CORRUPT'
+    throw error
+}
+
+// Temp + fsync + rename, mode 0600 on every write (an older 0644 file is replaced).
+const writeFileAtomic = async (file, text) => {
+    const tmp = `${file}.${process.pid}.tmp`
+    const handle = await fsp.open(tmp, 'w', 0o600)
+    try {
+        await handle.writeFile(text)
+        await handle.chmod(0o600)
+        await handle.sync()
+    } finally {
+        await handle.close()
+    }
+    await fsp.rename(tmp, file)
+}
+
 const writeFollows = async (dataDir, follows) => {
     await fsp.mkdir(dataDir, { recursive: true })
     const body = { format: FORMAT, version: 1, follows }
-    await fsp.writeFile(filePath(dataDir), `${JSON.stringify(body, null, 2)}\n`, { mode: 0o600 })
+    await writeFileAtomic(filePath(dataDir), `${JSON.stringify(body, null, 2)}\n`)
     return follows
 }
 
-const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null }) => {
-    const follows = readFollows(dataDir)
+const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
+    const follows = followsForWrite(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
         token: token || null,
@@ -49,13 +79,29 @@ const addFollow = async (dataDir, spaceId, { remote, token, label = null, addres
         // The ADDRESS PIN, kept in step with scripts/di/follows.mjs — absent
         // entirely rather than null, so a record with no pin serialises
         // byte-identically to one written before this existed.
-        ...(address ? { address } : {})
+        ...(address ? { address } : {}),
+        // `di follow --take-host | --take-mine`: the answer to a refusal, spent
+        // on the first comparison of each stream and then cleared by the
+        // server (clearDirection). `start: 'replay'` is the explicit opt-in to
+        // the old first start; absent means start from now. Absent entirely
+        // when unset, like `address`.
+        ...(direction ? { direction } : {}),
+        ...(start === 'replay' ? { start } : {})
     }
     return writeFollows(dataDir, follows)
 }
 
+/** Spend a direction: the first comparison happened, later edits sync the ordinary way. */
+const clearDirection = async (dataDir, spaceId) => {
+    const follows = followsForWrite(dataDir)
+    if (!follows[spaceId]?.direction) return false
+    delete follows[spaceId].direction
+    await writeFollows(dataDir, follows)
+    return true
+}
+
 const removeFollow = async (dataDir, spaceId) => {
-    const follows = readFollows(dataDir)
+    const follows = followsForWrite(dataDir)
     if (!follows[spaceId]) return { follows, removed: false }
     delete follows[spaceId]
     await writeFollows(dataDir, follows)
@@ -84,11 +130,13 @@ const readFollowState = (dataDir, spaceId) => {
 }
 
 const writeFollowState = async (dataDir, spaceId, state) => {
+    // An unfollowed space has no state to keep: the running follower may still
+    // tick for a moment after `di unfollow` removed the file, and a save then
+    // would bring the old cursors back for the next follow to resume from.
+    if (!readFollows(dataDir)[spaceId]) return
     const file = statePath(dataDir, spaceId)
     await fsp.mkdir(path.dirname(file), { recursive: true })
-    const tmp = `${file}.${process.pid}.tmp`
-    await fsp.writeFile(tmp, JSON.stringify({ format: STATE_FORMAT, version: 1, savedAt: new Date().toISOString(), state }), { mode: 0o600 })
-    await fsp.rename(tmp, file)
+    await writeFileAtomic(file, JSON.stringify({ format: STATE_FORMAT, version: 1, savedAt: new Date().toISOString(), state }))
 }
 
-module.exports = { readFollows, writeFollows, addFollow, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }
+module.exports = { readFollows, writeFollows, addFollow, clearDirection, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }

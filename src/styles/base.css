@@ -337,3 +337,7 @@ html.dii-embed body,
 html.dii-embed #root {
     background: transparent;
 }
+
+/* The account button keeps clear of a docked right column (Nodes' settings
+   column publishes its width). `body` out-ranks the component's own class. */
+body .account-btn-wrapper { right: calc(14px + var(--di-column-clear, 0px)); }
