@@ -1,0 +1,230 @@
+{
+ "what": "UNDO of one group drag in moxir-v2-10 at 2026-10-15 01:21:38 (ops 237-272): 36 objects moved together by (-0.89, 0, -18.55) m - 18 UP-B380F beams, the 8 outside washes on the left road + the stage key, the 12 ray washes (since re-laid by hand), the road and the forecourt boxes. Puts the 24 that were not re-laid by hand back where version 170 had them. NOT applied: waits for the owner's word (deliberate or not).",
+ "source": "scratchpad arr/pos170.json = rig JSON p + show offset (-0.073, 0.012, 0.112) and the v2-9 positions for untouched ids",
+ "moves": [
+  {
+   "id": "rig-par-planes-23",
+   "position": [
+    -21.933,
+    6.012,
+    -9.462
+   ]
+  },
+  {
+   "id": "rig-par-planes-09",
+   "position": [
+    -38.273,
+    0.322,
+    -11.888
+   ]
+  },
+  {
+   "id": "rig-par-planes-30",
+   "position": [
+    -38.273,
+    0.322,
+    -23.888
+   ]
+  },
+  {
+   "id": "rig-par-planes-36",
+   "position": [
+    -38.273,
+    0.322,
+    0.112
+   ]
+  },
+  {
+   "id": "rig-par-planes-15",
+   "position": [
+    -38.273,
+    0.322,
+    12.112
+   ]
+  },
+  {
+   "id": "rig-par-planes-03",
+   "position": [
+    -38.273,
+    0.322,
+    36.112
+   ]
+  },
+  {
+   "id": "rig-par-planes-31",
+   "position": [
+    -38.273,
+    0.322,
+    24.112
+   ]
+  },
+  {
+   "id": "rig-par-planes-06",
+   "position": [
+    -38.273,
+    0.322,
+    48.112
+   ]
+  },
+  {
+   "id": "rig-beam-planes-01",
+   "position": [
+    -15.713,
+    0.7,
+    -10.97
+   ]
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "position": [
+    -9.428,
+    0.7,
+    -10.97
+   ]
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "position": [
+    -3.143,
+    0.7,
+    -10.97
+   ]
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "position": [
+    3.143,
+    0.7,
+    -10.97
+   ]
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "position": [
+    9.429,
+    0.7,
+    -10.97
+   ]
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "position": [
+    15.714,
+    0.7,
+    -10.97
+   ]
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "position": [
+    22.0,
+    0.7,
+    -8.173
+   ]
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "position": [
+    22.0,
+    0.7,
+    3.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "position": [
+    22.0,
+    0.7,
+    15.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "position": [
+    -22.011,
+    0.7,
+    27.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "position": [
+    -22.011,
+    0.7,
+    39.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "position": [
+    22.0,
+    0.7,
+    27.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "position": [
+    22.0,
+    0.7,
+    39.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "position": [
+    22.0,
+    0.7,
+    51.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "position": [
+    -22.011,
+    0.7,
+    51.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-14",
+   "position": [
+    -22.011,
+    0.7,
+    -8.173
+   ]
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "position": [
+    -22.011,
+    0.7,
+    3.827
+   ]
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "position": [
+    -22.011,
+    0.7,
+    15.827
+   ]
+  },
+  {
+   "id": "rig-out-road-left",
+   "position": [
+    -42.273,
+    -0.038,
+    -2.888
+   ]
+  },
+  {
+   "id": "rig-out-forecourt",
+   "position": [
+    7.217,
+    -0.038,
+    62.112
+   ]
+  }
+ ]
+}

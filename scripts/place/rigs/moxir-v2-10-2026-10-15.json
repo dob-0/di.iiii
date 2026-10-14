@@ -2,7 +2,7 @@
  "snapshot": "moxir-v2-1-2026-10-10",
  "version": "2.10",
  "title": "MOXIR v2.10 - forty washes: the floor washes as 6 wild lines of 3, each one DMX chain",
- "what": "v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines (A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: \"there are 40 washes\", \"we pick from the poligraf 40 washes\", \"make it wild and as a lines and use the area not hard that we can connect dmx\". Source: scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) and line A last point (-32.7,-32.7) moved to (-27.0,-31.5) to stay in the fence (lead decision 2026-10-15; 1 m inside x -27.7).",
+ "what": "v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines (A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: \"there are 40 washes\", \"we pick from the poligraf 40 washes\", \"make it wild and as a lines and use the area not hard that we can connect dmx\". Source: scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) and line A last point (-32.7,-32.7) moved to (-27.0,-31.5) to stay in the fence (lead decision 2026-10-15; 1 m inside x -27.7). | 2026-10-15 01:40: 15 floor washes + 6 cube positions = the owner's hand arrangement, straightened (see moxir-v2-10-owner-arrangement-2026-10-15.json).",
  "written_by": "scripts/place/moxir_v2_8_floor.py",
  "date": "2026-10-15",
  "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
@@ -1929,11 +1929,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    8.6,
+    10.433,
     0.31,
-    -32.7
+    -17.212
    ],
    "r": [
     3.1416,
@@ -1987,7 +1987,14 @@
    },
    "circuit": "C13",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     8.6,
+     0.31,
+     -32.7
+    ]
+   }
   },
   {
    "id": "rig-par-planes-29",
@@ -2206,11 +2213,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line R (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was red tent right at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line R (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was red tent right at v2.9",
    "p": [
-    3.0,
+    7.853,
     0.31,
-    28.0
+    27.998
    ],
    "r": [
     3.1416,
@@ -2264,7 +2271,14 @@
    },
    "circuit": "C07",
    "throw_source": "epic-build default (reachOf) until the footprint run",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     3.0,
+     0.31,
+     28.0
+    ]
+   }
   },
   {
    "id": "rig-par-planes-10",
@@ -2273,11 +2287,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    -1.7,
+    2.143,
     0.31,
-    -14.0
+    -5.322
    ],
    "r": [
     3.1416,
@@ -2331,7 +2345,14 @@
    },
    "circuit": "C04",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -1.7,
+     0.31,
+     -14.0
+    ]
+   }
   },
   {
    "id": "rig-par-planes-17",
@@ -2340,11 +2361,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    -7.7,
+    -10.287,
     0.31,
-    -14.0
+    -40.982
    ],
    "r": [
     3.1416,
@@ -2398,7 +2419,14 @@
    },
    "circuit": "C07",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -7.7,
+     0.31,
+     -14.0
+    ]
+   }
   },
   {
    "id": "rig-par-planes-18",
@@ -2407,11 +2435,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    3.9,
+    -1.997,
     0.31,
-    -10.9
+    -5.322
    ],
    "r": [
     3.1416,
@@ -2465,7 +2493,14 @@
    },
    "circuit": "C10",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     3.9,
+     0.31,
+     -10.9
+    ]
+   }
   },
   {
    "id": "rig-par-planes-13",
@@ -2474,11 +2509,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    -11.2,
+    10.433,
     0.31,
-    -23.4
+    -5.322
    ],
    "r": [
     3.1416,
@@ -2532,7 +2567,14 @@
    },
    "circuit": "C07",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -11.2,
+     0.31,
+     -23.4
+    ]
+   }
   },
   {
    "id": "rig-par-planes-30",
@@ -2749,11 +2791,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    -22.5,
+    10.433,
     0.31,
-    -23.4
+    -40.982
    ],
    "r": [
     3.1416,
@@ -2807,7 +2849,14 @@
    },
    "circuit": "C07",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -22.5,
+     0.31,
+     -23.4
+    ]
+   }
   },
   {
    "id": "rig-par-planes-35",
@@ -2816,11 +2865,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line R (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was red tent right at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line R (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was red tent right at v2.9",
    "p": [
-    3.0,
+    7.853,
     0.31,
-    12.0
+    11.998
    ],
    "r": [
     3.1416,
@@ -2874,7 +2923,14 @@
    },
    "circuit": "C02",
    "throw_source": "epic-build default (reachOf) until the footprint run",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     3.0,
+     0.31,
+     12.0
+    ]
+   }
   },
   {
    "id": "rig-par-planes-15",
@@ -2953,11 +3009,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line C (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    3.5,
+    -10.287,
     0.31,
-    -23.4
+    -17.212
    ],
    "r": [
     3.1416,
@@ -3011,7 +3067,14 @@
    },
    "circuit": "C10",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): lantern top",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     3.5,
+     0.31,
+     -23.4
+    ]
+   }
   },
   {
    "id": "rig-par-planes-03",
@@ -3436,11 +3499,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was hall steel at v2.9",
    "p": [
-    -12.3,
+    -10.287,
     0.31,
-    -14.0
+    -5.322
    ],
    "r": [
     3.1416,
@@ -3494,7 +3557,14 @@
    },
    "circuit": "C07",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -12.3,
+     0.31,
+     -14.0
+    ]
+   }
   },
   {
    "id": "rig-par-planes-22",
@@ -3503,11 +3573,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
    "p": [
-    16.9,
+    -6.147,
     0.31,
-    -15.7
+    -5.322
    ],
    "r": [
     3.1416,
@@ -3561,7 +3631,14 @@
    },
    "circuit": "C10",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     16.9,
+     0.31,
+     -15.7
+    ]
+   }
   },
   {
    "id": "rig-par-planes-14",
@@ -3570,11 +3647,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
    "p": [
-    -27.0,
+    6.293,
     0.31,
-    -31.5
+    -5.322
    ],
    "r": [
     3.1416,
@@ -3628,7 +3705,14 @@
    },
    "circuit": "C07",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -27.0,
+     0.31,
+     -31.5
+    ]
+   }
   },
   {
    "id": "rig-par-planes-38",
@@ -3637,11 +3721,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line R (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was red tent right at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line R (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was red tent right at v2.9",
    "p": [
-    3.0,
+    7.853,
     0.31,
-    44.0
+    43.998
    ],
    "r": [
     3.1416,
@@ -3695,7 +3779,14 @@
    },
    "circuit": "C02",
    "throw_source": "epic-build default (reachOf) until the footprint run",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     3.0,
+     0.31,
+     44.0
+    ]
+   }
   },
   {
    "id": "rig-par-planes-16",
@@ -3704,11 +3795,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line D (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
    "p": [
-    17.0,
+    10.433,
     0.31,
-    -29.5
+    -29.092
    ],
    "r": [
     3.1416,
@@ -3762,7 +3853,14 @@
    },
    "circuit": "C10",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     17.0,
+     0.31,
+     -29.5
+    ]
+   }
   },
   {
    "id": "rig-par-planes-11",
@@ -3771,11 +3869,11 @@
    "layer": "lines",
    "status": "used",
    "moments": [],
-   "position": "MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
+   "position": "owner's hand arrangement 2026-10-15 01:20-01:32, straightened (moxir-v2-10-owner-arrangement-2026-10-15.json); MOXIR v2.10 wild line B (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
    "p": [
-    -14.7,
+    -10.287,
     0.31,
-    -32.7
+    -29.092
    ],
    "r": [
     3.1416,
@@ -3829,7 +3927,14 @@
    },
    "circuit": "C07",
    "throw_source": "footprints castRay 2026-10-12 (hall v13 record + rig solids): roof deck",
-   "moved_from_v2_9": true
+   "moved_from_v2_9": true,
+   "moved_from_v2_10_build": {
+    "p": [
+     -14.7,
+     0.31,
+     -32.7
+    ]
+   }
   },
   {
    "id": "rig-beam-planes-01",
@@ -6736,7 +6841,7 @@
       }
      ],
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "intent": "One colour, ember, low everywhere: the hall breathes, nothing shouts."
@@ -6896,7 +7001,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "notes": [
@@ -14986,7 +15091,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    },
    "source": "the spread's cap after a9d4b0d1: fader 0.16 = the drawn fraction measured under the 0.65 % budget"
@@ -18611,7 +18716,7 @@
   },
   "hand_rule": {
    "lowest_over_standing_m": 5.4,
-   "basis": "owner 2026-10-12: 3 m counted from a raised hand (2.4 m) — IEC TR 60825-3 separation above the audience"
+   "basis": "owner 2026-10-12: 3 m counted from a raised hand (2.4 m) \u2014 IEC TR 60825-3 separation above the audience"
   },
   "why_not_lower": "the comb runs along the hall and ends on the entry wall (>= 9.0 m rule) after crossing the DJ crane (>= 9.2 m); a true lattice of crossings over the floor would need sources far apart (the cubes sit within 7 m)"
  },
@@ -23556,19 +23661,19 @@
    9.7
   ],
   "counts": {
-   "B380F · plane 1 (behind the DJ)": 6,
-   "B380F · plane 3 (behind the stage)": 5,
-   "B380F · plane 2 (the wings)": 7,
-   "PAR · cut down": 5,
-   "PAR · cut up": 5,
-   "PAR · stage columns": 3,
-   "PAR · halo": 3,
-   "PAR · columns": 23,
-   "PAR · roof": 3,
-   "PAR · stage key": 2,
-   "PAR · speaker face L": 1,
-   "PAR · speaker face R": 1,
-   "PAR · embers": 4
+   "B380F \u00b7 plane 1 (behind the DJ)": 6,
+   "B380F \u00b7 plane 3 (behind the stage)": 5,
+   "B380F \u00b7 plane 2 (the wings)": 7,
+   "PAR \u00b7 cut down": 5,
+   "PAR \u00b7 cut up": 5,
+   "PAR \u00b7 stage columns": 3,
+   "PAR \u00b7 halo": 3,
+   "PAR \u00b7 columns": 23,
+   "PAR \u00b7 roof": 3,
+   "PAR \u00b7 stage key": 2,
+   "PAR \u00b7 speaker face L": 1,
+   "PAR \u00b7 speaker face R": 1,
+   "PAR \u00b7 embers": 4
   },
   "circuits": 14,
   "circuits_ok": false,
