@@ -2,8 +2,10 @@
 
 ## The owner's words (2026-10-14)
 
-> "full Raw laser workflow like TouchDesigner and more — all, all ways"
-> "we need to keep our research for future work, so we have the lexicon and managed things — full di.iiii control"
+> "i want to more than what i had in td so td + new things there so go" · "yes we need to all alll all ways :)" · "yes i want to all"
+> "4 we need to keep our resears for future work so we have lexicon and managed things so we need to full di.iiii control"
+
+(Verbatim, as typed in the session, 2026-10-14.)
 
 (Ledger N645, N645.4. "Raw" is the route; the canvas is called **Nodes**, see `vocabulary.md`.)
 
