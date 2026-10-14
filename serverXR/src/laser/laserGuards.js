@@ -84,30 +84,73 @@ const DEFAULT_GUARDS = Object.freeze({
     tempSamples: 150,
     tempPeriodMs: 100,
     sendSetRate: false,
-    validated: false
+    validated: false,
+    clamped: []
 })
 
-// What a laser.json value may be: [min, max]. A value outside is refused (the base value is kept).
-const BOUNDS = Object.freeze({
-    litStep: [0.001, 2], blankStep: [0.001, 2], cornerAngleDeg: [0, 180], cornerRadPerPoint: [0.05, 10],
-    startDwell: [0, 100], endDwell: [0, 100], blankBeforeOnMs: [0, 10], litAfterOnMs: [0, 10],
-    litBeforeOffMs: [0, 10], blankAfterOffMs: [0, 10], parkPoints: [1, 100],
-    tempStartC: [0, 100], tempEndC: [0, 100], tempMinScale: [0, 1], tempSamples: [1, 10000], tempPeriodMs: [10, 10000]
+// THE SAFE RANGES a laser.json value is clamped to (round 2, 2026-10-14, review of PR #931 §5): a
+// value may only make a guard STRICTER than the loosest practice cited in the header, never switch it
+// off. A value outside its range is clamped to the nearest edge and named in `clamped` (shown in the
+// state, logged by the engine). The loose edges, each the loosest cited value:
+//   litStep ≤ 2/60   OpenLase ugoira_player.py:105 on_speed 2/60 (the fastest lit speed in the sources)
+//   blankStep ≤ 2/20 OpenLase svg2ild.py off_speed, lasy 0.1 (the default is already the loosest)
+//   cornerAngleDeg ≤ 30, cornerRadPerPoint ≤ 0.6, startDwell/endDwell ≥ 1  (the cited defaults)
+//   blankBeforeOnMs ≥ 0.06 (OpenLase switch_on_dwell 3 at 48 kHz), litBeforeOffMs ≥ 0.1 (switch_off 6 at 48 kHz)
+//   tempStartC ≤ 60, tempEndC ≤ 75 (Wicked's limiter), start ≤ end − 5, tempMinScale ≤ 0.5
+//   the average window (tempSamples × tempPeriodMs) 1…30 s (Wicked: 15 s)
+// The strict edges keep the optimiser's work bounded (the frame budget in the engine refuses a frame
+// that does not fit; a step below 0.005 would refuse almost every figure).
+const SAFE = Object.freeze({
+    litStep: [0.005, 2 / 60], blankStep: [0.01, 2 / 20], cornerAngleDeg: [10, 30], cornerRadPerPoint: [0.2, 0.6],
+    startDwell: [1, 10], endDwell: [1, 10], blankBeforeOnMs: [0.06, 5], litAfterOnMs: [0, 5],
+    litBeforeOffMs: [0.1, 5], blankAfterOffMs: [0, 5], parkPoints: [5, 100],
+    tempStartC: [30, 60], tempEndC: [40, 75], tempMinScale: [0.1, 0.5], tempSamples: [10, 300], tempPeriodMs: [50, 200]
 })
+const TEMP_WINDOW_MS = Object.freeze([1000, 30000])
 
-/** Guards from config over a base, every key checked against BOUNDS; start < end for the temperatures. Pure. */
+/**
+ * Guards from config over a base, every key clamped into SAFE; `clamped` lists the keys that were.
+ * Pure.
+ */
 const normaliseGuards = (over, base = DEFAULT_GUARDS) => {
     const g = { ...base }
+    const clamped = []
+    const clamp = (k, v) => {
+        const [lo, hi] = SAFE[k]
+        const c = v < lo ? lo : v > hi ? hi : v
+        if (c !== v && !clamped.includes(k)) clamped.push(k)
+        return c
+    }
     if (over && typeof over === 'object') {
-        for (const [k, [lo, hi]] of Object.entries(BOUNDS)) {
+        for (const k of Object.keys(SAFE)) {
+            if (over[k] === undefined || over[k] === null) continue
             const v = Number(over[k])
-            if (over[k] !== undefined && over[k] !== null && Number.isFinite(v) && v >= lo && v <= hi) g[k] = v
+            if (Number.isFinite(v)) g[k] = clamp(k, v)
+            else if (!clamped.includes(k)) clamped.push(k)
         }
         if (typeof over.sendSetRate === 'boolean') g.sendSetRate = over.sendSetRate
     }
-    if (!(g.tempStartC < g.tempEndC)) { g.tempStartC = base.tempStartC; g.tempEndC = base.tempEndC }
+    if (g.tempStartC > g.tempEndC - 5) { g.tempStartC = Math.max(SAFE.tempStartC[0], g.tempEndC - 5); clamped.push('tempStartC') }
+    const windowMs = g.tempSamples * g.tempPeriodMs
+    if (windowMs < TEMP_WINDOW_MS[0] || windowMs > TEMP_WINDOW_MS[1]) {
+        g.tempSamples = Math.round(Math.min(Math.max(windowMs, TEMP_WINDOW_MS[0]), TEMP_WINDOW_MS[1]) / g.tempPeriodMs)
+        clamped.push('tempSamples')
+    }
+    g.startDwell = Math.round(g.startDwell); g.endDwell = Math.round(g.endDwell); g.tempSamples = Math.round(g.tempSamples)
     g.validated = false
+    g.clamped = [...new Set([...(base.clamped || []), ...clamped])]
     return Object.freeze(g)
+}
+
+// THE FRAME BUDGET (round 2, review §1): one pass of an optimised frame may take at most
+// FRAME_MAX_MS — 2000 points at 30 kpps, the longest pass di streamed before the guards
+// (FRAME_MAX_POINTS at the reference rate) — and never more than the cube's ring buffer minus the
+// margin the engine keeps. A frame over it is REFUSED (a named stop), never sped up: a looser step
+// would undo the guard. Bounds both the optimiser's work and how long a replaced frame can play.
+const FRAME_MAX_MS = (2000 / REFERENCE_RATE) * 1000
+const frameBudget = (rate, rxBufferSize = null, margin = 200) => {
+    const byTime = Math.floor((rate * FRAME_MAX_MS) / 1000 + 1e-9)
+    return rxBufferSize > margin ? Math.min(byTime, rxBufferSize - margin) : byTime
 }
 
 /** The guards in points and field units at one rate (points a second). Pure. */
@@ -163,13 +206,15 @@ const rgbOf = (p) => [p[2], p[3], p[4]]
 /**
  * The frame as the cube should draw it: step-limited, corners held, every lit stretch dwelt and
  * blank-delayed (the method in the header). The frame loops: the last point leads to the first.
- * Pure; O(points out).
+ * Over `maxPoints` it stops early and returns { points: null, overBudget: true } (the engine refuses
+ * the frame). Pure; O(min(points out, maxPoints)).
  * @returns {{ points: number[][], stats: { in: number, out: number, maxLitStep: number, maxBlankStep: number } }}
  */
-const optimisePath = (points, plan) => {
+const optimisePath = (points, plan, maxPoints = Infinity) => {
     const n = Array.isArray(points) ? points.length : 0
     const out = []
     for (let i = 0; i < n; i += 1) {
+        if (out.length > maxPoints) return { points: null, overBudget: true, stats: { in: n, out: out.length, maxLitStep: null, maxBlankStep: null } }
         const p = points[i]
         const next = points[(i + 1) % n]
         const prev = points[(i - 1 + n) % n]
@@ -187,7 +232,8 @@ const optimisePath = (points, plan) => {
         }
         if (n > 1) between(out, p, next, litOut ? plan.litStep : plan.blankStep, litOut ? rgbOf(next) : BLANK)
     }
-    return { points: out, stats: { in: n, out: out.length, ...stepStats(out) } }
+    if (out.length > maxPoints) return { points: null, overBudget: true, stats: { in: n, out: out.length, maxLitStep: null, maxBlankStep: null } }
+    return { points: out, overBudget: false, stats: { in: n, out: out.length, ...stepStats(out) } }
 }
 
 /** The longest lit and blank step of a looping list of points (Chebyshev). Pure. */
@@ -254,6 +300,6 @@ const createTempAverager = ({ samples = DEFAULT_GUARDS.tempSamples, periodMs = D
 const scaleColour = (points, scale) => (scale >= 1 ? points : points.map(([x, y, r, g, b]) => [x, y, r * scale, g * scale, b * scale]))
 
 module.exports = {
-    REFERENCE_RATE, DEFAULT_GUARDS, normaliseGuards, pathPlan, optimisePath, cornerHold, stepStats,
+    REFERENCE_RATE, DEFAULT_GUARDS, SAFE, FRAME_MAX_MS, frameBudget, normaliseGuards, pathPlan, optimisePath, cornerHold, stepStats,
     bridgePath, parkPath, powerScale, createTempAverager, scaleColour
 }

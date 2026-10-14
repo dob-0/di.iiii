@@ -176,7 +176,7 @@ const wire = (sent) => sent.map((s) => {
     return pts.every((p) => !p[2] && !p[3] && !p[4]) && last[0] === 0x800 && last[1] === 0x800 ? 'park' : 'data'
 })
 
-describe('every stop parks the beam blank at the centre BEFORE output-off (Helios practice)', () => {
+describe('every stop: buffer cleared, beam parked blank at the centre, THEN output-off (Helios practice; 0x8d per Wicked)', () => {
     const circle = generateShape({ shape: 'circle', size: 0.5, height: 0.5, points: 120 })
     const startedOn = (frame) => {
         const rig = armed(ONE)
@@ -193,36 +193,36 @@ describe('every stop parks the beam blank at the centre BEFORE output-off (Helio
         const rig = startedOn(circle)
         rig.clock.t += 201
         rig.engine.tick()
-        expect(wire(rig.sent)).toEqual(['park', '128,0', '128,0'])
+        expect(wire(rig.sent)).toEqual(['141', '141', 'park', '128,0', '128,0'])
         expect(parkSteps(rig)).toBeLessThanOrEqual(0.1 + 2 / 0xfff)
     })
     it('a still beam', () => {
         const rig = startedOn(Array.from({ length: 60 }, () => lit(0.2, 0.5)))
         for (let i = 0; i < 11; i += 1) rig.tick(20)
         const w = wire(rig.sent)
-        expect(w.slice(w.indexOf('park'))).toEqual(['park', '128,0', '128,0'])
+        expect(w.slice(w.indexOf('park') - 2)).toEqual(['141', '141', 'park', '128,0', '128,0'])
     })
     it('the link lost', () => {
         const rig = startedOn(circle)
         rig.clock.t += 3100
         rig.engine.alive('all')
         rig.engine.tick()
-        expect(wire(rig.sent)).toEqual(['park', '128,0', '128,0'])
+        expect(wire(rig.sent)).toEqual(['141', '141', 'park', '128,0', '128,0'])
     })
     it('disarm', () => {
         const rig = startedOn(circle)
         rig.engine.arm({ armed: false })
-        expect(wire(rig.sent)).toEqual(['park', '128,0', '128,0', '120,0'])
+        expect(wire(rig.sent)).toEqual(['141', '141', 'park', '128,0', '128,0', '120,0'])
     })
     it('shutdown', async () => {
         const rig = startedOn(circle)
         await rig.engine.shutdown()
-        expect(wire(rig.sent)).toEqual(['park', '128,0', '128,0', '120,0'])
+        expect(wire(rig.sent)).toEqual(['141', '141', 'park', '128,0', '128,0', '120,0'])
     })
 })
 
 describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers\' driver reads it', () => {
-    it('2 on firmware 1.7 is the interlock bit: output OFF (the 2026-10-14 reading that said "on")', () => {
+    it('2 on firmware 1.17 (the real cubes) is the interlock bit: output OFF (the 2026-10-14 reading that said "on")', () => {
         expect(proto.parseFullInfo(infoAnswer({ flagsByte: 2 }))).toMatchObject({ outputEnabled: false, interlockEnabled: true, statusFlags: 2 })
     })
     it('bit 0 is output enabled; ≥ 0.13: bit 2 warning, bit 3 over-temperature, bits 4-7 packet errors', () => {
@@ -248,7 +248,7 @@ describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers
         const rig = armed(ONE)
         rig.sent.length = 0
         rig.engine.arm({ armed: false })
-        expect(rig.sent.filter((s) => s.port === proto.PORT.CMD).map((s) => [...s.buf])).toEqual([[0x80, 0], [0x80, 0], [0x78, 0]])
+        expect(rig.sent.filter((s) => s.port === proto.PORT.CMD).map((s) => [...s.buf])).toEqual([[0x8d], [0x8d], [0x80, 0], [0x80, 0], [0x78, 0]])
     })
 })
 
@@ -283,11 +283,21 @@ describe('the Laser node\'s eight shapes, as the guards draw them, still pass th
 })
 
 describe('config and state', () => {
-    it('defaults in code, laser.json guards for all, per cube over that; a bad value falls back', () => {
+    it('defaults in code, laser.json guards for all, per cube over that; every value clamped into its safe range and named', () => {
         const rig = armed({ guards: { litStep: 0.02, startDwell: -3 }, cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { blankStep: 0.05, tempEndC: 10 } }, { id: 'cube-2', ip: '10.0.0.52' }] })
         const [a, b] = rig.engine.state().cubes
-        expect(a.guards).toMatchObject({ litStep: 0.02, blankStep: 0.05, startDwell: 2, tempStartC: 60, tempEndC: 75, validated: false })
-        expect(b.guards).toMatchObject({ litStep: 0.02, blankStep: 0.1 })
+        expect(a.guards).toMatchObject({ litStep: 0.02, blankStep: 0.05, startDwell: 1, tempEndC: 40, tempStartC: 35, validated: false })
+        expect(a.guards.clamped).toEqual(expect.arrayContaining(['startDwell', 'tempEndC', 'tempStartC']))
+        expect(b.guards).toMatchObject({ litStep: 0.02, blankStep: 0.1, startDwell: 1, clamped: ['startDwell'] })
+    })
+    it('laser.json cannot switch a guard off (review §5): the values that did are clamped to the loosest cited practice', () => {
+        const off = g.normaliseGuards({ litStep: 2, blankStep: 2, cornerAngleDeg: 180, startDwell: 0, endDwell: 0, blankBeforeOnMs: 0, litBeforeOffMs: 0, tempStartC: 99, tempEndC: 100, tempMinScale: 1, tempSamples: 10000, tempPeriodMs: 10000 })
+        expect(off).toMatchObject({ litStep: 2 / 60, blankStep: 0.1, cornerAngleDeg: 30, startDwell: 1, endDwell: 1, blankBeforeOnMs: 0.06, litBeforeOffMs: 0.1, tempStartC: 60, tempEndC: 75, tempMinScale: 0.5 })
+        expect(off.tempSamples * off.tempPeriodMs).toBeLessThanOrEqual(30000)
+        const dos = g.normaliseGuards({ litStep: 0.001, tempSamples: 1, tempPeriodMs: 10 })
+        expect(dos.litStep).toBe(0.005)
+        expect(dos.tempSamples * dos.tempPeriodMs).toBeGreaterThanOrEqual(1000)
+        expect(g.normaliseGuards({ litStep: 'x' }).clamped).toEqual(['litStep'])
     })
     it('the state shows what the guards did to the frame being drawn', () => {
         const rig = armed(ONE)
@@ -299,10 +309,103 @@ describe('config and state', () => {
         expect(p.maxLitStep).toBeLessThanOrEqual(0.025 + 1e-9)
         expect(rig.engine.state().guard.path).toMatchObject({ litStep: 0.025, blankStep: 0.1, referenceRate: 30000, validated: false })
     })
-    it('SET_RATE (0x82) is never sent by default; with guards.sendSetRate it goes before output-on', () => {
+    it('SET_RATE (0x82) is never sent by default; with guards.sendSetRate and a laser.json dacRate it goes before the clear and output-on', () => {
         const cmdsOf = (rig) => rig.sent.filter((s) => s.port === proto.PORT.CMD && s.buf[0] !== 0x77).map((s) => [...s.buf])
         expect(cmdsOf(armed(ONE)).some((b) => b[0] === 0x82)).toBe(false)
-        const on = cmdsOf(armed({ cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] }))
-        expect(on).toEqual([[0x78, 1], [0x82, 0x30, 0x75, 0, 0], [0x80, 1]])
+        expect(cmdsOf(armed({ cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] })).some((b) => b[0] === 0x82)).toBe(false) // nothing asked
+        const on = cmdsOf(armed({ dacRate: 30000, cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] }))
+        expect(on).toEqual([[0x78, 1], [0x82, 0x30, 0x75, 0, 0], [0x8d], [0x8d], [0x80, 1]])
+    })
+})
+
+// Round 2 (2026-10-14): the review of PR #931 (~/work/agent-reports-2026-10-14/laser-guards-review.md).
+describe('round 2: the review\'s findings (reproduced first with the reviewer\'s scripts on ae1ba1ac)', () => {
+    const zigzag = Array.from({ length: 2000 }, (_, i) => lit(i % 2 ? 1 : -1, (i / 2000) * 1)) // full-field strokes
+    const hold = (rig, ms) => { for (let t = 0; t < ms; t += 20) rig.tick(20) }
+    it('§1 the frame budget: 67 ms of points at the cube\'s rate, never above its buffer', () => {
+        expect(g.frameBudget(30000)).toBe(2000)
+        expect(g.frameBudget(35000, 6000)).toBe(2333)
+        expect(g.frameBudget(35000, 1000)).toBe(800)
+    })
+    it('§1 a frame that the guards make longer than the budget is refused with a named stop, never sped up', () => {
+        const opt = g.optimisePath(zigzag, at(30000), g.frameBudget(30000))
+        expect(opt).toMatchObject({ points: null, overBudget: true })
+        const rig = armed(ONE)
+        rig.engine.setFrame('all', zigzag)
+        rig.tick(20)
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'frame-too-long' })
+        expect(rig.engine.state().cubes[0].path).toMatchObject({ overBudget: true, budget: 2000, pointsOut: null })
+        // A frame that fits brings it back.
+        rig.engine.setFrame('all', generateShape({ shape: 'circle', size: 0.5, height: 0.5, points: 500 }))
+        rig.tick(20)
+        expect(rig.engine.state().cubes[0].stop).toBe(null)
+    })
+    it('§1 a dark frame cuts the lit pass at once: no lit point after it', () => {
+        const rig = armed(ONE)
+        rig.engine.setFrame('all', generateShape({ shape: 'star', size: 0.9, height: 0.5, points: 1500 }))
+        rig.tick(20)
+        rig.engine.setFrame('all', [dark(0, 0.5)])
+        rig.sent.length = 0
+        hold(rig, 200)
+        expect(pointsOf(rig.data()).filter((p) => p[2] || p[3] || p[4]).length).toBe(0)
+        expect(rig.engine.state().cubes[0].stop).toBe(null)
+    })
+    it('§2 six cubes × 2000-point frames: the work is done when the frame is posted, one tick takes < 20 ms', () => {
+        const six = { cubes: Array.from({ length: 6 }, (_, i) => ({ id: `cube-${i + 1}`, ip: `10.0.0.${51 + i}` })) }
+        const rig = armed(six)
+        const circle2000 = generateShape({ shape: 'circle', size: 0.5, height: 0.5, points: 2000 })
+        const ticks = []
+        const posts = []
+        for (let round = 0; round < 5; round += 1) {
+            const t0 = performance.now()
+            for (let i = 0; i < 6; i += 1) rig.engine.setFrame(`cube-${i + 1}`, i % 2 ? zigzag : circle2000.map(([x, y, r, gg, b]) => [x + round * 1e-4, y, r, gg, b]))
+            posts.push(performance.now() - t0)
+            const t1 = performance.now()
+            rig.tick(20)
+            ticks.push(performance.now() - t1)
+        }
+        expect(Math.max(...ticks), `ticks ${ticks.map((t) => t.toFixed(1)).join(', ')} ms`).toBeLessThan(20)
+        expect(Math.max(...posts), `posts ${posts.map((t) => t.toFixed(1)).join(', ')} ms`).toBeLessThan(100)
+    })
+    it('§2 cubes at the same rate share one optimised frame', () => {
+        const rig = armed({ cubes: [{ id: 'cube-1', ip: '10.0.0.51' }, { id: 'cube-2', ip: '10.0.0.52' }] })
+        rig.engine.setFrame('all', generateShape({ shape: 'square', size: 0.5, height: 0.5, points: 120 }))
+        rig.tick(20)
+        const [a, b] = rig.engine.state().cubes
+        expect(a.path).toEqual(b.path)
+    })
+    it('§3 still if EITHER the posted or the optimised frame is still: a spot plus one far point is stopped', () => {
+        const spot = (n) => Array.from({ length: n }, () => lit(0.2, 0.5))
+        for (const frame of [[...spot(40), dark(-0.8, 0.9)], [...spot(30), lit(-0.8, 0.9), lit(-0.6, 0.9)], [...spot(120), dark(0.9, 0.1)]]) {
+            const rig = armed(ONE)
+            rig.engine.setFrame('all', frame)
+            hold(rig, 240)
+            expect(rig.engine.state().cubes[0].stop, `${frame.length} points`).toMatchObject({ reason: 'still-beam' })
+        }
+    })
+    it('§5 the path is planned at the rate the cube plays, not laser.json\'s dacRate; a disagreement is shown', () => {
+        const rig = armed({ ...ONE, dacRate: 25000 })
+        rig.engine.setFrame('all', [lit(-0.5, 0.5), lit(0.5, 0.5)])
+        rig.tick(20)
+        expect(rig.engine.state().cubes[0]).toMatchObject({ rate: 30000, rateMismatch: true, path: { rate: 30000 } })
+    })
+    it('§7 the cube\'s over-temperature flag stops it (arm again); its warning takes the power to the minimum', () => {
+        const hot = armed(ONE, { flagsByte: 0x08 })
+        hot.engine.setFrame('all', [lit(0, 0.5), lit(0.2, 0.5)])
+        hot.tick(20)
+        expect(hot.engine.state().cubes[0]).toMatchObject({ armed: false, stop: { reason: 'over-temperature' } })
+        const warm = armed(ONE, { flagsByte: 0x04 })
+        warm.engine.setFrame('all', [lit(0, 0.5), lit(0.2, 0.5)])
+        warm.tick(20)
+        const maxG = Math.max(...pointsOf(warm.data()).map((p) => p[3]))
+        expect(maxG).toBe(proto.toDeviceColour(0.5))
+    })
+    it('§7 the temperature average starts fresh at every arm', () => {
+        const rig = armed(ONE, { temp: 30 })
+        hold(rig, 1000)
+        expect(rig.engine.state().cubes[0].temperature.samples).toBeGreaterThan(5)
+        rig.engine.arm({ armed: false })
+        rig.engine.arm({ armed: true, confirm: ARM_PHRASE })
+        expect(rig.engine.state().cubes[0].temperature.samples).toBe(0)
     })
 })

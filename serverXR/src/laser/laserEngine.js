@@ -39,8 +39,13 @@
 //      step-limited, corner-held, dwelt and blank-delayed for the cube's rate before it streams; a
 //      new frame is reached by a blank, step-limited bridge; colour is scaled down from 60 °C to
 //      50 % at 75 °C (averaged); every stop — no frame, still beam, link lost, disarm, shutdown —
-//      walks the beam blank to the centre and parks it there BEFORE output-off. The still-beam guard
-//      (7) reads the frame as optimised, so it judges what the cube is actually sent.
+//      clears the cube's ring buffer (0x8d), walks the beam blank to the centre and parks it, then
+//      output-off; a resume clears the buffer before output-on. The still-beam guard (7) stops a frame
+//      that is still as posted OR as optimised. Round 2 (review of PR #931): the path work runs once
+//      per posted frame (shared by cubes at the same rate), not in the tick; a frame longer than the
+//      frame budget (67 ms of points at the cube's rate, ≤ its buffer) is refused (frame-too-long);
+//      a dark frame cuts the lit pass at once; the path is planned at the rate the cube says it
+//      plays; the cube's over-temperature flag stops it, its warning drops the power to the minimum.
 // What software cannot do, said plainly: a galvo that stalls while a figure is being sent is a
 // still beam the server never sees (it only knows what it commanded); a server killed with -9, or a
 // cable pulled, leaves the cube to its own firmware, whose behaviour when the stream stops is not
@@ -116,12 +121,14 @@ const GUARD = Object.freeze({
     VALIDATED: false
 })
 const STILL_WINDOW_FIELD = GUARD.STILL_WINDOW_DEG / GUARD.SCAN_HALF_ANGLE_DEG
-const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost' })
+const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost', FRAME_TOO_LONG: 'frame-too-long', OVER_TEMPERATURE: 'over-temperature' })
 const STOP_TEXT = Object.freeze({
     [STOP.NO_INFO]: 'not armed: the cube never answered the info question',
     [STOP.NO_FRAME]: `stopped: no frame for ${GUARD.FRAME_TIMEOUT_MS} ms`,
     [STOP.STILL_BEAM]: `stopped: a still beam held ${GUARD.STILL_HOLD_MS} ms`,
-    [STOP.LINK_LOST]: `stopped: the cube went silent for ${GUARD.LINK_LOST_MS / 1000} s — arm again`
+    [STOP.LINK_LOST]: `stopped: the cube went silent for ${GUARD.LINK_LOST_MS / 1000} s — arm again`,
+    [STOP.FRAME_TOO_LONG]: `stopped: the frame needs more points than one pass may take (${Math.round(guardsLib.FRAME_MAX_MS)} ms at the cube's rate) once the galvo guards are in — simplify it`,
+    [STOP.OVER_TEMPERATURE]: 'stopped: the cube reports over-temperature — let it cool, then arm again'
 })
 
 const clampTo = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
@@ -282,9 +289,9 @@ const createLaserEngine = ({
         bufferFree: null, bufferAt: null, sentSince: 0,
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
-        prep: null, playingPrep: null,
+        prep: null, playingPrep: null, guardsKey: JSON.stringify(c.guards),
         temp: guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs }),
-        stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0 }
+        stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0, [STOP.FRAME_TOO_LONG]: 0, [STOP.OVER_TEMPERATURE]: 0 }
     }]))
     const frames = { all: null, byCube: new Map() }
     let armed = false
@@ -322,30 +329,63 @@ const createLaserEngine = ({
     }
     const framesFor = (id) => frames.byCube.get(id) || frames.all
 
+    // The rate the cube PLAYS (round 2, review §6): its last info answer (info.dacRate), never above
+    // its maximum. laser.json's dacRate is a REQUEST: sent as SET_RATE only with guards.sendSetRate,
+    // and it counts only once the cube's own answer says it plays it. Planning at a rate the cube
+    // does not play would run the galvos faster than the step limit.
     const rateOf = (c) => {
         if (!infoUsable(c.info)) return null
-        const want = config.dacRate || c.info.dacRate || c.info.maxDacRate
-        return Math.min(want, c.info.maxDacRate)
+        return Math.min(c.info.dacRate || c.info.maxDacRate, c.info.maxDacRate)
     }
-    // The rate a cube's path is planned at: its stream rate, or (sim, no info yet) laser.json's
+    const rateMismatch = (c) => Boolean(config.dacRate && rateOf(c) && rateOf(c) !== Math.min(config.dacRate, c.info.maxDacRate))
+    // The rate a cube's path is planned at: the rate it plays, or (sim, no info yet) laser.json's
     // dacRate, or the 30 kpps the guards were tuned at.
     const planRate = (c) => rateOf(c) || config.dacRate || guardsLib.REFERENCE_RATE
     const planOf = (c) => guardsLib.pathPlan(c.guards, planRate(c))
-    // The frame as this cube will draw it (laserGuards.js), and its still beams judged on that.
-    // Kept until the frame or the rate changes; a keep-alive changes neither.
-    const prepared = (c, frame) => {
+    const budgetOf = (c, rate) => guardsLib.frameBudget(rate, c.info?.rxBufferSize || null, BUFFER_MARGIN)
+    // The frame as this cube will draw it (laserGuards.js), its still beams judged on that, and
+    // whether it fits the frame budget. Worked out ONCE per posted frame for each (guards, rate,
+    // budget), shared by every cube with the same, and kept on the frame (round 2, review §2): the
+    // work happens when a frame is posted (setFrame), the tick only looks it up.
+    const prepare = (c, frame) => {
         if (!frame) return null
         const rate = planRate(c)
-        if (c.prep && c.prep.frame === frame && c.prep.rate === rate) return c.prep
-        const plan = guardsLib.pathPlan(c.guards, rate)
-        const opt = guardsLib.optimisePath(frame.points, plan)
-        c.prep = { frame, rate, plan, points: opt.points, stats: opt.stats, still: stillBeams(opt.points) }
-        return c.prep
+        const budget = budgetOf(c, rate)
+        const key = `${c.guardsKey}|${rate}|${budget}`
+        let prep = frame.preps.get(key)
+        if (!prep) {
+            const plan = guardsLib.pathPlan(c.guards, rate)
+            const opt = guardsLib.optimisePath(frame.points, plan, budget)
+            prep = { key, rate, budget, plan, points: opt.points, overBudget: opt.overBudget, stats: opt.stats, still: opt.points ? stillBeams(opt.points) : [] }
+            frame.preps.set(key, prep)
+        }
+        c.prep = prep
+        return prep
     }
     const allowed = (c, spot) => c.stillBeams.some((b) => Math.hypot(spot.x - b.x, spot.y - b.y) <= b.within)
-    const stillOf = (c, frame) => (prepared(c, frame)?.still || []).filter((s) => !allowed(c, s))
-    const powerOf = (c) => guardsLib.powerScale(c.temp.average(), c.guards)
+    // Still if EITHER the frame as posted OR as optimised is still (round 2, review §3): the
+    // optimiser turns the move into a dot into a lit line and adds blank holds to the frame's time,
+    // so the optimised list alone let a dot through that the raw frame shows plainly. Never looser
+    // than the guard before the optimiser.
+    const stillOf = (c, frame) => {
+        if (!frame) return []
+        const prep = prepare(c, frame)
+        return [...frame.rawStill, ...(prep?.still || [])].filter((s) => !allowed(c, s))
+    }
+    // Brightness: the averaged-temperature limiter, and the cube's own temperature warning (byte 5)
+    // takes it straight to the limiter's minimum.
+    const powerOf = (c) => {
+        const scale = guardsLib.powerScale(c.temp.average(), c.guards)
+        return c.info?.temperatureWarning ? Math.min(scale, c.guards.tempMinScale) : scale
+    }
 
+    // The ring buffer cleared (CLEAR_RINGBUFFER 0x8d, twice): what was queued before a stop must not
+    // play when the output comes back. The free count is full again.
+    const clearBuffer = (c, t) => {
+        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        if (c.info?.rxBufferSize) { c.bufferFree = c.info.rxBufferSize; c.bufferAt = t; c.sentSince = 0 }
+    }
     // The stop's points (laserGuards.parkPath): blank where the beam is, a blank walk to the centre,
     // parked there — as ≤140-point messages. Data only; the caller sends output-off after.
     const parkMessages = (c) => {
@@ -355,39 +395,49 @@ const createLaserEngine = ({
             out.push(proto.encodeSampleData(pts.slice(i, i + proto.MAX_POINTS_PER_MESSAGE), c.message, c.frameNum))
             c.message = (c.message + 1) & 0xff
         }
+        c.sentSince += pts.length
         c.lastPoint = [0, 0]
         c.playingPrep = null
         return out
     }
 
-    // A stop: blank and park at the centre, then output off twice (the spec: send critical commands
-    // twice, they are idempotent).
+    // A stop, in this order: the ring buffer cleared (twice), the beam parked blank at the centre,
+    // output off (twice; the spec: critical commands twice, they are idempotent). The clear and the
+    // park go to different ports, so the cube may take them in either order — UNVALIDATED on a real
+    // cube; the output-off is what makes it dark.
     const stopCube = (c, reason, t, detail = null) => {
         c.stop = { reason, at: t, detail }
         c.stops[reason] = (c.stops[reason] || 0) + 1
         c.stillSince = null
         c.playing = null
         c.index = 0
+        clearBuffer(c, t)
         for (const buf of parkMessages(c)) send(c, buf, proto.PORT.DATA)
         send(c, proto.setOutput(false), proto.PORT.CMD)
         send(c, proto.setOutput(false), proto.PORT.CMD)
         log?.warn?.(`[laser] ${c.id} ${STOP_TEXT[reason]}${detail ? ` (${detail})` : ''}`)
     }
-    const resumeCube = (c) => {
+    // Back on: the buffer cleared first, so nothing queued before the stop can light.
+    const resumeCube = (c, t) => {
         c.stop = null
         c.stillSince = null
+        clearBuffer(c, t)
         send(c, proto.setOutput(true), proto.PORT.CMD)
         log?.warn?.(`[laser] ${c.id} resumed on a new frame`)
     }
 
     // The next stretch of the cube's frame, as much as its ring buffer has room for, in ≤140-point
     // messages. Room is estimated as the spec advises: the last free count the cube reported, plus
-    // what it has played since at its DAC rate, minus what was sent since. A new frame starts at the
-    // end of the one playing (no torn figures); blackout and stops cut at once.
+    // what it has played since at its DAC rate, minus what was sent since. A new lit frame starts at
+    // the end of the one playing (no torn figures; one pass is at most the frame budget, ≤ 67 ms); a
+    // DARK frame, blackout and stops cut at once (round 2, review §1: no lit point of a replaced
+    // figure after the editor went dark).
     const stream = (c, frame, t) => {
         if (!c.ip) return
         const rate = rateOf(c)
         if (!rate) return
+        const prep = prepare(c, frame)
+        if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) { c.playing = null; c.index = 0 }
         const perTick = Math.ceil((rate * TICK_MS) / 1000)
         let room = perTick
         if (c.bufferFree !== null) {
@@ -397,8 +447,7 @@ const createLaserEngine = ({
         }
         // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
         const next = () => {
-            const prep = prepared(c, frame)
-            if (!prep?.points.length) { c.playingPrep = null; return [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]] }
+            if (!prep?.points?.length) { c.playingPrep = null; return [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]] }
             const bridge = c.playingPrep === prep ? [] : guardsLib.bridgePath(c.lastPoint, prep.points[0], prep.plan)
             c.playingPrep = prep
             return bridge.length ? bridge.concat(prep.points) : prep.points
@@ -424,28 +473,40 @@ const createLaserEngine = ({
         }
     }
 
-    // Every tick, while armed, per armed cube: the link, the signal-loss stop, the still-beam guard,
-    // then the stream. In sim the guards run and nothing is sent.
+    // Every tick, while armed, per armed cube: the link, the cube's over-temperature flag, the
+    // signal-loss stop, the frame budget, the still-beam guard, then the stream. In sim the guards
+    // run and nothing is sent. The frame's path work was done when it was posted (prepare).
     const tick = () => {
         if (!armed) return
         const t = now()
         for (const c of live.values()) {
             if (!c.armed) continue
-            if (c.info) c.temp.sample(t, c.info.temperature)
+            // A temperature reading counts only while fresh (two info periods), not a stale one.
+            if (c.info && t - c.infoAt <= 2 * INFO_POLL_MS) c.temp.sample(t, c.info.temperature)
             if (c.ip && t - (c.heardAt ?? 0) > GUARD.LINK_LOST_MS) {
                 stopCube(c, STOP.LINK_LOST, t)
                 c.armed = false
                 continue
             }
+            if (c.info?.overTemperature) {
+                stopCube(c, STOP.OVER_TEMPERATURE, t, `${c.info.temperature} °C`)
+                c.armed = false
+                continue
+            }
             const frame = framesFor(c.id)
+            const prep = prepare(c, frame)
             const still = stillOf(c, frame)
             if (c.stop) {
                 // Back on only on a frame newer than the stop that would not stop it again.
                 const fresh = frame && frame.at > c.stop.at && t - frame.at <= GUARD.FRAME_TIMEOUT_MS
-                if (!fresh || (c.stop.reason === STOP.STILL_BEAM && still.length)) continue
-                resumeCube(c)
+                if (!fresh || (frame.lit && prep?.overBudget) || (c.stop.reason === STOP.STILL_BEAM && still.length)) continue
+                resumeCube(c, t)
             }
             if (frame?.lit && t - frame.at > GUARD.FRAME_TIMEOUT_MS) { stopCube(c, STOP.NO_FRAME, t); continue }
+            if (frame?.lit && prep?.overBudget) {
+                stopCube(c, STOP.FRAME_TOO_LONG, t, `more than ${prep.budget} points after the guards (${prep.stats.in} posted)`)
+                continue
+            }
             if (frame?.lit && still.length) {
                 c.stillSince ??= t
                 if (t - c.stillSince >= GUARD.STILL_HOLD_MS) {
@@ -467,9 +528,11 @@ const createLaserEngine = ({
         const { plan } = prep
         return {
             rate: prep.rate,
+            budget: prep.budget,
+            overBudget: prep.overBudget,
             pointsIn: prep.stats.in,
-            pointsOut: prep.stats.out,
-            framesPerSecond: prep.stats.out ? Math.round((prep.rate / prep.stats.out) * 10) / 10 : null,
+            pointsOut: prep.overBudget ? null : prep.stats.out,
+            framesPerSecond: !prep.overBudget && prep.stats.out ? Math.round((prep.rate / prep.stats.out) * 10) / 10 : null,
             maxLitStep: prep.stats.maxLitStep,
             maxBlankStep: prep.stats.maxBlankStep,
             plan: { litStep: plan.litStep, blankStep: plan.blankStep, startDwell: plan.startDwell, endDwell: plan.endDwell, blankBeforeOn: plan.blankBeforeOn, litAfterOn: plan.litAfterOn, litBeforeOff: plan.litBeforeOff, blankAfterOff: plan.blankAfterOff, parkPoints: plan.parkPoints }
@@ -514,6 +577,7 @@ const createLaserEngine = ({
                 stops: { ...c.stops },
                 info: infoView(c, t),
                 rate: rateOf(c),
+                rateMismatch: rateMismatch(c),
                 stillBeams: c.stillBeams.length,
                 lastFrameAt: c.lastFrameAt,
                 guards: c.guards,
@@ -540,8 +604,13 @@ const createLaserEngine = ({
         keep(target, {
             points: zoned.points,
             at: now(),
-            lit: zoned.points.some(isLit)
+            lit: zoned.points.some(isLit),
+            rawStill: stillBeams(zoned.points),
+            preps: new Map()
         })
+        // The guards' work for this frame, now, once per (guards, rate, budget) — not in the tick.
+        const kept = target === ALL_CUBES ? frames.all : frames.byCube.get(target)
+        for (const c of live.values()) if (target === ALL_CUBES ? !frames.byCube.has(c.id) : c.id === target) prepare(c, kept)
         return { ok: true, armed, dropped: clean.dropped, blanked: zoned.blanked, cubes: state().cubes }
     }
 
@@ -572,7 +641,10 @@ const createLaserEngine = ({
         const msgs = []
         for (const c of live.values()) {
             if (!c.ip) continue
-            if (wasArmed.has(c.id)) for (const buf of parkMessages(c)) msgs.push([c, buf, proto.PORT.DATA])
+            if (wasArmed.has(c.id)) {
+                msgs.push([c, proto.clearRingBuffer(), proto.PORT.CMD], [c, proto.clearRingBuffer(), proto.PORT.CMD])
+                for (const buf of parkMessages(c)) msgs.push([c, buf, proto.PORT.DATA])
+            }
             msgs.push([c, proto.setOutput(false), proto.PORT.CMD], [c, proto.setOutput(false), proto.PORT.CMD], [c, proto.enableBufferSizeResponse(false), proto.PORT.CMD])
         }
         for (const [c, buf, port] of msgs) send(c, buf, port, done)
@@ -589,8 +661,13 @@ const createLaserEngine = ({
         c.playing = null
         c.index = 0
         c.playingPrep = null
+        // A fresh temperature average each arm (review §7): an old session's cool readings must not
+        // hold the limiter off while the cube is hot now.
+        c.temp = guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs })
         send(c, proto.enableBufferSizeResponse(true), proto.PORT.CMD)
-        if (c.guards.sendSetRate && rateOf(c)) send(c, proto.setRate(rateOf(c)), proto.PORT.CMD)
+        // SET_RATE only as a request from laser.json; the plan follows the cube's next answer.
+        if (c.guards.sendSetRate && config.dacRate && c.info) send(c, proto.setRate(Math.min(config.dacRate, c.info.maxDacRate)), proto.PORT.CMD)
+        clearBuffer(c, t)
         send(c, proto.setOutput(true), proto.PORT.CMD)
     }
 

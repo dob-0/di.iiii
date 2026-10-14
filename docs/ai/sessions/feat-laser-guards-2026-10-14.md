@@ -57,3 +57,28 @@ Every number above: step limits, corner hold, dwell, blanking delays, park point
 cube cuts the beam on `0x80 0` before playing its buffer out; SET_RATE on fw 1.17; bit 1's meaning. Checklist: the 10-09 note
 (`git show 7e212847:docs/ai/sessions/feat-laser-drive-finish-2026-10-09.md`) plus: look at a square at full size on the wall
 (corners sharp, no overshoot), a full-field blank jump (no ghost line), and read the frames/s in `/laser/api/state`.
+
+### Round 2 — the review of PR #931 (`~/work/agent-reports-2026-10-14/laser-guards-review.md`)
+Each finding was first reproduced on ae1ba1ac with the reviewer's scripts: a 2000-point zig-zag became a 5.7 s pass and lit
+points streamed 5 720 ms after an all-blank frame; ticks took 90–279 ms with 6 cubes; a spot plus one far point passed.
+- §1 **Frame budget**: one optimised pass ≤ 67 ms of points at the cube's rate (2000 at 30 kpps — the longest pass before
+  the guards), never above its ring buffer − 200. Over it the frame is REFUSED (`frame-too-long` stop, `path.overBudget` in
+  state), never sped up. A **dark** frame cuts the lit pass at once. Decision: a new LIT frame still starts at the end of the
+  playing pass (≤ 67 ms, as before the guards) so an animated figure is drawn whole — named here; cutting every frame
+  at once would tear every figure the editor animates at 25 fps.
+- §2 The path work runs once per posted frame in `setFrame`, cached on the frame per (guards, rate, budget) and shared by
+  cubes with the same; the tick only looks it up. Reviewer's script: tick 0–1 ms (was 90–279), setFrame 2–4 ms for 6 cubes.
+  Test: 6 cubes × 2000 points, tick < 20 ms.
+- §3 Still if the posted OR the optimised frame is still (spot ×40 + far blank, spot ×30 + far stroke, spot ×120 + far blank: all stop).
+- §4 Every stop: CLEAR_RINGBUFFER 0x8d ×2, park, output-off ×2; resume and arm: 0x8d ×2 before 0x80 1 (Wicked's driver
+  `LaserDockNetworkDevice.cpp:22, 1007-1012`). Order chosen clear → park → off (the coordinator wrote park → clear → off; a
+  clear after the park would drop the park). Fake cube: the park is kept after the clear 10/10 but arrives AFTER the off
+  0/10 — the two ports have no order; the dark comes from the off. UNVALIDATED on a real cube.
+- §5 laser.json values are clamped into safe ranges (only stricter than the loosest cited practice; `guards.clamped` in
+  state); the path is planned at the rate the cube says it plays (`rateMismatch` in state when laser.json asks another;
+  SET_RATE is sent only with `sendSetRate` and a `dacRate`).
+- §7 Temperature average restarts at every arm; a stale reading (> 2 s) is not sampled; the cube's over-temperature flag
+  stops it (arm again), its warning drops the power to `tempMinScale`.
+Fake cube rehearsal round 2 (10 runs): 28 979–29 430 points/s; max step lit 0.0254 / blank 0.1001; dark at 160–162 ms
+(signal loss), 200–204 ms (still beam), 0.2–0.3 ms (disarm), 0.6 ms (shutdown); 0 lit points after off; clears dropped up to
+485 queued points at once; 70 °C → colour 0.667 of full (window filled).

@@ -9,7 +9,7 @@
 // unconfirmed on a real Ultra MK2 until the owed real cube test (its checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //   UDP ports   45456 alive (pings) · 45457 commands · 45458 point data
 //   commands    0x77 get full info · 0x78 enable the buffer-free answer on data · 0x80 output on/off
-//               0x82 set the DAC rate (optional, off by default)
+//               0x82 set the DAC rate (optional, off by default) · 0x8d clear the ring buffer
 //               0x8a ask the ring buffer's free sample count · 0xa9 sample data
 //   sample data [0xa9, 0x00, message number 0-255, frame number 0-255] then up to 140 points
 //               (to stay under a typical MTU), each 10 bytes little-endian: x, y, r, g, b as u16
@@ -19,7 +19,7 @@
 'use strict'
 
 const PORT = Object.freeze({ ALIVE: 45456, CMD: 45457, DATA: 45458 })
-const CMD = Object.freeze({ GET_FULL_INFO: 0x77, ENABLE_BUFFER_SIZE_RESPONSE: 0x78, SET_OUTPUT: 0x80, SET_RATE: 0x82, GET_BUFFER_FREE: 0x8a, SAMPLE_DATA: 0xa9 })
+const CMD = Object.freeze({ GET_FULL_INFO: 0x77, ENABLE_BUFFER_SIZE_RESPONSE: 0x78, SET_OUTPUT: 0x80, SET_RATE: 0x82, GET_BUFFER_FREE: 0x8a, CLEAR_RINGBUFFER: 0x8d, SAMPLE_DATA: 0xa9 })
 const MAX_POINTS_PER_MESSAGE = 140
 const POINT_BYTES = 10
 const MAX_VALUE = 0xfff
@@ -35,6 +35,12 @@ const setOutput = (on) => Buffer.from([CMD.SET_OUTPUT, on ? 1 : 0])
 const enableBufferSizeResponse = (on) => Buffer.from([CMD.ENABLE_BUFFER_SIZE_RESPONSE, on ? 1 : 0])
 const getBufferFree = () => Buffer.from([CMD.GET_BUFFER_FREE])
 const getFullInfo = () => Buffer.from([CMD.GET_FULL_INFO])
+/**
+ * CLEAR_RINGBUFFER (0x8d): drop every point the cube has queued. One byte, as Wicked Lasers' own
+ * driver sends it (libLaserdockCore laserdocklib LaserDockNetworkDevice.cpp:22, 1007-1012); the TD
+ * script defines it too. What the cube does with it while playing: UNVALIDATED on an Ultra MK2.
+ */
+const clearRingBuffer = () => Buffer.from([CMD.CLEAR_RINGBUFFER])
 /**
  * SET_RATE (0x82): the cube's DAC rate, points a second, as a signed 32-bit little-endian number
  * after the command byte — as the TouchDesigner LaserCube script sends it (NairoDorian/
@@ -141,6 +147,6 @@ const parseFullInfo = (msg) => {
 
 module.exports = {
     PORT, CMD, MAX_POINTS_PER_MESSAGE, POINT_BYTES, MAX_VALUE, FULL_INFO_BYTES,
-    toDeviceCoord, toDeviceColour, setOutput, setRate, enableBufferSizeResponse, getBufferFree, getFullInfo,
+    toDeviceCoord, toDeviceColour, setOutput, setRate, clearRingBuffer, enableBufferSizeResponse, getBufferFree, getFullInfo,
     encodeSampleData, parseBufferFree, parseFullInfo, statusFlagsOf
 }

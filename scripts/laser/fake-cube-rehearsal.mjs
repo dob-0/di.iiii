@@ -2,7 +2,7 @@
 // A rehearsal of the laser engine against a FAKE LaserCube on the loopback (2026-10-14).
 //
 // What it does: starts a fake cube on 127.0.0.2 (UDP 45457 commands, 45458 data — the LaserCube
-// ports) that answers the info question like the protocol spec's table, keeps a 6000-point ring
+// ports) that answers the info question, empties its buffer on CLEAR_RINGBUFFER 0x8d like the protocol spec's table, keeps a 6000-point ring
 // buffer played at 30 kpps, answers each data message with its free count and records every point
 // and every output on/off with its arrival time. Then it runs the real engine (serverXR/src/laser/
 // laserEngine.js, real sockets, real timers) against it and measures:
@@ -35,7 +35,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 // THE FAKE CUBE
 const fakeCube = async () => {
-    const cube = { out: false, interlock: true, temp: 31, bufferAnswers: false, buffered: 0, playedAt: now(), points: [], outputs: [], overflow: 0 }
+    const cube = { out: false, interlock: true, temp: 31, bufferAnswers: false, buffered: 0, playedAt: now(), points: [], outputs: [], clears: [], overflow: 0 }
     const cmd = dgram.createSocket('udp4')
     const data = dgram.createSocket('udp4')
     const play = () => { const t = now(); cube.buffered = Math.max(0, cube.buffered - ((t - cube.playedAt) * RATE) / 1000); cube.playedAt = t }
@@ -53,6 +53,7 @@ const fakeCube = async () => {
         if (m[0] === 0x77) cmd.send(info(), r.port, r.address)
         if (m[0] === 0x78) cube.bufferAnswers = m[1] === 1
         if (m[0] === 0x80) { cube.out = m[1] === 1; cube.outputs.push({ t, on: cube.out }) }
+        if (m[0] === 0x8d) { play(); cube.clears.push({ t, dropped: Math.round(cube.buffered) }); cube.buffered = 0 }
         if (m[0] === 0x8a) { const f = free(); cmd.send(Buffer.from([0x8a, 0, f & 0xff, f >> 8]), r.port, r.address) }
     })
     data.on('message', (m, r) => {
@@ -85,21 +86,23 @@ const steps = (pts) => {
     return { maxLit, maxBlank }
 }
 const offAfter = (cube, t0) => cube.outputs.find((o) => !o.on && o.t >= t0)
-// From t0: when output-off arrived, when the last data point before it arrived and whether that
-// point is the park (blank, at the centre 0x800), and how many lit points arrived after the off.
+// From t0: when output-off arrived (time to dark); whether the park (blank points at the centre
+// 0x800) arrived AFTER the stop's ring-buffer clear, so it is kept and the galvo walks to the centre
+// — and whether it came before or after the off (UDP on two ports: no order is promised); how many
+// lit points arrived after the off.
 const stopTimes = (cube, t0) => {
     const off = offAfter(cube, t0)
-    const before = off ? cube.points.filter((p) => p.t >= t0 && p.t <= off.t) : []
-    const park = before.at(-1)
-    const parked = Boolean(park && !lit(park) && park.x === 0x800 && park.y === 0x800)
+    const clear = cube.clears.filter((c) => c.t >= t0 && (!off || c.t <= off.t + 50)).at(-1)
+    const park = cube.points.find((p) => p.t >= t0 && (!clear || p.t >= clear.t) && !lit(p) && p.x === 0x800 && p.y === 0x800)
     return {
         offMs: off ? off.t - t0 : null,
-        parkMs: parked ? park.t - t0 : null,
-        parkBeforeOff: parked,
+        parkMs: park ? park.t - t0 : null,
+        parkKept: Boolean(park),
+        parkBeforeOff: Boolean(park && off && park.t <= off.t),
         litAfterOff: off ? cube.points.filter((p) => p.t > off.t && lit(p)).length : null
     }
 }
-const range = (xs) => (xs.length ? `${Math.min(...xs).toFixed(1)}–${Math.max(...xs).toFixed(1)}` : 'n/a')
+const range = (xs) => ((xs = xs.filter((x) => x !== null)).length ? `${Math.min(...xs).toFixed(1)}–${Math.max(...xs).toFixed(1)}` : 'n/a')
 
 const cube = await fakeCube()
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-rehearsal-'))
@@ -173,9 +176,10 @@ console.log(`runs ${RUNS} · fake cube ${CUBE_IP} at ${RATE} pps`)
 console.log(`stream  points/s ${range(s.map((r) => r.pointsPerSecond))} (lit ${range(s.map((r) => r.litPerSecond))}) · max lit step ${Math.max(...s.map((r) => r.maxLit)).toFixed(4)} · max blank step ${Math.max(...s.map((r) => r.maxBlank)).toFixed(4)} (field units) · buffer overflow ${cube.overflow}`)
 for (const k of ['noFrame', 'still', 'disarm']) {
     const r = result[k]
-    console.log(`${k.padEnd(8)} off ${range(r.map((x) => x.offMs))} ms · park ${range(r.map((x) => x.parkMs))} ms · park before off ${r.filter((x) => x.parkBeforeOff).length}/${r.length} · lit after off ${r.reduce((n, x) => n + (x.litAfterOff || 0), 0)}`)
+    console.log(`${k.padEnd(8)} off ${range(r.map((x) => x.offMs))} ms · park ${range(r.map((x) => x.parkMs))} ms · park kept after the clear ${r.filter((x) => x.parkKept).length}/${r.length}, before the off ${r.filter((x) => x.parkBeforeOff).length}/${r.length} · lit after off ${r.reduce((n, x) => n + (x.litAfterOff || 0), 0)}`)
 }
-console.log(`shutdown off ${result.shutdown.offMs?.toFixed(1)} ms · park before off ${result.shutdown.parkBeforeOff}`)
+console.log(`ring-buffer clears heard ${cube.clears.length}; points dropped by them ${cube.clears.reduce((n, c) => n + c.dropped, 0)} (max ${Math.max(0, ...cube.clears.map((c) => c.dropped))} at once)`)
+console.log(`shutdown off ${result.shutdown.offMs?.toFixed(1)} ms · park kept ${result.shutdown.parkKept}, before off ${result.shutdown.parkBeforeOff}`)
 console.log(`after disarm: the cube's output ${result.flagsAfterDisarm.cubeOut ? 'ON' : 'off'}, byte 5 = ${result.flagsAfterDisarm.statusFlags}, di reads outputEnabled=${result.flagsAfterDisarm.outputEnabled}, interlock=${result.flagsAfterDisarm.interlockEnabled}`)
 console.log(`temperature 70 °C: max green ${result.temperature.maxGreen}/4095 = ${result.temperature.scale} (want 0.667); state ${JSON.stringify(result.temperature.state)}`)
 const out = arg('--json', null)
