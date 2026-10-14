@@ -55,7 +55,7 @@ import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
-import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import { classifyArchitecture, parseLayersParam } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { resolveViews } from '../../project/viewport/smartView/viewData.js'
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -1214,7 +1214,9 @@ export default function StudioViewport({
     const { setPresets, release: releaseView } = sv
     // The building switches of the Studio bar (Roof · Walls · Machines · Outside): null = everything shown; a host that
     // passes its own `smartView.layers` (the visitor page) keeps them.
-    const [studioLayers, setStudioLayers] = useState(null)
+    // The layer switches open from the address when it names them (?layers=, as the visitor's room reads it; 2026-10-15:
+    // ?layers=roof,walls,machines,outside = the whole building, Cut off), else null = every switch on.
+    const [studioLayers, setStudioLayers] = useState(() => (typeof window !== 'undefined' && /[?&]layers=/.test(window.location.search)) ? parseLayersParam(window.location.search) : null)
     const setStudioLayer = useCallback((id, shown) => setStudioLayers((prev) => ({ ...(prev || {}), [id]: shown })), [])
     const smartViewProps = useMemo(() => (smartOn ? {
         fovRef,
