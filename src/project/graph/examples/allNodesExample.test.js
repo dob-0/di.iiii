@@ -184,6 +184,26 @@ describe('all-nodes example graph', () => {
                 })
                 return { node: array, context }
             },
+            // A cube's shape fed in is what brings Laser Trace alive.
+            'laser.trace.frame': () => {
+                const trace = createNode('laser.trace', { id: 'proof-trace' })
+                const cube = createNode('geom.cube', { id: 'proof-trace-cube' })
+                const context = createNodeGraphContext({
+                    nodes: [trace, cube],
+                    edges: [createEdge('proof-trace-cube', 'geometry', 'proof-trace', 'geometry')]
+                })
+                return { node: trace, context }
+            },
+            // A Laser's frame fed in is what brings Laser Merge alive.
+            'laser.merge.frame': () => {
+                const merge = createNode('laser.merge', { id: 'proof-lmerge' })
+                const shape = createNode('laser.shape', { id: 'proof-lmerge-shape' })
+                const context = createNodeGraphContext({
+                    nodes: [merge, shape],
+                    edges: [createEdge('proof-lmerge-shape', 'frame', 'proof-lmerge', 'a')]
+                })
+                return { node: merge, context }
+            },
             // Feeding the value is enough — Open defaults true, so the wired
             // gate speaks; the bare-dead half is proven by the main sweep.
             'logic.route.out': () => {
