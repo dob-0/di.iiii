@@ -1,6 +1,6 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import LaserOutPanelWindow from './LaserOutPanelWindow.jsx'
+import LaserOutPanelWindow, { cubeCap } from './LaserOutPanelWindow.jsx'
 
 const ORIGIN = 'http://localhost:5173'
 const node = { id: 'laser-1', typeId: 'device.laser.out', values: {} }
@@ -39,7 +39,9 @@ describe('LaserOutPanelWindow', () => {
         expect(frames(posts)).toHaveLength(1)
         expect(frames(posts)[0].url).toBe(`${ORIGIN}/laser/api/frame`)
         expect(frames(posts)[0].body.cube).toBe('all')
-        expect(frames(posts)[0].body.points).toHaveLength(4)
+        // Flattened to the default budget (1000 points, owner 2026-10-14), a blank point at each path's entry.
+        // An old Laser shape frame with no budget set plays its own points (review of #934, finding 5).
+        expect(frames(posts)[0].body.points).toHaveLength(5) // its 4 + the blank entry point
         // A new object with the same points: nothing to say.
         view.rerender(panel({ fetchImpl, values: { frame: frameOf(0.5) } }))
         await act(async () => { await vi.advanceTimersByTimeAsync(200) })
@@ -204,12 +206,59 @@ describe('LaserOutPanelWindow preview', () => {
         expect(view.container.querySelector('canvas')).toBeTruthy()
         await waitFor(() => expect(calls.length).toBeGreaterThan(0))
         // The keep-in zone's edge is drawn first (a dashed line across the middle), then the shape.
-        // Four points: lit, lit, blank, lit. Only the first pair is a line.
+        // Two paths after flattening: a red line (resampled to the budget) and a green dot, drawn as a
+        // dot, not a stroke. The blank move between them is not drawn.
         const strokes = calls.filter((c) => c[0] === 'stroke')
         expect(strokes[0][1]).toMatch(/^rgba\(255, 90, 90/)
-        expect(strokes.slice(1)).toEqual([['stroke', 'rgb(255, 0, 0)']])
+        expect(new Set(strokes.slice(1).map((c) => c[1]))).toEqual(new Set(['rgb(255, 0, 0)']))
         // x 0.5 of -1..1 on 240px is 180; y 0 is the middle, 120.
         expect(calls).toContainEqual(['move', 180, 120])
+    })
+})
+
+describe('LaserOutPanelWindow: the point budget (frame v2)', () => {
+    beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: false }) })
+    afterEach(() => { vi.useRealTimers() })
+    const v2 = { kind: 'laser', v: 2, order: 'free', paths: [{ p: [0, 0.2, 1, 0, 0, 0.5, 0.2, 1, 0, 0], closed: false }, { p: [0, 0.6, 0, 1, 0, 0.4, 0.6, 0, 1, 0], closed: false }], ms: 1.25 }
+
+    it('sends v2 paths flattened to the wired budget, and shows the value in effect', async () => {
+        const { fetchImpl, posts } = fakeServer()
+        const view = render(panel({ fetchImpl, values: { frame: v2, budget: 300 } }))
+        expect(frames(posts)[0].body.points).toHaveLength(300)
+        expect(view.container.textContent).toContain('300 points · 2 paths · traced in 1.25 ms')
+    })
+    it('auto sizes the budget from the drawn length', async () => {
+        const { fetchImpl, posts } = fakeServer()
+        render(panel({ fetchImpl, values: { frame: v2, budget: 0 } }))
+        expect(frames(posts)[0].body.points).toHaveLength(2 + Math.ceil(0.9 / 0.01))
+    })
+    it('clamps to what the server says the cube takes, and shows the scan rate', async () => {
+        const state = { armed: false, sim: true, cubes: [{ id: 'a', connected: true, path: { budget: 400, framesPerSecond: 75 } }] }
+        const { fetchImpl, posts } = fakeServer({ state })
+        const view = render(panel({ fetchImpl, values: { frame: v2, budget: 1500 } }))
+        await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+        await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+        // 400 after the guards, 25 % kept for what the guards add when the server has no plan yet.
+        expect(frames(posts).at(-1).body.points).toHaveLength(300)
+        expect(view.container.textContent).toContain('the cube takes 300')
+        expect(view.container.textContent).toContain('scans at 75 Hz')
+    })
+    it('the cap: #931 path.budget first, else 67 ms at the cube\'s rate, the smallest for all', () => {
+        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900 } }, { id: 'b', info: { dacRate: 10000 } }] }, 'all')).toBe(502)
+        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900 } }] }, 'a')).toBe(675)
+        // With a plan, the guards' own in/out ratio.
+        expect(cubeCap({ cubes: [{ id: 'a', path: { budget: 900, pointsIn: 500, pointsOut: 800 } }] }, 'a')).toBe(562)
+        expect(cubeCap({ cubes: [{ id: 'a' }] }, 'a')).toBeNull()
+    })
+    it('the slider and Auto write the node\'s budget', async () => {
+        const { fetchImpl } = fakeServer()
+        const onConfigChange = vi.fn()
+        const view = render(panel({ fetchImpl, onConfigChange, values: { frame: v2, budget: 300 } }))
+        const { fireEvent } = await import('@testing-library/react')
+        fireEvent.change(view.getByLabelText('Points per frame'), { target: { value: '640' } })
+        expect(onConfigChange).toHaveBeenLastCalledWith('laser-1', { budget: 640 })
+        fireEvent.click(view.getByLabelText('Auto points'))
+        expect(onConfigChange).toHaveBeenLastCalledWith('laser-1', { budget: 0 })
     })
 })
 
@@ -289,7 +338,8 @@ describe('LaserOutPanelWindow arm, disarm and Find cubes', () => {
         // The cube the setup already knows by its serial keeps its name.
         expect(view.getByLabelText('Name for the cube at 192.0.2.44').value).toBe('Left')
         fireEvent.change(view.getByLabelText('Name for the cube at 192.0.2.184'), { target: { value: 'Right' } })
-        fireEvent.click(view.getAllByRole('checkbox')[0])
+        // Scoped to the list: the budget's Auto points box (#934) is a checkbox too.
+        fireEvent.click(within(view.getByLabelText('Cubes found')).getAllByRole('checkbox')[0])
         fireEvent.click(view.getByRole('button', { name: 'Use these (1)' }))
         await waitFor(() => expect(view.getByText(/disarmed for the change/)).toBeTruthy())
         expect(of(posts, '/config').map((p) => p.body)).toEqual([{ cubes: [{ serial: 'c0ffee000007', ip: '192.0.2.184', name: 'Right' }] }])

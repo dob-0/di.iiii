@@ -2172,6 +2172,11 @@ export default function RawEditor({
                     node={node}
                     values={resolvedValues}
                     onStatus={handleMidiOutStatus}
+                    // The point budget is set in the window too (owner, 2026-10-14).
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
                 />
             )
         }
