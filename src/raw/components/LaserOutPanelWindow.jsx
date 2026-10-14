@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ALL_CUBES, normaliseFramePoints } from '../../shared/laserFrame.js'
+import { ALL_CUBES, DEFAULT_BUDGET, FRAME_MAX_POINTS, MIN_BUDGET, flattenLaserPaths, normaliseLaserPaths } from '../../shared/laserFrame.js'
 import { createThrottledSender, laserApiBase } from '../utils/dmxRigClient.js'
 
 const POLL_MS = 3000
@@ -14,6 +14,8 @@ const SEND_MS = 40
 // lets its frames go dark — by design: nobody is watching it.
 const ALIVE_MS = 50
 const PREVIEW_PX = 240
+// One frame may be at most this long at the cube's own rate (#931, the frame budget in the engine).
+const FRAME_CAP_S = 0.067
 // The maker's operating range starts at 10 °C (Guide v1.2 p. 14, item 9).
 const COLD_FLOOR_C = 10
 
@@ -85,6 +87,14 @@ const drawPreview = (canvas, points) => {
     ctx.lineCap = 'round'
     const px = (v) => ((v + 1) / 2) * size
     const py = (v) => ((1 - v) / 2) * size
+    for (let i = 0; i < points.length; i += 1) {
+        // A lit point alone between dark ones is a dot (Laser Trace's Points): drawn as a dot.
+        const q = points[i]
+        if (lit(q) && !(i > 0 && lit(points[i - 1])) && !(i + 1 < points.length && lit(points[i + 1]))) {
+            ctx.fillStyle = `rgb(${Math.round(q[2] * 255)}, ${Math.round(q[3] * 255)}, ${Math.round(q[4] * 255)})`
+            ctx.fillRect(px(q[0]) - 1.5, py(q[1]) - 1.5, 3, 3)
+        }
+    }
     for (let i = 1; i < points.length; i += 1) {
         const a = points[i - 1]
         const b = points[i]
@@ -129,6 +139,26 @@ const cubeLine = (cube) => {
     return { name, doing, about, cold }
 }
 
+// What the server says this cube can take per frame: its own figure (#931 `path.budget`), else 67 ms
+// at the rate the cube reports. The budget is clamped to it so a frame is not refused as too long.
+export const cubeCap = (state, cube) => {
+    const cubes = (Array.isArray(state?.cubes) ? state.cubes : []).filter((c) => cube === ALL_CUBES || c?.id === cube)
+    const caps = cubes.map((c) => {
+        if (Number.isFinite(c?.path?.budget) && c.path.budget > 0) return c.path.budget
+        if (Number.isFinite(c?.info?.dacRate) && c.info.dacRate > 0) return Math.floor(c.info.dacRate * FRAME_CAP_S)
+        return null
+    }).filter((v) => v !== null)
+    return caps.length ? Math.min(...caps) : null
+}
+
+// The server's plan for a cube (#931): how many times a second it draws the figure.
+const scanText = (cube) => {
+    const path = cube?.path
+    if (!path) return ''
+    if (path.overBudget) return 'frame too long for this cube'
+    return Number.isFinite(path.framesPerSecond) ? `scans at ${path.framesPerSecond} Hz` : ''
+}
+
 const cubesText = (state) => {
     const cubes = Array.isArray(state?.cubes) ? state.cubes : []
     const connected = cubes.filter((cube) => cube?.connected).length
@@ -143,6 +173,7 @@ export default function LaserOutPanelWindow({
     node,
     values,
     onStatus,
+    onConfigChange,
     fetchImpl = defaultFetch,
     pageOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
 }) {
@@ -169,15 +200,31 @@ export default function LaserOutPanelWindow({
         }
     }, [base])
 
-    // The frame, cleaned the way the server will clean it. The wire hands a new
-    // object every evaluation, so "changed" is judged by content.
-    const raw = values?.frame
-    const points = useMemo(
-        () => normaliseFramePoints(Array.isArray(raw) ? raw : raw?.points).points,
-        [raw]
-    )
-    const pointsKey = useMemo(() => JSON.stringify(points), [points])
     const cube = String(values?.cube ?? '').trim() || ALL_CUBES
+
+    // The paths (frame v2, or a legacy frame read as paths), judged by content: the wire hands a new
+    // object every evaluation.
+    const raw = values?.frame
+    const paths = useMemo(() => normaliseLaserPaths(raw), [raw])
+    const pathsKey = useMemo(() => JSON.stringify([paths.order, paths.paths]), [paths])
+    // The budget: a wireable number; 0 (or less) = auto, sized from the drawn length. Clamped to the
+    // frame cap and to what the server says the cube takes (cubeCap); the value in effect is shown.
+    const asked = Number(values?.budget)
+    const requested = Number.isFinite(asked) && values?.budget !== '' && values?.budget !== null ? asked : DEFAULT_BUDGET
+    const auto = requested <= 0
+    const cap = server.status === SERVER.ANSWERING ? cubeCap(server.state, cube) : null
+    // Flatten: nearest-neighbour order from where the last frame ended, then resample to the budget.
+    // Recomputed only when the drawing, the budget or the cap change, so a still drawing is not re-sent.
+    // Where the last flatten ended: a per-panel memo cell, read only by the flatten below.
+    const [lastEnd] = useState(() => ({ at: null }))
+    const flat = useMemo(() => {
+        const result = flattenLaserPaths(paths, { budget: auto ? 'auto' : requested, start: lastEnd.at, cap: cap ?? FRAME_MAX_POINTS })
+        lastEnd.at = result.end
+        return result
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathsKey, requested, cap])
+    const points = flat.points
+    const pointsKey = useMemo(() => JSON.stringify(points), [points])
     const blackout = Boolean(values?.blackout)
 
     const canvasRef = useRef(null)
@@ -226,6 +273,15 @@ export default function LaserOutPanelWindow({
         postJson(base, '/blackout', {}, fetchRef.current)
     }, [blackout, base])
 
+    const setBudget = (budget) => onConfigChange?.(node.id, { budget })
+    const budgetText = [
+        `${flat.stats.outPoints} points${auto ? ' (auto)' : ''}`,
+        flat.stats.paths ? `${flat.stats.paths} paths` : '',
+        flat.stats.dropped ? `${flat.stats.dropped} short paths left out` : '',
+        cap ? `the cube takes ${thousands(cap)}` : '',
+        Number.isFinite(paths.ms) ? `traced in ${paths.ms.toFixed(2)} ms` : '',
+    ].filter(Boolean).join(' · ')
+
     const armed = server.status === SERVER.ANSWERING ? server.state.armed : null
     const statusText = useMemo(() => {
         if (server.status === SERVER.ABSENT) return 'The laser server lives on a local di.iiii — run di up or npm run dev'
@@ -254,6 +310,31 @@ export default function LaserOutPanelWindow({
                 height={PREVIEW_PX}
                 aria-label="Preview of the laser frame"
             />
+            <div className="raw-laser-panel-budget">
+                <label>
+                    Points
+                    <input
+                        type="range"
+                        min={MIN_BUDGET}
+                        max={FRAME_MAX_POINTS}
+                        step={1}
+                        value={auto ? flat.stats.outPoints || MIN_BUDGET : Math.min(FRAME_MAX_POINTS, Math.max(MIN_BUDGET, requested))}
+                        disabled={auto}
+                        aria-label="Points per frame"
+                        onChange={(event) => setBudget(Number(event.target.value))}
+                    />
+                </label>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={auto}
+                        aria-label="Auto points"
+                        onChange={(event) => setBudget(event.target.checked ? 0 : DEFAULT_BUDGET)}
+                    />
+                    Auto
+                </label>
+                <div className="raw-laser-panel-budget-text" role="status">{budgetText}</div>
+            </div>
             {armed !== null && (
                 <div className="raw-dmx-panel-status raw-laser-panel-armed" role="status">
                     {armed ? 'ARMED' : 'DISARMED'}
@@ -274,7 +355,7 @@ export default function LaserOutPanelWindow({
                         const line = cubeLine(cube)
                         return (
                             <li key={cube.id} className={cube.stop || line.cold ? 'raw-laser-panel-cube-warn' : undefined}>
-                                <strong>{line.name}</strong>: {line.doing}
+                                <strong>{line.name}</strong>: {line.doing}{scanText(cube) ? ` · ${scanText(cube)}` : ''}
                                 {line.about && <div className="raw-laser-panel-cube-about">{line.about}</div>}
                             </li>
                         )
