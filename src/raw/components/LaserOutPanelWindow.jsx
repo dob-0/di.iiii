@@ -360,6 +360,7 @@ function IpField({ ip, onCommit, resolved }) {
 // first ON of a run (after the server starts, or after Disarm all) takes the sign-off phrase, typed —
 // after that each Out is one click. The server decides (laserEngine.js rule 10), this only asks.
 function OnOffControl({ cubeId, cubeState, signedOff, post, refresh, outId }) {
+    const phraseId = useId()
     const [phrase, setPhrase] = useState('')
     const [askPhrase, setAskPhrase] = useState(false)
     const [note, setNote] = useState(null)
@@ -395,10 +396,11 @@ function OnOffControl({ cubeId, cubeState, signedOff, post, refresh, outId }) {
                 <form className="raw-laser-panel-arm-form" onSubmit={switchOn}>
                     {needPhrase && (
                         <>
-                            <label className="raw-laser-panel-label">
+                            <label className="raw-laser-panel-label" htmlFor={phraseId}>
                                 First ON of this run: typing the sign-off phrase means you are the laser safety officer for it.
                             </label>
                             <input
+                                id={phraseId}
                                 className="raw-laser-panel-input"
                                 type="text"
                                 value={phrase}

@@ -54,7 +54,7 @@ module.exports = [
   },
   {
     route: "POST /laser/api/arm",
-    summary: "arm the lasers with the laser safety officer's sign-off phrase, or disarm (every cube's output off)",
+    summary: "arm the lasers with the laser safety officer's sign-off phrase, or disarm (every cube's output off); with { cube, out } one cube ON or OFF, the phrase only on the first ON of a run",
     reach: "private",
     role: "guest",
     agent: false,
@@ -67,6 +67,14 @@ module.exports = [
     role: "guest",
     agent: false,
     note: `${SAME_MACHINE} ${OWN_PAGE} One search at a time and 5 s between searches (429 with retryAfterMs). Sends nothing but 0x77.`
+  },
+  {
+    route: "POST /laser/api/resolve",
+    summary: "a Laser Out's own cube by address: { ip, serial?, name?, out } checked private unicast, asked the info question (0x77) unless the engine already hears it, added to laser.json and the running engine keyed by serial (no reload), and held for that Out (one Out per cube); status answering | wrong-serial | no-answer | refused",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE} Sends nothing but 0x77. A cube held by another Out, or ON at another address, is refused (409).`
   },
   {
     route: "POST /laser/api/config",
