@@ -414,7 +414,6 @@ const createLaserEngine = ({
             armed,
             sim: sim(),
             zone: { ...config.zone },
-            armPhrase: ARM_PHRASE,
             guard: {
                 frameTimeoutMs: GUARD.FRAME_TIMEOUT_MS,
                 linkLostMs: GUARD.LINK_LOST_MS,
@@ -510,7 +509,8 @@ const createLaserEngine = ({
             if (timer) { stopEvery(timer); timer = null }
             return { ok: true, armed }
         }
-        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: `arming needs the sign-off phrase exactly: "${ARM_PHRASE}"` }
+        // The phrase is never echoed (nor in state()): it is typed by the officer, not copied from a hint.
+        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: 'not armed: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' }
         openSocket()
         const t = now()
         for (const c of live.values()) armCube(c, t)
