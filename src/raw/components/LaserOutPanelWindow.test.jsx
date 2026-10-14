@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import LaserOutPanelWindow, { cubeCap } from './LaserOutPanelWindow.jsx'
 
@@ -255,5 +255,97 @@ describe('LaserOutPanelWindow: the point budget (frame v2)', () => {
         expect(onConfigChange).toHaveBeenLastCalledWith('laser-1', { budget: 640 })
         fireEvent.click(view.getByLabelText('Auto points'))
         expect(onConfigChange).toHaveBeenLastCalledWith('laser-1', { budget: 0 })
+    })
+})
+
+// Arm / Disarm and Find cubes (2026-10-14). The server is faked at the fetch boundary.
+describe('LaserOutPanelWindow arm, disarm and Find cubes', () => {
+    const PHRASE = 'the words the officer agreed'
+    const opsServer = ({ armed = false, find, config } = {}) => {
+        const state = { armed, sim: false, cubes: [{ id: 'cube-1', name: 'Left', ip: '127.0.0.9', connected: true, info: { serial: 'deadbeef0042' } }] }
+        const posts = []
+        const fetchImpl = vi.fn(async (url, options) => {
+            const u = String(url)
+            if (u.endsWith('/laser/api/state')) return json({ ...state })
+            const body = JSON.parse(options.body)
+            posts.push({ url: u, body })
+            if (u.endsWith('/arm')) {
+                if (body.armed === false) { state.armed = false; return json({ ok: true, armed: false }) }
+                if (body.confirm === PHRASE) { state.armed = true; return json({ ok: true, armed: true }) }
+                return json({ ok: false, armed: false, error: 'not armed: that is not the sign-off phrase.' }, 403)
+            }
+            if (u.endsWith('/find')) return find ? find() : json({ ok: true, asked: 253, networks: ['192.0.2.0/24 (eth0)'], cubes: [] })
+            if (u.endsWith('/config')) { state.armed = false; return config ? config(body) : json({ ok: true, disarmed: true, cubes: body.cubes.map((c, i) => ({ id: `cube-${i + 1}`, name: c.name })) }) }
+            return json({ ok: true })
+        })
+        return { fetchImpl, posts, state }
+    }
+    const of = (posts, route) => posts.filter((p) => p.url.endsWith(route))
+
+    it('starts with an empty phrase field and never shows the phrase; Arm sends what was typed', async () => {
+        const { fetchImpl, posts } = opsServer()
+        const view = render(panel({ fetchImpl }))
+        await waitFor(() => expect(view.getByText('DISARMED')).toBeTruthy())
+        const field = view.getByLabelText('Sign-off phrase')
+        expect(field.value).toBe('')
+        expect(field.getAttribute('autocomplete')).toBe('off')
+        expect(field.getAttribute('placeholder')).toBeNull()
+        expect(view.container.textContent).toMatch(/you are the laser safety officer for this run/)
+        const armButton = view.getByRole('button', { name: 'Arm' })
+        expect(armButton.disabled).toBe(true)
+        fireEvent.change(field, { target: { value: `  ${PHRASE} ` } })
+        fireEvent.click(armButton)
+        await waitFor(() => expect(view.getByText('ARMED')).toBeTruthy())
+        expect(of(posts, '/arm')).toEqual([{ url: `${ORIGIN}/laser/api/arm`, body: { armed: true, confirm: PHRASE } }])
+    })
+
+    it('a wrong phrase is refused in the server\'s words and the field is emptied', async () => {
+        const { fetchImpl } = opsServer()
+        const view = render(panel({ fetchImpl }))
+        await waitFor(() => expect(view.getByText('DISARMED')).toBeTruthy())
+        fireEvent.change(view.getByLabelText('Sign-off phrase'), { target: { value: 'signed off' } })
+        fireEvent.click(view.getByRole('button', { name: 'Arm' }))
+        await waitFor(() => expect(view.getByRole('alert').textContent).toMatch(/not the sign-off phrase/))
+        expect(view.getByLabelText('Sign-off phrase').value).toBe('')
+        expect(view.getByText('DISARMED')).toBeTruthy()
+    })
+
+    it('Disarm is always there and disarms with one click, no confirm', async () => {
+        const { fetchImpl, posts } = opsServer({ armed: true })
+        const view = render(panel({ fetchImpl }))
+        // Before the server has even answered, Disarm is there.
+        expect(view.getByRole('button', { name: 'Disarm' })).toBeTruthy()
+        await waitFor(() => expect(view.getByText('ARMED')).toBeTruthy())
+        fireEvent.click(view.getByRole('button', { name: 'Disarm' }))
+        await waitFor(() => expect(view.getByText('DISARMED')).toBeTruthy())
+        expect(of(posts, '/arm').map((p) => p.body)).toEqual([{ armed: false }])
+    })
+
+    it('Find cubes lists the answers; pick, name and Use these posts serial, address and name', async () => {
+        const found = [
+            { serial: 'deadbeef0042', ip: '192.0.2.44', modelName: 'LaserCube Ultra', firmware: '1.7', temperature: 30 },
+            { serial: 'c0ffee000007', ip: '192.0.2.184', modelName: 'LaserCube Ultra', firmware: '1.7', temperature: 28 }
+        ]
+        const { fetchImpl, posts } = opsServer({ find: () => json({ ok: true, asked: 253, networks: ['192.0.2.0/24 (eth0)'], cubes: found }) })
+        const view = render(panel({ fetchImpl }))
+        await waitFor(() => expect(view.getByRole('button', { name: 'Find cubes' })).toBeTruthy())
+        fireEvent.click(view.getByRole('button', { name: 'Find cubes' }))
+        await waitFor(() => expect(view.getByText(/2 cubes answered/)).toBeTruthy())
+        // The cube the setup already knows by its serial keeps its name.
+        expect(view.getByLabelText('Name for the cube at 192.0.2.44').value).toBe('Left')
+        fireEvent.change(view.getByLabelText('Name for the cube at 192.0.2.184'), { target: { value: 'Right' } })
+        // Scoped to the list: the budget's Auto points box (#934) is a checkbox too.
+        fireEvent.click(within(view.getByLabelText('Cubes found')).getAllByRole('checkbox')[0])
+        fireEvent.click(view.getByRole('button', { name: 'Use these (1)' }))
+        await waitFor(() => expect(view.getByText(/disarmed for the change/)).toBeTruthy())
+        expect(of(posts, '/config').map((p) => p.body)).toEqual([{ cubes: [{ serial: 'c0ffee000007', ip: '192.0.2.184', name: 'Right' }] }])
+    })
+
+    it('a refused search says why (a firewall, the same-machine rule)', async () => {
+        const { fetchImpl } = opsServer({ find: () => json({ ok: false, error: 'this computer refused to send the question (EACCES): a firewall …' }, 502) })
+        const view = render(panel({ fetchImpl }))
+        await waitFor(() => expect(view.getByRole('button', { name: 'Find cubes' })).toBeTruthy())
+        fireEvent.click(view.getByRole('button', { name: 'Find cubes' }))
+        await waitFor(() => expect(view.getByText(/EACCES/)).toBeTruthy())
     })
 })
