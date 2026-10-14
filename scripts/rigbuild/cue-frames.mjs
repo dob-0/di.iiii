@@ -110,7 +110,7 @@ const main = async () => {
             // one loop: wait for each cue in turn, shoot it once its fade has landed
             const cues = await desk()
             const shot = new Set()
-            const deadline = Date.now() + 75_000
+            const deadline = Date.now() + Number(args['deadline-s'] || 75) * 1000   // --deadline-s: a loop longer than 75 s needs more
             while (shot.size < cues.list.length && Date.now() < deadline) {
                 const plan = shotPlan(await desk(), shot, Date.now())
                 if (plan.shoot == null) { await sleep(plan.wait); continue }
@@ -130,6 +130,7 @@ const main = async () => {
             }
             if (shot.size < cues.list.length) say(`  ${cam.name}: ${shot.size}/${cues.list.length} cues shot before the deadline`)
         } finally {
+            if (process.env.DI_TEST_CDP) for (const c of browser.contexts()) for (const pg of c.pages()) await pg.goto('about:blank').catch(() => {})   // sterile: leave the lane's page blank
             await browser.close()
         }
     }

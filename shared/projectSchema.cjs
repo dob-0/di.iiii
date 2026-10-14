@@ -827,7 +827,7 @@ const normalizeProductionMeta = (value) => {
 // numbers per group of lamps (a group is `${position}/${type}`), and a colour per
 // group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
 // the desk and the cue list, the room poses by them. Bounded, numbers and short words.
-const RIG_LOOKS_CAP = 50
+const RIG_LOOKS_CAP = 120
 const RIG_GROUPS_CAP = 100
 const lookKey = (value) => (typeof value === 'string' && /^[\w:.-]{1,40}\/[\w.-]{1,40}$/.test(value.trim()) ? value.trim() : '')
 const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim().toLowerCase() : '')

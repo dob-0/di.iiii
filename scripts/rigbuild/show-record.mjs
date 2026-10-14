@@ -46,7 +46,8 @@ export const waitForCool = async (max, log = say) => {
         await new Promise((r) => setTimeout(r, 15_000))
     }
 }
-export const launchGpu = async (chromium) => chromium.launch({ headless: false, env: { ...process.env, ...PRIME_ENV }, args: GPU_ARGS })
+// DI_TEST_CDP (set by `di-test-browser run`): attach to that lane's browser (real GPU, agent screen) instead of launching one.
+export const launchGpu = async (chromium) => process.env.DI_TEST_CDP ? chromium.connectOverCDP(process.env.DI_TEST_CDP) : chromium.launch({ headless: false, env: { ...process.env, ...PRIME_ENV }, args: GPU_ARGS })
 export const rendererOf = (page) => page.evaluate(() => {
     const canvas = document.querySelector('canvas')
     const ctx = canvas && (canvas.getContext('webgl2') || canvas.getContext('webgl'))
