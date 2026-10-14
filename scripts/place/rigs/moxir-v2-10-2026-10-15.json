@@ -2,7 +2,7 @@
  "snapshot": "moxir-v2-1-2026-10-10",
  "version": "2.10",
  "title": "MOXIR v2.10 - forty washes: the floor washes as 6 wild lines of 3, each one DMX chain",
- "what": "v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines (A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: \"there are 40 washes\", \"we pick from the poligraf 40 washes\", \"make it wild and as a lines and use the area not hard that we can connect dmx\". Source: scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) to stay in the fence.",
+ "what": "v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines (A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: \"there are 40 washes\", \"we pick from the poligraf 40 washes\", \"make it wild and as a lines and use the area not hard that we can connect dmx\". Source: scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) and line A last point (-32.7,-32.7) moved to (-27.0,-31.5) to stay in the fence (lead decision 2026-10-15; 1 m inside x -27.7).",
  "written_by": "scripts/place/moxir_v2_8_floor.py",
  "date": "2026-10-15",
  "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
@@ -3572,9 +3572,9 @@
    "moments": [],
    "position": "MOXIR v2.10 wild line A (moxir_v2_10_forty.py, lines.json 2026-10-15): straight up, 3 washes on one DMX chain; was columns at v2.9",
    "p": [
-    -32.7,
+    -27.0,
     0.31,
-    -32.7
+    -31.5
    ],
    "r": [
     3.1416,
@@ -13407,8 +13407,8 @@
       -23.4
      ],
      [
-      -32.7,
-      -32.7
+      -27.0,
+      -31.5
      ]
     ],
     "where": "crew zone behind the DJ, one chain from the home run"
@@ -26198,8 +26198,8 @@
      -23.4
     ],
     [
-     -32.7,
-     -32.7
+     -27.0,
+     -31.5
     ]
    ],
    "where": "crew zone behind the DJ, one chain from the home run"

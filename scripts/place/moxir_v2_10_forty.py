@@ -27,6 +27,7 @@ ap.add_argument('--moves', default='owner-edits,heads-u,heads-u-clear,heads-u-to
 ap.add_argument('--lines', required=True); ap.add_argument('--live', default=None)
 ap.add_argument('--out', default='scripts/place/rigs/moxir-v2-10-2026-10-15.json')
 ap.add_argument('--fix-d', default='16.9,-15.7;17.0,-29.5', help='line D: the last point moved inside the fence (owner brief 2026-10-15)')
+ap.add_argument('--fix-a', default='-27.0,-31.5', help='line A: the last point moved inside the fence, 1 m in from x -27.7 (lead decision 2026-10-15, keeps the ray direction)')
 ap.add_argument('--fence', default='-27.7,17.3,-34.5,-7.5', help='x0,x1,z0,z1 of the fenced crew zone')
 ap.add_argument('--api'); ap.add_argument('--project'); ap.add_argument('--token-file'); ap.add_argument('--backup'); ap.add_argument('--apply', action='store_true')
 a = ap.parse_args()
@@ -69,6 +70,7 @@ L = json.load(open(a.lines))['lines']
 x0, x1, z0, z1 = map(float, a.fence.split(','))
 dpts = [tuple(map(float, s.split(','))) for s in a.fix_d.split(';')]
 for ln in L:
+    if ln['name'] == 'A': ln['points'][2] = [float(v) for v in a.fix_a.split(',')]
     if ln['name'] == 'D': ln['points'][1] = list(dpts[0]); ln['points'][2] = list(dpts[1])
 out_of_fence = []
 for ln in L:
@@ -138,7 +140,7 @@ rig['title'] = 'MOXIR v2.10 - forty washes: the floor washes as 6 wild lines of 
 rig['what'] = ('v2.9 with the UP-PL5403 cut from 50 to 40 (Poligraf stock 40): the 14 back-row and 14 red-tent washes become 18 floor washes in 6 lines '
                '(A B C D behind the DJ in the crew zone; L and R across the floor), each wash straight up, each line one chain. Owner 2026-10-15: "there are 40 washes", '
                '"we pick from the poligraf 40 washes", "make it wild and as a lines and use the area not hard that we can connect dmx". Source: '
-               f'{a.src} + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) to stay in the fence.')
+               f'{a.src} + v2.9 moves files + the v2-9 project positions; lines from agent-reports-2026-10-15/moxir-40/lines.json; line D last point (29.9,-20.6) moved to (17.0,-29.5) and line A last point (-32.7,-32.7) moved to (-27.0,-31.5) to stay in the fence (lead decision 2026-10-15; 1 m inside x -27.7).')
 rig['removed_v2_10'] = [{'id': i, 'why': 'owner 2026-10-15: 40 washes, not 50 (Poligraf stock)'} for i in removed]
 json.dump(rig, open(R(a.out), 'w'), indent=1, ensure_ascii=False)
 print(f'wrote {a.out}: UP-PL5403 {n40}; removed {len(removed)}: {removed}')
