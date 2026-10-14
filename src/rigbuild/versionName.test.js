@@ -74,4 +74,11 @@ describe('versionLinks names from every source', () => {
         const v = { ...variant, siblings: [{ id: 'a', projectId: 'v2-8', title: 'MOXIR v2.8' }, { id: 'rig', projectId: 'v2-9', title: 'MOXIR v2.8' }] }
         expect(versionLinks(v, 'v2-9', href).find((l) => l.current).name).toBe('v2.9')
     })
+
+    it('a bare stored number ("2.8", no v) is the number token: the slug wins, nothing doubled (the test copy, 2026-10-14)', () => {
+        expect(versionName('2.8', 'x', 'moxir-v2-9')).toBe('v2.9')
+        expect(versionName('2.8 looks', 'x', 'moxir-v2-9')).toBe('v2.9 looks')
+        expect(versionName('2.9', 'x', 'moxir-v2-9')).toBe('v2.9')
+        expect(versionName('v2.9 - a laser matrix', 'x', 'moxir-v2-9')).toBe('v2.9 - a laser matrix')
+    })
 })

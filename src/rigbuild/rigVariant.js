@@ -41,7 +41,9 @@ export const versionName = (title, id, projectId) => {
     const label = shortTitle(title, id)
     const number = versionNumberOfSlug(projectId)
     if (!number) return label
-    const m = /^v(\d+(?:\.\d+)*)(.*)$/.exec(label)
+    // A stored number may come with or without its 'v' ("v2.8 …" or a bare "2.8" from a list entry titled "2.8 — …";
+    // the bare one showed the chip as "v2.9 2.8" on the test copy, 2026-10-14): both are the number token.
+    const m = /^v?(\d+(?:\.\d+)+)(\b.*)$/.exec(label) || /^v(\d+)(\b.*)$/.exec(label)
     if (!m) return `v${number} ${label}`.trim()
     if (m[1] !== number) {
         const key = `${projectId}|${m[1]}`
@@ -51,7 +53,7 @@ export const versionName = (title, id, projectId) => {
         }
         return `v${number}${m[2]}`
     }
-    return label
+    return `v${m[1]}${m[2]}`
 }
 
 const byProjectId = (a, b) => (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0)
