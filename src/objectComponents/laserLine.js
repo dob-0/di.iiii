@@ -259,6 +259,26 @@ export const laserSpot = ({ flux = 1, s = 0, sigmaT = 0, dist = 1, pixelAngle = 
     return { beamWidth: w, width: drawn, luminance: (clamp(num(albedo, SPOT_ALBEDO), 0, 1) * E) / Math.PI }
 }
 
+// 9. WHAT THE SCREEN SHOWS (2026-10-15, owner 15:5x: "white core with colour halo"). The room tone-maps with three.js's
+//    ACESFilmicToneMapping (three r185 tonemapping_pars_fragment: Stephen Hill's RRT+ODT fit, sRGB→AP1 input matrix,
+//    exposure/0.6). Its input matrix mixes every channel into the other two, so a line far above white saturates all three
+//    and reads WHITE, while its dimmer halo stays inside the curve and keeps the laser's colour. No special case: this is
+//    the same curve the room applies, reproduced here so the look can be tested without a GPU.
+const ACES_IN = [[0.59719, 0.35458, 0.04823], [0.076, 0.90834, 0.01566], [0.0284, 0.13383, 0.83777]]
+const ACES_OUT = [[1.60475, -0.53108, -0.07367], [-0.10208, 1.10813, -0.00605], [-0.00327, -0.07276, 1.07602]]
+const acesFit = (v) => (v * (v + 0.0245786) - 0.000090537) / (v * (0.983729 * v + 0.432951) + 0.238081)
+const mul3 = (m, v) => m.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2])
+
+/** Linear HDR rgb → linear display rgb 0…1, as the room's ACESFilmic tone mapping at `exposure` draws it. */
+export const toneMapAces = (rgb, exposure = 1) =>
+    mul3(ACES_OUT, mul3(ACES_IN, rgb.map((c) => (Math.max(num(c), 0) * exposure) / 0.6)).map(acesFit)).map((c) => clamp(c, 0, 1))
+
+/** How white a displayed colour is: its smallest channel over its largest (1 = white or grey, 0 = a pure primary). */
+export const whiteness = (rgb) => {
+    const hi = Math.max(...rgb)
+    return hi > 0 ? Math.min(...rgb) / hi : 0
+}
+
 /** A frame's points, cleaned the way the Nodes editor's laser frame is: [x, y, r, g, b], x/y −1…1, colour 0…1; bad points dropped. */
 export const framePoints = (points, max = 2000) => {
     const out = []
