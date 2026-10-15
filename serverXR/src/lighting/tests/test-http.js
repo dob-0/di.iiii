@@ -5,6 +5,13 @@
 // Spawns its own server on an ephemeral HTTP port with an ephemeral Art-Net socket and a
 // throwaway show file, so it never contends with a desk already running on 8080/6454.
 // Run with: npm run test:http   (npm test runs this after the unit tests)
+//
+//   DESK_URL=http://host:port node tests/test-http.js   use a server that is already up
+//                                                       instead of starting one
+//   node tests/test-http.js --class a                   only the class-a routes of
+//                                                       api-contract.json, each reply
+//                                                       checked against the contract's shape
+// Both flags together are how a node (anything that is not this desk) is held to the contract.
 
 const assert = require('assert');
 const { spawn } = require('child_process');
@@ -1773,13 +1780,76 @@ check('the desk\'s own state is read through: a holder of the desk reaches the l
   } finally { await d.stop(); }
 });
 
+// ---- the API contract --------------------------------------------------------
+// api-contract.json says what the desk UI reads from every route. --class a runs the routes
+// every node must really answer; each reply is held to the keys and JSON types written there.
+
+const contract = require('../api-contract.json');
+
+function jsonType(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
+function shapeProblems(body, shape, where) {
+  const out = [];
+  if (jsonType(body) !== 'object') return [where + ': the reply is not a JSON object (' + jsonType(body) + ')'];
+  for (const [key, want] of Object.entries(shape)) {
+    if (!(key in body)) { out.push(where + ': missing "' + key + '"'); continue; }
+    const got = jsonType(body[key]);
+    if (!want.split('|').includes(got)) out.push(where + ': "' + key + '" is ' + got + ', the UI reads ' + want);
+  }
+  return out;
+}
+
+function fill(v, ctx) {
+  if (typeof v === 'string' && v[0] === '$') {
+    if (!(v.slice(1) in ctx)) throw new Error('the probe wants ' + v + ' but no earlier route captured it');
+    return ctx[v.slice(1)];
+  }
+  if (Array.isArray(v)) return v.map((x) => fill(x, ctx));
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fill(x, ctx)]));
+  return v;
+}
+const dig = (obj, dotted) => dotted.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
+
+function contractChecks(cls) {
+  const ctx = {};
+  const list = [];
+  for (const e of contract.entries.filter((x) => x.class === cls)) {
+    list.push({
+      name: 'contract ' + cls + ': ' + e.method + ' /' + e.path,
+      fn: async () => {
+        const route = '/' + e.path;
+        const r = e.method === 'GET' ? await GET(route) : await POST(route, fill(e.probe.body, ctx));
+        assert.strictEqual(r.status, 200, e.method + ' ' + route + ' answered ' + r.status + ': ' + r.text.slice(0, 120));
+        if (r.body && r.body.error) assert.fail(route + ' refused the probe: ' + r.body.error);
+        const bad = shapeProblems(r.body, e.reply, route);
+        if (e.path === 'api/state') {
+          const k = contract.state_keys;
+          bad.push(...shapeProblems(r.body, k.required, 'state'));
+          for (const [group, shape] of Object.entries(k.nested_required)) bad.push(...shapeProblems(r.body[group], shape, 'state.' + group));
+        }
+        assert.ok(!bad.length, bad.join('\n       '));
+        for (const [name, from] of Object.entries((e.probe && e.probe.capture) || {})) {
+          ctx[name] = dig(r.body, from);
+          assert.ok(ctx[name] !== undefined, route + ' did not carry "' + from + '" for the routes after it');
+        }
+      },
+    });
+  }
+  return list;
+}
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {
+  const argv = process.argv.slice(2);
+  const ci = argv.indexOf('--class');
+  const onlyClass = ci >= 0 ? argv[ci + 1] : null;
+  if (ci >= 0 && !['a', 'b', 'c'].includes(onlyClass)) throw new Error('--class takes a, b or c');
+  if (onlyClass && onlyClass !== 'a') throw new Error('only --class a has checks: b and c are what a node may refuse, and there is nothing to run against them');
+  const external = (process.env.DESK_URL || '').replace(/\/+$/, '');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'artnet-test-'));
   process.env.DATA_DIR = dir;
 
-  const child = spawn(process.execPath, [path.join(__dirname, '..', 'standalone.js')], {
+  const child = external ? null : spawn(process.execPath, [path.join(__dirname, '..', 'standalone.js')], {
     // ARTNET_OFFLINE matters as much as the rest: without it the test server broadcasts
     // its universes at 40 Hz to the same address a real rig is listening on, and the
     // fixtures visibly flicker through the test run.
@@ -1788,7 +1858,7 @@ async function main() {
   });
 
   let log = '';
-  const port = await new Promise((resolve, reject) => {
+  const port = external ? 0 : await new Promise((resolve, reject) => {
     const bail = setTimeout(() => reject(new Error('server did not start in 10s:\n' + log)), 10000);
     child.stdout.on('data', (c) => {
       log += c;
@@ -1798,20 +1868,25 @@ async function main() {
     child.stderr.on('data', (c) => { log += c; });
     child.on('exit', (code) => { clearTimeout(bail); reject(new Error('server exited (' + code + '):\n' + log)); });
   });
-  base = 'http://127.0.0.1:' + port;
+  base = external || 'http://127.0.0.1:' + port;
+  const run = onlyClass ? contractChecks(onlyClass) : tests;
+  if (external) console.log('  against ' + external + (onlyClass ? ' — class ' + onlyClass + ' of api-contract.json v' + contract.contract_version : ''));
 
   try {
-    for (const t of tests) {
+    for (const t of run) {
       // Park the desk before each test rather than tidying up after. A test that fails
       // partway through never reaches its own cleanup, and a master left at half would
-      // then fail every test after it for the wrong reason.
-      await POST('/api/master', { master: 255, blackout: false });
-      await POST('/api/raw', { clear: true });
+      // then fail every test after it for the wrong reason. The contract run leaves the
+      // desk's own master and held channels alone: it may be a node that is live.
+      if (!onlyClass) {
+        await POST('/api/master', { master: 255, blackout: false });
+        await POST('/api/raw', { clear: true });
+      }
       try { await t.fn(); console.log('  ok   ' + t.name); }
       catch (e) { failures++; console.log('  FAIL ' + t.name + '\n       ' + e.message); }
     }
   } finally {
-    child.kill();
+    if (child) child.kill();
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
   }
 
