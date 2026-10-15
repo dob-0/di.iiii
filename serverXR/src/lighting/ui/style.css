@@ -880,6 +880,8 @@ input.pinned { border-color: var(--accent); }
 .title > * { flex: none; }
 .title > #showName { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .statusstrip.bad { color: var(--danger); }
+/* A control this desk cannot offer (caps, or no secure page for mic and MIDI) is not drawn at all. */
+.capoff { display: none !important; }
 /* The show note is a row of the top bar, last, full width: it stays in view with the bar. */
 .topbar > .shownote { flex: 1 1 100%; order: 10; border-top: 1px solid var(--line); border-bottom: 0; }
 

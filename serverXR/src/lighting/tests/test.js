@@ -1476,5 +1476,41 @@ check('the show sentence: the migration offer says it is a copy before the press
   assert.strictEqual(deskShow.copied({ space: 'lab', label: 'Lab' }), "Copied. Lab has its own show now; this machine's show is unchanged.");
 });
 
+// ---- what the page may offer, and what it says when it cannot draw ---------------
+// ui/caps.js is plain script the page loads; the poll's failure rule is held here.
+const deskCaps = require('../ui/caps');
+
+check('a render error neither raises nor resets the failure counter; only a lost reply counts', () => {
+  let n = 0;
+  n = deskCaps.nextFails(n, 'network');
+  assert.strictEqual(n, 1);
+  assert.strictEqual(deskCaps.nextFails(n, 'render'), 1, 'a reply that could not be drawn is not the network, and not a recovery either');
+  assert.strictEqual(deskCaps.nextFails(0, 'render'), 0, 'a state the page cannot draw never reads as offline');
+  assert.strictEqual(deskCaps.nextFails(deskCaps.nextFails(n, 'render'), 'network'), 2, 'the second lost reply still latches the banner');
+  assert.strictEqual(deskCaps.nextFails(2, 'drawn'), 0, 'only a reply that drew resets it');
+});
+
+check('cap() is on without caps, off only on an explicit false, and mic and MIDI need a secure page', () => {
+  assert.strictEqual(deskCaps.cap(undefined, 'midi', true), true, 'no caps is the full desk');
+  assert.strictEqual(deskCaps.cap(null, 'looks', true), true);
+  assert.strictEqual(deskCaps.cap({}, 'midi', true), true);
+  assert.strictEqual(deskCaps.cap({ midi: false }, 'midi', true), false);
+  assert.strictEqual(deskCaps.cap({ midi: false }, 'audio', true), true, 'one cap does not turn off another');
+  assert.strictEqual(deskCaps.cap({ audio: false }, 'audio', true), false);
+  assert.strictEqual(deskCaps.cap(undefined, 'midi', false), false, 'a plain http page cannot open MIDI');
+  assert.strictEqual(deskCaps.cap(undefined, 'audio', false), false, 'or the microphone');
+  assert.strictEqual(deskCaps.cap(undefined, 'looks', false), true, 'but everything else is unaffected');
+  assert.strictEqual(deskCaps.cap({ midi: 0 }, 'midi', true), true, 'only false means off, so a malformed value cannot hide a control');
+});
+
+check('the render line names the key the page could not draw', () => {
+  const st = { fixtures: [], fx: {}, output: {}, chase: {}, scenes: [], groups: [], lfos: [], layers: [] };
+  assert.strictEqual(deskCaps.culprit(new TypeError("Cannot read properties of undefined (reading 'universes')"), st), 'status');
+  assert.strictEqual(deskCaps.unreadable(new TypeError('x'), st), 'the desk sent a state this page cannot draw: status');
+  const whole = { status: {}, output: {}, fx: {}, chase: {}, fixtures: [], scenes: [], groups: [], lfos: [], layers: [] };
+  assert.strictEqual(deskCaps.culprit(new TypeError("Cannot read properties of undefined (reading 'mode')"), whole), 'mode', 'with every key present, the engine\'s own word');
+  assert.ok(deskCaps.culprit(new Error('boom'), whole).length > 0);
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
