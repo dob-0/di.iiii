@@ -9,7 +9,9 @@ import { normalizeRigLooks } from './projectSchema.js'
 import { v1Entities, v1Looks, v1RigParts } from '../../scripts/rigbuild/epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-const file = 'scripts/place/rigs/moxir-v2-11-2026-10-15.json'
+// A FROZEN copy of rig v2.11 (fixtures, looks, cues) taken 2026-10-15 17:5x: the parity digest must not move when the show's data
+// moves (it broke twice that day on recolours); the live rig is covered by the 0-differences test below.
+const file = 'src/shared/__fixtures__/rig-parity-2026-10-15.json'
 const rig = JSON.parse(fs.readFileSync(path.join(repo, file), 'utf8'))
 const ctx = { axis: 0.13, stage: { front: 24.5, into: 1 } }
 const ents = v1Entities(rig)
@@ -21,9 +23,9 @@ describe('buildLook: the one function the build script and the Studio share', ()
         // sha256 of JSON [{id, aims, colours, levels}] of the 51 looks, taken from the build script BEFORE it called buildLook (2026-10-15)
         const digest = crypto.createHash('sha256').update(JSON.stringify(built.looks.map(({ id, aims, colours, levels }) => ({ id, aims, colours, levels })))).digest('hex')
         expect(built.looks).toHaveLength(51)
-        // Re-pinned 2026-10-15 04:5x: rig v2.11 recolour pass 3 (ae5858c7) changed every look's colours; the digest
+        // Pinned against the frozen copy 2026-10-15 17:5x (before: re-pinned at 04:5x after recolour 3); the digest
         // follows the rig file, so it is re-pinned whenever the rig changes on purpose (the old pin was 5300f747…).
-        expect(digest).toBe('a90184562b7218132500a83d572efbfdf6b203eea85501973a574e9aea488168')
+        expect(digest).toBe('b8c2bd1a11316d6754d8953327b928c2871834c3e89fba7014cb98cd30ab51eb')
     })
 
     it('buildLook from a look\'s SOURCE and the document alone equals what the build wrote, for every look (0 differences)', () => {

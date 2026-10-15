@@ -22,7 +22,7 @@ describe('the fixtures manifest', () => {
             expect(entry.code, kind).toMatch(/^(UP|EXT)-/)
             if (entry.code.startsWith('EXT-')) expect(entry.identified, kind).toMatch(/another supplier/)
             for (const [field, spec] of Object.entries(entry.specs)) {
-                expect(['EXACT', 'COMPONENT', 'EQUIVALENT', 'TESTED', 'UNKNOWN', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
+                expect(['EXACT', 'COMPONENT', 'EQUIVALENT', 'TESTED', 'ARCHIVED', 'UNKNOWN', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
                 // UNKNOWN: looked for and not found — it holds no number and cites nothing
                 if (spec.basis === 'UNKNOWN') { expect(spec.value, `${kind}.${field}`).toBeNull(); expect(spec.note, `${kind}.${field}`).toBeTruthy(); continue }
                 if (spec.basis === 'ASSUMED') continue
@@ -43,8 +43,8 @@ describe('the fixtures manifest', () => {
 
     it('carries the Sevan-kit research of 2026-10-09: each number labelled, the open conflict kept open', () => {
         const { beam380, par, smoke, lasercube } = manifest.kinds
-        // the B380F's two TESTED channel maps disagree from ch11: written down as OPEN, not resolved by choice
-        expect(beam380.specs.dmx_order.basis).toBe('TESTED')
+        // the B380F's 10-09 walk map is ARCHIVED (owner 2026-10-15: the unit's own manual is the chart); its open conflict stays written down
+        expect(beam380.specs.dmx_order.basis).toBe('ARCHIVED')
         expect(beam380.specs.dmx_order.open).toMatch(/^OPEN/)
         expect(beam380.specs.dmx_order.open).toMatch(/ch11-16/)
         expect(beam380.specs.lamp_component.basis).toBe('COMPONENT')

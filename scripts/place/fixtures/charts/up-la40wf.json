@@ -1,0 +1,942 @@
+{
+ "kind": "laser",
+ "code": "UP-LA40WF",
+ "maker": "U-Plus Lighting",
+ "model": "IP-LL40 (manual IP-LL30)",
+ "manual": {
+  "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+  "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+  "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+  "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+  "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+  "basis": "APPROVED"
+ },
+ "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
+ "modes": {
+  "19": {
+   "status": "APPROVED",
+   "note": "manual: 19ch and 32ch available only (6 / 29 / 52 are listed but not available)",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Dimmer",
+     "ranges": [
+      [
+       0,
+       255,
+       "dark to bright"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Mode selection",
+     "ranges": [
+      [
+       0,
+       49,
+       "auto"
+      ],
+      [
+       50,
+       99,
+       "voice control"
+      ],
+      [
+       100,
+       149,
+       "PRG file sequential playback"
+      ],
+      [
+       150,
+       199,
+       "ILD file loop playback"
+      ],
+      [
+       200,
+       255,
+       "built-in graphics"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Graphics selection",
+     "ranges": [
+      [
+       0,
+       255,
+       "one graphic for every two values (the manual lists no graphic names)"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "Display mode",
+     "ranges": [
+      [
+       0,
+       63,
+       "normal"
+      ],
+      [
+       64,
+       127,
+       "highlight display"
+      ],
+      [
+       128,
+       191,
+       "segmented display"
+      ],
+      [
+       192,
+       255,
+       "point display"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Colour selection",
+     "ranges": [
+      [
+       0,
+       16,
+       "white"
+      ],
+      [
+       17,
+       33,
+       "red"
+      ],
+      [
+       34,
+       50,
+       "green"
+      ],
+      [
+       51,
+       67,
+       "blue"
+      ],
+      [
+       68,
+       84,
+       "yellow"
+      ],
+      [
+       85,
+       101,
+       "purple"
+      ],
+      [
+       102,
+       118,
+       "cyan"
+      ],
+      [
+       119,
+       135,
+       "white, red, green, blue colour segments"
+      ],
+      [
+       136,
+       152,
+       "blue, yellow, purple, cyan colour segments"
+      ],
+      [
+       153,
+       169,
+       "white red green blue yellow purple cyan colour segmentation"
+      ],
+      [
+       170,
+       186,
+       "white, red, green, blue colours flowing"
+      ],
+      [
+       187,
+       203,
+       "blue, yellow, purple, cyan colours flow"
+      ],
+      [
+       204,
+       220,
+       "white red green blue yellow purple cyan colour flow"
+      ],
+      [
+       221,
+       237,
+       "colour breaks at graphic breakpoints"
+      ],
+      [
+       238,
+       255,
+       "voice-controlled colour change"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "X move",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto left-right circular motion"
+      ],
+      [
+       176,
+       225,
+       "auto left-right jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 7,
+     "function": "Y move",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto up-down cycle motion"
+      ],
+      [
+       176,
+       225,
+       "auto up-down jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 8,
+     "function": "Zoom",
+     "ranges": [
+      [
+       0,
+       10,
+       "no scaling"
+      ],
+      [
+       11,
+       87,
+       "resize by hand"
+      ],
+      [
+       88,
+       150,
+       "zoom"
+      ],
+      [
+       151,
+       200,
+       "zoom out"
+      ],
+      [
+       201,
+       255,
+       "loop zoom"
+      ]
+     ]
+    },
+    {
+     "ch": 9,
+     "function": "X rotation",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 10,
+     "function": "Y rotation",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 11,
+     "function": "Centre rotation",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       192,
+       "automatic clockwise"
+      ],
+      [
+       193,
+       255,
+       "automatic counter-clockwise"
+      ]
+     ]
+    },
+    {
+     "ch": 12,
+     "function": "Gradual painting",
+     "ranges": [
+      [
+       0,
+       10,
+       "no fade"
+      ],
+      [
+       10,
+       74,
+       "fader by hand"
+      ],
+      [
+       75,
+       104,
+       "auto grading (increase)"
+      ],
+      [
+       105,
+       144,
+       "auto fade (decrease)"
+      ],
+      [
+       145,
+       184,
+       "auto loop fade"
+      ],
+      [
+       185,
+       224,
+       "end-to-end loop drawing (increase)"
+      ],
+      [
+       225,
+       255,
+       "end-to-end loop drawing (decrease)"
+      ]
+     ]
+    },
+    {
+     "ch": 13,
+     "function": "X wave",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 14,
+     "function": "Y wave",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 15,
+     "function": "Strobe",
+     "ranges": [
+      [
+       0,
+       10,
+       "no strobe"
+      ],
+      [
+       11,
+       199,
+       "auto strobe slow to fast"
+      ],
+      [
+       200,
+       255,
+       "strobe by voice"
+      ]
+     ]
+    },
+    {
+     "ch": 16,
+     "function": "Red modulation",
+     "ranges": [
+      [
+       0,
+       255,
+       "red from brightest to dark (0 = brightest)"
+      ]
+     ]
+    },
+    {
+     "ch": 17,
+     "function": "Green modulation",
+     "ranges": [
+      [
+       0,
+       255,
+       "green from brightest to dark (0 = brightest)"
+      ]
+     ]
+    },
+    {
+     "ch": 18,
+     "function": "Blue modulation",
+     "ranges": [
+      [
+       0,
+       255,
+       "blue from brightest to dark (0 = brightest)"
+      ]
+     ]
+    },
+    {
+     "ch": 19,
+     "function": "Movement out-of-bounds effect",
+     "ranges": [
+      [
+       0,
+       49,
+       "out-of-bounds rebound"
+      ],
+      [
+       50,
+       99,
+       "out-of-bounds to a line"
+      ],
+      [
+       100,
+       149,
+       "out-of-bounds blanking"
+      ],
+      [
+       150,
+       255,
+       "out-of-bounds pass through"
+      ]
+     ]
+    }
+   ]
+  },
+  "32": {
+   "status": "APPROVED",
+   "note": "ch 1-19 as the 19-ch chart; ch 20-32 draw a second graphic at the same time (mirror of ch 3-14, then out-of-bounds). The tested Sevan map (SEVAN, TESTED) agrees: colour 8 white / 25 red / 76 yellow / 93 purple / 110 cyan, X/Y centre 64, centre rotation 150, mode 250",
+   "same_as": "19",
+   "channels": [
+    {
+     "ch": 20,
+     "function": "Graphics selection (2nd graphic)",
+     "ranges": [
+      [
+       0,
+       255,
+       "one graphic for every two values"
+      ]
+     ]
+    },
+    {
+     "ch": 21,
+     "function": "Display mode (2nd)",
+     "ranges": [
+      [
+       0,
+       63,
+       "normal"
+      ],
+      [
+       64,
+       127,
+       "highlight display"
+      ],
+      [
+       128,
+       191,
+       "segmented display"
+      ],
+      [
+       192,
+       255,
+       "point display"
+      ]
+     ]
+    },
+    {
+     "ch": 22,
+     "function": "Colour selection (2nd)",
+     "ranges": [
+      [
+       0,
+       16,
+       "white"
+      ],
+      [
+       17,
+       33,
+       "red"
+      ],
+      [
+       34,
+       50,
+       "green"
+      ],
+      [
+       51,
+       67,
+       "blue"
+      ],
+      [
+       68,
+       84,
+       "yellow"
+      ],
+      [
+       85,
+       101,
+       "purple"
+      ],
+      [
+       102,
+       118,
+       "cyan"
+      ],
+      [
+       119,
+       135,
+       "white, red, green, blue colour segments"
+      ],
+      [
+       136,
+       152,
+       "blue, yellow, purple, cyan colour segments"
+      ],
+      [
+       153,
+       169,
+       "white red green blue yellow purple cyan colour segmentation"
+      ],
+      [
+       170,
+       186,
+       "white, red, green, blue colours flowing"
+      ],
+      [
+       187,
+       203,
+       "blue, yellow, purple, cyan colours flow"
+      ],
+      [
+       204,
+       220,
+       "white red green blue yellow purple cyan colour flow"
+      ],
+      [
+       221,
+       237,
+       "colour breaks at graphic breakpoints"
+      ],
+      [
+       238,
+       255,
+       "voice-controlled colour change"
+      ]
+     ]
+    },
+    {
+     "ch": 23,
+     "function": "X move (2nd)",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto left-right circular motion"
+      ],
+      [
+       176,
+       225,
+       "auto left-right jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 24,
+     "function": "Y move (2nd)",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto up-down cycle motion"
+      ],
+      [
+       176,
+       225,
+       "auto up-down jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 25,
+     "function": "Zoom (2nd)",
+     "ranges": [
+      [
+       0,
+       10,
+       "no scaling"
+      ],
+      [
+       11,
+       87,
+       "resize by hand"
+      ],
+      [
+       88,
+       150,
+       "zoom"
+      ],
+      [
+       151,
+       200,
+       "zoom out"
+      ],
+      [
+       201,
+       255,
+       "loop zoom"
+      ]
+     ]
+    },
+    {
+     "ch": 26,
+     "function": "X rotation (2nd)",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 27,
+     "function": "Y rotation (2nd)",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 28,
+     "function": "Centre rotation (2nd)",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       192,
+       "automatic clockwise"
+      ],
+      [
+       193,
+       255,
+       "automatic counter-clockwise"
+      ]
+     ]
+    },
+    {
+     "ch": 29,
+     "function": "Gradual painting (2nd)",
+     "ranges": [
+      [
+       0,
+       10,
+       "no fade"
+      ],
+      [
+       10,
+       74,
+       "fader by hand"
+      ],
+      [
+       75,
+       104,
+       "auto grading (increase)"
+      ],
+      [
+       105,
+       144,
+       "auto fade (decrease)"
+      ],
+      [
+       145,
+       184,
+       "auto loop fade"
+      ],
+      [
+       185,
+       224,
+       "end-to-end loop drawing (increase)"
+      ],
+      [
+       225,
+       255,
+       "end-to-end loop drawing (decrease)"
+      ]
+     ]
+    },
+    {
+     "ch": 30,
+     "function": "X wave (2nd)",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 31,
+     "function": "Y wave (2nd)",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 32,
+     "function": "Movement out-of-bounds effect (2nd)",
+     "ranges": [
+      [
+       0,
+       49,
+       "out-of-bounds rebound"
+      ],
+      [
+       50,
+       99,
+       "out-of-bounds to a line"
+      ],
+      [
+       100,
+       149,
+       "out-of-bounds blanking"
+      ],
+      [
+       150,
+       255,
+       "out-of-bounds pass through"
+      ]
+     ]
+    }
+   ]
+  }
+ }
+}
