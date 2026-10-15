@@ -1,4 +1,4 @@
-# feat/migrate-sheets-2026-10-15 — the show's sheets move into di.iiii (rows N811.5 N811.6 N811.9)
+## 2026-10-15 — The show's sheets and outside views migrated into scripts/place ("nothing is left behind")
 
 Rule: "Nothing is left behind". Brief: agent-reports-2026-10-15/moxir-50/briefs/migrate-sheets.md. Venue-to-show skill: step 11 (sheets) and step 10 (views).
 
