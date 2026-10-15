@@ -17,7 +17,9 @@ now; in the future maybe we connect it in main and let the audience play."
   hand, and "page 4 of 5" says where you are in 50), opens on the page of the playing scene, follows it when it changes. Playing scene = desk runner
   (`deskCues.read`, the chip's own read) where a desk drives, the chip's clock index where the clock drives (`playingIndex`), else the server answer.
   A click = the same `POST …/choose` as the list (the server decides who may). A viewer the server blocks gets a card that does nothing and says
-  "the show runs on its own clock". On a clock show a successful click also sets the chip's per-viewer PREVIEW (`onPreview`), outlined in cyan.
+  "the show runs on its own clock". ROOT CAUSE of "not selectable": the show's `showSource: 'clock'` makes `lightBlocked` true, so EVERY card was
+  disabled ('no-light'). On a clock show there is no runner to GO, so a click is now the chip's per-viewer PREVIEW (`onPreview`, outlined in cyan;
+  nothing is posted); the clock keeps running for everyone else.
   FUTURE HOOK (owner: audience playing, NOT built): the prop `audiencePlays` (false) - true hands every click to the server, which still decides.
 - Wiki: the show page article (strip) and the rig versions article (scene bar), `updated` bumped.
 

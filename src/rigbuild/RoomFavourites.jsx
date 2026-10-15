@@ -11,7 +11,7 @@ import { CHIP, ACTIVE, INK, LINE } from './chromeStyle.js'
 // scene that is playing. The playing scene is read from the desk's runner where a desk drives the room (the SAME read the SHOW chip
 // makes, deskCues.read once a second), from the show clock where the clock does (`playingIndex`, the chip's own), else from the server's show answer - never a card the chip does not agree with.
 // The strip stays behind one small control (owner 2026-10-13: the scene is the page; rememberedOpen.js, remembered for that viewer only).
-// A click sends that scene to Light through the SAME POST .../choose as the list and the show page, so the server alone decides who
+// A click sends that scene to Light through the SAME POST .../choose (on a show that plays by its own clock there is no runner: the click is the chip's per-viewer PREVIEW) as the list and the show page, so the server alone decides who
 // may (the cooldown, the operator's lock); a viewer who may not gets a card that does nothing and says so on hover. A laser scene is
 // never sent (the server refuses it). The audience playing is a FUTURE plan (owner): `audiencePlays` is its one hook - false today, so
 // only what the server lets this viewer do is clickable; true will hand every click to the server, which still decides.
@@ -112,15 +112,15 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
 
     const choose = useCallback(async (cue) => {
         if (cue.laser || sending != null || watching) return
+        // A show that plays by its own clock is not Light's: there is no runner to GO (the server answers 'no-light' to every card). The click
+        // shows that scene to THIS viewer as the chip's preview ("PREVIEW · name · the show is on ..."); the clock keeps running for everyone else.
+        if (onPreview) { onPreview(String(cue.lookId || '').replace(/^rig-/, '') || null); return }
         setSending(cue.index)
         setNotice('')
         const t0 = Date.now()
         try {
             take(await chooseCue(spaceId, projectId, { index: cue.index, cueId: cue.id, name: cleanName(readName()) }), t0, Date.now())
             setDeskAgain((n) => n + 1) // read the desk now, not in a second
-            // A show that plays by its own clock does not follow the runner: the scene is shown to THIS viewer as the chip's preview
-            // ("PREVIEW · name · the show is on ..."), the clock keeps running for everyone else.
-            onPreview?.(String(cue.lookId || '').replace(/^rig-/, '') || null)
         } catch (e) {
             if (e instanceof ShowError && e.body?.cues) take(e.body, t0, Date.now())
             setNotice(e.message || 'Light did not take it.')
@@ -151,7 +151,7 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
                 {shown.map((cue) => {
                     const isLive = isLiveScene(cue, live, cues)
                     const previewed = Boolean(previewLook) && String(cue.lookId || '').replace(/^rig-/, '') === previewLook
-                    const disabled = Boolean(cue.laser) || lightBlocked || lightBusy || youBlock === 'cooldown' || sending != null
+                    const disabled = Boolean(cue.laser) || (!onPreview && (lightBlocked || lightBusy || youBlock === 'cooldown')) || sending != null
                     const name = cue.title || cue.name
                     const tip = watching ? `${name} — ${WATCH_WORDS}` : cue.laser ? `${name} — operator only` : name
                     return (

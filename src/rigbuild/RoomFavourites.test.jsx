@@ -98,15 +98,28 @@ describe('the scene strip', () => {
         expect(JSON.parse(post[1].body)).toMatchObject({ index: 3, cueId: 'c3' })
     })
 
-    it('on a show that plays by its own clock a successful click also previews that scene for this viewer', async () => {
+    it('on a show that plays by its own clock (the server answers no-light) a click previews that scene for this viewer and posts nothing', async () => {
         openBricks()
         const previewed = vi.fn()
-        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'operator', block: '', authOff: false } })))
+        const calls = []
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer({ clock: { showEpoch: 1, loop: true, showSource: 'clock', cues: [] }, you: { who: 'operator', block: '', authOff: false } })) })
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="clock" playingIndex={2} onPreview={previewed} previewLook="l3" />)
         await screen.findByText('the black')
+        expect(document.querySelector('[data-fav="rig-l4"]').disabled).toBe(false)
         expect(document.querySelector('[data-fav="rig-l3"]').getAttribute('aria-pressed')).toBe('true')
         await act(async () => { fireEvent.click(document.querySelector('[data-fav="rig-l4"]')) })
         expect(previewed).toHaveBeenCalledWith('l4')
+        expect(calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+    })
+
+    it('a visitor the server blocks gets no preview either', async () => {
+        openBricks()
+        const previewed = vi.fn()
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })))
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="clock" playingIndex={2} onPreview={previewed} />)
+        await screen.findByText('the black')
+        await act(async () => { fireEvent.click(document.querySelector('[data-fav="rig-l4"]')) })
+        expect(previewed).not.toHaveBeenCalled()
     })
 
     it('for a visitor a click does nothing and the card says why on hover', async () => {
