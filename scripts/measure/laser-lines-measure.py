@@ -140,7 +140,8 @@ def main():
     doc = doc.get('document', doc)
     lines = lines_of(doc)
     res = {'lines': len(lines), 'shots': {}}
-    for shot in json.load(open(a.shots)):
+    shots = json.load(open(a.shots))
+    for shot in (shots['shots'] if isinstance(shots, dict) else shots):
         f = os.path.join(a.dir, shot['name'] + '.png')
         if not shot.get('camera') or not os.path.exists(f):
             continue
