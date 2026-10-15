@@ -89,3 +89,5 @@ the lines of light as THE look (N808/N810). Rows: N811.1 scenes50 · N811.2 pale
 design · N811.5 scenes sheet · N811.6 laser sheet · N811.7 energy data · N811.8 light-environment table · N811.9 outside/floor
 views · N811.10 one generator · N800.1 read-back · N767 guard · N717 stories (N811.11: the scenes file, moved in this job). close a row by moving the thing into
 `scripts/place` with a test and fixing this table.
+
+Migrated (feat/migrate-scenes-2026-10-15): N811.1 `scenes50.py` → `scripts/place/scenes_build.py` (spec → scenes file + check; the colour audit stays with N811.2) · N811.3 → `scenes_outside_rule.py` · N811.4 → `laser_design.py` + `rigs/moxir-laser-design-2026-10-15.json`; test `scripts/place/scenes-tools.test.js`.
