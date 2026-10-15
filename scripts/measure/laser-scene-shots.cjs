@@ -11,7 +11,7 @@
  * --scene "<name>:<lookId>:<frame index>". Files: <out>/<n>-<page>-<scene>.png and shots.json. Waits while the CPU package is
  * over --heat (at most --wait-s, then stops and says so); refuses a software renderer; ends on about:blank, also on error.
  * --camera (2026-10-15, lasers-look job): the browser's copy gets it as presentationState.fixedCamera, and after the settle the
- * room's camera (HdrBloom's DEV handle window.__diRoom.camera) is put there and read back into shots.json, so
+ * room's camera (HdrBloom's DEV handle window.__diRoom: camera, and controls.setLookAt when the page has camera-controls) is put there and read back into shots.json, so
  * laser-lines-measure.py can project the lines with the camera the picture was really taken from.
  */
 const fs = require('node:fs')
@@ -113,7 +113,11 @@ const main = async () => {
                     r.camera = await page.evaluate(async (c) => {
                         const cam = window.__diRoom?.camera
                         if (!cam) return { error: 'no window.__diRoom.camera (dev build of HdrBloom.jsx needed)' }
-                        cam.position.set(...c.position); cam.fov = c.fov; cam.lookAt(...c.target); cam.updateProjectionMatrix()
+                        cam.fov = c.fov; cam.updateProjectionMatrix()
+                        // the page's camera controls own the camera (camera-controls setLookAt); without them, set it directly
+                        const ctl = window.__diRoom.controls
+                        if (ctl?.setLookAt) await ctl.setLookAt(...c.position, ...c.target, false)
+                        else { cam.position.set(...c.position); cam.lookAt(...c.target) }
                         await new Promise((res) => setTimeout(res, 3000))
                         return { position: cam.position.toArray(), target: c.target, fov: cam.fov, readBack: cam.position.toArray().map((n) => Math.round(n * 100) / 100) }
                     }, CAMERA)
