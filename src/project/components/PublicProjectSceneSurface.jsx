@@ -6,6 +6,7 @@ import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
 import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
 import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
+import { useGraphMakesRoom } from './graphRoom.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
@@ -186,8 +187,11 @@ export default function PublicProjectSceneSurface({
 
     // A document carries both lanes (`nodes` and `entities`) and either may be
     // empty. Whichever renderer we pick has to be the one that can show
-    // everything this document holds — and only RawViewport shows both.
-    const hasGraph = (document.nodes || []).length > 0
+    // everything this document holds — and only RawViewport shows both. Only a graph that DRAWS in the room
+    // (a Scene node, a spatial node) needs it: a VJ Deck alone sent MOXIR v2-11's room to RawViewport, which has
+    // none of the room's light, and the page went dark where the Studio was lit (graphRoom.js, 2026-10-15).
+    // null while the node registry loads for a document with nodes: nothing is drawn for that moment.
+    const hasGraph = useGraphMakesRoom(document.nodes)
 
     // The smart view (docs/architecture/SMART_VIEW.md) for a visitor: the camera kept out
     // of the floor and near the building, the cutaway from outside, the occlusion fade,
@@ -229,7 +233,7 @@ export default function PublicProjectSceneSurface({
                     walkLook={walkLook}
                     topClear={topClear}
                 />
-            ) : hasGraph ? (
+            ) : hasGraph === null ? null : hasGraph ? (
                 <PublicGraphSurface
                     document={document}
                     interactive={!caged && !isPreview}

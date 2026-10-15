@@ -45,6 +45,7 @@ import DisplayChip from '../../rigbuild/DisplayChip.jsx'
 import useOutputMode from '../viewport/useOutputMode.js'
 import { renderPlan } from '../../shared/renderPlan.js'
 import useRenderMode from '../viewport/useRenderMode.js'
+import { useGraphMakesRoom } from './graphRoom.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -300,8 +301,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const entryView = viewMode || presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
     // Work in the node lane. The renderer that can show it is not the one walk
-    // mode uses — see the Walk / Fly control below.
-    const hasGraph = (document?.nodes?.length || 0) > 0
+    // mode uses — see the Walk / Fly control below. Only a graph that draws in the room counts (graphRoom.js): a VJ
+    // Deck alone is not a node room, and hid the Fly button on MOXIR v2-11.
+    const hasGraph = useGraphMakesRoom(document?.nodes) === true
     // What walk mode would actually have to show. `entities` is always an array
     // after normalization, so presence proves nothing — length does. Explicitly
     // hidden entities are dropped with their whole subtree by LiveProjectScene,
