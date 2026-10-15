@@ -10,7 +10,7 @@ lattice, the deck is the first solid surface), and the lantern glazing top (ridg
 
 Limits, stated: the rest axis only (a look may aim a unit elsewhere at show time — the room clips at runtime for that); planes
 and boxes, not the hall's triangles; the cone's spread is not cast (the axis only). `--fix` writes beam.length = the first-hit
-distance for each leak (ops on the project; back it up first).
+distance for each leak, lasers too (ops on the project; back it up first).
 
     python3 scripts/place/physics_check.py --api http://127.0.0.1:4337/serverXR --project moxir-v2-9 \
         --hall scripts/place/rigs/moxir-hall-2026-10-11-v11-show-park-far41.hall.json [--fix]
@@ -45,6 +45,13 @@ def first_surface(p, d, dims):
     return min(hits)
 
 
+def fix_ops(leaks, stamp):
+    """One updateComponent op per leak, lasers included: a laser line is a beam too, and 'stops at the first surface' has no exception.
+    A project with no leak gets no ops (the route answers 400 'No operations provided.' to an empty batch)."""
+    return [{'type': 'updateComponent', 'payload': {'entityId': l['id'], 'component': 'beam', 'patch': {'length': round(l['first_hit'], 2)}},
+             'opId': f'physics-fix-{stamp}-{i}', 'clientId': 'physics-check'} for i, l in enumerate(leaks)]
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--api', required=True); ap.add_argument('--project', required=True)
     ap.add_argument('--hall', required=True); ap.add_argument('--tol', type=float, default=0.5); ap.add_argument('--fix', action='store_true')
@@ -66,11 +73,10 @@ def main():
     print(json.dumps({'project': a.project, 'version': raw.get('version'), 'beams_checked': checked, 'leaks': len(leaks)}))
     for l in sorted(leaks, key=lambda l: -l['over_m'])[:40]: print(' ', json.dumps(l))
     if a.fix and leaks:
-        ops = [{'type': 'updateComponent', 'payload': {'entityId': l['id'], 'component': 'beam', 'patch': {'length': round(l['first_hit'], 2)}},
-                'opId': f'physics-fix-{int(time.time() * 1000)}-{i}', 'clientId': 'physics-check'} for i, l in enumerate(leaks) if not l['laser']]
+        ops = fix_ops(leaks, int(time.time() * 1000))
         req = urllib.request.Request(f'{a.api}/api/projects/{a.project}/ops', data=json.dumps({'baseVersion': raw['version'], 'ops': ops}).encode(),
                                      headers={'Content-Type': 'application/json', 'Authorization': 'Bearer dummy'})
-        out = json.load(urllib.request.urlopen(req, timeout=60)); print('fixed', len(ops), 'beams (lasers left for the room\'s clip):', out.get('ok'), out.get('newVersion'))
+        out = json.load(urllib.request.urlopen(req, timeout=60)); print('fixed', len(ops), 'beams:', out.get('ok'), out.get('newVersion'))
     return 1 if leaks and not a.fix else 0
 
 
