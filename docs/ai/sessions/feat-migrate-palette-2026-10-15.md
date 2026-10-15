@@ -1,4 +1,6 @@
-# feat/migrate-palette-2026-10-15 — palette + light-environment tools become di.iiii features
+## 2026-10-15 — Palette audit and light-environment table tools become di.iiii features (N811.2, N811.8)
+
+Branch `feat/migrate-palette-2026-10-15`. Rule: "Nothing is left behind" (owner 2026-10-13). Venue-to-show skill: the palette step and step 8 (environment picker).
 
 Rule: "Nothing is left behind" (owner 2026-10-13). Ledger rows N811.2 (palette audit) and N811.8 (light-environment table). Venue-to-show skill steps: the palette step, and step 8 (environment picker).
 
