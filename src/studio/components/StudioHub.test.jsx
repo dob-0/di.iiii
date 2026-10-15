@@ -248,6 +248,20 @@ describe('StudioHub', () => {
         })
     })
 
+    // P1 (2026-10-13): the card said "empty" over 133 files. The server now
+    // sends the file count and size; the card prints them.
+    it('says what a project holds — files included — and never "empty" over them', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'docs', title: 'Documents', updatedAt: Date.now(), source: 'studio-v3', layers: { files: 133, fileBytes: 123102822 } },
+            { id: 'blank', title: 'Blank', updatedAt: Date.now(), source: 'studio-v3', layers: {} }
+        ])
+
+        render(<StudioHub spaceId="gallery" />)
+
+        expect(await screen.findByText('133 files · 117.4 MB')).toBeTruthy()
+        expect(screen.getAllByText('empty')).toHaveLength(1)
+    })
+
     it('is the page main landmark (F4)', async () => {
         listProjects.mockResolvedValue([])
         render(<StudioHub spaceId="gallery" />)

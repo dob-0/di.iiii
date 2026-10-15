@@ -34,7 +34,9 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
-| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The lamp you place in a scene still reads Light too, until the owner settles its own word (Lamp is the recommendation). |
+| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
+| **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
+| **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
 | **master clock** | The one loop of beats a project keeps running; every LFO follows it unless it picks another clock. Added 2026-10-14. |
@@ -364,9 +366,10 @@ projection". Routes, keys and folders stay: `/raw`, `/map`, `/light`, `src/raw/`
 (`src/copyVocabulary.test.js`) now also reads `src/kit/KitPage.jsx` and
 `src/landing/LocalHome.jsx`, so "Raw" as a name there fails the build.
 
-Not settled here: Studio's "Lights" button and the lamp you place still say Light. That word
-waits on the owner (desk keeps Light, the object becomes Lamp, the rig button becomes Rig — the
-recommendation, not yet his yes), and the guard does not police it until then.
+Settled since, on 2026-10-13 (see "Amended 2026-10-13" below): the light you place in a scene
+stays a light, and **lamp** is the stage fixture. The recommendation written here, that the
+object becomes Lamp, was not taken. Studio's "Lights" button and the rig button were not changed
+by that amendment, and the guard does not police them.
 
 ## Amended 2026-09-22 — `scan`, and the one thing it must never say
 
@@ -402,6 +405,25 @@ the two existing ones are both on the card. Code: `getNodeCardTitle` (`src/proje
 Still open for the owner (no word is settled here, so nothing changed): the family tag **the scene**
 sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
 node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
+
+## Amended 2026-10-13 — lamp and light, one word for each thing
+
+The question (the "one place for a space" program, ledger N585, phase P1): what does a project's
+holds line call the fixture placed in a scene, "lamp" or "light"? The owner's answer on
+2026-10-13: both words stay, each for its own thing. *"light" = a 3D scene light (sun, point…),
+"lamp" = a stage fixture.*
+
+- **lamp**: a stage fixture. In a scene it is a light that carries a fixture: a typed one from
+  the rig builder (`components.fixture.type`), or a join to a fixture of the lighting desk
+  (`components.fixture.index`).
+- **light**: a 3D scene light. In a scene it is a sun, a point, a spot or an ambient light that
+  carries no fixture.
+- **Light**, with a capital, stays the tool: the lighting desk at `/light/`.
+
+The holds line follows it (`describeProjectLayers`, `src/project/layers.js`): a light that
+carries a fixture counts as a lamp, any other light as a light, and an object is neither. Other strings that
+name a placed light (Studio's Lights row, the `light.point` row of the node table above) were
+not touched by this amendment; a later pass lines them up with these two rows.
 
 ## The rule for anything new
 

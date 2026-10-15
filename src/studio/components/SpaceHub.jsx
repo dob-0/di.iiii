@@ -31,6 +31,7 @@ import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
 import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
+import { describeSpaceHolds } from '../utils/spaceHolds.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
@@ -1667,9 +1668,7 @@ export default function SpaceHub() {
                                         person may enter; zero is an answer too. */}
                                     {Number.isFinite(space.projectCount) && (
                                         <p className="ssh-space-project">
-                                            {space.projectCount === 0
-                                                ? 'No projects yet'
-                                                : `${space.projectCount} project${space.projectCount === 1 ? '' : 's'} · ${space.publishedCount > 0 ? `${space.publishedCount} published` : 'none published'}`}
+                                            {describeSpaceHolds(space)}
                                         </p>
                                     )}
                                     {/* A card opens the space's one door. Everything
