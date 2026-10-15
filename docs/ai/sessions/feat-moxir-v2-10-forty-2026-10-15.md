@@ -94,3 +94,12 @@
 - Tests: with serverXR's packages linked, serverXR + server-process tests 168 files pass; without them ~54 cannot load. The only other
   failure is kitCatalogue (this worktree's glTF Transform 4.4.2 is older than package.json's 4.5.1; environment).
 - page-check.cjs committed (it was untracked; later jobs used it).
+
+## 14:00-18:25 — lead 3 continued: the look decided, dev, the 40 W lasers
+- Places restored from the v739 backup (102 units, ops) after the morning's default-mode rebuild (N803). The owner's "line of the light"
+  = the room page draws like the Studio → PR #972 (room draws through the Studio viewport; room 10.5→65.2 vs Studio 69.1). Merged #960
+  #964 #972 #978 #979 #988; dev's fixtures-test fix cherry-picked (ef0cd9de).
+- Landed on dev twice (#971 with #974; #986); the Mac pulls the published release (reload after). v2-11/red/arcs copied to dev with frames;
+  v2.11 = for the show; the light he took (exposure 2.0, ambient 0.35 warm) on both — file scripts/place/rigs/moxir-v2-11-light-env-2026-10-15.json.
+- 40 W lasers: addresses + 22-scene parts from the U-Plus chart (PR #988); their hand aims moved 0.6°/3° by the safety rules; owed: line-42 leak,
+  patch sheet 47 mismatches, pictures. Process: venue-to-show skill (di-atlas #109, di.iiii #973), four migrations (#982–#985) batched to dev.

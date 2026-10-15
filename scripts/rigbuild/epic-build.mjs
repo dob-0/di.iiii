@@ -267,6 +267,40 @@ export const steelTagOps = (doc, rig) => {
     return { ops, already, absent }
 }
 
+/** A rig unit's DMX patch as fixture fields: its `dmx` block (universe, address, footprint) when the rig gives one, else off
+ * DMX (`dmx: false`: a LaserCube runs over the LAN; a laser or smoke machine with no planned address is run by hand). Pure. */
+export const dmxOf = (f) => (f.dmx && Number.isInteger(f.dmx.universe) && Number.isInteger(f.dmx.address)
+    ? { universe: f.dmx.universe, address: f.dmx.address, mode: f.dmx.mode || `${f.dmx.footprint}ch` }
+    : { dmx: false })
+
+/**
+ * --patch-only (2026-10-15): the rig file's planned addresses into the document, nothing else — `updateComponent` fixture
+ * {universe, address, mode} (+ `dmx: null`, which puts an off-DMX unit on DMX) for every entity whose rig unit has a `dmx`
+ * block and whose document fixture differs. A laser unit's entities are its beams (`rig-laser-<beam id>`). Pure.
+ */
+export const patchOps = (doc, rig) => {
+    const want = new Map()
+    for (const f of rig.fixtures || []) {
+        const d = dmxOf(f)
+        if (d.dmx === false) continue
+        if (isLaserType(f.type)) for (const b of f.laser?.beams || []) { if (!b.off) want.set(`rig-laser-${b.id}`, d) }
+        else want.set(f.id, d)
+    }
+    const ops = []
+    const absent = new Set(want.keys())
+    for (const e of doc.entities || []) {
+        const d = want.get(e.id)
+        const fx = e.components?.fixture
+        if (!d || !fx) continue
+        absent.delete(e.id)
+        const patch = {}
+        for (const k of ['universe', 'address', 'mode']) if (fx[k] !== d[k]) patch[k] = d[k]
+        if (fx.dmx === false) patch.dmx = null
+        if (Object.keys(patch).length) ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'fixture', patch } })
+    }
+    return { ops, absent: [...absent] }
+}
+
 /** v1.0's entities from the rig file. Pure. */
 export const v1Entities = (rig, { hall = null } = {}) => {
     const out = []
@@ -281,7 +315,7 @@ export const v1Entities = (rig, { hall = null } = {}) => {
                         light: { color: f.colour, intensity: laserIntensityOfLumens(laserBeamLumens(f, b)), distance: r3(b.length_m), angle: LASER_ANGLE, penumbra: 0, decay: 2 },
                         beam: { visible: true, haze: 1, aperture: LASER_APERTURE, laser: laserComponentOf(f, b) },
                         animation: { mode: 'static', speed: 1, amplitude: 1 },
-                        fixture: { type: f.type, unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, dmx: false }
+                        fixture: { type: f.type, unit: Number(f.id.slice(-1)), circuit: f.circuit || '', position: `named v1 laser-${b.id}`, ...dmxOf(f) }
                     } })
             }
             continue
@@ -291,7 +325,7 @@ export const v1Entities = (rig, { hall = null } = {}) => {
             // file's own `r` (MOXIR v2 true look, 2026-10-09: the fan's direction is part of the design), else +Z as before
             const r = Array.isArray(f.r) && f.r.length === 3 ? f.r.map(Number) : [0, 0, 0]
             out.push({ id: f.id, type: 'group', name: `UP-YZ31P smoke machine (${f.position})`.slice(0, 200), parentId: null,
-                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', dmx: false } } })
+                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', ...dmxOf(f) } } })
             continue
         }
         if (f.angle_rad == null) continue
@@ -585,6 +619,20 @@ const main = async () => {
         say(`written, version ${out.body.newVersion}; read back v${back.body.version}: ${d2.entities.length} entities (before ${doc.entities.length}), ` +
             `${drawn}/${lz.length} laser beams carry beam.laser; other fields changed since the read: ${changed.length}${changed.length ? ` (${changed.slice(0, 5).join(', ')})` : ''}`)
         if (d2.entities.length !== doc.entities.length || drawn !== lz.length) die('read back: not every laser beam carries beam.laser, or the entity count moved')
+        return
+    }
+    if (args['patch-only']) {
+        const { ops, absent } = patchOps(doc, rig)
+        say(`${project} @ v${got.body.version}: patch — ${ops.length} units get the rig file's address (updateComponent fixture); in the rig file, not in the project: ${absent.length}${absent.length ? ` (${absent.join(', ')})` : ''}`)
+        for (const op of ops) say(`  ${op.payload.entityId}: ${JSON.stringify(op.payload.patch)}`)
+        if (!args.apply || !ops.length) { say(ops.length ? 'dry run: nothing written (--apply to write)' : 'nothing to write'); return }
+        const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-patch-${Date.now()}-${j}`, clientId: 'epic-build' })) })
+        if (!out.ok) die(`patch ops: ${out.status} ${out.text.slice(0, 300)}`)
+        const back = await client.get(`/api/projects/${project}/document`)
+        if (!back.ok) die(`read back: ${back.status}`)
+        const left = patchOps(back.body.document, rig).ops.length
+        say(`written, version ${out.body.newVersion}; read back v${back.body.version}: ${ops.length - left}/${ops.length} units at the rig file's address`)
+        if (left) die('read back: not every unit is at its address')
         return
     }
     if (args['laser-frames']) {

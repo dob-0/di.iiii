@@ -25,6 +25,23 @@ THE `laser` FIELD OF A SCENE (null = the cubes dark in that scene). Validated by
       "refs":      [str], "why": str
     }
 
+THE `laser_lines` FIELD OF A SCENE (null or absent = the line units dark): the single-beam DMX lasers (`LINE_TYPES`, e.g. the
+UP-LA40WF 40 W: one static beam each, X/Y position by hand ch 6/7, 7 diode colours ch 5, dimmer ch 1; maker chart
+scripts/place/fixtures/charts/up-la40wf.json). Validated by validate_line(); the same keys as `laser` where they mean the same:
+    {
+      "pattern":   "still" | "sweep" | "lift"     still = the rigged aim; sweep = a yaw swing around it; lift = a rise above it, never below
+      "units":     "all" | "west" | "east"        (line units counted west → east)
+      "colour":    one of LINE_COLOURS             what the unit's colour channel can make (chart ch 5); "colour_key" optional
+      "level", "tempo", "breathe", "hits", "refs", "why"   as `laser`
+      "phase":     "unison" | "mirror" | "chase"   a sweep always runs inward (the X closes), so unison = mirror; chase: unit k k/n later
+      "amplitude_deg": >= 0                        sweep half-amplitude (yaw) / lift height (pitch), around the rigged aim
+      "base_lift_deg": >= 0                        optional: every ray starts this much above the rigged aim (ch 7 tilt), e.g. to
+                                                   clear a crane crossing the rigged aim misses; never down
+      "base_yaw_in_deg": >= 0                      optional: the base aim turned this much toward the hall's centre line (ch 6),
+                                                   e.g. to keep a line inside the bay's column lines; a sweep runs inward from it
+    }
+A line unit's field is the line's own (fieldHalfDeg ±18.5, ASSUMED as the cubes'); every ray gets the same physics as a cube's.
+
 GEOMETRY. A cube's axis is the mean of its lines' directions (as laser-frames.mjs fanOf): its field is checked around it.
 A pattern's ray is written in hall terms (yaw from the long axis, pitch over the horizontal). Each of a cube's six lines draws one ray of the pattern (line j = ray j); the ray is
 turned into that line's own field point exactly (the inverse of three.js Euler XYZ, then laserLine.js fieldDirection inverted).
@@ -63,6 +80,11 @@ GROUPS = {'all': (1, 2, 3, 4, 5, 6), 'odd': (1, 3, 5), 'even': (2, 4, 6), 'west'
 PHASES = ('unison', 'mirror', 'chase')
 UP_PATTERNS = ('fan', 'fan-sweep', 'single-scan', 'tunnel', 'sky')
 DEG = math.pi / 180
+LINE_TYPES = ('up-la40wf',)       # single-beam DMX lasers (fixtureTypes.js UP-LA40WF: static beam, ch 6/7 aim by hand)
+LINE_PATTERNS = ('still', 'sweep', 'lift')
+LINE_GROUPS = {'all': (1, 2), 'west': (1,), 'east': (2,)}
+LINE_COLOURS = {'#ffffff': ('white', 8), '#ff0000': ('red', 25), '#00ff00': ('green', 42), '#0000ff': ('blue', 59),
+                '#ffff00': ('yellow', 76), '#ff00ff': ('purple', 93), '#00ffff': ('cyan', 110)}   # chart ch 5, mid-range values
 
 
 def _physics():
@@ -154,6 +176,33 @@ def validate_laser(laser, where=''):
     return e
 
 
+def validate_line(line, where=''):
+    """Errors of one scene's `laser_lines` (None is valid: dark)."""
+    if line is None:
+        return []
+    if not isinstance(line, dict):
+        return [f'{where}: laser_lines must be an object or null']
+    e = []
+    if line.get('pattern') not in LINE_PATTERNS: e.append(f"{where}: lines pattern {line.get('pattern')!r} not in {LINE_PATTERNS}")
+    if line.get('units') not in LINE_GROUPS: e.append(f"{where}: lines units {line.get('units')!r} not in {tuple(LINE_GROUPS)}")
+    if str(line.get('colour', '')).lower() not in LINE_COLOURS:
+        e.append(f"{where}: lines colour {line.get('colour')!r} is not one the unit makes ({', '.join(LINE_COLOURS)})")
+    base = {k: line.get(k) for k in ('level', 'tempo', 'phase', 'breathe', 'hits', 'refs')}
+    base.update({'pattern': 'comb', 'cubes': 'all', 'colour': '#ffffff'})
+    e += [m.replace(f'{where}:', f'{where}: lines') for m in validate_laser({k: v for k, v in base.items() if v is not None or k in ('breathe', 'hits')}, where)]
+    if not (isinstance(line.get('amplitude_deg', 0), (int, float)) and line.get('amplitude_deg', 0) >= 0):
+        e.append(f'{where}: lines amplitude_deg must be a number >= 0')
+    if not (isinstance(line.get('base_lift_deg', 0), (int, float)) and line.get('base_lift_deg', 0) >= 0):
+        e.append(f'{where}: lines base_lift_deg must be a number >= 0 (up only)')
+    if not (isinstance(line.get('base_yaw_in_deg', 0), (int, float)) and line.get('base_yaw_in_deg', 0) >= 0):
+        e.append(f'{where}: lines base_yaw_in_deg must be a number >= 0')
+    known = {'pattern', 'units', 'colour', 'colour_key', 'level', 'tempo', 'phase', 'amplitude_deg', 'base_lift_deg', 'base_yaw_in_deg', 'breathe', 'hits',
+             'refs', 'why'}
+    extra = set(line) - known
+    if extra: e.append(f'{where}: lines unknown keys {sorted(extra)}')
+    return e
+
+
 # ---- the rig's cubes ------------------------------------------------------------------------------------------------------
 def cubes_of(rig):
     cubes = [f for f in rig.get('fixtures', []) if f.get('type') == CUBE_TYPE and (f.get('laser') or {}).get('beams')]
@@ -169,6 +218,41 @@ def cubes_of(rig):
         out.append({'hall_axis': hall_axis, 'n': i, 'id': f['id'], 'p': f['p'], 'beams': beams, 'dirs': dirs, 'axis': axis, 'east': east, 'up': up,
                     'side': -1 if f['p'][0] < 0 else 1})
     return out
+
+
+def units_of(rig):
+    """The single-beam line units (LINE_TYPES), west → east, in the cube shape (one beam each) plus their rigged aim in hall terms."""
+    fx = [f for f in rig.get('fixtures', []) if f.get('type') in LINE_TYPES and [b for b in (f.get('laser') or {}).get('beams', []) if not b.get('off')]]
+    fx.sort(key=lambda f: f['p'][0])
+    out = []
+    for i, f in enumerate(fx, 1):
+        beam = [b for b in f['laser']['beams'] if not b.get('off')][0]
+        d = norm(PHYS.axis_of(beam['r']))
+        east = norm(cross([0, 1, 0], d))
+        a = [0.0, 0.0, 1.0 if d[2] >= 0 else -1.0]
+        out.append({'hall_axis': a, 'n': i, 'id': f['id'], 'p': f['p'], 'beams': [beam], 'dirs': [d], 'axis': d, 'east': east,
+                    'up': cross(d, east), 'side': -1 if f['p'][0] < 0 else 1,
+                    'yaw0': math.atan2(d[0], d[2] * a[2]) / DEG, 'pitch0': math.asin(max(-1, min(1, d[1]))) / DEG})
+    return out
+
+
+def line_rays_at(line, unit, group, u):
+    """[(0, world dir | None, field offset | None)] of a line unit at cycle phase u: still / sweep / lift around its base aim
+    (the rigged aim, raised by base_lift_deg and turned toward the hall's centre line by base_yaw_in_deg)."""
+    pat, A = line['pattern'], line.get('amplitude_deg', 0)
+    p0 = unit['pitch0'] + line.get('base_lift_deg', 0)
+    inward = -1.0 if unit['yaw0'] > 0 else 1.0                  # toward the hall's centre line: the crossed X closes
+    y0 = unit['yaw0'] + inward * min(abs(unit['yaw0']), line.get('base_yaw_in_deg', 0))
+    ph = line.get('phase', 'unison')
+    phase = u + (group.index(unit['n']) / max(1, len(group)) if ph == 'chase' else 0.0)
+    s = math.sin(2 * math.pi * phase)
+    if (pat == 'still' or not A) and not line.get('base_lift_deg') and not line.get('base_yaw_in_deg'):
+        return [(0, None, (0.0, 0.0))]
+    if pat == 'still' or not A:
+        return [(0, ray(unit, y0, p0), None)]
+    if pat == 'sweep':                                          # inward from the base and back: the X closes and opens
+        return [(0, ray(unit, y0 + inward * A * (0.5 + 0.5 * s), p0), None)]
+    return [(0, ray(unit, y0, p0 + A * (0.5 + 0.5 * s)), None)]      # lift: up from the base, never below
 
 
 def ray(cube, yaw, pitch):
@@ -306,11 +390,16 @@ def cycle_s(laser):
 
 
 # ---- per scene: the check and the plan ------------------------------------------------------------------------------------
-def scene_plan(scene, cubes, dims, crane_z, samples=24):
-    laser = scene.get('laser')
+CUBE_SET = {'key': 'laser', 'group_key': 'cubes', 'groups': GROUPS, 'rays': lambda *a: rays_at(*a)}
+LINE_SET = {'key': 'laser_lines', 'group_key': 'units', 'groups': LINE_GROUPS, 'rays': lambda *a: line_rays_at(*a)}
+
+
+def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
+    laser = scene.get(kind['key'])
     if laser is None:
         return {'id': scene['id'], 'laser': None}
-    group = GROUPS[laser['cubes']]
+    group = kind['groups'][laser[kind['group_key']]]
+    rays_at = kind['rays']
     fails, ends, rays_out, max_field, max_line_field = [], {}, [], 0.0, 0.0
     budget = {}
     for cube in cubes:
@@ -337,13 +426,13 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24):
                     if not ok:
                         fails.append(f"{cube['id']} line {beam['id']} u={u:.2f}: {why}")
                     ends.setdefault(label, []).append(end[1])
-                    if k % 2 == 0 or laser['pattern'] in ('comb', 'net', 'fan'):
+                    if k % 2 == 0 or laser['pattern'] in ('comb', 'net', 'fan', 'still'):
                         rays_out.append({'cube': cube['n'], 'from': [round(c, 2) for c in cube['p']],
                                          'to': [round(c, 2) for c in end], 'ends_on': label})
         # the real cube's point budget for one frame of this pattern
         pat = laser['pattern']
         n = len(cube['beams'])
-        if pat in ('comb', 'net', 'fan', 'fan-sweep'):
+        if pat in ('comb', 'net', 'fan', 'fan-sweep', 'still', 'sweep', 'lift'):
             pts = n * (DWELL_PTS + BLANK_PTS)
         elif pat == 'single-scan':
             pts = DWELL_PTS + BLANK_PTS
@@ -377,7 +466,8 @@ def r4(v):
     return round(v, 4)
 
 
-def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES):
+def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES, kind=CUBE_SET):
+    rays_at = kind['rays']
     rows, loop = timeline(scenes, timing)
     step = loop / frames_n
     epoch_s = (epoch_ms or 0) / 1000.0
@@ -388,10 +478,10 @@ def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES):
         for k in range(SUBSAMPLES):
             tau = start + step * (k + 0.5) / SUBSAMPLES
             s, ts = scene_at(rows, loop, tau)
-            laser = s.get('laser')
+            laser = s.get(kind['key'])
             if laser is None:
                 continue
-            group = GROUPS[laser['cubes']]
+            group = kind['groups'][laser[kind['group_key']]]
             u = (ts / cycle_s(laser)) % 1.0
             drv = r4(drive_at(laser, ts))
             for cube in cubes:
@@ -448,6 +538,22 @@ def stills_of(plans, cubes):
     return out
 
 
+def desk_values(line, rays, units):
+    """What the desk sends a line unit in this scene (fixtureTypes.js UP-LA40WF 32 ch): ch 1 dimmer, ch 5 colour, ch 6/7 the aim range."""
+    name, value = LINE_COLOURS[line['colour'].lower()]
+    pts = []
+    for u in units:
+        if u['n'] not in LINE_GROUPS[line['units']]:
+            continue
+        for k in range(24):
+            for _, d, off in line_rays_at(line, u, LINE_GROUPS[line['units']], k / 24):
+                pts.append(off if d is None else field_point(d, u['beams'][0]['r'], FIELD_HALF_DEG))
+    dmx = lambda v: int(round(64 + max(-1, min(1, v)) * 61))            # ch 6/7: 0-125 by hand, 64 centre (fixtureTypes.js cap.aim)
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return {'ch1_dimmer': int(round(line['level'] * 255)), 'ch5_colour': value, 'colour': name,
+            'ch6_x': [dmx(min(xs)), dmx(max(xs))], 'ch7_y': [dmx(min(ys)), dmx(max(ys))]}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--scenes', required=True)
@@ -464,6 +570,7 @@ def main(argv=None):
     S = json.load(open(a.scenes)); rig = json.load(open(a.rig)); dims = json.load(open(a.hall))['dims']
     scenes = S['scenes'] if isinstance(S, dict) else S
     errors = [m for s in scenes for m in validate_laser(s.get('laser'), s.get('id', '?'))]
+    errors += [m for s in scenes for m in validate_line(s.get('laser_lines'), s.get('id', '?'))]
     if errors:
         print(json.dumps({'ok': False, 'schema_errors': errors[:40]}, indent=1)); return 1
     cubes = cubes_of(rig)
@@ -472,14 +579,28 @@ def main(argv=None):
     plans = [scene_plan(s, cubes, dims, a.crane_z) for s in scenes]
     lists, loop, step, total = room_frames(scenes, cubes, a.timing, a.show_epoch_ms)
     frame_fails = [f'{bid}: {n} points > {MAX_POINTS}' for bid, n in total.items() if n > MAX_POINTS]
+    units = units_of(rig)
+    line_plans, line_lists = [], {}
+    if units and any(s.get('laser_lines') for s in scenes):
+        line_plans = [scene_plan(s, units, dims, a.crane_z, kind=LINE_SET) for s in scenes]
+        for p in line_plans:
+            if p.get('laser'):
+                p['desk'] = desk_values(p['laser'], [r for r in p['rays']], units)
+        line_lists, _, _, line_total = room_frames(scenes, units, a.timing, a.show_epoch_ms, kind=LINE_SET)
+        frame_fails += [f'{bid}: {n} points > {MAX_POINTS}' for bid, n in line_total.items() if n > MAX_POINTS]
+        total.update(line_total)
     fails = [(p['id'], p['fails']) for p in plans if p.get('fail_count')]
+    fails += [(p['id'] + ' (lines)', p['fails']) for p in line_plans if p.get('fail_count')]
     summary = {'ok': not fails and not frame_fails, 'cubes': [c['id'] for c in cubes], 'lines': sum(len(c['beams']) for c in cubes),
                'scenes': len(scenes), 'scenes_lit': sum(1 for p in plans if p.get('laser')), 'loop_s': round(loop, 2),
                'timing': a.timing, 'frames': MAX_FRAMES, 'step_s': round(step, 3), 'max_points_a_line': max(total.values()),
-               'show_epoch_ms': a.show_epoch_ms, 'fails': fails[:20], 'frame_fails': frame_fails}
+               'show_epoch_ms': a.show_epoch_ms, 'fails': fails[:20], 'frame_fails': frame_fails,
+               'line_units': [u['id'] for u in units], 'line_scenes_lit': sum(1 for p in line_plans if p.get('laser'))}
     if a.plan_out:
         json.dump({'summary': summary, 'stillBeams': stills_of(plans, cubes),
-                   'cubes': [{'n': c['n'], 'id': c['id'], 'p': c['p']} for c in cubes], 'scenes': plans},
+                   'cubes': [{'n': c['n'], 'id': c['id'], 'p': c['p']} for c in cubes], 'scenes': plans,
+                   'line_units': [{'n': u['n'], 'id': u['id'], 'p': u['p'], 'yaw0': round(u['yaw0'], 2), 'pitch0': round(u['pitch0'], 2)} for u in units],
+                   'line_scenes': line_plans},
                   open(a.plan_out, 'w'), indent=0)
     if summary['ok'] and a.out and not a.check:
         for f in rig['fixtures']:
@@ -491,7 +612,16 @@ def main(argv=None):
                     b['fieldHalfDeg'] = FIELD_HALF_DEG
             f['laser']['frames_source'] = (f'scripts/place/laser_frames.py from {os.path.basename(a.scenes)} `laser`; '
                                            f'{MAX_FRAMES} frames x {step:.3f} s, timing {a.timing}, epoch {a.show_epoch_ms:.0f} ms')
-        json.dump(rig, open(a.out, 'w'), indent=1)
+        for f in rig['fixtures']:
+            if f.get('type') not in LINE_TYPES or not line_lists:
+                continue
+            for b in f['laser']['beams']:
+                if b['id'] in line_lists:
+                    b['frames'] = {'period': round(loop, 3), 'list': line_lists[b['id']]}
+                    b['fieldHalfDeg'] = FIELD_HALF_DEG
+            f['laser']['frames_source'] = (f'scripts/place/laser_frames.py from {os.path.basename(a.scenes)} `laser_lines`; '
+                                           f'{MAX_FRAMES} frames x {step:.3f} s, timing {a.timing}, epoch {a.show_epoch_ms:.0f} ms')
+        json.dump(rig, open(a.out, 'w'), indent=1, ensure_ascii=False)
         summary['written'] = a.out
     print(json.dumps(summary, indent=1))
     return 0 if summary['ok'] else 1
