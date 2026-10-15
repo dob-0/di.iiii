@@ -113,6 +113,17 @@ const main = async () => {
             await page.bringToFront()
             r.loadMs = Date.now() - t0
             await sleep(25000)
+            if (shot.camera) {
+                // the plan's camera, through the page's own handle (RawViewport's window.__diView, dev build): fixedCamera in the document does not move the room's view
+                r.camera = await page.evaluate(async (c) => {
+                    const v = window.__diView
+                    if (!v) return { error: 'no window.__diView (dev build of RawViewport.jsx needed)' }
+                    const set = v.setView(c)
+                    await new Promise((r) => setTimeout(r, 4000))
+                    return { position: v.camera.position.toArray().map((n) => Math.round(n * 100) / 100), fov: v.camera.fov, set: set.position }
+                }, shot.camera)
+                console.log(`${shot.name}: camera`, JSON.stringify(r.camera))
+            }
             r.frames = await page.evaluate(() => new Promise((resolve) => {
                 const dts = []
                 let last = performance.now()
