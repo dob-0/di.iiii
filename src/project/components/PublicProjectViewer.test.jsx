@@ -65,12 +65,13 @@ vi.mock('../../raw/PublicGraphSurface.jsx', () => ({
 }))
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
-    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines }) {
+    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines, smartView }) {
         return (
             <div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
                 <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
                 <div data-testid="viewport-timelines">{`play:${Boolean(playTimelines)}`}</div>
+                <div data-testid="viewport-fly">{`fly:${Boolean(smartView?.flyOn)}`}</div>
             </div>
         )
     }
@@ -596,6 +597,36 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true low:false')
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+    })
+
+    // Auto fly (viewport/autoFly.js): a button beside Walk / Fly; ?fly=1 starts the flight on open.
+    it('offers Auto fly beside Walk / Fly, and the button starts and stops the flight', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        const button = await screen.findByRole('button', { name: 'Auto fly' })
+        expect(button.style.borderRadius || '').not.toMatch(/999|50%/)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:false')
+        fireEvent.click(button)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:true')
+        expect(button.getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(button)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:false')
+    })
+
+    it('starts the flight on open with ?fly=1', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        window.history.replaceState(null, '', '/main?fly=1')
+        try {
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByRole('button', { name: 'Auto fly' })
+            expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:true')
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
     })
 
     // The standard move's settings (owner, 2026-10-13: "settable in settings that you can set how you want"): one small Move

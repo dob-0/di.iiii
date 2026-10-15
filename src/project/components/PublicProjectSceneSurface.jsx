@@ -137,7 +137,9 @@ export default function PublicProjectSceneSurface({
     // the scene bar's layer toggles: { roof, walls, machines, outside } (smartViewGeometry.parseLayersParam)
     layers = null,
     // the author's switch for the views bar (visitorChrome.views); the bar is on unless it says false
-    viewsBar = true
+    viewsBar = true,
+    flyOn = false,
+    onFlyChange = null
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
@@ -203,7 +205,7 @@ export default function PublicProjectSceneSurface({
     }, [viewsBar])
 
     // The "Inside" toggle (PublicProjectViewer) and its two reports travel with the smart view's settings.
-    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused, layers }), [smartView, lockInside, onBuilding, onLockPaused, layers])
+    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused, layers, flyOn, onFlyChange }), [smartView, lockInside, onBuilding, onLockPaused, layers, flyOn, onFlyChange])
 
     return (
         <>
