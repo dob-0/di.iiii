@@ -160,10 +160,6 @@
             "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
             "what": "UPlus IP PAR-54X3 manual (another maker, another housing): an 8-channel chart for a 54 x 3 W RGBW PAR — the equivalent for the UP-PL5403 channel meanings"
         },
-        "PROST380": {
-            "url": "https://www.pro-stagelighting.com/uploads/soft/20240103/1704289146.pdf",
-            "what": "Outdoor 380 W waterproof beam, 16 channels (another maker, YODN 380 W lamp, 550 W): the equivalent 16-channel chart for the UP-B380F"
-        },
         "LASEROS-MK2-GUIDE": {
             "url": "https://www.laseros.com/manual-mk2.pdf",
             "what": "LaserCube Ultra MK2 Guide v1.2 (103 pp), pp. 11-12: the 10 W and 6.0 W variants per diode, 4 mm beam, 1 mrad (definition — 1/e or 1/e2, full or half angle — not stated). The local v1.0 manual (89 pp) has neither. Read 2026-10-09"
@@ -294,10 +290,10 @@
                 "dmx_order": {
                     "value": "pan, tilt, pan fine, tilt fine, speed, frost, strobe (255 open), dimmer, colour, gobo, prism 1, prism 1 rot, ch13, ch14, focus, reset",
                     "src": "SEVAN",
-                    "basis": "TESTED",
+                    "basis": "ARCHIVED",
                     "accessed": "2026-10-09",
                     "open": "OPEN (2026-10-09): the two TESTED maps disagree from ch11 — src/rigbuild/fixtureTypes.js (above) vs the desk's show.json 'Beam 16ch' (…colour, gobo, FOCUS ch11, PRISM ch12, aux3 ch13 = 145 REQUIRED or no light, aux4-6), and artnet-desk CLAUDE.md says 'prism 2' is WRONG for these heads. ch11-16 are NOT tested until one unit is stepped 0..255 per channel on the desk. The manual the map came from was not found on disk.",
-                    "equivalent": "PROST380 16 ch: PAN, PAN FINE, TILT, TILT FINE, SPEED, FROST, DIMMER, STROBE, COLOR, GOBO, PRISM, PRISM1 R, PRISM2 R, FOCUS, RAINBOW, RESET/LAMP (100-105 off, 200-205 on, 240-255 reset). Re-read 2026-10-09 from the PDF itself (sha256 7fd7b59a22ff23d5, 16CH Mode, pp. 19-22): the lamp commands are on ch16 and 145 on ch13 is prism-2 rotation there, so this chart does NOT explain the console profile's \"ch13 must be 145\" (the earlier lamp-strike guess is withdrawn); the ten disagreements with the TESTED map are in docs/moxir/b380f-16ch-map-check-2026-10-09.md"
+                    "note": "ARCHIVED 2026-10-15: the 10-09 walk map (pan ch 1). The approved chart is the unit's own manual (pan ch 10); setup-day check #1 settles which the units follow"
                 }
             },
             "look": "Low black base box with tubular grab bars at the ends and four round connectors on the front; tall flat-sided yoke arms with chevron vents; head = a round rear drum across the tilt axis (lamp, vent-hole ring) and a long cylindrical nose to the lens.",
@@ -335,6 +331,23 @@
                 "centre": "centre of beam, fixed 1.8 deg",
                 "crossCheck": "ELATION-PROTEUS-HYBRID: 233,000 lux @ 15 m in its 2.0 deg beam = 52.4 Mcd, vs 50.2 Mcd here (4 % apart). The GalaxyJet's own 475,000 lux @ 10 m = 47.5 Mcd agrees with its 20 m figure under the inverse-square law.",
                 "note": "maker's claim, not an independent measurement"
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye and word 2026-10-15: made-in-china page, model no. UP-B380F (APPROVED)",
+            "maker_model": "IP65 380W Beam",
+            "manual": {
+                "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+                "date": "2024-01 (upload path)",
+                "file": "~/Downloads/moxir/devices/380-IP-BEAM.pdf",
+                "read": "2026-10-15, pdftotext, \"4.DMX Channels\" (16 channels)",
+                "basis": "APPROVED"
+            },
+            "tested_map": "ARCHIVED: the 10-09 walk on Sevan units (ch 1-10), src/rigbuild/fixtureTypes.js ARCHIVED_CHANNEL_LISTS, mode walk-2026-10-09 — selectable, never the default. The DESK USES the approved IP BEAM chart (MAKER_CHANNEL_LISTS)",
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-b380f.json",
+                "modes": {
+                    "16": "APPROVED"
+                }
             }
         },
         "bsw250": {
@@ -658,6 +671,24 @@
                 "centre": "full white; the page does not tie the lux to an angle — 25 deg (its standard lens) ASSUMED",
                 "caveat": "1 m is barely far-field for a ~200 mm LED array, so candela from it is an upper estimate",
                 "note": "no brand datasheet with lux for a 54 x 3 W PAR found (3 searches)"
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye on the housing/manual, 2026-10-15 16:3x (devices.html)",
+            "maker_model": "IP PAR-54X3",
+            "manual": {
+                "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+                "product_page": "https://www.upluslighting.com/product/543w-rgbw-led-par-light-for-outdoor/",
+                "date": "2024-01 (upload path; PDF created 2023-08-07)",
+                "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
+                "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
+                "basis": "APPROVED"
+            },
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-pl5403.json",
+                "modes": {
+                    "8": "APPROVED",
+                    "4": "APPROVED"
+                }
             }
         },
         "laser": {
@@ -750,6 +781,24 @@
                 "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed).",
                 "src": "BLUESEA",
                 "basis": "EQUIVALENT"
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye on the housing/manual, 2026-10-15 16:3x (devices.html)",
+            "maker_model": "IP-LL40 (manual IP-LL30)",
+            "manual": {
+                "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+                "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+                "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+                "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+                "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+                "basis": "APPROVED"
+            },
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-la40wf.json",
+                "modes": {
+                    "19": "APPROVED",
+                    "32": "APPROVED"
+                }
             }
         },
         "co2": {
@@ -938,6 +987,16 @@
                         200
                     ],
                     "nozzle_d_mm": 50
+                }
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye, 2026-10-15 16:3x; model UP-YZ31P not confirmed by a U-Plus page",
+            "maker_model": null,
+            "manual": null,
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-yz31p.json",
+                "modes": {
+                    "1": "ASSUMED"
                 }
             }
         },
@@ -1360,7 +1419,9 @@
                 "note": "a laser is not a lamp with a candela figure: 10 W optical, 4 mm beam, 1 mrad (LASEROS-MK2), scanned into shapes. Its drawn beam's air brightness is set by hand (the rig's airFixed).",
                 "src": "LASEROS-MK2",
                 "basis": "EXACT"
-            }
+            },
+            "control": "network (LaserCube UDP 45456-45458 through di Nodes); no DMX at MOXIR — the 16-ch DMX profile is the maker's reference only",
+            "maker_note": "not U-Plus: Wicked Lasers (the owner's own cubes)"
         }
     },
     "modelsLicence": {
@@ -1368,5 +1429,19 @@
         "author": "built by Claude (Anthropic) for di.iiii, 2026-09-28, from the datasheet dimensions and the makers' photos",
         "note": "Our own geometry, not the makers' CAD, not GDTF and not derived from any 3D file; the makers' names and model codes are used only to identify what is modelled."
     },
-    "photometryMethod": "Every value is a maker's claim for an EQUIVALENT fixture (no UPlight page publishes lux or lumens: 0 occurrences across 38 store listings and every pro-uplight.com page, checked 2026-09-28). A lux figure is the centre of the beam at the stated distance and angle; candela = lux x distance^2. How the rig uses these: scripts/place/rig-lib.mjs 'PHOTOMETRY' and scripts/place/README.md 'Photometry'."
+    "photometryMethod": "Every value is a maker's claim for an EQUIVALENT fixture (no UPlight page publishes lux or lumens: 0 occurrences across 38 store listings and every pro-uplight.com page, checked 2026-09-28). A lux figure is the centre of the beam at the stated distance and angle; candela = lux x distance^2. How the rig uses these: scripts/place/rig-lib.mjs 'PHOTOMETRY' and scripts/place/README.md 'Photometry'.",
+    "archive": {
+        "howToRead": "ARCHIVED = kept for the record, never the desk's chart and never a default (owner 2026-10-15: every mark reads APPROVED or ARCHIVED).",
+        "PROST380": {
+            "status": "ARCHIVED",
+            "reason": "the equivalent 16-channel chart used for UP-B380F before its own manual was found; replaced by the U-Plus '380 IP BEAM' chart, APPROVED by the owner 2026-10-15 ('yes the chart is right'). Pan/tilt order differs: PROST380 pan ch 1, the unit's manual pan ch 10",
+            "url": "https://www.pro-stagelighting.com/uploads/soft/20240103/1704289146.pdf",
+            "what": "Outdoor 380 W waterproof beam, 16 channels (another maker, YODN 380 W lamp, 550 W): the equivalent 16-channel chart for the UP-B380F",
+            "note": "the ten disagreements with the 10-09 walk map are in docs/moxir/b380f-16ch-map-check-2026-10-09.md"
+        },
+        "indoor_380_beam": {
+            "status": "ARCHIVED",
+            "reason": "the indoor U-Plus '380 Beam' manual (16/20 ch, IP20, 12 kg) is not the UP-B380F (IP65, 23-27 kg); its chart is no longer stored here (one line in docs/moxir/devices/up-b380f.md)"
+        }
+    }
 }

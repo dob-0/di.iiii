@@ -59,7 +59,7 @@ describe('the MOXIR type library', () => {
         // A tested unit's list says so, with no url to invent; a mode nobody charted stays null.
         const beam = modeOf(typeById(committed, 'UP-B380F'))
         expect(beam.channels).toHaveLength(16)
-        expect(beam.channelsSource).toMatchObject({ basis: 'TESTED', url: null })
+        expect(beam.channelsSource).toMatchObject({ basis: 'APPROVED' })
         expect(new Set(beam.channels.map((c) => c.role)).size).toBe(16)
         expect(modeOf(typeById(committed, 'UP-250BSW')).channels).toBe(null)
     })
