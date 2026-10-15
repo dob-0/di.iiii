@@ -100,8 +100,8 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
     const buttons = useMemo(() => sceneButtons(cues), [cues])
     const pages = Math.max(1, Math.ceil(buttons.length / PAGE_SIZE))
     const livePos = buttons.findIndex((cue) => isLiveScene(cue, live, cues))
-    useEffect(() => { setPicked(null) }, [livePos]) // a new scene is on: follow it
     const page = Math.min(pages - 1, picked != null ? picked : Math.max(0, Math.floor(livePos / PAGE_SIZE)))
+    const playingPage = livePos >= 0 ? Math.floor(livePos / PAGE_SIZE) : null
     const shown = buttons.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
     const cooldownLeftMs = data ? Math.max(0, (data.control?.cooldownLeftMs || 0) - Math.max(0, now - data.receivedAt)) : 0
     const lightBlocked = Boolean(data && (data.light?.state === 'none' || data.clock?.showSource === 'clock'))
@@ -144,6 +144,9 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
                 <div data-testid="room-scenes-pager" style={pagerStyle}>
                     <button type="button" aria-label="previous scenes" data-testid="room-scenes-prev" disabled={page === 0} onClick={() => setPicked(page - 1)} style={pageButton}>‹</button>
                     <span data-testid="room-scenes-page" aria-live="polite" style={{ minWidth: '4.5rem', textAlign: 'center', fontSize: 'var(--di-text-3, 0.76rem)', fontWeight: 600 }}>{page + 1} / {pages}</span>
+                    {playingPage != null && playingPage !== page ? (
+                        <button type="button" data-testid="room-scenes-now" title="Back to the scene that is playing" onClick={() => setPicked(null)} style={{ ...pageButton, padding: '0 var(--di-space-3, 12px)', minWidth: 44, marginLeft: 4 }}>playing: page {playingPage + 1}</button>
+                    ) : null}
                     <button type="button" aria-label="next scenes" data-testid="room-scenes-next" disabled={page >= pages - 1} onClick={() => setPicked(page + 1)} style={pageButton}>›</button>
                 </div>
             ) : null}

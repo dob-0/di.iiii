@@ -64,6 +64,10 @@ describe('the scene strip', () => {
         fireEvent.click(screen.getByTestId('room-scenes-prev'))
         expect(screen.getByTestId('room-scenes-page').textContent).toBe('1 / 5')
         expect(screen.getByTestId('room-scenes-prev').disabled).toBe(true)
+        // away from the playing page the pager says where it is and takes you back; the page you turned to is not snapped away
+        fireEvent.click(screen.getByTestId('room-scenes-now'))
+        expect(screen.getByTestId('room-scenes-page').textContent).toBe('4 / 5')
+        expect(screen.queryByTestId('room-scenes-now')).toBe(null)
     })
 
     it('where a desk drives the room the playing card is the desk runner\'s scene, not the server feed\'s', async () => {
