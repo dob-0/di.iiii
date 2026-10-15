@@ -1,0 +1,6 @@
+## 2026-10-15 — land the MOXIR v2.11 show branch on dev, and copy_project.mjs between stacks
+
+- What landed: `feat/moxir-v2-10-forty-2026-10-15` (it carries `fix/moxir-selection-box-and-scenes-2026-10-13`, PR #938's base) merged `--no-ff` onto `origin/dev` as one landing branch. The merge had no conflicts. The branches' own session notes stay in place for the fold on dev.
+- Left out on purpose: the generated `scripts/place/rigs/*.laser-frames.json` (3.8 MB; regenerate with `laser_frames.py`). It is untracked on the show branch and not in this commit.
+- Added: `scripts/place/copy_project.mjs` copies a project between two stacks (`--from-api` / `--to-api`, same id unless `--to`). It creates the target when missing and replaces an existing one only with `--update`, sending only the assets the target lacks. A non-local target needs `--remote`, and `--backup` keeps the replaced document. `scripts/place/api.mjs`: `readToken(file, keys)` reads another tier's key (`--to-token-key LIVE_API_TOKEN`), and the client has `head()`. Guard: `scripts/place/api.test.js`.
+- Why: the owner's "ok push" (10-15 08:0x, ledger N683 / N694 / N712). dev.diiii.xyz/moxir/p/moxir-v2-11 should show what the moxir-test copy shows. Dev's older server stripped `beam.laser.frames`, so the code lands before the content.
