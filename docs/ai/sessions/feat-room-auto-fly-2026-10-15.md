@@ -1,4 +1,6 @@
-# Session note — Auto fly (feat/room-auto-fly-2026-10-15)
+## 2026-10-15 — Auto fly: an FPV-drone flight through the room, one button
+
+Branch `feat/room-auto-fly-2026-10-15`.
 
 Owner 2026-10-15 05:5x: "make a cool auto-fly and a button … like an FPV drone … we will show our work."
 
