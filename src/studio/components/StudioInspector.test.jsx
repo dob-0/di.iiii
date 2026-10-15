@@ -88,3 +88,18 @@ describe('StudioInspector number display (P10)', () => {
         expect(onSectionChange).toHaveBeenCalledTimes(1)
     })
 })
+
+// N581 (2026-10-15): Enter and Escape in a number field kept the focus there, so the editor's
+// own Escape (deselect) and every other shortcut stayed dead after a value was typed — the
+// shortcuts step aside while a field has the focus.
+describe('StudioInspector number field hands the focus back', () => {
+    const numSections = [{ id: 'transform', label: 'Transform', fields: [{ label: 'Position', component: 'transform', path: ['position', 0], type: 'number', step: 0.1 }] }]
+    it.each(['Enter', 'Escape'])('%s leaves the field', (key) => {
+        const { container } = render(<StudioInspector title="Box" sections={numSections} values={{ transform: { position: [0, 0, 0] } }} onSectionChange={() => {}} />)
+        const input = container.querySelector('input[type="number"]')
+        input.focus()
+        expect(document.activeElement).toBe(input)
+        fireEvent.keyDown(input, { key })
+        expect(document.activeElement).not.toBe(input)
+    })
+})
