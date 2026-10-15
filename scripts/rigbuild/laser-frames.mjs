@@ -108,6 +108,12 @@ export const laserFramesOf = (rig, { dirOf, matrixN = MATRIX_N, spread = MATRIX_
             units.push({ unit: f.id, type: f.type, picture: 'matrix', lines: frame.length / 2, reachDeg: Math.max(...frame.flatMap((p) => [Math.abs(p[0]), Math.abs(p[1])])) * field.halfDeg, field })
             continue
         }
+        // The rig's own frames win (scripts/place/laser_frames.py: the show's per-scene `laser` design, 2026-10-15).
+        if (beams.every((b) => b.frames?.list?.length)) {
+            for (const b of beams) byBeam.set(`rig-laser-${b.id}`, { frames: b.frames, fieldHalfDeg: b.fieldHalfDeg ?? field.halfDeg })
+            units.push({ unit: f.id, type: f.type, picture: 'rig frames', lines: beams.length, frames: beams[0].frames.list.length, period: beams[0].frames.period, source: f.laser.frames_source || '', field })
+            continue
+        }
         const fan = fanOf(beams.map((b) => dirOf(b.r)), { wantDeg: fanDeg, fieldHalfDeg: field.halfDeg })
         const frames = fanSweepFrames({ amplitudeDeg: fan.amplitudeDeg, fieldHalfDeg: field.halfDeg, steps, period, drive })
         for (const b of beams) byBeam.set(`rig-laser-${b.id}`, { frames, fieldHalfDeg: field.halfDeg })

@@ -21,7 +21,9 @@ describe('buildLook: the one function the build script and the Studio share', ()
         // sha256 of JSON [{id, aims, colours, levels}] of the 51 looks, taken from the build script BEFORE it called buildLook (2026-10-15)
         const digest = crypto.createHash('sha256').update(JSON.stringify(built.looks.map(({ id, aims, colours, levels }) => ({ id, aims, colours, levels })))).digest('hex')
         expect(built.looks).toHaveLength(51)
-        expect(digest).toBe('5300f747545e09725c2fbbb561bdcf3568389b73b30e5aa996a99c70254c8fbb')
+        // Re-pinned 2026-10-15 04:5x: rig v2.11 recolour pass 3 (ae5858c7) changed every look's colours; the digest
+        // follows the rig file, so it is re-pinned whenever the rig changes on purpose (the old pin was 5300f747…).
+        expect(digest).toBe('a90184562b7218132500a83d572efbfdf6b203eea85501973a574e9aea488168')
     })
 
     it('buildLook from a look\'s SOURCE and the document alone equals what the build wrote, for every look (0 differences)', () => {

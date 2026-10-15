@@ -196,6 +196,7 @@ export const describeLaserFrames = ({ units, want }) => {
     const lines = []
     for (const u of units) {
         const f = u.field
+        if (u.picture === 'rig frames') { lines.push(`${u.unit} (${u.type}): RIG FRAMES, ${u.lines} lines, ${u.frames} frames over ${u.period} s; ${u.source}`); continue }
         lines.push(u.picture === 'matrix'
             ? `${u.unit} (${u.type}): MATRIX, ${u.lines} lines on a grid within ±${u.reachDeg.toFixed(2)} deg of its aim; field ±${f.halfDeg} deg ${f.basis}`
             : `${u.unit} (${u.type}): FAN SWEEP of its ${u.lines} lines, ±${u.amplitudeDeg.toFixed(2)} deg over ${u.period} s in ${u.steps} frames; lines span ±${u.widestDeg.toFixed(2)} deg (±${u.tallestDeg.toFixed(2)} up/down) around the cube's axis, so they reach ±${u.reachDeg.toFixed(2)} deg; field ±${f.halfDeg} deg ${f.basis}`)
