@@ -1,4 +1,4 @@
-# feat: version-to-desk — one command (2026-10-15, ledger N877)
+## 2026-10-15 23:1x — version-to-desk: one command puts a version onto the desk (N877)
 
 **Meant:** the lead's shell chain (`apply.sh`: plan → other versions off → exact → show-loop → check) becomes a di.iiii command, no production name in any default.
 **Built:** `scripts/rigbuild/version-to-desk.mjs` (spawns the existing tools; stops at the first failed step; exit 1 on failure or another project left on the desk) and `version-to-desk.test.js` (pure helpers `deskBaseOf`, `otherProjectsOnDesk`, `summaryOf`). Doc: `docs/architecture/RIG_BUILD.md` §19.
