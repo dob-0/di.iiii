@@ -1,4 +1,4 @@
-# UP-LA40WF — 40 W RGB laser, DMX / ILDA (2 units at the entry, U1, 32 ch ASSUMED)
+# UP-LA40WF — 40 W RGB laser, DMX / ILDA (2 units at the entry, U1, **32 ch — the owner's decision 2026-10-15 16:4x**)
 **CANDIDATE, U-Plus "IP-LL40"** (product page; manual IP-LL30 covers the 40 W column: R 10 W + G 15 W + B 16 W = 41 W — MOXIR.md §4.0b read the same numbers from the maker page; ~/Downloads/moxir/devices/IP-LL30.pdf, read 2026-10-15):
 DMX modes 6 / 19 / 32 (29 / 52 listed, "19 / 32 available only"). 19 ch: 1 dimmer · 2 mode (0–49 auto, 50–99 sound, 100–149 PRG, 150–199 ILD, 200–255 built-in graphics) · 3 graphic (one per two values) · 4 display mode · 5 colour (0–16 white, 17–33 red, 34–50 green, 51–67 blue … 238–255 sound) · 6 X move · 7 Y move · 8 zoom · 9 X rotation · 10 Y rotation · 11 centre rotation · 12 gradual painting · 13 X wave · 14 Y wave · 15 strobe · 16 red · 17 green · 18 blue · 19 out-of-bounds. 32 ch = the same + ch 20–32 for a second graphic at the same time.
 Menu: laser lock (closes when the angle is too small), ILDA lock, size X/Y, speed 8–40, DMX state show/black. Safety: scanning system notes, E-stop remote + key.
