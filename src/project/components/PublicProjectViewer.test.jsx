@@ -729,11 +729,11 @@ describe('PublicProjectViewer', () => {
             await screen.findByRole('button', { name: 'Walk / Fly' })
             expect(screen.queryByTestId('rig-versions-chip')).toBeNull()
         })
-        it('the walk switch takes Walk / Fly and Lite away', async () => {
+        it('the walk switch takes Walk / Fly and Quality away', async () => {
             await visit({ walk: false })
             await screen.findByTestId('rig-versions-chip')
             expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
-            expect(screen.queryByRole('button', { name: /^(Lite|Full)$/ })).toBeNull()
+            expect(screen.queryByRole('button', { name: /^(Low|High)$/ })).toBeNull()
         })
         it('Edit in Studio is offered to a session that can edit, and not to one that cannot', async () => {
             authState.session = { requireAuth: true, authenticated: true, role: 'editor', spaces: ['main'] }

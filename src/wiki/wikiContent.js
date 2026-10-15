@@ -23,7 +23,7 @@ export const WIKI_ARTICLES = [
         summary: 'The view page opens clear: the scene, and a few small controls. You choose which controls exist; a visitor opens the rest.',
         body: [
             'A view page starts with nothing covering the scene: one small Versions chip, a SHOW chip, a Scenes control at the bottom and a Display chip. Each is closed; a click opens it, and the page remembers what that visitor opened — on their device only.',
-            'In Studio, Project > “What visitors see” has one switch per part: the Versions chip, the SHOW chip, the scene bricks, Walk / Fly and Lite, the views bar and the layers. Off removes the control from the view page. For a production the choice is shared by every version, like the views. “Edit in Studio” appears only for someone who can edit that space.',
+            'In Studio, Project > “What visitors see” has one switch per part: the Versions chip, the SHOW chip, the scene bricks, Walk / Fly and Quality, the views bar and the layers. Off removes the control from the view page. For a production the choice is shared by every version, like the views. “Edit in Studio” appears only for someone who can edit that space.',
             'The Studio’s own Scenes window is folded until you open it.'
         ],
         tags: ['view page', 'visitors', 'controls', 'studio', 'scenes', 'versions', 'minimal'],
@@ -2012,21 +2012,21 @@ export const WIKI_ARTICLES = [
     {
         id: 'room-quality-lite-full',
         category: 'Spaces & access',
-        title: 'Lite and Full — a room light enough for a phone',
-        summary: 'A published room is drawn two ways. Full is the work renderer: every lamp a real light, shadows, bloom, the floor\'s reflection. Lite is what everyone else sees: the same room following the same desk, light enough for a phone. The Full / Lite button under Walk / Fly switches between them.',
+        title: 'Low and High — a room light enough for a phone',
+        summary: 'A published room is drawn at two qualities. High is the work renderer: every lamp a real light, shadows, bloom, the floor\'s reflection. Low is what everyone else sees: the same room following the same desk, light enough for a phone. The High / Low button under Walk / Fly switches between them.',
         body: [
-            'Who gets which, by itself: a desktop with a real graphics card starts in Full; a phone or a tablet, and a machine with no graphics card (a software renderer), start in Lite (since 2026-10-15; before, every visit started in Lite). The button changes it and this browser remembers the choice; ?quality=lite or ?quality=full in the address wins over both.',
+            'Who gets which, by itself: a desktop with a real graphics card starts in High; a phone or a tablet, and a machine with no graphics card (a software renderer), start in Low (since 2026-10-15; before, every visit started in Low). The button changes it and this browser remembers the choice; ?quality=low or ?quality=high in the address (the old ?quality=lite and ?quality=full still open) wins over both.',
             { list: [
-                'Lite keeps every beam and its lens, and the haze — the light you see in the air.',
+                'Low keeps every beam and its lens, and the haze — the light you see in the air.',
                 'The light falling on the room comes from four real lights that follow the lamps that matter most in the look that plays, so the floor and the walls still answer the show.',
-                'Lite leaves out shadows, bloom, the floor\'s reflection and edge smoothing, and draws at one pixel per screen pixel.',
-                'Your saved room is never changed: Lite draws a copy.'
+                'Low leaves out shadows, bloom, the floor\'s reflection and edge smoothing, and draws at one pixel per screen pixel.',
+                'Your saved room is never changed: Low draws a copy.'
             ] },
-            'Measured on a laptop\'s built-in graphics, a 70-lamp room: Full still had nothing on screen after a minute of preparing its shaders; Lite drew the hall and the beams in seconds and ran at over 200 frames a second at phone size.',
+            'Measured on a laptop\'s built-in graphics, a 70-lamp room: High still had nothing on screen after a minute of preparing its shaders; Low drew the hall and the beams in seconds and ran at over 200 frames a second at phone size.',
             'The real lights never depend on this: the desk sends DMX from the server on its own clock, whatever any screen is doing.'
         ],
-        tags: ['lite', 'full', 'quality', 'phone', 'mobile', 'performance', 'fps', 'lag', 'slow', 'shadows', 'bloom', 'output', 'visitor', 'moxir', 'rig', 'room'],
-        updated: '2026-10-04'
+        tags: ['low', 'high', 'lite', 'full', 'quality', 'phone', 'mobile', 'performance', 'fps', 'lag', 'slow', 'shadows', 'bloom', 'output', 'visitor', 'moxir', 'rig', 'room'],
+        updated: '2026-10-15'
     },
     {
         id: 'rig-show-loop',
@@ -2100,7 +2100,7 @@ export const WIKI_ARTICLES = [
         body: [
             'A version is a whole rig in its own project: the same hall and the same show, hung differently — fewer lamps, more lamps, movers in a different place. Each version keeps its own equipment list, plot, looks and patch sheet, so changing one never changes another. The versions of one show belong to a set, and a set is only what its projects say they are.',
             'Open any version of a set and a row of names sits at the top of the room, one name per version. The version you are in is the pale one. Tap another and that version opens. The row lists only versions the space really holds and that you are allowed to see: a version that was archived, removed or is private to someone else is never a link, so a tap never lands on "Project not found". It is the same list, in the same order, from every version, so it does not reshuffle as you move between them.',
-            'The scene bar (2026-10-12). On a MOXIR-type scene everything at the top is one strip: the version switch (named v1.1, v1.1 looks, v2.6), Edit in Studio (a link to /space/project/studio), the SHOW chip, and on the right Sound, Walk / Fly, Free, Lite / Full and, on a dev copy, the small red dev-copy chip. The view buttons stay at the bottom in the same style; a scene may name any extra camera (Entrance, Outside) and it joins them after the six.',
+            'The scene bar (2026-10-12). On a MOXIR-type scene everything at the top is one strip: the version switch (named v1.1, v1.1 looks, v2.6), Edit in Studio (a link to /space/project/studio), the SHOW chip, and on the right Sound, Walk / Fly, Free, Low / High and, on a dev copy, the small red dev-copy chip. The view buttons stay at the bottom in the same style; a scene may name any extra camera (Entrance, Outside) and it joins them after the six.',
             'Old (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
             'A room with only one version, or one that belongs to no set, shows no row at all. While the list is still being read the row shows only the version you are in, as a label with no links.',
             'For the show. A production keeps one list of its versions in its space, and the list says what each one is: a candidate, a kept copy, a concept, archived, or the one for the show. At most one is for the show, and none is until someone chooses. Members of the space see the row in the list\'s order: the version for the show first, marked "for the show", then the candidates, then the kept copies folded, then the concepts folded; an archived version is not on the row. The row never chooses; a status is set from the terminal (scripts/production/versions.mjs). Anyone who is not a member sees the row as described above.',
@@ -2110,7 +2110,7 @@ export const WIKI_ARTICLES = [
             'What it does not do: it never copies, merges or deletes a version, and it does not tell you which one is better. Making a version, and keeping a copy of one, is done from the terminal with the rig scripts (docs/architecture/RIG_BUILD.md, the versions section).'
         ],
         tags: ['rig', 'versions', 'version', 'switch', 'old versions', 'copy', 'walk', 'phone', 'moxir', 'minimal', 'full', 'set', 'room', 'compare', 'for the show', 'production', 'status', 'candidate', 'archived'],
-        updated: '2026-10-04'
+        updated: '2026-10-15'
     },
     {
         id: 'rig-patch-sheet-flags',

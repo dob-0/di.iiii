@@ -179,6 +179,6 @@ export const spotLightCone = ({ angle, penumbra, fieldRatio } = {}) => {
  * (rigbuild/lightPool.js) draws the light of the lamp it holds and says so with `components.lightPool.fitted`. It must NOT
  * carry the fixture itself: every reader of `components.fixture` (the lamps' bodies, the patch, the haze machines) would count
  * the slot as a second lamp. Both renderers (LiveProjectScene, EntityContent) ask here. Before 2026-10-09 they asked only for
- * the fixture, so Lite's slot reached three with the raw half-beam angle as its cutoff: half the lumens of the same lamp in Full.
+ * the fixture, so Low's slot reached three with the raw half-beam angle as its cutoff: half the lumens of the same lamp in High.
  */
 export const lampIsFitted = (components) => Boolean(components?.fixture) || components?.lightPool?.fitted === true

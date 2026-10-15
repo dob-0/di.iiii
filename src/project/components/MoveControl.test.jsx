@@ -102,7 +102,7 @@ describe('the viewer\'s Move control', () => {
         expect(screen.queryByRole('group', { name: 'Move' })).toBeNull()
     })
 
-    it('takes the button\'s look and place from the viewer, so it sits with Lite / Full and in the scene bar', () => {
+    it('takes the button\'s look and place from the viewer, so it sits with Low / High and in the scene bar', () => {
         render(<MoveControl buttonStyle={{ color: 'rgb(1, 2, 3)' }} wrapStyle={{ position: 'absolute', top: '9rem', right: '1rem' }} />)
         const button = screen.getByRole('button', { name: 'Move' })
         expect(button.style.color).toBe('rgb(1, 2, 3)')

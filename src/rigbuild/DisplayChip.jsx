@@ -1,7 +1,7 @@
 import useRememberedOpen from '../utils/rememberedOpen.js'
 import { CHIP, PANEL, ACTIVE, INK } from './chromeStyle.js'
 
-// DISPLAY: the view page's rarely-needed switches (layers, Inside / Free, Lite / Full) behind one small chip in the scene
+// DISPLAY: the view page's rarely-needed switches (layers, Inside / Free, Low / High) behind one small chip in the scene
 // bar. Closed at first load; what a viewer opens is remembered for that viewer only (rememberedOpen.js).
 export default function DisplayChip({ children }) {
     const [open, toggle] = useRememberedOpen('display')
