@@ -86,6 +86,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
+    // Auto fly (viewport/autoFly.js): the drone flight through the room. ?fly=1 starts it on open, for showing the work.
+    const [flying, setFlying] = useState(() => typeof window !== 'undefined' && /[?&]fly=1(&|$)/.test(window.location.search))
     // "Inside": keep the camera inside the building (SmartView). On by default where there is a building,
     // remembered per browser; a preset whose camera stands outside the building (Top, Side) pauses it.
     const [lockInside, setLockInside] = useState(() => {
@@ -317,7 +319,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         compact: isPhoneCompact,
         rightControls: (navMode === 'orbit' && walkButtons) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
         // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, then Move, each one 56 px line, all top-right
-        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 4 : 3) : null
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 5 : 4) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
@@ -571,6 +573,28 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </Suspense>
                 ) : null
 
+    // Auto fly: next to Walk / Fly (the scene bar's row) or the last line of the corner column. The flight is SmartView's;
+    // any input ends it, so this button is marked data-autofly and toggles itself.
+    const flyButton = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
+                    <button
+                        type="button"
+                        data-autofly
+                        data-testid="auto-fly"
+                        aria-pressed={flying}
+                        title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                        style={{
+                            ...btnBase,
+                            ...abs({ top: `calc(${topClear} + ${hasBuilding ? '13.6rem' : '10.2rem'})`, right: '1rem', minWidth: 104 }),
+                            minHeight: 44,
+                            color: flying ? 'var(--di-cyan)' : btnBase.color,
+                            borderColor: flying ? 'var(--di-cyan)' : btnBase.borderColor
+                        }}
+                        onClick={() => setFlying((on) => !on)}
+                    >
+                        Auto fly
+                    </button>
+                ) : null
+
     const barControls = (
         <>
             {/* Walk mode enters LiveProjectScene, which renders `entities` and
@@ -622,6 +646,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     Walk / Fly
                 </button>
             ) : null}
+            {flyButton}
 
             {sceneBar ? null : insideButton}
             {sceneBar ? null : liteButton}
@@ -706,6 +731,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         onLockPaused={onLockPaused}
                         layers={layers}
                         viewsBar={chrome.views}
+                        flyOn={flying}
+                        onFlyChange={setFlying}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'

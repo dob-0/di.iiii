@@ -19,6 +19,8 @@ export default function useSmartViewState({ enabled = true, deepLink = false, ke
     const [activeId, setActiveId] = useState(null)
     const [command, setCommand] = useState({ presetId: null, nonce: 0 })
     const [xray, setXray] = useState(false)
+    // Auto fly (autoFly.js): the drone flight through the room; ?fly=1 starts it on open.
+    const [flying, setFlying] = useState(() => typeof window !== 'undefined' && /[?&]fly=1(&|$)/.test(window.location.search))
     const hashApplied = useRef(false)
 
     const choose = useCallback((id) => {
@@ -69,5 +71,5 @@ export default function useSmartViewState({ enabled = true, deepLink = false, ke
         return () => window.removeEventListener('keydown', onKey)
     }, [enabled, keysLive, presets, reservedKeys, choose])
 
-    return { presets, setPresets, activeId, command, xray, setXray, choose, release }
+    return { presets, setPresets, activeId, command, xray, setXray, choose, release, flying, setFlying }
 }
