@@ -46,7 +46,7 @@ const BAR_RULE = [
     '.scene-bar__left{display:flex;align-items:stretch;gap:var(--di-space-1,3px);min-width:0;flex:1 1 auto;flex-wrap:nowrap;pointer-events:auto}',
     '.scene-bar__left>*{min-width:0}',
     '.scene-bar__left [data-testid="rig-show-chip"],.scene-bar__left nav{flex:0 1 auto;min-width:var(--di-touch-target,44px)}',
-    '.scene-bar__left [data-testid="rig-show-chip"]>button{max-width:100%;width:100%}',
+    '.scene-bar__left [data-testid="rig-show-chip"]>button,.scene-bar__left nav>button{max-width:100%;width:100%;min-width:var(--di-touch-target,44px);overflow:hidden}',
     '.scene-bar__right{display:flex;align-items:stretch;gap:var(--di-space-1,3px);margin-left:auto;flex:0 0 auto;flex-wrap:nowrap;justify-content:flex-end;pointer-events:auto}',
     '@media (max-width:899px){.scene-bar{flex-wrap:wrap}.scene-bar__left{flex:1 1 100%}.scene-bar__right{flex:1 1 100%;flex-wrap:wrap}}'
 ].join('')

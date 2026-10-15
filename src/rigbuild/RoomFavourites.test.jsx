@@ -76,6 +76,15 @@ describe('the scene strip', () => {
         expect(document.querySelector('[data-cue="12"]').getAttribute('aria-current')).toBe('true')
     })
 
+    it('where the show clock drives the room the playing card is the clock\'s scene, not a stale server runner', async () => {
+        openBricks()
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(fifty(49)))
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="clock" playingIndex={33} />)
+        await screen.findByText('scene 34')
+        expect(screen.getByTestId('room-scenes-page').textContent).toBe('4 / 5')
+        expect(cards().filter((b) => b.getAttribute('aria-current') === 'true').map((b) => b.dataset.cue)).toEqual(['33'])
+    })
+
     it('for the editor a click posts the same choose that sends the scene to Light', async () => {
         openBricks()
         const calls = []
@@ -87,6 +96,17 @@ describe('the scene strip', () => {
         const post = calls.find(([, init]) => init?.method === 'POST')
         expect(post[0]).toMatch(/\/api\/spaces\/moxir\/show\/v1-1\/choose$/)
         expect(JSON.parse(post[1].body)).toMatchObject({ index: 3, cueId: 'c3' })
+    })
+
+    it('on a show that plays by its own clock a successful click also previews that scene for this viewer', async () => {
+        openBricks()
+        const previewed = vi.fn()
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'operator', block: '', authOff: false } })))
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="clock" playingIndex={2} onPreview={previewed} previewLook="l3" />)
+        await screen.findByText('the black')
+        expect(document.querySelector('[data-fav="rig-l3"]').getAttribute('aria-pressed')).toBe('true')
+        await act(async () => { fireEvent.click(document.querySelector('[data-fav="rig-l4"]')) })
+        expect(previewed).toHaveBeenCalledWith('l4')
     })
 
     it('for a visitor a click does nothing and the card says why on hover', async () => {

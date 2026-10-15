@@ -9,7 +9,7 @@ import { CHIP, ACTIVE, INK, LINE } from './chromeStyle.js'
 // version multi-page for now"). It lists ALL scenes of the show, ten to a page with ‹ › and "n / N" (a page, not a scroll: ten
 // cards never move under a finger or a mouse, and "page 4 of 5" says where you are in a 50-scene show), and it opens on the page of the
 // scene that is playing. The playing scene is read from the desk's runner where a desk drives the room (the SAME read the SHOW chip
-// makes, deskCues.read once a second), else from the server's show answer - never a card the chip does not agree with.
+// makes, deskCues.read once a second), from the show clock where the clock does (`playingIndex`, the chip's own), else from the server's show answer - never a card the chip does not agree with.
 // The strip stays behind one small control (owner 2026-10-13: the scene is the page; rememberedOpen.js, remembered for that viewer only).
 // A click sends that scene to Light through the SAME POST .../choose as the list and the show page, so the server alone decides who
 // may (the cooldown, the operator's lock); a viewer who may not gets a card that does nothing and says so on hover. A laser scene is
@@ -36,7 +36,7 @@ const useWide = () => {
     return wide
 }
 
-export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', driver = '', audiencePlays = false }) {
+export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', driver = '', playingIndex = null, previewLook = null, onPreview = null, audiencePlays = false }) {
     const { data, take } = useShowFeed(spaceId, projectId)
     const [sending, setSending] = useState(null)
     const [notice, setNotice] = useState('')
@@ -95,7 +95,7 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
 
     const serverNow = now + (data?.offset || 0)
     const feedLive = useMemo(() => liveOf(data, serverNow), [data, serverNow])
-    const live = useMemo(() => (driver === 'desk' && desk && desk.project === projectId_(data, projectId) && desk.index >= 0 ? { index: desk.index } : feedLive), [driver, desk, data, projectId, feedLive])
+    const live = useMemo(() => (driver === 'clock' && playingIndex != null ? { index: playingIndex } : driver === 'desk' && desk && desk.project === projectId_(data, projectId) && desk.index >= 0 ? { index: desk.index } : feedLive), [driver, playingIndex, desk, data, projectId, feedLive])
     const cues = useMemo(() => data?.cues || [], [data?.cues])
     const buttons = useMemo(() => sceneButtons(cues), [cues])
     const pages = Math.max(1, Math.ceil(buttons.length / PAGE_SIZE))
@@ -118,13 +118,16 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
         try {
             take(await chooseCue(spaceId, projectId, { index: cue.index, cueId: cue.id, name: cleanName(readName()) }), t0, Date.now())
             setDeskAgain((n) => n + 1) // read the desk now, not in a second
+            // A show that plays by its own clock does not follow the runner: the scene is shown to THIS viewer as the chip's preview
+            // ("PREVIEW · name · the show is on ..."), the clock keeps running for everyone else.
+            onPreview?.(String(cue.lookId || '').replace(/^rig-/, '') || null)
         } catch (e) {
             if (e instanceof ShowError && e.body?.cues) take(e.body, t0, Date.now())
             setNotice(e.message || 'Light did not take it.')
         } finally {
             setSending(null)
         }
-    }, [spaceId, projectId, sending, watching, take])
+    }, [spaceId, projectId, sending, watching, take, onPreview])
 
     if (!data || !buttons.length) return null
     return (
@@ -147,14 +150,15 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
             {open ? <ul id="room-favourites-list" aria-label="scenes" data-cols={wide ? 10 : 5} style={{ ...listStyle, gridTemplateColumns: `repeat(${wide ? 10 : 5}, minmax(0, 1fr))` }}>
                 {shown.map((cue) => {
                     const isLive = isLiveScene(cue, live, cues)
+                    const previewed = Boolean(previewLook) && String(cue.lookId || '').replace(/^rig-/, '') === previewLook
                     const disabled = Boolean(cue.laser) || lightBlocked || lightBusy || youBlock === 'cooldown' || sending != null
                     const name = cue.title || cue.name
                     const tip = watching ? `${name} — ${WATCH_WORDS}` : cue.laser ? `${name} — operator only` : name
                     return (
                         <li key={cue.lookId} style={{ minWidth: 0 }}>
-                            <button type="button" disabled={disabled} aria-disabled={watching || undefined} data-fav={cue.lookId} data-cue={cue.index} aria-current={isLive ? 'true' : undefined} title={tip}
+                            <button type="button" disabled={disabled} aria-disabled={watching || undefined} data-fav={cue.lookId} data-cue={cue.index} aria-current={isLive ? 'true' : undefined} aria-pressed={previewed || undefined} title={tip}
                                 onClick={() => choose(cue)}
-                                style={{ ...brickStyle, cursor: disabled || watching ? 'default' : 'pointer', opacity: (disabled || watching) && !isLive ? 0.55 : 1, borderColor: isLive ? EMBER : LINE, background: isLive ? 'rgba(var(--di-danger-rgb, 242, 95, 92), 0.22)' : 'var(--di-scrim-strong, rgba(4, 6, 14, 0.9))', boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none' }}>
+                                style={{ ...brickStyle, cursor: disabled || watching ? 'default' : 'pointer', opacity: (disabled || watching) && !isLive ? 0.55 : 1, borderColor: isLive ? EMBER : previewed ? ACTIVE : LINE, background: isLive ? 'rgba(var(--di-danger-rgb, 242, 95, 92), 0.22)' : 'var(--di-scrim-strong, rgba(4, 6, 14, 0.9))', boxShadow: isLive ? `inset 0 0 0 1px ${EMBER}` : 'none' }}>
                                 <span aria-hidden="true" style={{ display: 'flex', gap: 2 }}>
                                     {(cue.swatch?.length ? cue.swatch.slice(0, 2) : [{ hex: '#000' }]).map((s, i) => (
                                         <span key={i} style={{ width: 12, height: 8, background: s.hex, border: '1px solid rgba(255,255,255,0.3)' }} />
