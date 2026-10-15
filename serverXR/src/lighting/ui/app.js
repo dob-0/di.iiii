@@ -210,12 +210,28 @@ function say(text, bad) {
 // A single dropped fetch — a lid closing, a wifi blip — is not an offline server, and a
 // banner that latches on forever trains you to ignore the banner.
 let pollFails = 0;
+
+// What this desk can do. `S.caps` may be absent: that is the full desk.
+const cap = (name) => window.deskCaps.cap(S && S.caps, name, window.isSecureContext);
+function applyCaps() {
+  $$('[data-cap]').forEach((el) => el.classList.toggle('capoff', !cap(el.dataset.cap)));
+  // A hidden page must not stay the open one: a bookmark to #midi on a desk without MIDI.
+  const open = document.querySelector('.page.is-active');
+  if (open && open.classList.contains('capoff')) { location.hash = 'setup'; showPage('setup'); }
+}
+// A state the page cannot draw is said on its own line and never counts as the desk being
+// offline; the last good state stays on screen until a drawable one arrives.
+function renderNote(text) {
+  const n = $('#renderNote');
+  n.hidden = !text;
+  n.textContent = text || '';
+}
 async function pullState() {
   try {
     const reply = await fetch('api/state');
     const next = await reply.json();
-    if (pollFails >= 2) say('back in touch with the desk');
-    pollFails = 0;
+    // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
+    const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
     // drawn rather than drawing the other show under this space's name.
     if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
@@ -235,23 +251,40 @@ async function pullState() {
       // desk's pre-drag level and the fader jumps out from under the finger.
       if (S.layers) next.layers = S.layers;
     }
+    const lastGood = S;
     S = next;
-    // Selection is pruned against what actually exists. With the desk open on two clients
-    // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
-    // stayed correct because selectedFixtures() filters, but the header counted fixtures
-    // that were not there, which is a status line lying.
-    if (!busy && sel.size) {
-      const alive = new Set(S.fixtures.map((f) => f.id));
-      for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+    try {
+      // Selection is pruned against what actually exists. With the desk open on two clients
+      // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
+      // stayed correct because selectedFixtures() filters, but the header counted fixtures
+      // that were not there, which is a status line lying.
+      if (!busy && sel.size) {
+        const alive = new Set(S.fixtures.map((f) => f.id));
+        for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+      }
+      // start with everything selected, so the faders do something the moment you open it
+      if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
+      renderAll(busy);
+    } catch (e) {
+      // The desk answered; this page cannot draw what it said. Not a network failure: the
+      // counter stays as it was, the last good state stays on screen, and the page says why.
+      S = lastGood;
+      pollFails = window.deskCaps.nextFails(pollFails, 'render');
+      renderNote(window.deskCaps.unreadable(e, next));
+      console.error('renderAll threw on the desk\'s state:', e);
+      return;
     }
-    // start with everything selected, so the faders do something the moment you open it
-    if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
     DMX = next.dmx || DMX;
-    renderAll(busy);
+    pollFails = window.deskCaps.nextFails(pollFails, 'drawn');
+    renderNote('');
+    if (wasOffline) say('back in touch with the desk');
+    applyCaps();
+    dmxFeed.setAllowed(streamWanted());
   } catch (e) {
     // Latch only after it has really gone, and then keep saying it until it comes back:
     // this one does NOT expire, because a desk that is not answering is not a passing note.
-    if (++pollFails >= 2) {
+    pollFails = window.deskCaps.nextFails(pollFails, 'network');
+    if (pollFails >= 2) {
       clearTimeout(sayTimer);
       const s = $('#statusStrip');
       s.hidden = false;
@@ -261,16 +294,27 @@ async function pullState() {
   }
 }
 
-async function pullDmx() {
-  if (document.hidden || !S) return;
-  try {
-    DMX = (await (await fetch('api/dmx')).json()).dmx;
-    paintStage();
-    paintSelList();
-    syncAttr();
-    if (page === 'fader') syncFaders();
-  } catch (e) { /* the slow poll reports it */ }
+// The live DMX comes from the desk's pushed stream when it offers one (`caps.stream`, absent =
+// the full desk, which has it), and from this 10 Hz poll when it does not or the stream goes
+// quiet; dmxfeed.js holds that rule. Either way the same painters run on the same DMX object.
+async function fetchDmx() {
+  if (document.hidden || !S) return null;
+  try { return (await (await fetch('api/dmx')).json()).dmx || null; } catch (e) { return null; }   // the slow poll reports it
 }
+function paintDmx(dmx) {
+  DMX = dmx;
+  paintStage();
+  paintSelList();
+  syncAttr();
+  if (page === 'fader') syncFaders();
+}
+const dmxFeed = window.dmxFeed.createFeed({
+  open: (url) => new EventSource(url),
+  poll: fetchDmx,
+  onUpdate: paintDmx,
+});
+// Is the stream on? Needs the page to have EventSource and the desk not to have said no.
+const streamWanted = () => typeof EventSource === 'function' && !!S && cap('stream');
 
 /* =============== colour =============== */
 
@@ -6171,7 +6215,8 @@ showPage(location.hash.slice(1));
   Promise.resolve(pullState()).then(next, next);
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
-setInterval(pullDmx, 100);
+dmxFeed.start();
+document.addEventListener('visibilitychange', () => { if (document.hidden) dmxFeed.pause(); else dmxFeed.resume(); });
 
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:
