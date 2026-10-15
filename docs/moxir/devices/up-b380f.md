@@ -8,3 +8,7 @@
 Owed: channels 11–16 walked on setup day; the maker's own chart (Sevan's list).
 **Product pages for the owner's eye (2026-10-15 16:5x):** indoor "380 BEAM" https://www.upluslighting.com/product/mini-380w-beam-moving-head-stage-lights/ (380 W lamp, 600 W draw, 2°, 14 gobos + 14 colours, double prism, 16/20 ch, IP20, 300×240×530 mm, 12 kg) ·
 IP65 "380W Beam" https://upluslighting.com/product/stage-lights-ip-outdoor-waterproof-380w-beam-moving-head-lights-for-show-dj/ (371 W Osram, 400 W, 16 ch, 27 kg, tilt 270°) — a different unit. Owner's approval: pending.
+**APPROVED by the owner's eye (2026-10-15 17:0x, Screenshot_20261015_154953.png):** UP-B380F = UPlight Stage Equipment (Guangzhou) Co., Ltd. (= U-Plus Lighting), "IP65 380W Waterproof DJ Light Beam Moving Head for Outdoor Events",
+https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html (page read 2026-10-15): model no. UP-B380F, 350XL/380 bulb, rated 500 W,
+1.8°, pan 540° / tilt 270°, 14 colours, 13 gobos + open + a rotating wheel, 16-facet + honeycomb prism, strobe 0.5–14/s, IP65, 460×310×690 mm, 23 kg, **16 CH** — no channel list on the page.
+So the INDOOR "380 Beam" manual's order (above) does not apply to our unit; the IP65 unit's own manual is "380 IP BEAM" on upluslighting.com (downloaded 2026-10-15, see below) — its table is compared with the TESTED map in this file.
