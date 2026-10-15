@@ -1690,7 +1690,8 @@
 }
 
 /* SCENE EDITOR (2026-10-15, SceneEditor.jsx): under the scene's row. Rectangles, 2 px; fields at least 28 px tall. */
-.scene-picker--editing { width: 460px; }
+.sfp-shell.scene-picker.scene-picker--editing { width: 500px; }
+.scene-editor input[type="range"] { width: 90px; }
 .scene-picker .sfp-content { overflow-y: auto; max-height: calc(58vh - 40px); }
 .scene-picker--editable .spa-list { display: grid; grid-template-columns: 1fr auto; gap: var(--di-space-1); align-items: stretch; }
 .scene-picker--editable .scene-editor { grid-column: 1 / -1; }
