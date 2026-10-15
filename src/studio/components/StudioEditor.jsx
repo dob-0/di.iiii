@@ -28,6 +28,7 @@ import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
 import useProjectViews from '../hooks/useProjectViews.js'
+import useLightEnvPicker from '../hooks/useLightEnvPicker.js'
 import { frameEntities, runViewCommand } from '../utils/viewCommands.js'
 import { resolveViewKey } from '../../utils/viewAxisPose.js'
 import StudioShell from './StudioShell.jsx'
@@ -1175,6 +1176,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
         return projectViews.addCamera({ position: snapshot.position, target: snapshot.target, fov: snapshot.fov }, label)
     }
+    const lightEnvPicker = useLightEnvPicker({ projectId, spaceId: resolvedSpaceId, document, applyLocalOps })
     const viewsPanel = { ...projectViews, onAddCurrent: handleAddCurrentView }
 
     // The Studio's Preview button: this project's VIEW page, as a visitor opens it (see utils/previewUrl.js).
@@ -1474,6 +1476,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
             views={viewsPanel}
+            lightEnv={lightEnvPicker}
             onCopyShareLink={handleCopyShareLink}
             onViewLive={handleViewLive}
             previewUrl={previewUrl}

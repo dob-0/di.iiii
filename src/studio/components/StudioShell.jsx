@@ -156,6 +156,7 @@ export default function StudioShell({
     onMakeSpacePublic,
     onSaveCurrentCamera,
     views,
+    lightEnv,
     onCopyShareLink,
     onViewLive,
     previewUrl,
@@ -571,7 +572,8 @@ export default function StudioShell({
     )
 
     const viewportShared = {
-        document,
+        // a Try in the Light environment section draws the viewport with another version's light; nothing is written
+        document: lightEnv?.previewDocument || document,
         selectedEntityId,
         selectedEntityIds,
         onSelectEntity: handleSelectEntity,
@@ -699,7 +701,7 @@ export default function StudioShell({
         ),
         world: (
             <>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} />
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} lightEnv={lightEnv} />
             </>
         )
     }

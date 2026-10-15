@@ -952,6 +952,48 @@ export function VisitorChromeSection({ views }) {
     )
 }
 
+// LIGHT ENVIRONMENT — each version's air, ambient, exposure, bloom and surfaces side by side (src/shared/lightEnv.js).
+// Try draws the live view with that version's environment and writes nothing; Take writes it to this project (one
+// history step, Undo restores it). `lightEnv` comes from useLightEnvPicker (StudioEditor).
+const hazeText = (s) => (s.haze === null ? 'no haze' : `haze ${s.haze} /m${s.calibrated ? '' : ' (estimate)'}`)
+export function LightEnvSection({ lightEnv }) {
+    if (!lightEnv || lightEnv.rows.length < 2) return null
+    const { rows, tryId } = lightEnv
+    return (
+        <CollapsibleSection title={`Light environment (${rows.length} versions)`} defaultOpen={false}>
+            <p className="insp-label">
+                Each version of this space with its light: haze, ambient, exposure, bloom, surfaces. Try shows it here without writing anything; Take writes it to this project.
+            </p>
+            {tryId && (
+                <div className="insp-field" data-light-env-trying={tryId}>
+                    <label className="insp-label">{`Trying ${rows.find((r) => r.id === tryId)?.title || tryId}`}</label>
+                    <button type="button" className="scc-btn scc-btn--xs" onClick={lightEnv.back}>Back</button>
+                </div>
+            )}
+            {rows.map((row) => (
+                <div key={row.id} className="insp-field" data-light-env-row={row.id} data-current={String(row.current)} data-trying={String(row.id === tryId)}>
+                    <label className="insp-label">{`${row.title}${row.current ? ' · this one' : ''}`}</label>
+                    <span className="insp-label">
+                        {[
+                            hazeText(row.summary),
+                            `ambient ${row.summary.ambient ?? '–'}`,
+                            `exposure ${row.summary.exposure ?? '–'}`,
+                            `bloom ${row.summary.bloom ? 'on' : 'off'}`,
+                            `surfaces ${row.summary.surfaces ? 'on' : 'off'}`
+                        ].join(' · ')}
+                    </span>
+                    {!row.current && (
+                        <>
+                            <button type="button" className="scc-btn scc-btn--xs" onClick={() => lightEnv.tryRow(row.id)}>{`Try ${row.title}`}</button>
+                            <button type="button" className="scc-btn scc-btn--xs" disabled={row.changes === 0} title={row.changes === 0 ? 'This project already has this light' : `${row.changes} values change`} onClick={() => lightEnv.take(row.id)}>{`Take ${row.title}`}</button>
+                        </>
+                    )}
+                </div>
+            ))}
+        </CollapsibleSection>
+    )
+}
+
 export function ProjectPanel({
     document,
     displayName,
@@ -960,7 +1002,8 @@ export function ProjectPanel({
     onWorldPatch,
     onRenderSettingsPatch,
     onOpenHub,
-    views = null
+    views = null,
+    lightEnv = null
 }) {
     const world = document.worldState || defaultWorldState
     const render = document.renderSettings || defaultRenderSettings
@@ -1038,6 +1081,7 @@ export function ProjectPanel({
             </CollapsibleSection>
 
             <ViewsSection views={views} />
+            <LightEnvSection lightEnv={lightEnv} />
             <VisitorChromeSection views={views} />
 
             <CollapsibleSection title="Default camera" defaultOpen={false}>

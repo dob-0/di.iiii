@@ -35,42 +35,10 @@ import { makeClient, readToken } from './api.mjs'
 import { changesFor, forwardOps, undoOps, tableOf } from '../rigbuild/apply-picture.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
 
-export const GROUPS = {
-    atmosphere: [['renderSettings', 'atmosphere']],
-    exposure: [['renderSettings', 'toneMapping'], ['renderSettings', 'toneMappingExposure'], ['renderSettings', 'exposure']],
-    bloom: [['renderSettings', 'bloom']],
-    surfaces: [['renderSettings', 'surfaces']],
-    fog: [['worldState', 'fog']],
-    ambient: [['worldState', 'ambientLight']]
-}
+import { GROUPS, getPath, leavesOf, wantedFrom } from '../../src/shared/lightEnv.js'
+export { GROUPS, leavesOf, wantedFrom }
 export const UNDO_DIR = path.join(os.homedir(), '.di', 'light-env-undo')
 const CLIENT_ID = 'apply-light-env'
-
-const getPath = (doc, p) => p.reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), doc)
-const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v)
-
-/** Leaves of `src` under `base`, plus null for every leaf `dst` holds there and `src` lacks. Pure. */
-export const leavesOf = (base, src, dst, group) => {
-    if (!isObj(src)) return [{ group, path: base, value: src === undefined ? null : src }]
-    const out = []
-    for (const k of Object.keys(src)) out.push(...leavesOf([...base, k], src[k], isObj(dst) ? dst[k] : undefined, group))
-    if (isObj(dst)) for (const k of Object.keys(dst)) if (!(k in src)) out.push({ group, path: [...base, k], value: null })
-    return out
-}
-
-/** The wanted leaves: the source's light environment, group by group, against the target. Pure. */
-export const wantedFrom = (source, target, groups = Object.keys(GROUPS)) => {
-    const wanted = []
-    const missing = []
-    for (const g of groups) {
-        for (const p of GROUPS[g] || []) {
-            const v = getPath(source, p)
-            if (v === undefined) { missing.push(p.join('.')); continue }
-            wanted.push(...leavesOf(p, v, getPath(target, p), g))
-        }
-    }
-    return { wanted, missing }
-}
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
