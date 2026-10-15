@@ -73,3 +73,15 @@
 - Owner's PR sweep ("merge the finished ones only"): 31 PRs merged across 12 repos by `gh pr merge` one plain command each (the allow rule
   matches nothing compound); 14 di.iiii PRs to dev as the batch PR #962 (branch protection: 2 checks + up to date), merged when green.
 - Owed on this branch: noSupplierPrices test (a rig json holds a price field); the GPU looks of #958/#959/#960 (box at 94-99 °C all hour).
+
+## 06:47- — night lead (headless Opus, API credit; owner asleep)
+- Merged: #966 scenes energy pass 4 (levels only; v2-11 v1371 read back 36 x 256 frames, 51 looks, 50 cues), #961 Auto fly (conflict in
+  PublicProjectViewer rightLines: Low / High label kept, the Auto fly line added, 5 : 4), #967 Studio env-pick shots.
+- PR #963 (ring -> dev): CI failed the spine + contrast tests on loadingScreen.css; fixed on the ring branch (token ladders), merged into
+  the show branch and into dev.
+- Show-branch test debt fixed, one commit each: scene-editor CSS tokens, 'total' -> 'wash_count' in the v2.10 lines file (noSupplierPrices),
+  wiki "Lite" -> Low quality, laserLine.js no longer cites a session note, laser-glsl-check uses fileURLToPath, test:raw runs headMotion,
+  SceneEditor test reads the rig's level instead of a hardcoded 0.15.
+- Not code: in this worktree serverXR has no node_modules, so ~54 server test files cannot load dotenv / express; kitCatalogue sees a
+  stale glTF Transform 4.4.2. CI installs and runs them.
+- Hand-over: agent-reports-2026-10-15/moxir-50/LEAD-HANDOVER-4.md.
