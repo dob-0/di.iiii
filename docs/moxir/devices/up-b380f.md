@@ -6,3 +6,5 @@
 1 colour · 2 strobe · 3 dimmer · 4 gobo · 5 prism 1 · 6 prism 1 rot · 7 prism 2 · 8 frost · 9 focus · 10 pan · 11 pan fine · 12 tilt · 13 tilt fine · 14 7-colour · 15 reset · 16 lamp.
 **Verdict:** a different channel ORDER from the tested units → the Sevan B380F is not this manual's unit (or another firmware). The tested map rules; the owner's eye on the unit's look decides whether U-Plus is the maker at all.
 Owed: channels 11–16 walked on setup day; the maker's own chart (Sevan's list).
+**Product pages for the owner's eye (2026-10-15 16:5x):** indoor "380 BEAM" https://www.upluslighting.com/product/mini-380w-beam-moving-head-stage-lights/ (380 W lamp, 600 W draw, 2°, 14 gobos + 14 colours, double prism, 16/20 ch, IP20, 300×240×530 mm, 12 kg) ·
+IP65 "380W Beam" https://upluslighting.com/product/stage-lights-ip-outdoor-waterproof-380w-beam-moving-head-lights-for-show-dj/ (371 W Osram, 400 W, 16 ch, 27 kg, tilt 270°) — a different unit. Owner's approval: pending.
