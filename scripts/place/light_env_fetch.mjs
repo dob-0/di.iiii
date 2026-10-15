@@ -6,6 +6,7 @@
 import { readToken } from './api.mjs'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 export const parseArgs = (argv) => {
   const o = { ids: [], api: null, tag: 'doc', out: '.', tokenFile: null, help: false }
   for (let i = 0; i < argv.length; i++) {
@@ -19,7 +20,7 @@ export const parseArgs = (argv) => {
   }
   return o
 }
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const o = parseArgs(process.argv.slice(2))
   if (o.help || !o.api || !o.ids.length) {
     console.log('usage: node scripts/place/light_env_fetch.mjs --api URL/serverXR --tag NAME --out DIR [--token-file F] ID [ID ...]')

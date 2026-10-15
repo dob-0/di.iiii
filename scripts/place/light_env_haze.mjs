@@ -4,10 +4,11 @@
 // (haze.mjs, 2026-10-15, ledger N811.8).   node scripts/place/light_env_haze.mjs DOC.json [DOC.json ...]
 import { readFileSync } from 'node:fs'
 import { register } from 'node:module'
+import { fileURLToPath } from 'node:url'
 if (!process.argv[2] || process.argv[2] === '-h' || process.argv[2] === '--help') { console.log('usage: node scripts/place/light_env_haze.mjs DOC.json [DOC.json ...]   (a project document, or {"document": {...}})'); process.exit(process.argv[2] ? 0 : 2) }
 // the rig type library imports .json files: give them the import attribute
 register('data:text/javascript,' + encodeURIComponent("export async function load(u,c,n){return u.endsWith('.json')?n(u,{...c,importAttributes:{type:'json'}}):n(u,c)}"))
-const R=new URL('../../src/', import.meta.url).pathname
+const R=fileURLToPath(new URL('../../src/', import.meta.url))
 const { buildHazeField, hazeSettingsOf, hazeMachinesOf } = await import(R+'objectComponents/hazeField.js')
 const { TYPE_LIBRARY } = await import(R+'rigbuild/types/index.js')
 const { libraryWithShow } = await import(R+'rigbuild/rental.js')
