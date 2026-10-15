@@ -85,3 +85,12 @@
 - Not code: in this worktree serverXR has no node_modules, so ~54 server test files cannot load dotenv / express; kitCatalogue sees a
   stale glTF Transform 4.4.2. CI installs and runs them.
 - Hand-over: agent-reports-2026-10-15/moxir-50/LEAD-HANDOVER-4.md.
+- 07:1x-07:45: all five jobs ended. Merged #968 (laser frames draw as straight rays, shader), #969 (Walk no longer snaps back to the
+  gate on a show scene change; known-fixes conflict kept both), #965 + #970 (shot plans: URL query, a DEV-only view handle so shot
+  scripts can move the room page camera; side / along / 043205 laser shots). PR #963 live on dev (releaseId 5f08f208).
+- Lead look on the agent screen (lane 2, browser copy only): Studio "The storm" shows straight green rays (luma 31/255); the room page
+  on "Blinders" is still dark (luma 6.1/255 vs his v2-7 example 45.3) because every v2.11 look aims the 18 beams straight up —
+  a design decision for the owner (N778.2).
+- Tests: with serverXR's packages linked, serverXR + server-process tests 168 files pass; without them ~54 cannot load. The only other
+  failure is kitCatalogue (this worktree's glTF Transform 4.4.2 is older than package.json's 4.5.1; environment).
+- page-check.cjs committed (it was untracked; later jobs used it).
