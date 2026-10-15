@@ -2156,6 +2156,8 @@ Four additions to the planner, each with a test in `src/rigbuild/patchPlan.test.
 
 Also fixed on the way: a lamp with no position name never converged (the planner wanted `position: ""`, the schema stores none), so a re-run wrote it again.
 
+**One command for a version onto the desk (2026-10-15, ledger N877):** `node scripts/rigbuild/version-to-desk.mjs --project <id> --api <base>/serverXR --token-file <f> --plan <plan.patch.json> [--dry-run] [--keep-others] [--no-start]` runs, in order, `patch-plan.mjs --keep-circuits`, `patch.mjs --unpatch` for every other project on the desk, `patch.mjs --exact`, `show-loop.mjs` (the document's own cues), then prints the desk per project, U1/U2 and the runner, and exits 1 if a step failed or another project is still on the desk. `--dry-run` writes nothing.
+
 Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 353 / 400, no LaserCube on any universe, the controls that make it fail on a wrong plan; `MOXIR_PATCH_FILE=` points it at any candidate). The crew's short table is `node scripts/rigbuild/patch-table.mjs --plan <plan> --out <dir> --pdf` (universe, start address, fixture, mode; Markdown, a page, CSV, a PDF through LibreOffice). The B380F's 16-channel map against the equivalent chart, and what is walked on the unit: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
 
 Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
