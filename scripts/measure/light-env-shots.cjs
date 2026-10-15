@@ -3,7 +3,7 @@
  * and the renderer string of each. Read-only: nothing is written to any server (2026-10-15, the light-environment audit).
  *
  *   DI_TEST_LANES=3 DI_TEST_LANE=3 timeout 2400 di-test-browser run scripts/measure/light-env-shots.cjs \
- *       --base http://moxir-test.diiii.localhost --space moxir --plan plan.json --out <dir> [--heat 85]
+ *       --base http://moxir-test.diiii.localhost --space moxir --plan plan.json --out <dir> [--heat 85] [--size 1600x900]
  *
  * plan.json: [{ "name": "v2-10-floor15-lite", "project": "moxir-v2-10", "look": "red-wave", "quality": "lite"|"full",
  *               "camera": { "position": [x,y,z], "target": [x,y,z], "fov": 70 } | null,     // null = the document's own
@@ -32,7 +32,7 @@ const SPACE = arg('space', 'moxir')
 const PLAN = JSON.parse(fs.readFileSync(String(arg('plan', 'plan.json')), 'utf8'))
 const OUT = path.resolve(String(arg('out', '.')))
 const HEAT_LIMIT = Number(arg('heat', 85))
-const SIZE = [1600, 900]
+const SIZE = String(arg('size', '1600x900')).split('x').map(Number)
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|lavapipe/i
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -113,6 +113,17 @@ const main = async () => {
             await page.bringToFront()
             r.loadMs = Date.now() - t0
             await sleep(25000)
+            if (shot.camera) {
+                // the plan's camera, through the page's own handle (RawViewport's window.__diView, dev build): fixedCamera in the document does not move the room's view
+                r.camera = await page.evaluate(async (c) => {
+                    const v = window.__diView
+                    if (!v) return { error: 'no window.__diView (dev build of RawViewport.jsx needed)' }
+                    const set = v.setView(c)
+                    await new Promise((r) => setTimeout(r, 4000))
+                    return { position: v.camera.position.toArray().map((n) => Math.round(n * 100) / 100), fov: v.camera.fov, set: set.position }
+                }, shot.camera)
+                console.log(`${shot.name}: camera`, JSON.stringify(r.camera))
+            }
             r.frames = await page.evaluate(() => new Promise((resolve) => {
                 const dts = []
                 let last = performance.now()
