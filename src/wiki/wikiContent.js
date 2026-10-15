@@ -846,6 +846,7 @@ export const WIKI_ARTICLES = [
                 'A sixth, space-level window — Projects — lists every project in the space: click to switch, ＋ New to create, hover a row to rename or delete (the live project is badged; deleting it clears the published pointer). No more hub round-trips to hop between projects.',
                 'Every file — uploaded, from Google Drive, or from the Commons — sits in the Create window’s Files list with + Add to place it in the scene, badges for where it is used and for public sharing, and × to delete. PDFs import as images, one per page.',
                 'Drag to position; edit the selected object in the Objects window — the defaults for the whole scene live in the Scene window.',
+                'Light environment (Scene window): every version of the space is a row with its haze, ambient, exposure, bloom and surfaces. Try draws the view with that version’s light and writes nothing (Back returns); Take writes it to this project as one step, and Undo takes it back. Lamps are never carried.',
                 'In the Objects tree: double-click any object to rename it, and use the per-row circle (show/hide) and square (lock/unlock) toggles — hidden objects disappear from the scene, locked ones can be selected but not moved.',
                 'Duplicate (Shift+D copies and starts moving the copy at once — Esc leaves it in place; Ctrl+D copies in place) and copy/paste (Ctrl+C / Ctrl+V) carry whole hierarchies — duplicating a group brings all of its children along, and copy works on multi-selections.',
                 'Drag an Objects-tree row onto a group to nest it (its position in the scene is kept), onto another object to make them siblings, or onto empty list space to move it back to the root.',
@@ -868,7 +869,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-10-13'
+        updated: '2026-10-15'
     },
     {
         id: 'studio-content-model',
