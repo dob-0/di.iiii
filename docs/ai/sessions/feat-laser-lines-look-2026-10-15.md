@@ -78,3 +78,74 @@ for the whole job. Lesson (owed as a row): a job whose done needs GPU renders mu
 lane queue BEFORE it starts, and the brief should say what to do when the heat guard holds (here: arithmetic diagnosis +
 pure functions + hand-over). Also: never pipe a long `di-test-browser run` through `tail` — the progress is hidden until it
 ends (cost one blind 20-min wait).
+
+---
+
+# Job 2 — the shader (branch `feat/laser-lines-shader-2026-10-15`, from the show branch at 8ce24ad9), 2026-10-15 05:0x
+
+Brief: `~/work/agent-reports-2026-10-15/moxir-50/briefs/lasers-look-2.md`. Look decided by the lead from the owner's words
+(N730): reading 1 — a white core with the colour in the halo; lasers do not feed the bloom.
+
+## Why the Studio looked right and the room did not (evidence, by code — no browser: 93–98 °C all job)
+
+The brief's hypothesis was a flag (`atmosphere`, governor, bloom) differing between the pages. Both pages mount
+`RenderSettingsEffect` with the document's renderSettings (`StudioViewport.jsx:792`, `LiveProjectScene.jsx:1983`), so both
+draw `LaserLines` (the ribbons). The difference: the Studio ALSO mounts `<LaserView>` (`StudioViewport.jsx:795`,
+`src/rigbuild/LaserView.jsx`) — the laser server's frames as 1-px `lineSegments`, additive, opacity 0.3, NOT tone-mapped,
+drawn on top. That overlay is the "crisp green-white lines" of Screenshot_20261015_042548/043344. The room page has no
+overlay (grep: `LaserView` is imported only by StudioViewport), so it shows the ribbons alone, bloomed: the slab of
+043205 ("the net"). Not checked live: which flag values each page had (no browser slot); the overlay difference does not
+depend on them.
+
+## What landed
+
+- `laserLineMaterial.js`: core + halo shader (the formulas of `coreHalo`, tested in JS); `aSpacing` per line; end spot
+  material + geometry (`laserSpotGeometry`, `createLaserSpotMaterial`).
+- `laserLine.js`: `coreHalo` now carries the whole haloShare in the CAPPED Gaussian (the brief: "Gaussian of
+  haloRadiusCapped, carries haloShare" — changed from the first job's "peak stays uncapped", which made the halo invisible);
+  `lineSpacings`, `LONE_LINE_SPACING_RAD` (0.5° scan step, ASSUMPTION), `laserSpot` + `SPOT_ALBEDO` 0.3 (ASSUMPTION).
+- `src/project/viewport/laserOverBloom.js` + HdrBloom: lasers held out of the room's render pass and drawn after the glow,
+  into the same HDR buffer and depth, before exposure and tone mapping. No composer (XR, no bloom): unchanged path.
+- `scripts/measure/laser-glsl-check.mjs` (glslang ES 3.00: 4/4 compile), `laser-look-diagnose.mjs` gained the after model.
+- Tests: laserLine 23/23, laserOverBloom 2/2; `vitest run src/objectComponents src/project/viewport` 60 files / 547 pass; eslint clean.
+
+## After, by arithmetic (owner's camera, v2-11, green drive, σs 0.02, g 0.7, exposure 3.5, 1.556 mrad/px)
+
+| s (m) | before: line HDR, width | after: core HDR, width | after: halo HDR, σ px | gap px | dip before / after (HDR, pre-bloom) |
+|---|---|---|---|---|---|
+| 2 | 6.85, 1.5 px | 6.58, 1 px | 1.12, 0.5 | 0.39 | 0.76 / 0.73 |
+| 5 | 6.69, 1.5 px | 6.05, 1 px | 1.01, 0.5 | 1.03 | 1.06 / 0.97 |
+| 10 | 6.38, 1.5 px | 5.22, 1 px | 0.84, 0.55 | 2.26 | 0 / 0.03 |
+| 20 | 5.55, 1.5 px | 3.72, 1 px | 0.54, 1.36 | 5.58 | 0 / 0.03 |
+| 40 | 2.57, 1.5 px | 1.00, 1.17 px | 0.11, 5.1 | 20.6 | 0 / 0.03 |
+
+Read: before the bloom the lines were already apart beyond ~10 m; the bloom (and ACES clipping of the summed band) made the
+slab, and it is now out of the lasers' path. Below ~5 m from the cube the lines are under a pixel apart: one line there, as a
+1.5 mrad pixel must show. The "net" scenes (scanned sub-lines 0.5° apart) were not computed here.
+
+## OWED — the GPU look (the lead renders; the job held: package 93 → 98 °C, 4–5 `claude -p`)
+
+```bash
+sensors | grep Package; curl -s 127.0.0.1:9224/json; ps -eo args | grep -c '^claude -p'   # < 85 °C, lane 2 free, ≤ 3
+di-dev down lasers-look 2>/dev/null; rm -rf ~/.cache/di-dev/lasers-look/data && mkdir -p ~/.cache/di-dev/lasers-look
+time cp -a ~/.cache/di-dev/moxir-one/data ~/.cache/di-dev/lasers-look/data                # say the copy time
+di-dev up lasers-look --api scratch && di-dev name moxir-test2 lasers-look 2>/dev/null     # or the tree address
+V=$(mktemp -d); D=~/.cache/di-dev/lasers-look/data/spaces/moxir/projects/moxir-v2-11/document.json
+jq '(.document // .) |= (.renderSettings.bloom.enabled=false)' $D > $V/nobloom.json
+jq '(.document // .) |= (.entities |= map(if .components.beam.laser then .components.beam.only=true else . end))' $D > $V/nolight.json   # check the beam.only key in SpotLightObject first
+jq '(.document // .) |= (.entities |= map(select(.components.beam.laser | not)))' $D > $V/lamponly.json
+sed "s#VARIANTS#$V#" scripts/measure/plans/laser-look-shots.json > $V/plan.json
+export DI_TEST_LANES=3 DI_TEST_LANE=2
+timeout 2400 di-test-browser run scripts/measure/light-env-shots.cjs --base http://lasers-look.diiii.localhost --space moxir --plan $V/plan.json --out $V/shots   # never through tail
+python3 -I scripts/measure/laser-lines-measure.py --doc $D --shots $V/shots/shots.json --dir $V/shots --out $V/m.json
+# lamp-only: run the same lamponly shot on the show branch (before) and here (after): diff < 0.5 % of pixels
+di-test-browser down; di-dev down lasers-look --wipe
+```
+Also owed: the room's "the net" scene shot from the owner's 043205 camera; then the sheet's "after" column gets pictures.
+
+## Review (job 2)
+
+Meant: shader + bloom split + end spot + seen on the GPU. Happened: all code, tests and docs; GPU still blocked by heat
+(98 °C at the check). Lesson kept from job 1 and applied: heat checked FIRST (05:0x, 93 °C), so no time was spent queueing.
+New lesson: the "Studio looks right" clue came from a Studio-only overlay (`LaserView`), not from a render flag — compare
+what each page MOUNTS before comparing flags.

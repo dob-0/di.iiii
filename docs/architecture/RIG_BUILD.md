@@ -2322,16 +2322,22 @@ through the DJ lights the air behind him). Auto-exposure (an eye adapts to the r
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
 
-**Laser lines in the room's picture — why they read as fog, and what is owed (2026-10-15).** A laser is drawn as a line
-source (`src/objectComponents/laserLine.js`, `laserLineMaterial.js`): a camera-facing ribbon ≥ 1.5 px wide with a soft
-parabolic cross profile, its intensity per length σs·p(θ)·Φ·T/sinθ kept at any drawn width. From the floor (fov 70°, 900 px:
-1.556 mrad a pixel) MOXIR's 36 cube lines over their first 20 m are 0.4–2.3 px apart and each 6–7 × the screen's white
-after exposure 3.5 (`scripts/measure/laser-look-diagnose.mjs`): the ribbons overlap, add, clip flat under ACES, and the
-bloom spreads the clipped band into a glow — a comb an eye resolves (~0.3 mrad) becomes a green fog. Landed: the core/halo
-arithmetic (`laserLine.js` §7 — core ≥ 1 px as wide as the beam; halo share 1 − exp(−σs·s), Beer–Lambert; halo radius by
-Fermi–Eyges small-angle multiple scattering, capped at half the gap to the next line). OWED: the shader drawing core + halo +
-the end spot, the look decision on lines far above white (bloom or a separate tone map — the owner's call), and GPU
-before/after renders. Hand-over: `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md`.
+**Laser lines in the room's picture — core, halo, end spot, drawn after the bloom (2026-10-15).** A laser is drawn as a
+line source (`src/objectComponents/laserLine.js`, `laserLineMaterial.js`), its intensity per length σs·p(θ)·Φ·T/sinθ kept at
+any drawn width. Until 2026-10-15 each line was a ≥ 1.5 px soft ribbon fed into the room's bloom; from the floor (fov 70°,
+900 px: 1.556 mrad a pixel) MOXIR's cube lines are 6–7 × the screen's white after exposure 3.5, and the bloom spread them
+into one green slab (`scripts/measure/laser-look-diagnose.mjs`). The Studio looked right only because it draws the laser
+server's frames on top as 1-px GL lines (`src/rigbuild/LaserView.jsx`, Studio only); the room page has no such overlay. Now
+(shader job 2, the owner's look "a white core with the colour in the halo", decided from his words of 2026-10-15): each line
+is a CORE as wide as the beam or 1 px (a box with 1-px ramps) carrying 1 − haloShare, plus a HALO — a Gaussian of
+`haloRadiusCapped` (Fermi–Eyges, ≤ half the gap to the next line of the fan; a lone line takes the 0.5° scan step,
+ASSUMPTION) carrying haloShare = 1 − exp(−σs·s); a line far above white tone-maps to a white core in a coloured halo. The
+lines and their end spots are left out of the bloom input and drawn over the picture after the glow
+(`src/project/viewport/laserOverBloom.js`, three's selective-bloom pattern as an over-pass; lamps' bloom unchanged). Where a
+line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
+Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
+between two lines 0.03 of the peak (Rayleigh < 0.735). OWED: GPU before/after renders (held by the heat guard, 93–98 °C) —
+hand-over in `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md`.
 
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
