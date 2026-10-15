@@ -43,7 +43,8 @@ import { isSpaceInSessionScope } from '../../utils/sessionScope.js'
 import { visitorChromeOf, canEditSession } from '../../shared/visitorChrome.js'
 import DisplayChip from '../../rigbuild/DisplayChip.jsx'
 import useOutputMode from '../viewport/useOutputMode.js'
-import { outputDocument } from '../viewport/outputMode.js'
+import { renderPlan } from '../../shared/renderPlan.js'
+import useRenderMode from '../viewport/useRenderMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -277,7 +278,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // Output mode (viewport/outputMode.js): everyone but the work machine sees a copy of the
     // room drawn light enough for a phone; the document itself is never written.
     const [outputMode, setOutputMode] = useOutputMode()
-    const viewDocument = useMemo(() => (outputMode ? outputDocument(document) : document), [outputMode, document])
+    // What the room is drawn FOR (src/shared/renderPlan.js): Show for everyone, Tech for the crew in the live show
+    // (Display → Tech, ?render=tech). Render first, then quality; a copy, never the document.
+    const [renderMode, setRenderMode] = useRenderMode()
+    const plan = useMemo(() => renderPlan(document, { mode: renderMode, quality: outputMode ? 'low' : 'high' }), [document, renderMode, outputMode])
+    const viewDocument = plan.document
+    // Tech turns the machines and the outside off, over the viewer's own layer switches
+    const drawnLayers = useMemo(() => (plan.layers ? { ...(layers || {}), ...plan.layers } : layers), [plan.layers, layers])
     const sceneDocument = useMemo(() => (viewDocument && lookEntities ? { ...viewDocument, entities: lookEntities } : viewDocument), [viewDocument, lookEntities])
     // A visitor is standing here, not authoring. Arming the gate is what makes
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
@@ -557,6 +564,30 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </button>
                 ) : null
 
+    // Tech | Show (src/shared/renderPlan.js, decision 2026-10-15-studio-tech-show-render.md): what the room is drawn FOR.
+    // Show = the room as the audience sees it (the default); Tech = the crew's schematic, only the show's things.
+    const renderButtons = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
+                    <div role="group" aria-label="render" data-testid="render-switch" style={{ display: 'flex', alignItems: 'stretch', gap: 'var(--di-space-1, 3px)' }}>
+                        {[['tech', 'Tech', 'Tech: the rig as plain shapes for the crew in the live show — no air, no glow, no other objects'],
+                            ['show', 'Show', 'Show: the room as the audience sees it, with its air and glow']].map(([id, label, title]) => (
+                            <button
+                                key={id}
+                                type="button"
+                                data-testid={`render-${id}`}
+                                aria-pressed={renderMode === id}
+                                title={title}
+                                onClick={() => setRenderMode(id)}
+                                style={{
+                                    ...barButtonStyle,
+                                    color: renderMode === id ? 'var(--di-text, #fff)' : 'var(--di-text-muted, rgba(255,255,255,0.5))'
+                                }}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                ) : null
+
     // Under Low / High: how the view moves (speed, turning) — one small button that opens a card, the visitor's own setting on
     // this device, the same one the Studio's Scene window sets (the standard move, 2026-10-13). With the scene bar it sits in
     // DISPLAY with the other rarely-needed switches (the view page starts clear, 2026-10-13 20:21).
@@ -687,6 +718,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             ) : document ? (
                 <Suspense fallback={loadingOverlay}>
                     <PublicProjectSceneSurface
+                        key={renderMode}
                         projectId={projectId}
                         spaceId={resolvedRouteSpaceId}
                         document={sceneDocument}
@@ -704,7 +736,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         lockInside={lockInside}
                         onBuilding={onBuilding}
                         onLockPaused={onLockPaused}
-                        layers={layers}
+                        layers={drawnLayers}
                         viewsBar={chrome.views}
                         canOfferXrEntry={
                             state.status === 'ready'
@@ -736,7 +768,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </>}
                     right={<>
                         {/* Layers, Inside / Free and Low / High: one Display chip, closed until a viewer opens it */}
-                        {(navMode === 'orbit' && hasBuilding && chrome.layers) || (insideButton || liteButton) ? (
+                        {(navMode === 'orbit' && hasBuilding && chrome.layers) || (insideButton || liteButton || renderButtons) ? (
                             <DisplayChip>
                                 {navMode === 'orbit' && hasBuilding && chrome.layers ? (
                                     <div role="group" aria-label="layers" data-testid="scene-layers" style={{ display: 'flex', alignItems: 'stretch', gap: 'var(--di-space-1, 3px)', flexWrap: 'wrap' }}>
@@ -759,6 +791,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                         ))}
                                     </div>
                                 ) : null}
+                                {renderButtons}
                                 {insideButton}
                                 {liteButton}
                                 {moveButton}
