@@ -49,7 +49,8 @@ describe('the scene editor: a change emits the ops with the rebuilt look', () =>
         fireEvent.change(within(row).getByLabelText('line L level number'), { target: { value: '0.8' } })
         const now2 = lookOf(apply(doc, onApplyOps.mock.calls.at(-1)[0]), scene4.lookId)
         expect(now2.parts['line L'][1]).toBe(0.8)
-        expect(Math.max(...Object.keys(was.colours).map((k) => now2.levels[k] - was.levels[k]))).toBeCloseTo(0.8 - 0.15, 5)
+        // the step is the part's own: from the level the rig gives line L on this scene to 0.8 (was a hardcoded 0.15)
+        expect(Math.max(...Object.keys(was.colours).map((k) => now2.levels[k] - was.levels[k]))).toBeCloseTo(0.8 - was.parts['line L'][1], 5)
     })
 
     it('the flash rule blocks glitch, holds sparkle at 20 bpm and caps the rest at 132', () => {
