@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
     CMF_1931, KM, beamWidth, driveOfHex, fieldDirection, gamutMapConstantY, hgPhase, laserColourFlux, laserFlux, laserOf,
     lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, scanLinesAt,
-    MIN_CORE_PX, coreHalo, coreWidth, haloRadius, haloRadiusCapped, haloShare
+    MIN_CORE_PX, coreHalo, coreWidth, haloRadius, haloRadiusCapped, haloShare,
+    LONE_LINE_SPACING_RAD, SCAN_STEP_DEG, SPOT_ALBEDO, laserSpot, lineSpacings
 } from './laserLine.js'
+import { laserLineGeometry, laserSpotGeometry } from './laserLineMaterial.js'
 
 const SIX_W = [2700, 1500, 1800] // mW at 455 / 525 / 638 nm, the maker's 6.0 W Ultra MK2 (Guide v1.2 p. 12)
 
@@ -183,16 +185,80 @@ describe('laserLine 7.: core and halo (2026-10-15, lasers that look like lasers)
         expect(haloRadiusCapped(0.02, 0.7, 10)).toBeCloseTo(Math.sqrt(8), 6)
     })
 
-    it('keeps what a pixel sums: core·W + halo·√(2π)·r0 = the line intensity per length', () => {
+    it('keeps what a pixel sums: core·W + halo·√(2π)·r = the line intensity per length, capped or not', () => {
         const a = { sigmaS: 0.02, g: 0.7, flux: 3.61, cosTheta: 0, s: 10, d: 0, dist: 10, pixelAngle: 8.09e-4 }
         const c = coreHalo(a)
         const r0 = haloRadius(0.02, 0.7, 10)
-        expect(c.core * c.coreWidth + c.halo * Math.sqrt(2 * Math.PI) * r0).toBeCloseTo(c.perLength, 9)
+        expect(c.haloRadius).toBeCloseTo(r0, 12)
+        expect(c.core * c.coreWidth + c.halo * Math.sqrt(2 * Math.PI) * c.haloRadius).toBeCloseTo(c.perLength, 9)
         expect(c.perLength).toBeCloseTo(lineLuminance({ ...a, width: 1 }), 12)
         // the core outshines its halo by far: a laser reads as a line
         expect(c.core / c.halo).toBeGreaterThan(50)
-        // capping the halo's width does not raise its peak
-        expect(coreHalo({ ...a, spacingRad: 0.018 }).halo).toBeCloseTo(c.halo, 12)
+        // a capped halo is narrower and carries the same share (shader job 2): its light is kept, its peak rises
+        const k = coreHalo({ ...a, spacingRad: 0.018 })
+        expect(k.haloRadius).toBeCloseTo(0.5 * 0.018 * 10, 12)
+        expect(k.core * k.coreWidth + k.halo * Math.sqrt(2 * Math.PI) * k.haloRadius).toBeCloseTo(k.perLength, 9)
+        expect(k.halo).toBeGreaterThan(c.halo)
+    })
+
+    it('the owner\'s comb at 20 m: white core, coloured halo, six lines still six', () => {
+        // the 2026-10-15 diagnosis: eye 41 m away, 1.556 mrad a pixel, cube lines 18 mrad apart
+        const px = 1.556e-3
+        const at = { sigmaS: 0.02, g: 0.7, flux: 1, cosTheta: 0.95, s: 20, d: 41, dist: 41, pixelAngle: px, spacingRad: 0.018 }
+        const c = coreHalo(at)
+        // across a comb of such lines: the light at a line's axis against the light midway to the next (two halos, no core)
+        const gap = 0.018 * 20
+        const r = c.haloRadius
+        const peak = c.core + c.halo * (1 + 2 * Math.exp(-(gap * gap) / (2 * r * r)))
+        const valley = 2 * c.halo * Math.exp(-(gap * gap) / (8 * r * r))
+        // Rayleigh's criterion: two lines read as two while the dip between them falls below ~0.735 of the peak
+        expect(valley / peak).toBeLessThan(0.735)
+        expect(gap / (41 * px)).toBeGreaterThan(5) // and they are more than five pixels apart there
+        // the halo is visible next to the core (a few % to tens of % of it), not a fog of 0.1 %
+        expect(c.halo / c.core).toBeGreaterThan(0.02)
+        expect(c.halo / c.core).toBeLessThan(0.5)
+    })
+
+    it('lineSpacings: nearest neighbour in the fan; a lone line takes the cube\'s scan step', () => {
+        const fan = [-2, -1, 0, 1, 2].map((k) => fieldDirection(k * 0.1, 0))
+        const sp = lineSpacings(fan)
+        const step = 0.1 * 18.5 * Math.PI / 180
+        sp.forEach((a) => expect(a).toBeCloseTo(step, 2))
+        expect(lineSpacings([[0, -1, 0]])).toEqual([LONE_LINE_SPACING_RAD])
+        expect(LONE_LINE_SPACING_RAD).toBeCloseTo(SCAN_STEP_DEG * Math.PI / 180, 12)
+        // two sub-lines that point the same way are not each other's neighbour
+        expect(lineSpacings([[0, -1, 0], [0, -1, 0]])).toEqual([LONE_LINE_SPACING_RAD, LONE_LINE_SPACING_RAD])
+        expect(lineSpacings(null)).toEqual([])
+    })
+
+    it('laserSpot: a Lambertian dot as wide as the beam, its light kept when drawn wider', () => {
+        // 4 mm + 1 mrad: 4.0 cm at 40 m, 6.0 cm at 60 m (the brief's 4–6 cm)
+        expect(laserSpot({ s: 40 }).beamWidth).toBeCloseTo(0.0402, 3)
+        expect(laserSpot({ s: 60 }).beamWidth).toBeCloseTo(0.0601, 3)
+        const near = laserSpot({ flux: 2, s: 40, sigmaT: 0, dist: 5, pixelAngle: 1e-3 }) // beam wider than a pixel
+        expect(near.width).toBeCloseTo(near.beamWidth, 12)
+        expect(near.luminance).toBeCloseTo((SPOT_ALBEDO * 2) / (Math.PI * Math.PI * near.width * near.width / 4), 6)
+        // seen from far, drawn as one pixel: L·A (the dot's light) is the same
+        const far = laserSpot({ flux: 2, s: 40, sigmaT: 0, dist: 60, pixelAngle: 1.556e-3 })
+        expect(far.width).toBeGreaterThan(far.beamWidth)
+        expect(far.luminance * far.width ** 2).toBeCloseTo(near.luminance * near.width ** 2, 9)
+        // Beer–Lambert on the way to the wall
+        expect(laserSpot({ flux: 2, s: 40, sigmaT: 0.02, dist: 5 }).luminance / near.luminance).toBeCloseTo(Math.exp(-0.8), 9)
+    })
+
+    it('the geometry carries each line\'s spacing, and one dot per line that met a surface', () => {
+        const lines = [
+            { dir: [0, -1, 0], flux: [0, 1, 0], length: 30, spacing: 0.018, spot: true },
+            { dir: [0, -1, 0], flux: [0, 1, 0], length: 12, spot: false }
+        ]
+        const g = laserLineGeometry(lines, 20, 4)
+        const sp = g.getAttribute('aSpacing').array
+        expect(sp[0]).toBeCloseTo(0.018, 6)
+        expect(sp[sp.length - 1]).toBeCloseTo(LONE_LINE_SPACING_RAD, 6)
+        const dots = laserSpotGeometry(lines)
+        expect(dots.userData.spotCount).toBe(1)
+        expect(dots.getAttribute('aS').array[0]).toBe(30)
+        expect(dots.index.count).toBe(6)
     })
 
     it('a 40 W line is brighter per length than a cube line by its flux ratio, whatever the width', () => {

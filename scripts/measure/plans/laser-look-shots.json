@@ -1,0 +1,9 @@
+[
+ { "name": "gb-own", "project": "moxir-v2-11", "look": "green-breath", "quality": "full", "camera": null },
+ { "name": "sd-own", "project": "moxir-v2-11", "look": "second-drop", "quality": "full", "camera": null },
+ { "name": "gb-side", "project": "moxir-v2-11", "look": "green-breath", "quality": "full", "camera": { "position": [-8, 1.7, -32.338], "target": [0, 8.8, -32.338], "fov": 40 } },
+ { "name": "gb-along", "project": "moxir-v2-11", "look": "green-breath", "quality": "full", "camera": { "position": [-4, 7.5, -46], "target": [0, 8.8, 0], "fov": 50 } },
+ { "name": "gb-own-nobloom", "project": "moxir-v2-11", "look": "green-breath", "quality": "full", "camera": null, "docFile": "VARIANTS/nobloom.json" },
+ { "name": "gb-own-nolight", "project": "moxir-v2-11", "look": "green-breath", "quality": "full", "camera": null, "docFile": "VARIANTS/nolight.json" },
+ { "name": "gb-own-lamponly", "project": "moxir-v2-11", "look": "green-breath", "quality": "full", "camera": null, "docFile": "VARIANTS/lamponly.json" }
+]

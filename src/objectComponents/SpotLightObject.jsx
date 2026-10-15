@@ -9,9 +9,10 @@ import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAir
 import { registerBeamMesh, registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
-import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, nextFrameIn, scanLines } from './laserLine.js'
+import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, lineSpacings, nextFrameIn, scanLines } from './laserLine.js'
 import { getServerOffset } from '../rigbuild/serverClock.js'
-import { createLaserLineMaterial, laserLineBeforeRender, laserLineGeometry } from './laserLineMaterial.js'
+import { createLaserLineMaterial, createLaserSpotMaterial, laserLineBeforeRender, laserLineGeometry, laserSpotGeometry } from './laserLineMaterial.js'
+import { registerLaserMesh } from '../project/viewport/laserOverBloom.js'
 import BeamReachProbe from './BeamReachProbe.jsx'
 import { coneRays, coneReach, reachFrom } from './beamReach.js'
 
@@ -312,29 +313,47 @@ function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
     const scan = useMemo(() => scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }), [scanKey])
     const dirs = useMemo(() => scan.map((l) => l.dir), [scan])
+    // each line's gap to its nearest neighbour in this fan caps its halo (laserLine.js 7.)
+    const spacings = useMemo(() => lineSpacings(dirs), [dirs])
     const [reach, setReach] = useState(null)
     const fallback = Math.max(Number(length) || 20, 0.5)
-    const lengths = scan.map((_, i) => (reach && reach.hits.length === scan.length ? reachFrom(reach.hits[i]?.t, fallback) : fallback))
-    const key = JSON.stringify([laser, color, level, lengths, index])
-    const geometry = useMemo(() => {
+    const measured = Boolean(reach && reach.hits.length === scan.length)
+    const lengths = scan.map((_, i) => (measured ? reachFrom(reach.hits[i]?.t, fallback) : fallback))
+    // a line that met a surface lights a dot there (laserLine.js 8.); a miss has no surface to light
+    const spots = scan.map((_, i) => measured && Number.isFinite(reach.hits[i]?.t) && reach.hits[i].t > 0)
+    const key = JSON.stringify([laser, color, level, lengths, spots, index])
+    const lines = useMemo(() => {
         const lvl = Math.min(1, Math.max(0, Number(level ?? 1)))
-        const lines = scan.map((l, i) => {
+        return scan.map((l, i) => {
             const { rgb } = laserColourFlux({ mW: laser.mW, nm: laser.nm, drive: l.drive })
-            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale), length: lengths[i] }
+            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale), length: lengths[i], spacing: spacings[i], spot: spots[i] }
         })
-        return laserLineGeometry(lines, fallback)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [key])
+    const geometry = useMemo(() => laserLineGeometry(lines, fallback), [lines, fallback])
+    const spotGeometry = useMemo(() => laserSpotGeometry(lines), [lines])
     const material = useMemo(() => createLaserLineMaterial(hazeUniformsFor(gl)), [gl])
+    const spotMaterial = useMemo(() => createLaserSpotMaterial(hazeUniformsFor(gl)), [gl])
     useEffect(() => () => geometry.dispose(), [geometry])
+    useEffect(() => () => spotGeometry.dispose(), [spotGeometry])
     useEffect(() => () => material.dispose(), [material])
-    material.uniforms.uDiam.value = laser.diameter_mm / 1000
-    material.uniforms.uDiv.value = laser.divergence_mrad / 1000
+    useEffect(() => () => spotMaterial.dispose(), [spotMaterial])
+    // drawn over the room's glow, not into it (laserOverBloom.js)
+    const lineRef = useRef(null)
+    const spotRef = useRef(null)
+    useEffect(() => registerLaserMesh(lineRef.current), [])
+    const hasSpots = spotGeometry.userData.spotCount > 0
+    useEffect(() => (hasSpots ? registerLaserMesh(spotRef.current) : undefined), [hasSpots])
+    for (const m of [material, spotMaterial]) {
+        m.uniforms.uDiam.value = laser.diameter_mm / 1000
+        m.uniforms.uDiv.value = laser.divergence_mrad / 1000
+    }
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
     return (
         <>
             {store?.getState?.().scene ? <BeamReachProbe dirs={dirs} onReach={setReach} /> : null}
-            <mesh geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+            <mesh ref={lineRef} geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+            {hasSpots ? <mesh ref={spotRef} geometry={spotGeometry} material={spotMaterial} frustumCulled={false} userData={{ noBounds: true }} onBeforeRender={beforeLaserRender} /> : null}
         </>
     )
 }
