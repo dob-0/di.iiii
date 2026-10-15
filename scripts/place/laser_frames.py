@@ -419,7 +419,13 @@ def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES):
                 path = [p[0] for p in uniq]
                 lists[bid].append(path + path[-2:0:-1] if len(path) > 2 else path)   # the path travelled, out and back
             else:
-                flat = [pt for p in uniq[:3] for pt in p]                  # sheets: up to three poses of the sheet
+                # sheets: up to three poses of the sheet, each drawn after a BLANK move to its first point (laserLine.js
+                # scanLines lights a segment by its end point): the jump between poses and the loop's return stay dark,
+                # as a projector blanks them; only the sheet's own segments are lit (fixed 2026-10-15, laser-frames-as-rays)
+                flat = []
+                for p in uniq[:3]:
+                    flat.append([p[0][0], p[0][1], 0, 0, 0])
+                    flat.extend(p)
                 lists[bid].append(flat)
     total = {bid: sum(len(f) for f in fl) for bid, fl in lists.items()}
     return lists, loop, step, total

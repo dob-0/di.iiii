@@ -30,8 +30,7 @@ uniform float uFill;
 varying vec3 vWorld;
 varying vec3 vDirW;
 varying float vS;
-varying float vW;
-varying float vSide;
+varying float vX;
 varying vec3 vFlux;
 varying float vCoreW;
 varying float vHaloR;
@@ -60,8 +59,10 @@ void main() {
     vWorld = w.xyz;
     vDirW = dirW;
     vS = aS;
-    vW = W;
-    vSide = aSide;
+    // the signed distance from the axis, in metres, as ONE varying: it is affine across the ribbon's plane, so the GPU
+    // interpolates it exactly. Interpolating aSide and W apart and multiplying them (before 2026-10-15) bent the core at
+    // every station of a wide ribbon (a halo metres wide): the lines drew as zig-zags (known-fixes 2026-10-15).
+    vX = aSide * 0.5 * W;
     vFlux = aFlux;
     vCoreW = coreW;
     vHaloR = r;
@@ -76,8 +77,7 @@ uniform float uG;
 varying vec3 vWorld;
 varying vec3 vDirW;
 varying float vS;
-varying float vW;
-varying float vSide;
+varying float vX;
 varying vec3 vFlux;
 varying float vCoreW;
 varying float vHaloR;
@@ -100,7 +100,7 @@ void main() {
     float T = exp(-uFill * (vS + d));
     // the line's intensity per unit length (laserLine.js lineLuminance at width 1)
     vec3 perLength = hazeSigma(vWorld) * hgPhaseL(c, uG) * vFlux * T / sinT;
-    float x = abs(vSide) * 0.5 * vW; // metres from the line's axis
+    float x = abs(vX); // metres from the line's axis
     // core: a box of vCoreW with a one-pixel ramp each side — its integral across is vCoreW, so this sums to 1
     float core = clamp((0.5 * vCoreW - x) / vPx + 0.5, 0.0, 1.0) / vCoreW;
     // halo: a unit-area Gaussian of radius vHaloR
