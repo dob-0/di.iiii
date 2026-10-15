@@ -2,7 +2,8 @@
 // Usage: node scripts/measure/laser-glsl-check.mjs [repo root] — exit 1 if a laser shader does not compile (glslangValidator).
 import { writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-const root = process.argv[2] || new URL("../..", import.meta.url).pathname.replace(/\/$/, "")
+import { fileURLToPath } from 'node:url'
+const root = process.argv[2] || fileURLToPath(new URL("../..", import.meta.url)).replace(/\/$/, "")
 const { createLaserLineMaterial, createLaserSpotMaterial } = await import(`${root}/src/objectComponents/laserLineMaterial.js`)
 const { hazeUniformsFor } = await import(`${root}/src/objectComponents/hazeUniforms.js`)
 const common = `#define PI 3.141592653589793\n`
