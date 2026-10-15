@@ -5,7 +5,7 @@
  * so the picture shows that scene's lasers whatever the server clock says. Run it through `di-test-browser run` (CDP).
  *
  *   node scripts/measure/laser-scene-shots.cjs --base http://<tree>.diiii.localhost --space moxir --project moxir-v2-11 \
- *       --scene "The storm:rig-the-storm:123" --scene "The matrix:rig-matrix:128" --out <dir> [--heat 85] [--wait-s 600]
+ *       --scene "The storm:rig-the-storm:123" --scene "The matrix:rig-matrix:128" --out <dir> [--heat 85] [--wait-s 600] [--size 1280x800]
  *
  * --scene "<name>:<lookId>:<frame index>". Files: <out>/<n>-<page>-<scene>.png and shots.json. Waits while the CPU package is
  * over --heat (at most --wait-s, then stops and says so); refuses a software renderer; ends on about:blank, also on error.
@@ -25,7 +25,7 @@ const OUT = path.resolve(String(arg('out', '.')))
 const HEAT = Number(arg('heat', 85))
 const WAIT_S = Number(arg('wait-s', 600))
 const SETTLE_MS = Number(arg('settle-ms', 20000))
-const SIZE = [1600, 900]
+const SIZE = String(arg('size', '1600x900')).split('x').map(Number) // --size WxH (default 1600x900)
 const MODE = String(arg('frame-mode', 'as-is')) // as-is | first-point | no-frames | no-lasers (diagnosis variants of the browser's copy)
 const KINDS = String(arg('pages', 'studio,room')).split(',')
 const SCENES = all('scene').map((s) => { const [name, lookId, frame] = s.split(':'); return { name, lookId, frame: Number(frame) } })
