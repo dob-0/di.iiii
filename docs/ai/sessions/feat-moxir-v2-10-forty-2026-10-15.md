@@ -58,3 +58,18 @@
   far above white is a crisp separate core; laser fragments stay out of the bloom that merged the six lines into one slab; halo and end spot as
   laserLine.js §7. Brief: agent-reports-2026-10-15/moxir-50/briefs/lasers-look-2.md. Launch waits for a job slot (cap 3) and heat.
 - Lesson for the briefs: a GPU job checks heat and the lane queue first and never queues past 10 min; it hands over the shots to the lead instead.
+
+## 05:00-06:50 — lead 3: the owner's merges, lasers, Tech | Show, laser content
+- Merged into this branch (--no-ff, touched tests green): #958 lasers core + halo + end spot over the bloom (cause of the Studio's crisp look =
+  the LaserView overlay, Studio only), #959 Tech | Show render modes (renderPlan), #960 room page one-row bar + scenes paged and clickable
+  (conflicts: the bar comment and one wiki paragraph, both kept with Low / High). The buildLook digest re-pinned to rig recolour 3 (ae5858c7).
+- Laser content (job, Opus): `scripts/place/laser_frames.py` (+ test) compiles the scenes' `laser` design into cube frames; epic-build reads a
+  rig's own frames (`laser-frames.mjs`). The rig with frames (3.8 MB, generated) sits UNTRACKED at scripts/place/rigs/moxir-v2-11-2026-10-15.laser-frames.json;
+  the scenes design json lives in agent-reports (owed: the scenes pipeline into the repo, N717). Written to v2-11 on moxir-one with
+  `epic-build.mjs --laser-frames --apply` (v1165: 36 lines × 256 frames, period 1116 s).
+- MISTAKE, measured: the first write used epic-build's default mode (delete + create every unit), which dropped the cube lines' frames
+  (v1051); `--lasers-only` wrote intensities even without --apply (v1127). Backup v739 kept (agent-reports backup/). Ledger N767: the tool
+  must refuse the default mode when the project's lasers carry frames the rig lacks, and honour --apply everywhere.
+- Owner's PR sweep ("merge the finished ones only"): 31 PRs merged across 12 repos by `gh pr merge` one plain command each (the allow rule
+  matches nothing compound); 14 di.iiii PRs to dev as the batch PR #962 (branch protection: 2 checks + up to date), merged when green.
+- Owed on this branch: noSupplierPrices test (a rig json holds a price field); the GPU looks of #958/#959/#960 (box at 94-99 °C all hour).
