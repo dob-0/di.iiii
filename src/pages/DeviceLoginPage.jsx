@@ -12,6 +12,7 @@ import {
 } from '../services/cliLoginApi.js'
 import './legal.css'
 import './deviceLogin.css'
+import LoadingScreen from '../components/LoadingScreen.jsx'
 
 // `/device` — the browser half of `di login` (docs/architecture/CLI_LOGIN.md).
 //
@@ -504,7 +505,7 @@ function TerminalList({ onNeedsAccount }) {
             </h2>
             <p className="device-status device-status-list" role="status" aria-live="polite" aria-atomic="true">{note}</p>
 
-            {status === 'loading' && <p className="device-note" role="status">Loading…</p>}
+            {status === 'loading' && <LoadingScreen variant="inline" label="Loading" text="loading" />}
 
             {status === 'failed' && (
                 <Problem problem={{ ...failure, retry: load }} doing="load the list" />
@@ -626,7 +627,7 @@ export default function DeviceLoginPage() {
         body = (
             <>
                 <p className="device-lead">Sign in with your account to approve a terminal.</p>
-                <Suspense fallback={<p className="device-note" role="status">Loading…</p>}>
+                <Suspense fallback={<LoadingScreen variant="inline" label="Loading" text="loading" />}>
                     <SignInSurface onSignedIn={afterSignIn} />
                 </Suspense>
             </>
