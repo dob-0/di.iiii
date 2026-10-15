@@ -18,7 +18,7 @@ const run = (file, ...args) => spawnSync(process.execPath, [path.join(here, 'tes
 })
 
 describe('the lighting desk', () => {
-  for (const file of ['test.js', 'test-wiring.js', 'test-http.js', 'test-rigpatch.js', 'test-dmxin.js', 'test-cues.js', 'test-stream.js', 'lint-api-contract.js']) {
+  for (const file of ['test.js', 'test-wiring.js', 'test-http.js', 'test-rigpatch.js', 'test-dmxin.js', 'test-cues.js', 'test-stream.js', 'test-bundle.js', 'lint-api-contract.js']) {
     it(`${file} passes`, () => {
       const r = run(file)
       const tail = (r.stdout || '').split('\n').filter((l) => !l.startsWith('  ok')).join('\n')
