@@ -14,3 +14,5 @@ Map check: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`. Equivalent chart: `s
 | LaserCube Ultra Mk2 | 7.5 W RGB laser cube, network | 6 | back crane girder, the comb | — (not DMX) | manual v1.0 (NOHD), driven live 10-14 | lasercube.md |
 
 Sevan's own DMX lists (the owner, 10-15: "we have all list DMX from Sevan") are NOT in the di.bo inbox; when they arrive they replace every ASSUMED row here.
+
+**Maker (owner's eye, 2026-10-15 16:3x):** UP-PL5403, UP-B380F, UP-LA40WF and UP-YZ31P are U-Plus Lighting (`maker` in fixtures.json and the type library; model and manual per kind). Charts with value ranges: `scripts/place/fixtures/charts/`. The rig's `kit_makers` block lists maker/model/manual per kind. The project's `rentalList` has no maker/model field in its schema (`normalizeRentalList`, src/shared/projectSchema.js + the server twin): the equipment sheet reads the maker from the type library.

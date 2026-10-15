@@ -8,10 +8,25 @@
       "code": "UP-B380F",
       "identified": "EXACT",
       "identifiedNote": "EXACT",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-B380F",
       "modelledOn": null,
       "product": "UPlight UP-B380F, IP65 380 W beam moving head (outdoor)",
+      "makerModel": "380 Beam",
+      "manual": {
+        "url": "https://www.upluslighting.com/wp-content/uploads/2025/03/380-Beam.pdf",
+        "date": "2024-07-19 (PDF created; upload path 2025/03)",
+        "file": "~/Downloads/moxir/devices/380-Beam.pdf",
+        "read": "2026-10-15, pdftotext, \"4.DMX Channels\" (16 ch and 20 ch)",
+        "basis": "CANDIDATE"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-b380f.json",
+        "modes": {
+          "16": "CANDIDATE",
+          "20": "CANDIDATE"
+        }
+      },
       "category": "moving-head",
       "modes": [
         {
@@ -1325,10 +1340,26 @@
       "code": "UP-PL5403",
       "identified": "EXACT",
       "identifiedNote": "EXACT",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-PL5403",
       "modelledOn": null,
       "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
+      "makerModel": "IP PAR-54X3",
+      "manual": {
+        "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+        "product_page": "https://www.upluslighting.com/product/543w-rgbw-led-par-light-for-outdoor/",
+        "date": "2024-01 (upload path; PDF created 2023-08-07)",
+        "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
+        "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
+        "basis": "CANDIDATE"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-pl5403.json",
+        "modes": {
+          "4": "CANDIDATE",
+          "8": "CANDIDATE"
+        }
+      },
       "category": "par",
       "modes": [
         {
@@ -1361,11 +1392,13 @@
             },
             {
               "role": "aux1",
-              "label": "Ch 7 (unused in the tested map)"
+              "label": "Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)",
+              "default": 0
             },
             {
               "role": "aux2",
-              "label": "Ch 8 (unused in the tested map)"
+              "label": "Function speed (0; never sent)",
+              "default": 0
             }
           ],
           "channelsSource": {
@@ -1587,10 +1620,26 @@
       "code": "UP-LA40WF",
       "identified": "EXACT",
       "identifiedNote": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-LA40WF",
       "modelledOn": null,
       "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
+      "makerModel": "IP-LL40 (manual IP-LL30)",
+      "manual": {
+        "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+        "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+        "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+        "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+        "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+        "basis": "CANDIDATE"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-la40wf.json",
+        "modes": {
+          "19": "CANDIDATE",
+          "32": "CANDIDATE"
+        }
+      },
       "category": "laser",
       "modes": [
         {
@@ -1603,27 +1652,99 @@
             },
             {
               "role": "c2",
-              "label": "Mode (25 auto, 75 voice, 250 manual graphics)"
+              "label": "Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, 200-255 built-in graphics; static beam 200)",
+              "default": 200
             },
             {
               "role": "c3",
-              "label": "Graphic select"
+              "label": "Graphic select (one graphic per two values; static beam 0 = graphic 1)",
+              "default": 0
             },
             {
               "role": "c4",
-              "label": "Display mode"
+              "label": "Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 192)",
+              "default": 192
             },
             {
               "role": "c5",
-              "label": "Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)"
+              "label": "Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)",
+              "default": 8,
+              "cap": {
+                "laserColour": [
+                  {
+                    "from": 0,
+                    "to": 16,
+                    "colour": "#ffffff",
+                    "name": "white"
+                  },
+                  {
+                    "from": 17,
+                    "to": 33,
+                    "colour": "#ff0000",
+                    "name": "red"
+                  },
+                  {
+                    "from": 34,
+                    "to": 50,
+                    "colour": "#00ff00",
+                    "name": "green"
+                  },
+                  {
+                    "from": 51,
+                    "to": 67,
+                    "colour": "#0000ff",
+                    "name": "blue"
+                  },
+                  {
+                    "from": 68,
+                    "to": 84,
+                    "colour": "#ffff00",
+                    "name": "yellow"
+                  },
+                  {
+                    "from": 85,
+                    "to": 101,
+                    "colour": "#ff00ff",
+                    "name": "purple"
+                  },
+                  {
+                    "from": 102,
+                    "to": 118,
+                    "colour": "#00ffff",
+                    "name": "cyan"
+                  }
+                ]
+              }
             },
             {
               "role": "c6",
-              "label": "X position (64 centre)"
+              "label": "X position (0-125 by hand, 64 centre)",
+              "default": 64,
+              "cap": {
+                "aim": {
+                  "axis": "x",
+                  "from": 0,
+                  "to": 125,
+                  "centre": 64,
+                  "halfDeg": 18.5,
+                  "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+                }
+              }
             },
             {
               "role": "c7",
-              "label": "Y position (64 centre)"
+              "label": "Y position (0-125 by hand, 64 centre)",
+              "default": 64,
+              "cap": {
+                "aim": {
+                  "axis": "y",
+                  "from": 0,
+                  "to": 125,
+                  "centre": 64,
+                  "halfDeg": 18.5,
+                  "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+                }
+              }
             },
             {
               "role": "c8",
@@ -2097,10 +2218,16 @@
       "code": "UP-YZ31P",
       "identified": "EQUIVALENT",
       "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT (wattage unknown)",
-      "maker": null,
+      "maker": "U-Plus Lighting",
       "model": null,
       "modelledOn": "Antari Z-1500 III fog machine",
       "product": "equivalent: Antari Z-1500 III fog machine",
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-yz31p.json",
+        "modes": {
+          "1": "ASSUMED"
+        }
+      },
       "category": "smoke-machine",
       "modes": [
         {

@@ -6,3 +6,5 @@
 1 colour · 2 strobe · 3 dimmer · 4 gobo · 5 prism 1 · 6 prism 1 rot · 7 prism 2 · 8 frost · 9 focus · 10 pan · 11 pan fine · 12 tilt · 13 tilt fine · 14 7-colour · 15 reset · 16 lamp.
 **Verdict:** a different channel ORDER from the tested units → the Sevan B380F is not this manual's unit (or another firmware). The tested map rules; the owner's eye on the unit's look decides whether U-Plus is the maker at all.
 Owed: channels 11–16 walked on setup day; the maker's own chart (Sevan's list).
+
+**maker: U-Plus Lighting (owner's eye on the manual, 2026-10-15 16:3x — devices.html). model: 380 Beam.** Chart with value ranges: `scripts/place/fixtures/charts/up-b380f.json`; the desk's map: `src/rigbuild/fixtureTypes.js`. The U-Plus 16/20-ch chart is stored as `maker_chart` beside the tested map and is NEVER what the desk sends (order differs: walk ch 11–16 on setup day). The desk's truth stays the TESTED map.

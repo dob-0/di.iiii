@@ -335,6 +335,24 @@
                 "centre": "centre of beam, fixed 1.8 deg",
                 "crossCheck": "ELATION-PROTEUS-HYBRID: 233,000 lux @ 15 m in its 2.0 deg beam = 52.4 Mcd, vs 50.2 Mcd here (4 % apart). The GalaxyJet's own 475,000 lux @ 10 m = 47.5 Mcd agrees with its 20 m figure under the inverse-square law.",
                 "note": "maker's claim, not an independent measurement"
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye on the housing/manual, 2026-10-15 16:3x (devices.html)",
+            "maker_model": "380 Beam",
+            "manual": {
+                "url": "https://www.upluslighting.com/wp-content/uploads/2025/03/380-Beam.pdf",
+                "date": "2024-07-19 (PDF created; upload path 2025/03)",
+                "file": "~/Downloads/moxir/devices/380-Beam.pdf",
+                "read": "2026-10-15, pdftotext, \"4.DMX Channels\" (16 ch and 20 ch)",
+                "basis": "CANDIDATE"
+            },
+            "tested_map": "src/rigbuild/fixtureTypes.js TESTED_CHANNEL_LISTS UP-B380F 16 (Sevan units, ch 1-10 walked 2026-10-09) — the DESK USES THIS",
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-b380f.json",
+                "modes": {
+                    "16": "CANDIDATE",
+                    "20": "CANDIDATE"
+                }
             }
         },
         "bsw250": {
@@ -658,6 +676,24 @@
                 "centre": "full white; the page does not tie the lux to an angle — 25 deg (its standard lens) ASSUMED",
                 "caveat": "1 m is barely far-field for a ~200 mm LED array, so candela from it is an upper estimate",
                 "note": "no brand datasheet with lux for a 54 x 3 W PAR found (3 searches)"
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye on the housing/manual, 2026-10-15 16:3x (devices.html)",
+            "maker_model": "IP PAR-54X3",
+            "manual": {
+                "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+                "product_page": "https://www.upluslighting.com/product/543w-rgbw-led-par-light-for-outdoor/",
+                "date": "2024-01 (upload path; PDF created 2023-08-07)",
+                "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
+                "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
+                "basis": "CANDIDATE"
+            },
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-pl5403.json",
+                "modes": {
+                    "8": "CANDIDATE",
+                    "4": "CANDIDATE"
+                }
             }
         },
         "laser": {
@@ -750,6 +786,24 @@
                 "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed).",
                 "src": "BLUESEA",
                 "basis": "EQUIVALENT"
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye on the housing/manual, 2026-10-15 16:3x (devices.html)",
+            "maker_model": "IP-LL40 (manual IP-LL30)",
+            "manual": {
+                "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+                "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+                "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+                "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+                "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+                "basis": "CANDIDATE"
+            },
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-la40wf.json",
+                "modes": {
+                    "19": "CANDIDATE",
+                    "32": "CANDIDATE"
+                }
             }
         },
         "co2": {
@@ -938,6 +992,16 @@
                         200
                     ],
                     "nozzle_d_mm": 50
+                }
+            },
+            "maker": "U-Plus Lighting",
+            "maker_basis": "owner's eye, 2026-10-15 16:3x; model UP-YZ31P not confirmed by a U-Plus page",
+            "maker_model": null,
+            "manual": null,
+            "maker_chart": {
+                "file": "scripts/place/fixtures/charts/up-yz31p.json",
+                "modes": {
+                    "1": "ASSUMED"
                 }
             }
         },
@@ -1360,7 +1424,9 @@
                 "note": "a laser is not a lamp with a candela figure: 10 W optical, 4 mm beam, 1 mrad (LASEROS-MK2), scanned into shapes. Its drawn beam's air brightness is set by hand (the rig's airFixed).",
                 "src": "LASEROS-MK2",
                 "basis": "EXACT"
-            }
+            },
+            "control": "network (LaserCube UDP 45456-45458 through di Nodes); no DMX at MOXIR — the 16-ch DMX profile is the maker's reference only",
+            "maker_note": "not U-Plus: Wicked Lasers (the owner's own cubes)"
         }
     },
     "modelsLicence": {

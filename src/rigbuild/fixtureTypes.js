@@ -54,6 +54,13 @@ const SEVAN = {
     licence: null
 }
 const laserChannel = (n, label) => ({ role: `c${n}`, label })
+// The colour slots of the U-Plus laser's ch 5 (IP-LL30 manual, "Selection of color"; slot centres are what the tested desk used)
+const LASER_COLOURS = [
+    { from: 0, to: 16, colour: '#ffffff', name: 'white' }, { from: 17, to: 33, colour: '#ff0000', name: 'red' },
+    { from: 34, to: 50, colour: '#00ff00', name: 'green' }, { from: 51, to: 67, colour: '#0000ff', name: 'blue' },
+    { from: 68, to: 84, colour: '#ffff00', name: 'yellow' }, { from: 85, to: 101, colour: '#ff00ff', name: 'purple' },
+    { from: 102, to: 118, colour: '#00ffff', name: 'cyan' }
+]
 export const TESTED_CHANNEL_LISTS = {
     'UP-B380F': {
         ...SEVAN,
@@ -98,8 +105,11 @@ export const TESTED_CHANNEL_LISTS = {
                 { role: 'b', label: 'Blue' },
                 { role: 'w', label: 'White' },
                 { role: 'strobe', label: 'Strobe' },
-                { role: 'aux1', label: 'Ch 7 (unused in the tested map)' },
-                { role: 'aux2', label: 'Ch 8 (unused in the tested map)' }
+                // U-Plus IP PAR-54X3 8-ch chart (CANDIDATE, scripts/place/fixtures/charts/up-pl5403.json): 7 = function
+                // choice (0-50 = channels 1-7 control), 8 = its speed. The desk never uses them: both rest at 0, so
+                // the colour is the one set on channels 1-6. Roles stay aux1/aux2 (a desk that holds this profile keeps it).
+                { role: 'aux1', label: 'Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)', default: 0 },
+                { role: 'aux2', label: 'Function speed (0; never sent)', default: 0 }
             ]
         }
     },
@@ -110,14 +120,22 @@ export const TESTED_CHANNEL_LISTS = {
             // and blackout reach it. The per-colour dimmers run 0 = BRIGHTEST, so they are
             // plain channels, never the r/g/b roles. A laser is held dark by
             // deskLookValues.js (every channel 0) until the IEC 60825-1 sign-off.
+            // STATIC BEAM (the entry lasers, one fixed beam each, 2026-10-15): the channels REST at the
+            // values a static beam needs, so only ch 1 (dimmer) decides lit or dark — ch 2 = 200 (built-in
+            // graphics), ch 3 = 0 (graphic 1), ch 4 = 192 (point display: the graphic drawn as dots — the
+            // manual lists no graphic names, so which graphic is "a dot" is ASSUMED, walk it on setup day),
+            // ch 5 colour (cap.laserColour), ch 6/7 position from the aim (cap.aim: 0-125 by hand, 64 = centre,
+            // the scan half-angle is fixtures.json laser.scan_field_half_deg, ASSUMED), ch 16-18 = 0 (brightest),
+            // everything else 0, ch 20-32 = 0 (the second graphic stays off). Maker chart:
+            // scripts/place/fixtures/charts/up-la40wf.json (CANDIDATE; the tested values below agree with it).
             32: [
                 { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
-                laserChannel(2, 'Mode (25 auto, 75 voice, 250 manual graphics)'),
-                laserChannel(3, 'Graphic select'),
-                laserChannel(4, 'Display mode'),
-                laserChannel(5, 'Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)'),
-                laserChannel(6, 'X position (64 centre)'),
-                laserChannel(7, 'Y position (64 centre)'),
+                { ...laserChannel(2, 'Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, 200-255 built-in graphics; static beam 200)'), default: 200 },
+                { ...laserChannel(3, 'Graphic select (one graphic per two values; static beam 0 = graphic 1)'), default: 0 },
+                { ...laserChannel(4, 'Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 192)'), default: 192 },
+                { ...laserChannel(5, 'Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)'), default: 8, cap: { laserColour: LASER_COLOURS } },
+                { ...laserChannel(6, 'X position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'x', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
+                { ...laserChannel(7, 'Y position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'y', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
                 ...[8, 9, 10].map((n) => laserChannel(n, `Ch ${n}`)),
                 laserChannel(11, 'Centre rotation (150 slow clockwise)'),
                 laserChannel(12, 'Ch 12'),
@@ -231,7 +249,8 @@ const identityOf = (kind) => {
     return {
         identified: exact ? 'EXACT' : 'EQUIVALENT',
         identifiedNote: identified,
-        maker: exact && /UPlight/i.test(product) ? MAKER_UPLIGHT : null,
+        // a maker the manifest names (the owner's eye on a manual, 2026-10-15) wins over the rental label's
+        maker: kind.maker || (exact && /UPlight/i.test(product) ? MAKER_UPLIGHT : null),
         model: exact ? kind.code : null,
         modelledOn: exact ? null : product.replace(/^equivalent:\s*/i, '')
     }
@@ -279,6 +298,11 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             code: kind.code,
             ...identityOf(kind),
             product: kind.product || null,
+            // the maker's own model name and manual where the manifest holds them (basis on the manual: CANDIDATE until the owner's eye or Sevan's list says it is the unit)
+            ...(kind.maker_model ? { makerModel: kind.maker_model } : {}),
+            ...(kind.manual ? { manual: kind.manual } : {}),
+            // the maker's DMX chart(s) with value ranges, kept beside the desk's modes (scripts/place/fixtures/charts/); never what the desk sends unless a mode says so
+            ...(kind.maker_chart ? { makerChart: kind.maker_chart } : {}),
             category: kind.model?.archetype || null,
             modes,
             // The mode a lamp takes when none is chosen: the first the source lists.
