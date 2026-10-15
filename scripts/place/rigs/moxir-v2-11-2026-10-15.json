@@ -2,7 +2,7 @@
  "snapshot": "moxir-v2-1-2026-10-10",
  "version": "2.11",
  "title": "MOXIR v2.11 — the 50 scenes",
- "what": "v2.11: 50 scenes (MOXIR 2026-10-17: the 50 scenes (looks + cue list) for project moxir-v2-10 (rig v2.10), in the rig look schema plus `heads` (moving-head motion, lead spec 2026-10-15); v2 re-colour after the owner's 03:10 verdict)",
+ "what": "v2.11: 50 scenes (MOXIR 2026-10-17: the 50 scenes (looks + cue list) for project moxir-v2-10 (rig v2.10), in the rig look schema plus `heads` (moving-head motion, lead spec 2026-10-15); v3 re-colour (Palette 3) after the owner's 06:0x 'still too many red')",
  "written_by": "scripts/place/moxir_v2_8_floor.py",
  "date": "2026-10-15",
  "schema": "the beta v0.9 snapshot schema (rigs/moxir-beta-v0.9-lights-2026-10-07.json: fixtures[{id,type,position,p,r,colour,angle_rad}] + solids[{id,name,kind,p,r,s}]), with status/moments/dmx/power_w/circuit per fixture and laser per cube. versions.mjs's rule schema places by mount rules and cannot hold per-unit positions; the build loads this file into a copy of beta as ops. v1.1 adds: stage (the booth move), views (the room buttons), checks_v1_1, crew, entrance, organiser.",
@@ -3939,7 +3939,7 @@
   {
    "id": "rig-beam-planes-01",
    "type": "up-b380f",
-   "part": "plane 1 (behind the DJ)",
+   "part": "plane 1",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -4076,7 +4076,7 @@
   {
    "id": "rig-beam-planes-02",
    "type": "up-b380f",
-   "part": "plane 1 (behind the DJ)",
+   "part": "plane 1",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -4213,7 +4213,7 @@
   {
    "id": "rig-beam-planes-03",
    "type": "up-b380f",
-   "part": "plane 1 (behind the DJ)",
+   "part": "plane 1",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -4350,7 +4350,7 @@
   {
    "id": "rig-beam-planes-04",
    "type": "up-b380f",
-   "part": "plane 1 (behind the DJ)",
+   "part": "plane 1",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -4487,7 +4487,7 @@
   {
    "id": "rig-beam-planes-05",
    "type": "up-b380f",
-   "part": "plane 1 (behind the DJ)",
+   "part": "plane 1",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -4624,7 +4624,7 @@
   {
    "id": "rig-beam-planes-06",
    "type": "up-b380f",
-   "part": "plane 1 (behind the DJ)",
+   "part": "plane 1",
    "layer": "beams",
    "status": "used",
    "moments": [],
@@ -6607,17 +6607,17 @@
    "id": "the-road-in",
    "title": "The road in",
    "act": 1,
-   "intent": "Doors: the road and the entrance glow amber like street light outside; inside, the plane in low steel blue.",
+   "intent": "Doors: outside, the road glows toxic green and the entrance dark amber; inside, the plane in low steel blue.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#73bdff",
      0.35
     ],
@@ -6650,7 +6650,7 @@
      "up-b380f"
     ]
    },
-   "notes": "amber = sodium street light on the road (t8/t6 amber, warmth only)"
+   "notes": "outside = the owner's rule (road toxic green, entrance dark amber, 03:5x), unchanged"
   },
   {
    "id": "first-light",
@@ -6659,14 +6659,14 @@
    "intent": "Blackout and the plane behind the DJ alone in cold white, leaning very slowly.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.55
     ],
@@ -6705,22 +6705,22 @@
    "id": "slow-sweep",
    "title": "Slow sweep",
    "act": 1,
-   "intent": "The six cold white beams lean toward the floor and back, one slow sweep every 22 s.",
+   "intent": "The six cold white beams lean toward the floor and back, one slow sweep every 22 s; the DJ back in ice.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.8
     ],
     "dj back": [
-     "#73bdff",
+     "#d1eeff",
      0.2
     ],
     "road": [
@@ -6758,22 +6758,22 @@
    "id": "steel-breath",
    "title": "Steel breath",
    "act": 1,
-   "intent": "The DJ plane turns steel blue and breathes; a ripple of lean runs across it.",
+   "intent": "The DJ plane turns steel blue and breathes; a ripple of lean runs across it; petrol behind the DJ.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#73bdff",
      0.7
     ],
     "dj back": [
-     "#73bdff",
+     "#66faff",
      0.2
     ],
     "stage key": [
@@ -6815,22 +6815,22 @@
    "id": "dj-alone",
    "title": "The DJ alone",
    "act": 1,
-   "intent": "Steel blue plane, a warm ash kicker on the DJ, a soft pulse on the beams only.",
+   "intent": "Steel blue plane, a warm white (3200 K) kicker on the DJ, a soft pulse on the beams only.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#73bdff",
      0.6
     ],
     "dj kicker": [
-     "#e8e4dc",
+     "#ffbe7a",
      0.3
     ],
     "dj back": [
@@ -6838,7 +6838,7 @@
      0.2
     ],
     "stage key": [
-     "#e8e4dc",
+     "#ffbe7a",
      0.2
     ],
     "road": [
@@ -6870,36 +6870,36 @@
      "up-b380f"
     ]
    },
-   "notes": ""
+   "notes": "warm white = the tungsten key of the stage (LEE 204 Full CTO), the one warm thing of act 1"
   },
   {
    "id": "ice-rays",
    "title": "Ice rays",
    "act": 1,
-   "intent": "The four rays behind the DJ rise in steel blue, a slow wave rolling toward him.",
+   "intent": "The four rays behind the DJ rise in ice, a slow wave rolling toward him.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line A": [
-     "#73bdff",
+     "#d1eeff",
      0.6
     ],
     "line B": [
-     "#73bdff",
+     "#d1eeff",
      0.6
     ],
     "line C": [
-     "#73bdff",
+     "#d1eeff",
      0.6
     ],
     "line D": [
-     "#73bdff",
+     "#d1eeff",
      0.6
     ],
     "road": [
@@ -6927,22 +6927,22 @@
    "id": "the-wall-wakes",
    "title": "The wall wakes",
    "act": 1,
-   "intent": "The twelve side beams in steel blue; a comet walks down the walls to the DJ.",
+   "intent": "The twelve side beams in petrol; a comet walks down the walls to the DJ.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "side line left": [
-     "#73bdff",
+     "#66faff",
      0.6
     ],
     "side line right": [
-     "#73bdff",
+     "#66faff",
      0.6
     ],
     "road": [
@@ -6983,12 +6983,12 @@
    "intent": "The side beams in cold white, straight columns in the haze, crossing gently.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "side line left": [
      "#eefdfd",
@@ -7033,34 +7033,34 @@
    "id": "rust-low",
    "title": "Rust, low",
    "act": 1,
-   "intent": "The rays in deep ember and the cut in amber, each lamp sparking on its own count: the rust of the hall.",
+   "intent": "The rays in rose-copper and the cut in warm white, each lamp sparking on its own count: the rust of the hall.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line A": [
-     "#a3200c",
+     "#ff9180",
      0.45
     ],
     "line B": [
-     "#a3200c",
+     "#ff9180",
      0.45
     ],
     "line C": [
-     "#a3200c",
+     "#ff9180",
      0.45
     ],
     "line D": [
-     "#a3200c",
+     "#ff9180",
      0.45
     ],
     "cut down": [
-     "#ffad4d",
+     "#ffbe7a",
      0.3
     ],
     "road": [
@@ -7082,7 +7082,7 @@
     ],
     "still": 0.3
    },
-   "notes": "the one warm moment of act 1: rust gives back 34 % of ember vs 23 % of deep blue (measured); sparkle only at 20 bpm"
+   "notes": "the one warm moment of act 1, now without red: rose-copper (t5 #ad756c hue; rust returns warm light best, measured); sparkle only at 20 bpm"
   },
   {
    "id": "first-net",
@@ -7091,18 +7091,18 @@
    "intent": "The green laser net appears over the floor, breathing, the DJ plane low in poster green.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "laser": [
      "#00ff00",
      0.35
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#33ff47",
      0.4
     ],
@@ -7152,12 +7152,12 @@
    "intent": "The side beams in poster green chase down the walls, a lean ripples along them.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "side line left": [
      "#33ff47",
@@ -7205,12 +7205,12 @@
    "intent": "The poster glow runs down both walls to the DJ on every half beat; the plane glows green.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "side line left": [
      "#f4fcf4",
@@ -7220,7 +7220,7 @@
      "#f4fcf4",
      0.9
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#33ff47",
      0.4
     ],
@@ -7259,33 +7259,33 @@
    "id": "rays-pulse",
    "title": "Rays pulse",
    "act": 2,
-   "intent": "The rays pulse green at half time; the plane behind leans in a wave of poster glow.",
+   "intent": "The rays pulse mint at half time; the plane behind leans in a wave of poster glow.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line A": [
-     "#33ff47",
+     "#99ffce",
      0.8
     ],
     "line B": [
-     "#33ff47",
+     "#99ffce",
      0.8
     ],
     "line C": [
-     "#33ff47",
+     "#99ffce",
      0.8
     ],
     "line D": [
-     "#33ff47",
+     "#99ffce",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#f4fcf4",
      0.5
     ],
@@ -7324,15 +7324,15 @@
    "id": "the-cut",
    "title": "The cut",
    "act": 2,
-   "intent": "The truss over the DJ in poster glow, blocks flipping; the walls low and steady in green.",
+   "intent": "The truss over the DJ in poster glow, blocks flipping; the walls low and steady in green, mint behind the DJ.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "cut up": [
      "#f4fcf4",
@@ -7351,7 +7351,7 @@
      0.4
     ],
     "dj back": [
-     "#33ff47",
+     "#99ffce",
      0.3
     ],
     "road": [
@@ -7389,15 +7389,15 @@
    "id": "left-right",
    "title": "Left, right",
    "act": 2,
-   "intent": "The two walls answer each other in cold white; the beams trace a mirrored X over a green plane.",
+   "intent": "The two walls answer each other in cold white; the beams trace a mirrored X over a petrol plane.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "side line left": [
      "#eefdfd",
@@ -7407,8 +7407,8 @@
      "#eefdfd",
      0.9
     ],
-    "plane 1 (behind the DJ)": [
-     "#33ff47",
+    "plane 1": [
+     "#66faff",
      0.3
     ],
     "road": [
@@ -7446,15 +7446,15 @@
    "id": "glow-comet",
    "title": "Glow comet",
    "act": 2,
-   "intent": "One comet of poster glow runs through the rays out toward the entrance.",
+   "intent": "One comet of poster glow runs through the rays out toward the entrance over a mint cut.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line A": [
      "#f4fcf4",
@@ -7473,7 +7473,7 @@
      0.7
     ],
     "cut down": [
-     "#33ff47",
+     "#99ffce",
      0.3
     ],
     "road": [
@@ -7504,14 +7504,14 @@
    "intent": "The six beams behind the DJ in poster glow lean against each other like scissors (the teasers' crossing beams).",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#f4fcf4",
      0.9
     ],
@@ -7561,18 +7561,18 @@
    "intent": "The laser comb pulses green at half time over a cold white plane (t5: white beams, green lasers, haze).",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "laser": [
      "#00ff00",
      0.6
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.4
     ],
@@ -7619,33 +7619,33 @@
    "id": "pingpong-rays",
    "title": "Ping-pong rays",
    "act": 2,
-   "intent": "A green head bounces across the rays, left to right and back, under a cold white plane.",
+   "intent": "A petrol head bounces across the rays, left to right and back, under a cold white plane.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line A": [
-     "#33ff47",
+     "#66faff",
      0.8
     ],
     "line B": [
-     "#33ff47",
+     "#66faff",
      0.8
     ],
     "line C": [
-     "#33ff47",
+     "#66faff",
      0.8
     ],
     "line D": [
-     "#33ff47",
+     "#66faff",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.5
     ],
@@ -7684,15 +7684,15 @@
    "id": "riser",
    "title": "Riser",
    "act": 2,
-   "intent": "Before the drop: white walls and plane, green rays, the cut turns violet; all pulse on the beat.",
+   "intent": "Before the drop: white walls and plane, mint rays, the cut turns lavender; all pulse on the beat.",
    "parts": {
     "line L": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "line R": [
-     "#33ff47",
-     0.12
+     "#99ffce",
+     0.07
     ],
     "side line left": [
      "#eefdfd",
@@ -7702,28 +7702,28 @@
      "#eefdfd",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.8
     ],
     "line A": [
-     "#33ff47",
+     "#99ffce",
      0.7
     ],
     "line B": [
-     "#33ff47",
+     "#99ffce",
      0.7
     ],
     "line C": [
-     "#33ff47",
+     "#99ffce",
      0.7
     ],
     "line D": [
-     "#33ff47",
+     "#99ffce",
      0.7
     ],
     "cut up": [
-     "#7419ff",
+     "#b699ff",
      0.7
     ],
     "road": [
@@ -7756,23 +7756,23 @@
      "up-b380f"
     ]
    },
-   "notes": "violet enters on the cut: the colour of the peak to come"
+   "notes": "lavender enters on the cut: the colour of the peak to come"
   },
   {
    "id": "white-cathedral",
    "title": "White cathedral",
    "act": 3,
-   "intent": "The drop: every beam in cold white over violet rays; the walls turn a mirrored bow-tie, the rays pump.",
+   "intent": "The drop: every beam in cold white over lavender rays; the walls turn a mirrored bow-tie, the rays pump.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -7789,19 +7789,19 @@
      1
     ],
     "line A": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "line B": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "line C": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "line D": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "road": [
@@ -7842,14 +7842,14 @@
    "intent": "The whole hall strobes cold white for 6 s (engine cap: under 3 flashes a second).",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -7915,15 +7915,15 @@
    "id": "red-room",
    "title": "Red room",
    "act": 3,
-   "intent": "Everything in ember, pumping on the beat; a lean ripples across all beams.",
+   "intent": "Everything in ember, pumping on the beat; a lean ripples across all beams. The one red scene of the first peak.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "side line left": [
      "#ff3a12",
@@ -7933,7 +7933,7 @@
      "#ff3a12",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1
     ],
@@ -7994,21 +7994,21 @@
      "up-b380f"
     ]
    },
-   "notes": "the owner's 'red room': red earns its place here, at the first peak"
+   "notes": "the owner's 'red room' (09-28 loop): red as an accent, 20 s; the floor stays rose-copper; pump = 3 flashes/s max (WCAG 2.3.1 red-flash limit met)"
   },
   {
    "id": "the-storm",
    "title": "The storm",
    "act": 3,
-   "intent": "Green lasers, cold white walls and cut, violet rays; the walls flip and trace an X.",
+   "intent": "Green lasers, cold white walls and cut, petrol rays; the walls flip and trace an X.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "laser": [
      "#00ff00",
@@ -8031,19 +8031,19 @@
      1
     ],
     "line A": [
-     "#7419ff",
+     "#66faff",
      0.8
     ],
     "line B": [
-     "#7419ff",
+     "#66faff",
      0.8
     ],
     "line C": [
-     "#7419ff",
+     "#66faff",
      0.8
     ],
     "line D": [
-     "#7419ff",
+     "#66faff",
      0.8
     ],
     "road": [
@@ -8088,38 +8088,38 @@
    "id": "matrix",
    "title": "The matrix",
    "act": 3,
-   "intent": "The laser comb at its cap over deep ember rays, breathing; the violet plane ripples.",
+   "intent": "The laser comb at its cap over rose-copper rays, breathing; the lavender plane ripples.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "laser": [
      "#00ff00",
      1
     ],
     "line A": [
-     "#a3200c",
+     "#ff9180",
      0.5
     ],
     "line B": [
-     "#a3200c",
+     "#ff9180",
      0.5
     ],
     "line C": [
-     "#a3200c",
+     "#ff9180",
      0.5
     ],
     "line D": [
-     "#a3200c",
+     "#ff9180",
      0.5
     ],
-    "plane 1 (behind the DJ)": [
-     "#7419ff",
+    "plane 1": [
+     "#8f73ad",
      0.4
     ],
     "road": [
@@ -8168,14 +8168,14 @@
    "intent": "All eighteen beams in cold white hit on the beat and turn mirrored bow-ties.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -8222,34 +8222,34 @@
    "id": "radar",
    "title": "Radar",
    "act": 3,
-   "intent": "A violet radar line sweeps round the rays; the ember plane beams circle in a ripple (t4: red and violet).",
+   "intent": "A lavender radar line sweeps round the rays; the rose-copper plane beams circle in a ripple.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line A": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "line B": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "line C": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
     "line D": [
-     "#7419ff",
+     "#b699ff",
      0.9
     ],
-    "plane 1 (behind the DJ)": [
-     "#ff3a12",
+    "plane 1": [
+     "#ff9180",
      0.6
     ],
     "road": [
@@ -8290,12 +8290,12 @@
    "intent": "The cut, the kicker, the key and the rays hit full ash on every beat: the blinder moment.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "cut up": [
      "#e8e4dc",
@@ -8333,7 +8333,7 @@
      "#e8e4dc",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#e8e4dc",
      1
     ],
@@ -8368,29 +8368,29 @@
    "notes": "no blinder fixtures in the kit: the truss washes stand in; ash (the warm white) is closest to a tungsten blinder (taste)"
   },
   {
-   "id": "red-scissors",
-   "title": "Red scissors",
+   "id": "copper-scissors",
+   "title": "Copper scissors",
    "act": 3,
-   "intent": "Ember walls and a violet plane flip on the half beat and cross fast.",
+   "intent": "Rose-copper walls and a lavender plane flip on the half beat and cross fast.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "side line left": [
-     "#ff3a12",
+     "#ff9180",
      1
     ],
     "side line right": [
-     "#ff3a12",
+     "#ff9180",
      1
     ],
-    "plane 1 (behind the DJ)": [
-     "#7419ff",
+    "plane 1": [
+     "#8f73ad",
      1
     ],
     "road": [
@@ -8422,36 +8422,36 @@
      "up-b380f"
     ]
    },
-   "notes": ""
+   "notes": "v2 id red-scissors: ember walls became rose-copper (the beams show the wheel's Pink)"
   },
   {
    "id": "sparkle-peak",
    "title": "Sparkle peak",
    "act": 3,
-   "intent": "Violet walls and a cold white plane sparkle, each on its own count, over an ember cut.",
+   "intent": "Lavender walls and a cold white plane sparkle, each on its own count, over a rose-copper cut.",
    "parts": {
     "line L": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "line R": [
-     "#a3200c",
-     0.25
+     "#ff9180",
+     0.14
     ],
     "side line left": [
-     "#7419ff",
+     "#8f73ad",
      1
     ],
     "side line right": [
-     "#7419ff",
+     "#8f73ad",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
     "cut up": [
-     "#ff3a12",
+     "#ff9180",
      0.8
     ],
     "road": [
@@ -8489,18 +8489,18 @@
    "id": "drop-away",
    "title": "Drop away",
    "act": 4,
-   "intent": "Almost dark: the plane in ice cyan (the beam wheel's blue), one slow lean, the floor glowing deep blue.",
+   "intent": "Almost dark: the plane in deep sea (the beam wheel's cyan), one slow lean, the floor glowing petrol.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
-    "plane 1 (behind the DJ)": [
-     "#2631ff",
+    "plane 1": [
+     "#26bcff",
      0.4
     ],
     "road": [
@@ -8538,22 +8538,22 @@
    "id": "one-beam-back",
    "title": "One beam back",
    "act": 4,
-   "intent": "The plane returns in cold white, low, a lean travels across it.",
+   "intent": "The plane returns in cold white, low, a lean travels across it; warm white on the DJ.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.5
     ],
     "dj kicker": [
-     "#e8e4dc",
+     "#ffbe7a",
      0.2
     ],
     "road": [
@@ -8581,34 +8581,34 @@
    "id": "blue-wave",
    "title": "Blue wave",
    "act": 4,
-   "intent": "A deep blue wave rolls along the rays and floor strips toward the DJ; the cut holds the floor in violet.",
+   "intent": "A deep sea wave rolls along the rays and petrol floor strips toward the DJ; the cut holds the floor in lavender.",
    "parts": {
     "line L": [
-     "#2631ff",
+     "#66faff",
      0.9
     ],
     "line R": [
-     "#2631ff",
+     "#66faff",
      0.9
     ],
     "line A": [
-     "#2631ff",
+     "#26bcff",
      0.9
     ],
     "line B": [
-     "#2631ff",
+     "#26bcff",
      0.9
     ],
     "line C": [
-     "#2631ff",
+     "#26bcff",
      0.9
     ],
     "line D": [
-     "#2631ff",
+     "#26bcff",
      0.9
     ],
     "cut down": [
-     "#7419ff",
+     "#b699ff",
      0.3
     ],
     "road": [
@@ -8630,28 +8630,28 @@
     ],
     "still": 0.3
    },
-   "notes": "floor here = cut down at 0.3 (still), the strips join the wave"
+   "notes": "floor here = cut down at 0.3 (still), the strips join the wave in petrol (not pure blue: the eye cannot focus it on the floor)"
   },
   {
    "id": "ice-mist",
    "title": "Ice mist",
    "act": 4,
-   "intent": "The walls in low steel blue and the cut in cold white breathe together; the beams barely cross.",
+   "intent": "The walls in low ice and the cut in cold white breathe together; the beams barely cross.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "side line left": [
-     "#73bdff",
+     "#d1eeff",
      0.5
     ],
     "side line right": [
-     "#73bdff",
+     "#d1eeff",
      0.5
     ],
     "cut up": [
@@ -8694,18 +8694,18 @@
    "id": "slow-eight",
    "title": "Slow eight",
    "act": 4,
-   "intent": "Only the plane, in UV violet, drawing one slow mirrored X every 29 s.",
+   "intent": "Only the plane, in lavender, drawing one slow mirrored X every 29 s.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
-    "plane 1 (behind the DJ)": [
-     "#7419ff",
+    "plane 1": [
+     "#8f73ad",
      0.8
     ],
     "road": [
@@ -8730,33 +8730,33 @@
    "notes": ""
   },
   {
-   "id": "uv-steel",
-   "title": "UV steel",
+   "id": "sea-steel",
+   "title": "Sea steel",
    "act": 4,
-   "intent": "Outside, the road and the entrance spark violet; inside, the rays glow deep blue.",
+   "intent": "Outside, the road and the entrance spark in their own colours; inside, the rays glow deep sea.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line A": [
-     "#2631ff",
+     "#26bcff",
      0.6
     ],
     "line B": [
-     "#2631ff",
+     "#26bcff",
      0.6
     ],
     "line C": [
-     "#2631ff",
+     "#26bcff",
      0.6
     ],
     "line D": [
-     "#2631ff",
+     "#26bcff",
      0.6
     ],
     "road": [
@@ -8778,48 +8778,48 @@
     ],
     "still": 0.3
    },
-   "notes": ""
+   "notes": "v2 id uv-steel: the UV went with the outside rule; the rays are deep sea now"
   },
   {
    "id": "deep-tent",
    "title": "Deep tent",
    "act": 4,
-   "intent": "Rays deep blue, the plane ice cyan, the walls violet, all swelling slowly, a lean ripples through.",
+   "intent": "Rays deep sea, the plane petrol, the walls lavender, all swelling slowly, a lean ripples through.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line A": [
-     "#2631ff",
+     "#26bcff",
      0.5
     ],
     "line B": [
-     "#2631ff",
+     "#26bcff",
      0.5
     ],
     "line C": [
-     "#2631ff",
+     "#26bcff",
      0.5
     ],
     "line D": [
-     "#2631ff",
+     "#26bcff",
      0.5
     ],
     "side line left": [
-     "#7419ff",
+     "#8f73ad",
      0.5
     ],
     "side line right": [
-     "#7419ff",
+     "#8f73ad",
      0.5
     ],
-    "plane 1 (behind the DJ)": [
-     "#2631ff",
+    "plane 1": [
+     "#66faff",
      0.5
     ],
     "road": [
@@ -8858,15 +8858,15 @@
    "id": "green-breath",
    "title": "Green breath",
    "act": 4,
-   "intent": "The laser net alone breathes very slowly in green over the blue floor.",
+   "intent": "The laser net alone breathes very slowly in green over the petrol floor.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "laser": [
      "#00ff00",
@@ -8905,15 +8905,15 @@
    "id": "cold-rise",
    "title": "Cold rise",
    "act": 4,
-   "intent": "The build back: a cold white comet climbs the walls toward the entrance over deep blue rays.",
+   "intent": "The build back: a cold white comet climbs the walls toward the entrance over deep sea rays.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "side line left": [
      "#eefdfd",
@@ -8924,19 +8924,19 @@
      0.6
     ],
     "line A": [
-     "#2631ff",
+     "#26bcff",
      0.3
     ],
     "line B": [
-     "#2631ff",
+     "#26bcff",
      0.3
     ],
     "line C": [
-     "#2631ff",
+     "#26bcff",
      0.3
     ],
     "line D": [
-     "#2631ff",
+     "#26bcff",
      0.3
     ],
     "road": [
@@ -8974,46 +8974,46 @@
    "id": "riser-two",
    "title": "Riser two",
    "act": 4,
-   "intent": "Violet walls, white plane, ember rays and cut pulse on the beat, the beams lean fast: the second drop is coming.",
+   "intent": "Lavender walls, white plane, rose-copper rays and cut pulse on the beat, the beams lean fast: the second drop is coming.",
    "parts": {
     "line L": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "line R": [
-     "#2631ff",
-     0.3
+     "#66faff",
+     0.08
     ],
     "side line left": [
-     "#7419ff",
+     "#8f73ad",
      0.8
     ],
     "side line right": [
-     "#7419ff",
+     "#8f73ad",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.8
     ],
     "line A": [
-     "#ff3a12",
+     "#ff9180",
      0.8
     ],
     "line B": [
-     "#ff3a12",
+     "#ff9180",
      0.8
     ],
     "line C": [
-     "#ff3a12",
+     "#ff9180",
      0.8
     ],
     "line D": [
-     "#ff3a12",
+     "#ff9180",
      0.8
     ],
     "cut up": [
-     "#ff3a12",
+     "#ff9180",
      0.7
     ],
     "road": [
@@ -9055,18 +9055,18 @@
    "intent": "White-out: cold white lasers and every beam; the rays pump, the walls turn mirrored bow-ties.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "laser": [
      "#eefdfd",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -9137,53 +9137,53 @@
    "notes": ""
   },
   {
-   "id": "red-strobe",
-   "title": "Red strobe",
+   "id": "ice-strobe",
+   "title": "Ice strobe",
    "act": 5,
-   "intent": "The whole hall strobes ember for 6 s: the one red hit of the second peak.",
+   "intent": "The whole hall strobes ice for 6 s: the hit of the second peak.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "side line left": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "side line right": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
-    "plane 1 (behind the DJ)": [
-     "#ff3a12",
+    "plane 1": [
+     "#d1eeff",
      1
     ],
     "line A": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "line B": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "line C": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "line D": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "cut up": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "cut down": [
-     "#ff3a12",
+     "#d1eeff",
      1
     ],
     "road": [
@@ -9206,7 +9206,7 @@
     ],
     "still": 0.3
    },
-   "notes": ""
+   "notes": "v2 id red-strobe: no strobe in a saturated colour (WCAG 2.2 2.3.1 red flash; Harding et al. 2005), so ice"
   },
   {
    "id": "cathedral-turns",
@@ -9215,14 +9215,14 @@
    "intent": "All the beams in cold white circle in a ripple, the cut breathes steel blue.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -9273,14 +9273,14 @@
    "id": "ice-and-fire",
    "title": "Ice and fire",
    "act": 5,
-   "intent": "Cold white walls, an ember plane, deep blue rays; blocks flip, the beams trace an X.",
+   "intent": "Cold white walls, an ember plane, ice rays; blocks flip, the beams trace an X.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "side line left": [
@@ -9291,24 +9291,24 @@
      "#eefdfd",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1
     ],
     "line A": [
-     "#2631ff",
+     "#d1eeff",
      0.9
     ],
     "line B": [
-     "#2631ff",
+     "#d1eeff",
      0.9
     ],
     "line C": [
-     "#2631ff",
+     "#d1eeff",
      0.9
     ],
     "line D": [
-     "#2631ff",
+     "#d1eeff",
      0.9
     ],
     "road": [
@@ -9340,20 +9340,20 @@
      "up-b380f"
     ]
    },
-   "notes": ""
+   "notes": "red accent: the ember plane holds (beams are not in the flip), the flipping rays are ice"
   },
   {
    "id": "red-fans",
    "title": "Red fans",
    "act": 5,
-   "intent": "Ember lasers (the red fans of teaser t4) over violet walls flipping, the ember plane crossing.",
+   "intent": "Ember lasers (the red fans of teaser t4) over lavender walls flipping, the rose-copper plane crossing.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "laser": [
@@ -9361,15 +9361,15 @@
      0.8
     ],
     "side line left": [
-     "#7419ff",
+     "#8f73ad",
      0.8
     ],
     "side line right": [
-     "#7419ff",
+     "#8f73ad",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
-     "#ff3a12",
+    "plane 1": [
+     "#ff9180",
      0.6
     ],
     "road": [
@@ -9408,7 +9408,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "t4 as measured: red fans, blue-violet around them"
+   "notes": "red accent, lasers only: t4 as measured, red fans with pale violet round them (#9982d4)"
   },
   {
    "id": "last-strobe",
@@ -9417,14 +9417,14 @@
    "intent": "The final hit: everything strobes for 8 s, cold white beams, warm ash washes.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -9494,34 +9494,34 @@
    "id": "afterglow",
    "title": "Afterglow",
    "act": 5,
-   "intent": "Amber rays and a deep ember plane breathe down; a slow ripple of lean.",
+   "intent": "Rose-copper rays and a warm white plane breathe down; a slow ripple of lean.",
    "parts": {
     "line L": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line R": [
-     "#73bdff",
+     "#b699ff",
      0.15
     ],
     "line A": [
-     "#ffad4d",
+     "#ff9180",
      0.6
     ],
     "line B": [
-     "#ffad4d",
+     "#ff9180",
      0.6
     ],
     "line C": [
-     "#ffad4d",
+     "#ff9180",
      0.6
     ],
     "line D": [
-     "#ffad4d",
+     "#ff9180",
      0.6
     ],
-    "plane 1 (behind the DJ)": [
-     "#a3200c",
+    "plane 1": [
+     "#ffbe7a",
      0.5
     ],
     "road": [
@@ -9554,7 +9554,7 @@
      "up-b380f"
     ]
    },
-   "notes": "amber as warmth after the peak"
+   "notes": "warmth after the peak without red or amber: rose-copper + 3200 K"
   },
   {
    "id": "the-last-run",
@@ -9563,12 +9563,12 @@
    "intent": "Steel blue runs up the walls toward the entrance: the way out.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "side line left": [
      "#73bdff",
@@ -9613,15 +9613,15 @@
    "id": "embers-out",
    "title": "Embers out",
    "act": 5,
-   "intent": "The road and entrance spark amber again; inside only deep ember rays.",
+   "intent": "Outside, the road and entrance spark again; inside only deep ember rays: the last embers.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line A": [
      "#a3200c",
@@ -9658,7 +9658,7 @@
     ],
     "still": 0.3
    },
-   "notes": ""
+   "notes": "red accent: deep ember at 0.4, sparkle 20 bpm (3 flashes/s max), over an ice floor"
   },
   {
    "id": "one-beam-loop",
@@ -9667,14 +9667,14 @@
    "intent": "Back to the start: the plane alone in low cold white, one slow lean; the loop begins again.",
    "parts": {
     "line L": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
     "line R": [
-     "#73bdff",
-     0.15
+     "#d1eeff",
+     0.07
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.4
     ],
@@ -9880,8 +9880,8 @@
    "hold": 8
   },
   {
-   "look": "red-scissors",
-   "name": "Red scissors",
+   "look": "copper-scissors",
+   "name": "Copper scissors",
    "fade": 0,
    "hold": 18
   },
@@ -9922,8 +9922,8 @@
    "hold": 30
   },
   {
-   "look": "uv-steel",
-   "name": "UV steel",
+   "look": "sea-steel",
+   "name": "Sea steel",
    "fade": 5,
    "hold": 26
   },
@@ -9958,8 +9958,8 @@
    "hold": 20
   },
   {
-   "look": "red-strobe",
-   "name": "Red strobe",
+   "look": "ice-strobe",
+   "name": "Ice strobe",
    "fade": 0,
    "hold": 6
   },
@@ -16915,7 +16915,7 @@
      "units": 29
     },
     {
-     "part": "plane 1 (behind the DJ)",
+     "part": "plane 1",
      "peak_colour": "#ff3a12",
      "peak_level": 0.85,
      "spread_colour": "#ff3a12",
@@ -21927,7 +21927,7 @@
   "beam_checks": [
    {
     "id": "rig-beam-planes-01",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "island": "the stage pen",
     "region": "stage pen",
     "throw_m": 16.653,
@@ -22190,7 +22190,7 @@
    },
    {
     "id": "rig-beam-planes-02",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "island": "the stage pen",
     "region": "stage pen",
     "throw_m": 14.487,
@@ -22295,7 +22295,7 @@
    },
    {
     "id": "rig-beam-planes-03",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "island": "the stage pen",
     "region": "stage pen",
     "throw_m": 13.511,
@@ -22362,7 +22362,7 @@
    },
    {
     "id": "rig-beam-planes-04",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "island": "the stage pen",
     "region": "stage pen",
     "throw_m": 13.511,
@@ -22430,7 +22430,7 @@
    },
    {
     "id": "rig-beam-planes-05",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "island": "the stage pen",
     "region": "stage pen",
     "throw_m": 8.372,
@@ -22603,7 +22603,7 @@
    },
    {
     "id": "rig-beam-planes-06",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "island": "the stage pen",
     "region": "stage pen",
     "throw_m": 17.026,
@@ -28140,7 +28140,7 @@
   "b380f": [
    {
     "id": "rig-beam-planes-01",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "into_people": 0,
     "into_cubes": 0,
     "into_the_cut": 0,
@@ -28150,7 +28150,7 @@
    },
    {
     "id": "rig-beam-planes-02",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "into_people": 0,
     "into_cubes": 0,
     "into_the_cut": 0,
@@ -28161,7 +28161,7 @@
    },
    {
     "id": "rig-beam-planes-03",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "into_people": 0,
     "into_cubes": 0,
     "into_the_cut": 0,
@@ -28171,7 +28171,7 @@
    },
    {
     "id": "rig-beam-planes-04",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "into_people": 0,
     "into_cubes": 0,
     "into_the_cut": 0,
@@ -28182,7 +28182,7 @@
    },
    {
     "id": "rig-beam-planes-05",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "into_people": 0,
     "into_cubes": 0,
     "into_the_cut": 0,
@@ -28192,7 +28192,7 @@
    },
    {
     "id": "rig-beam-planes-06",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "into_people": 0,
     "into_cubes": 0,
     "into_the_cut": 0,
@@ -28413,25 +28413,25 @@
    },
    {
     "id": "rig-beam-planes-05",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "gap_m": 11.261,
     "nearest_cube": "rig-lasercube-cut-04"
    },
    {
     "id": "rig-beam-planes-06",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "gap_m": 11.261,
     "nearest_cube": "rig-lasercube-cut-05"
    },
    {
     "id": "rig-beam-planes-04",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "gap_m": 11.263,
     "nearest_cube": "rig-lasercube-cut-01"
    },
    {
     "id": "rig-beam-planes-03",
-    "part": "plane 1 (behind the DJ)",
+    "part": "plane 1",
     "gap_m": 11.284,
     "nearest_cube": "rig-lasercube-cut-01"
    }
@@ -28488,7 +28488,7 @@
     "columns",
     "hall steel",
     "haze",
-    "plane 1 (behind the DJ)",
+    "plane 1",
     "plane 2 (the wings)",
     "plane 2 (wings, facing the entry)",
     "plane 3 (behind the stage)",
@@ -28783,7 +28783,7 @@
    "title": "The wall (beams behind the DJ + the side lines)",
    "act": 3,
    "parts": {
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1.0
     ],
@@ -28891,7 +28891,7 @@
      "#ff3a12",
      0.6
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.8
     ],
@@ -29039,7 +29039,7 @@
      "#ff3a12",
      0.85
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.85
     ],
@@ -29220,7 +29220,7 @@
    "title": "The DJ (the plane behind him, the kicker, nothing else)",
    "act": 1,
    "parts": {
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1.0
     ],
@@ -29328,7 +29328,7 @@
      "#ff3a12",
      0.5
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.3
     ],
@@ -29369,7 +29369,7 @@
      "#e8e4dc",
      1.0
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#e8e4dc",
      1.0
     ],
@@ -29465,7 +29465,7 @@
      "#ff3a12",
      0.6
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.5
     ],
@@ -29485,7 +29485,7 @@
    "title": "Breath (almost dark, a red breath behind the DJ)",
    "act": 1,
    "parts": {
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.35
     ],
@@ -29550,7 +29550,7 @@
    "title": "Ice and fire (the DJ wall red, the hall ice blue)",
    "act": 2,
    "parts": {
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1.0
     ],
@@ -29614,7 +29614,7 @@
      "#ff3a12",
      1.0
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.3
     ],
@@ -29718,7 +29718,7 @@
      "#12d7ff",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.8
     ],
@@ -29772,7 +29772,7 @@
      "#e8e4dc",
      1.0
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.3
     ],
@@ -29818,7 +29818,7 @@
      "#e8e4dc",
      1.0
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.3
     ],
@@ -29872,7 +29872,7 @@
      "#e8e4dc",
      1.0
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#e8e4dc",
      1.0
     ],
@@ -29959,7 +29959,7 @@
      "#ff3a12",
      0.3
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      0.3
     ],
@@ -30142,17 +30142,17 @@
      "#73bdff",
      0.15
     ],
-    "hall steel": [
-     "#ffad4d",
-     0.5
-    ],
-    "columns": [
-     "#ffad4d",
-     0.5
-    ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#73bdff",
      0.35
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30191,9 +30191,17 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.55
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30232,13 +30240,21 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.8
     ],
     "dj back": [
      "#73bdff",
      0.2
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30277,7 +30293,7 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#73bdff",
      0.7
     ],
@@ -30288,6 +30304,14 @@
     "stage key": [
      "#eefdfd",
      0.15
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30326,7 +30350,7 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#73bdff",
      0.6
     ],
@@ -30341,6 +30365,14 @@
     "stage key": [
      "#e8e4dc",
      0.2
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30394,6 +30426,14 @@
     "line D": [
      "#73bdff",
      0.6
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30428,6 +30468,14 @@
     ],
     "side line right": [
      "#73bdff",
+     0.6
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
      0.6
     ]
    },
@@ -30474,6 +30522,14 @@
     "side line right": [
      "#eefdfd",
      0.5
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30531,6 +30587,14 @@
     "cut down": [
      "#ffad4d",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30563,9 +30627,17 @@
      "#00ff00",
      0.35
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#33ff47",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30619,6 +30691,14 @@
     "side line right": [
      "#33ff47",
      0.8
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30665,9 +30745,17 @@
      "#f4fcf4",
      0.9
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#33ff47",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30722,9 +30810,17 @@
      "#33ff47",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#f4fcf4",
      0.5
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30782,6 +30878,14 @@
     "dj back": [
      "#33ff47",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30828,9 +30932,17 @@
      "#eefdfd",
      0.9
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#33ff47",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30888,6 +31000,14 @@
     "cut down": [
      "#33ff47",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30916,7 +31036,7 @@
      "#33ff47",
      0.12
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#f4fcf4",
      0.9
     ],
@@ -30927,6 +31047,14 @@
     "side line right": [
      "#33ff47",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -30969,9 +31097,17 @@
      "#00ff00",
      0.6
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31034,9 +31170,17 @@
      "#33ff47",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.5
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31083,7 +31227,7 @@
      "#eefdfd",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.8
     ],
@@ -31106,6 +31250,14 @@
     "cut up": [
      "#7419ff",
      0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31145,7 +31297,7 @@
      "#a3200c",
      0.25
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -31176,6 +31328,14 @@
     "line D": [
      "#7419ff",
      0.9
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31214,7 +31374,7 @@
      "#a3200c",
      0.25
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -31253,6 +31413,14 @@
     "dj kicker": [
      "#eefdfd",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31290,7 +31458,7 @@
      "#ff3a12",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1
     ],
@@ -31321,6 +31489,14 @@
     "dj back": [
      "#ff3a12",
      0.5
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31394,6 +31570,14 @@
     "line D": [
      "#7419ff",
      0.8
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31459,9 +31643,17 @@
      "#a3200c",
      0.5
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#7419ff",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31508,7 +31700,7 @@
      "#a3200c",
      0.25
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -31519,6 +31711,14 @@
     "side line right": [
      "#eefdfd",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31573,8 +31773,16 @@
      "#7419ff",
      0.9
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
+     0.6
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
      0.6
     ]
    },
@@ -31650,7 +31858,7 @@
      "#e8e4dc",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#e8e4dc",
      1
     ],
@@ -31661,6 +31869,14 @@
     "side line right": [
      "#e8e4dc",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31698,9 +31914,17 @@
      "#ff3a12",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#7419ff",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31747,13 +31971,21 @@
      "#7419ff",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
     "cut up": [
      "#ff3a12",
      0.8
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31792,9 +32024,17 @@
      "#2631ff",
      0.3
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#2631ff",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31833,13 +32073,21 @@
      "#2631ff",
      0.3
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.5
     ],
     "dj kicker": [
      "#e8e4dc",
      0.2
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "heads": {
@@ -31887,6 +32135,14 @@
     "cut down": [
      "#7419ff",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31926,6 +32182,14 @@
     "cut up": [
      "#eefdfd",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -31965,9 +32229,17 @@
      "#2631ff",
      0.3
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#7419ff",
      0.8
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "heads": {
@@ -31996,14 +32268,6 @@
      "#2631ff",
      0.3
     ],
-    "hall steel": [
-     "#7419ff",
-     0.8
-    ],
-    "columns": [
-     "#7419ff",
-     0.8
-    ],
     "line A": [
      "#2631ff",
      0.6
@@ -32019,6 +32283,14 @@
     "line D": [
      "#2631ff",
      0.6
+    ],
+    "road": [
+     "#a5ff0f",
+     0.8
+    ],
+    "entrance": [
+     "#e04e00",
+     0.8
     ]
    },
    "motion": {
@@ -32071,9 +32343,17 @@
      "#7419ff",
      0.5
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#2631ff",
      0.5
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32116,6 +32396,14 @@
     "laser": [
      "#00ff00",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32175,6 +32463,14 @@
     "line D": [
      "#2631ff",
      0.3
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32221,7 +32517,7 @@
      "#7419ff",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.8
     ],
@@ -32244,6 +32540,14 @@
     "cut up": [
      "#ff3a12",
      0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32287,7 +32591,7 @@
      "#eefdfd",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -32318,6 +32622,14 @@
     "line D": [
      "#eefdfd",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32371,7 +32683,7 @@
      "#ff3a12",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1
     ],
@@ -32398,6 +32710,14 @@
     "cut down": [
      "#ff3a12",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32427,7 +32747,7 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -32442,6 +32762,14 @@
     "cut up": [
      "#73bdff",
      0.8
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32488,7 +32816,7 @@
      "#eefdfd",
      1
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
      1
     ],
@@ -32507,6 +32835,14 @@
     "line D": [
      "#2631ff",
      0.9
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32557,8 +32893,16 @@
      "#7419ff",
      0.8
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#ff3a12",
+     0.6
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
      0.6
     ]
    },
@@ -32605,7 +32949,7 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      1
     ],
@@ -32648,6 +32992,14 @@
     "stage key": [
      "#e8e4dc",
      1
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32693,9 +33045,17 @@
      "#ffad4d",
      0.6
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#a3200c",
      0.5
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32742,6 +33102,14 @@
     "side line right": [
      "#73bdff",
      0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32780,14 +33148,6 @@
      "#73bdff",
      0.15
     ],
-    "hall steel": [
-     "#ffad4d",
-     0.6
-    ],
-    "columns": [
-     "#ffad4d",
-     0.6
-    ],
     "line A": [
      "#a3200c",
      0.4
@@ -32803,6 +33163,14 @@
     "line D": [
      "#a3200c",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.6
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
@@ -32831,9 +33199,17 @@
      "#73bdff",
      0.15
     ],
-    "plane 1 (behind the DJ)": [
+    "plane 1": [
      "#eefdfd",
      0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
     ]
    },
    "motion": {
