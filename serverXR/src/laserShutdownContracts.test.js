@@ -48,7 +48,7 @@ const bootWithOneCube = async () => {
   await mkdir(path.join(dataRoot, 'laser'), { recursive: true })
   await writeFile(path.join(dataRoot, 'laser', 'laser.json'), JSON.stringify({ cubes: [{ id: 'cube-1', ip: '127.0.0.1' }] }))
   const port = await getFreePort()
-  const env = { ...process.env, PORT: String(port), DATA_ROOT: dataRoot, DI_LOCAL: '1', AUTH_SESSION_SECRET: 'laser-down-secret' }
+  const env = { ...process.env, PORT: String(port), DATA_ROOT: dataRoot, DI_LOCAL: '1', DI_LASER_TEST_LOOPBACK: '1', AUTH_SESSION_SECRET: 'laser-down-secret' }
   delete env.NODE_ENV
   delete env.SPACES_DIR
   delete env.UPLOADS_DIR
