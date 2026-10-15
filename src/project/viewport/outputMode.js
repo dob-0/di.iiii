@@ -23,7 +23,9 @@
 // default everywhere ("full HQ only when needed") — that rule stays for every device that
 // cannot carry High. The setting is called Quality, its values Low and High (owner 2026-10-15; the keys 'lite'/'full' of before are read as aliases).
 
-export const OUTPUT_POOL_SLOTS = 4
+// The Low rule itself (what the output keeps and drops) lives in src/shared/renderPlan.js since 2026-10-15, so the render
+// plan (Studio / Tech / Show × Low / High) and this file share one copy.
+export { OUTPUT_POOL_SLOTS, outputRenderSettings, outputDocument } from '../../shared/renderPlan.js'
 export const OUTPUT_STORAGE_KEY = 'di.view.quality'
 
 const QUALITY_RE = /(?:^|[?&])quality=(high|low|full|lite)(?:&|$)/i
@@ -48,29 +50,3 @@ export const outputModeWanted = ({ search = '', stored = null, coarse = false, w
 
 /** Is this WebGL renderer string a software one (no GPU: SwiftShader, llvmpipe, Mesa's software rasterizer)? */
 export const isSoftwareRenderer = (renderer = '') => /swiftshader|llvmpipe|softpipe|software|mesa offscreen|basic render/i.test(String(renderer || ''))
-
-/** The room's render settings as the output draws them. */
-export const outputRenderSettings = (renderSettings = {}) => {
-    const rs = renderSettings && typeof renderSettings === 'object' ? renderSettings : {}
-    const { bloom: _bloom, surfaces: _surfaces, ...rest } = rs
-    return {
-        ...rest,
-        shadows: false,
-        shadowCasting: { ...(rs.shadowCasting || {}), enabled: false },
-        antialias: false,
-        dprMin: 1,
-        dprMax: 1
-    }
-}
-
-/** A copy of the document drawn as the output: its render settings, and the light pool on. */
-export const outputDocument = (document) => {
-    if (!document) return document
-    const pool = document.mappingState?.lightPool || {}
-    const slots = Math.min(OUTPUT_POOL_SLOTS, Number.isFinite(Number(pool.slots)) ? Number(pool.slots) : OUTPUT_POOL_SLOTS)
-    return {
-        ...document,
-        renderSettings: outputRenderSettings(document.renderSettings),
-        mappingState: { ...(document.mappingState || {}), lightPool: { ...pool, enabled: true, slots } }
-    }
-}

@@ -27,12 +27,12 @@ describe('buildStudioPreviewPath', () => {
 describe('buildStudioPreviewUrl', () => {
     it('sits on the origin it is given, so a local install stays local and a dev tree stays on its tree', () => {
         const ids = { spaceSlug: 'moxir', spaceId: 'moxir', projectSlug: 'v2-9', projectId: 'moxir-v2-9' }
-        expect(buildStudioPreviewUrl({ origin: 'http://diiii.localhost', ...ids })).toBe('http://diiii.localhost/moxir/v2-9')
-        expect(buildStudioPreviewUrl({ origin: 'http://studio-nav-test.diiii.localhost', ...ids })).toBe('http://studio-nav-test.diiii.localhost/moxir/v2-9')
-        expect(buildStudioPreviewUrl({ origin: 'https://dev.diiii.xyz', ...ids })).toBe('https://dev.diiii.xyz/moxir/v2-9')
+        expect(buildStudioPreviewUrl({ origin: 'http://diiii.localhost', ...ids })).toBe('http://diiii.localhost/moxir/v2-9?render=show')
+        expect(buildStudioPreviewUrl({ origin: 'http://studio-nav-test.diiii.localhost', ...ids })).toBe('http://studio-nav-test.diiii.localhost/moxir/v2-9?render=show')
+        expect(buildStudioPreviewUrl({ origin: 'https://dev.diiii.xyz', ...ids })).toBe('https://dev.diiii.xyz/moxir/v2-9?render=show')
     })
     it('defaults to the origin of the page the Studio runs on', () => {
-        expect(buildStudioPreviewUrl({ spaceId: 'moxir', projectId: 'moxir-v2-9' })).toBe(`${window.location.origin}/moxir/p/moxir-v2-9`)
+        expect(buildStudioPreviewUrl({ spaceId: 'moxir', projectId: 'moxir-v2-9' })).toBe(`${window.location.origin}/moxir/p/moxir-v2-9?render=show`)
     })
     it('is null while nothing is known', () => {
         expect(buildStudioPreviewUrl({ origin: 'http://diiii.localhost' })).toBeNull()

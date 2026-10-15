@@ -20,11 +20,13 @@ export function buildStudioPreviewPath({ spaceSlug = '', spaceId = '', projectSl
     return null
 }
 
-// The same, absolute, on the origin the Studio itself runs on — a local install stays local
+// The same, absolute, with ?render=show, on the origin the Studio itself runs on — a local install stays local
 // (diiii.localhost), a dev tree stays on its tree, dev stays on dev. Null when nothing is known yet.
 export function buildStudioPreviewUrl({ origin, ...ids } = {}) {
     const path = buildStudioPreviewPath(ids)
     if (!path) return null
     const base = origin ?? (typeof window !== 'undefined' ? window.location.origin : '')
-    return `${base}${path}`
+    // Preview = the Show render (src/shared/renderPlan.js, decision 2026-10-15-studio-tech-show-render.md): the room as the
+    // audience sees it, even in a tab that chose Tech before
+    return `${base}${path}?render=show`
 }

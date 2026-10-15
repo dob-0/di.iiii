@@ -2010,6 +2010,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'room-render-studio-tech-show',
+        category: 'Spaces & access',
+        title: 'Studio, Tech and Show — what a room is drawn for',
+        summary: 'One room, three renders. Studio is the building view where you make it. Tech is the crew\'s view in the live show: only the rig as plain shapes. Show is the room as the audience sees it — the public link and the Studio\'s Preview. Quality (Low / High) is separate: it says what the device can carry.',
+        body: [
+            'On a room page, open Display and pick Tech or Show. Show is where every visit starts. Your pick is kept for this tab; `?render=tech` or `?render=show` in an address opens the room that way.',
+            { list: [
+                'Tech draws only the show\'s things: the lamps, every beam as a plain flat cone in its colour, every laser as plain lines to the first surface they meet, the floor, the stage and the hall in plain grey.',
+                'Tech leaves out the haze, the fog, the glow (bloom), shadows, the floor\'s reflection, textures, the machines, the outside and every other object.',
+                'Show draws the room with its own air and glow, the lasers as lines with their halo — the showcase anyone with the link sees.',
+                'The Studio\'s Preview button opens the room page in Show.',
+                'Your saved room is never changed: Tech and Show draw a copy.'
+            ] },
+            'With Quality: the render is drawn first, then Low takes off what a phone cannot carry. Tech is light already, so Tech on Low only draws at one pixel per screen pixel.',
+            'The Scene window\'s Light environment rows (haze, ambient, exposure, bloom, surfaces) are what Show and the Studio draw. Tech keeps only the exposure, so the crew reads the same schematic in every version.'
+        ],
+        tags: ['render', 'tech', 'show', 'studio', 'preview', 'display', 'schematic', 'crew', 'live', 'showcase', 'lasers', 'beams', 'room'],
+        updated: '2026-10-15'
+    },
+    {
         id: 'room-quality-lite-full',
         category: 'Spaces & access',
         title: 'Low and High — a room light enough for a phone',
