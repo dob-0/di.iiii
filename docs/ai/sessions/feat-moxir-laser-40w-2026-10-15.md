@@ -3,6 +3,8 @@
 Owner (17:5x): "look we dont need any dmx charts you fouund right" — the U-Plus chart (PR #978) is in, so the two UP-LA40WF lines get
 their real content. Brief: ~/work/agent-reports-2026-10-15/moxir-50/briefs/laser-40w.md; report: …/moxir-50/laser-40w-report.md.
 
+## What changed
+
 - Addresses: `epic-build.mjs` `dmxOf` + `--patch-only`; v2.11 rig: LA40WF U1.401 / U1.433 (32 ch), smoke U1.501 (1 ch ASSUMED).
   Proven on a scratch copy (stack laser40): 61/61 DMX units on the desk at the document's addresses. moxir-one's v2-11 is NOT
   patched (the brief allowed only the frames write there): `epic-build.mjs --patch-only --apply` + `patch.mjs --exact` is owed.
