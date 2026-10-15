@@ -648,7 +648,7 @@ known-fixes row and `useLightingMirror.test.jsx`.
 `serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port
 `src/rigbuild/headMotion.js` drives the room, both from the server's clock and the look's fire time, so desk and room agree
 (pinned to 0.01 degree by `headMotion.test.js`). Offsets sit on the look's rest aim. From a vertical rest only the tilt
-patterns (nod, wave, circle, figure8) show. Session note: `docs/ai/sessions/feat-looks-heads-motion-2026-10-15.md`.
+patterns (nod, wave, circle, figure8) show. Session note: `PROGRESS.md`, 2026-10-15 "Looks move the moving heads" (folded from the branch's note).
 
 ### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
 
@@ -2337,7 +2337,7 @@ lines and their end spots are left out of the bloom input and drawn over the pic
 line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
 Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
 between two lines 0.03 of the peak (Rayleigh < 0.735). OWED: GPU before/after renders (held by the heat guard, 93–98 °C) —
-hand-over in `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md`.
+hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (folded from the branch's note).
 
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
