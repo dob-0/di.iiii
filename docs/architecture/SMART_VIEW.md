@@ -101,7 +101,9 @@ The owner on MOXIR v2.6, 2026-10-12: the circle of the occlusion fade "read as a
    (hall.py v13: roof = deck, skylight; walls = block, brick, glass, steel; machines = machine, press, rust; outside =
    entities `rig-out-*`), and the merged `shell` mesh's roof and wall parts are taken by the cutaway planes held in
    place (`planWithLayers`). All on by default; `?layers=walls,machines` (the layers shown, `none` for none) carries the
-   state in a link. Sources: The Sims "walls down", Capture / Depence layer visibility.
+   state in a link. Cut (the camera's cutaway itself) is the fifth item: the Studio starts with it on (the walls-down work reading);
+   the room page (public link) starts with it OFF — the building stands whole — unless `?layers=` names the layers, and the
+   Display menu's Cut item switches it and writes the link back (owner 2026-10-15). Sources: The Sims "walls down", Capture / Depence layer visibility.
 
 ## What is "the building"
 

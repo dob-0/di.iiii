@@ -34,7 +34,7 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import SceneBar, { EditInStudio, barButtonStyle } from '../../rigbuild/SceneBar.jsx'
-import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, layersParam, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
+import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -101,13 +101,23 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const onLockPaused = useCallback((on) => setLockPaused(Boolean(on)), [])
     // The layers (SceneBar: Roof · Walls · Machines · Outside, owner 2026-10-12 "we need all 3"): all shown unless the
     // link says otherwise (?layers=walls,machines — the layers shown), and every toggle writes the link back.
-    const [layers, setLayers] = useState(() => parseLayersParam(typeof window !== 'undefined' ? window.location.search : ''))
+    // The room page is the showcase link: the building stands whole (Cut off) unless the address names the layers
+    // (owner 2026-10-15 N730). The cutaway is a work reading (Studio / Tech), switched on from the Display menu.
+    const [layers, setLayers] = useState(() => {
+        const search = typeof window !== 'undefined' ? window.location.search : ''
+        const parsed = parseLayersParam(search)
+        let named = false
+        try { named = new URLSearchParams(search).get('layers') !== null } catch { named = false }
+        return named ? parsed : { ...parsed, cut: false }
+    })
     const toggleLayer = useCallback((id) => {
         setLayers((prev) => {
             const next = { ...prev, [id]: prev[id] === false }
             try {
                 const url = new URL(window.location.href)
-                const value = layersParam(next)
+                // the default here is the whole building (Cut off): that state needs no parameter, every other state is named in full
+                const wholeBuilding = next.cut === false && VIEW_LAYER_IDS.every((lid) => lid === 'cut' || next[lid] !== false)
+                const value = wholeBuilding ? null : (VIEW_LAYER_IDS.filter((lid) => next[lid] !== false).join(',') || 'none')
                 if (value === null) url.searchParams.delete('layers')
                 else url.searchParams.set('layers', value)
                 window.history.replaceState(window.history.state, '', url)
@@ -808,7 +818,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                                 type="button"
                                                 data-testid={`layer-${id}`}
                                                 aria-pressed={layers[id] !== false}
-                                                title={`${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                                                title={id === 'cut' ? 'Cut away the roof and the walls facing you from outside' : `${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
                                                 onClick={() => toggleLayer(id)}
                                                 style={{
                                                     ...barButtonStyle,
