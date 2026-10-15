@@ -765,6 +765,8 @@ export default function SmartView({
         if (flyRef.current && !state.flight) {
             state.flight = { path: flightPath(frame, flightPois(frame, { stageBox: state.stageBox, rigBox: state.rigBox })), t: 0 }
             if (cc) cc.enabled = false
+            // DEV ONLY, for the harness's physics check: the room's frame and the path it flies.
+            if (import.meta.env.DEV && typeof window !== 'undefined' && window.__diRoom) window.__diRoom.flight = { frame, path: state.flight.path }
         }
         if (state.flight) {
             const flight = state.flight
