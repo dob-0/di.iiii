@@ -1,3 +1,4 @@
+import { playScene } from '../utils/playScene.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
@@ -1488,6 +1489,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             cues={cues}
             liveCueId={liveCueId}
             onFireCue={fireCue}
+            onSceneOps={applyLocalOps}
+            onPlayScene={(cue) => playScene(document, cue)}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}

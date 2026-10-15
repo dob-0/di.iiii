@@ -182,6 +182,9 @@ export default function StudioShell({
     cues = [],
     liveCueId = null,
     onFireCue = null,
+    // The scene editor's two doors (ScenePicker): changes as ops through the Studio's own history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
     // Nodes' things in the room, and which room Studio stands in — the whole
     // room, or the inside of a Geo (StudioEditor; null on the open jam).
     // geoSwitcher: { geos, currentGeoId, onOpenGeo, onNewGeo }
@@ -598,6 +601,8 @@ export default function StudioShell({
         onCloseHelp: () => setShowHelp(false),
         rigMirror: rigMirror.on,
         graphRoom,
+        onSceneOps,
+        onPlayScene,
     }
 
     // One source of truth for each window's content, shared by the desktop
