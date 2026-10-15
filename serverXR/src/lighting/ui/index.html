@@ -120,6 +120,103 @@
     </div>
   </details>
 
+  <!-- THIS NODE — only when the state says caps.node: true (a hardware node serving this page).
+       The node's own settings that nothing above covers: Wi-Fi, source, Art-Net address,
+       burn-safe, peers, reboot. Every control calls the node's console route as its README
+       documents it (POST + X-Vizzz-Console: 1); facts come from GET status on the Setup
+       page's one-second tick. docs/ai/sessions/cloud-desk-this-node-section-2026-10-15.md -->
+  <details class="indetails nodedetails" id="ndDetails" data-cap="node">
+    <summary><h2>This node</h2><i class="inlamp" id="ndLamp"></i><span id="ndSummary">not reached yet</span></summary>
+    <div class="inbox nodegrid">
+      <section class="nodegroup" aria-label="Network">
+        <h3>Network</h3>
+        <div class="ndfacts mono" id="ndAddr"></div>
+        <div class="inline">
+          <label>Wi-Fi mode <select id="ndNetMode">
+            <option value="0">access point + Wi-Fi</option>
+            <option value="1">Wi-Fi only</option>
+            <option value="2">access point only</option>
+          </select></label>
+          <button class="sq" id="ndNetModeSet" title="The node restarts in the new mode; this page reconnects when it is back">Set and restart</button>
+        </div>
+        <div class="inline">
+          <button class="sq" id="ndScan">Scan</button>
+          <span class="muted" id="ndScanNote"></span>
+        </div>
+        <div class="ndlist" id="ndNets"></div>
+        <div class="inline">
+          <label>network <input type="text" id="ndSsid" maxlength="32" autocomplete="off" style="width:10em"></label>
+          <label>password <input type="password" id="ndPass" maxlength="63" autocomplete="new-password" style="width:9em"></label>
+          <button class="sq" id="ndJoin">Join</button>
+          <button class="sq danger" id="ndForget" title="Clears the saved Wi-Fi network; the access point stays">Forget</button>
+        </div>
+      </section>
+
+      <section class="nodegroup" aria-label="Source">
+        <h3>Source</h3>
+        <div class="inline">
+          <label>output follows <select id="ndMode">
+            <option value="0">web only</option>
+            <option value="1">network only</option>
+            <option value="2">merge (HTP)</option>
+          </select></label>
+        </div>
+        <div class="inline"><label><input type="checkbox" id="ndFallback"> fall back to web when the network goes quiet</label></div>
+        <div class="inline ndlamps" id="ndLive"></div>
+      </section>
+
+      <section class="nodegroup" aria-label="Art-Net">
+        <h3>Art-Net</h3>
+        <div class="inline">
+          <label>net <input type="number" id="ndArtNet" min="0" max="127" style="width:4em"></label>
+          <label>subnet <input type="number" id="ndArtSub" min="0" max="15" style="width:3.5em"></label>
+          <label>universe <input type="number" id="ndArtUni" min="0" max="15" style="width:3.5em"></label>
+          <button class="sq" id="ndArtSet">Set</button>
+        </div>
+        <div class="muted mono" id="ndArtNote"></div>
+        <div class="inline">
+          <label>Art-Net out goes to <select id="ndPeerTarget"><option value="">every node (broadcast)</option></select></label>
+          <button class="sq" id="ndPeerSet">Set</button>
+        </div>
+      </section>
+
+      <section class="nodegroup" aria-label="Safety">
+        <h3>Safety</h3>
+        <div class="inline">
+          <button class="sq" id="ndBurn">Burn-safe is OFF</button>
+          <span class="mono muted" id="ndBurnNums"></span>
+        </div>
+        <div class="inline">
+          <button class="sq danger" id="ndPanic" title="Master to zero, web layer black, FX and cues off, source web only">Panic</button>
+        </div>
+      </section>
+
+      <section class="nodegroup" aria-label="Fleet">
+        <h3>Fleet</h3>
+        <div class="inline">
+          <button class="sq" id="ndDiscover" title="Send a beacon now, then read the peer table again">Discover</button>
+          <span class="muted" id="ndPeerCount"></span>
+        </div>
+        <div class="ndlist mono" id="ndPeers"></div>
+      </section>
+
+      <section class="nodegroup" aria-label="Maintenance">
+        <h3>Maintenance</h3>
+        <div class="inline">
+          <label>name <input type="text" id="ndName" maxlength="31" autocomplete="off" style="width:9em"></label>
+          <label>access point <input type="text" id="ndApSsid" maxlength="31" autocomplete="off" style="width:9em"></label>
+          <label>its password <input type="password" id="ndApPass" maxlength="63" autocomplete="new-password" placeholder="unchanged" style="width:8em"></label>
+          <button class="sq" id="ndNameSet">Save</button>
+        </div>
+        <div class="ndfacts mono muted" id="ndHealth"></div>
+        <div class="inline">
+          <button class="sq" id="ndReboot">Restart</button>
+          <button class="sq danger" id="ndFactory" title="Erases every saved setting on this node and restarts it">Factory reset</button>
+        </div>
+      </section>
+    </div>
+  </details>
+
   <section class="top-split">
     <div class="pane library">
       <div class="pane-head">
