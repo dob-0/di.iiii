@@ -34299,5 +34299,16 @@
    "fade": 6,
    "hold": 26
   }
- ]
+ ],
+ "rest_aims": {
+  "plane 1": {
+   "lean_deg": -24
+  },
+  "side line left": {
+   "in_deg": 30
+  },
+  "side line right": {
+   "in_deg": 30
+  }
+ }
 }

@@ -6065,5 +6065,17 @@
   }
  ],
  "laser_schema": "di.iiii scripts/place/laser_frames.py (validate_laser); design: scenes-tools/laser_design.py 2026-10-15",
- "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)"
+ "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)",
+ "rest_aims": {
+  "plane 1": {
+   "lean_deg": -24
+  },
+  "side line left": {
+   "in_deg": 30
+  },
+  "side line right": {
+   "in_deg": 30
+  }
+ },
+ "rest_aims_note": "the 18 UP-B380F rest as in the owner's v2-7 peak (measured from moxir-v2-7: planes 24 deg from vertical along the stage, side lines 30 deg toward the axis); the scenes' heads move around it. Owner 2026-10-15 'yes' (N778.2)."
 }

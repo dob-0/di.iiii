@@ -376,6 +376,12 @@ export const v1RigParts = (rig, ents) => {
     return out
 }
 
+/** A shared (vertical) group's aim: the lamp's own hang, or the scenes file's `rest_aims[part]` (a fan the design chose:
+ * `in_deg` toward the stage axis, `lean_deg` along the stage; the scenes' `heads` move around it). Pure. */
+export const restAim = (inDeg, rest) => rest
+    ? { rule: 'vertical', in_deg: rest.in_deg ?? inDeg, ...(rest.lean_deg ? { lean_deg: rest.lean_deg } : {}) }
+    : { rule: 'vertical', in_deg: inDeg }
+
 /** The looks as rig looks: every unit its own named group, aimed at its own target. Pure. */
 export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const units = ents.filter((e) => e.type === 'spotLight')
@@ -383,7 +389,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     for (const f of rig.fixtures) {
         if (isLaserType(f.type)) {
             for (const b of f.laser.beams) if (!b.off) byPart.set(`rig-laser-${b.id}`, { part: 'laser', beam: b.id, colour: f.colour })
-        } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f) })
+        } else byPart.set(f.id, { part: f.part, colour: f.colour, lean: f.angle_rad == null ? null : verticalLean(f), rest: f.angle_rad == null ? null : (rig.rest_aims?.[f.part] || null) })
     }
     const aimOf = (e) => {
         const p = e.components.transform.position
@@ -401,7 +407,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         const key = shared != null
             ? `${e.components.fixture.position.replace(/\s+/g, '-')}/${e.components.fixture.type}`
             : groupKey(meta.part === 'laser' ? `laser-${meta.beam}` : e.id, e.components.fixture.type)
-        unitsOf.push({ id: e.id, key, colour: meta.colour, aim: shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e) })
+        unitsOf.push({ id: e.id, key, colour: meta.colour, aim: shared != null ? restAim(shared, meta.rest) : aimOf(e) })
     }
     const lookOf = (lk) => {
         // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09). A look that names the

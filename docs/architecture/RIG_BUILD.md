@@ -643,6 +643,13 @@ owed) was drawn white at full by the mirror, which assumed "no colour channel" m
 Such a fixture is now `known: false`, and the lamp keeps its authored light. See the
 known-fixes row and `useLightingMirror.test.jsx`.
 
+**Rest aims of a part (2026-10-15, N778.2).** A scenes file may carry `rest_aims: { <part>: { in_deg, lean_deg } }`; `scenes_to_rig.py`
+copies it into the rig file and `epic-build.mjs` (`restAim`) gives it to that part's shared `vertical` group in every look, so a part
+can rest leaned (in_deg toward the stage axis, lean_deg along the stage) while the lamps hang as built; the scenes' `heads` move around it.
+MOXIR v2.11: the 18 UP-B380F rest as in the v2-7 peak (plane 1: 24 deg along the stage, side lines: 30 deg toward the axis).
+`scripts/place/look_aim_check.py` casts those rest directions against the building (first surface, 0 leaks). Limit: one aim per
+shared group, so the +-0.14 sideways spread of v2-7's six plane lamps is not kept.
+
 **Heads that move (2026-10-15).** A look may carry `heads: { pattern, period_s, pan_deg, tilt_deg, spatial, kinds }`
 (`components.rigLooks.looks[].heads`; patterns sweep, nod, circle, figure8, fan, wave, cross). One pure function,
 `serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port

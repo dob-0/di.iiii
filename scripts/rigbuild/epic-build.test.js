@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
-import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps } from './epic-build.mjs'
+import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, restAim, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -272,5 +272,13 @@ describe('the rig file\'s planned addresses (2026-10-15, laser-40w N852)', () =>
         const { ops, absent } = patchOps(doc, rig)
         expect(absent).toEqual([])
         expect(ops).toEqual([{ type: 'updateComponent', payload: { entityId: 'rig-laser-41', component: 'fixture', patch: { universe: 1, address: 401, mode: '32ch', dmx: null } } }])
+    })
+})
+
+describe('restAim (the scenes rest_aims, 2026-10-15)', () => {
+    it('keeps the own hang of the lamp with no rest, and gives a shared group the fan the design chose', () => {
+        expect(restAim(0, null)).toEqual({ rule: 'vertical', in_deg: 0 })
+        expect(restAim(0, { lean_deg: -24 })).toEqual({ rule: 'vertical', in_deg: 0, lean_deg: -24 })
+        expect(restAim(0, { in_deg: 30 })).toEqual({ rule: 'vertical', in_deg: 30 })
     })
 })
