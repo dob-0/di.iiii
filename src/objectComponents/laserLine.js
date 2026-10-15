@@ -163,7 +163,7 @@ export const lineLuminance = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, widt
 // 7. CORE AND HALO (2026-10-15, owner: "the lasers don't even look like lasers"). What the eye sees of a laser in haze is a
 //    thin bright CORE (the singly scattered light, 1. and 2. above, as wide as the beam) and a faint HALO around it: light
 //    that scattered more than once on its way out of the beam. The pure arithmetic of both, for the renderer (owed: the
-//    shader, laserLineMaterial.js — see docs/ai/sessions/feat-laser-lines-look-2026-10-15.md).
+//    shader, laserLineMaterial.js; the measurements are in laserLine.test.js).
 //    Core: drawn as wide as the beam, never thinner than MIN_CORE_PX pixels; what a pixel sums is kept (3.).
 //    Halo share: of the light singly scattered toward the eye, the part that scatters again over the path s it has already
 //    run in the beam's air is 1 − exp(−σs·s) (Beer–Lambert); the core keeps exp(−σs·s). Energy is kept, not lost.
