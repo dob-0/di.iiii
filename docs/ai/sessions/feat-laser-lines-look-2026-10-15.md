@@ -183,3 +183,32 @@ glow by `laserOverBloom.js`); nothing to unify. `LaserView` (the laser server's 
 - Tools: `laser-scene-shots.cjs --camera` (fixedCamera in the browser's copy + the room camera set through HdrBloom's DEV
   handle `window.__diRoom.camera`, read back into shots.json); `laser-lines-measure.py` reads a shot's own `file`;
   `before-after-sheet.py`; `picture-diff.py` (the lamp gate: changed pixels over 2 levels < 0.5 %).
+
+## The GPU look — one shot, the rest held by heat (16:0x–17:4x)
+
+- Scratch stack `lasers-look` on a snapshot of moxir-one (`sqlite3 .backup` of di.db + the files, 399 MB), lane 2.
+- Taken: ONE shot, Studio, The storm (frame 124 of 256; Green breath = 198, Second drop = 212, from the cues' holds over the
+  1116 s loop). The camera read back [0, 2.4, 6.5], not the plan's [0, 1.7, 19.8]: the Studio's camera-controls own the camera.
+  Fixed in the tool (setLookAt through `window.__diRoom.controls`), not yet seen working.
+- Held: CPU package 88–100 °C for ~90 min (lane 3's moxir-v2-11-mix room page at 119 % CPU for 40+ min, the di-show tabs,
+  4 `claude -p`); the 85 °C gate passed once (one shot) in that time. Not mine to close (lane 3, his tabs).
+- Sheet: `~/Downloads/moxir/v2-11/lasers-look.html` — your 043205 as before, the one Studio shot as after, the arithmetic.
+- Limit: node_modules is the shared link (three 0.185.1 installed, 0.186.1 locked); `toneMapAces` cites r185, the one installed.
+
+## OWED — the room page floor shots, the lamp diff, the measures (one command)
+
+```bash
+cd ~/work/di.iiii-lasers-look   # or a fresh worktree of this branch; scratch stack: see job 2's commands (snapshot, di-dev up)
+git show decae48f^:src/project/viewport/HdrBloom.jsx | sed 's/const { gl, scene, size, viewport } = useThree()/const { gl, scene, size, viewport, camera, controls } = useThree()/; s/window.__diRoom = { scene, gl }/window.__diRoom = { scene, gl, camera, controls }/' > /tmp/hb-before.jsx
+OUT=/tmp/laser-gpu BEFORE_HDRBLOOM=/tmp/hb-before.jsx scripts/measure/laser-look-gpu-chain.sh   # waits on the 85 °C gate itself
+python3 -I scripts/measure/picture-diff.py /tmp/laser-gpu/before-lamps/01-room-second-drop.png /tmp/laser-gpu/after-lamps/01-room-second-drop.png
+python3 -I scripts/measure/laser-lines-measure.py --doc <document.json> --shots /tmp/laser-gpu/after-lasers/shots.json --dir /tmp/laser-gpu/after-lasers
+```
+"Before" there = lasers inside the glow (the path until #958), same shader — the one lamp-path change of the laser work.
+
+## Review (job 3)
+
+Meant: build the drawing, see it on the GPU, sheet, docs. Happened: the drawing was already built and merged (#958/#968/#972);
+the decision is now a test (35/35), tools for the floor shots are in, ONE GPU shot (wrong camera), the rest held by heat ~90 min.
+Lesson: the brief named a PR "draft" that was merged 15 h earlier — check `gh pr view` state before planning a build (cost: none,
+caught in round 3). Lesson kept: heat first — and when another lane holds the CPU above the gate, say so early instead of waiting.
