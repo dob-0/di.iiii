@@ -175,6 +175,8 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     gizmoVisible={shared.gizmoVisible}
                     transformOp={shared.transformOp}
                     onTransformCommit={shared.onTransformCommit}
+                    onSceneOps={shared.onSceneOps}
+                    onPlayScene={shared.onPlayScene}
                     onTransformCommitMany={shared.onTransformCommitMany}
                     onTransformCancel={shared.onTransformCancel}
                     cameraView={cameraView}

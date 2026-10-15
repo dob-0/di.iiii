@@ -53,6 +53,7 @@ import { fileURLToPath } from 'node:url'
 
 import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
+import { buildLook } from '../../src/shared/buildLook.js'
 import { lookFrame, rigLooksOf, staleDeskLooks } from '../../src/rigbuild/looks.js'
 import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
@@ -329,6 +330,17 @@ export const oldEntities = (doc) => (Array.isArray(doc.entities) ? doc.entities 
     /^rig-(hazer|smoke)-/.test(e.id) || /^rig-pa-/.test(e.id) || /^rig-foh-/.test(e.id) || e.id === 'rig-ash-wall' || e.id === 'rig-tower-cube6' ||
     (e.type === 'box' && RIG_FILE_SOLIDS.test(e.id)))    // laid by a rig file: taken out, and laid again only if this file still lists it
 
+/** Which units belong to which part: `rigParts` on the show entity {part: [unitId…]}, from fixtures[].part (a laser's beams are the part `laser`). Pure. */
+export const v1RigParts = (rig, ents) => {
+    const ids = new Set(ents.filter((e) => e.type === 'spotLight').map((e) => e.id))
+    const out = {}
+    for (const f of rig.fixtures) {
+        if (isLaserType(f.type)) { for (const b of f.laser.beams) if (!b.off && ids.has(`rig-laser-${b.id}`)) (out.laser ||= []).push(`rig-laser-${b.id}`) }
+        else if (f.part && ids.has(f.id)) (out[f.part] ||= []).push(f.id)
+    }
+    return out
+}
+
 /** The looks as rig looks: every unit its own named group, aimed at its own target. Pure. */
 export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
     const units = ents.filter((e) => e.type === 'spotLight')
@@ -344,35 +356,27 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         const T = [p[0] + d[0] * 10, p[1] + d[1] * 10, p[2] + d[2] * 10]
         return { rule: 'point', x: r3(T[0] - (ctx.axis ?? 0)), y: r3(T[1]), a: r3((T[2] - ctx.stage.front) / ctx.stage.into) }
     }
+    // every unit once: its group key, its own colour, its own aim; the part it belongs to is `rigParts` (v1RigParts, which the project remembers)
+    const rigParts = v1RigParts(rig, ents)
+    const unitsOf = []
+    for (const e of units) {
+        const meta = byPart.get(e.id)
+        if (!meta) continue
+        const shared = meta.part !== 'laser' ? meta.lean : null
+        const key = shared != null
+            ? `${e.components.fixture.position.replace(/\s+/g, '-')}/${e.components.fixture.type}`
+            : groupKey(meta.part === 'laser' ? `laser-${meta.beam}` : e.id, e.components.fixture.type)
+        unitsOf.push({ id: e.id, key, colour: meta.colour, aim: shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e) })
+    }
     const lookOf = (lk) => {
-        const aims = {}
-        const colours = {}
-        const levels = {}
-        for (const e of units) {
-            const meta = byPart.get(e.id)
-            if (!meta) continue
-            const shared = meta.part !== 'laser' ? meta.lean : null
-            const key = shared != null
-                ? `${e.components.fixture.position.replace(/\s+/g, '-')}/${e.components.fixture.type}`
-                : groupKey(meta.part === 'laser' ? `laser-${meta.beam}` : e.id, e.components.fixture.type)
-            aims[key] = shared != null ? { rule: 'vertical', in_deg: shared } : aimOf(e)
-            let on = null
-            if (lk.parts) {
-                // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09: the
-                // lasers' glare share capped per look). Every rig before it holds 1.0, so their rooms do not change. A look that
-                // names the lasers' colour (`laser_colour`: the laser colour rule of moxir_v2_8_floor.py, ledger N559, 2026-10-13)
-                // gives it to every line; no rig file before it names one, so their looks do not change.
-                const lv = (pair) => (Number.isFinite(Number(pair?.[1])) ? Math.min(1, Math.max(0, Number(pair[1]))) : 1)
-                if (meta.part === 'laser') on = lk.parts.laser ? [lk.laser_colour || null, lv(lk.parts.laser)] : (lk.parts.cube6a && meta.beam === '6a' ? [null, lv(lk.parts.cube6a)] : null)
-                else on = lk.parts[meta.part] || null
-            }
-            colours[key] = ((on && on[0]) || meta.colour || '#e8e4dc').toLowerCase()
-            levels[key] = on ? on[1] : 0
-        }
+        // a laser keeps its cube's own colour; its LEVEL is the part's (a desk cap, MOXIR v2 spread 2026-10-09). A look that names the
+        // lasers' colour (`laser_colour`, ledger N559) gives it to every line. The rule itself lives in src/shared/buildLook.js, the one
+        // function the Studio's scene editor builds with too (2026-10-15).
+        const { colours, levels, aims } = buildLook(lk.parts ? lk : { ...lk, parts: {} }, rigParts, unitsOf)
+        // A look keeps its SOURCE (parts, desk_caps, laser_colour) next to what was built from it, so the Studio can edit it.
         // A MOVING look keeps its `motion` (MOXIR v2.9 scenes, 2026-10-13): the room plays it (src/rigbuild/lookMotion.js), the
-        // schema bounds it (normalizeLookMotion). Before this, only scripts/rigbuild/motion-looks.mjs re-attached it, for v1.1.
-        // A look with `heads` (moving-head patterns, feat/looks-heads-motion 2026-10-15) keeps it the same way; the schema bounds it (normalizeLookHeads).
-        return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), aims, colours, levels, ...(lk.motion ? { motion: lk.motion } : {}), ...(lk.heads ? { heads: lk.heads } : {}) }
+        // schema bounds it (normalizeLookMotion). A look with `heads` (2026-10-15) keeps it the same way (normalizeLookHeads).
+        return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), ...(lk.act != null ? { act: lk.act } : {}), aims, colours, levels, ...(lk.parts ? { parts: lk.parts } : {}), ...(lk.laser_colour ? { laser_colour: lk.laser_colour } : {}), ...(lk.desk_caps ? { desk_caps: lk.desk_caps } : {}), ...(lk.motion ? { motion: lk.motion } : {}), ...(lk.heads ? { heads: lk.heads } : {}) }
     }
     const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
     return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
@@ -649,6 +653,7 @@ const main = async () => {
         if (bar.name && doc.entities.find((e) => e.id === 'rig-crowd-barrier')?.name !== bar.name) ops.push({ type: 'updateEntity', payload: { entityId: 'rig-crowd-barrier', patch: { name: bar.name.slice(0, 200) } } })
     }
     ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigLooks', patch: looks } })
+    ops.push({ type: 'updateComponent', payload: { entityId: 'rig-show', component: 'rigParts', patch: { parts: v1RigParts(rig, ents) } } })
     // No hazer (owner 10-08: "the haze is the 4 smoke machines"): the external hazers come off the rental list, so the cards
     // page stops asking to place 6 of them.
     const rental = looksOnly ? null : doc.entities.find((e) => e.id === 'rig-show')?.components?.rentalList

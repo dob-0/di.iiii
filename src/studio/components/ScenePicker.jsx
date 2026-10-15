@@ -1,5 +1,8 @@
 import { scenesOf } from '../utils/scenesOf.js'
 import { laserUnitsOf } from '../utils/laserTest.js'
+import { Fragment, useState } from 'react'
+import SceneEditor from './SceneEditor.jsx'
+import { newSceneOps, duplicateSceneOps, deleteSceneOps, moveSceneOps } from '../utils/sceneEdit.js'
 import useRememberedOpen from '../../utils/rememberedOpen.js'
 
 // SCENES in the Studio, open by default (a work tool the owner asked for open; the visitors' view page starts clear, owner 2026-10-13
@@ -19,15 +22,19 @@ import useRememberedOpen from '../../utils/rememberedOpen.js'
 // LASER TEST (owner 2026-10-13 20:5x), a work tool beside the scenes, shown when the project has laser lines: while on, every
 // laser unit draws its whole scan field as a square on the real surfaces, labelled with its metres (LaserTest.jsx). A
 // button of the Studio's own (scc-btn), nothing written to the project.
-export default function ScenePicker({ document, current, onPick, laserTest = false, onLaserTest = null }) {
+//
+// EDIT (2026-10-15, SceneEditor.jsx): where `onApplyOps` is given, each row has an Edit button that opens the scene's editor under it,
+// and the header offers New / Duplicate / Delete / ↑ / ↓ for the scene being edited (the cue list order).
+export default function ScenePicker({ document, current, onPick, laserTest = false, onLaserTest = null, onApplyOps = null, onPlay = null }) {
     const [open, toggleOpen] = useRememberedOpen('studio-scenes', true)
+    const [editing, setEditing] = useState(null)
     const scenes = scenesOf(document)
     const hasLasers = Boolean(onLaserTest) && laserUnitsOf(document?.entities).size > 0
     if (!scenes.length && !hasLasers) return null
     const following = current === undefined
     const workLight = current === ''
     return (
-        <div role="region" aria-label="Scenes" data-testid="studio-scene-picker" className="sfp-shell scene-picker">
+        <div role="region" aria-label="Scenes" data-testid="studio-scene-picker" className={`sfp-shell scene-picker${editing ? ' scene-picker--editing' : ''}${onApplyOps ? ' scene-picker--editable' : ''}`}>
             <div className="sfp-header">
                 <span className="sfp-title">SCENES · {scenes.length}</span>
                 <button
@@ -63,6 +70,19 @@ export default function ScenePicker({ document, current, onPick, laserTest = fal
                             >
                                 Work light
                             </button>
+                            {onApplyOps && (
+                                <button type="button" className="scc-btn" title="A new, dark scene at the end of the list" onClick={() => {
+                                    const made = newSceneOps(document)
+                                    onApplyOps(made.ops)
+                                    if (made.lookId) setEditing(`cue-${made.lookId}`)
+                                }}>New scene</button>
+                            )}
+                            {onApplyOps && editing && (<>
+                                <button type="button" className="scc-btn" onClick={() => { const made = duplicateSceneOps(document, editing); onApplyOps(made.ops); if (made.lookId) setEditing(made.ops[1]?.payload?.cue?.id || null) }}>Duplicate</button>
+                                <button type="button" className="scc-btn" onClick={() => { onApplyOps(deleteSceneOps(document, editing)); setEditing(null) }}>Delete</button>
+                                <button type="button" className="scc-btn" aria-label="Move up" onClick={() => onApplyOps(moveSceneOps(document, editing, -1))}>↑</button>
+                                <button type="button" className="scc-btn" aria-label="Move down" onClick={() => onApplyOps(moveSceneOps(document, editing, 1))}>↓</button>
+                            </>)}
                             {hasLasers && (
                                 <button
                                     type="button"
@@ -81,19 +101,26 @@ export default function ScenePicker({ document, current, onPick, laserTest = fal
                             {scenes.map((s) => {
                                 const active = current === s.lookId
                                 return (
-                                    <button
-                                        key={s.cueId}
-                                        type="button"
-                                        className={`spa-item ${active ? 'active' : ''}`}
-                                        aria-pressed={active}
-                                        title={s.title}
-                                        onClick={() => onPick?.(s.lookId)}
-                                    >
-                                        <span className="scene-picker__text">
-                                            <span className="spa-name">{s.name}</span>
-                                            {s.intent && <span className="scene-picker__intent">{s.intent}</span>}
-                                        </span>
-                                    </button>
+                                    <Fragment key={s.cueId}>
+                                        <button
+                                            type="button"
+                                            className={`spa-item ${active ? 'active' : ''}`}
+                                            aria-pressed={active}
+                                            title={s.title}
+                                            onClick={() => onPick?.(s.lookId)}
+                                        >
+                                            <span className="scene-picker__text">
+                                                <span className="spa-name">{s.name}</span>
+                                                {s.intent && <span className="scene-picker__intent">{s.intent}</span>}
+                                            </span>
+                                        </button>
+                                        {onApplyOps && (
+                                            <button type="button" className={`scc-btn ${editing === s.cueId ? 'active' : ''}`} aria-expanded={editing === s.cueId} aria-label={`Edit ${s.name}`} onClick={() => setEditing(editing === s.cueId ? null : s.cueId)}>Edit</button>
+                                        )}
+                                        {onApplyOps && editing === s.cueId && (
+                                            <SceneEditor document={document} scene={s} onApplyOps={onApplyOps} onPlay={onPlay} onClose={() => setEditing(null)} />
+                                        )}
+                                    </Fragment>
                                 )
                             })}
                         </div>

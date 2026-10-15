@@ -875,6 +875,42 @@ const normalizeLookHeads = (value) => {
   }
 }
 
+// A look keeps its SOURCE next to what was built from it (2026-10-15, the Studio's scene editor, src/shared/buildLook.js): `parts`
+// {part: [hex|null, level 0..1]} (a part left out is off), `laser_colour`, `desk_caps` {part: {fader, note}} and `act`.
+const PART_KEY = /^[\w .:/()+,'#-]{1,60}$/
+const normalizeLookParts = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const out = {}
+  for (const [k, pair] of Object.entries(value).slice(0, RIG_GROUPS_CAP)) {
+    if (!PART_KEY.test(k) || !Array.isArray(pair)) continue
+    const level = planNum(pair[1])
+    out[k] = [lookHex(pair[0]) || null, level == null ? 1 : Math.min(1, Math.max(0, level))]
+  }
+  return out
+}
+const normalizeDeskCaps = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const out = {}
+  for (const [k, cap] of Object.entries(value).slice(0, RIG_GROUPS_CAP)) {
+    const fader = planNum(cap?.fader)
+    if (!PART_KEY.test(k) || fader == null) continue
+    out[k] = { fader: Math.min(1, Math.max(0, fader)), note: planText(cap.note, 240) }
+  }
+  return Object.keys(out).length ? out : null
+}
+// Which units belong to which part of a project: `rigParts` on the show entity { parts: {part: [unitId…]} }.
+const RIG_PART_UNITS_CAP = 400
+const normalizeRigParts = (value) => {
+  const source = value?.parts
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return null
+  const parts = {}
+  for (const [k, ids] of Object.entries(source).slice(0, RIG_GROUPS_CAP)) {
+    if (!PART_KEY.test(k) || !Array.isArray(ids)) continue
+    parts[k] = ids.filter((id) => typeof id === 'string' && /^[\w.:-]{1,80}$/.test(id)).slice(0, RIG_PART_UNITS_CAP)
+  }
+  return Object.keys(parts).length ? { parts } : null
+}
+
 const normalizeRigLooks = (value) => {
   if (!value || typeof value !== 'object') return null
   const looks = planList(value.looks, (look) => {
@@ -909,8 +945,12 @@ const normalizeRigLooks = (value) => {
       if (key && n != null) levels[key] = Math.min(1, Math.max(0, n))
     }
     const motion = normalizeLookMotion(look.motion)
+    const parts = normalizeLookParts(look.parts)
+    const deskCaps = normalizeDeskCaps(look.desk_caps)
+    const laserColour = lookHex(look.laser_colour)
+    const act = planNum(look.act)
     const heads = normalizeLookHeads(look.heads)
-    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(motion ? { motion } : {}), ...(heads ? { heads } : {}) }
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), ...(act != null ? { act: Math.max(0, Math.min(99, Math.round(act))) } : {}), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(parts ? { parts } : {}), ...(laserColour ? { laser_colour: laserColour } : {}), ...(deskCaps ? { desk_caps: deskCaps } : {}), ...(motion ? { motion } : {}), ...(heads ? { heads } : {}) }
   }).slice(0, RIG_LOOKS_CAP)
   if (!looks.length) return null
   return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
@@ -1138,6 +1178,12 @@ const normalizeEntity = (entity = {}) => {
     const looks = normalizeRigLooks(sourceComponents.rigLooks)
     if (looks) nextComponents.rigLooks = looks
     else delete nextComponents.rigLooks
+  }
+  // Which units belong to which part — mirror of src/shared/projectSchema.js normalizeRigParts.
+  if (sourceComponents.rigParts) {
+    const rigParts = normalizeRigParts(sourceComponents.rigParts)
+    if (rigParts) nextComponents.rigParts = rigParts
+    else delete nextComponents.rigParts
   }
   // Which rig version this project is — mirror of src/shared/projectSchema.js (RIG_BUILD.md §15).
   if (sourceComponents.rigVariant) {
@@ -2824,6 +2870,7 @@ module.exports = {
   normalizePublishState,
   normalizeProjectDocument,
   normalizeRigLooks,
+  normalizeRigParts,
   normalizeProjectNode,
   normalizeProjectEdge,
   normalizeProjectMeta,

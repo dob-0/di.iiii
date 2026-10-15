@@ -1169,6 +1169,9 @@ export default function StudioViewport({
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
     onRigLook = null,
+    // The scene editor (ScenePicker): ops through the Studio's history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
     // The Studio's laser test (a work tool, nothing written to the document): every laser unit's field as a square.
     laserTest = false,
     onLaserTest = null,
@@ -1417,7 +1420,7 @@ export default function StudioViewport({
             )}
 
             {onRigLook && (
-                <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} />
+                <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} onApplyOps={onSceneOps} onPlay={onPlayScene} />
             )}
 
             {transformStatus && (

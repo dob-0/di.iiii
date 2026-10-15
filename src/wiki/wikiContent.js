@@ -11,6 +11,7 @@ export const WIKI_CATEGORIES = [
     'Getting started',
     'Spaces & access',
     'Editing',
+    'Studio',
     'For developers'
 ]
 
@@ -2162,6 +2163,28 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['rig', 'ground', 'moving heads', 'movers', 'truss', 'laser', 'effects', 'co2', 'haze', 'spark', 'policy', 'safety', 'sign-off', 'scenes', 'loop', 'underground', 'moxir', 'minimal', 'full', 'cold white', 'deep red', 'blinder', 'versions'],
         updated: '2026-09-30'
+    },
+    {
+        id: 'studio-edit-a-scene',
+        category: 'Studio',
+        title: 'Editing a scene in the Studio',
+        summary: 'In a show project the Scenes window edits each scene: its parts, colours, levels, motion, heads, fade and hold. Play puts it on the desk.',
+        body: [
+            'A scene is a look and its cue. Open the Scenes window in the Studio (bottom left), press Edit on a scene, and its editor opens under it.',
+            {
+                list: [
+                    'Parts: one row per part of the project, with a colour (hex and a swatch) and a level from 0 to 1. “off” leaves the part out of the scene.',
+                    'Motion: the effect, its bpm, depth, how it fans across the rig and which lamp kinds move. Glitch is not allowed, sparkle runs only at 20 bpm and every other effect stops at 132 bpm, so no lamp flashes more than 3 times a second. The line under the fields says what the scene will do.',
+                    'Heads: the pattern of the moving heads, its period, pan, tilt and spread. Sweep and cross only pan, so a head that rests pointing straight up shows nothing; the editor warns.',
+                    'Cue: the fade and the hold, in seconds. Title, intent and act are text fields.',
+                    'Play: the desk’s GO on this scene.',
+                    'New scene, Duplicate, Delete and the arrows (the order of the cue list) are in the window’s buttons.'
+                ]
+            },
+            'Every change is saved through the Studio’s normal path, so it can be undone from the history, and the room and the desk pick it up the way they pick up a scene built by a script.'
+        ],
+        tags: ['studio', 'scene', 'scenes', 'light', 'cue', 'motion', 'heads', 'edit'],
+        updated: '2026-10-15'
     }
 ]
 

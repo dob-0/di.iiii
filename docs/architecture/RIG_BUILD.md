@@ -2546,3 +2546,37 @@ edits", which on a `di up --guests` install hands a guest the sign-in card on th
 - **Stars.** The operator sees a star on each non-laser brick of the SHOW list; a toggle posts the new list (at five, the oldest star leaves) and the row updates at once (window event `di:show-answer`).
 - **Tests.** `serverXR/src/showContracts.test.js` (operator only, <= 5, unknown/laser refused, shared, persisted), `showRemote.test.js`, `src/rigbuild/RoomFavourites.test.jsx`, `showApi.test.js`.
 
+
+## 25. Editing a scene in the Studio (2026-10-15)
+
+Until now a scene (a rig look and its cue) was built only by scripts. Since 2026-10-15 the Studio's Scenes window edits it, and the
+build script and the Studio build a look with the same function.
+
+**The data.** A rig look keeps its SOURCE next to what was built from it: `parts` `{part: [hex|null, level 0..1]}` (a part left out is
+off), `motion`, `heads`, `laser_colour`, `desk_caps` and `act` (schema: `normalizeRigLooks`, bounded; `shared/projectSchema.cjs` mirrors
+it). The project remembers which units belong to which part: `rigParts` `{ parts: {part: [unitId…]} }` on the show entity
+(`normalizeRigParts`; `epic-build.mjs` writes it from `fixtures[].part`, a laser's beams are the part `laser`). A project without it: each
+unit's `fixture.part` if it has one, else no parts, and the editor edits per unit (a look with no `parts` is seeded from its built
+levels). Written by `epic-build.mjs --looks-only --apply`, like the looks.
+
+**The one function.** `src/shared/buildLook.js` `buildLook(source, rigParts, units)` → `{colours, levels, aims}`. `epic-build.mjs`
+(`v1Looks`) and `src/studio/utils/sceneEdit.js` both call it. Parity (`src/shared/buildLook.test.js`): the 51 looks of
+`scripts/place/rigs/moxir-v2-11-2026-10-15.json` built by the script are byte-identical to what the script gave before the refactor
+(sha256 of colours, levels and aims), and `buildLook` from a stored look's source and the document alone gives the same for every look
+(0 differences).
+
+**The editor.** `ScenePicker.jsx` → `SceneEditor.jsx`: Edit on a scene row opens title, act, intent; one row per part (hex + swatch,
+level slider + number, "off"); motion (mode, bpm, depth, spatial, kinds, still); heads (pattern, period, pan, tilt, spatial); cue fade
+and hold; Play. New scene, Duplicate, Delete and the arrows (cue order) are the window's buttons. Every change is ops through the
+Studio's `applyLocalOps` (one undo each), and the look is rebuilt by `buildLook` in the same op.
+- **The flash rule is enforced, not only shown** (`sceneEdit.js` `FLASH`): glitch never (greyed, and `changeSceneOps` refuses it);
+  sparkle only at 20 bpm; every other mode at most 132 bpm (a bpm above it is clamped). Source: `scenes-design-report.md` "Decisions"
+  (flash ≤ 3 a second per lamp, `flashrate.cjs` on `fx.js`).
+- **Heads:** sweep and cross only pan; the editor warns that a head resting vertical shows nothing.
+- **Play** = the desk's GO on this cue: `playScene.js` loads the project's cue list on the desk (`deskCues.load`, as the cards page does)
+  and goes to the cue's index. With no desk it says why in the editor.
+
+**Limits, stated.** A look's lamps are found by the keys in its `aims`; a key the schema drops (`lookKey` allows no parentheses, so
+`named-v1-plane-1-(behind-the-DJ)-in0/up-b380f` of the v2-11 rig is dropped on every save, before this change too) is not rebuilt: owed,
+a separate fix with the owner's look (it would light those lamps). `desk_caps` is kept and shown in the data, not yet edited in the UI.
+Studio edits do not re-load the desk's cue list by themselves; Play does.
