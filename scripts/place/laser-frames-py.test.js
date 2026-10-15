@@ -58,6 +58,26 @@ describe.skipIf(!hasPython)('laser_frames.py', () => {
         expect(JSON.stringify(run({ ...base, pattern: 'comb', tempo: { clock: 'master', bpm: 132, beats: 4 }, hits: { per_beat: 2, duty: 0.5 } }).summary.fails)).toContain('flashes/s')
         expect(JSON.stringify(run({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 22, spread_deg: 2 }).summary.fails)).toContain('field')
     })
+    it('blanks the move between the poses of a sheet: every lit segment joins two points of one pose', async () => {
+        const { scanLines } = await import('../../src/objectComponents/laserLine.js')
+        const { status, written } = run({ ...base, pattern: 'sky', phase: 'unison', pitch_deg: 4, yaw_deg: 9, spread_deg: 3, amplitude_deg: 0.75, tempo: { clock: 'master', bpm: 33, beats: 16 } })
+        expect(status).toBe(0)
+        const frames = written.fixtures[0].laser.beams[0].frames.list.filter((f) => f.length > 5)
+        expect(frames.length).toBeGreaterThan(0)
+        for (const f of frames) {
+            // a pose = a blank point then its lit points; the blank sits on the pose's first point (no lit jump into it)
+            const starts = f.flatMap((p, i) => (p[2] === 0 ? [i] : []))
+            expect(starts[0]).toBe(0)
+            for (const i of starts) expect(f[i + 1].slice(0, 2)).toEqual(f[i].slice(0, 2))
+            // the room's reading: no lit sub-ray wider than one pose's own segments (a lit retrace would span the sheet)
+            const lit = scanLines(f, { fieldHalfDeg: 18.5 })
+            expect(lit.length).toBeGreaterThan(0)
+            for (let i = 0; i < f.length; i += 1) {
+                const a = f[i]; const b = f[(i + 1) % f.length]
+                if (b[2] > 0 && a[2] > 0) expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeLessThan(0.2)
+            }
+        }
+    })
     it('inverts fieldDirection exactly', () => {
         const code = 'import importlib.util as u,sys;s=u.spec_from_file_location("m",sys.argv[1]);m=u.module_from_spec(s);s.loader.exec_module(m)\n' +
             'r=[-1.5795,0.02,-0.03];w=m.world_of_field(0.31,-0.12,r,18.5);x,y=m.field_point(w,r,18.5);print(abs(x-0.31)+abs(y+0.12))'
