@@ -1873,17 +1873,25 @@ export default function LiveProjectScene({
     }, [entities])
 
     // Start a little south of the entrance gate (if any), facing into the space.
+    // Once per entry and per gate position: `entities` is a new array on every
+    // document edit (a show scene change writes the lamps), so keying on the
+    // gateEntity object put the walker back at the gate every few seconds --
+    // "walk / fly is stuck" (room page, 2026-10-15).
+    const gateArrivalRef = useRef(null)
+    const gatePos = gateEntity?.components?.transform?.position
+    const gateKey = Array.isArray(gatePos) ? `${gateEntity.id}|${gatePos[0]}|${gatePos[2]}` : null
     useEffect(() => {
-        if (!interactive) return
-        if (!gateEntity) return
-        const pos = gateEntity.components?.transform?.position
-        if (!Array.isArray(pos)) return
+        if (!interactive) { gateArrivalRef.current = null; return }
+        if (!gateKey) return
+        if (gateArrivalRef.current === gateKey) return
+        gateArrivalRef.current = gateKey
+        const pos = gatePos
         // Mutate in place for the same reason as the spawn effect above:
         // replacing playerRef.current orphans Walker's mount-time look
         // closure (mouse/touch-look silently dead), and a plain object
         // literal would also drop altY.
         Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
-    }, [gateEntity, interactive])
+    }, [gateKey, gatePos, interactive])
 
     // Neither a gate nor an authored spawn: stand where the WORK is, not at the
     // world origin. A space whose content happens to sit away from 0,0 dropped
