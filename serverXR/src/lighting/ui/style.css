@@ -1438,7 +1438,7 @@ body.space .stage { cursor: grab; }
 .cuestrip[hidden] { display: none; }
 
 /* ---- This node (caps.node): the hardware node's own settings, a fold under Input ---- */
-.nodedetails .nodegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1px; background: var(--line); max-height: 60vh; }
+.nodedetails .nodegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1px; background: var(--line); max-height: 70vh; }
 .nodegroup { background: var(--pane); padding: 8px 12px 10px; display: grid; gap: 6px; align-content: start; min-width: 0; }
 .nodegroup h3 { margin: 0; font-size: 11px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: .06em; }
 .nodegroup input[type="text"], .nodegroup input[type="password"], .nodegroup input[type="number"], .nodegroup select { min-width: 0; max-width: 100%; }
