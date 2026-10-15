@@ -1,4 +1,4 @@
-# feat/room-page-whole-building-2026-10-15
+## 2026-10-15 — The room page shows the whole building: Cut off by default, a Cut item in Display
 
 Owner 15:2x, a room page seen from above the roof: "why walls not visible". Cause: the smart view's cutaway (roof and the walls facing the camera cut) applied on the public page too. Rule (07:2x, N730): the showcase link shows the building whole; the cutaway is a work reading.
 
