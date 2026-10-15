@@ -7,7 +7,8 @@
  *
  * plan.json: [{ "name": "v2-10-floor15-lite", "project": "moxir-v2-10", "look": "red-wave", "quality": "lite"|"full",
  *               "camera": { "position": [x,y,z], "target": [x,y,z], "fov": 70 } | null,     // null = the document's own
- *               "docFile": "<saved document.json>" }]                                       // optional: served instead
+ *               "docFile": "<saved document.json>",
+ *               "query": "render=tech" }]                                       // optional: served instead
  * The browser's copy of the project document is changed on the way in (Playwright intercepts GET
  * /api/projects/<id>/document, as scripts/measure/lite-vs-full-gpu.cjs does): one cue holds the look on the show clock
  * (docFor below is that script's rule), and presentationState.fixedCamera is the plan's camera.
@@ -105,7 +106,7 @@ const main = async () => {
             r.cool = await waitCool(HEAT_LIMIT, 900)
             if (!r.cool.ok) { r.error = `refused: package ${r.cool.now} C after ${r.cool.waited_s} s`; save(); continue }
             current = shot
-            const url = `${BASE}/${SPACE}/${shot.project}?quality=${shot.quality}`
+            const url = `${BASE}/${SPACE}/${shot.project}?quality=${shot.quality}${shot.query ? `&${shot.query}` : ''}`
             r.url = url
             const t0 = Date.now()
             await page.goto(url, { waitUntil: 'load', timeout: 90000 })
