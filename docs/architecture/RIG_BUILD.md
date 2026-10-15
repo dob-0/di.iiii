@@ -2322,6 +2322,17 @@ through the DJ lights the air behind him). Auto-exposure (an eye adapts to the r
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
 
+**Laser lines in the room's picture — why they read as fog, and what is owed (2026-10-15).** A laser is drawn as a line
+source (`src/objectComponents/laserLine.js`, `laserLineMaterial.js`): a camera-facing ribbon ≥ 1.5 px wide with a soft
+parabolic cross profile, its intensity per length σs·p(θ)·Φ·T/sinθ kept at any drawn width. From the floor (fov 70°, 900 px:
+1.556 mrad a pixel) MOXIR's 36 cube lines over their first 20 m are 0.4–2.3 px apart and each 6–7 × the screen's white
+after exposure 3.5 (`scripts/measure/laser-look-diagnose.mjs`): the ribbons overlap, add, clip flat under ACES, and the
+bloom spreads the clipped band into a glow — a comb an eye resolves (~0.3 mrad) becomes a green fog. Landed: the core/halo
+arithmetic (`laserLine.js` §7 — core ≥ 1 px as wide as the beam; halo share 1 − exp(−σs·s), Beer–Lambert; halo radius by
+Fermi–Eyges small-angle multiple scattering, capped at half the gap to the next line). OWED: the shader drawing core + halo +
+the end spot, the look decision on lines far above white (bloom or a separate tone map — the owner's call), and GPU
+before/after renders. Hand-over: `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md`.
+
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
 The data layer under the owner's two scene screens (2026-09-30: A = a deck of scenes, B = a cue timeline over
