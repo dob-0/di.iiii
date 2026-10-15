@@ -1,0 +1,568 @@
+{
+ "kind": "beam380",
+ "code": "UP-B380F",
+ "maker": "U-Plus Lighting",
+ "model": "IP65 380W Beam",
+ "manual": {
+  "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+  "product_page": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html (model no. UP-B380F, 16 CH)",
+  "date": "2024-01 (upload path)",
+  "file": "~/Downloads/moxir/devices/380-IP-BEAM.pdf",
+  "read": "2026-10-15, pdftotext, \"4.DMX Channels\" (16 channels), values verbatim; ranges the manual does not list (ch 2: 5-50, 241-251) are left out, not filled",
+  "basis": "APPROVED"
+ },
+ "howToRead": "value ranges are [from, to, meaning]; status APPROVED = owner's eye and word 2026-10-15; ARCHIVED = kept, never the default (the 10-09 walk map lives in src/rigbuild/fixtureTypes.js ARCHIVED_CHANNEL_LISTS as mode walk-2026-10-09)",
+ "approved": "owner, 2026-10-15 17:1x: \"yes the chart is right\"",
+ "archive": {
+  "indoor_380_beam": "the indoor U-Plus \"380 Beam\" manual (16/20 ch, colour first) is NOT this unit (IP20, 12 kg); its chart was dropped from this file on 2026-10-15 — the manual stays at ~/Downloads/moxir/devices/380-Beam.pdf"
+ },
+ "modes": {
+  "16": {
+   "status": "APPROVED",
+   "note": "the desk sends this chart (pan ch 10, tilt ch 12, lamp ch 16 held at 0). Setup-day check #1: pan on ch 10 vs ch 1 — if the head follows ch 1, switch the fixtures to mode walk-2026-10-09",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Colour",
+     "ranges": [
+      [
+       0,
+       4,
+       "white"
+      ],
+      [
+       5,
+       9,
+       "white + colour 1"
+      ],
+      [
+       10,
+       14,
+       "colour 1"
+      ],
+      [
+       15,
+       19,
+       "colour 1 + colour 2"
+      ],
+      [
+       20,
+       24,
+       "colour 2"
+      ],
+      [
+       25,
+       29,
+       "colour 2 + colour 3"
+      ],
+      [
+       30,
+       34,
+       "colour 3"
+      ],
+      [
+       35,
+       39,
+       "colour 3 + colour 4"
+      ],
+      [
+       40,
+       44,
+       "colour 4"
+      ],
+      [
+       45,
+       49,
+       "colour 4 + colour 5"
+      ],
+      [
+       50,
+       54,
+       "colour 5"
+      ],
+      [
+       55,
+       59,
+       "colour 5 + colour 6"
+      ],
+      [
+       60,
+       64,
+       "colour 6"
+      ],
+      [
+       65,
+       69,
+       "colour 6 + colour 7"
+      ],
+      [
+       70,
+       74,
+       "colour 7"
+      ],
+      [
+       75,
+       79,
+       "colour 7 + colour 8"
+      ],
+      [
+       80,
+       84,
+       "colour 8"
+      ],
+      [
+       85,
+       89,
+       "colour 8 + colour 9"
+      ],
+      [
+       90,
+       94,
+       "colour 9"
+      ],
+      [
+       95,
+       99,
+       "colour 9 + colour 10"
+      ],
+      [
+       100,
+       104,
+       "colour 10"
+      ],
+      [
+       105,
+       109,
+       "colour 10 + colour 11"
+      ],
+      [
+       110,
+       114,
+       "colour 11"
+      ],
+      [
+       115,
+       119,
+       "colour 11 + colour 12"
+      ],
+      [
+       120,
+       124,
+       "colour 12"
+      ],
+      [
+       125,
+       129,
+       "colour 12 + colour 13"
+      ],
+      [
+       130,
+       134,
+       "colour 13"
+      ],
+      [
+       135,
+       139,
+       "colour 13 + white"
+      ],
+      [
+       140,
+       199,
+       "rotate forward (fast to slow)"
+      ],
+      [
+       200,
+       255,
+       "rotate reverse (slow to fast)"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Strobe",
+     "ranges": [
+      [
+       0,
+       0,
+       "close"
+      ],
+      [
+       1,
+       4,
+       "open"
+      ],
+      [
+       51,
+       240,
+       "slow strobe to fast strobe"
+      ],
+      [
+       252,
+       255,
+       "open"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Dimmer",
+     "ranges": [
+      [
+       0,
+       255,
+       "0-100 %"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "Gobo",
+     "ranges": [
+      [
+       0,
+       4,
+       "white"
+      ],
+      [
+       5,
+       9,
+       "gobo 1"
+      ],
+      [
+       10,
+       14,
+       "gobo 2"
+      ],
+      [
+       15,
+       19,
+       "gobo 3"
+      ],
+      [
+       20,
+       24,
+       "gobo 4"
+      ],
+      [
+       25,
+       29,
+       "gobo 5"
+      ],
+      [
+       30,
+       34,
+       "gobo 6"
+      ],
+      [
+       35,
+       39,
+       "gobo 7"
+      ],
+      [
+       40,
+       44,
+       "gobo 8"
+      ],
+      [
+       45,
+       49,
+       "gobo 9"
+      ],
+      [
+       50,
+       54,
+       "gobo 10"
+      ],
+      [
+       55,
+       59,
+       "gobo 11"
+      ],
+      [
+       60,
+       64,
+       "gobo 12"
+      ],
+      [
+       65,
+       69,
+       "gobo 13"
+      ],
+      [
+       70,
+       128,
+       "rotate forward (fast to slow)"
+      ],
+      [
+       129,
+       131,
+       "white"
+      ],
+      [
+       132,
+       190,
+       "rotate reverse (slow to fast)"
+      ],
+      [
+       191,
+       195,
+       "shake slow to fast, gobo 1"
+      ],
+      [
+       196,
+       200,
+       "shake slow to fast, gobo 2"
+      ],
+      [
+       201,
+       205,
+       "shake slow to fast, gobo 3"
+      ],
+      [
+       206,
+       210,
+       "shake slow to fast, gobo 4"
+      ],
+      [
+       211,
+       215,
+       "shake slow to fast, gobo 5"
+      ],
+      [
+       216,
+       220,
+       "shake slow to fast, gobo 6"
+      ],
+      [
+       221,
+       225,
+       "shake slow to fast, gobo 7"
+      ],
+      [
+       226,
+       230,
+       "shake slow to fast, gobo 8"
+      ],
+      [
+       231,
+       235,
+       "shake slow to fast, gobo 9"
+      ],
+      [
+       236,
+       240,
+       "shake slow to fast, gobo 10"
+      ],
+      [
+       241,
+       245,
+       "shake slow to fast, gobo 11"
+      ],
+      [
+       246,
+       250,
+       "shake slow to fast, gobo 12"
+      ],
+      [
+       251,
+       255,
+       "shake slow to fast, gobo 13"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Prism",
+     "ranges": [
+      [
+       0,
+       63,
+       "none"
+      ],
+      [
+       64,
+       127,
+       "insert prism 1"
+      ],
+      [
+       128,
+       191,
+       "insert prism 2"
+      ],
+      [
+       192,
+       255,
+       "insert prism 1 and prism 2"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "Prism 1 rotation",
+     "ranges": [
+      [
+       0,
+       127,
+       "0-400 degrees"
+      ],
+      [
+       128,
+       191,
+       "rotate forward (fast to slow)"
+      ],
+      [
+       192,
+       255,
+       "rotate reverse (slow to fast)"
+      ]
+     ]
+    },
+    {
+     "ch": 7,
+     "function": "Prism 2 rotation",
+     "ranges": [
+      [
+       0,
+       127,
+       "0-400 degrees"
+      ],
+      [
+       128,
+       191,
+       "rotate forward (fast to slow)"
+      ],
+      [
+       192,
+       255,
+       "rotate reverse (slow to fast)"
+      ]
+     ]
+    },
+    {
+     "ch": 8,
+     "function": "Frost",
+     "ranges": [
+      [
+       0,
+       127,
+       "no function"
+      ],
+      [
+       128,
+       191,
+       "insert frost"
+      ],
+      [
+       192,
+       255,
+       "insert colourful"
+      ]
+     ]
+    },
+    {
+     "ch": 9,
+     "function": "Focus",
+     "ranges": [
+      [
+       0,
+       255,
+       "focus"
+      ]
+     ]
+    },
+    {
+     "ch": 10,
+     "function": "Pan",
+     "ranges": [
+      [
+       0,
+       255,
+       "pan"
+      ]
+     ]
+    },
+    {
+     "ch": 11,
+     "function": "Pan fine",
+     "ranges": [
+      [
+       0,
+       255,
+       "pan fine"
+      ]
+     ]
+    },
+    {
+     "ch": 12,
+     "function": "Tilt",
+     "ranges": [
+      [
+       0,
+       255,
+       "tilt"
+      ]
+     ]
+    },
+    {
+     "ch": 13,
+     "function": "Tilt fine",
+     "ranges": [
+      [
+       0,
+       255,
+       "tilt fine"
+      ]
+     ]
+    },
+    {
+     "ch": 14,
+     "function": "Pan/Tilt speed",
+     "ranges": [
+      [
+       0,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 15,
+     "function": "Reset",
+     "ranges": [
+      [
+       26,
+       76,
+       "reset effects over 3 s"
+      ],
+      [
+       77,
+       127,
+       "reset XY over 3 s"
+      ],
+      [
+       128,
+       255,
+       "reset all over 3 s"
+      ]
+     ]
+    },
+    {
+     "ch": 16,
+     "function": "Lamp",
+     "ranges": [
+      [
+       10,
+       100,
+       "lamp off over 3 s"
+      ],
+      [
+       101,
+       255,
+       "lamp on over 3 s"
+      ]
+     ]
+    }
+   ]
+  }
+ }
+}

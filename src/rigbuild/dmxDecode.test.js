@@ -177,8 +177,8 @@ describe('the assumed profiles', () => {
         // festival (TESTED, 2026-10-01) fill the real mode; the assumed ones stay after it.
         const b = type('UP-B380F')
         const real16 = b.modes.find((m) => m.name === '16ch')
-        expect(real16.channelsSource.basis).toBe('TESTED')
-        expect(real16.channels.map((c) => c.role).slice(0, 4)).toEqual(['pan', 'tilt', 'panFine', 'tiltFine'])
+        expect(real16.channelsSource.basis).toBe('APPROVED')
+        expect(real16.channels.map((c) => c.role).slice(0, 4)).toEqual(['color', 'strobe', 'dimmer', 'gobo'])
         expect(b.defaultMode).toBe('16ch')
         expect(b.assumedMode).toBe('16ch-assumed')
         const par = type('UP-PL5403')

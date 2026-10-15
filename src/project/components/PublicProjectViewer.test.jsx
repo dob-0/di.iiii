@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
@@ -66,8 +67,12 @@ vi.mock('../../raw/PublicGraphSurface.jsx', () => ({
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
     default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines, smartView }) {
+        const layers = smartView?.layers
+        const onBuilding = smartView?.onBuilding
+        useEffect(() => { if (globalThis.__mockBuilding) onBuilding?.(true) }, [onBuilding])
         return (
             <div>
+                <div data-testid="viewport-layers">{`cut:${layers?.cut !== false} roof:${layers?.roof !== false}`}</div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
                 <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
                 <div data-testid="viewport-timelines">{`play:${Boolean(playTimelines)}`}</div>
@@ -806,6 +811,36 @@ describe('PublicProjectViewer', () => {
             // the versions chip is inside the left group (so it can take an ellipsis before the bar wraps), the Display chip in the right
             expect(screen.getByTestId('scene-bar-left').contains(screen.getByTestId('rig-versions-chip'))).toBe(true)
             expect(screen.getByTestId('scene-bar-right').contains(screen.getByTestId('display-chip'))).toBe(true)
+        })
+        describe('the building stands whole on the room page (owner 2026-10-15)', () => {
+            const openDisplay = async (search = '') => {
+                globalThis.__mockBuilding = true
+                window.history.replaceState(null, '', `/main/p/live-project${search}`)
+                await visitRig()
+                fireEvent.click(screen.getByTestId('display-chip'))
+            }
+            afterEach(() => { globalThis.__mockBuilding = false; window.history.replaceState(null, '', '/') })
+            it('Cut starts off, with no address parameter', async () => {
+                await openDisplay()
+                expect(await screen.findByTestId('viewport-layers')).toHaveTextContent('cut:false')
+                expect(screen.getByTestId('layer-cut').getAttribute('aria-pressed')).toBe('false')
+                expect(window.location.search).toBe('')
+            })
+            it('?layers= names the layers and wins', async () => {
+                await openDisplay('?layers=roof,walls,machines,outside,cut')
+                expect(await screen.findByTestId('viewport-layers')).toHaveTextContent('cut:true')
+            })
+            it('the Cut item toggles the cutaway and writes the address', async () => {
+                await openDisplay()
+                const cut = await screen.findByTestId('layer-cut')
+                expect(cut.title).toBe('Cut away the roof and the walls facing you from outside')
+                fireEvent.click(cut)
+                expect(screen.getByTestId('viewport-layers')).toHaveTextContent('cut:true')
+                expect(new URLSearchParams(window.location.search).get('layers')).toBe('roof,walls,machines,outside,cut')
+                fireEvent.click(screen.getByTestId('layer-cut'))
+                expect(screen.getByTestId('viewport-layers')).toHaveTextContent('cut:false')
+                expect(window.location.search).toBe('')
+            })
         })
         it('the Display menu lists its items as one width on the chip\'s left edge, rectangles', async () => {
             await visitRig()

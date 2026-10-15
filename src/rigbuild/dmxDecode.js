@@ -266,7 +266,9 @@ const opticsAt = (spec, at) => {
     const p2 = caps.find((c) => c.cap?.prism2)
     if (p2 && at[p2.role] >= (p2.cap.prism2.in?.from ?? 128)) optics.honeycomb = { rotation: rotationOf(2) }
     const frost = caps.find((c) => c.cap?.frost)
-    if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
+    // a chart that states the frost's range (an insert, not a curve) is read as in/out; one that does not is read as linear
+    if (frost && frost.cap.frost.from != null) { if (at[frost.role] >= frost.cap.frost.from && at[frost.role] <= frost.cap.frost.to) optics.frost = 1 }
+    else if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
     return Object.keys(optics).length ? optics : null
 }
 
@@ -357,6 +359,20 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         const scale = has('dimmer') || level == null ? 1 : level
         if (has('warm')) out.warm = Math.round(((1 - f) / top) * 255 * scale)
         if (has('cool')) out.cool = Math.round((f / top) * 255 * scale)
+    }
+    // A laser's own colour slots (cap.laserColour) and its X/Y position (cap.aim, 0-125 by hand, pan/tilt in
+    // degrees from home mapped over ±halfDeg, centre exact): the static beam's bytes. Never read back by decode.
+    const laserColour = Object.values(spec).find((c) => c.cap?.laserColour)
+    if (laserColour && rgb) {
+        const v = nearestSlot(laserColour.cap.laserColour, rgb)
+        if (v != null) out[laserColour.role] = v
+    }
+    for (const c of Object.values(spec)) {
+        const a = c.cap?.aim
+        const deg = a ? (a.axis === 'x' ? want.pan : want.tilt) : null
+        if (deg == null) continue
+        const t = Math.max(-1, Math.min(1, Number(deg) / a.halfDeg))
+        out[c.role] = Math.round(a.centre + t * (t >= 0 ? a.to - a.centre : a.centre - a.from))
     }
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (cto && rgb) out[cto.role] = 0
