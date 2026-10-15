@@ -62,7 +62,72 @@ const LASER_COLOURS = [
     { from: 102, to: 118, colour: '#00ffff', name: 'cyan' }
 ]
 export const TESTED_CHANNEL_LISTS = {
+    'UP-PL5403': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Wash 8ch". Channels 7-8 were never used there and their
+            // meaning was not written down: aux, not guessed.
+            8: [
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'r', label: 'Red' },
+                { role: 'g', label: 'Green' },
+                { role: 'b', label: 'Blue' },
+                { role: 'w', label: 'White' },
+                { role: 'strobe', label: 'Strobe' },
+                // U-Plus IP PAR-54X3 8-ch chart (APPROVED by the owner 2026-10-15, scripts/place/fixtures/charts/up-pl5403.json): 7 = function
+                // choice (0-50 = channels 1-7 control), 8 = its speed. The desk never uses them: both rest at 0, so
+                // the colour is the one set on channels 1-6. Roles stay aux1/aux2 (a desk that holds this profile keeps it).
+                { role: 'aux1', label: 'Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)', default: 0 },
+                { role: 'aux2', label: 'Function speed (0; never sent)', default: 0 }
+            ]
+        }
+    },
+    'UP-LA40WF': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Laser 32ch". Ch 1 is named dimmer (as on that desk) so master
+            // and blackout reach it. The per-colour dimmers run 0 = BRIGHTEST, so they are
+            // plain channels, never the r/g/b roles. A laser is held dark by
+            // deskLookValues.js (every channel 0) until the IEC 60825-1 sign-off.
+            // STATIC BEAM (the entry lasers, one fixed beam each, 2026-10-15): the channels REST at the
+            // values a static beam needs, so only ch 1 (dimmer) decides lit or dark — ch 2 = 200 (built-in
+            // graphics), ch 3 = 0 (graphic 1, the first of the chart: the manual lists no graphic names, so which one is a
+            // single line or dot is ASSUMED, walk it on setup day), ch 4 = 0 (normal display; owner 2026-10-15),
+            // ch 5 colour (cap.laserColour), ch 6/7 position from the aim (cap.aim: 0-125 by hand, 64 = centre,
+            // the scan half-angle is fixtures.json laser.scan_field_half_deg, ASSUMED), ch 16-18 = 0 (brightest),
+            // everything else 0, ch 20-32 = 0 (the second graphic stays off). Maker chart:
+            // scripts/place/fixtures/charts/up-la40wf.json (APPROVED by the owner 2026-10-15 as the IP-LL40 in 32-ch mode; the tested values below agree with it).
+            32: [
+                { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
+                { ...laserChannel(2, 'Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, 200-255 built-in graphics; static beam 200)'), default: 200 },
+                { ...laserChannel(3, 'Graphic select (one graphic per two values; static beam 0 = graphic 1)'), default: 0 },
+                { ...laserChannel(4, 'Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 0)'), default: 0 },
+                { ...laserChannel(5, 'Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)'), default: 8, cap: { laserColour: LASER_COLOURS } },
+                { ...laserChannel(6, 'X position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'x', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
+                { ...laserChannel(7, 'Y position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'y', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
+                ...[8, 9, 10].map((n) => laserChannel(n, `Ch ${n}`)),
+                laserChannel(11, 'Centre rotation (150 slow clockwise)'),
+                laserChannel(12, 'Ch 12'),
+                laserChannel(13, 'Wave 1'),
+                laserChannel(14, 'Wave 2'),
+                laserChannel(15, 'Strobe'),
+                laserChannel(16, 'Red level (0 brightest)'),
+                laserChannel(17, 'Green level (0 brightest)'),
+                laserChannel(18, 'Blue level (0 brightest)'),
+                laserChannel(19, 'Ch 19'),
+                ...Array.from({ length: 13 }, (_, i) => laserChannel(20 + i, i === 2 ? 'Graphic 2 colour (mirror ch 5)' : `Graphic 2, ch ${20 + i}`))
+            ]
+        }
+    }
+}
+
+// ARCHIVED modes: kept selectable (`mode: 'walk-2026-10-09'`), never the default, never exported (gdtf.js).
+// Each carries its reason (owner's rule 2026-10-15: every mark reads APPROVED or ARCHIVED).
+export const ARCHIVED_CHANNEL_LISTS = {
     'UP-B380F': {
+        name: 'walk-2026-10-09',
+        footprint: 16,
+        reason: 'the desk profile walked on Sevan units 2026-10-09 (ch 1-10); replaced as the default by the unit\'s own manual chart (owner 2026-10-15); pan was ch 1 there, ch 10 in the manual — setup-day check #1 decides',
         ...SEVAN,
         modes: {
             // Desk profile "Beam 16ch", the map from its manual: strobe 255 = open,
@@ -90,63 +155,6 @@ export const TESTED_CHANNEL_LISTS = {
                 { role: 'aux2', label: 'Prism 2 rotation', cap: { prismRotation: { prism: 2, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
                 { role: 'focus', label: 'Focus' },
                 { role: 'control', label: 'Reset (always 0)', default: 0 }
-            ]
-        }
-    },
-    'UP-PL5403': {
-        ...SEVAN,
-        modes: {
-            // Desk profile "Wash 8ch". Channels 7-8 were never used there and their
-            // meaning was not written down: aux, not guessed.
-            8: [
-                { role: 'dimmer', label: 'Dimmer' },
-                { role: 'r', label: 'Red' },
-                { role: 'g', label: 'Green' },
-                { role: 'b', label: 'Blue' },
-                { role: 'w', label: 'White' },
-                { role: 'strobe', label: 'Strobe' },
-                // U-Plus IP PAR-54X3 8-ch chart (CANDIDATE, scripts/place/fixtures/charts/up-pl5403.json): 7 = function
-                // choice (0-50 = channels 1-7 control), 8 = its speed. The desk never uses them: both rest at 0, so
-                // the colour is the one set on channels 1-6. Roles stay aux1/aux2 (a desk that holds this profile keeps it).
-                { role: 'aux1', label: 'Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)', default: 0 },
-                { role: 'aux2', label: 'Function speed (0; never sent)', default: 0 }
-            ]
-        }
-    },
-    'UP-LA40WF': {
-        ...SEVAN,
-        modes: {
-            // Desk profile "Laser 32ch". Ch 1 is named dimmer (as on that desk) so master
-            // and blackout reach it. The per-colour dimmers run 0 = BRIGHTEST, so they are
-            // plain channels, never the r/g/b roles. A laser is held dark by
-            // deskLookValues.js (every channel 0) until the IEC 60825-1 sign-off.
-            // STATIC BEAM (the entry lasers, one fixed beam each, 2026-10-15): the channels REST at the
-            // values a static beam needs, so only ch 1 (dimmer) decides lit or dark — ch 2 = 200 (built-in
-            // graphics), ch 3 = 0 (graphic 1), ch 4 = 192 (point display: the graphic drawn as dots — the
-            // manual lists no graphic names, so which graphic is "a dot" is ASSUMED, walk it on setup day),
-            // ch 5 colour (cap.laserColour), ch 6/7 position from the aim (cap.aim: 0-125 by hand, 64 = centre,
-            // the scan half-angle is fixtures.json laser.scan_field_half_deg, ASSUMED), ch 16-18 = 0 (brightest),
-            // everything else 0, ch 20-32 = 0 (the second graphic stays off). Maker chart:
-            // scripts/place/fixtures/charts/up-la40wf.json (CANDIDATE; the tested values below agree with it).
-            32: [
-                { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
-                { ...laserChannel(2, 'Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, 200-255 built-in graphics; static beam 200)'), default: 200 },
-                { ...laserChannel(3, 'Graphic select (one graphic per two values; static beam 0 = graphic 1)'), default: 0 },
-                { ...laserChannel(4, 'Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 192)'), default: 192 },
-                { ...laserChannel(5, 'Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)'), default: 8, cap: { laserColour: LASER_COLOURS } },
-                { ...laserChannel(6, 'X position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'x', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
-                { ...laserChannel(7, 'Y position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'y', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
-                ...[8, 9, 10].map((n) => laserChannel(n, `Ch ${n}`)),
-                laserChannel(11, 'Centre rotation (150 slow clockwise)'),
-                laserChannel(12, 'Ch 12'),
-                laserChannel(13, 'Wave 1'),
-                laserChannel(14, 'Wave 2'),
-                laserChannel(15, 'Strobe'),
-                laserChannel(16, 'Red level (0 brightest)'),
-                laserChannel(17, 'Green level (0 brightest)'),
-                laserChannel(18, 'Blue level (0 brightest)'),
-                laserChannel(19, 'Ch 19'),
-                ...Array.from({ length: 13 }, (_, i) => laserChannel(20 + i, i === 2 ? 'Graphic 2 colour (mirror ch 5)' : `Graphic 2, ch ${20 + i}`))
             ]
         }
     }
@@ -194,10 +202,21 @@ const modesOf = (kind) => {
     // The ASSUMED test modes (assumedProfiles.js, RIG_BUILD.md §18.1) come AFTER the
     // real ones, so a lamp's default is still the maker's mode, and they are never
     // mistaken for it: `basis: 'ASSUMED'`, a name ending `-assumed`, their words.
-    return [...real, ...assumedModesOf(kind.code)]
+    const archived = ARCHIVED_CHANNEL_LISTS[kind.code]
+    const kept = archived ? [{
+        name: archived.name,
+        footprint: archived.footprint,
+        channels: archived.modes[archived.footprint].map((c) => ({ ...c })),
+        channelsSource: { fixture: archived.fixture, url: archived.url, licence: archived.licence, basis: 'ARCHIVED' },
+        src: spec?.src ?? null,
+        basis: 'ARCHIVED',
+        archived: true,
+        reason: archived.reason
+    }] : []
+    return [...real, ...kept, ...assumedModesOf(kind.code)]
 }
 
-const realModes = (modes) => modes.filter((m) => !isAssumedMode(m))
+const realModes = (modes) => modes.filter((m) => !isAssumedMode(m) && !m.archived)
 
 const MAKER_UPLIGHT = 'UPlight Stage Equipment (Guangzhou) Co., Ltd.'
 
@@ -214,6 +233,36 @@ const LASERCUBE_MK2_MANUAL = {
     licence: null
 }
 export const MAKER_CHANNEL_LISTS = {
+    // APPROVED (owner's eye and word, 2026-10-15): UP-B380F = U-Plus "IP65 380W Beam", the "380 IP BEAM" manual
+    // (upluslighting.com 2024-01), 16 ch, value ranges verbatim in scripts/place/fixtures/charts/up-b380f.json.
+    // The 10-09 walk (pan on ch 1) is kept as the archived mode `walk-2026-10-09` (ARCHIVED_CHANNEL_LISTS).
+    // The lamp channel (16) rests at 0 = no function: the desk never strikes or kills a lamp.
+    'UP-B380F': {
+        fixture: 'U-Plus IP65 380W Beam, manual "380 IP BEAM" (2024-01), APPROVED by the owner 2026-10-15',
+        basis: 'APPROVED',
+        url: 'https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf',
+        licence: null,
+        modes: {
+            16: [
+                { role: 'color', label: 'Colour wheel (0 white, 10-14 colour 1 … 130-134 colour 13, 140+ rotate)', default: 0 },
+                { role: 'strobe', label: 'Strobe (0 close, 1-4 open, 51-240 slow to fast, 252-255 open)', default: 255, cap: { shutter: [{ from: 0, to: 0, open: false }, { from: 1, to: 4, open: true }, { from: 252, to: 255, open: true }] } },
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'gobo', label: 'Gobo (0-4 white, 5-69 gobo 1-13, 191+ shake)', cap: { gobo: true, goboSlots: { from: 5, to: 69, count: 13, basis: 'APPROVED chart: 5-wide slots stated' }, goboShake: { from: 191, basis: 'APPROVED chart' } } },
+                { role: 'prism', label: 'Prism (0-63 none, 64 prism 1, 128 prism 2, 192 both)', cap: { prism: true, prismIn: { from: 64, facets: 16, basis: 'APPROVED chart for the thresholds; which prism is 8 or 16 facets is ASSUMED' } } },
+                { role: 'rotation', label: 'Prism 1 rotation (0-127 angle, 128+ spin)', cap: { prismRotation: { prism: 1, basis: 'APPROVED chart; read as an index 0…255 → 0…360° (0-127 = 0-400°)' } } },
+                { role: 'aux1', label: 'Prism 2 rotation (0-127 angle, 128+ spin)', cap: { prismRotation: { prism: 2, basis: 'APPROVED chart; read as an index 0…255 → 0…360°' } } },
+                { role: 'frost', label: 'Frost (0-127 none, 128-191 frost, 192-255 colourful)', cap: { frost: { from: 128, to: 191, basis: 'APPROVED chart: an insert, not a curve' } } },
+                { role: 'focus', label: 'Focus' },
+                { role: 'pan', label: 'Pan', default: 128 },
+                { role: 'panFine', label: 'Pan fine', default: 0 },
+                { role: 'tilt', label: 'Tilt', default: 128 },
+                { role: 'tiltFine', label: 'Tilt fine', default: 0 },
+                { role: 'speed', label: 'Pan/tilt speed' },
+                { role: 'control', label: 'Reset (26-76 effects, 77-127 XY, 128+ all; always 0)', default: 0 },
+                { role: 'lamp', label: 'Lamp (10-100 off, 101-255 on; the desk never sends it, 0)', default: 0 }
+            ]
+        }
+    },
     'EXT-LC-ULTRA-MK2': {
         ...LASERCUBE_MK2_MANUAL,
         modes: {
@@ -298,7 +347,7 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             code: kind.code,
             ...identityOf(kind),
             product: kind.product || null,
-            // the maker's own model name and manual where the manifest holds them (basis on the manual: CANDIDATE until the owner's eye or Sevan's list says it is the unit)
+            // the maker's own model name and manual where the manifest holds them (basis on the manual: APPROVED by the owner's eye and word, 2026-10-15, for the three U-Plus kinds)
             ...(kind.maker_model ? { makerModel: kind.maker_model } : {}),
             ...(kind.manual ? { manual: kind.manual } : {}),
             // the maker's DMX chart(s) with value ranges, kept beside the desk's modes (scripts/place/fixtures/charts/); never what the desk sends unless a mode says so

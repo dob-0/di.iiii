@@ -347,15 +347,15 @@ Inventory = the rental order (50 UP-PL5403 PAR, 18 UP-B380F beam, 12 UP-250BSW, 
 
 **Control (v2, owner N460.2, 2026-10-09):** two DMX universes — **U1** 18 UP-B380F (16 ch) + 2 Poligraf UP-LA40WF (32 ch) + the one UP-YZ31P smoke machine (1 ch, ASSUMED, maybe 2) = **353 of 512**; **U2** the 50 UP-PL5403 (8 ch) = **400 of 512** — and the six LaserCubes on the LAN through di Nodes, **no DMX**. Start addresses, fixture numbers and the room left to grow: `scripts/place/rigs/moxir-v2-patch-2026-10-09.json` (RIG_BUILD.md §19.5); the crew's short table: `node scripts/rigbuild/patch-table.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json`. U2 holds 50 devices and one DMX line carries 32 (ANSI E1.11), so U2 leaves its node on at least two lines; the cabling plan is owed. The B380F's channels 11–16 disagree with the equivalent chart and the studio console's own profile and are walked on a real unit on setup day: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
 
-**Equipment list by kind (2026-10-15; maker = the owner's eye, 16:3x; one file per kind in `docs/moxir/devices/`, charts in `scripts/place/fixtures/charts/`):**
+**Equipment list by kind (APPROVED by the owner 2026-10-15 17:1x; one file per kind in `docs/moxir/devices/`, charts in `scripts/place/fixtures/charts/`):** 40 × U-Plus IP PAR-54X3 (UP-PL5403) · 18 × U-Plus IP65 380W Beam (UP-B380F) · 2 × U-Plus IP-LL40 (UP-LA40WF, 32 ch) · 1 × UP-YZ31P hazer · 6 × LaserCube Ultra Mk2.
 
 | Kind | Units (rig v2.11) | Maker · model | Manual | DMX map the desk sends | Chart status |
 |---|---|---|---|---|---|
-| UP-PL5403 | 40 | U-Plus Lighting · IP PAR-54X3 | upluslighting.com `…/2024/01/IP-PAR-54X3.pdf` | 8 ch (dimmer, R G B W, strobe, function 0, speed 0) | CANDIDATE (4/8 ch stored) |
-| UP-B380F | 18 | U-Plus Lighting · 380 Beam | `…/2025/03/380-Beam.pdf` | 16 ch, the TESTED Sevan map | TESTED map; U-Plus 16/20-ch chart stored, order differs — walk ch 11–16 on setup day |
-| UP-LA40WF | 2 | U-Plus Lighting · IP-LL40 (manual IP-LL30) | product page `ip-ll40-waterproof-40w-rgb-animation-laser-light` | 32 ch, static beam (ch 2 = 200, ch 4 = 192, ch 5 white, ch 6/7 centre) | CANDIDATE (19/32 ch stored); graphic for a dot ASSUMED |
-| UP-YZ31P | 1 | U-Plus Lighting (model not on a U-Plus page) | none | 1 ch, haze output | ASSUMED, source: none |
-| LaserCube Ultra MK2 | 6 | Wicked Lasers (ours) | laseros.com manual v1.0 | none: network, no DMX | EXACT, driven live 10-14 |
+| UP-PL5403 | 40 | U-Plus Lighting · IP PAR-54X3 | upluslighting.com `…/2024/01/IP-PAR-54X3.pdf` | 8 ch (1 dimmer, 2 R, 3 G, 4 B, 5 W, 6 strobe, 7 function 0, 8 speed 0) | APPROVED (owner, 2026-10-15) |
+| UP-B380F | 18 | U-Plus Lighting · IP65 380W Beam (made-in-china model no. UP-B380F) | `…/2024/01/380-IP-BAEM.pdf` ("380 IP BEAM") | 16 ch in the manual's order (colour first, pan ch 10, tilt ch 12, lamp ch 16 held at 0) | APPROVED (owner, 2026-10-15); the 10-09 walk (pan ch 1) ARCHIVED as mode `walk-2026-10-09`; setup-day check #1 |
+| UP-LA40WF | 2 | U-Plus Lighting · IP-LL40 (manual IP-LL30, 2025-03) | product page `ip-ll40-waterproof-40w-rgb-animation-laser-light` | **32 ch**, static beam (ch 2 = 200, ch 3 = 0, ch 4 = 0 normal, ch 5 colour, ch 6/7 from the aim, the rest 0) | APPROVED (owner, 2026-10-15); which graphic is a single line or dot is ASSUMED (the manual names none) |
+| UP-YZ31P | 1 | U-Plus Lighting (model not on a U-Plus page) | none | 1 ch, haze output | ASSUMED, source: none (unchanged) |
+| LaserCube Ultra Mk2 | 6 | Wicked Lasers (ours) | laseros.com manual v1.0 | none: network, no DMX | EXACT, driven live 10-14 (unchanged) |
 
 **Universe maths, re-checked 2026-10-15 for rig v2.11 (40 PL5403):** U1 = 18 × 16 + 2 × 32 + 1 = 288 + 64 + 1 = **353 of 512**; U2 = 40 × 8 = **320 of 512**. (The "400 of 512" and "50 devices" in the v2 paragraph above are the 50-PAR rental order of 2026-10-09; the rig now places 40.) The rig's `kit_makers` block carries the same maker/model/manual per kind; the project's `rentalList` schema has no maker/model field, so the equipment sheet reads them from the type library.
 

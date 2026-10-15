@@ -9,12 +9,12 @@
   "date": "2024-01 (upload path; PDF created 2023-08-07)",
   "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
   "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
-  "basis": "CANDIDATE"
+  "basis": "APPROVED"
  },
- "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (CANDIDATE = maker manual that may be the unit; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
+ "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
  "modes": {
   "8": {
-   "status": "CANDIDATE",
+   "status": "APPROVED",
    "note": "the desk sends ch 1 dimmer, 2-5 R G B W, 6 strobe, 7 function 0, 8 speed 0 (src/rigbuild/fixtureTypes.js TESTED_CHANNEL_LISTS UP-PL5403)",
    "channels": [
     {
@@ -133,7 +133,7 @@
    ]
   },
   "4": {
-   "status": "CANDIDATE",
+   "status": "APPROVED",
    "note": "colour-only mode R G B W; not used by the rig (8 ch)",
    "channels": [
     {

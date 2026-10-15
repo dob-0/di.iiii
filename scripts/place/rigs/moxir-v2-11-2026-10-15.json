@@ -16,26 +16,26 @@
   "UP-LA40WF": 2
  },
  "kit_makers": {
-  "_note": "maker, model and manual per kind in `kit` (the counts above stay plain numbers: scripts and tests read them as counts). Maker = the owner's eye 2026-10-15 16:3x; full facts in docs/moxir/devices/ and scripts/place/fixtures/charts/.",
+  "_note": "maker, model and manual per kind in `kit` (the counts above stay plain numbers: scripts and tests read them as counts). Every U-Plus row APPROVED by the owner 2026-10-15; full facts in docs/moxir/devices/ and scripts/place/fixtures/charts/.",
   "UP-B380F": {
    "maker": "U-Plus Lighting",
-   "model": "380 Beam",
-   "manual": "https://www.upluslighting.com/wp-content/uploads/2025/03/380-Beam.pdf",
-   "chart_status": "desk = TESTED map; U-Plus chart CANDIDATE, order differs",
+   "model": "IP65 380W Beam",
+   "manual": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+   "chart_status": "APPROVED (owner 2026-10-15); the 10-09 walk ARCHIVED as mode walk-2026-10-09",
    "chart": "scripts/place/fixtures/charts/up-b380f.json"
   },
   "UP-PL5403": {
    "maker": "U-Plus Lighting",
    "model": "IP PAR-54X3",
    "manual": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
-   "chart_status": "CANDIDATE",
+   "chart_status": "APPROVED (owner 2026-10-15)",
    "chart": "scripts/place/fixtures/charts/up-pl5403.json"
   },
   "UP-LA40WF": {
    "maker": "U-Plus Lighting",
-   "model": "IP-LL40 (manual IP-LL30)",
+   "model": "IP-LL40 (manual IP-LL30, 2025-03)",
    "manual": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
-   "chart_status": "CANDIDATE",
+   "chart_status": "APPROVED (owner 2026-10-15), 32 ch",
    "chart": "scripts/place/fixtures/charts/up-la40wf.json"
   },
   "UP-YZ31P": {

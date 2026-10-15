@@ -24,3 +24,13 @@ Branch `feat/moxir-devices-charts-2026-10-15` off `feat/moxir-v2-10-forty-2026-1
   (digest b8c2bd1a…, pinned a9018456…) — checked by reverting my four source files; left alone.
 - **Owed (ledger rows needed):** walk B380F ch 11–16 and the laser's graphic on setup day; Sevan's own DMX lists replace every ASSUMED/CANDIDATE row; lasers in looks
   with the aim once the sign-off exists; the other UP-* kinds (250BSW, HK1915…) still say "UPlight Stage Equipment" until the owner's eye covers them.
+
+## Approved (owner 17:1x, "yes the chart is right … patch all that, make them approved, clear the old, archive what is not needed, fix the list")
+- **UP-B380F** = U-Plus IP65 380W Beam; the desk's `16ch` is the "380 IP BEAM" manual chart (colour first, pan ch 10, tilt ch 12; ch 15 reset and ch 16 lamp held at 0).
+  The 10-09 walk map is kept as mode `walk-2026-10-09` (`ARCHIVED_CHANNEL_LISTS`, `archived: true`; never default, not in the GDTF). PROST380 moved to `fixtures.json` `archive`;
+  the indoor "380 Beam" chart is dropped (one line in the datasheet). `dmxDecode` reads a frost with a stated range as an insert (128–191), not a curve.
+- **UP-PL5403** 8-ch and **UP-LA40WF** 32-ch (ch 4 now 0 = normal; ch 3 = 0 graphic 1, ASSUMED — the manual names no graphic) read APPROVED; no CANDIDATE left in fixtures.json, charts, fixtureTypes.js or the datasheets.
+- Equipment list in MOXIR.md and the rig's `kit_makers` read the approved names; U1 = 18×16 + 2×32 + 1 = 353, U2 = 40×8 = 320 (unchanged).
+- Tests: `uplusProfiles.test.js` (B380F bytes for a known look, lamp/reset never sent, archived mode, manifest archive), `dmxOptics.test.js` re-based on the manual chart.
+- Setup-day checks: docs/moxir/devices/README.md (#1 B380F pan ch 10 vs ch 1 · #2 PL5403 8-ch mode · #3 LA40WF 32-ch mode, laser lock, key).
+

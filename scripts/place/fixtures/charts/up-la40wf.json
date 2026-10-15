@@ -9,12 +9,12 @@
   "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
   "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
   "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
-  "basis": "CANDIDATE"
+  "basis": "APPROVED"
  },
- "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (CANDIDATE = maker manual that may be the unit; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
+ "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
  "modes": {
   "19": {
-   "status": "CANDIDATE",
+   "status": "APPROVED",
    "note": "manual: 19ch and 32ch available only (6 / 29 / 52 are listed but not available)",
    "channels": [
     {
@@ -524,7 +524,7 @@
    ]
   },
   "32": {
-   "status": "CANDIDATE",
+   "status": "APPROVED",
    "note": "ch 1-19 as the 19-ch chart; ch 20-32 draw a second graphic at the same time (mirror of ch 3-14, then out-of-bounds). The tested Sevan map (SEVAN, TESTED) agrees: colour 8 white / 25 red / 76 yellow / 93 purple / 110 cyan, X/Y centre 64, centre rotation 150, mode 250",
    "same_as": "19",
    "channels": [

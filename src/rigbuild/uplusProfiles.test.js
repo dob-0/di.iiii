@@ -1,5 +1,4 @@
-// The U-Plus profiles (2026-10-15): the PAR's 8-ch map, the 40 W laser's 32-ch STATIC BEAM, the B380F stays the
-// TESTED map, and the maker charts (scripts/place/fixtures/charts/) agree with what the desk sends.
+// The U-Plus profiles (2026-10-15): the PAR's 8-ch map, the 40 W laser's 32-ch STATIC BEAM, the B380F runs the unit's own manual chart, and the maker charts (scripts/place/fixtures/charts/) agree with what the desk sends.
 // @vitest-environment node
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -29,27 +28,27 @@ describe('UP-PL5403 8ch (U-Plus IP PAR-54X3)', () => {
         expect(bytes(m, { level: 0.5, colour: '#ff0000' })).toEqual([128, 255, 0, 0, 0, 0, 0, 0])
         expect(bytes(m, { level: 0 })).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
     })
-    it('the maker chart holds the 4-ch and 8-ch maps, CANDIDATE, with the function ranges', () => {
+    it('the maker chart holds the 4-ch and 8-ch maps, APPROVED, with the function ranges', () => {
         const c = chart('UP-PL5403')
         expect(c.maker).toBe('U-Plus Lighting')
         expect(c.modes['8'].channels).toHaveLength(8)
         expect(c.modes['4'].channels).toHaveLength(4)
-        expect(c.modes['8'].status).toBe('CANDIDATE')
+        expect(c.modes['8'].status).toBe('APPROVED')
         expect(c.modes['8'].channels[6].ranges.map((r) => r[0])).toEqual([0, 51, 101, 151, 201, 251])
     })
 })
 
 describe('UP-LA40WF 32ch static beam (U-Plus IP-LL40, manual IP-LL30)', () => {
     const m = mode('UP-LA40WF', '32ch')
-    it('is 32 channels; at rest only ch 1 is 0 of the beam-defining channels: 2=200, 4=192, 5=8, 6/7=64', () => {
+    it('is 32 channels; at rest only ch 1 is 0 of the beam-defining channels: 2=200, 4=0, 5=8, 6/7=64', () => {
         expect(m.channels).toHaveLength(32)
         const rest = bytes(m, {})
-        expect(rest.slice(0, 7)).toEqual([0, 200, 0, 192, 8, 64, 64])
+        expect(rest.slice(0, 7)).toEqual([0, 200, 0, 0, 8, 64, 64])
         expect(rest.slice(7)).toEqual(Array(25).fill(0)) // 16-18 RGB 0 = brightest, 20-32 the second graphic off
     })
     it('a known look → the exact bytes: level 1, red, aimed +9.25° / −18.5° → X 95, Y 0', () => {
         const b = bytes(m, { level: 1, colour: '#ff0000', pan: 9.25, tilt: -18.5 })
-        expect(b.slice(0, 7)).toEqual([255, 200, 0, 192, 25, 95, 0])
+        expect(b.slice(0, 7)).toEqual([255, 200, 0, 0, 25, 95, 0])
         expect(b.slice(7)).toEqual(Array(25).fill(0))
     })
     it('the aim is clamped to the scan field and 0° is the centre', () => {
@@ -72,25 +71,54 @@ describe('UP-LA40WF 32ch static beam (U-Plus IP-LL40, manual IP-LL30)', () => {
     })
 })
 
-describe('UP-B380F stays the TESTED map; the U-Plus 380 Beam chart sits beside it', () => {
-    it('16 ch, pan first (tested order), basis TESTED', () => {
+describe('UP-B380F: the unit\'s own "380 IP BEAM" chart is the desk\'s (APPROVED 2026-10-15); the 10-09 walk is archived', () => {
+    it('16 ch in the manual\'s order: colour first, pan on ch 10, tilt on ch 12, lamp on ch 16; basis APPROVED', () => {
         const m = mode('UP-B380F', '16ch')
-        expect(m.channels.map((c) => c.role).slice(0, 4)).toEqual(['pan', 'tilt', 'panFine', 'tiltFine'])
-        expect(m.channelsSource.basis).toBe('TESTED')
+        expect(m.channels.map((c) => c.role)).toEqual(['color', 'strobe', 'dimmer', 'gobo', 'prism', 'rotation', 'aux1', 'frost', 'focus', 'pan', 'panFine', 'tilt', 'tiltFine', 'speed', 'control', 'lamp'])
+        expect(m.channelsSource.basis).toBe('APPROVED')
+        expect(type('UP-B380F').defaultMode).toBe('16ch')
     })
-    it('the maker chart is stored, marked as a different order, and never the desk\'s', () => {
+    it('a known look → the exact bytes: level 0.5, aimed at home: dimmer ch 3 = 128, strobe open 255, pan/tilt at 128, reset and lamp 0', () => {
+        const m = mode('UP-B380F', '16ch')
+        expect(bytes(m, { level: 0.5 }, type('UP-B380F'))).toEqual([0, 255, 128, 0, 0, 0, 0, 0, 0, 128, 0, 128, 0, 0, 0, 0])
+    })
+    it('the desk never strikes or kills the lamp: ch 16 and the reset ch 15 rest at 0 and no look moves them', () => {
+        const m = mode('UP-B380F', '16ch')
+        for (const want of [{}, { level: 1 }, { level: 0 }, { level: 1, pan: 90, tilt: -45 }]) {
+            const b = bytes(m, want, type('UP-B380F'))
+            expect([b[14], b[15]], JSON.stringify(want)).toEqual([0, 0])
+        }
+    })
+    it('the 10-09 walk map is kept as the archived mode walk-2026-10-09: pan first, never the default, never in the GDTF', () => {
+        const w = mode('UP-B380F', 'walk-2026-10-09')
+        expect(w.archived).toBe(true)
+        expect(w.basis).toBe('ARCHIVED')
+        expect(w.reason).toMatch(/owner 2026-10-15/)
+        expect(w.channels.map((c) => c.role).slice(0, 4)).toEqual(['pan', 'tilt', 'panFine', 'tiltFine'])
+        expect(w.footprint).toBe(16)
+        expect(type('UP-B380F').defaultMode).not.toBe('walk-2026-10-09')
+    })
+    it('the maker chart holds the unit\'s 16 ch verbatim, APPROVED; the indoor 380 Beam chart is gone', () => {
         const c = chart('UP-B380F')
-        expect(c.modes['16'].order_differs_from_tested).toBe(true)
-        expect(c.modes['16'].channels.map((x) => x.function).slice(0, 3)).toEqual(['Colour', 'Strobe', 'Dimmer'])
-        expect(c.modes['20'].channels).toHaveLength(20)
-        expect(type('UP-B380F').makerChart.modes).toEqual({ '16': 'CANDIDATE', '20': 'CANDIDATE' })
+        expect(c.model).toBe('IP65 380W Beam')
+        expect(c.modes['20']).toBeUndefined()
+        expect(c.modes['16'].status).toBe('APPROVED')
+        expect(c.modes['16'].channels.map((x) => x.function)).toEqual(['Colour', 'Strobe', 'Dimmer', 'Gobo', 'Prism', 'Prism 1 rotation', 'Prism 2 rotation', 'Frost', 'Focus', 'Pan', 'Pan fine', 'Tilt', 'Tilt fine', 'Pan/Tilt speed', 'Reset', 'Lamp'])
+        expect(c.modes['16'].channels[15].ranges).toEqual([[10, 100, 'lamp off over 3 s'], [101, 255, 'lamp on over 3 s']])
+        expect(type('UP-B380F').makerChart.modes).toEqual({ '16': 'APPROVED' })
+    })
+    it('PROST380 is archived in the manifest, not a source', () => {
+        const man = JSON.parse(readFileSync(path.join(ROOT, 'scripts/place/fixtures/fixtures.json'), 'utf8'))
+        expect(man.sources.PROST380).toBeUndefined()
+        expect(man.archive.PROST380.status).toBe('ARCHIVED')
+        expect(man.archive.PROST380.reason).toMatch(/approved by the owner 2026-10-15/i)
     })
 })
 
 describe('makers', () => {
     it('the four U-Plus kinds name U-Plus Lighting with their manual; the cube is not U-Plus; every ASSUMED stays ASSUMED', () => {
         for (const code of ['UP-PL5403', 'UP-B380F', 'UP-LA40WF', 'UP-YZ31P']) expect(type(code).maker, code).toBe('U-Plus Lighting')
-        expect(type('UP-PL5403').manual.basis).toBe('CANDIDATE')
+        for (const code of ['UP-PL5403', 'UP-B380F', 'UP-LA40WF']) expect(type(code).manual.basis, code).toBe('APPROVED')
         expect(type('UP-YZ31P').manual).toBeUndefined()
         expect(chart('UP-YZ31P').modes['1'].status).toBe('ASSUMED')
         expect(type('EXT-LC-ULTRA-MK2').maker).toBe(null)

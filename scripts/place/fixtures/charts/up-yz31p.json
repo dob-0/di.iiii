@@ -4,7 +4,7 @@
  "maker": "U-Plus Lighting",
  "model": null,
  "manual": null,
- "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (CANDIDATE = maker manual that may be the unit; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
+ "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
  "modes": {
   "1": {
    "status": "ASSUMED",

@@ -266,7 +266,9 @@ const opticsAt = (spec, at) => {
     const p2 = caps.find((c) => c.cap?.prism2)
     if (p2 && at[p2.role] >= (p2.cap.prism2.in?.from ?? 128)) optics.honeycomb = { rotation: rotationOf(2) }
     const frost = caps.find((c) => c.cap?.frost)
-    if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
+    // a chart that states the frost's range (an insert, not a curve) is read as in/out; one that does not is read as linear
+    if (frost && frost.cap.frost.from != null) { if (at[frost.role] >= frost.cap.frost.from && at[frost.role] <= frost.cap.frost.to) optics.frost = 1 }
+    else if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
     return Object.keys(optics).length ? optics : null
 }
 
