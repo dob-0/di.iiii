@@ -116,14 +116,36 @@ describe('the scene strip', () => {
         expect(calls.some(([, init]) => init?.method === 'POST')).toBe(false)
     })
 
-    it('a visitor the server blocks gets no preview either', async () => {
+    it('a visitor the server blocks still previews on a clock show: the preview is this viewer\'s own page and posts nothing (owner 10-15 22:0x)', async () => {
         openBricks()
         const previewed = vi.fn()
-        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })))
+        const calls = []
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })) })
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="clock" playingIndex={2} onPreview={previewed} />)
         await screen.findByText('the black')
-        await act(async () => { fireEvent.click(document.querySelector('[data-fav="rig-l4"]')) })
-        expect(previewed).not.toHaveBeenCalled()
+        const card = document.querySelector('[data-fav="rig-l4"]')
+        expect(card.disabled).toBe(false)
+        expect(card.getAttribute('aria-disabled')).toBeNull()
+        expect(card.title).toMatch(/preview, for you only/)
+        await act(async () => { fireEvent.click(card) })
+        expect(previewed).toHaveBeenCalledWith('l4')
+        expect(calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+    })
+
+    it('a laser scene previews too on a clock show (nothing reaches a device); without a preview it stays operator only', async () => {
+        openBricks()
+        const previewed = vi.fn()
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'operator', block: '', authOff: false } })))
+        const { unmount } = render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="clock" playingIndex={2} onPreview={previewed} />)
+        await screen.findByText('the black')
+        const card = document.querySelector('[data-fav="rig-l1"]') // 'one line', the fixture's laser scene
+        expect(card.disabled).toBe(false)
+        await act(async () => { fireEvent.click(card) })
+        expect(previewed).toHaveBeenCalledWith('l1')
+        unmount()
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        await screen.findByText('the black')
+        expect(document.querySelector('[data-fav="rig-l1"]').disabled).toBe(true)
     })
 
     it('for a visitor a click does nothing and the card says why on hover', async () => {
