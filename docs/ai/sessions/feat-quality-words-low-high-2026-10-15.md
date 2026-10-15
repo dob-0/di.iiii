@@ -1,4 +1,4 @@
-# feat/quality-words-low-high-2026-10-15 — the room's two render qualities: Low / High
+## 2026-10-15 — the room's render quality reads Low / High, not Lite / Full (old words stay as aliases)
 
 Owner 2026-10-15 06:1x: "Full and Lite do not suit … look at the global lexicon, and fix that all."
 Decision: the setting is **Quality**, its values **Low** and **High** (the field's words for a renderer's two presets: game and video-player
