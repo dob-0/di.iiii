@@ -12,7 +12,7 @@
     place-items: center;
     align-content: center;
     justify-items: center;
-    gap: 14px;
+    gap: var(--di-space-4);
     /* Fixed and full-bleed so nothing underneath shows at the edges, and so a
        short load cannot produce a scrollbar that appears and vanishes. */
     background: var(--di-black);
@@ -79,21 +79,21 @@
     z-index: auto;
     display: inline-grid;
     grid-auto-flow: column;
-    gap: 10px;
-    padding: 6px 0;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) 0;
 }
 
 /* One drawn line under the ring, and after 8 s a second one that names what
    the wait is for. Small mono type, no box: rectangles only, no pills. */
 .loading-screen-text,
 .loading-screen-slow {
-    font-family: var(--di-font-mono, ui-monospace, monospace);
-    font-size: 12px;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
     letter-spacing: 0.04em;
     color: rgba(255, 255, 255, 0.7);
     text-align: center;
 }
 
 .loading-screen-slow {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
