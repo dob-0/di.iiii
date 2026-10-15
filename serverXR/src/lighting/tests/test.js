@@ -1512,5 +1512,61 @@ check('the render line names the key the page could not draw', () => {
   assert.ok(deskCaps.culprit(new Error('boom'), whole).length > 0);
 });
 
+// ---- This node (caps.node, plan step D5) ----
+check('the "This node" fold is opt-in: hidden without caps.node, shown only on an explicit true', () => {
+  assert.strictEqual(deskCaps.cap(undefined, 'node', true), false, 'no caps is the full desk on a machine: no node fold');
+  assert.strictEqual(deskCaps.cap({}, 'node', true), false);
+  assert.strictEqual(deskCaps.cap({ node: false }, 'node', true), false);
+  assert.strictEqual(deskCaps.cap({ node: 1 }, 'node', true), false, 'only true turns it on, so a malformed value cannot show it');
+  assert.strictEqual(deskCaps.cap({ node: 'yes' }, 'node', true), false);
+  assert.strictEqual(deskCaps.cap({ node: true }, 'node', true), true);
+  assert.strictEqual(deskCaps.cap({ node: true }, 'node', false), true, 'a node serves plain http; the fold does not need a secure page');
+  assert.strictEqual(deskCaps.cap({ node: true }, 'looks', true), true, 'and it changes no other cap');
+  // The markup half of the rule: one fold, gated by data-cap="node", which applyCaps turns into .capoff.
+  const html = require('fs').readFileSync(require('path').join(__dirname, '../ui/index.html'), 'utf8');
+  const css = require('fs').readFileSync(require('path').join(__dirname, '../ui/style.css'), 'utf8');
+  const folds = html.match(/<details[^>]*id="ndDetails"[^>]*>/g) || [];
+  assert.strictEqual(folds.length, 1, 'one "This node" fold');
+  assert.ok(/data-cap="node"/.test(folds[0]), 'the fold carries data-cap="node"');
+  assert.ok(/\.capoff\s*\{\s*display:\s*none\s*!important/.test(css), 'and .capoff hides it');
+  assert.ok(html.indexOf('id="inDetails"') < html.indexOf('id="ndDetails"') && html.indexOf('id="ndDetails"') < html.indexOf('<main class="page" data-page="control"'), 'it sits on Setup, under Input');
+});
+
+check('a node\'s /status reads the same from the firmware and the simulator, and an absent fact stays null', () => {
+  const fw = { ip: '192.168.4.1', sta_ip: '10.0.0.7', sta_connected: true, sta_ssid: 'lab', wl_status: 3, ssid: 'node-ap', name: 'n1',
+    net_mode: 0, net: 0, subnet: 1, uni: 2, uni15: 18, mode: 1, artnet_active: true, sacn_active: false, ao: true, ao_target: 'broadcast',
+    burn_safe: true, safe_ceiling: 96, safe_slew_step: 8, artnet_fallback_to_web: true, usb_active: false, heap_free: 150000, heap_max_block: 90000, fw: 'v1.2' };
+  const f = deskCaps.nodeFacts(fw);
+  assert.strictEqual(f.apIp, '192.168.4.1'); assert.strictEqual(f.staOn, true); assert.strictEqual(f.wl, 'joined');
+  assert.strictEqual(f.ceiling, 96); assert.strictEqual(f.slew, 8); assert.strictEqual(f.fw, 'v1.2');
+  assert.deepStrictEqual(f.live, { artnet: true, sacn: false, usb: false });
+  assert.strictEqual(f.uptimeS, null, 'no node sends uptime: it is not reported, never invented');
+  const sim = deskCaps.nodeFacts({ ap_ip: '192.168.4.1', sta: false, wl_status: 4, mode: 2 }, { firmware: { tag: 'simulator' } });
+  assert.strictEqual(sim.apIp, '192.168.4.1'); assert.strictEqual(sim.staOn, false);
+  assert.strictEqual(sim.wl, 'join failed: check the password', 'a failed join says why');
+  assert.strictEqual(sim.fw, 'simulator', 'the manifest\'s tag when /status has no fw');
+  assert.strictEqual(sim.heapFree, null); assert.strictEqual(sim.burnSafe, null);
+  assert.strictEqual(deskCaps.nodeSummary(f), 'n1 · 10.0.0.7 · network only · burn-safe');
+  assert.strictEqual(deskCaps.nodeFacts(null).name, null, 'no answer is not a crash');
+  assert.strictEqual(deskCaps.wlWords(undefined), 'not reported');
+});
+
+check('factory reset (and every two-press control) fires only on a second press of the same button within 4 s', () => {
+  let a = null;
+  let s = deskCaps.confirmStep(a, 'ndFactory', 1000);
+  assert.strictEqual(s.fire, false, 'one press arms, never fires'); a = s.armed;
+  assert.ok(deskCaps.stillArmed(a, 2000));
+  s = deskCaps.confirmStep(a, 'ndFactory', 3000);
+  assert.strictEqual(s.fire, true, 'the second press fires'); assert.strictEqual(s.armed, null, 'and disarms');
+  a = deskCaps.confirmStep(null, 'ndFactory', 0).armed;
+  s = deskCaps.confirmStep(a, 'ndFactory', 4001);
+  assert.strictEqual(s.fire, false, 'after 4 s the second press only arms again');
+  a = deskCaps.confirmStep(null, 'ndReboot', 0).armed;
+  s = deskCaps.confirmStep(a, 'ndFactory', 100);
+  assert.strictEqual(s.fire, false, 'restart armed, then factory reset pressed: nothing fires');
+  assert.strictEqual(s.armed.key, 'ndFactory');
+  assert.strictEqual(deskCaps.stillArmed(a, 4001), false, 'time disarms');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
