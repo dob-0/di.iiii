@@ -1,4 +1,5 @@
 // LOOK MOTION - a look that moves, in the room. Pure: no clock is read here, `now` is a parameter.
+// (Moving HEADS - pan/tilt patterns of a look - are in headMotion.js, not here: this file moves levels and colours.)
 //
 // The desk already has the effect vocabulary: serverXR/src/lighting/fx.js (14 modes, each a pure function of `now`,
 // a level multiplier 0..255 per fixture, 40 Hz frame grid). A scene in the room must not invent a second vocabulary,

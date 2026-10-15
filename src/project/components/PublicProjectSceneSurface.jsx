@@ -120,6 +120,7 @@ export default function PublicProjectSceneSurface({
     title,
     entryView,
     navMode,
+    walkLook = 'lock',
     onNavModeChange,
     topClear = null,
     isPreview,
@@ -134,7 +135,11 @@ export default function PublicProjectSceneSurface({
     onBuilding,
     onLockPaused,
     // the scene bar's layer toggles: { roof, walls, machines, outside } (smartViewGeometry.parseLayersParam)
-    layers = null
+    layers = null,
+    // the author's switch for the views bar (visitorChrome.views); the bar is on unless it says false
+    viewsBar = true,
+    flyOn = false,
+    onFlyChange = null
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
@@ -189,18 +194,18 @@ export default function PublicProjectSceneSurface({
     // the view row and #view-… links. Not on a caged (locked) composition, and not on a
     // thumbnail. Inside somebody else's page (?embed=1) the row stays off — embed is
     // glass — unless the host asks for it with &views=1 (the visualiser's split).
-    const [smartView] = useState(() => {
+    const smartView = useMemo(() => {
         const embed = isEmbedRequest()
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
         return {
-            bar: embed && params?.get('views') !== '1' ? false : 'visitor',
+            bar: !viewsBar || (embed && params?.get('views') !== '1') ? false : 'visitor',
             constraints: true,
             deepLink: !embed
         }
-    })
+    }, [viewsBar])
 
     // The "Inside" toggle (PublicProjectViewer) and its two reports travel with the smart view's settings.
-    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused, layers }), [smartView, lockInside, onBuilding, onLockPaused, layers])
+    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused, layers, flyOn, onFlyChange }), [smartView, lockInside, onBuilding, onLockPaused, layers, flyOn, onFlyChange])
 
     return (
         <>
@@ -220,6 +225,8 @@ export default function PublicProjectSceneSurface({
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                    // the view page walks with one look (drag), never a pointer lock
+                    walkLook={walkLook}
                     topClear={topClear}
                 />
             ) : hasGraph ? (

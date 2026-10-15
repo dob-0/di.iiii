@@ -643,6 +643,13 @@ owed) was drawn white at full by the mirror, which assumed "no colour channel" m
 Such a fixture is now `known: false`, and the lamp keeps its authored light. See the
 known-fixes row and `useLightingMirror.test.jsx`.
 
+**Heads that move (2026-10-15).** A look may carry `heads: { pattern, period_s, pan_deg, tilt_deg, spatial, kinds }`
+(`components.rigLooks.looks[].heads`; patterns sweep, nod, circle, figure8, fan, wave, cross). One pure function,
+`serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port
+`src/rigbuild/headMotion.js` drives the room, both from the server's clock and the look's fire time, so desk and room agree
+(pinned to 0.01 degree by `headMotion.test.js`). Offsets sit on the look's rest aim. From a vertical rest only the tilt
+patterns (nod, wave, circle, figure8) show. Session note: `docs/ai/sessions/feat-looks-heads-motion-2026-10-15.md`.
+
 ### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
 
 The data came from `space-bundle.mjs export moxir` on the local tier, taken after the
@@ -2315,6 +2322,23 @@ through the DJ lights the air behind him). Auto-exposure (an eye adapts to the r
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
 
+**Laser lines in the room's picture — core, halo, end spot, drawn after the bloom (2026-10-15).** A laser is drawn as a
+line source (`src/objectComponents/laserLine.js`, `laserLineMaterial.js`), its intensity per length σs·p(θ)·Φ·T/sinθ kept at
+any drawn width. Until 2026-10-15 each line was a ≥ 1.5 px soft ribbon fed into the room's bloom; from the floor (fov 70°,
+900 px: 1.556 mrad a pixel) MOXIR's cube lines are 6–7 × the screen's white after exposure 3.5, and the bloom spread them
+into one green slab (`scripts/measure/laser-look-diagnose.mjs`). The Studio looked right only because it draws the laser
+server's frames on top as 1-px GL lines (`src/rigbuild/LaserView.jsx`, Studio only); the room page has no such overlay. Now
+(shader job 2, the owner's look "a white core with the colour in the halo", decided from his words of 2026-10-15): each line
+is a CORE as wide as the beam or 1 px (a box with 1-px ramps) carrying 1 − haloShare, plus a HALO — a Gaussian of
+`haloRadiusCapped` (Fermi–Eyges, ≤ half the gap to the next line of the fan; a lone line takes the 0.5° scan step,
+ASSUMPTION) carrying haloShare = 1 − exp(−σs·s); a line far above white tone-maps to a white core in a coloured halo. The
+lines and their end spots are left out of the bloom input and drawn over the picture after the glow
+(`src/project/viewport/laserOverBloom.js`, three's selective-bloom pattern as an over-pass; lamps' bloom unchanged). Where a
+line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
+Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
+between two lines 0.03 of the peak (Rayleigh < 0.735). OWED: GPU before/after renders (held by the heat guard, 93–98 °C) —
+hand-over in `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md`.
+
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
 The data layer under the owner's two scene screens (2026-09-30: A = a deck of scenes, B = a cue timeline over
@@ -2539,3 +2563,37 @@ edits", which on a `di up --guests` install hands a guest the sign-in card on th
 - **Stars.** The operator sees a star on each non-laser brick of the SHOW list; a toggle posts the new list (at five, the oldest star leaves) and the row updates at once (window event `di:show-answer`).
 - **Tests.** `serverXR/src/showContracts.test.js` (operator only, <= 5, unknown/laser refused, shared, persisted), `showRemote.test.js`, `src/rigbuild/RoomFavourites.test.jsx`, `showApi.test.js`.
 
+
+## 25. Editing a scene in the Studio (2026-10-15)
+
+Until now a scene (a rig look and its cue) was built only by scripts. Since 2026-10-15 the Studio's Scenes window edits it, and the
+build script and the Studio build a look with the same function.
+
+**The data.** A rig look keeps its SOURCE next to what was built from it: `parts` `{part: [hex|null, level 0..1]}` (a part left out is
+off), `motion`, `heads`, `laser_colour`, `desk_caps` and `act` (schema: `normalizeRigLooks`, bounded; `shared/projectSchema.cjs` mirrors
+it). The project remembers which units belong to which part: `rigParts` `{ parts: {part: [unitId…]} }` on the show entity
+(`normalizeRigParts`; `epic-build.mjs` writes it from `fixtures[].part`, a laser's beams are the part `laser`). A project without it: each
+unit's `fixture.part` if it has one, else no parts, and the editor edits per unit (a look with no `parts` is seeded from its built
+levels). Written by `epic-build.mjs --looks-only --apply`, like the looks.
+
+**The one function.** `src/shared/buildLook.js` `buildLook(source, rigParts, units)` → `{colours, levels, aims}`. `epic-build.mjs`
+(`v1Looks`) and `src/studio/utils/sceneEdit.js` both call it. Parity (`src/shared/buildLook.test.js`): the 51 looks of
+`scripts/place/rigs/moxir-v2-11-2026-10-15.json` built by the script are byte-identical to what the script gave before the refactor
+(sha256 of colours, levels and aims), and `buildLook` from a stored look's source and the document alone gives the same for every look
+(0 differences).
+
+**The editor.** `ScenePicker.jsx` → `SceneEditor.jsx`: Edit on a scene row opens title, act, intent; one row per part (hex + swatch,
+level slider + number, "off"); motion (mode, bpm, depth, spatial, kinds, still); heads (pattern, period, pan, tilt, spatial); cue fade
+and hold; Play. New scene, Duplicate, Delete and the arrows (cue order) are the window's buttons. Every change is ops through the
+Studio's `applyLocalOps` (one undo each), and the look is rebuilt by `buildLook` in the same op.
+- **The flash rule is enforced, not only shown** (`sceneEdit.js` `FLASH`): glitch never (greyed, and `changeSceneOps` refuses it);
+  sparkle only at 20 bpm; every other mode at most 132 bpm (a bpm above it is clamped). Source: `scenes-design-report.md` "Decisions"
+  (flash ≤ 3 a second per lamp, `flashrate.cjs` on `fx.js`).
+- **Heads:** sweep and cross only pan; the editor warns that a head resting vertical shows nothing.
+- **Play** = the desk's GO on this cue: `playScene.js` loads the project's cue list on the desk (`deskCues.load`, as the cards page does)
+  and goes to the cue's index. With no desk it says why in the editor.
+
+**Limits, stated.** A look's lamps are found by the keys in its `aims`; a key the schema drops (`lookKey` allows no parentheses, so
+`named-v1-plane-1-(behind-the-DJ)-in0/up-b380f` of the v2-11 rig is dropped on every save, before this change too) is not rebuilt: owed,
+a separate fix with the owner's look (it would light those lamps). `desk_caps` is kept and shown in the data, not yet edited in the UI.
+Studio edits do not re-load the desk's cue list by themselves; Play does.

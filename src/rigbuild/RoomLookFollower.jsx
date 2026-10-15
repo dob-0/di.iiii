@@ -5,6 +5,8 @@ import { useRigLookEntities } from './useRigLook.js'
 import { useLightPool } from './useLightPool.js'
 import { showWords } from './showClock.js'
 import { deskCues, cueClockWords } from './cueRun.js'
+import useRememberedOpen from '../utils/rememberedOpen.js'
+import { CHIP, PANEL, INK, LINE } from './chromeStyle.js'
 import LoadingScreen from '../components/LoadingScreen.jsx'
 
 // THE SPACE VIEW FOLLOWS THE SHOW (RIG_BUILD.md §15.6, §16). /{space} — the room as it
@@ -21,7 +23,7 @@ import LoadingScreen from '../components/LoadingScreen.jsx'
 const RoomFavourites = lazyWithReload(() => import('./RoomFavourites.jsx'), 'room-favourites')
 const RoomCueList = lazyWithReload(() => import('./RoomCueList.jsx'), 'room-cue-list')
 
-export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true, spaceId = '', projectId = '', bare = false, slot = null }) {
+export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true, scenes = showChip, spaceId = '', projectId = '', bare = false, slot = null }) {
     // PREVIEW (owner 2026-10-12 05:3x: "scenes where we can pick ... now I can't in view select the scenes, it's the operator-only
     // mode; can we have a preview mode"): a look chosen in the chip is shown to THIS viewer only; the show clock keeps running for
     // everyone else and the chip says so. 'Follow the show' (or another document) drops it.
@@ -36,12 +38,12 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
         onEntities(entities === document?.entities ? null : entities)
     }, [entities, document, onEntities])
     useEffect(() => () => onEntities(null), [onEntities])
-    if (!showChip) return null
-    // The five favourite scenes, always on screen (RoomFavourites.jsx) - wherever a desk or the clock drives the room.
-    const row = spaceId && projectId && (look.driver === 'desk' || (look.driver === 'clock' && look.clock))
-        ? <Suspense fallback={null}><RoomFavourites spaceId={spaceId} projectId={projectId} /></Suspense> : null
+    if (!showChip && !scenes) return null
+    // The favourite scene bricks, behind one small control at the bottom (RoomFavourites.jsx) - wherever a desk or the clock drives the room.
+    const row = scenes && spaceId && projectId && (look.driver === 'desk' || (look.driver === 'clock' && look.clock))
+        ? <Suspense fallback={null}><RoomFavourites spaceId={spaceId} projectId={projectId} driver={look.driver} playingIndex={look.driver === 'clock' && look.clock ? look.clock.index : null} previewLook={preview} onPreview={look.driver === 'clock' ? setPreview : null} /></Suspense> : null
     // In the scene bar (bare) the chip is drawn INTO the bar's slot; the favourites row stays where it is (bottom of the scene).
-    const place = (chip) => (bare ? (slot ? createPortal(chip, slot) : null) : chip)
+    const place = (chip) => (!showChip ? null : bare ? (slot ? createPortal(chip, slot) : null) : chip)
     if (look.driver === 'desk') return <>{place(<DeskShowChip bare={bare} projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />)}{row}</>
     if (look.driver !== 'clock' || !look.clock) return null
     return <>{place(<ShowChip bare={bare} show={look.show} state={look.clock} offset={look.clockOffset} top={top} spaceId={spaceId} routeProject={projectId} preview={preview} onPreview={setPreview} />)}{row}</>
@@ -61,7 +63,7 @@ export const deskShowWords = (cues, projectId) => {
 // 2026-10-08 the room said nothing here, and a room played by the desk looked like a room playing nothing (MOXIR v1.0).
 export function DeskShowChip({ projectId, top, spaceId = '', routeProject = '', bare = false }) {
     const [cues, setCues] = useState(null)
-    const [open, setOpen] = useState(false)
+    const [open, toggleOpen] = useRememberedOpen('show')
     const [again, setAgain] = useState(0) // bumped after a choice: read the desk now, not in a second
     useEffect(() => {
         let gone = false
@@ -80,14 +82,14 @@ export function DeskShowChip({ projectId, top, spaceId = '', routeProject = '', 
         || (cues.project && cues.project !== projectId && cues.n > 0 ? "the desk plays another project's list · choose a cue" : 'no cue on yet · choose one')
     return (
         <div style={chipBox(bare, top)} data-testid="rig-show-chip" data-driver="desk" data-cue={cues.index}>
-            <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)} disabled={!spaceId || !routeProject}
+            <button type="button" style={buttonStyle} aria-expanded={open} onClick={toggleOpen} disabled={!spaceId || !routeProject}
                 title="The light desk on this machine plays the cue list; the room follows it. Tap to see the cues and choose one.">
-                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
-                <span style={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.72rem', flex: '0 0 auto' }}>SHOW · DESK</span>
+                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: 'var(--di-danger, #f25f5c)', boxShadow: '0 0 8px var(--di-danger, #f25f5c)', flex: '0 0 auto' }} />
+                <span style={{ fontWeight: 700, letterSpacing: 'var(--di-label-tracking, 0.16em)', fontSize: 'var(--di-text-2, 0.625rem)', flex: '0 0 auto' }}>SHOW · DESK</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
                 <Caret open={open} />
             </button>
-            {open ? <Drop bare={bare}><CueListPanel spaceId={spaceId} projectId={routeProject} onChosen={() => setAgain((n) => n + 1)} /></Drop> : null}
+            {open ? <Drop><CueListPanel spaceId={spaceId} projectId={routeProject} onChosen={() => setAgain((n) => n + 1)} /></Drop> : null}
         </div>
     )
 }
@@ -106,40 +108,21 @@ const chipStyle = {
     zIndex: 20,
     maxWidth: 'calc(100vw - 2rem)',
     width: 'max-content',
-    minWidth: 'min(22rem, calc(100vw - 2rem))',
-    borderRadius: '2px',
-    border: '1px solid rgba(255,255,255,0.14)',
-    background: 'rgba(10, 16, 24, 0.82)',
-    backdropFilter: 'blur(12px)',
-    color: '#f5f7fa',
-    fontSize: '0.85rem',
+    color: INK,
+    fontFamily: 'var(--di-sans, system-ui, sans-serif)',
+    fontSize: 'var(--di-text-3, 0.76rem)',
     lineHeight: 1.3
 }
 
-// In the scene bar (bare) the chip is one cell of the bar: no border or glass of its own, and its
-// opened cue list hangs under the bar as a panel instead of growing the bar.
+// In the scene bar (bare) the chip is one cell of the bar; its opened cue list hangs under it as a panel instead of growing
+// the bar. Not in the bar, it stands alone at `top`, and its list opens under it the same way.
 const chipBox = (bare, top) => (bare
-    ? { position: 'relative', minWidth: 0, flex: '0 1 auto', color: '#f5f7fa', fontSize: '0.85rem', lineHeight: 1.3 }
+    ? { position: 'relative', minWidth: 0, flex: '0 1 auto', color: INK, fontSize: 'var(--di-text-3, 0.76rem)', lineHeight: 1.3 }
     : { ...chipStyle, top })
-const Drop = ({ bare, children }) => (bare
-    ? <div style={{ position: 'absolute', top: 'calc(100% + 3px)', left: 0, width: 'max-content', minWidth: 'min(22rem, calc(100vw - 2rem))', maxWidth: 'calc(100vw - 2rem)', maxHeight: '60vh', overflowY: 'auto', borderRadius: '2px', border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(10, 16, 24, 0.94)', backdropFilter: 'blur(12px)' }}>{children}</div>
-    : children)
+const Drop = ({ children }) => <div style={PANEL}>{children}</div>
 
-const previewButton = { font: 'inherit', fontSize: '0.78rem', color: '#fff', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 0, padding: '0.22rem 0.55rem', cursor: 'pointer' }
-const buttonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.55rem',
-    minHeight: '44px',
-    padding: '0 0.95rem',
-    border: 0,
-    background: 'transparent',
-    color: 'inherit',
-    font: 'inherit',
-    cursor: 'pointer',
-    textAlign: 'left',
-    maxWidth: '100%'
-}
+const previewButton = { font: 'inherit', fontSize: 'var(--di-text-3, 0.76rem)', color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: '2px', padding: '0.22rem 0.55rem', minHeight: 32, cursor: 'pointer' }
+const buttonStyle = { ...CHIP, textTransform: 'none', letterSpacing: 'normal', fontWeight: 400, maxWidth: 'min(18rem, calc(100vw - 2rem))', textAlign: 'left' }
 
 // The chip's own second hand: "next in N s" counts down once a second. The ROOM does not
 // re-render for it — only this chip does.
@@ -153,7 +136,9 @@ const useSecondTick = () => {
 }
 
 export function ShowChip({ show, state, offset, top, spaceId = '', routeProject = '', bare = false, preview = null, onPreview = null }) {
-    const [open, setOpen] = useState(false)
+    // Closed at first load (owner 2026-10-13 21:xx: "look how many UI things pop up ... they cover the view"): the scene
+    // is the page. One click opens the looks (PREVIEW row included); this viewer's choice is remembered, theirs only.
+    const [open, toggleOpen] = useRememberedOpen('show')
     const now = useSecondTick() + (offset?.offset || 0)
     const nextInMs = state.nextInMs == null ? null : Math.max(0, state.firedAt + (show.cues[state.index]?.holdMs || 0) - now)
     const previewCue = preview ? show.cues.find((c) => c.lookId === preview) : null
@@ -169,14 +154,14 @@ export function ShowChip({ show, state, offset, top, spaceId = '', routeProject 
     ) : null
     return (
         <div style={chipBox(bare, top)} data-testid="rig-show-chip" data-look={preview || state.lookId} data-cue={state.index} data-preview={preview || undefined}>
-            <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)}
+            <button type="button" style={buttonStyle} aria-expanded={open} onClick={toggleOpen}
                 title="The show plays by the clock: everyone watching sees the same look at the same moment">
-                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
-                <span style={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.72rem', flex: '0 0 auto' }}>SHOW</span>
+                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: 'var(--di-danger, #f25f5c)', boxShadow: '0 0 8px var(--di-danger, #f25f5c)', flex: '0 0 auto' }} />
+                <span style={{ fontWeight: 700, letterSpacing: 'var(--di-label-tracking, 0.16em)', fontSize: 'var(--di-text-2, 0.625rem)', flex: '0 0 auto' }}>SHOW</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
                 <Caret open={open} />
             </button>
-            {open ? <Drop bare={bare}>{previewRow}{spaceId && routeProject
+            {open ? <Drop>{previewRow}{spaceId && routeProject
                 ? <CueListPanel spaceId={spaceId} projectId={routeProject} />
                 : (
                     <ol style={{ margin: 0, padding: '0 0.95rem 0.7rem 2.2rem' }} aria-label="the looks of the show, in order">

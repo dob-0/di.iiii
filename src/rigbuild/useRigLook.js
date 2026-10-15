@@ -8,6 +8,7 @@ import { dmxEntities } from './dmxPose.js'
 import { isAssumedMode, typeById } from './fixtureTypes.js'
 import { getServerOffset } from './serverClock.js'
 import { motionFrame, motionOf, motionPlan, serverNowOf, withMotion } from './lookMotion.js'
+import { headFrame, headPlan, headsOf, withHeads } from './headMotion.js'
 
 // THE ROOM FOLLOWS THE LOOK (docs/architecture/RIG_BUILD.md §11.4). While the desk plays
 // one of the room's designed looks on a layer — fired by a cue, by the desk itself, or by
@@ -152,16 +153,24 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
         const level = new Map(shownTo.map((e) => [e.id, e.components?.rigShown?.level ?? 1]))
         return motionPlan({ entities: shownTo, look: playing, levelOf: (id) => level.get(id) ?? 1, centre: djCentre(entities) })
     }, [playing, shownTo, entities])
+    // MOVING HEADS (headMotion.js): the look's `heads` turn the lit moving heads of its kinds, from the same server clock and the same epoch.
+    const headsPlan = useMemo(() => {
+        if (!playing || !headsOf(playing)) return null
+        const level = new Map(shownTo.map((e) => [e.id, e.components?.rigShown?.level ?? 1]))
+        return headPlan({ entities: shownTo, library, look: playing, levelOf: (id) => level.get(id) ?? 1 })
+    }, [playing, shownTo, library])
     const [beat, setBeat] = useState(0)
     useEffect(() => {
-        if (!plan) return undefined
+        if (!plan && !headsPlan) return undefined
         const timer = setInterval(() => setBeat((n) => n + 1), MOTION_FRAME_MS)
         return () => clearInterval(timer)
-    }, [plan])
+    }, [plan, headsPlan])
     const epoch = explicit !== undefined ? 0 : driver === 'clock' ? clock.state?.firedAt || 0 : (fade?.firedAt || 0)
     const offsetMs = driver === 'clock' ? clock.offset?.offset || 0 : 0
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `beat` is the clock's tick; the time is read inside the memo
     const frame = useMemo(() => (plan ? motionFrame(plan, serverNowOf(clockNow(), offsetMs), epoch) : null), [plan, epoch, offsetMs, beat])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `beat` is the clock's tick; the time is read inside the memo
+    const headsNow = useMemo(() => (headsPlan ? headFrame(headsPlan, serverNowOf(clockNow(), offsetMs), epoch) : null), [headsPlan, epoch, offsetMs, beat])
     // DMX WINS (RIG_BUILD.md §18.4): while the desk is live, every lamp joined to a patched
     // fixture with a known channel list is drawn from what the desk sends, attribute by
     // attribute. A page's own GO (`explicit`) means no desk is being followed.
@@ -171,14 +180,18 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
         : { entities: flashed, driven: NO_DRIVEN }), [dmxOn, flashed, entities, deskFixtures, library])
     // Motion rides on top of whatever draws the lamps, DMX included: the desk's values are the level, the look's motion is the beat.
     const shown = useMemo(() => withMotion(dmx.entities, frame), [dmx.entities, frame])
+    // Heads ride on top the same way, except a head the desk MOVES (its DMX decodes pan/tilt): the desk's DMX already holds the
+    // offsets, so the room does not add them a second time.
+    const deskMoves = useMemo(() => new Set([...dmx.driven].filter(([, d]) => d.pan != null || d.tilt != null).map(([id]) => id)), [dmx.driven])
+    const shownHeads = useMemo(() => withHeads(shown, headsNow, { library, skip: deskMoves }), [shown, headsNow, library, deskMoves])
     const lit = Boolean(looks && lookId && looks.looks.some((l) => l.id === lookId))
     return {
-        entities: shown,
+        entities: shownHeads,
         driven: dmx.driven,
         lookId: lit ? lookId : NONE,
         fromDesk: driver === 'desk' && Boolean(deskLook),
         fading: Boolean(shownFrom && t < 1),
-        moving: Boolean(plan),
+        moving: Boolean(plan || headsPlan),
         driver,
         show: driver === 'clock' ? show : null,
         clock: driver === 'clock' ? clock.state : null,
