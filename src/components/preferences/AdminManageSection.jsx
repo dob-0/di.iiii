@@ -26,6 +26,7 @@ import {
     navigateToStudioPath
 } from '../../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
+import LoadingScreen from '../LoadingScreen.jsx'
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
@@ -272,7 +273,7 @@ export default function AdminManageSection({ onStats }) {
                                 </button>
                                 {isOpen && (
                                     <>
-                                        {bucket?.loading && <div className="preferences-tree-note">Loading projects…</div>}
+                                        {bucket?.loading && <div className="preferences-tree-note"><LoadingScreen variant="inline" label="Loading projects" text="loading projects" /></div>}
                                         {bucket?.error && <div className="preferences-tree-note">{bucket.error}</div>}
                                         {bucket && !bucket.loading && bucket.items.length === 0 && (
                                             <div className="preferences-tree-note">No projects yet.</div>
@@ -377,7 +378,7 @@ export function TrafficSection() {
         .reduce((best, row) => (!best || row.count > best.count ? row : best), null)
     return (
         <ModuleSection title="Traffic" subtitle={`Last ${stats?.windowDays || 30} days · counted here, first-party, one per page load`}>
-            {loading && <div className="preferences-empty">Loading the counts…</div>}
+            {loading && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading the counts" text="loading the counts" /></div>}
             {error && <div className="preferences-empty">{error}</div>}
             {stats && (
                 <>
@@ -445,7 +446,7 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
             <CommonsModerationSection />
 
             <ModuleSection title="People" subtitle="Account roles and overall reach">
-                {users === null && <div className="preferences-empty">Loading accounts…</div>}
+                {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
                 )}
@@ -604,7 +605,7 @@ function SpaceDetail({
                     value={ownerLabel}
                     mono={!ownerUser}
                 />
-                {users === null && <div className="preferences-empty">Loading accounts…</div>}
+                {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
                 )}

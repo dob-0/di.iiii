@@ -45,6 +45,7 @@ import {
 import { lightingDeskPath, probeLightingDesk } from '../../map/lightingLink.js'
 import { PREVIEW_POSTER_MESSAGE, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Every space card embeds the SAME app at a different route, and browsers
 // coalesce overlapping requests for the same module: twelve cards booting
@@ -1028,7 +1029,7 @@ export default function SpaceHub() {
 
             {invites?.spaceId === space.id && (
                 <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    {invites.loading && <p className="ssh-linker-status">Loading invite links…</p>}
+                    {invites.loading && <LoadingScreen variant="inline" label="Loading invite links" text="loading invite links" />}
                     {invites.error && <p className="ssh-linker-status ssh-linker-error">{invites.error}</p>}
                     {invites.notice && <p className="ssh-linker-status">{invites.notice}</p>}
                     {!invites.loading && !invites.error && invites.items.length === 0 && (
@@ -1071,7 +1072,7 @@ export default function SpaceHub() {
 
             {history?.spaceId === space.id && (
                 <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    {history.loading && <p className="ssh-linker-status">Loading history…</p>}
+                    {history.loading && <LoadingScreen variant="inline" label="Loading history" text="loading history" />}
                     {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
                     {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
                     {!history.loading && history.changes?.length > 0 && (
@@ -1139,7 +1140,7 @@ export default function SpaceHub() {
 
             {isLinking && (
                 <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
+                    {linker.loading && <LoadingScreen variant="inline" label="Loading projects" text="loading projects" />}
                     {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                     {!linker.loading && !linker.error && linker.projects.length === 0 && (
                         <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
@@ -1371,7 +1372,8 @@ export default function SpaceHub() {
                     </p>
                 )}
 
-                {status && (
+                {status === 'loading...' && <LoadingScreen variant="inline" label="Loading" text="loading" />}
+                {status && status !== 'loading...' && (
                     <p className={`ssh-status${status.includes('error') ? ' ssh-status-error' : ''}`}>
                         {status}
                     </p>

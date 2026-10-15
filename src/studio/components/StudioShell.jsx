@@ -38,6 +38,7 @@ import {
     StructurePanel,
     TimelinePanel,
 } from './StudioShellPanels.jsx'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -697,7 +698,7 @@ export default function StudioShell({
             />
 
             {loading && (
-                <div className="sfp-overlay-card">Loading project…</div>
+                <LoadingScreen variant="cover" label="Loading project" text="loading the project" waitingFor="the project file" />
             )}
             {loadError && (
                 <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>
