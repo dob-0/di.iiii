@@ -575,7 +575,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
     // Auto fly: next to Walk / Fly (the scene bar's row) or the last line of the corner column. The flight is SmartView's;
     // any input ends it, so this button is marked data-autofly and toggles itself.
-    const flyButton = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
+    // Only where the smart view runs: a room with a node graph is drawn by PublicGraphSurface, which has no flight yet (owed).
+    const flyButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && !hasGraph ? (
                     <button
                         type="button"
                         data-autofly

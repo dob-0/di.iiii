@@ -754,6 +754,7 @@ export default function SmartView({
             state.misses = state.frame ? 0 : (state.misses || 0) + 1
         }
         const frame = state.frame
+        if (import.meta.env.DEV && typeof window !== 'undefined') window.__diFlyState = { frame: Boolean(frame), fly: flyRef.current, misses: state.misses || 0, entities: entities.length }
         if (!frame) { if ((state.misses || 0) <= 20) frameState.invalidate(); return }
         if (!state.building) {
             state.building = true
