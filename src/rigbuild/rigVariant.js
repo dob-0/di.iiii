@@ -23,6 +23,39 @@ export const shortTitle = (title, id = '') => {
     return /^\d+(?:\.\d+)*$/.test(rest) ? `v${rest}` : `${m[1]}${rest ? ` ${rest}` : ''}`
 }
 
+/** The number a project's slug names in the naming standard vX-Y (`v2-9` -> "2.9", `moxir-v10-2` -> "10.2"), or null. */
+export const versionNumberOfSlug = (slug) => {
+    const m = /(?:^|-)v(\d+)-(\d+)$/.exec(String(slug || ''))
+    return m ? `${m[1]}.${m[2]}` : null
+}
+
+const warned = new Set()
+
+/**
+ * A version's name for the chip and the row: ONE source for its number. The project's slug gives the number;
+ * the stored title (the list entry's, the rows', the document's own mark) may add words after it, never a
+ * different number. A stored number that disagrees loses to the slug (console.warn names both); a title with
+ * no number gets the slug's in front. A slug without the vX-Y pattern: the stored label as it is.
+ */
+export const versionName = (title, id, projectId) => {
+    const label = shortTitle(title, id)
+    const number = versionNumberOfSlug(projectId)
+    if (!number) return label
+    // A stored number may come with or without its 'v' ("v2.8 …" or a bare "2.8" from a list entry titled "2.8 — …";
+    // the bare one showed the chip as "v2.9 2.8" on the test copy, 2026-10-14): both are the number token.
+    const m = /^v?(\d+(?:\.\d+)+)(\b.*)$/.exec(label) || /^v(\d+)(\b.*)$/.exec(label)
+    if (!m) return `v${number} ${label}`.trim()
+    if (m[1] !== number) {
+        const key = `${projectId}|${m[1]}`
+        if (!warned.has(key)) {
+            warned.add(key)
+            console.warn(`[versions] project ${projectId}: stored label says v${m[1]}, its slug says v${number}; showing v${number}`)
+        }
+        return `v${number}${m[2]}`
+    }
+    return `v${m[1]}${m[2]}`
+}
+
 const byProjectId = (a, b) => (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0)
 
 /**
@@ -52,7 +85,7 @@ const setFromRows = (variant, currentProjectId, hrefOf, rows) => {
         members.push({ projectId: currentProjectId, id: variant.id, title: variant.title || variant.id, summary: variant.summary || '', copy: Boolean(variant.copyOf) })
     }
     members.sort((a, b) => (a.copy === b.copy ? byProjectId(a, b) : a.copy ? 1 : -1))
-    return members.map((m) => ({ id: m.id, title: m.title, summary: m.summary, href: hrefOf(m.projectId), current: m.projectId === currentProjectId, copy: m.copy }))
+    return members.map((m) => ({ projectId: m.projectId, id: m.id, title: m.title, summary: m.summary, href: hrefOf(m.projectId), current: m.projectId === currentProjectId, copy: m.copy }))
 }
 
 /** The project that holds the version list of this version's production (`<set>-versions`), or null. */
@@ -73,6 +106,7 @@ const setFromList = (variant, currentProjectId, hrefOf, rows, list) => {
     const links = list.entries
         .filter((v) => v.projectId === currentProjectId || (v.status !== 'archived' && here.has(v.projectId)))
         .map((v) => ({
+            projectId: v.projectId,
             id: v.id,
             title: v.title || v.id,
             summary: '',
@@ -83,7 +117,7 @@ const setFromList = (variant, currentProjectId, hrefOf, rows, list) => {
             // two "for the show" can only come from a merge of two machines' edits; then neither is marked
             show: v.status === FOR_THE_SHOW && !twoForTheShow
         }))
-    if (!links.some((l) => l.current)) links.unshift({ id: variant.id, title: variant.title || variant.id, summary: variant.summary || '', href: hrefOf(currentProjectId), current: true, copy: Boolean(variant.copyOf), show: false })
+    if (!links.some((l) => l.current)) links.unshift({ projectId: currentProjectId, id: variant.id, title: variant.title || variant.id, summary: variant.summary || '', href: hrefOf(currentProjectId), current: true, copy: Boolean(variant.copyOf), show: false })
     return links
 }
 
@@ -106,7 +140,7 @@ const setFromList = (variant, currentProjectId, hrefOf, rows, list) => {
  * rigbuilder.7 and got "Project not found." While the list is unknown only the current
  * version is shown — a label, no links. With fewer than two real versions there is no row.
  */
-export const versionLinks = (variant, currentProjectId, hrefOf, existing = undefined, list = null) => {
+const linksOf = (variant, currentProjectId, hrefOf, existing, list) => {
     const isRows = Array.isArray(existing) && existing.some((x) => x && typeof x === 'object')
     if (isRows && list) {
         const listed = setFromList(variant, currentProjectId, hrefOf, existing, list)
@@ -119,7 +153,7 @@ export const versionLinks = (variant, currentProjectId, hrefOf, existing = undef
     const siblings = variant?.siblings || []
     if (siblings.length < 2) return null
     const isCurrent = (s) => s.projectId === currentProjectId || s.id === variant.id
-    const all = siblings.map((s) => ({ id: s.id, title: s.title || s.id, summary: s.summary || '', href: hrefOf(s.projectId), current: isCurrent(s), copy: false }))
+    const all = siblings.map((s) => ({ projectId: s.projectId, id: s.id, title: s.title || s.id, summary: s.summary || '', href: hrefOf(s.projectId), current: isCurrent(s), copy: false }))
     if (existing === undefined) return all
     if (existing === null) {
         const here = all.filter((l) => l.current)
@@ -129,4 +163,10 @@ export const versionLinks = (variant, currentProjectId, hrefOf, existing = undef
     const have = ids instanceof Set ? ids : new Set(ids)
     const real = siblings.map((s, i) => [s, all[i]]).filter(([s]) => isCurrent(s) || have.has(s.projectId)).map(([, l]) => l)
     return real.length >= 2 ? real : null
+}
+
+/** The switch's entries (see linksOf above), each with `name`: what the row and the chip show (versionName). */
+export const versionLinks = (variant, currentProjectId, hrefOf, existing = undefined, list = null) => {
+    const links = linksOf(variant, currentProjectId, hrefOf, existing, list)
+    return links ? links.map((l) => ({ ...l, name: versionName(l.title, l.id, l.projectId) })) : links
 }

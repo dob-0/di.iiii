@@ -155,3 +155,14 @@ offload), uncapped (`--disable-gpu-vsync --disable-frame-rate-limit`), 1440×900
 - Room bounds are axis-aligned: a building turned off the world axes gets a loose box and a
   looser cut. MOXIR is axis-aligned by construction (`hall.py`).
 - The graph lane's published renderer (`PublicGraphSurface`) and walk mode do not have it.
+
+## Auto fly (2026-10-15)
+
+`src/project/viewport/autoFly.js` (pure) builds a closed flight from the room's frame (`computeRoomFrame`) and the points of
+interest the scene has (DJ riser, rig box, entrance; the frame alone is enough): a centripetal Catmull-Rom spline, speed from a
+profile (1.6–6 m/s, curvature- and acceleration-limited), bank = atan(lateral acceleration / g) capped at 25°, look-ahead on the
+path. Every sample stays 0.8 m inside the walls and the roof cut and ≥ 1.2 m above the floor (`checkFlight` reports it).
+`SmartView` follows it (`fly`, `onFlyEnd` props) with camera-controls disabled; `useAutoFlyStop` ends it on any pointer, wheel,
+key or touch input. Buttons: the room page's "Auto fly" beside Walk / Fly (PublicProjectViewer), the Studio view bar's "Auto fly";
+`?fly=1` starts it on open. Limits: the path is checked against the room's frame, not against each piece of furniture; the spline
+is C1 (smoothness of speed and bank is by filtering, not by construction).

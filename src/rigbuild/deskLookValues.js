@@ -9,7 +9,8 @@
 // A fixture with no list still gets none (the look's pose then shows by rule, as before).
 
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
-import { deskLooks, lookPoses, rigLooksOf, flashKindOf } from './looks.js'
+import { deskLooks, lookPoses, posedEntities, rigLooksOf, flashKindOf } from './looks.js'
+import { deskHeadsOf } from './headMotion.js'
 import { typeById } from './fixtureTypes.js'
 import { encodeDmx } from './dmxDecode.js'
 import { lookStrobeHz } from './strobeCap.js'
@@ -26,6 +27,8 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
     const looks = rigLooks || rigLooksOf(entities)
     const shells = deskLooks(looks, deskFixtures)
     const byEntity = new Map(entities.map((e) => [e.id, e]))
+    // desk fixture id by lamp (the key is `<project>:<entity id>`): the heads' units are named by it
+    const deskIdOf = new Map(deskFixtures.map((f) => [String(f.key || '').split(':').slice(1).join(':'), f.id]))
     return shells.map((shell, i) => {
         const look = looks.looks[i]
         const poses = lookPoses({ entities, library, lookId: look.id, rigLooks: looks })
@@ -61,7 +64,15 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
             const cell = laserHeld ? Object.fromEntries(mode.channels.map((c) => [c.role, 0])) : encodeDmx(mode.channels, want, type)
             if (Object.keys(cell).length) values[f.id] = cell
         }
-        return { ...shell, steps: [{ values }], valuesFrom: Object.keys(values).length ? 'channel lists (assumed where marked)' : null }
+        // HEAD MOTION (headMotion.js): the heads this look moves, with what the desk needs per head (order, hung, range). The desk
+        // plays the offsets onto the rest pan/tilt above, from the moment the look is fired; the room draws the same offsets.
+        // A lamp the look leaves dark (level 0) or a laser is no unit: it takes no part in the fan.
+        const heads = deskHeadsOf({
+            entities: posedEntities(entities, poses), library, look,
+            levelOf: (id) => (typeById(library, byEntity.get(id)?.components?.fixture?.type)?.category === 'laser' ? 0 : (poses.get(id)?.level ?? 0)),
+            idOf: (e) => deskIdOf.get(e.id) || null
+        })
+        return { ...shell, ...(heads ? { heads } : {}), steps: [{ values }], valuesFrom: Object.keys(values).length ? 'channel lists (assumed where marked)' : null }
     })
 }
 

@@ -691,6 +691,12 @@
                     "basis": "EQUIVALENT",
                     "note": "'< 1.3 mrad'"
                 },
+                "scan_field_half_deg": {
+                    "value": 18.5,
+                    "basis": "ASSUMED",
+                    "accessed": "2026-10-13",
+                    "note": "no scan angle published for the UP-LA40WF (nor for the BLLO-RGB40 equivalent): the LaserCube's own +-18.5 deg (itself ASSUMED, kind lasercube) is taken. Read the unit's menu / ILDA size on site. Used by scripts/rigbuild/laser-frames.mjs (N562). Searched again 2026-10-13 (cloud agent, WebSearch 'UPlight UP-LA40WF 40W RGB laser light scan angle'): no page for the unit, no scan angle; the maker's page (https://www.uplight.com.cn/pd48855201.html) and the equivalent's page (https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html) could not be fetched from that session (DNS refused), so neither was re-read. Nothing published is known; stays ASSUMED"
+                },
                 "power_w": {
                     "value": 1200,
                     "src": "BLUESEA",
@@ -1318,6 +1324,12 @@
                     "basis": "UNKNOWN",
                     "accessed": "2026-10-09",
                     "note": "4 mm / 1 mrad: whether 1/e or 1/e2, full or half angle, is not stated (asked of support@laseros.com, owed). The renderer reads 4 mm full width, 1 mrad full angle"
+                },
+                "scan_field_half_deg": {
+                    "value": 18.5,
+                    "basis": "ASSUMED",
+                    "accessed": "2026-10-13",
+                    "note": "the maker's '>37 deg' scan angle read as +-18.5 deg optical, full field (laserLine.js FIELD_HALF_DEG): whether 37 is optical or mechanical, full or half, is not stated. Used by scripts/rigbuild/laser-frames.mjs (N562). Searched again 2026-10-13 (cloud agent, WebSearch): the maker's page https://www.laseros.com/lasercube-models/ could not be fetched from that session (DNS refused). Retailer listings (e.g. https://www.idjnow.com/x-laser-lasercube-7-5w-laser-system.html, 7.5 W Ultra, pre-MK2) print 'AT-40S galvanometer scanners, 35K PPS @ 7 deg scan angle': that is the galvo's pps rating condition (a 7 deg reference angle), NOT the field, and is not taken as one. No MK2 field figure found beyond the '>37 deg'; stays ASSUMED"
                 }
             },
             "look": "A black cube, a little under 16 cm a side, with a small output window in its front face; here in a short U-bracket to clamp it on the truss.",

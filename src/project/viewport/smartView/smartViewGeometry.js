@@ -738,8 +738,10 @@ export const nearFadeOpacity = (distance, nearM = NEAR_FADE_DEFAULT_M, { floor =
     return floor + (1 - floor) * t * t * (3 - 2 * t)
 }
 
-export const VIEW_LAYER_IDS = ['roof', 'walls', 'machines', 'outside']
-export const VIEW_LAYER_LABELS = { roof: 'Roof', walls: 'Walls', machines: 'Machines', outside: 'Outside' }
+// 'cut' (2026-10-15, owner: "I want to see the whole building"): the camera's cutaway itself — off = nothing is cut from
+// outside, the building stands whole (its lit outer walls too); on = today's walls-down reading. Not a mesh group.
+export const VIEW_LAYER_IDS = ['roof', 'walls', 'machines', 'outside', 'cut']
+export const VIEW_LAYER_LABELS = { roof: 'Roof', walls: 'Walls', machines: 'Machines', outside: 'Outside', cut: 'Cut' }
 // The hall's material groups (hall.py v13 merges one mesh per material, named hall-<material>). 'shell' mixes the roof
 // deck and the walls in one mesh, so it is in no group: the cutaway's clip planes take its parts (planWithLayers).
 const LAYER_MATERIALS = {
@@ -760,7 +762,7 @@ export const meshLayer = (name = '') => {
 /** The scene's outside: entities whose id starts rig-out- (MOXIR v2.6: ground, road, forecourt boxes). */
 export const isOutsideEntityId = (id) => /^rig-out-/.test(String(id || ''))
 
-export const allLayersOn = () => ({ roof: true, walls: true, machines: true, outside: true })
+export const allLayersOn = () => ({ roof: true, walls: true, machines: true, outside: true, cut: true })
 
 /** ?layers=walls,machines → the layers shown; no parameter = all shown; 'none' = all hidden. */
 export const parseLayersParam = (search = '') => {
@@ -781,11 +783,13 @@ export const layersParam = (layers) => {
 
 /**
  * The cutaway with the authored layers on top of the camera's own plan: Roof off holds the roof cut in place, Walls off
- * all four wall cuts (`wallInset` inside their lines, as cutawayPlan), wherever the camera is.
+ * all four wall cuts (`wallInset` inside their lines, as cutawayPlan), wherever the camera is; Cut off drops the camera's
+ * own cutaway (the whole building from outside).
  */
 export const planWithLayers = (plan, frame, layers, { wallInset = 1.2 } = {}) => {
     if (!frame || !layers) return plan
-    const out = { ...plan }
+    // Cut off: the camera's own cutaway is dropped, the building stands whole; Roof/Walls off still cut (authored).
+    const out = layers.cut === false ? { roof: null, xMax: null, xMin: null, zMax: null, zMin: null } : { ...plan }
     if (layers.roof === false && Number.isFinite(frame.roofCut)) out.roof = frame.roofCut
     if (layers.walls === false) {
         const { min, max } = frame.bounds

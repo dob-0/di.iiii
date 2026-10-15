@@ -77,3 +77,4 @@ android-twa/*
 android-twa-staging/
 .verify-vj-deck/
 .claude/settings.local.json
+__pycache__/
