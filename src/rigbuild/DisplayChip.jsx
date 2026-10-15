@@ -3,6 +3,8 @@ import { CHIP, PANEL, ACTIVE, INK } from './chromeStyle.js'
 
 // DISPLAY: the view page's rarely-needed switches (layers, Inside / Free, Low / High) behind one small chip in the scene
 // bar. Closed at first load; what a viewer opens is remembered for that viewer only (rememberedOpen.js).
+// Every item of the menu is one width and sits on one left edge, whatever wraps it (the Move control brings its own wrapper).
+const ITEM_RULE = '.scene-display>*{display:flex;width:100%;min-width:0}.scene-display button,.scene-display a{width:100%;justify-content:flex-start}.scene-display [role="group"]{flex-direction:column}'
 export default function DisplayChip({ children }) {
     const [open, toggle] = useRememberedOpen('display')
     return (
@@ -12,7 +14,8 @@ export default function DisplayChip({ children }) {
                 Display <span aria-hidden="true" style={{ opacity: 0.7 }}>{open ? '▾' : '▸'}</span>
             </button>
             {open ? (
-                <div id="scene-display" style={{ ...PANEL, left: 'auto', right: 0, minWidth: 'min(14rem, calc(100vw - 2rem))', display: 'flex', flexDirection: 'column', gap: 'var(--di-space-2, 7px)', padding: 'var(--di-space-2, 7px)' }}>
+                <div id="scene-display" className="scene-display" data-testid="scene-display" style={{ ...PANEL, left: 0, right: 'auto', width: 'min(14rem, calc(100vw - 2rem))', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 'var(--di-space-1, 3px)', padding: 'var(--di-space-1, 3px)' }}>
+                    <style>{ITEM_RULE}</style>
                     {children}
                 </div>
             ) : null}
