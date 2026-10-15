@@ -1,4 +1,7 @@
-# Session — migrate the scenes tools (rows N811.1, N811.3, N811.4), 2026-10-15
+# feat/migrate-scenes-2026-10-15
+
+## Scenes tools moved into scripts/place (rows N811.1 N811.3 N811.4, 2026-10-15)
+
 
 Brief: `agent-reports-2026-10-15/moxir-50/briefs/migrate-scenes.md`. Rule: nothing made for a show is left behind.
 
