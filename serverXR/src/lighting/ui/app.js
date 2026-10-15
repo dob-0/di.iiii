@@ -279,6 +279,7 @@ async function pullState() {
     renderNote('');
     if (wasOffline) say('back in touch with the desk');
     applyCaps();
+    dmxFeed.setAllowed(streamWanted());
   } catch (e) {
     // Latch only after it has really gone, and then keep saying it until it comes back:
     // this one does NOT expire, because a desk that is not answering is not a passing note.
@@ -293,16 +294,27 @@ async function pullState() {
   }
 }
 
-async function pullDmx() {
-  if (document.hidden || !S) return;
-  try {
-    DMX = (await (await fetch('api/dmx')).json()).dmx;
-    paintStage();
-    paintSelList();
-    syncAttr();
-    if (page === 'fader') syncFaders();
-  } catch (e) { /* the slow poll reports it */ }
+// The live DMX comes from the desk's pushed stream when it offers one (`caps.stream`, absent =
+// the full desk, which has it), and from this 10 Hz poll when it does not or the stream goes
+// quiet; dmxfeed.js holds that rule. Either way the same painters run on the same DMX object.
+async function fetchDmx() {
+  if (document.hidden || !S) return null;
+  try { return (await (await fetch('api/dmx')).json()).dmx || null; } catch (e) { return null; }   // the slow poll reports it
 }
+function paintDmx(dmx) {
+  DMX = dmx;
+  paintStage();
+  paintSelList();
+  syncAttr();
+  if (page === 'fader') syncFaders();
+}
+const dmxFeed = window.dmxFeed.createFeed({
+  open: (url) => new EventSource(url),
+  poll: fetchDmx,
+  onUpdate: paintDmx,
+});
+// Is the stream on? Needs the page to have EventSource and the desk not to have said no.
+const streamWanted = () => typeof EventSource === 'function' && !!S && cap('stream');
 
 /* =============== colour =============== */
 
@@ -6203,7 +6215,8 @@ showPage(location.hash.slice(1));
   Promise.resolve(pullState()).then(next, next);
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
-setInterval(pullDmx, 100);
+dmxFeed.start();
+document.addEventListener('visibilitychange', () => { if (document.hidden) dmxFeed.pause(); else dmxFeed.resume(); });
 
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:

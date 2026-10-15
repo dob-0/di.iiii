@@ -88,6 +88,14 @@
       ]
     }
   },
+  "caps": {
+    "about": "Keys of the `caps` object in GET api/state. caps may be absent: that is the full desk. A cap is off only on an explicit false; an absent key is on. Read by ui/caps.js cap().",
+    "keys": {
+      "midi": "MIDI controls (also needs a secure page)",
+      "audio": "microphone / audio controls (also needs a secure page)",
+      "stream": "api/dmx/stream (server-sent DMX frames) is offered. On: the UI takes DMX from the stream and polls api/dmx only as a fallback (silent 2 s, error: poll resumes, stream retried with back-off 1-30 s). false: api/dmx is polled at 10 Hz. Absent: on, because the full desk (desk.js) always has the route."
+    }
+  },
   "entries": [
     {
       "method": "GET",
@@ -106,6 +114,19 @@
       "reply": {
         "dmx": "object"
       }
+    },
+    {
+      "method": "GET",
+      "path": "api/dmx/stream",
+      "class": "a",
+      "transport": "sse",
+      "reply": {
+        "s": "number",
+        "t": "number",
+        "k": "number",
+        "d": "array"
+      },
+      "note": "transport: sse. Content-Type text/event-stream; a `retry:` line, then one event named `frame` per change, data = JSON {s,t,k,d,m?}: s sequence from 1, t desk clock ms, k 1 on a key frame (whole universes, sent first on subscribe) else 0, d = [[universe (0 = U1), start (0-based), [values]], ...] runs of changed slots, m = {master,blackout,looks,cues} only when changed (ignored by the UI). A frame with nothing changed is not sent, so a quiet desk is silent. Optional ?u=0,1 limits universes. Used only when caps.stream is on; api/dmx stays the fallback."
     },
     {
       "method": "GET",

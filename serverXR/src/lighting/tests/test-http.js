@@ -1809,10 +1809,41 @@ function fill(v, ctx) {
 }
 const dig = (obj, dotted) => dotted.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
 
+// An SSE entry: open it, read until the first `frame` event, check the shape, close.
+function streamCheck(e, cls) {
+  return {
+    name: 'contract ' + cls + ': ' + e.method + ' /' + e.path + ' (sse)',
+    fn: async () => {
+      const ac = new AbortController();
+      const res = await fetch(base + '/' + e.path, { signal: ac.signal });
+      try {
+        assert.strictEqual(res.status, 200, 'answered ' + res.status);
+        assert.ok(/text\/event-stream/.test(res.headers.get('content-type') || ''), 'content-type is not text/event-stream');
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        const t0 = Date.now();
+        while (!/event: frame\ndata: (.*)\n\n/.test(buf)) {
+          assert.ok(Date.now() - t0 < 5000, 'no frame event in 5 s');
+          const { value, done } = await reader.read();
+          assert.ok(!done, 'stream ended before a frame');
+          buf += dec.decode(value, { stream: true });
+        }
+        const body = JSON.parse(/event: frame\ndata: (.*)\n\n/.exec(buf)[1]);
+        const bad = shapeProblems(body, e.reply, e.path);
+        assert.ok(!bad.length, bad.join('\n       '));
+        assert.strictEqual(body.k, 1, 'the first frame is a key frame');
+        assert.ok(body.d.every((r) => Array.isArray(r) && r.length === 3 && Number.isInteger(r[0]) && Number.isInteger(r[1]) && Array.isArray(r[2])), 'd is [[universe, start, [values]], ...]');
+      } finally { ac.abort(); }
+    },
+  };
+}
+
 function contractChecks(cls) {
   const ctx = {};
   const list = [];
   for (const e of contract.entries.filter((x) => x.class === cls)) {
+    if (e.transport === 'sse') { list.push(streamCheck(e, cls)); continue; }   // a stream never ends: read one frame, not a body
     list.push({
       name: 'contract ' + cls + ': ' + e.method + ' /' + e.path,
       fn: async () => {
