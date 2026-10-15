@@ -49,6 +49,18 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'loading-ring',
+        category: 'Getting started',
+        title: 'The loading ring',
+        summary: 'Every wait in di.iiii shows the same ring, so a page that is still working never looks broken.',
+        body: [
+            'Whenever di.iiii is waiting for something — a room, a project, a list, your sign-in — you see one thin white ring turning on black. It is the same ring everywhere: the room page, Studio, the space pages, the lists in Preferences.',
+            'A short line under the ring says what is loading, for example “loading the room”. If the wait lasts more than 8 seconds a second, dimmer line appears — “still waiting for the scene file…” — so a slow connection or a stuck server is seen as that, never mistaken for a finished black page. If it stays for long, reload; if it keeps coming back, the line tells you what to report.'
+        ],
+        tags: ['loading', 'wait', 'spinner', 'ring', 'black screen'],
+        updated: '2026-10-15'
+    },
+    {
         id: 'spaces-and-projects',
         category: 'Getting started',
         title: 'Spaces & projects',
