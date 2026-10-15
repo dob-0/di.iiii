@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
     CMF_1931, KM, beamWidth, driveOfHex, fieldDirection, gamutMapConstantY, hgPhase, laserColourFlux, laserFlux, laserOf,
-    lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, scanLinesAt
+    lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, scanLinesAt,
+    MIN_CORE_PX, coreHalo, coreWidth, haloRadius, haloRadiusCapped, haloShare
 } from './laserLine.js'
 
 const SIX_W = [2700, 1500, 1800] // mW at 455 / 525 / 638 nm, the maker's 6.0 W Ultra MK2 (Guide v1.2 p. 12)
@@ -156,3 +157,49 @@ describe('a frame is scaled by the lamp\'s colour', () => {
     })
 })
 
+
+describe('laserLine 7.: core and halo (2026-10-15, lasers that look like lasers)', () => {
+    it('draws the core as wide as the beam, never under one pixel', () => {
+        // 10 m from the cube, 1 mrad: the beam is √(4² + 10²) mm = 10.8 mm
+        expect(coreWidth({ s: 10, dist: 1, pixelAngle: 0.001 })).toBeCloseTo(0.01077, 4)
+        // 50 m from the eye at 1.556 mrad a pixel (fov 70°, 900 px): the pixel (78 mm) wins over the beam
+        expect(coreWidth({ s: 10, dist: 50, pixelAngle: 1.556e-3 })).toBeCloseTo(0.0778, 4)
+        expect(MIN_CORE_PX).toBe(1)
+    })
+
+    it('splits the scattered light by Beer–Lambert and spreads the halo by Fermi–Eyges', () => {
+        expect(haloShare(0.02, 0)).toBe(0)
+        expect(haloShare(0.02, 10)).toBeCloseTo(1 - Math.exp(-0.2), 6)
+        // √((2/3)·0.02·2·0.3·10³) = √8 = 2.83 m
+        expect(haloRadius(0.02, 0.7, 10)).toBeCloseTo(Math.sqrt(8), 6)
+        expect(haloRadius(0, 0.7, 10)).toBe(0)
+        // a sharper forward lobe (larger g) spreads less
+        expect(haloRadius(0.02, 0.9, 10)).toBeLessThan(haloRadius(0.02, 0.7, 10))
+    })
+
+    it('holds a fan of lines apart: no halo wider than half the gap to the next line', () => {
+        // MOXIR cube fan: 6 lines over 0.090 rad, 18 mrad apart; at 10 m the gap is 0.18 m
+        expect(haloRadiusCapped(0.02, 0.7, 10, 0.018)).toBeCloseTo(0.09, 6)
+        expect(haloRadiusCapped(0.02, 0.7, 10)).toBeCloseTo(Math.sqrt(8), 6)
+    })
+
+    it('keeps what a pixel sums: core·W + halo·√(2π)·r0 = the line intensity per length', () => {
+        const a = { sigmaS: 0.02, g: 0.7, flux: 3.61, cosTheta: 0, s: 10, d: 0, dist: 10, pixelAngle: 8.09e-4 }
+        const c = coreHalo(a)
+        const r0 = haloRadius(0.02, 0.7, 10)
+        expect(c.core * c.coreWidth + c.halo * Math.sqrt(2 * Math.PI) * r0).toBeCloseTo(c.perLength, 9)
+        expect(c.perLength).toBeCloseTo(lineLuminance({ ...a, width: 1 }), 12)
+        // the core outshines its halo by far: a laser reads as a line
+        expect(c.core / c.halo).toBeGreaterThan(50)
+        // capping the halo's width does not raise its peak
+        expect(coreHalo({ ...a, spacingRad: 0.018 }).halo).toBeCloseTo(c.halo, 12)
+    })
+
+    it('a 40 W line is brighter per length than a cube line by its flux ratio, whatever the width', () => {
+        const cube = laserColourFlux({ mW: [666.667, 333.333, 250] }).lumens
+        const forty = laserColourFlux({ mW: [16000, 15000, 10000] }).lumens
+        const at = { sigmaS: 0.02, g: 0.7, cosTheta: 0.5, s: 10, d: 10, dist: 10, pixelAngle: 1e-3 }
+        expect(coreHalo({ ...at, flux: forty }).perLength / coreHalo({ ...at, flux: cube }).perLength).toBeCloseTo(forty / cube, 9)
+        expect(forty / cube).toBeGreaterThan(40)
+    })
+})

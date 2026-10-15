@@ -160,6 +160,63 @@ export const lineLuminance = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, widt
     return (Math.max(num(sigmaS), 0) * hgPhase(cosTheta, g) * Math.max(num(flux), 0) * T) / (Math.max(width, 1e-9) * sin)
 }
 
+// 7. CORE AND HALO (2026-10-15, owner: "the lasers don't even look like lasers"). What the eye sees of a laser in haze is a
+//    thin bright CORE (the singly scattered light, 1. and 2. above, as wide as the beam) and a faint HALO around it: light
+//    that scattered more than once on its way out of the beam. The pure arithmetic of both, for the renderer (owed: the
+//    shader, laserLineMaterial.js — see docs/ai/sessions/feat-laser-lines-look-2026-10-15.md).
+//    Core: drawn as wide as the beam, never thinner than MIN_CORE_PX pixels; what a pixel sums is kept (3.).
+//    Halo share: of the light singly scattered toward the eye, the part that scatters again over the path s it has already
+//    run in the beam's air is 1 − exp(−σs·s) (Beer–Lambert); the core keeps exp(−σs·s). Energy is kept, not lost.
+//    Halo radius: small-angle multiple scattering, the Fermi–Eyges result for a pencil beam (Eyges, Phys. Rev. 74, 1948;
+//    used for light beams in water by the beam-spread-function literature): the mean square radial spread after a path s
+//    is ⟨r²⟩ = (2/3)·σs·⟨θ²⟩·s³, with ⟨θ²⟩ ≈ 2·(1 − g) for a Henyey–Greenstein phase with asymmetry g (⟨cos θ⟩ = g, and
+//    1 − cos θ ≈ θ²/2). The halo radius is √⟨r²⟩. ASSUMPTION: HG under-states the sharp forward peak of real glycol-droplet
+//    Mie scattering, so this halo is wider and fainter than a real one; it is a stated model, unvalidated against a photo.
+//    Cap: no halo is drawn wider than HALO_SPACING_CAP of the angle to the next line of the same fan, so a comb of lines
+//    stays a comb of lines (the cut-off tails are not piled onto the rest: the peak stays the uncapped one).
+export const MIN_CORE_PX = 1
+export const HALO_SPACING_CAP = 0.5
+
+/** The core's drawn width (m): the beam's own width at s, or MIN_CORE_PX pixels at the eye's distance, whichever is wider. */
+export const coreWidth = ({ s = 0, dist = 1, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, minPx = MIN_CORE_PX } = {}) =>
+    Math.max(beamWidth(s, diameter_mm, divergence_mrad), Math.max(dist, 0) * Math.max(pixelAngle, 0) * minPx)
+
+/** The share of the scattered light that sits in the halo after a path s (m) in air of σs (1/m): 1 − exp(−σs·s). */
+export const haloShare = (sigmaS, s) => 1 - Math.exp(-Math.max(num(sigmaS), 0) * Math.max(num(s), 0))
+
+/** Fermi–Eyges halo radius (m) after a path s: √((2/3)·σs·2(1 − g)·s³). */
+export const haloRadius = (sigmaS, g, s) => {
+    const gg = clamp(num(g, 0.7), -0.95, 0.95)
+    return Math.sqrt((2 / 3) * Math.max(num(sigmaS), 0) * 2 * (1 - gg) * Math.pow(Math.max(num(s), 0), 3))
+}
+
+/** The halo radius held under HALO_SPACING_CAP of the gap to the neighbouring line (spacing in radians, at path s). */
+export const haloRadiusCapped = (sigmaS, g, s, spacingRad = Infinity) => {
+    const r = haloRadius(sigmaS, g, s)
+    const cap = Number.isFinite(spacingRad) && spacingRad > 0 ? HALO_SPACING_CAP * spacingRad * Math.max(s, 0) : Infinity
+    return Math.min(r, cap)
+}
+
+/**
+ * A line's look at one point: the intensity per unit length I (= L·W, cd/m per lm of Φ, 2.), the core's luminance over its
+ * drawn width, and the halo's peak luminance (a Gaussian of radius r across the line: peak = share·I / (√(2π)·r)).
+ */
+export const coreHalo = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, s = 0, d = 0, dist = d, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, spacingRad = Infinity }) => {
+    const perLength = lineLuminance({ sigmaS, sigmaT, g, flux, cosTheta, width: 1, s, d })
+    const W = coreWidth({ s, dist, pixelAngle, diameter_mm, divergence_mrad })
+    const share = haloShare(sigmaS, s)
+    const r0 = haloRadius(sigmaS, g, s)
+    // the cap cuts the halo's tails; its peak stays that of the uncapped Gaussian (the cut light is not piled up)
+    return {
+        perLength,
+        coreWidth: W,
+        core: ((1 - share) * perLength) / W,
+        haloRadius: haloRadiusCapped(sigmaS, g, s, spacingRad),
+        haloShare: share,
+        halo: r0 > 0 ? (share * perLength) / (Math.sqrt(2 * Math.PI) * r0) : 0
+    }
+}
+
 /** A frame's points, cleaned the way the Nodes editor's laser frame is: [x, y, r, g, b], x/y −1…1, colour 0…1; bad points dropped. */
 export const framePoints = (points, max = 2000) => {
     const out = []
