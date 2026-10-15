@@ -13,6 +13,7 @@ import {
 } from '../utils/constellationLayout.js'
 import { listProjects, updateProject } from '../../project/services/projectsApi.js'
 import '../styles/space-constellation.css'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // One space, rendered as a living node: an emissive core, an additive halo
 // that breathes for the main/live spaces, and a selection ring. Text lives in
@@ -362,7 +363,7 @@ export default function SpaceConstellation({
                         <div className="scon-projects-head mono">
                             projects {projects ? `· ${projects.length}` : ''}
                         </div>
-                        {projectsLoading && <div className="scon-muted mono">loading…</div>}
+                        {projectsLoading && <LoadingScreen variant="inline" label="Loading projects" text="loading projects" />}
                         {projects && projects.length === 0 && <div className="scon-muted mono">no projects yet</div>}
                         {projects && projects.map(p => (
                             <ProjectRow

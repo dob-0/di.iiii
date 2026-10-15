@@ -5,6 +5,7 @@ import { WORK_DIRECTOR_SURFACES } from '../../works/routes.jsx'
 import { buildStudioHubPath, buildSpacesPath } from '../utils/studioRouting.js'
 import '../styles/studio-hub.css'
 import './studioCodeSpaceDirector.css'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // The authoring surface for a space whose scene is CODE.
 //
@@ -80,7 +81,7 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
                 `.is-embedded` rule in algoVrithm.css. Without a positioned host
                 an `absolute` root escapes to the nearest one, which is the page. */}
             <div className="scsd-stage">
-                <Suspense fallback={<div className="scsd-loading">Loading the piece…</div>}>
+                <Suspense fallback={<div className="scsd-loading"><LoadingScreen variant="inline" label="Loading the piece" text="loading the piece" /></div>}>
                     <Surface embedded director />
                 </Suspense>
             </div>

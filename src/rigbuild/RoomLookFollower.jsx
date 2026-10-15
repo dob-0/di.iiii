@@ -7,6 +7,7 @@ import { showWords } from './showClock.js'
 import { deskCues, cueClockWords } from './cueRun.js'
 import useRememberedOpen from '../utils/rememberedOpen.js'
 import { CHIP, PANEL, INK, LINE } from './chromeStyle.js'
+import LoadingScreen from '../components/LoadingScreen.jsx'
 
 // THE SPACE VIEW FOLLOWS THE SHOW (RIG_BUILD.md §15.6, §16). /{space} — the room as it
 // opens, the one the owner watches a show in — draws the lamps posed by the look that is
@@ -98,7 +99,7 @@ function Caret({ open }) {
 }
 
 function CueListPanel(props) {
-    return <Suspense fallback={<p style={{ margin: 0, padding: '0.5rem 0.95rem', fontSize: '0.8rem' }}>Loading the cues…</p>}><RoomCueList {...props} /></Suspense>
+    return <Suspense fallback={<LoadingScreen variant="inline" label="Loading the cues" text="loading the cues" />}><RoomCueList {...props} /></Suspense>
 }
 
 const chipStyle = {

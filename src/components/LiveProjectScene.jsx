@@ -70,6 +70,7 @@ import './liveProjectScene.css'
 import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
 import { isSteelEntity } from '../objectComponents/steelOccluder.js'
 import { isArchitectureEntity } from '../project/viewport/smartView/smartViewGeometry.js'
+import LoadingScreen from './LoadingScreen.jsx'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../rigbuild/RigBodies.jsx'))
@@ -2184,7 +2185,7 @@ export default function LiveProjectScene({
                                 </button>
                             </div>
                         ) : (
-                            <div className="live-scene-loading-ring" />
+                            <LoadingScreen variant="inline" label="Loading the room" text="loading the room" waitingFor="the scene file" />
                         )}
                     </div>
 

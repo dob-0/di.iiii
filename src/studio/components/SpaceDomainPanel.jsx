@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { addSpaceDomain, checkSpaceDomain, listSpaceDomains, removeSpaceDomain } from '../../services/serverSpaces.js'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 const STATE_WORDS = {
     active: 'Live',
@@ -101,7 +102,7 @@ export default function SpaceDomainPanel({ space, onClose }) {
                     This di.iiii is not connected to Cloudflare, so a domain is saved but does not switch on by itself. An admin can switch it on.
                 </p>
             )}
-            {loading && <p className="ssh-linker-status">Loading…</p>}
+            {loading && <LoadingScreen variant="inline" label="Loading" text="loading" />}
             {error && <p className="ssh-linker-status ssh-linker-error">{error}</p>}
 
             {domains.length > 0 && (
