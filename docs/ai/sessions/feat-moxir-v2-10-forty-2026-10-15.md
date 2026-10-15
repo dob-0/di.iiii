@@ -38,3 +38,14 @@
 - 03:5x owner: "so fix" → Full by default on a desktop with a real GPU, Lite on a coarse pointer or a software renderer (7ffb32bf; reverses the 10-08 Lite-everywhere rule on his word; the audit says Full alone adds nothing visible on this view — the air does).
 - Generator (Sonnet, plan meter, the last plan-meter job): moxir-v2-11 = copy of v2-10 + 50 cues; the schema's RIG_LOOKS_CAP 50 dropped the 51st look → 120 (214ee554), stack restarted, looks-only re-run: 51 looks / 50 cues (v515). Its 32 renders were nearly black (thin air + Lite) → re-render job on the credit with the outside views (Cut off).
 - Owner 04:0x "close all unused": his duplicate dev tabs were already closed by him; agent lane 1 (idle, blank) stopped; nothing else of ours ran.
+
+## 04:40-07:30 — the owner's asks as jobs on the API credits (lead b); hand-over 2
+- Studio picker (PR #942) and scene editor (PR #943) built headless and merged into this branch; moxir-one runs them. Rig looks cap 50 → 120.
+- v2-11: air = known-full (scattering 0.02, haze {} — the haze plan removed by a document PUT, backup kept), outside rule, recolour pass 3 (rare,
+  eye-safe colours; red as accent; the part 'plane 1 (behind the DJ)' renamed 'plane 1' for the editor's lookKey). Stories kept as projects:
+  moxir-v2-11-red, moxir-v2-11-arcs, moxir-v2-11.
+- Owner's new definitions: three render looks — Studio (building), Tech (the light show: only the show's things, lights and lasers as flat shapes),
+  Show (the public link); auto-fly (FPV button); lasers as lasers in the room page (the Studio already draws them right); laser content for the 6
+  cubes until the 40 W DMX charts arrive; Full/Lite → High/Low. Briefs in agent-reports-2026-10-15/moxir-50/briefs/.
+- Lessons: one dropped ask (N705) → the "read my chat text right" rule + ledger-open (di-atlas #95); 7 jobs at once → 94 °C → cap 3; the
+  environment before the renders. Hand-over 2: agent-reports-2026-10-15/moxir-50/LEAD-HANDOVER-2.md (b meter 90 %).
