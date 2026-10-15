@@ -18,17 +18,14 @@
 //   node scripts/session-land.mjs             # do it
 //   node scripts/session-land.mjs --dry-run   # show what would happen, touch nothing
 
-import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { foldNotesIntoProgress, buildLastSessionSection, replaceLastSessionSection } from './session-land-lib.mjs'
+import { buildLastSessionSection } from './session-land-lib.mjs'
+import { planFold, applyFold } from './fold-notes-branch.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const sessionsDir = path.join(repoRoot, 'docs', 'ai', 'sessions')
-const progressPath = path.join(repoRoot, 'PROGRESS.md')
-const currentMdPath = path.join(repoRoot, 'CURRENT.md')
 
 const git = (args) => execFileSync('git', args, { encoding: 'utf8', cwd: repoRoot }).trim()
 
@@ -56,9 +53,8 @@ const main = () => {
     process.exit(1)
   }
 
-  const noteFiles = fs.existsSync(sessionsDir)
-    ? fs.readdirSync(sessionsDir).filter((name) => name.endsWith('.md') && name !== 'README.md').sort()
-    : []
+  const plan = planFold(repoRoot)
+  const { noteFiles, notes } = plan
 
   if (!noteFiles.length) {
     console.log('Nothing to fold — docs/ai/sessions/ has no notes beyond README.md (CI lands them on merge; see deploy-vps-dev.yml).')
@@ -66,14 +62,7 @@ const main = () => {
     return
   }
 
-  const notes = noteFiles.map((name) => fs.readFileSync(path.join(sessionsDir, name), 'utf8'))
   console.log(`Landing ${noteFiles.length} session note(s): ${noteFiles.join(', ')}`)
-
-  const progressContent = fs.readFileSync(progressPath, 'utf8')
-  const newProgress = foldNotesIntoProgress(progressContent, notes)
-
-  const currentMdContent = fs.readFileSync(currentMdPath, 'utf8')
-  const newCurrentMd = replaceLastSessionSection(currentMdContent, buildLastSessionSection(notes))
 
   if (dryRun) {
     console.log('--dry-run: would update PROGRESS.md and CURRENT.md, delete the note files, sweep worktrees, and commit.')
@@ -82,9 +71,7 @@ const main = () => {
     return
   }
 
-  fs.writeFileSync(progressPath, newProgress)
-  fs.writeFileSync(currentMdPath, newCurrentMd)
-  for (const name of noteFiles) fs.unlinkSync(path.join(sessionsDir, name))
+  applyFold(repoRoot)
 
   sweepWorktrees()
 
