@@ -49,3 +49,12 @@
   cubes until the 40 W DMX charts arrive; Full/Lite → High/Low. Briefs in agent-reports-2026-10-15/moxir-50/briefs/.
 - Lessons: one dropped ask (N705) → the "read my chat text right" rule + ledger-open (di-atlas #95); 7 jobs at once → 94 °C → cap 3; the
   environment before the renders. Hand-over 2: agent-reports-2026-10-15/moxir-50/LEAD-HANDOVER-2.md (b meter 90 %).
+
+## 04:50- — lead 3 on info@ (the clock: the stamps 07:xx above are 04:xx +04)
+- Merged with --no-ff: PR #944 (Low / High; the stray `.qw-shot.cjs` left out) and PR #956 (laser look diagnosis + core/halo functions +
+  measure scripts; the shader owed). Touched tests: 7 files, 101 pass. moxir-one moved to a7360429 (no serverXR change, no restart); room page 200.
+- The lasers job 1 could not render (package 91–96 °C from the other jobs' browsers; lane 2 queued 25 min, 0 shots). Look decision for job 2,
+  made from the owner's own words (N730 "looks like the laser" of the Studio page; N723 "don't even look like lasers" of the room page): a line
+  far above white is a crisp separate core; laser fragments stay out of the bloom that merged the six lines into one slab; halo and end spot as
+  laserLine.js §7. Brief: agent-reports-2026-10-15/moxir-50/briefs/lasers-look-2.md. Launch waits for a job slot (cap 3) and heat.
+- Lesson for the briefs: a GPU job checks heat and the lane queue first and never queues past 10 min; it hands over the shots to the lead instead.
