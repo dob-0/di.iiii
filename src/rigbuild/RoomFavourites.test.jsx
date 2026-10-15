@@ -22,81 +22,126 @@ const respond = (body, status = 200) => Promise.resolve({ ok: status < 400, stat
 const openBricks = () => window.localStorage.setItem('di.panel.bricks', '1')
 afterEach(() => { cleanup(); vi.restoreAllMocks(); window.localStorage.clear() })
 
-describe('the favourite row', () => {
-    it('is ONE small control at first load; a click opens the bricks and the next visit finds them open', async () => {
+const fifty = (liveIndex, over = {}) => {
+    const cues = Array.from({ length: 50 }, (_, i) => cue(i, `scene ${i + 1}`))
+    return answer({ cues, live: { index: liveIndex, n: 50, running: true, loop: false, autoplay: false, nextIndex: -1, nextInMs: null, by: null, missing: 0 }, ...over })
+}
+const cards = () => [...document.querySelectorAll('[data-fav]')]
+
+describe('the scene strip', () => {
+    it('is ONE small control at first load; a click opens the scenes and the next visit finds them open', async () => {
         vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer()))
         const first = render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         const toggle = await screen.findByTestId('room-favourites-toggle')
-        expect(document.querySelectorAll('[data-fav]').length).toBe(0)
+        expect(cards().length).toBe(0)
         expect(toggle.getAttribute('aria-expanded')).toBe('false')
         expect(parseFloat(toggle.style.borderRadius) || 2).toBeLessThanOrEqual(2)
         fireEvent.click(toggle)
-        expect(document.querySelectorAll('[data-fav]').length).toBe(5)
+        expect(cards().length).toBe(7) // ALL the scenes (a laser one too), not five favourites
         first.unmount()
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await screen.findByTestId('room-favourites-toggle')
-        expect(document.querySelectorAll('[data-fav]').length).toBe(5)
+        expect(cards().length).toBe(7)
     })
 
-    it('shows exactly the server\'s five, marks the live one, and a tap posts the same choose', async () => {
+    it('50 scenes are 5 pages of 10; the page of the playing scene opens first and the pager turns', async () => {
+        openBricks()
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(fifty(33)))
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        await screen.findByText('scene 34')
+        expect(screen.getByTestId('room-scenes-page').textContent).toBe('4 / 5')
+        expect(cards().length).toBe(10)
+        expect(cards()[0].getAttribute('data-cue')).toBe('30')
+        expect(document.querySelector('[data-cue="33"]').getAttribute('aria-current')).toBe('true')
+        expect(cards().filter((b) => b.getAttribute('aria-current') === 'true').length).toBe(1)
+        fireEvent.click(screen.getByTestId('room-scenes-next'))
+        expect(screen.getByTestId('room-scenes-page').textContent).toBe('5 / 5')
+        expect(cards()[0].getAttribute('data-cue')).toBe('40')
+        expect(screen.getByTestId('room-scenes-next').disabled).toBe(true)
+        fireEvent.click(screen.getByTestId('room-scenes-prev'))
+        fireEvent.click(screen.getByTestId('room-scenes-prev'))
+        fireEvent.click(screen.getByTestId('room-scenes-prev'))
+        fireEvent.click(screen.getByTestId('room-scenes-prev'))
+        expect(screen.getByTestId('room-scenes-page').textContent).toBe('1 / 5')
+        expect(screen.getByTestId('room-scenes-prev').disabled).toBe(true)
+    })
+
+    it('where a desk drives the room the playing card is the desk runner\'s scene, not the server feed\'s', async () => {
+        openBricks()
+        const deskAnswer = { cues: { project: 'moxir-v1-1', index: 12, n: 50, running: true, loop: false, autoplay: false, nextInMs: null, missing: [] } }
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url) => respond(String(url).includes('api/cues') ? deskAnswer : fifty(33)))
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" driver="desk" />)
+        await screen.findByText('scene 13')
+        expect(screen.getByTestId('room-scenes-page').textContent).toBe('2 / 5')
+        expect(document.querySelector('[data-cue="12"]').getAttribute('aria-current')).toBe('true')
+    })
+
+    it('for the editor a click posts the same choose that sends the scene to Light', async () => {
         openBricks()
         const calls = []
-        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer()) })
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer({ you: { who: 'operator', block: '', authOff: false } })) })
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await screen.findByText('the black')
-        expect(document.querySelectorAll('[data-fav]').length).toBe(5)
         expect(document.querySelector('[data-fav="rig-l2"]').getAttribute('aria-current')).toBe('true')
-        expect(document.querySelector('[data-fav="rig-l3"]').getAttribute('aria-current')).toBe(null)
         await act(async () => { fireEvent.click(document.querySelector('[data-fav="rig-l3"]')) })
         const post = calls.find(([, init]) => init?.method === 'POST')
         expect(post[0]).toMatch(/\/api\/spaces\/moxir\/show\/v1-1\/choose$/)
         expect(JSON.parse(post[1].body)).toMatchObject({ index: 3, cueId: 'c3' })
     })
 
-    it('ten favourites are ten buttons: one row on a wide screen, two rows of five on a phone', async () => {
+    it('for a visitor a click does nothing and the card says why on hover', async () => {
+        openBricks()
+        const calls = []
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })) })
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
+        await screen.findByText('the black')
+        const card = document.querySelector('[data-fav="rig-l3"]')
+        expect(card.title).toMatch(/the show runs on its own clock/)
+        await act(async () => { fireEvent.click(card) })
+        expect(calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+    })
+
+    it('the audience-plays hook hands a visitor click to the server, which still decides', async () => {
+        openBricks()
+        const calls = []
+        vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => { calls.push([String(url), init]); return respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })) })
+        render(<RoomFavourites spaceId="moxir" projectId="v1-1" audiencePlays />)
+        await screen.findByText('the black')
+        await act(async () => { fireEvent.click(document.querySelector('[data-fav="rig-l3"]')) })
+        expect(calls.some(([, init]) => init?.method === 'POST')).toBe(true)
+    })
+
+    it('ten scenes are ten cards: one row on a wide screen, two rows of five on a phone', async () => {
         openBricks()
         const cues = Array.from({ length: 10 }, (_, i) => cue(i, `scene ${i + 1}`))
         const a = answer({ cues, live: { index: 0, n: 10, running: true, loop: false, autoplay: false, nextIndex: -1, nextInMs: null, by: null, missing: 0 } })
-        a.control.favourites = cues.map((c) => c.lookId)
         vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(a))
         const mm = (matches) => { window.matchMedia = () => ({ matches, addEventListener() {}, removeEventListener() {} }) }
         mm(true)
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await screen.findByText('scene 1')
-        expect(document.querySelectorAll('[data-fav]').length).toBe(10)
-        expect(document.querySelector('[aria-label="favourite scenes"]').getAttribute('data-cols')).toBe('10')
+        expect(cards().length).toBe(10)
+        expect(document.querySelector('[aria-label="scenes"]').getAttribute('data-cols')).toBe('10')
+        expect(screen.queryByTestId('room-scenes-pager')).toBe(null) // one page: no pager
         cleanup()
         mm(false)
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await screen.findByText('scene 1')
-        expect(document.querySelectorAll('[data-fav]').length).toBe(10)
-        expect(document.querySelector('[aria-label="favourite scenes"]').getAttribute('data-cols')).toBe('5')
+        expect(document.querySelector('[aria-label="scenes"]').getAttribute('data-cols')).toBe('5')
         delete window.matchMedia
     })
 
-    it('where the server says you watch (or the cooldown runs) every button is disabled', async () => {
+    it('a laser scene is never tappable', async () => {
         openBricks()
-        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ you: { who: 'visitor', block: 'team-only', authOff: false } })))
-        render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
-        await screen.findByText('the black')
-        expect([...document.querySelectorAll('[data-fav]')].every((b) => b.disabled)).toBe(true)
-    })
-
-    it('a laser scene is never tappable, even if it were listed', async () => {
-        openBricks()
-        const a = answer()
-        a.control.favourites = ['rig-l1', 'rig-l2']
-        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(a))
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer()))
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await screen.findByText('the black')
         expect(document.querySelector('[data-fav="rig-l1"]').disabled).toBe(true)
     })
 
-    it('draws nothing when there are no favourites', async () => {
+    it('draws nothing when the show has no scenes', async () => {
         openBricks()
-        const a = answer()
-        a.control.favourites = []
-        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(a))
+        vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(answer({ cues: [] })))
         render(<RoomFavourites spaceId="moxir" projectId="v1-1" />)
         await act(async () => { await Promise.resolve() })
         expect(document.querySelector('[data-testid="room-favourites"]')).toBe(null)

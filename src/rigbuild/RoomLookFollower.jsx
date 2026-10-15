@@ -40,7 +40,7 @@ export default function RoomLookFollower({ document, onEntities, top = '1rem', s
     if (!showChip && !scenes) return null
     // The favourite scene bricks, behind one small control at the bottom (RoomFavourites.jsx) - wherever a desk or the clock drives the room.
     const row = scenes && spaceId && projectId && (look.driver === 'desk' || (look.driver === 'clock' && look.clock))
-        ? <Suspense fallback={null}><RoomFavourites spaceId={spaceId} projectId={projectId} /></Suspense> : null
+        ? <Suspense fallback={null}><RoomFavourites spaceId={spaceId} projectId={projectId} driver={look.driver} /></Suspense> : null
     // In the scene bar (bare) the chip is drawn INTO the bar's slot; the favourites row stays where it is (bottom of the scene).
     const place = (chip) => (!showChip ? null : bare ? (slot ? createPortal(chip, slot) : null) : chip)
     if (look.driver === 'desk') return <>{place(<DeskShowChip bare={bare} projectId={document?.projectMeta?.id} top={top} spaceId={spaceId} routeProject={projectId} />)}{row}</>
