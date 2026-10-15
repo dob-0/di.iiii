@@ -29,6 +29,13 @@ const FIND_GAP_MS = 5000
 //   POST /laser/api/arm        { armed: true, confirm: '<the sign-off phrase>' } | { armed: false }
 //   POST /laser/api/find       {} — ask every address of this machine's IPv4 /24s the read-only info
 //                              question (0x77) and list the cubes that answered (laserFind.js)
+//   POST /laser/api/resolve    { ip, serial?, name?, out } — a Laser Out's address (2026-10-14): checked
+//                              private unicast, asked the info question (0x77) unless the engine
+//                              already hears it, added to laser.json and the running engine keyed by
+//                              serial (no reload: the other cubes keep running), and given to that
+//                              Out. status: answering | wrong-serial | no-answer | refused
+//   POST /laser/api/arm        { armed, cube, out, confirm? } — ONE cube on or off; the phrase only
+//                              on the first ON of a run (laserEngine.js rule 10)
 //   POST /laser/api/config     { cubes: [{ serial, ip, name }, …] } — write laser.json (laserConfig.js)
 //                              and reload: the engine is disarmed and closed first, then rebuilt
 //                              from the new file on the next request. No restart.
@@ -38,7 +45,10 @@ const FIND_GAP_MS = 5000
 // drive a cube. Arm, frame, alive, find and config then answer only a browser on this same machine
 // with no proxy in between (requireSameMachine), unless DI_ALLOW_LAN_DEVICES=1. Disarm and blackout
 // follow STOPS_FROM_REMOTE (above).
-function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, now = Date.now } = {}) {
+// How long a Laser Out's address check waits for the cube's answer.
+const PROBE_WAIT_MS = 800
+
+function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now } = {}) {
   const laserDir = path.join(dataDir, 'laser')
   let engine = null
   const getEngine = () => {
@@ -58,6 +68,12 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     return { wasArmed }
   }
   const find = findCubes || ((opts) => require('../laser/laserFind').findCubes(opts))
+  // The one cube at `ip`, asked once (the read-only 0x77), or null when nothing answered.
+  const probe = probeCube || (async (ip) => {
+    const out = await require('../laser/laserFind').sweep({ targets: [ip], gapMs: 0, waitMs: PROBE_WAIT_MS })
+    if (!out.ok) throw new Error(out.error)
+    return out.cubes[0] || null
+  })
   let finding = null
   let lastFindAt = -Infinity
 
@@ -67,11 +83,11 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().state()) })
   router.get('/api/frames', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().frames()) })
   router.post('/api/frame', requireSameMachine, (req, res) => {
-    const out = getEngine().setFrame(req.body?.cube, req.body?.points)
+    const out = getEngine().setFrame(req.body?.cube, req.body?.points, req.body?.out ?? null)
     res.status(out.ok ? 200 : 400).json(out)
   })
   router.post('/api/alive', requireSameMachine, (req, res) => {
-    const out = getEngine().alive(req.body?.cube)
+    const out = getEngine().alive(req.body?.cube, req.body?.out ?? null)
     res.status(out.ok ? 200 : 400).json(out)
   })
   router.post('/api/blackout', stopGate, (req, res) => res.json(getEngine().blackout()))
@@ -99,6 +115,48 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
       finding = null
       lastFindAt = now()
     }
+  })
+  router.post('/api/resolve', requireSameMachine, async (req, res) => {
+    res.set('Cache-Control', 'no-store')
+    const { outAddressProblem } = require('../laser/laserFind')
+    const ip = String(req.body?.ip ?? '').trim()
+    const out = String(req.body?.out ?? '').slice(0, 120)
+    const want = String(req.body?.serial ?? '').toLowerCase()
+    if (!out) { res.status(400).json({ ok: false, status: 'refused', error: 'which Laser Out is asking (out) is missing' }); return }
+    const problem = outAddressProblem(ip)
+    if (problem) { res.status(400).json({ ok: false, status: 'refused', error: problem }); return }
+    const engine = getEngine()
+    let found = null
+    const heard = engine.heardAt(ip)
+    if (heard) found = { ...heard.info, ip }
+    else {
+      try {
+        found = await probe(ip)
+      } catch (error) {
+        res.status(502).json({ ok: false, status: 'no-answer', error: error.message }); return
+      }
+    }
+    if (!found?.serial) { res.json({ ok: false, status: 'no-answer', ip, error: `no cube answered at ${ip} — is it on, in Client mode, and on this network?` }); return }
+    const about = { ip, serial: found.serial, modelName: found.modelName || 'LaserCube', firmware: found.firmware ?? null }
+    if (want && want !== found.serial) {
+      res.json({ ok: false, status: 'wrong-serial', ...about, expected: want, error: `the cube at ${ip} is serial ${found.serial}, not ${want}: another box has this address now. Find cubes again, or clear the serial to take this one.` }); return
+    }
+    // Another engine may have been built by a reload while the probe waited.
+    const now2 = getEngine()
+    const refused = now2.canTake({ serial: found.serial, ip, out })
+    if (refused) { res.status(409).json({ ok: false, status: 'refused', ...about, error: refused }); return }
+    const { upsertCube } = require('../laser/laserConfig')
+    let saved
+    try {
+      saved = upsertCube(laserDir, { serial: found.serial, ip, name: req.body?.name })
+    } catch (error) {
+      res.status(500).json({ ok: false, status: 'refused', error: `laser.json could not be written: ${error.message}` }); return
+    }
+    if (!saved.ok) { res.status(400).json({ ok: false, status: 'refused', ...about, error: saved.error }); return }
+    const added = now2.upsertCube(saved.cube, heard ? null : found.info || null, out)
+    if (!added.ok) { res.status(400).json({ ok: false, status: 'refused', ...about, error: added.error }); return }
+    const cube = now2.state().cubes.find((c) => c.id === added.id)
+    res.json({ ok: true, status: 'answering', ...about, cube: { id: added.id, name: cube?.name, armed: Boolean(cube?.armed) }, droppedStillBeams: saved.dropped })
   })
   router.post('/api/config', requireSameMachine, async (req, res) => {
     const { saveCubes } = require('../laser/laserConfig')
