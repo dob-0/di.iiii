@@ -14,14 +14,8 @@ import argparse, datetime, json, re, sys
 
 def kebab(s): return re.sub(r'-+', '-', re.sub(r'[^a-z0-9]+', '-', s.lower())).strip('-')
 
-def main():
-    a = argparse.ArgumentParser()
-    for k in ('scenes', 'rig', 'out', 'version', 'title'): a.add_argument('--' + k, required=True)
-    a.add_argument('--date', default=datetime.date.today().isoformat()); a.add_argument('--what')
-    a = a.parse_args()
-    sc = json.load(open(a.scenes)); scenes = sc['scenes'] if isinstance(sc, dict) else sc
-    rig = json.load(open(a.rig))
-    parts = sorted({f['part'] for f in rig['fixtures'] if f.get('part')})
+def looks_from_scenes(scenes, parts):
+    """The scenes in the rig look schema: (looks, cues, errors). Shared with rig_generate.py."""
     errs, looks, cues, ids = [], [], [], set()
     for s in scenes:
         i = kebab(s['id'])
@@ -36,6 +30,18 @@ def main():
         looks.append({'id': i, **{k: v for k, v in look.items() if v is not None}})
         c = s.get('cue') or {}
         cues.append({'look': i, 'name': s['title'], 'fade': c.get('fade_s'), 'hold': c.get('hold_s')})
+    return looks, cues, errs
+
+
+def main():
+    a = argparse.ArgumentParser()
+    for k in ('scenes', 'rig', 'out', 'version', 'title'): a.add_argument('--' + k, required=True)
+    a.add_argument('--date', default=datetime.date.today().isoformat()); a.add_argument('--what')
+    a = a.parse_args()
+    sc = json.load(open(a.scenes)); scenes = sc['scenes'] if isinstance(sc, dict) else sc
+    rig = json.load(open(a.rig))
+    parts = sorted({f['part'] for f in rig['fixtures'] if f.get('part')})
+    looks, cues, errs = looks_from_scenes(scenes, parts)
     if errs:
         print('\n'.join(errs[:40])); sys.exit(1)
     old = str(rig.get('version', 'old')).replace('.', '_')
@@ -47,4 +53,5 @@ def main():
     print(f'{a.out}: {len(looks)} looks, {len(cues)} cues, {len(parts)} rig parts: {parts}')
     print(f'heads on {sum(1 for l in looks if "heads" in l)} looks; kept looks_v{old} ({len(rig["looks"])}) cues_v{old} ({len(rig["cues"])})')
 
-main()
+if __name__ == '__main__':
+    main()
