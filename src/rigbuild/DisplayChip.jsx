@@ -4,7 +4,8 @@ import { CHIP, PANEL, ACTIVE, INK } from './chromeStyle.js'
 // DISPLAY: the view page's rarely-needed switches (layers, Inside / Free, Low / High) behind one small chip in the scene
 // bar. Closed at first load; what a viewer opens is remembered for that viewer only (rememberedOpen.js).
 // Every item of the menu is one width and sits on one left edge, whatever wraps it (the Move control brings its own wrapper).
-const ITEM_RULE = '.scene-display>*{display:flex;width:100%;min-width:0}.scene-display button,.scene-display a{width:100%;justify-content:flex-start}.scene-display [role="group"]{flex-direction:column}'
+// `:not(style)`: the rule's own <style> element is a child of the panel too; `>*` made it display:flex and the CSS text showed in the menu (owner's screenshot 2026-10-15 06:4x).
+const ITEM_RULE = '.scene-display>:not(style){display:flex;width:100%;min-width:0}.scene-display button,.scene-display a{width:100%;justify-content:flex-start}.scene-display [role="group"]{flex-direction:column}'
 export default function DisplayChip({ children }) {
     const [open, toggle] = useRememberedOpen('display')
     return (

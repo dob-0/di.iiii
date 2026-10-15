@@ -783,7 +783,9 @@ describe('PublicProjectViewer', () => {
             expect(menu.style.left).toBe('0px')
             expect(menu.style.right).toBe('auto')
             expect(parseFloat(menu.style.borderRadius)).toBeLessThanOrEqual(2)
-            expect(menu.querySelector('style').textContent).toContain('.scene-display>*{display:flex;width:100%')
+            // the rule must skip the <style> element itself, or the CSS text shows in the menu (2026-10-15)
+            expect(menu.querySelector('style').textContent).toContain('.scene-display>:not(style){display:flex;width:100%')
+            expect(menu.querySelector('style').textContent).not.toContain('.scene-display>*{')
             const items = [...menu.querySelectorAll('button')]
             expect(items.length).toBeGreaterThanOrEqual(2)
             items.forEach((b) => expect(parseFloat(b.style.borderRadius || '2')).toBeLessThanOrEqual(2))
