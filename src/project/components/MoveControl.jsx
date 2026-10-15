@@ -1,5 +1,5 @@
 // The visitor's Move control: how fast and how the view moves (the standard move, studio/navigation/freeMove.js), in the
-// corner with Walk / Fly, Inside and Lite / Full. One small button; it opens a card with the two settings and nothing else —
+// corner with Walk / Fly, Inside and Low / High. One small button; it opens a card with the two settings and nothing else —
 // Speed (empty is Auto, a number is metres a wheel step) and Turn (around a point ahead, or where you stand). The same two
 // the Studio's Scene window has, written to the same per-device preference, so what is set in one holds in the other.
 // Loaded lazily (PublicProjectViewer.jsx): it reads the move's own speed reading, which comes with three.

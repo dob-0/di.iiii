@@ -20,8 +20,8 @@ export const CONTROL_LINE = '56px'
  * @returns {{ rowTop: string, chipTop: string }}
  */
 export function rigChromeTops(topClear, { rowShown = false, compact = false, rightControls = false, rightLines = null } = {}) {
-    // rightLines: how many 56 px lines the top-right stack takes (Walk / Fly, Inside / Free, Lite / Full). Measured 2026-10-09 on
-    // MOXIR v1.1 at 390x844: three lines, the chip sat at y 128-173 on top of Lite (y 125-169). Without it, one line when a control is there.
+    // rightLines: how many 56 px lines the top-right stack takes (Walk / Fly, Inside / Free, Low / High). Measured 2026-10-09 on
+    // MOXIR v1.1 at 390x844: three lines, the chip sat at y 128-173 on top of the quality button (y 125-169). Without it, one line when a control is there.
     const lines = rightLines ?? (rightControls ? 1 : 0)
     if (!rowShown) return { rowTop: topClear, chipTop: compact && lines > 1 ? `calc(${topClear} + ${lines} * ${CONTROL_LINE})` : topClear }
     const rowTop = compact && lines > 0 ? `calc(${topClear} + ${lines} * ${CONTROL_LINE})` : topClear

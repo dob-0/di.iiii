@@ -308,7 +308,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // The one gate walk mode has: shared by the Walk / Fly button and the
     // arrive-walking effect below.
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
-    // The author may take Walk / Fly (and Inside, Lite) off the page; the gate above still decides arriving walking.
+    // The author may take Walk / Fly (and Inside, Quality) off the page; the gate above still decides arriving walking.
     const walkButtons = walkGateOpen && chrome.walk
     // The version row and the show chip: on a portrait phone the row gets its own line
     // under Walk / Fly / Sound instead of running under them (rigbuild/rigVersionLayout.js).
@@ -316,7 +316,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
         rightControls: (navMode === 'orbit' && walkButtons) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
-        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, then Move, each one 56 px line, all top-right
+        // Walk / Fly, then Inside / Free (a room with a building), then Low / High, then Move, each one 56 px line, all top-right
         rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 4 : 3) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
@@ -333,7 +333,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         sound: state.status === 'ready' && hasSound && !soundLocked && !isPreview
     })
     // ONE bar at the top of a rig scene in orbit (rigbuild/SceneBar.jsx): versions, Edit in Studio, the SHOW chip on the
-    // left, the room's own controls (Sound, Walk / Fly, Free, Lite / Full) and the dev-copy chip on the right.
+    // left, the room's own controls (Sound, Walk / Fly, Free, Low / High) and the dev-copy chip on the right.
     const sceneBar = state.status === 'ready' && !isPreview && !isEmbed && roomHasRig
     const [showSlot, setShowSlot] = useState(null)
     // The bar's measured height: in walk mode the room's own header (exit, title) sits under it, never behind it.
@@ -519,7 +519,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 : `${spaceLabel || resolvedRouteSpaceId} — di.iiii`)
     )
 
-    // Inside / Free and Lite / Full: drawn in the page's corner column, or (in the scene bar) behind its Display chip.
+    // Inside / Free and Low / High: drawn in the page's corner column, or (in the scene bar) behind its Display chip.
     const insideButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && hasBuilding ? (
                     <button
                         type="button"
@@ -544,8 +544,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         type="button"
                         aria-pressed={!outputMode}
                         title={outputMode
-                            ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
-                            : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
+                            ? 'Quality Low: beams and haze, light enough for a phone. Tap for High, the full renderer (shadows, bloom, every lamp a real light)'
+                            : 'Quality High: the work renderer. Tap for Low, light enough for a phone'}
                         style={{
                             ...btnBase,
                             ...abs({ top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`, right: '1rem', minWidth: 104 }),
@@ -553,11 +553,11 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         }}
                         onClick={() => setOutputMode(!outputMode)}
                     >
-                        {outputMode ? 'Lite' : 'Full'}
+                        {outputMode ? 'Low' : 'High'}
                     </button>
                 ) : null
 
-    // Under Lite / Full: how the view moves (speed, turning) — one small button that opens a card, the visitor's own setting on
+    // Under Low / High: how the view moves (speed, turning) — one small button that opens a card, the visitor's own setting on
     // this device, the same one the Studio's Scene window sets (the standard move, 2026-10-13). With the scene bar it sits in
     // DISPLAY with the other rarely-needed switches (the view page starts clear, 2026-10-13 20:21).
     const moveButton = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
@@ -735,7 +735,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         {canEdit ? <EditInStudio spaceId={resolvedRouteSpaceId} projectId={projectId} /> : null}
                     </>}
                     right={<>
-                        {/* Layers, Inside / Free and Lite / Full: one Display chip, closed until a viewer opens it */}
+                        {/* Layers, Inside / Free and Low / High: one Display chip, closed until a viewer opens it */}
                         {(navMode === 'orbit' && hasBuilding && chrome.layers) || (insideButton || liteButton) ? (
                             <DisplayChip>
                                 {navMode === 'orbit' && hasBuilding && chrome.layers ? (

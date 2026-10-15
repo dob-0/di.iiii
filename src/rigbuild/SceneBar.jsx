@@ -6,7 +6,7 @@ import { CHIP, GLASS, LINE } from './chromeStyle.js'
 // THE ONE BAR of a rig scene (owner, 2026-10-12: "we need a button to go to the edit studio ... UI/UX is messed, fix
 // that all"). Before: four boxes in four styles (version row, SHOW chip, Walk / Fly stack, the dev-copy chip).
 // Now one strip at the top, one style: dark glass, rectangles (0-2 px), 44 px targets, read left to right:
-//   [version switch] [Edit in Studio] [SHOW ...]                 [Sound] [Walk / Fly] [Free] [Lite / Full] [dev copy]
+//   [version switch] [Edit in Studio] [SHOW ...]                 [Sound] [Walk / Fly] [Free] [Low / High] [dev copy]
 // The parts are passed in; this file owns only the strip, its cells and the shared button look. On a phone the
 // strip wraps onto lines (the left group first), never under another control.
 

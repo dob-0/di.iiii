@@ -38,6 +38,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
 | **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
+| **quality** | The room's one render setting, with two values: **Low** (beams and haze, light enough for a phone) and **High** (the work renderer: shadows, bloom, every lamp a real light). The button shows the quality now in use; its title says what a tap switches to. `?quality=low\|high` in an address. Why these words: the field names a renderer's two presets Low / High (quality presets in games, video players, Blender's render presets); HD / HQ name video formats, not a renderer setting. Owner 2026-10-15 ("Full and Lite do not suit"). Stored values and old links `lite` / `full` are read as `low` / `high`. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -60,6 +61,7 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 | `linked space` · `code space` | Implementation notes. A visitor sees a space. | **space** |
 | `Universe` | Promised a world, delivered a toolbar switch. | **Kiosk** (see below) |
 | `di.i` *(inside the product)* | The studio's signature, not the product's name. Correct on a byline, a deck, thedi.studio; a slip in product copy, which names the product. | **di.iiii** |
+| `Lite` · `Full` *(as the room's render quality)* | Two words that did not say what they measure; `Full` also read as "complete". Retired 2026-10-15. The keys `lite` / `full` and old `?quality=lite\|full` links still open, as aliases. | **Low** · **High** (the setting is **Quality**) |
 
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
 user-visible string where it can be mistaken for the lane — rewrite those.
