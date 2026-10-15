@@ -1,4 +1,4 @@
-import { pickLampBody } from '../utils/selectionTools.js'
+import { isDeselectingMiss, pickLampBody } from '../utils/selectionTools.js'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
 import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
@@ -746,6 +746,19 @@ function StudioSceneContent({
     }
     // Hide the drag-handle gizmo while the V1-parity modal transform is running.
     const gizmoVisibleEffective = gizmoVisible && !transformOp
+    // What the modal transform may move: a locked object never moves, even when it was
+    // selected before it was locked.
+    const modalEntities = useMemo(
+        () => selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true),
+        [selectedEntities]
+    )
+    // An op with nothing to move is cancelled HERE, not left for a modal that never mounts:
+    // transformOp set with no ModalTransform meant every editor shortcut dead and the gizmo
+    // gone until a reload (N581, 2026-10-15 — the editor refuses to arm such an op too; this
+    // covers a selection that empties or locks while the op is set).
+    useEffect(() => {
+        if (transformOp && !modalEntities.length) onTransformCancel?.()
+    }, [transformOp, modalEntities.length, onTransformCancel])
 
     // Same fog semantics as LiveProjectScene: colour falls back to the
     // background, `enabled: false` switches it off.
@@ -902,11 +915,10 @@ function StudioSceneContent({
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.some((entity) => entity.components?.runtime?.locked !== true) && (
+            {transformOp && modalEntities.length > 0 && (
                 <ModalTransform
                     op={transformOp}
-                    // A locked object never moves, even when it was selected before it was locked.
-                    selectedEntities={selectedEntities.filter((entity) => entity.components?.runtime?.locked !== true)}
+                    selectedEntities={modalEntities}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
@@ -1285,7 +1297,10 @@ export default function StudioViewport({
                     far: camera.far || 1000,
                     orthographic: camera.projection === 'orthographic'
                 }}
-                onPointerMissed={() => onSelectEntity?.(null)}
+                // A primary click or a tap on nothing deselects. R3F also reports the
+                // contextmenu event as a miss, and Linux fires that on the right button's
+                // PRESS: every right-drag pan dropped the selection (N581, 2026-10-15).
+                onPointerMissed={(event) => { if (isDeselectingMiss(event)) onSelectEntity?.(null) }}
             >
                 <XR store={xrStore}>
                     <RenderDemandProvider demand={demand}>

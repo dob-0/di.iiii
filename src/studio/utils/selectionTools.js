@@ -34,6 +34,36 @@ export const lockOps = (entities = [], ids = [], locked = true) => {
         }))
 }
 
+/** Of a selection, what a transform (G/R/S, X/Y/Z, the gizmo) may move: selected, and not locked. */
+export const movableEntities = (entities = [], ids = []) => {
+    const wanted = new Set(ids || [])
+    return (entities || []).filter((entity) => wanted.has(entity.id) && !isLockedEntity(entity))
+}
+
+/** True when a selection has anything a transform may move. An id the list does not know
+ *  counts as movable: the editor, which holds the document, is the gate; this is the shell's. */
+export const selectionCanMove = (entities = [], ids = []) => {
+    const locked = new Set((entities || []).filter(isLockedEntity).map((entity) => entity.id))
+    return (ids || []).some((id) => !locked.has(id))
+}
+
+/** The selection once `ids` are locked: a locked object leaves the selection, whichever control locked it. */
+export const selectionWithout = (selectedIds = [], ids = []) => {
+    const out = new Set(ids || [])
+    return (selectedIds || []).filter((id) => !out.has(id))
+}
+
+/**
+ * True for a pointer miss that deselects: a primary-button click or a tap. R3F reports the
+ * `contextmenu` event as a miss too, and on Linux the browser fires it on the right button's
+ * PRESS — so every right-drag pan dropped the selection and closed the Inspector (N581 sweep).
+ */
+export const isDeselectingMiss = (event) => {
+    if (!event) return true
+    if (event.type === 'contextmenu') return false
+    return (event.button ?? 0) === 0
+}
+
 /** The rectangle between two screen points, whichever way it was dragged. */
 export const normalizeRect = (a, b) => ({
     left: Math.min(a.x, b.x),
