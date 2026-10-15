@@ -10,6 +10,7 @@ import { roomHasSound } from '../../utils/roomSound.js'
 import RoomTextLayer from './RoomTextLayer.jsx'
 import './roomTextLayer.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
+import { crowdedTabsLine, useCrowdedTabs } from '../../utils/siblingTabs.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
@@ -67,6 +68,7 @@ const MoveControl = lazyWithReload(() => import('./MoveControl.jsx'), 'move-cont
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
 // here, the last per-surface loading look left.
 const loadingOverlay = <LoadingScreen label="Loading live experience" />
+const crowdedOverlay = <LoadingScreen label="Loading live experience" slowText={crowdedTabsLine} slowAfterMs={0} />
 
 // deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
 // page has a real security origin — getUserMedia is impossible in an opaque one
@@ -85,6 +87,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         error: ''
     })
     const [viewMode, setViewMode] = useState(null)
+    const [streamOpen, setStreamOpen] = useState(false)
+    // Stalled on the ring with no stream: is it the browser's per-host ceiling?
+    const crowdedTabs = useCrowdedTabs(state.status === 'loading' && !streamOpen)
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
@@ -460,6 +465,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         const syncService = syncServiceRef.current
         syncService.connect({
             eventsUrl: buildProjectEventsUrl(projectId),
+            onOpen: () => setStreamOpen(true),
             onProjectOp: ({ version, ops }) => {
                 if (!documentRef.current) {
                     void reloadDocument()
@@ -939,7 +945,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 the exact box embed mode exists to remove — inside a window it
                 would flash one on every open. The host's own page is what the
                 visitor waits on. */}
-            {state.status === 'loading' && !isEmbed ? loadingOverlay : null}
+            {state.status === 'loading' && !isEmbed ? (crowdedTabs ? crowdedOverlay : loadingOverlay) : null}
 
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
