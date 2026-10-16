@@ -1,0 +1,82 @@
+{
+  "what": "The record that MOXIR's show version (Known · full, copied from PONYO 10-04) is the git build of its rig file plus the parts named in notFromGit. Re-check it with the command in rebuild.check. Audit D1, docs/ai/audits/moxir-2026-10-05/D-data-sync.md (branch docs/moxir-audit-2026-10-05).",
+  "production": "moxir-2026-10-17",
+  "space": "moxir",
+  "projectId": "moxir-hall-known-full",
+  "versionId": "known-full-ponyo-10-04",
+  "versionOf": "known-full",
+  "listed": {
+    "fingerprint": "sha256:3d64a1bc7690aeb6d817587978a7334273384639392270db8ff73d3eba4c79a7",
+    "documentVersion": 1,
+    "note": "The list's fingerprint is the project at document version 1 (read back from the op log on dev and on local: replaceDocument by the copy, then nothing else)."
+  },
+  "afterListing": [
+    {
+      "documentVersion": 2,
+      "at": "2026-10-04T20:03:06.892Z",
+      "op": "setWorldState { backgroundColor #000000 -> #030304, fog.near 0 -> 60, fog.far 80 -> 250 }",
+      "tool": "scripts/rigbuild/apply-picture.mjs (branch feat/apply-picture-2026-10-04, PR #761, not in dev yet); undo file ~/.di/picture-undo/moxir-hall-known-full-2026-10-04T20-03-07-147Z.json on aylmo",
+      "fingerprint": "sha256:c5df2904fde0586ccd2206b524c8dfb3da0886ea5f17b247da6c5fd1ae4696c4",
+      "touchesGitBuiltParts": false
+    }
+  ],
+  "rebuild": {
+    "how": "Offline, no server, no Blender: scripts/production/rebuild-compare.mjs replays each step a version is made by with the repo's own pure functions and compares, per entity and field, with the project; then puts every git-built part into the project's document and takes the list's fingerprint (versionList.mjs fingerprintOf). Equal fingerprint = every git-built part is identical.",
+    "steps": [
+      "versions.mjs --report (versions-report.mjs: moxir.mjs moxirDocument + patchMoxir) — the typed, patched lamps and effects, hall file from the versions file",
+      "load-plot.mjs piecesFromRigBoxes — the truss line and decks as pieces; piece bodies content-addressed (sha256 of scripts/rigbuild/pieces/*.glb)",
+      "load-plot.mjs venuePlanFromHall — place-hall.venuePlan",
+      "load-version.mjs step 4 — rig-show rentalList, rigLooks (looks.mjs rigLooksFrom), rigVariant (variantOf)",
+      "load-version.mjs --look k-monolith --nominal — every lamp's aim, colour, light and haze (rig-lib buildRig)",
+      "realism.mjs apertureByType — every lamp's beam.aperture",
+      "copy-version.mjs --label \"PONYO 10-04\" --siblings scripts/place/rigs/moxir-ponyo-to-dev-siblings-2026-10-04.json — the copy's mark",
+      "the server's normaliser (projectSchema.js normalizeEntity) to its fixed point — e.g. beam.haze 1.5 is held as 1"
+    ],
+    "look": "k-monolith",
+    "copy": {
+      "label": "PONYO 10-04",
+      "siblingsFile": "scripts/place/rigs/moxir-ponyo-to-dev-siblings-2026-10-04.json"
+    },
+    "check": "node scripts/production/rebuild-compare.mjs --record scripts/production/records/moxir-2026-10-17--known-full-ponyo-10-04.json --api https://dev.diiii.xyz/serverXR --token-file <env with ADMIN_API_TOKEN> [--at-version 1]"
+  },
+  "measured": {
+    "at": "2026-10-05",
+    "by": "aylmo, read-only GETs (document, ops) with each install's admin token",
+    "commit": "b3d7f76bdc7b",
+    "results": [
+      { "install": "dev.diiii.xyz", "documentVersion": 1, "fingerprint": "sha256:3d64a1bc7690aeb6d817587978a7334273384639392270db8ff73d3eba4c79a7", "withGitParts": "sha256:3d64a1bc7690aeb6d817587978a7334273384639392270db8ff73d3eba4c79a7", "entitiesIdentical": "125 of 125" },
+      { "install": "dev.diiii.xyz", "documentVersion": 2, "fingerprint": "sha256:c5df2904fde0586ccd2206b524c8dfb3da0886ea5f17b247da6c5fd1ae4696c4", "withGitParts": "sha256:c5df2904fde0586ccd2206b524c8dfb3da0886ea5f17b247da6c5fd1ae4696c4", "entitiesIdentical": "125 of 125" },
+      { "install": "local.thedi.studio", "documentVersion": 1, "fingerprint": "sha256:3d64a1bc7690aeb6d817587978a7334273384639392270db8ff73d3eba4c79a7", "withGitParts": "sha256:3d64a1bc7690aeb6d817587978a7334273384639392270db8ff73d3eba4c79a7", "entitiesIdentical": "125 of 125" },
+      { "install": "local.thedi.studio", "documentVersion": 2, "fingerprint": "sha256:c5df2904fde0586ccd2206b524c8dfb3da0886ea5f17b247da6c5fd1ae4696c4", "withGitParts": "sha256:c5df2904fde0586ccd2206b524c8dfb3da0886ea5f17b247da6c5fd1ae4696c4", "entitiesIdentical": "125 of 125" }
+    ],
+    "alsoIdentical": ["rig-show.rentalList", "rig-show.rigLooks", "rig-show.rigVariant (with the copy step)", "place-hall.venuePlan", "rigbuild-truss-3m.glb and rigbuild-deck-2x1.glb: the project's asset ids are the sha256 of the files in git"]
+  },
+  "pinned": {
+    "scripts/place/rigs/moxir-versions-2026-10-17.json": "bc2efd81a5f39a6e273a00e7f2439381b11b8626",
+    "scripts/place/rigs/moxir-2026-10-17-known-full.json": "6bd4ea08ed55e5d1d55f96d7355e09990102cfef",
+    "scripts/rigbuild/rentals/moxir-2026-10-17-known-full.json": "78d7cb3b773cb5aaca4fc6fb3fd8c95298517cf8",
+    "scripts/place/rigs/moxir-hall-2026-10-02-crane-dj.hall.json": "dc5d524d668b18967fb5a96ea012e1a7e3ac4c7f",
+    "scripts/place/rigs/moxir-ponyo-to-dev-siblings-2026-10-04.json": "c48e2a0518138cc36c23e99faf683994ec2ba7ca",
+    "scripts/place/fixtures/fixtures.json": "9d156a6cadbc0d783f77ba48469ded8ab6ffd5b1",
+    "src/rigbuild/types/moxir.json": "95d6310af89747d5750a2f7b78e9f3a793e6ffd1",
+    "scripts/rigbuild/pieces/truss-3m.glb": "3af4726c2275b8312a3b56bcd8e2f092a299d7b2",
+    "scripts/rigbuild/pieces/deck-2x1.glb": "34ea592e7d107c443723a26124637d026a750199"
+  },
+  "notFromGit": {
+    "hallModel": {
+      "entity": "place-hall",
+      "asset": "hall-night.glb",
+      "sha256": "df837baa7cf96b984a78d93fa2c0cfbdd6fdfdccf0c4b73feccb3a0157e3e48b",
+      "bytes": 3189904,
+      "why": "scripts/place/hall.py builds the hall in Blender (import bpy) and realism.mjs makes its night copy; not rebuilt (no Blender on aylmo, heat rule). The bytes are held only as this project's asset on dev and local; no other project and no backup on aylmo holds them (audit D5, D9)."
+    },
+    "placeHallComponents": ["transform", "appearance", "media", "animation"],
+    "rigBounce": {
+      "source": "hall asset 4b0d561fe1319ec22aa97811c0bfe75d0de74cc3ae1d8e1eda04860ad3714aee",
+      "why": "realism.mjs measures it off the day hall model, which is not in git"
+    },
+    "worldStateSha256AtV1": "d25af751890107a15943ea55539c337b65c302646afc4cdab86a98fd1608b04f",
+    "renderSettingsSha256": "e8c7784834f3eaac38f0e277e5284f54284fcf5454e3d788b9ae94acc2a7e322",
+    "worldRenderVsToolDefaults": "Not the tools' defaults, and the arguments are not recorded: fog.far 80 and atmosphere.scattering 0.02 fit realism.mjs --scattering 0.02 (1.6/0.02 = 80; commit 5389d9c9 notes σ 0.02); ambientLight #a39c92 at 0.1 (realism writes black 0) and shadowCasting enabled (nightOps gives false for this rig) come from steps nobody recorded."
+  }
+}
