@@ -95,7 +95,7 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
             const docLens = base.components?.transform?.position || [0, 0, 0]
             const docBeam = spotAimDirection(base.components?.transform?.rotation || [0, 0, 0])
             const mount = mountFromLens({ lens: docLens, hung, beam: docBeam, type })
-            const dir = beamOfPanTilt(d.pan ?? 0, d.tilt ?? 0, hung)
+            const dir = beamOfPanTilt(roomPanOf(d.pan ?? 0, fx), d.tilt ?? 0, hung)
             const { pan, tilt } = panTiltOfDirection(dir)
             components.transform = {
                 ...(e.components.transform || {}),
@@ -147,6 +147,14 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
 }
 
 export default dmxEntities
+
+// A lamp hung turned or with its pan reversed (seen at MOXIR 2026-10-17: two truss heads on one truss faced the front at
+// pan +45°, one turning the other way). The document says so per lamp — fixture.panOffsetDeg (degrees added) and
+// fixture.panInvert (the pan turns the other way) — measured with scripts/rigbuild/aim-test.mjs. The room's pan (what
+// panTiltOfBeam / beamOfPanTilt speak) and the fixture's pan (what goes to DMX) differ only by these two.
+const wrapPan = (p) => (p > 270 ? p - 360 : p < -270 ? p + 360 : p)
+export const fixturePanOf = (roomPan, fx = null) => wrapPan((fx?.panInvert === true ? -roomPan : roomPan) + (Number(fx?.panOffsetDeg) || 0))
+export const roomPanOf = (fixturePan, fx = null) => { const p = (Number(fixturePan) || 0) - (Number(fx?.panOffsetDeg) || 0); return wrapPan(fx?.panInvert === true ? -p : p) }
 
 /** The fixture pan/tilt (degrees from home) that sends a lamp's beam along a room direction. */
 export const panTiltOfBeam = (dir, hung = false) => {

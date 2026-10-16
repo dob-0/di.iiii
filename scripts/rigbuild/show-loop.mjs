@@ -49,6 +49,7 @@ import { deskLookId, lookIdOfDesk, rigLooksOf, staleDeskLooks } from '../../src/
 import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
+import { withFixtureOverlay } from './fixture-overlay.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
@@ -173,7 +174,7 @@ const main = async () => {
     if (!rig.ok) die(`the desk's rig for ${project}: ${rig.status}`)
     const fixtures = rig.body.fixtures || []
     const library = libraryWithShow(loadLibrary(), document.entities)
-    const deskSet = deskLooksWithValues(looks, fixtures, { entities: document.entities, library })
+    const deskSet = deskLooksWithValues(looks, fixtures, { entities: withFixtureOverlay(document.entities, args['fixture-overlay'] ? String(args['fixture-overlay']) : null), library })
     for (const look of deskSet) {
         const put = await desk.post('/api/looks/add', { look })
         if (!put.ok) die(`the desk did not take ${look.id}: ${put.status} ${put.text.slice(0, 200)}`)

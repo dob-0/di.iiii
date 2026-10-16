@@ -261,6 +261,28 @@ const LASERCUBE_MK2_MANUAL = {
     url: 'https://www.laseros.com/manual-mk2.pdf',
     licence: null
 }
+// UP-B380F colour wheel, SEEN on the units at MOXIR 2026-10-16 23:1x–23:25: every universe 1 beam held on each
+// slot (scripts/rigbuild/wheel-walk.mjs --set), named by the owner's eye (slots 1-4) and from his photos sent
+// through di.bo (slots 5, 7-13; docs/moxir/devices/photos/b380f-wheel-slot*-2026-10-16.jpg). The printed manual
+// numbers the slots without naming them. Slots 6 and 8 are UNSURE (6 looked white; 8 shared its frame with pink
+// washes). Log: docs/moxir/devices/up-b380f-wheel-walk-2026-10-16.txt. The hex codes are estimates spaced by the names
+// (hue: red 5°, red-orange 20°, orange 29°, amber 41°, yellow 53°), so a look's red picks slot 1 — owner 2026-10-17:
+// "i click the red room and it not the red".
+const B380F_SLOTS_SEEN = [
+    ['open', '#ffffff'], ['red', '#ff2a0a'], ['green', '#00d12a'], ['blue', '#1f3cff'], ['yellow', '#ffe000'],
+    ['magenta', '#ff2fc8'], ['white (unsure)', '#f2f2f2'], ['amber', '#ffb000'], ['lavender (unsure)', '#e8b4ff'],
+    ['lime', '#8cff3a'], ['orange', '#ff7a00'], ['red-orange', '#ff5a1e'], ['warm white', '#fff0c0'], ['light blue', '#a8d8ff']
+]
+const B380F_WHEEL_SEEN = [
+    ...B380F_SLOTS_SEEN.flatMap(([name, colour], i) => [
+        // An UNSURE slot keeps its name but no colour, so a look never picks it (dmxDecode.js nearestSlot skips it).
+        name.includes('unsure') ? { from: i * 10, to: i * 10 + 4, name } : { from: i * 10, to: i * 10 + 4, name, colour },
+        { from: i * 10 + 5, to: i * 10 + 9, half: [i, i + 1 < B380F_SLOTS_SEEN.length ? i + 1 : 0] }
+    ]),
+    { from: 140, to: 200, spin: 'forward' },
+    { from: 201, to: 255, spin: 'reverse' }
+]
+
 export const MAKER_CHANNEL_LISTS = {
     // APPROVED (the owner's word, 2026-10-16 16:2x — he sent the printed manual: "the beam real chart"): UP-B380F runs the
     // PRINTED "MOVEHEAD FIXTURE USER MANUAL" shipped with the unit (ch. 3, pp. 13-15), 16 ch, pan FIRST — the order the 10-09
@@ -283,7 +305,7 @@ export const MAKER_CHANNEL_LISTS = {
                 { role: 'frost', label: 'Frost (0-127 none, 128-191 colourful, 192-255 frost)', cap: { frost: { from: 192, to: 255, basis: 'MANUAL (printed, 2026-10-16): 192-255 insert frost; 128-191 is a colour filter, not frost' } } },
                 { role: 'strobe', label: 'Strobe (0-3 dark, 4-103 pulse, 104-107 open, 108-207 fade, 208-212 open, 213-251 random, 252-255 open)', default: 255, cap: { shutter: [{ from: 0, to: 3, open: false }, { from: 104, to: 107, open: true }, { from: 208, to: 212, open: true }, { from: 252, to: 255, open: true }] } },
                 { role: 'dimmer', label: 'Dimmer' },
-                { role: 'color', label: 'Colour wheel (0-4 white, 10-14 colour 1 … 130-134 colour 13, 5-wide splits between, 140-200 rotate fwd, 201-255 rev)', default: 0 },
+                { role: 'color', label: 'Colour wheel (0-4 white, 10-14 colour 1 … 130-134 colour 13, 5-wide splits between, 140-200 rotate fwd, 201-255 rev)', default: 0, cap: { wheel: B380F_WHEEL_SEEN } },
                 { role: 'gobo', label: 'Gobo (0-4 white, 5-9 gobo 1 … 85-89 gobo 17, 90-128 rotate rev, 129-131 stop, 132-170 rotate fwd, 171-255 shake gobo 1-17)', cap: { gobo: true, goboSlots: { from: 5, to: 89, count: 17, basis: 'MANUAL (printed, 2026-10-16): 5-wide slots' }, goboShake: { from: 171, basis: 'MANUAL (printed, 2026-10-16): 171-255 shake gobo 1-17' } } },
                 { role: 'prism', label: 'Prism 1 (0-127 none, 128-255 in)', cap: { prism: true, prismIn: { from: 128, facets: 16, basis: 'MANUAL (printed, 2026-10-16): 128-255 insert prism 1; 16 facets from the spec (fixtures.json)' } } },
                 { role: 'rotation', label: 'Prism 1 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)', cap: { prismRotation: { prism: 1, index: { from: 0, to: 127 }, basis: 'MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse' } } },

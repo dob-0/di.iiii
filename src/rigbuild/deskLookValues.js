@@ -14,7 +14,7 @@ import { deskHeadsOf } from './headMotion.js'
 import { typeById } from './fixtureTypes.js'
 import { encodeDmx } from './dmxDecode.js'
 import { lookStrobeHz } from './strobeCap.js'
-import { panTiltOfBeam, runningMode } from './dmxPose.js'
+import { panTiltOfBeam, runningMode, fixturePanOf } from './dmxPose.js'
 
 
 /**
@@ -55,7 +55,7 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
             if (pose?.color) want.colour = pose.color
             if (pose && Array.isArray(type?.pan_tilt_deg?.value)) {
                 const { pan, tilt } = panTiltOfBeam(spotAimDirection(pose.rotation), fx.hung === true)
-                want.pan = pan
+                want.pan = fixturePanOf(pan, fx)
                 want.tilt = tilt
             }
             if (pose && flashKindOf(library, fx.type) === 'strobe' && level > 0) want.strobeHz = lookStrobeHz(look)
