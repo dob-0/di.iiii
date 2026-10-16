@@ -69,8 +69,10 @@ const fieldDirection = (x, y, fieldHalfDeg = FIELD_HALF_DEG) => {
 /** fieldDirection undone: a lamp-frame direction as the field point that draws it, or null when it is behind or outside. */
 const fieldPoint = ([dx, dy, dz], fieldHalfDeg = FIELD_HALF_DEG) => {
     if (!(-dy > 1e-9)) return null
-    const x = Math.atan(dx / -dy) / (fieldHalfDeg * DEG)
-    const y = Math.atan(dz / -dy) / (fieldHalfDeg * DEG)
+    // Rounded to 1e-6 field units (0.00002°): a point on the cube's own axis reads 0, not −1e-17, which the zone's
+    // edge (yMin 0) would otherwise blank.
+    const x = Math.round((Math.atan(dx / -dy) / (fieldHalfDeg * DEG)) * 1e6) / 1e6
+    const y = Math.round((Math.atan(dz / -dy) / (fieldHalfDeg * DEG)) * 1e6) / 1e6
     return Math.abs(x) <= 1 + 1e-9 && Math.abs(y) <= 1 + 1e-9 ? [clamp(x, -1, 1), clamp(y, -1, 1)] : null
 }
 
