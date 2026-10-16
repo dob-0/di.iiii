@@ -43,8 +43,9 @@ describe('the fixtures manifest', () => {
 
     it('carries the Sevan-kit research of 2026-10-09: each number labelled, the open conflict kept open', () => {
         const { beam380, par, smoke, lasercube } = manifest.kinds
-        // the B380F's 10-09 walk map is ARCHIVED (owner 2026-10-15: the unit's own manual is the chart); its open conflict stays written down
-        expect(beam380.specs.dmx_order.basis).toBe('ARCHIVED')
+        // the B380F's order is the printed manual with the unit (owner 2026-10-16), which agrees with the 10-09 walk; the PDF chart is archived
+        expect(beam380.specs.dmx_order.basis).toBe('EXACT')
+        expect(beam380.specs.dmx_order.src).toBe('B380F-MANUAL-PRINT')
         expect(beam380.specs.dmx_order.open).toMatch(/^OPEN/)
         expect(beam380.specs.dmx_order.open).toMatch(/ch11-16/)
         expect(beam380.specs.lamp_component.basis).toBe('COMPONENT')

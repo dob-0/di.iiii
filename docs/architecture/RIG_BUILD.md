@@ -2156,6 +2156,8 @@ Four additions to the planner, each with a test in `src/rigbuild/patchPlan.test.
 
 Also fixed on the way: a lamp with no position name never converged (the planner wanted `position: ""`, the schema stores none), so a re-run wrote it again.
 
+**One command for a version onto the desk (2026-10-15, ledger N877):** `node scripts/rigbuild/version-to-desk.mjs --project <id> --api <base>/serverXR --token-file <f> --plan <plan.patch.json> [--dry-run] [--keep-others] [--no-start]` runs, in order, `patch-plan.mjs --keep-circuits`, `patch.mjs --unpatch` for every other project on the desk, `patch.mjs --exact`, `show-loop.mjs` (the document's own cues), then prints the desk per project, U1/U2 and the runner, and exits 1 if a step failed or another project is still on the desk. `--dry-run` writes nothing.
+
 Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 353 / 400, no LaserCube on any universe, the controls that make it fail on a wrong plan; `MOXIR_PATCH_FILE=` points it at any candidate). The crew's short table is `node scripts/rigbuild/patch-table.mjs --plan <plan> --out <dir> --pdf` (universe, start address, fixture, mode; Markdown, a page, CSV, a PDF through LibreOffice). The B380F's 16-channel map against the equivalent chart, and what is walked on the unit: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
 
 Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
@@ -2597,3 +2599,17 @@ Studio's `applyLocalOps` (one undo each), and the look is rebuilt by `buildLook`
 `named-v1-plane-1-(behind-the-DJ)-in0/up-b380f` of the v2-11 rig is dropped on every save, before this change too) is not rebuilt: owed,
 a separate fix with the owner's look (it would light those lamps). `desk_caps` is kept and shown in the data, not yet edited in the UI.
 Studio edits do not re-load the desk's cue list by themselves; Play does.
+
+## The 40 W lines: addresses and per-scene parts (2026-10-15, ledger N852)
+
+- **Addresses.** A rig unit's `dmx` block (universe, address, footprint, mode) is now what `epic-build.mjs` writes for laser and
+  smoke units too (`dmxOf`; a LaserCube with no block stays `dmx: false`, run over the LAN). `epic-build.mjs --patch-only [--apply]`
+  writes only the rig file's addresses into a project (fixture ops where the document differs), then `patch.mjs --exact` puts the desk
+  there. MOXIR v2.11: UP-LA40WF ×2 at **U1.401 and U1.433** (32 ch, the maker chart `scripts/place/fixtures/charts/up-la40wf.json`),
+  UP-YZ31P at **U1.501** (1 ch, ASSUMED) — the v2 patch plan's own blocks (owner N460.2).
+- **Parts.** A scene's `laser_lines` (laser_frames.py `validate_line`) drives the single-beam DMX lasers: `still` (the crossed X),
+  `sweep` (the X closes inward by up to `amplitude_deg` and opens, on the master clock), `lift` (rises above the aim, never below);
+  colour only one of the unit's 7 diode colours (chart ch 5); `base_lift_deg` / `base_yaw_in_deg` move the base aim by the unit's
+  ch 7 / ch 6 without moving the unit. Every ray takes the cubes' physics (first surface, column lines, the near crane ≥ 9.2 m,
+  ≤ 3 flashes a second). `laser-frames.mjs`: the rig's own frames now win for the 40 W too (the matrix stays the fallback).
+- **Limit.** The room draws a look's one laser colour for every line; a 40 W colour that differs from the cubes' is desk data only.

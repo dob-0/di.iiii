@@ -6467,6 +6467,15 @@
       "checks": "static line, no scan; from 7.0 m at the door up to the roof chords; DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ]
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 401,
+    "footprint": 32,
+    "fixture": 131,
+    "mode": "32ch",
+    "port": "A",
+    "from": "the v2 patch plan (moxir-v2-patch-v2-1-2026-10-10.json, owner N460.2, UP-LA40WF block: 401 and 433, 32 ch); mode from the maker chart scripts/place/fixtures/charts/up-la40wf.json (APPROVED 2026-10-15), added 2026-10-15 laser-40w (N852)"
    }
   },
   {
@@ -6515,6 +6524,15 @@
       "checks": "static line, no scan; from 7.0 m at the door up to the roof chords; DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ]
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 433,
+    "footprint": 32,
+    "fixture": 132,
+    "mode": "32ch",
+    "port": "A",
+    "from": "the v2 patch plan (moxir-v2-patch-v2-1-2026-10-10.json, owner N460.2, UP-LA40WF block: 401 and 433, 32 ch); mode from the maker chart scripts/place/fixtures/charts/up-la40wf.json (APPROVED 2026-10-15), added 2026-10-15 laser-40w (N852)"
    }
   }
  ],
@@ -13738,15 +13756,6 @@
     "devices": 40
    }
   ],
-  "not_in_this_rig": [
-   {
-    "universe": 1,
-    "block": "UP-LA40WF laser (Poligraf 40 W)",
-    "start": 401,
-    "units": 2,
-    "footprint": 32
-   }
-  ],
   "lines": [
    {
     "line": "NODE-FAR-A",
@@ -16434,7 +16443,21 @@
     ],
     "where": "right fenced strip along the dance floor (where the 7 stand today), chain from the DJ side"
    }
-  ]
+  ],
+  "laser40_patched": {
+   "date": "2026-10-15",
+   "was_not_in_this_rig": [
+    {
+     "universe": 1,
+     "block": "UP-LA40WF laser (Poligraf 40 W)",
+     "start": 401,
+     "units": 2,
+     "footprint": 32
+    }
+   ],
+   "now": "rig-laser40-1 U1.401, rig-laser40-2 U1.433 (32 ch each, last channel 464); smoke U1.501 (1 ch ASSUMED)",
+   "ref": "N852"
+  }
  },
  "checks": {
   "round": "r2-2026-10-10",
