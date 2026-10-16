@@ -1,0 +1,14 @@
+{
+ "what": "road wash rig-par-planes-06 back on the floor at the x/z the owner dragged it to",
+ "source": "owner 2026-10-16 19:1x: 'yes put it back to floor'",
+ "moves": [
+  {
+   "id": "rig-par-planes-06",
+   "position": [
+    17.6501259349511,
+    0.32,
+    51.04221342203726
+   ]
+  }
+ ]
+}
