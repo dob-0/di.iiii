@@ -265,11 +265,13 @@ const LASERCUBE_MK2_MANUAL = {
 // slot (scripts/rigbuild/wheel-walk.mjs --set), named by the owner's eye (slots 1-4) and from his photos sent
 // through di.bo (slots 5, 7-13; docs/moxir/devices/photos/b380f-wheel-slot*-2026-10-16.jpg). The printed manual
 // numbers the slots without naming them. Slots 6 and 8 are UNSURE (6 looked white; 8 shared its frame with pink
-// washes). Log: docs/moxir/devices/up-b380f-wheel-walk-2026-10-16.txt.
+// washes). Log: docs/moxir/devices/up-b380f-wheel-walk-2026-10-16.txt. The hex codes are estimates spaced by the names
+// (hue: red 5°, red-orange 20°, orange 29°, amber 41°, yellow 53°), so a look's red picks slot 1 — owner 2026-10-17:
+// "i click the red room and it not the red".
 const B380F_SLOTS_SEEN = [
-    ['open', '#ffffff'], ['red', '#ff1a00'], ['green', '#00d12a'], ['blue', '#1f3cff'], ['yellow', '#ffe000'],
+    ['open', '#ffffff'], ['red', '#ff2a0a'], ['green', '#00d12a'], ['blue', '#1f3cff'], ['yellow', '#ffe000'],
     ['magenta', '#ff2fc8'], ['white (unsure)', '#f2f2f2'], ['amber', '#ffb000'], ['lavender (unsure)', '#e8b4ff'],
-    ['lime', '#8cff3a'], ['orange', '#ff7a00'], ['red-orange', '#ff4010'], ['warm white', '#fff0c0'], ['light blue', '#a8d8ff']
+    ['lime', '#8cff3a'], ['orange', '#ff7a00'], ['red-orange', '#ff5a1e'], ['warm white', '#fff0c0'], ['light blue', '#a8d8ff']
 ]
 const B380F_WHEEL_SEEN = [
     ...B380F_SLOTS_SEEN.flatMap(([name, colour], i) => [

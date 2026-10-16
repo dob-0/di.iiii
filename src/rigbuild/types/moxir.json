@@ -134,7 +134,7 @@
                     "from": 10,
                     "to": 14,
                     "name": "red",
-                    "colour": "#ff1a00"
+                    "colour": "#ff2a0a"
                   },
                   {
                     "from": 15,
@@ -272,7 +272,7 @@
                     "from": 110,
                     "to": 114,
                     "name": "red-orange",
-                    "colour": "#ff4010"
+                    "colour": "#ff5a1e"
                   },
                   {
                     "from": 115,
