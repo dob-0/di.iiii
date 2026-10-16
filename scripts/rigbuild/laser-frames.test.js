@@ -118,3 +118,14 @@ describe('laser frames on the v2.8 matrix rig', () => {
         expect(scanLinesAt(matrix, 99)).toEqual(scanLinesAt(matrix, 0))
     })
 })
+
+describe('the rig\'s own frames win for the 40 W too (2026-10-15, laser-40w)', () => {
+    it('a UP-LA40WF beam with frames keeps them instead of the matrix', () => {
+        const frames = { period: 12, list: [[[0.1, 0, 1, 1, 1]], [[0, 0, 0, 0, 0]]] }
+        const rig = { fixtures: [{ id: 'l1', type: 'up-la40wf', p: [0, 6, 50], laser: { beams: [{ id: '41', r: [1.62, 0, 0], frames }] } }] }
+        const { byBeam, units } = laserFramesOf(rig, { dirOf: () => [0, 0, -1] })
+        expect(byBeam.get('rig-laser-41').frames).toEqual(frames)
+        expect(byBeam.get('rig-laser-41').frame).toBeUndefined()
+        expect(units[0].picture).toBe('rig frames')
+    })
+})
