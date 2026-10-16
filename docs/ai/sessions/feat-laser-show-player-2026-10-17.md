@@ -50,3 +50,23 @@ box into the ZONE (FIT_EDGE 0.9 of each half-extent, centred on the zone's centr
 the player and `/show/still` pass `engine.state().zone`. After: 0 % below y = 0 on all six groups, 0 stops in run 5.
 Limit: under the upper-half zone a picture fills half the field's height; the whole field is the officer's zone choice
 (laser.json `zone`), never the player's. Catalogue entries for the three show routes added (CI's catalogue contract).
+
+## 03:5x — "more robust scenes": keyframes that blend, fuller pictures, fit by lit stretch
+
+The owner at the wall: *"i need more robust scenes … its nothing its so boring"*, *"use full scale"*. Measured: each cube drew
+6 single beams (dots on a wall), only 22 of 50 scenes had any laser, and the room's 256 frames over 1116 s hold a picture
+4.36 s then jump. Built:
+- `laser_frames.py`: `beams` (1..48) per scene — comb/net along the rigged aims, fan/fan-sweep/tunnel across the spread,
+  several rays a line each lit after a blank move; `segments` for a denser sky; `--keyframes` writes one pose a frame and
+  `frames.tween: true`. Physics check unchanged (every new ray checked; MOXIR cubes 0 fails; the 40 W lines were left out
+  of this compile — their hand aims in the rig file fail on a column, they are not the cubes' business tonight).
+- `laserShow.js`: `poseAt` blends frame i into i+1 when they match point for point (by `frames.tween` or the run's
+  `tween`), the key then carries the 20 Hz tick; `stillBeamsOfGroup` samples the blended path finely enough that the
+  whole motion is approved; 'fit' takes the box of the lit STRETCH the frame belongs to (fitting each picture on its own
+  centre froze every sweep); `strokesAt`, `bboxOf`, `fitBoxOf`, `tweens` exported.
+- `moxir-scenes-50-2026-10-15.json`: beams 12 (comb, net), 18 (fan, fan-sweep, tunnel), sky segments 10 on 17 scenes.
+- Written into moxir-v2-11 on aylmo's di by `agent-reports-2026-10-17/apply_frames.mjs` (36 cube lines, full laser object
+  with `frames` replaced, backup `~/di-backups/moxir-v2-11-document-before-dense-lasers-20261017-0331.json`).
+Owed: the room (laserLine.js) still holds each keyframe 4.4 s — give it the shared `poseAt`; epic-build needs a cubes-only
+switch (it dies on the 40 W lines being in the project but not in a cubes-only rig); the 28 dark scenes are the owner's call;
+the whole field needs the officer's zone (his line, N912/N932); the scenes-50 change should also reach dev (follow).

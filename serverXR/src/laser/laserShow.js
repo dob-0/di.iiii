@@ -121,7 +121,8 @@ const framesOf = (frames) => {
         total += pts.length
         list.push(pts)
     }
-    return list.length ? { period: Math.min(3600, Math.max(0.05, period)), list } : null
+    // `tween: true` marks keyframes (laser_frames.py --keyframes): a player blends each pose into the next.
+    return list.length ? { period: Math.min(3600, Math.max(0.05, period)), list, ...(frames.tween === true ? { tween: true } : {}) } : null
 }
 
 /** Which of `frames.list` is on at show time `t` (seconds) — the room's formula. Pure. */
@@ -168,22 +169,88 @@ const lineGroupsOf = (document) => {
  * cube with nothing lit draws one blank point (dark, as the compiled frames do). Pure.
  * @returns {{ points: number[][], outside: number }}
  */
-const cubeFrameAt = (group, t, { scale = 1, zone = DEFAULT_ZONE } = {}) => {
+/**
+ * A line's pose at `t`: its frame, or with `tween` the blend of that frame and the next (a show's keyframes are far apart:
+ * MOXIR's 256 frames over 1116 s are 4.4 s each; held, every picture jumps to the next). Two frames blend only when they
+ * match point for point in count and lit-ness; otherwise the frame holds, as before. Linear in the field and in colour. Pure.
+ */
+const poseAt = (frames, t, tween = false) => {
+    const i = frameIndexAt(frames, t)
+    if (i < 0) return null
+    const a = frames.list[i]
+    if (!tween && frames.tween !== true) return a
+    const n = frames.list.length
+    const b = frames.list[(i + 1) % n]
+    if (!b || b.length !== a.length || a.some((p, k) => isLit(p) !== isLit(b[k]))) return a
+    const phase = ((num(t) % frames.period) + frames.period) % frames.period
+    const f = Math.min(1, Math.max(0, (phase / frames.period) * n - i))
+    return a.map((p, k) => p.map((v, c) => v + (b[k][c] - v) * f))
+}
+
+/** The strokes of a group's lines at `t` in the cube's field, unzoomed: { strokes, outside }. Pure. */
+const strokesAt = (group, t, tween = false) => {
     const strokes = []
     let outside = 0
     for (const l of group.lines) {
-        const i = frameIndexAt(l.frames, t)
-        if (i < 0) continue
-        const pts = l.frames.list[i].map((p) => {
+        const pose = poseAt(l.frames, t, tween)
+        if (!pose) continue
+        const pts = pose.map((p) => {
             const q = toCubeField(l, group.cube, p[0], p[1])
             if (!q && isLit(p)) outside += 1
             return q ? [q[0], q[1], p[2], p[3], p[4]] : [clamp(p[0], -1, 1), clamp(p[1], -1, 1), 0, 0, 0]
         })
         if (pts.some(isLit)) strokes.push(pts)
     }
-    // The zoom (a projector's size control): a number about the cube's axis, or 'fit' — this picture fills the field
-    // about its own lit centre. What leaves the field is blanked and counted.
-    const { k, cx, cy, tx, ty } = zoomOf(scale, strokes, zone)
+    return { strokes, outside }
+}
+
+/** The lit box of strokes { xMin, xMax, yMin, yMax }, or null when nothing is lit. Pure. */
+const bboxOf = (strokes) => {
+    let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity
+    for (const pts of strokes) for (const p of pts) if (isLit(p)) { xMin = Math.min(xMin, p[0]); xMax = Math.max(xMax, p[0]); yMin = Math.min(yMin, p[1]); yMax = Math.max(yMax, p[1]) }
+    return xMin <= xMax ? { xMin, xMax, yMin, yMax } : null
+}
+
+const FIT_BOXES = new WeakMap() // group → the fit box per frame index (built once per document load)
+
+/**
+ * The box 'fit' fills for frame `i` of a group: the lit box of the whole LIT STRETCH the frame belongs to (consecutive lit
+ * frames, wrapping round the show's end), not of the one picture. Fitting each picture on its own centre would cancel its
+ * motion (a sweeping fan or a scanning beam would stand still); the stretch is the show's own scene boundary. Pure but
+ * for a cache keyed by the group object, which a document reload replaces.
+ */
+const fitBoxOf = (group, i) => {
+    if (!(i >= 0)) return null
+    let boxes = FIT_BOXES.get(group)
+    if (!boxes) {
+        const n = Math.max(0, ...group.lines.map((l) => l.frames.list.length))
+        const period = group.lines[0]?.frames.period ?? 1
+        const own = []
+        for (let k = 0; k < n; k += 1) own.push(bboxOf(strokesAt(group, ((k + 0.5) * period) / n).strokes))
+        boxes = new Array(n).fill(null)
+        const allLit = own.every(Boolean)
+        for (let k = 0; k < n; k += 1) {
+            if (!own[k] || boxes[k] || (!allLit && own[(k - 1 + n) % n])) continue // a stretch starts after a dark frame
+            const run = []
+            for (let j = k; own[j % n] && run.length < n; j += 1) run.push(j % n)
+            const u = { xMin: Infinity, xMax: -Infinity, yMin: Infinity, yMax: -Infinity }
+            for (const j of run) { u.xMin = Math.min(u.xMin, own[j].xMin); u.xMax = Math.max(u.xMax, own[j].xMax); u.yMin = Math.min(u.yMin, own[j].yMin); u.yMax = Math.max(u.yMax, own[j].yMax) }
+            for (const j of run) boxes[j] = u
+            if (allLit) break
+        }
+        FIT_BOXES.set(group, boxes)
+    }
+    return boxes[i] ?? null
+}
+
+const cubeFrameAt = (group, t, { scale = 1, zone = DEFAULT_ZONE, tween = false } = {}) => {
+    const got = strokesAt(group, t, tween)
+    const strokes = got.strokes
+    let outside = got.outside
+    // The zoom (a projector's size control): a number about the cube's axis, or 'fit' — the lit stretch this picture
+    // belongs to fills the keep-in zone. What leaves the field is blanked and counted.
+    const box = scale === 'fit' ? fitBoxOf(group, frameIndexAt(group.lines[0]?.frames, t)) : null
+    const { k, cx, cy, tx, ty } = zoomOf(scale, strokes, zone, box)
     const out = []
     for (const pts of strokes) {
         const z = pts.map((p) => {
@@ -210,12 +277,12 @@ const FIT_EDGE = 0.9 // 'fit' fills the keep-in zone to here, a margin inside ea
  * (measured 2026-10-17 03:1x on MOXIR: fit about the field under the upper-half zone cut 40 % of the lit points and
  * tripped the still-beam guard 75 times in 57 min, every dot at y ≈ 0). Pure.
  */
-const zoomOf = (scale, strokes, zone = DEFAULT_ZONE) => {
+const zoomOf = (scale, strokes, zone = DEFAULT_ZONE, box = null) => {
     if (scale !== 'fit') return { k: scaleOf(scale), cx: 0, cy: 0, tx: 0, ty: 0 }
     const z = normaliseZone(zone)
-    let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity
-    for (const pts of strokes) for (const p of pts) if (isLit(p)) { xMin = Math.min(xMin, p[0]); xMax = Math.max(xMax, p[0]); yMin = Math.min(yMin, p[1]); yMax = Math.max(yMax, p[1]) }
-    if (!(xMin <= xMax)) return { k: 1, cx: 0, cy: 0, tx: 0, ty: 0 }
+    const b = box ?? bboxOf(strokes)
+    if (!b) return { k: 1, cx: 0, cy: 0, tx: 0, ty: 0 }
+    const { xMin, xMax, yMin, yMax } = b
     const ex = (xMax - xMin) / 2, ey = (yMax - yMin) / 2
     const hx = ((z.xMax - z.xMin) / 2) * FIT_EDGE, hy = ((z.yMax - z.yMin) / 2) * FIT_EDGE
     const k = Math.min(10, ex > 1e-6 ? hx / ex : 10, ey > 1e-6 ? hy / ey : 10)
@@ -226,7 +293,8 @@ const zoomOf = (scale, strokes, zone = DEFAULT_ZONE) => {
 const scaleOf = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? clamp(n, 0.1, 10) : 1 }
 
 /** The frame indices of a group's lines at `t`, as one key: it changes exactly when the drawing changes. Pure. */
-const frameKeyAt = (group, t) => group.lines.map((l) => frameIndexAt(l.frames, t)).join(',')
+const TWEEN_KEY_HZ = 20 // with tween the picture moves every tick: the key carries the tick, so a fresh frame is posted each time
+const frameKeyAt = (group, t, tween = false) => group.lines.map((l) => frameIndexAt(l.frames, t)).join(',') + (tween ? `@${Math.floor(num(t) * TWEEN_KEY_HZ)}` : '')
 
 /** Cubes and groups side by side in sorted order: { cubeId: groupId }. Extra cubes stay unmapped. Pure. */
 const defaultMap = (cubeIds, groupIds) => {
@@ -242,17 +310,36 @@ const defaultMap = (cubeIds, groupIds) => {
  * own function), each once: [{ x, y, within }], `within` the engine's default tolerance. The frames are sampled at the
  * middle of every step of the finest list. Pure.
  */
-const stillBeamsOfGroup = (group, stillBeams, { within = 0.01, grid = 0.005, scale = 1, zone = DEFAULT_ZONE } = {}) => {
+/** Whether a group's pictures blend between keyframes: the run's switch, or the document's own `frames.tween`. Pure. */
+const tweens = (group, tween = false) => tween === true || group.lines.some((l) => l.frames?.tween === true)
+
+/** How many samples frame i needs so that, with tween, neighbouring samples lie within half the approval radius. Pure. */
+const tweenStepsOf = (group, i, n, period, within, opts) => {
+    const a = cubeFrameAt(group, ((i + 0.001) * period) / n, opts).points
+    const b = cubeFrameAt(group, ((i + 0.999) * period) / n, opts).points
+    if (a.length !== b.length) return 1
+    let d = 0
+    for (let k = 0; k < a.length; k += 1) d = Math.max(d, Math.hypot(a[k][0] - b[k][0], a[k][1] - b[k][1]))
+    return Math.min(200, Math.max(1, Math.ceil(d / (within / 2))))
+}
+
+const stillBeamsOfGroup = (group, stillBeams, { within = 0.01, grid = 0.005, scale = 1, zone = DEFAULT_ZONE, tween = false } = {}) => {
     const z = normaliseZone(zone)
     const n = Math.max(1, ...group.lines.map((l) => l.frames.list.length))
     const period = group.lines[0]?.frames.period ?? 1
     const seen = new Map()
+    const moving = tweens(group, tween)
+    const opts = { scale, zone: z, tween: moving }
     for (let i = 0; i < n; i += 1) {
-        // The engine judges the frame AFTER its keep-in zone (a clipped stub is a dot to it), so the approval looks there too.
-        const { points } = applyZone(cubeFrameAt(group, ((i + 0.5) * period) / n, { scale, zone: z }).points, z)
-        for (const d of stillBeams(points)) {
-            const key = `${Math.round(d.x / grid)},${Math.round(d.y / grid)}`
-            if (!seen.has(key)) seen.set(key, { x: Math.round(d.x * 1e4) / 1e4, y: Math.round(d.y * 1e4) / 1e4, within })
+        // With tween the beams move between the keyframes: the whole path is approved, not only the keyframes.
+        const steps = moving ? tweenStepsOf(group, i, n, period, within, opts) : 1
+        for (let s = 0; s < steps; s += 1) {
+            // The engine judges the frame AFTER its keep-in zone (a clipped stub is a dot to it), so the approval looks there too.
+            const { points } = applyZone(cubeFrameAt(group, ((i + (s + 0.5) / steps) * period) / n, opts).points, z)
+            for (const d of stillBeams(points)) {
+                const key = `${Math.round(d.x / grid)},${Math.round(d.y / grid)}`
+                if (!seen.has(key)) seen.set(key, { x: Math.round(d.x * 1e4) / 1e4, y: Math.round(d.y * 1e4) / 1e4, within })
+            }
         }
     }
     return [...seen.values()]
@@ -308,11 +395,12 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
         const t = now() / 1000
         let zone = null // the engine's keep-in zone, read once per tick and only when a frame is drawn
         for (const m of run.map) {
-            const key = frameKeyAt(m.lines, t)
+            const moving = tweens(m.lines, run.tween)
+            const key = frameKeyAt(m.lines, t, moving)
             let res
             if (key !== m.key || m.held) {
                 zone ??= engine.state?.().zone ?? DEFAULT_ZONE
-                const frame = cubeFrameAt(m.lines, t, { scale: run.scale, zone })
+                const frame = cubeFrameAt(m.lines, t, { scale: run.scale, zone, tween: moving })
                 m.outside = frame.outside
                 res = engine.setFrame(m.cube, frame.points, run.out)
             } else res = engine.alive(m.cube, run.out)
@@ -351,7 +439,7 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
         if (!got.ok) return got
         stop()
         const t0 = now()
-        run = { project: got.project, out: `show:${got.project}`, map: got.map, groups: got.groups, scale: got.scale, timer: null, startedAt: t0, reloadedAt: t0, reloadMs: Math.max(1000, num(opts.reloadMs, RELOAD_MS)), error: null, reloading: false }
+        run = { project: got.project, out: `show:${got.project}`, map: got.map, groups: got.groups, scale: got.scale, tween: opts.tween === true || opts.tween === 'true', timer: null, startedAt: t0, reloadedAt: t0, reloadMs: Math.max(1000, num(opts.reloadMs, RELOAD_MS)), error: null, reloading: false }
         tick()
         run.timer = every(tick, TICK_MS)
         run.timer?.unref?.()
@@ -367,6 +455,7 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
             project: run.project,
             out: run.out,
             scale: run.scale,
+            tween: run.tween,
             startedAt: run.startedAt,
             reloadedAt: run.reloadedAt,
             error: run.error,
@@ -388,6 +477,6 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
 }
 
 module.exports = {
-    createShowPlayer, lineGroupsOf, groupOfLine, framesOf, frameIndexAt, cubeFrameAt, frameKeyAt, defaultMap, stillBeamsOfGroup, scaleOf,
+    createShowPlayer, lineGroupsOf, groupOfLine, framesOf, frameIndexAt, poseAt, strokesAt, fitBoxOf, cubeFrameAt, frameKeyAt, tweens, defaultMap, stillBeamsOfGroup, scaleOf,
     eulerXYZ, fieldDirection, fieldPoint, aimAt, aimOfGroup, toCubeField, TICK_MS, RELOAD_MS, FIELD_HALF_DEG
 }

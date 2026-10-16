@@ -5,8 +5,7 @@ import { describe, expect, it } from 'vitest'
 const require = createRequire(import.meta.url)
 const {
     createShowPlayer, lineGroupsOf, groupOfLine, frameIndexAt, cubeFrameAt, defaultMap, stillBeamsOfGroup,
-    eulerXYZ, fieldDirection, fieldPoint, aimAt, TICK_MS
-} = require('./laserShow')
+    eulerXYZ, fieldDirection, fieldPoint, aimAt, TICK_MS, poseAt, fitBoxOf, framesOf, frameKeyAt } = require('./laserShow')
 const { stillBeams } = require('./laserEngine')
 
 const DEG = Math.PI / 180
@@ -97,13 +96,13 @@ describe('the geometry: a line\'s field into its cube\'s field', () => {
         expect(stillBeamsOfGroup(g, stillBeams, { scale: 4 })[0].x).toBeCloseTo(4 * X2, 3)
     })
     it('\'fit\' fills the keep-in zone with each picture, centred in the zone, nothing of it clipped', () => {
-        const g = lineGroupsOf(DOC).get('rig-laser-1')
         // The default zone is the engine's, the upper half: centre (0, 0.5), room ±0.9 across and ±0.45 up and down.
-        // t = 7: one stroke 0.1 wide at −2°: the zoom is capped at ×10, so its ends reach ±0.5 about the zone's centre.
-        const fit = cubeFrameAt(g, 7, { scale: 'fit' })
+        // One stroke 0.1 wide: the zoom is capped at ×10, so its ends reach ±0.5 about the zone's centre.
+        const narrow = lineGroupsOf({ entities: [line('n-1a', [[[-0.05, 0.3, 1, 1, 1], [0.05, 0.3, 1, 1, 1]]])] }).get('n-1')
+        const fit = cubeFrameAt(narrow, 1, { scale: 'fit' })
         expect(fit.outside).toBe(0)
-        expect(near(fit.points[1].slice(0, 2), [-0.5, 0.5], 2e-3)).toBe(true)
-        expect(near(fit.points[2].slice(0, 2), [0.5, 0.5], 2e-3)).toBe(true)
+        expect(near(fit.points[1].slice(0, 2), [-0.5, 0.5], 1e-6)).toBe(true)
+        expect(near(fit.points[2].slice(0, 2), [0.5, 0.5], 1e-6)).toBe(true)
         // A stroke 0.4 wide fills the zone's width: ±0.9, at the zone's centre height.
         const wide = lineGroupsOf({ entities: [line('w-1a', [[[-0.2, 0.3, 1, 1, 1], [0.2, 0.3, 1, 1, 1]]])] }).get('w-1')
         const f2 = cubeFrameAt(wide, 1, { scale: 'fit' })
@@ -118,8 +117,31 @@ describe('the geometry: a line\'s field into its cube\'s field', () => {
         const full = { xMin: -1, xMax: 1, yMin: -1, yMax: 1 }
         expect(near(cubeFrameAt(wide, 1, { scale: 'fit', zone: full }).points[2].slice(0, 2), [0.9, 0], 1e-6)).toBe(true)
         // A single dot: nothing to stretch, it moves to the zone's centre.
-        expect(near(cubeFrameAt(g, 3, { scale: 'fit' }).points[1].slice(0, 2), [0, 0.5], 1e-9)).toBe(true)
-        expect(cubeFrameAt(g, 3, { scale: 'fit' }).points).toHaveLength(3)
+        const dot = lineGroupsOf({ entities: [line('d-1a', [[[0.2, -0.1, 1, 1, 1]]])] }).get('d-1')
+        expect(near(cubeFrameAt(dot, 1, { scale: 'fit' }).points[1].slice(0, 2), [0, 0.5], 1e-9)).toBe(true)
+        expect(cubeFrameAt(dot, 1, { scale: 'fit' }).points).toHaveLength(3)
+    })
+    it('\'fit\' keeps motion: the box is the lit stretch\'s, so a moving picture still moves', () => {
+        // Two lit frames in a row: a dot at x 0.1 then at x 0.3 (a scan). Fitted each on its own centre both would sit at
+        // the zone's centre; fitted on the stretch's box the dot goes from the left edge to the right edge.
+        const scan = lineGroupsOf({ entities: [line('m-1a', [[[0.1, 0.2, 1, 1, 1]], [[0.3, 0.2, 1, 1, 1]], [[0, 0, 0, 0, 0]]])] }).get('m-1')
+        const period = scan.lines[0].frames.period
+        const a = cubeFrameAt(scan, 0.5 * period / 3, { scale: 'fit' }).points[1]
+        const b = cubeFrameAt(scan, 1.5 * period / 3, { scale: 'fit' }).points[1]
+        expect(near(a.slice(0, 2), [-0.9, 0.5], 1e-6)).toBe(true)
+        expect(near(b.slice(0, 2), [0.9, 0.5], 1e-6)).toBe(true)
+        expect(fitBoxOf(scan, 0)).toEqual(fitBoxOf(scan, 1))
+        expect(fitBoxOf(scan, 2)).toBeNull()
+    })
+    it('keyframes blend: poseAt moves between two matching frames, holds when they differ', () => {
+        const frames = { period: 4, list: [[[0, 0, 1, 1, 1]], [[0.4, 0.2, 1, 1, 1]], [[0, 0, 0, 0, 0]], [[0, 0, 1, 1, 1], [0.1, 0, 1, 1, 1]]] }
+        expect(poseAt(frames, 0.5, true)[0].slice(0, 2)).toEqual([0.2, 0.1])          // half way from frame 0 to frame 1
+        expect(poseAt(frames, 1.5, true)[0].slice(0, 2)).toEqual([0.4, 0.2])          // frame 1 → 2: lit-ness differs, held
+        expect(poseAt(frames, 0.5, false)[0].slice(0, 2)).toEqual([0, 0])             // no tween: the frame as written
+        expect(poseAt({ ...frames, tween: true }, 0.5)[0].slice(0, 2)).toEqual([0.2, 0.1])  // the document's own flag
+        expect(framesOf({ period: 4, list: frames.list, tween: true }).tween).toBe(true)
+        expect(framesOf({ period: 4, list: frames.list }).tween).toBeUndefined()
+        expect(frameKeyAt({ lines: [{ frames }] }, 1.26, true)).toBe('1@25')          // with tween the key carries the tick
     })
     it('the still-beam approval judges the frame as the engine does: after the keep-in zone', () => {
         // A stroke that only grazes the zone's edge: the engine blanks its lower part and the stub left near y = 0 is

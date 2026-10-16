@@ -22,8 +22,16 @@ THE `laser` FIELD OF A SCENE (null = the cubes dark in that scene). Validated by
       "amplitude_deg": >= 0  sweep half-amplitude (fan-sweep, single-scan, sky wave); net: the cross yaw
       "breathe":   null | {"min": 0..1}                     intensity breathing over one cycle
       "hits":      null | {"per_beat": > 0, "duty": 0 < d < 1}   hard hits on the beat (lit share of each hit period)
+      "beams":     1..48, optional   how many beams the pattern draws per cube (default: one per line, 6). More than the lines:
+                                     a line carries several, each lit after a blank move (comb/net: along the rigged aims;
+                                     fan, fan-sweep, tunnel: across the spread). 2026-10-17: the owner, at the wall, "more
+                                     robust scenes" — six dots a cube read as nothing.
+      "segments":  2..24, optional   points per line of a `sky` sheet (default 4): the sheet's smoothness
       "refs":      [str], "why": str
     }
+
+--keyframes (2026-10-17): one pose per room frame (no sub-sampled path) and `frames.tween: true`, so a player blends each
+pose into the next (serverXR laserShow.js poseAt) — continuous motion instead of a jump every step (4.4 s on a 1116 s show).
 
 THE `laser_lines` FIELD OF A SCENE (null or absent = the line units dark): the single-beam DMX lasers (`LINE_TYPES`, e.g. the
 UP-LA40WF 40 W: one static beam each, X/Y position by hand ch 6/7, 7 diode colours ch 5, dimmer ch 1; maker chart
@@ -71,6 +79,7 @@ MAX_FRAMES, MAX_POINTS = 256, 20000   # laserLine.js MAX_FRAMES, MAX_FRAME_POINT
 MAX_FLASH_HZ = 3.0
 CUBE_PPS, MIN_REFRESH_HZ = 30000, 30  # ASSUMED (laserEngine.js dacRate example; flicker-free scanned figure)
 DWELL_PTS, BLANK_PTS, PTS_PER_DEG = 12, 6, 4
+MAX_BEAMS, MAX_SEGMENTS = 48, 24   # per cube: 48 x (12 + 6) = 864 points, inside the 1000-point frame
 CRANE_CLEAR_M, CRANE_HALF_Z = 9.2, 1.45   # rig lasers.arithmetic (crossing >= 9.2 m); girders 2 x 0.7 + gap 1.5 (hall dims)
 ENTRY_MIN_M = 9.0                # rig: entry wall >= 9.0 m (over the 6 m door)
 SUBSAMPLES = 6                   # positions per room frame for a moving pattern
@@ -169,8 +178,12 @@ def validate_laser(laser, where=''):
     if laser.get('pattern') in ('comb', 'net') and (laser.get('pitch_deg') or laser.get('yaw_deg')):
         e.append(f'{where}: comb/net stay on the rigged aims (pitch_deg = yaw_deg = 0)')
     if not isinstance(laser.get('refs', []), list): e.append(f'{where}: refs must be a list')
+    nb = laser.get('beams')
+    if nb is not None and not (isinstance(nb, int) and 1 <= nb <= MAX_BEAMS): e.append(f'{where}: beams must be 1..{MAX_BEAMS}')
+    ns = laser.get('segments')
+    if ns is not None and not (isinstance(ns, int) and 2 <= ns <= MAX_SEGMENTS): e.append(f'{where}: segments must be 2..{MAX_SEGMENTS}')
     known = {'pattern', 'cubes', 'colour', 'colour_key', 'level', 'tempo', 'phase', 'pitch_deg', 'yaw_deg', 'spread_deg',
-             'amplitude_deg', 'breathe', 'hits', 'refs', 'why'}
+             'amplitude_deg', 'breathe', 'hits', 'beams', 'segments', 'refs', 'why'}
     extra = set(laser) - known
     if extra: e.append(f'{where}: unknown keys {sorted(extra)}')
     return e
@@ -267,6 +280,33 @@ def ray_angles(cube, d):
     return (math.atan2(dot(d, cube['east']), dot(d, cube['axis'])) / DEG, math.asin(max(-1, min(1, dot(d, cube['up'])))) / DEG)
 
 
+def ray_cube(cube, Y, P):
+    """A world direction from (Y, P) degrees in the cube's frame: the inverse of ray_angles."""
+    cp, sp, cy, sy = math.cos(P * DEG), math.sin(P * DEG), math.cos(Y * DEG), math.sin(Y * DEG)
+    return norm([cp * cy * cube['axis'][i] + cp * sy * cube['east'][i] + sp * cube['up'][i] for i in range(3)])
+
+
+def spread_lines(cube, count):
+    """`count` rays along the polyline of the rigged aims (west → east), as [(line index, Y, P)] in the cube's frame:
+    count = the lines gives the rigged aims themselves; more fills the gaps between neighbouring lines."""
+    n = len(cube['beams'])
+    ang = [ray_angles(cube, world_of_field(0.0, 0.0, b['r'], FIELD_HALF_DEG)) for b in cube['beams']]
+    out = []
+    for k in range(count):
+        u = (k * (n - 1) / (count - 1)) if count > 1 and n > 1 else 0.0
+        j = min(n - 2, int(u)) if n > 1 else 0
+        f = u - j
+        Y = ang[j][0] + ((ang[j + 1][0] - ang[j][0]) * f if n > 1 else 0.0)
+        P = ang[j][1] + ((ang[j + 1][1] - ang[j][1]) * f if n > 1 else 0.0)
+        out.append((int(round(u)), Y, P))
+    return out
+
+
+def line_of(k, count, n):
+    """Ray k of `count` (west → east) goes on line k·n/count: neighbouring rays share a line."""
+    return min(n - 1, (k * n) // count)
+
+
 # ---- the pattern at a time ------------------------------------------------------------------------------------------------
 def cube_phase(laser, cube, group):
     ph = laser.get('phase', 'unison')
@@ -288,32 +328,38 @@ def rays_at(laser, cube, group, u):
     mirror = laser.get('phase') == 'mirror'
     centre = lambda y0, a: side * (y0 + a) if mirror else side * y0 + a
     n = len(cube['beams'])
+    N = int(laser.get('beams') or n)                        # beams per cube: the lines, or more (several on a line)
     out = []
     if pat == 'comb':
-        return [(j, None, (0.0, 0.0)) for j in range(n)]
+        if N == n:
+            return [(j, None, (0.0, 0.0)) for j in range(n)]
+        return [(j, ray_cube(cube, Y, P), None) for j, Y, P in spread_lines(cube, N)]
     if pat == 'net':
         breath = (0.5 + 0.5 * s) if A else 1.0
         a = A * breath * (1 if cube['n'] % 2 else -1)
-        return [(j, None, (a / FIELD_HALF_DEG, 0.0)) for j in range(n)]
+        if N == n:
+            return [(j, None, (a / FIELD_HALF_DEG, 0.0)) for j in range(n)]
+        return [(j, ray_cube(cube, Y + a, P), None) for j, Y, P in spread_lines(cube, N)]
     if pat in ('fan', 'fan-sweep'):
         yc = centre(Y0, A * s if pat == 'fan-sweep' else 0.0)
-        for j in range(n):                                  # line j (west → east aims) takes ray j (west → east)
-            f = (2 * j / (n - 1) - 1) if n > 1 else 0
-            out.append((j, ray(cube, yc + W * f, P0), None))
+        for k in range(N):                                  # ray k (west → east) on line k·n/N (west → east aims)
+            f = (2 * k / (N - 1) - 1) if N > 1 else 0
+            out.append((line_of(k, N, n), ray(cube, yc + W * f, P0), None))
         return out
     if pat == 'single-scan':                                # the cube's outermost line
         return [(0 if side < 0 else n - 1, ray(cube, centre(Y0, A * s), P0), None)]
     if pat == 'tunnel':
-        for j in range(n):
-            th = math.pi * ((j / n + phase) % 1.0)          # six dots run round the upper half ring
-            out.append((j, ray(cube, side * Y0 - W * math.cos(th), P0 + W * math.sin(th)), None))
+        for k in range(N):
+            th = math.pi * ((k / N + phase) % 1.0)          # N dots run round the upper half ring
+            out.append((line_of(k, N, n), ray(cube, side * Y0 - W * math.cos(th), P0 + W * math.sin(th)), None))
         return out
-    if pat == 'sky':                                        # each line draws one sixth of a waving sheet
+    if pat == 'sky':                                        # each line draws one n-th of a waving sheet, S points each
+        S = int(laser.get('segments') or 4)
         pts = []
         for j in range(n):
             seg = []
-            for k in range(4):
-                f = (2 * (j * 3 + k) / (3 * n - 1) - 1)
+            for k in range(S):
+                f = (2 * (j * (S - 1) + k) / ((S - 1) * n) - 1)
                 seg.append(ray(cube, side * Y0 + W * f, P0 + A * math.sin(2 * math.pi * (f * 0.75 - phase))))
             pts.append((j, seg, None))
         return pts
@@ -431,13 +477,13 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
                                          'to': [round(c, 2) for c in end], 'ends_on': label})
         # the real cube's point budget for one frame of this pattern
         pat = laser['pattern']
-        n = len(cube['beams'])
+        n = int(laser.get('beams') or len(cube['beams']))
         if pat in ('comb', 'net', 'fan', 'fan-sweep', 'still', 'sweep', 'lift'):
             pts = n * (DWELL_PTS + BLANK_PTS)
         elif pat == 'single-scan':
             pts = DWELL_PTS + BLANK_PTS
         elif pat == 'tunnel':
-            pts = int(math.pi * laser['spread_deg'] * PTS_PER_DEG) + BLANK_PTS
+            pts = n * (DWELL_PTS + BLANK_PTS) if laser.get('beams') else int(math.pi * laser['spread_deg'] * PTS_PER_DEG) + BLANK_PTS
         else:
             pts = int(2 * laser['spread_deg'] * PTS_PER_DEG) + BLANK_PTS
         budget[cube['n']] = pts
@@ -466,7 +512,8 @@ def r4(v):
     return round(v, 4)
 
 
-def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES, kind=CUBE_SET):
+def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES, kind=CUBE_SET, subsamples=SUBSAMPLES):
+    """subsamples = 1 (--keyframes): one pose per frame, for a player that blends poses; more: the path within the frame."""
     rays_at = kind['rays']
     rows, loop = timeline(scenes, timing)
     step = loop / frames_n
@@ -475,8 +522,8 @@ def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES, kind=CUBE_
     for i in range(frames_n):
         start = (i * step - epoch_s) % loop
         per_beam = {bid: [] for bid in lists}
-        for k in range(SUBSAMPLES):
-            tau = start + step * (k + 0.5) / SUBSAMPLES
+        for k in range(subsamples):
+            tau = start + step * (k + 0.5) / subsamples
             s, ts = scene_at(rows, loop, tau)
             laser = s.get(kind['key'])
             if laser is None:
@@ -487,6 +534,7 @@ def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES, kind=CUBE_
             for cube in cubes:
                 if cube['n'] not in group:
                     continue
+                pieces = {}                                   # line index → the rays it carries this subsample, in order
                 for j, d, off in rays_at(laser, cube, group, u):
                     beam = cube['beams'][j]
                     dirs = d if (d and isinstance(d[0], list)) else [d]
@@ -494,7 +542,20 @@ def room_frames(scenes, cubes, timing, epoch_ms, frames_n=MAX_FRAMES, kind=CUBE_
                     for dd in dirs:
                         fp = off if dd is None else field_point(dd, beam['r'], FIELD_HALF_DEG)
                         pts.append([r4(fp[0]), r4(fp[1]), drv, drv, drv])
-                    per_beam[beam['id']].append(pts)
+                    pieces.setdefault(j, []).append(pts)
+                for j, ps in pieces.items():
+                    beam = cube['beams'][j]
+                    if len(ps) == 1:
+                        per_beam[beam['id']].append(ps[0])        # one ray (a point) or one sheet segment, as before
+                        continue
+                    # several rays on one line (`beams` > the lines): each lit after a BLANK move to its own spot, so the room
+                    # and the cube draw separate beams and never a stroke between them (laserLine.js scanLines lights a
+                    # segment by its end point; the engine blanks a move)
+                    flat = []
+                    for p in ps:
+                        flat.append([p[0][0], p[0][1], 0, 0, 0])
+                        flat.extend(p)
+                    per_beam[beam['id']].append(flat)
         for bid, poses in per_beam.items():
             if not poses:
                 lists[bid].append([[0, 0, 0, 0, 0]])                       # dark: one blank point
@@ -566,6 +627,7 @@ def main(argv=None):
     ap.add_argument('--timing', choices=('clock', 'fade+hold'), default='clock',
                     help='clock: a cue lasts its hold (showClock.js); fade+hold: fade then hold')
     ap.add_argument('--check', action='store_true', help='check only, write nothing but --plan-out')
+    ap.add_argument('--keyframes', action='store_true', help='one pose per frame and frames.tween true: a player blends pose to pose')
     a = ap.parse_args(argv)
     S = json.load(open(a.scenes)); rig = json.load(open(a.rig)); dims = json.load(open(a.hall))['dims']
     scenes = S['scenes'] if isinstance(S, dict) else S
@@ -577,7 +639,7 @@ def main(argv=None):
     if not cubes:
         print(json.dumps({'ok': False, 'error': f'no {CUBE_TYPE} fixtures with beams in the rig'})); return 1
     plans = [scene_plan(s, cubes, dims, a.crane_z) for s in scenes]
-    lists, loop, step, total = room_frames(scenes, cubes, a.timing, a.show_epoch_ms)
+    lists, loop, step, total = room_frames(scenes, cubes, a.timing, a.show_epoch_ms, subsamples=1 if a.keyframes else SUBSAMPLES)
     frame_fails = [f'{bid}: {n} points > {MAX_POINTS}' for bid, n in total.items() if n > MAX_POINTS]
     units = units_of(rig)
     line_plans, line_lists = [], {}
@@ -608,10 +670,11 @@ def main(argv=None):
                 continue
             for b in f['laser']['beams']:
                 if b['id'] in lists:
-                    b['frames'] = {'period': round(loop, 3), 'list': lists[b['id']]}
+                    b['frames'] = {'period': round(loop, 3), 'list': lists[b['id']], **({'tween': True} if a.keyframes else {})}
                     b['fieldHalfDeg'] = FIELD_HALF_DEG
             f['laser']['frames_source'] = (f'scripts/place/laser_frames.py from {os.path.basename(a.scenes)} `laser`; '
-                                           f'{MAX_FRAMES} frames x {step:.3f} s, timing {a.timing}, epoch {a.show_epoch_ms:.0f} ms')
+                                           f'{MAX_FRAMES} frames x {step:.3f} s, timing {a.timing}, epoch {a.show_epoch_ms:.0f} ms'
+                                           + ('; keyframes (tween)' if a.keyframes else ''))
         for f in rig['fixtures']:
             if f.get('type') not in LINE_TYPES or not line_lists:
                 continue
