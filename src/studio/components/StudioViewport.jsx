@@ -17,6 +17,7 @@ import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import ScenePicker from './ScenePicker.jsx'
+import ModelLoading from './ModelLoading.jsx'
 import LaserTest from './LaserTest.jsx'
 import { laserUnitsOf } from '../utils/laserTest.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
@@ -1427,6 +1428,7 @@ export default function StudioViewport({
                 />
             )}
 
+            <ModelLoading />
             {onRigLook && (
                 <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} onApplyOps={onSceneOps} onPlay={onPlayScene} />
             )}
