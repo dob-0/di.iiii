@@ -12,6 +12,7 @@ import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei
 import RigMirror from './RigMirror.jsx'
 import { useLiveLightEntity } from '../../rigMirror/liveLight.js'
 import { useRigLookEntities } from '../../rigbuild/useRigLook.js'
+import { workLightEntities } from '../../rigbuild/workLight.js'
 import { hasRigLamps } from '../../rigbuild/hasRigLamps.js'
 import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
@@ -725,7 +726,9 @@ function StudioSceneContent({
     // drawn as handed: posed a second time, every look level was drawn squared (MOXIR
     // 2026-10-09, docs/ai/known-fixes.md; src/rigbuild/lookLevel.test.jsx).
     const look = useRigLookEntities(lookDrawn ? null : document, { explicit: rigLook })
-    const sceneEntities = lookDrawn ? (document.entities || NO_SCENE_ENTITIES) : look.entities
+    // "Work light" in the Scenes panel ('' = no scene): every lamp white at its own strength (src/rigbuild/workLight.js).
+    const workLit = useMemo(() => (rigLook === '' && !lookDrawn ? workLightEntities(look.entities) : look.entities), [rigLook, lookDrawn, look.entities])
+    const sceneEntities = lookDrawn ? (document.entities || NO_SCENE_ENTITIES) : workLit
     const childMap = useMemo(() => {
         const map = new Map()
         for (const entity of sceneEntities) {
