@@ -17,6 +17,22 @@ Sevan's own DMX lists (the owner, 10-15: "we have all list DMX from Sevan") are 
 
 **Maker (owner's eye, 2026-10-15 16:3x):** UP-PL5403, UP-B380F, UP-LA40WF and UP-YZ31P are U-Plus Lighting (`maker` in fixtures.json and the type library; model and manual per kind). Charts with value ranges: `scripts/place/fixtures/charts/`. The rig's `kit_makers` block lists maker/model/manual per kind. The project's `rentalList` has no maker/model field in its schema (`normalizeRentalList`, src/shared/projectSchema.js + the server twin): the equipment sheet reads the maker from the type library.
 
+## The ESP controller's universe (owner at the venue, 2026-10-16 04:xx — patched on the node, read back)
+Node `vizzz.di_BA6FCC` (ESP32 + MAX485, AP 192.168.4.1, one universe = "Universe 1" on its desk, Art-Net 0). Order as the owner wired it, addresses as he set them on the units:
+
+| # | kind | addresses | mode | where (his words) |
+|---|---|---|---|---|
+| 1 | UP-B380F beam | 1–16 | 16ch | the truss, first |
+| 2–11 | UP-PL5403 wash ×10 | 17–96 | 8ch | the truss, "17 till the end" |
+| 12 | UP-B380F beam | 97–112 | 16ch | the truss, last — "the truss is finished" |
+| 13–17 | UP-PL5403 wash ×5 | 113–152 | 8ch | after the truss (place not said yet) |
+| 18… | UP-B380F beam ×1 or ×11 | 153–168 or 153–328 | 16ch | OPEN: "then 11 beam again" — 1 or 11, asked |
+
+Patched 04:3x with the node's generic profiles (beam = `dimmer` on its ch 3, wash = `drgbw`); the real charts are node profiles
+`up-b380f-16` / `up-pl5403-8` in vizzz.di branch `feat/uplus-profiles-2026-10-16` (re-patch: repatch.sh in that PR). The rig file
+(`moxir-v2-11-2026-10-15.json`) still carries the old cut patch (11 washes on NODE-STAGE-B U2 1–88, no beams on the cut): which two of
+the 18 beams and which 10 of the 40 washes are on the truss, and where the 5 washes stand, is the owner's word — owed as ledger rows.
+
 ## Setup-day check list (owner's approvals 2026-10-15 17:1x)
 1. **B380F pan on ch 10 vs ch 1.** Send pan on ch 10 (the manual's order, the desk's default). If the head does not move and ch 1 moves it, switch the 18 fixtures to mode `walk-2026-10-09` and say so. No lamp is struck by either chart: ch 16 stays 0 (lamp on = 101–255 is a 3-second strike).
 2. **PL5403 8-ch mode set on the unit** (A001 on its display). 40 units, U2 = 40 × 8 = 320 of 512.
