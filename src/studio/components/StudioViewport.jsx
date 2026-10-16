@@ -223,6 +223,9 @@ function AutoLookAround({ controlsRef, config }) {
 
 // Alt+click on a laser line selects its whole unit (pickPriority.js); provided inside the Canvas, read by the two entity kinds.
 const UnitSelectContext = createContext(null)
+// False while the Studio's Work light is on: a live desk's colour and level (rigMirror/liveLight.js) must not
+// replace the white work light on a lamp with a fixture number (owner 2026-10-16: "still not all work lights works").
+const DeskLightContext = createContext(true)
 
 // Edit and Select both transform the selection; Navigate never does.
 const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
@@ -341,7 +344,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
     // A lamp with a fixture number draws what the desk says it is emitting, while the
     // desk is here; the authored light otherwise (src/rigMirror/liveLight.js). The
     // document is untouched — only what reaches the renderer changes.
-    const shown = useLiveLightEntity(entity)
+    const deskLight = useContext(DeskLightContext)
+    const shown = useLiveLightEntity(entity, { enabled: deskLight })
 
     if (!isVisible) return null
 
@@ -791,6 +795,7 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
         <UnitSelectContext.Provider value={onSelectUnit}>
+        <DeskLightContext.Provider value={!(rigLook === '' && !lookDrawn)}>
             <LaserTest active={laserTest} entities={document.entities} />
             <RenderSettingsEffect renderSettings={document.renderSettings} />
             <ShadowsOnDemand live={Boolean(transformOp)} changeKey={document} />
@@ -949,6 +954,7 @@ function StudioSceneContent({
                     onStatus={onTransformStatus}
                 />
             )}
+        </DeskLightContext.Provider>
         </UnitSelectContext.Provider>
         </EntityLinksContext.Provider>
         </LiveTimelineContext.Provider>

@@ -30,4 +30,12 @@ describe('work light: every lamp white at its own strength, nothing else touched
         expect(out.components.beam.laser.mW).toEqual([4000, 2000, 1500])
         expect(line.components.beam.laser.frames).not.toBeNull()
     })
+    it('the Studio viewport keeps a live desk off the lamps while Work light is on (owner 2026-10-16)', async () => {
+        const { readFileSync } = await import('node:fs')
+        const { dirname, join } = await import('node:path')
+        const { fileURLToPath } = await import('node:url')
+        const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'studio', 'components', 'StudioViewport.jsx'), 'utf8')
+        expect(src).toMatch(/<DeskLightContext\.Provider value=\{!\(rigLook === '' && !lookDrawn\)\}>/)
+        expect(src).toMatch(/useLiveLightEntity\(entity, \{ enabled: deskLight \}\)/)
+    })
 })
