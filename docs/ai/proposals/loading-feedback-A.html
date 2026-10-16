@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Load line — sketch A</title>
+<!-- Static sketch for docs/ai/proposals/loading-feedback-A.md. Not product code.
+     Tokens copied from src/styles/base.css (:root) so it reads in the house style
+     when opened straight from disk. -->
+<style>
+:root {
+    --di-cyan: #4df9ff; --di-cyan-rgb: 77, 249, 255;
+    --di-black: #000; --di-surface: #0a0a0a; --di-surface-2: #111114; --di-surface-3: #17171b;
+    --di-text: #fff; --di-dim: rgba(255,255,255,.5); --di-faint: rgba(255,255,255,.34);
+    --di-line: rgba(77,249,255,.12); --di-cyan-border: rgba(77,249,255,.3);
+    --di-danger: #f25f5c; --di-warning: #ffb347; --di-success: #4df9c0;
+    --di-scrim: rgba(4,6,14,.74);
+    --di-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --di-radius: 2px;
+    --di-space-1: 3px; --di-space-2: 7px; --di-space-3: 12px; --di-space-4: 16px; --di-space-5: 22px;
+    --di-text-2: .625rem; --di-text-3: .76rem; --di-text-4: .9rem;
+    --di-label-tracking: .16em;
+    --di-motion-base: .15s;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--di-black); color: var(--di-text); font-family: var(--di-sans); }
+body { padding: var(--di-space-5) var(--di-space-4) 60px; }
+h1, h2 { font-family: var(--di-mono); font-weight: 500; letter-spacing: var(--di-label-tracking);
+         text-transform: uppercase; color: var(--di-dim); }
+h1 { font-size: var(--di-text-3); margin: 0 0 var(--di-space-2); }
+h2 { font-size: var(--di-text-2); margin: 40px 0 var(--di-space-3); }
+p.note { color: var(--di-dim); font-size: var(--di-text-3); max-width: 70ch; line-height: 1.55; margin: 0 0 var(--di-space-4); }
+code { font-family: var(--di-mono); color: var(--di-cyan); }
+
+/* ── the Studio frame ─────────────────────────────────── */
+.studio { position: relative; border: 1px solid var(--di-line); border-radius: var(--di-radius);
+          height: 560px; display: grid; grid-template-rows: 38px 1fr; overflow: hidden; max-width: 1180px; }
+.appbar { background: var(--di-surface); border-bottom: 1px solid var(--di-cyan-border);
+          display: flex; align-items: center; gap: var(--di-space-3); padding: 0 var(--di-space-3);
+          font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: var(--di-label-tracking);
+          text-transform: uppercase; color: var(--di-dim); white-space: nowrap; overflow: hidden; }
+.appbar b { color: var(--di-text); font-weight: 500; }
+.appbar .tab { padding: 4px 8px; border: 1px solid transparent; border-radius: var(--di-radius); }
+.appbar .tab.on { border-color: var(--di-cyan-border); color: var(--di-cyan); }
+.appbar .sp { flex: 1; }
+.appbar .sync { width: 6px; height: 6px; background: var(--di-success); }
+.body { display: grid; grid-template-columns: 200px 1fr 230px; min-height: 0; }
+.panel { background: var(--di-surface-2); border-right: 1px solid var(--di-line); padding: var(--di-space-3);
+         font-size: var(--di-text-3); color: var(--di-dim); overflow: hidden; }
+.panel.r { border-right: 0; border-left: 1px solid var(--di-line); }
+.panel h3 { margin: 0 0 var(--di-space-2); font-family: var(--di-mono); font-size: var(--di-text-2);
+            letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-faint); font-weight: 500; }
+.row { padding: 4px 6px; border-radius: var(--di-radius); display: flex; justify-content: space-between; }
+.row.sel { background: rgba(var(--di-cyan-rgb), .1); color: var(--di-text); }
+.row .k { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-faint); }
+.row .k.wait { color: var(--di-cyan); }
+.field { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--di-line); }
+.field span:last-child { font-family: var(--di-mono); color: var(--di-text); }
+.viewport { position: relative; background: radial-gradient(ellipse at 50% 120%, #0c1316 0%, #000 65%); overflow: hidden; }
+.viewport svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cluster { position: absolute; right: var(--di-space-3); bottom: var(--di-space-3); display: flex; gap: 4px; }
+.cluster span { width: 30px; height: 30px; border: 1px solid var(--di-cyan-border); border-radius: var(--di-radius);
+                background: var(--di-surface); }
+
+/* ── the load line (the proposal) ─────────────────────── */
+.loadline { position: absolute; left: 0; right: 0; top: 38px; height: 2px; background: var(--di-line);
+            pointer-events: none; z-index: 5; }
+.loadline i { display: block; height: 100%; width: var(--p, 64%); background: var(--di-cyan); }
+.loadline.unknown i { width: 20%; margin-left: 30%; }
+.loadline.parse i { opacity: .5; }
+.loadline.slow i { background: var(--di-warning); }
+.loadline.fail i { width: 100%; background: var(--di-danger); }
+.loadtext { position: absolute; left: var(--di-space-2); top: var(--di-space-2); z-index: 5; max-width: 60ch;
+            background: var(--di-scrim); border-radius: var(--di-radius); padding: var(--di-space-1) var(--di-space-2);
+            font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: .02em; color: var(--di-dim);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.loadtext b { color: var(--di-text); font-weight: 500; }
+.loadtext .n { color: var(--di-faint); }
+.loadtext.slow { color: var(--di-warning); }
+.loadtext.fail { color: var(--di-danger); pointer-events: auto; }
+.loadtext.fail a { color: var(--di-text); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.callout { position: absolute; z-index: 6; font-family: var(--di-mono); font-size: var(--di-text-2);
+           color: var(--di-warning); border-left: 1px solid var(--di-warning); padding-left: 6px; }
+
+/* ── the states strip ─────────────────────────────────── */
+.states { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--di-space-3); max-width: 1180px; }
+.state { position: relative; height: 96px; border: 1px solid var(--di-line); border-radius: var(--di-radius);
+         background: radial-gradient(ellipse at 50% 140%, #0c1316 0%, #000 70%); overflow: hidden; }
+.state .loadline { top: 0; }
+.state .loadtext { top: 10px; }
+.state .cap { position: absolute; left: var(--di-space-2); bottom: var(--di-space-2); font-family: var(--di-mono);
+              font-size: var(--di-text-2); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-faint); }
+
+/* ── phone ────────────────────────────────────────────── */
+.phones { display: flex; gap: var(--di-space-5); flex-wrap: wrap; }
+.phone { position: relative; width: 300px; height: 560px; border: 1px solid var(--di-cyan-border); border-radius: var(--di-radius);
+         overflow: hidden; display: grid; grid-template-rows: 22px 40px 1fr; background: #000; }
+.phone .safe { background: #000; }
+.phone .head { background: var(--di-surface); border-bottom: 1px solid var(--di-cyan-border); display: flex; align-items: center;
+               padding: 0 var(--di-space-3); font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: var(--di-label-tracking);
+               text-transform: uppercase; color: var(--di-dim); }
+.phone .loadline { top: 62px; }
+.phone .viewport { position: relative; }
+.legend { color: var(--di-dim); font-size: var(--di-text-3); line-height: 1.6; max-width: 70ch; }
+.legend li { margin-bottom: 4px; }
+@media (max-width: 720px) {
+    .body { grid-template-columns: 1fr; }
+    .panel { display: none; }
+    .studio { height: 420px; }
+}
+</style>
+</head>
+<body>
+
+<h1>di.iiii · loading feedback · design A · the load line</h1>
+<p class="note">A static sketch of the Studio opening a big project. The lamps are in, the hall is
+still downloading, and every toolbar is already there. The only addition is the 2 px line under
+the appbar and the one line of words. Nothing is covered. Proposal:
+<code>docs/ai/proposals/loading-feedback-A.md</code>.</p>
+
+<div class="studio" aria-label="Studio while the hall loads">
+    <div class="appbar">
+        <b>di.iiii</b><span>/ dilijan / opening-night</span>
+        <span class="tab on">Studio</span><span class="tab">Nodes</span><span class="tab">Projection</span>
+        <span class="sp"></span><span>2 here</span><span class="sync" title="in sync"></span>
+    </div>
+    <div class="loadline" style="--p:58%"><i></i></div>
+    <div class="body">
+        <div class="panel">
+            <h3>Outliner</h3>
+            <div class="row"><span>hall</span><span class="k wait">2.1 / 3.3 MB</span></div>
+            <div class="row"><span>stage floor</span><span class="k wait">waiting</span></div>
+            <div class="row sel"><span>wash L</span><span class="k">lamp</span></div>
+            <div class="row"><span>wash R</span><span class="k">lamp</span></div>
+            <div class="row"><span>spot 1</span><span class="k">lamp</span></div>
+            <div class="row"><span>spot 2</span><span class="k">lamp</span></div>
+            <div class="row"><span>beam 1–4</span><span class="k">lamps</span></div>
+            <div class="row"><span>sun</span><span class="k">light</span></div>
+        </div>
+        <div class="viewport">
+            <div class="loadtext">loading <b>the hall</b> · 2.1 of 3.3 MB <span class="n">· 1 more file</span></div>
+            <svg viewBox="0 0 700 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#4df9ff" stop-opacity=".45"/>
+                        <stop offset="1" stop-color="#4df9ff" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="warm" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffb347" stop-opacity=".4"/>
+                        <stop offset="1" stop-color="#ffb347" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <!-- the hall is NOT drawn yet: only a faint grid floor -->
+                <g stroke="rgba(77,249,255,.08)">
+                    <path d="M0 400 H700 M0 440 H700 M0 480 H700"/>
+                    <path d="M350 360 L0 520 M350 360 L700 520 M350 360 L175 520 M350 360 L525 520 M350 360 L350 520"/>
+                </g>
+                <!-- the lamps, already in -->
+                <polygon points="160,110 120,420 220,420" fill="url(#beam)"/>
+                <polygon points="540,110 480,420 580,420" fill="url(#beam)"/>
+                <polygon points="290,90 250,400 330,400" fill="url(#warm)"/>
+                <polygon points="410,90 370,400 450,400" fill="url(#warm)"/>
+                <g fill="#0a0a0a" stroke="#4df9ff" stroke-width="1">
+                    <rect x="152" y="98" width="16" height="12"/><rect x="532" y="98" width="16" height="12"/>
+                    <rect x="282" y="78" width="16" height="12"/><rect x="402" y="78" width="16" height="12"/>
+                </g>
+                <g fill="#4df9ff" opacity=".7">
+                    <rect x="230" y="60" width="4" height="4"/><rect x="300" y="60" width="4" height="4"/>
+                    <rect x="396" y="60" width="4" height="4"/><rect x="466" y="60" width="4" height="4"/>
+                </g>
+            </svg>
+            <div class="callout" style="left:52%; top:46%">the hall appears here when it is in.<br>nothing covers the lamps meanwhile.</div>
+            <div class="cluster"><span></span><span></span><span></span><span></span></div>
+        </div>
+        <div class="panel r">
+            <h3>Inspector · wash L</h3>
+            <div class="field"><span>kind</span><span>lamp</span></div>
+            <div class="field"><span>intensity</span><span>0.80</span></div>
+            <div class="field"><span>colour</span><span>#4df9ff</span></div>
+            <div class="field"><span>beam</span><span>24°</span></div>
+            <div class="field"><span>channel</span><span>1.017</span></div>
+        </div>
+    </div>
+</div>
+
+<h2>Every state of the line</h2>
+<div class="states">
+    <div class="state"><div class="loadline" style="--p:64%"><i></i></div>
+        <div class="loadtext">loading <b>the hall</b> · 2.1 of 3.3 MB</div><span class="cap">bytes known</span></div>
+    <div class="state"><div class="loadline unknown"><i></i></div>
+        <div class="loadtext">loading <b>the hall</b> · 1.4 MB so far</div><span class="cap">size unknown · walking segment, never without words</span></div>
+    <div class="state"><div class="loadline parse" style="--p:100%"><i></i></div>
+        <div class="loadtext">preparing <b>the hall</b> · 3.3 MB</div><span class="cap">downloaded, parsing</span></div>
+    <div class="state"><div class="loadline" style="--p:41%"><i></i></div>
+        <div class="loadtext">loading <b>the hall</b> · 2.1 of 3.3 MB <span class="n">· 4 more files</span></div><span class="cap">several · biggest first</span></div>
+    <div class="state"><div class="loadline slow" style="--p:64%"><i></i></div>
+        <div class="loadtext slow">still waiting for <b>the hall</b> · nothing arrived for 8 s</div><span class="cap">slow</span></div>
+    <div class="state"><div class="loadline fail"><i></i></div>
+        <div class="loadtext fail"><b>the hall</b> did not load · 404 · <a>try again</a> · <a>details</a></div><span class="cap">failed · stays until handled</span></div>
+    <div class="state"><div class="loadline fail"><i></i></div>
+        <div class="loadtext fail">2 files did not load · <a>details</a></div><span class="cap">several failed</span></div>
+    <div class="state"><div class="loadline" style="--p:100%"><i></i></div>
+        <div class="loadtext">all 6 files in · 14.2 MB · 9.4 s</div><span class="cap">done · 1.5 s, then fades</span></div>
+</div>
+
+<h2>Phone</h2>
+<div class="phones">
+    <div class="phone">
+        <div class="safe"></div>
+        <div class="head">opening-night</div>
+        <div class="loadline" style="--p:58%"><i></i></div>
+        <div class="viewport">
+            <div class="loadtext" style="max-width:calc(100% - 14px)">loading <b>the hall</b> · 2.1 of 3.3 MB <span class="n">· 1 more file</span></div>
+            <svg viewBox="0 0 300 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <polygon points="80,90 50,380 130,380" fill="url(#beam)"/>
+                <polygon points="220,90 170,380 250,380" fill="url(#warm)"/>
+                <g fill="#0a0a0a" stroke="#4df9ff"><rect x="72" y="78" width="16" height="12"/><rect x="212" y="78" width="16" height="12"/></g>
+            </svg>
+        </div>
+    </div>
+    <div class="phone">
+        <div class="safe"></div>
+        <div class="head">opening-night</div>
+        <div class="loadline fail"><i></i></div>
+        <div class="viewport">
+            <div class="loadtext fail" style="max-width:calc(100% - 14px)"><b>the hall</b> did not load · <a>try again</a></div>
+        </div>
+    </div>
+</div>
+
+<h2>The rules, short</h2>
+<ul class="legend">
+    <li>Show after 400 ms, keep for at least 600 ms. A fast cached load never flashes.</li>
+    <li>Say <b>what</b> (the object's own name, else <i>a model, a picture, a video, a sound, the scene's light, the lamps, the tools</i>) and <b>how far</b> (bytes, else files).</li>
+    <li>Never covers, dims or blocks what is drawn. Toolbars never wait for loads.</li>
+    <li>A failure stays, in plain words, until handled. No more console-only failures.</li>
+    <li>Not drawn on a projector output. Never white on a wall.</li>
+    <li>The ring stays only where nothing is drawn yet, and from now on it always has words.</li>
+</ul>
+</body>
+</html>
