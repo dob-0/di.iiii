@@ -1,17 +1,18 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { context as fiberContext, useFrame } from '@react-three/fiber'
-import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
+import { AdditiveBlending, BufferAttribute, BufferGeometry, ConeGeometry, DoubleSide, NormalBlending } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
 import { beamCastsLight, beamFadeColors, beamIsVisible, edgeForExponent, fieldRatioOf, profileExponentForRatio, spotBeamShape, spotLightCone } from './spotBeam.js'
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
-import { registerBeamMesh, registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
+import { registerBeamMesh, registerGlareMesh, useAtmosphere, useSchematic } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
-import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, nextFrameIn, scanLines } from './laserLine.js'
+import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, lineSpacings, nextFrameIn, scanLines } from './laserLine.js'
 import { getServerOffset } from '../rigbuild/serverClock.js'
-import { createLaserLineMaterial, laserLineBeforeRender, laserLineGeometry } from './laserLineMaterial.js'
+import { createLaserLineMaterial, createLaserSpotMaterial, laserLineBeforeRender, laserLineGeometry, laserSpotGeometry } from './laserLineMaterial.js'
+import { registerLaserMesh } from '../project/viewport/laserOverBloom.js'
 import BeamReachProbe from './BeamReachProbe.jsx'
 import { coneRays, coneReach, reachFrom } from './beamReach.js'
 
@@ -73,6 +74,8 @@ export default function SpotLightObject({
     const fiberStore = useContext(fiberContext)
     const gl = fiberStore?.getState?.().gl || null
     const atmosphere = useAtmosphere(gl)
+    // render Tech (src/shared/renderPlan.js): the beam a plain flat shape in its own colour, a laser plain lines
+    const schematic = useSchematic(gl)
     // a real Canvas (not the markup-only render the tests use): the lamp can look where its beam stops (BeamReachProbe)
     const inCanvas = Boolean(fiberStore?.getState?.().scene)
     // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
@@ -102,19 +105,20 @@ export default function SpotLightObject({
     // still costs a draw call and fill over the whole throw. It is how a strobe
     // draws NO cone in the room (looks.js flashEntities, RIG_BUILD.md §15.6).
     const showBeam = beamIsVisible(beam) && throwShape.opacity > 0
-    const physical = Boolean(atmosphere) && showBeam && !laser
-    const laserLines = Boolean(atmosphere) && showBeam && Boolean(laser)
+    const physical = !schematic && Boolean(atmosphere) && showBeam && !laser
+    const laserLines = !schematic && Boolean(atmosphere) && showBeam && Boolean(laser)
+    const schematicLaser = schematic && showBeam && Boolean(laser)
 
     // The cone is built by hand rather than as <coneGeometry> so the fade along
     // the throw can ride on it as vertex colours. Rebuilt only when the lamp's
     // reach or angle changes, and thrown away with the entity.
     const beamGeometry = useMemo(() => {
-        if (!showBeam || physical || laserLines) return null
+        if (!showBeam || physical || laserLines || schematicLaser) return null
         const geometry = new ConeGeometry(throwShape.radius, throwShape.length, 28, 12, true)
         const positions = geometry.getAttribute('position')
         geometry.setAttribute('color', new BufferAttribute(beamFadeColors(positions.array, throwShape.length), 3))
         return geometry
-    }, [showBeam, physical, laserLines, throwShape.radius, throwShape.length])
+    }, [showBeam, physical, laserLines, schematicLaser, throwShape.radius, throwShape.length])
     useEffect(() => () => beamGeometry?.dispose(), [beamGeometry])
 
     // The lamp's steady intensity, for whoever ranks lamps by their light (shadowCasting.js
@@ -168,6 +172,9 @@ export default function SpotLightObject({
                     <object3D ref={targetRef} position={spotTargetOffset()} />
                 </>
             ) : null}
+            {schematicLaser ? (
+                <SchematicLaserLines store={fiberStore} laser={laser} color={color} length={stored} />
+            ) : null}
             {laserLines ? (
                 <LaserLines gl={gl} store={fiberStore} laser={laser} color={color} level={beam?.haze} length={stored} anisotropy={atmosphere.anisotropy} />
             ) : null}
@@ -198,10 +205,11 @@ export default function SpotLightObject({
                 >
                     <meshBasicMaterial
                         color={color}
-                        vertexColors
+                        vertexColors={!schematic}
                         transparent
-                        opacity={throwShape.opacity}
-                        blending={AdditiveBlending}
+                        // Tech: a plain flat shape, the same for every lamp that is on (no additive glow, no fade)
+                        opacity={schematic ? SCHEMATIC_CONE_OPACITY : throwShape.opacity}
+                        blending={schematic ? NormalBlending : AdditiveBlending}
                         depthWrite={false}
                         side={DoubleSide}
                         toneMapped={false}
@@ -305,6 +313,38 @@ function BeamAirStrobe({ material, values }) {
 // A laser with frames in time (laserLine.js §6) draws the frame on at the show's time; without, its static frame as before.
 // Each line (a static beam, each sub-line of a scanned frame) ends at the first building surface along its own
 // direction (BeamReachProbe, beamReach.js); before the first cast, and on a miss, at `length` (capped on a miss).
+// RENDER TECH (renderPlan.js): a laser's lines as plain lines in its colour, each to its first surface (physics first:
+// the same BeamReachProbe as LaserLines), the frame on at the show's time. No haze law, no halo, no end spot.
+const SCHEMATIC_CONE_OPACITY = 0.28
+function SchematicLaserLines({ store, laser, color, length }) {
+    const index = useLaserFrameIndex(store, laser.frames)
+    const points = index >= 0 && index < laser.frames.list.length ? laser.frames.list[index] : laser.frame
+    const scanKey = JSON.stringify([points, laser.fieldHalfDeg, color])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
+    const dirs = useMemo(() => scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => l.dir), [scanKey])
+    const [reach, setReach] = useState(null)
+    const fallback = Math.max(Number(length) || 20, 0.5)
+    const measured = Boolean(reach && reach.hits.length === dirs.length)
+    const lengthsKey = JSON.stringify(dirs.map((_, i) => (measured ? reachFrom(reach.hits[i]?.t, fallback) : fallback)))
+    const geometry = useMemo(() => {
+        const lengths = JSON.parse(lengthsKey)
+        const positions = new Float32Array(dirs.length * 6)
+        dirs.forEach((d, i) => positions.set([0, 0, 0, d[0] * lengths[i], d[1] * lengths[i], d[2] * lengths[i]], i * 6))
+        const g = new BufferGeometry()
+        g.setAttribute('position', new BufferAttribute(positions, 3))
+        return g
+    }, [dirs, lengthsKey])
+    useEffect(() => () => geometry.dispose(), [geometry])
+    return (
+        <>
+            {store?.getState?.().scene ? <BeamReachProbe dirs={dirs} onReach={setReach} /> : null}
+            <lineSegments geometry={geometry} frustumCulled={false} userData={{ noBounds: true, beamPick: true }}>
+                <lineBasicMaterial color={color} toneMapped={false} fog={false} />
+            </lineSegments>
+        </>
+    )
+}
+
 function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) {
     const index = useLaserFrameIndex(store, laser.frames)
     const points = index >= 0 && index < laser.frames.list.length ? laser.frames.list[index] : laser.frame
@@ -312,29 +352,47 @@ function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
     const scan = useMemo(() => scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }), [scanKey])
     const dirs = useMemo(() => scan.map((l) => l.dir), [scan])
+    // each line's gap to its nearest neighbour in this fan caps its halo (laserLine.js 7.)
+    const spacings = useMemo(() => lineSpacings(dirs), [dirs])
     const [reach, setReach] = useState(null)
     const fallback = Math.max(Number(length) || 20, 0.5)
-    const lengths = scan.map((_, i) => (reach && reach.hits.length === scan.length ? reachFrom(reach.hits[i]?.t, fallback) : fallback))
-    const key = JSON.stringify([laser, color, level, lengths, index])
-    const geometry = useMemo(() => {
+    const measured = Boolean(reach && reach.hits.length === scan.length)
+    const lengths = scan.map((_, i) => (measured ? reachFrom(reach.hits[i]?.t, fallback) : fallback))
+    // a line that met a surface lights a dot there (laserLine.js 8.); a miss has no surface to light
+    const spots = scan.map((_, i) => measured && Number.isFinite(reach.hits[i]?.t) && reach.hits[i].t > 0)
+    const key = JSON.stringify([laser, color, level, lengths, spots, index])
+    const lines = useMemo(() => {
         const lvl = Math.min(1, Math.max(0, Number(level ?? 1)))
-        const lines = scan.map((l, i) => {
+        return scan.map((l, i) => {
             const { rgb } = laserColourFlux({ mW: laser.mW, nm: laser.nm, drive: l.drive })
-            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale), length: lengths[i] }
+            return { dir: l.dir, flux: rgb.map((c) => c * l.duty * lvl * laser.sceneScale), length: lengths[i], spacing: spacings[i], spot: spots[i] }
         })
-        return laserLineGeometry(lines, fallback)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [key])
+    const geometry = useMemo(() => laserLineGeometry(lines, fallback), [lines, fallback])
+    const spotGeometry = useMemo(() => laserSpotGeometry(lines), [lines])
     const material = useMemo(() => createLaserLineMaterial(hazeUniformsFor(gl)), [gl])
+    const spotMaterial = useMemo(() => createLaserSpotMaterial(hazeUniformsFor(gl)), [gl])
     useEffect(() => () => geometry.dispose(), [geometry])
+    useEffect(() => () => spotGeometry.dispose(), [spotGeometry])
     useEffect(() => () => material.dispose(), [material])
-    material.uniforms.uDiam.value = laser.diameter_mm / 1000
-    material.uniforms.uDiv.value = laser.divergence_mrad / 1000
+    useEffect(() => () => spotMaterial.dispose(), [spotMaterial])
+    // drawn over the room's glow, not into it (laserOverBloom.js)
+    const lineRef = useRef(null)
+    const spotRef = useRef(null)
+    useEffect(() => registerLaserMesh(lineRef.current), [])
+    const hasSpots = spotGeometry.userData.spotCount > 0
+    useEffect(() => (hasSpots ? registerLaserMesh(spotRef.current) : undefined), [hasSpots])
+    for (const m of [material, spotMaterial]) {
+        m.uniforms.uDiam.value = laser.diameter_mm / 1000
+        m.uniforms.uDiv.value = laser.divergence_mrad / 1000
+    }
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
     return (
         <>
             {store?.getState?.().scene ? <BeamReachProbe dirs={dirs} onReach={setReach} /> : null}
-            <mesh geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+            <mesh ref={lineRef} geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
+            {hasSpots ? <mesh ref={spotRef} geometry={spotGeometry} material={spotMaterial} frustumCulled={false} userData={{ noBounds: true }} onBeforeRender={beforeLaserRender} /> : null}
         </>
     )
 }

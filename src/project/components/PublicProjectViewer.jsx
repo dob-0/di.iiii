@@ -34,7 +34,7 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import SceneBar, { EditInStudio, barButtonStyle } from '../../rigbuild/SceneBar.jsx'
-import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, layersParam, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
+import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -43,7 +43,9 @@ import { isSpaceInSessionScope } from '../../utils/sessionScope.js'
 import { visitorChromeOf, canEditSession } from '../../shared/visitorChrome.js'
 import DisplayChip from '../../rigbuild/DisplayChip.jsx'
 import useOutputMode from '../viewport/useOutputMode.js'
-import { outputDocument } from '../viewport/outputMode.js'
+import { renderPlan } from '../../shared/renderPlan.js'
+import useRenderMode from '../viewport/useRenderMode.js'
+import { useGraphMakesRoom } from './graphRoom.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -86,6 +88,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
+    // Auto fly (viewport/autoFly.js): the drone flight through the room. ?fly=1 starts it on open, for showing the work.
+    const [flying, setFlying] = useState(() => typeof window !== 'undefined' && /[?&]fly=1(&|$)/.test(window.location.search))
     // "Inside": keep the camera inside the building (SmartView). On by default where there is a building,
     // remembered per browser; a preset whose camera stands outside the building (Top, Side) pauses it.
     const [lockInside, setLockInside] = useState(() => {
@@ -97,13 +101,23 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const onLockPaused = useCallback((on) => setLockPaused(Boolean(on)), [])
     // The layers (SceneBar: Roof · Walls · Machines · Outside, owner 2026-10-12 "we need all 3"): all shown unless the
     // link says otherwise (?layers=walls,machines — the layers shown), and every toggle writes the link back.
-    const [layers, setLayers] = useState(() => parseLayersParam(typeof window !== 'undefined' ? window.location.search : ''))
+    // The room page is the showcase link: the building stands whole (Cut off) unless the address names the layers
+    // (owner 2026-10-15 N730). The cutaway is a work reading (Studio / Tech), switched on from the Display menu.
+    const [layers, setLayers] = useState(() => {
+        const search = typeof window !== 'undefined' ? window.location.search : ''
+        const parsed = parseLayersParam(search)
+        let named = false
+        try { named = new URLSearchParams(search).get('layers') !== null } catch { named = false }
+        return named ? parsed : { ...parsed, cut: false }
+    })
     const toggleLayer = useCallback((id) => {
         setLayers((prev) => {
             const next = { ...prev, [id]: prev[id] === false }
             try {
                 const url = new URL(window.location.href)
-                const value = layersParam(next)
+                // the default here is the whole building (Cut off): that state needs no parameter, every other state is named in full
+                const wholeBuilding = next.cut === false && VIEW_LAYER_IDS.every((lid) => lid === 'cut' || next[lid] !== false)
+                const value = wholeBuilding ? null : (VIEW_LAYER_IDS.filter((lid) => next[lid] !== false).join(',') || 'none')
                 if (value === null) url.searchParams.delete('layers')
                 else url.searchParams.set('layers', value)
                 window.history.replaceState(window.history.state, '', url)
@@ -277,7 +291,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // Output mode (viewport/outputMode.js): everyone but the work machine sees a copy of the
     // room drawn light enough for a phone; the document itself is never written.
     const [outputMode, setOutputMode] = useOutputMode()
-    const viewDocument = useMemo(() => (outputMode ? outputDocument(document) : document), [outputMode, document])
+    // What the room is drawn FOR (src/shared/renderPlan.js): Show for everyone, Tech for the crew in the live show
+    // (Display → Tech, ?render=tech). Render first, then quality; a copy, never the document.
+    const [renderMode, setRenderMode] = useRenderMode()
+    const plan = useMemo(() => renderPlan(document, { mode: renderMode, quality: outputMode ? 'low' : 'high' }), [document, renderMode, outputMode])
+    const viewDocument = plan.document
+    // Tech turns the machines and the outside off, over the viewer's own layer switches
+    const drawnLayers = useMemo(() => (plan.layers ? { ...(layers || {}), ...plan.layers } : layers), [plan.layers, layers])
     const sceneDocument = useMemo(() => (viewDocument && lookEntities ? { ...viewDocument, entities: lookEntities } : viewDocument), [viewDocument, lookEntities])
     // A visitor is standing here, not authoring. Arming the gate is what makes
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
@@ -291,8 +311,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const entryView = viewMode || presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
     // Work in the node lane. The renderer that can show it is not the one walk
-    // mode uses — see the Walk / Fly control below.
-    const hasGraph = (document?.nodes?.length || 0) > 0
+    // mode uses — see the Walk / Fly control below. Only a graph that draws in the room counts (graphRoom.js): a VJ
+    // Deck alone is not a node room, and hid the Fly button on MOXIR v2-11.
+    const hasGraph = useGraphMakesRoom(document?.nodes) === true
     // What walk mode would actually have to show. `entities` is always an array
     // after normalization, so presence proves nothing — length does. Explicitly
     // hidden entities are dropped with their whole subtree by LiveProjectScene,
@@ -308,7 +329,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // The one gate walk mode has: shared by the Walk / Fly button and the
     // arrive-walking effect below.
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
-    // The author may take Walk / Fly (and Inside, Lite) off the page; the gate above still decides arriving walking.
+    // The author may take Walk / Fly (and Inside, Quality) off the page; the gate above still decides arriving walking.
     const walkButtons = walkGateOpen && chrome.walk
     // The version row and the show chip: on a portrait phone the row gets its own line
     // under Walk / Fly / Sound instead of running under them (rigbuild/rigVersionLayout.js).
@@ -316,8 +337,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
         rightControls: (navMode === 'orbit' && walkButtons) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview),
-        // Walk / Fly, then Inside / Free (a room with a building), then Lite / Full, then Move, each one 56 px line, all top-right
-        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 4 : 3) : null
+        // Walk / Fly, then Inside / Free (a room with a building), then Low / High, then Move, then Auto fly, each one 56 px line, all top-right
+        rightLines: state.status === 'ready' && navMode === 'orbit' && walkButtons ? (hasBuilding ? 5 : 4) : null
     })
     // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
     // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
@@ -333,7 +354,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         sound: state.status === 'ready' && hasSound && !soundLocked && !isPreview
     })
     // ONE bar at the top of a rig scene in orbit (rigbuild/SceneBar.jsx): versions, Edit in Studio, the SHOW chip on the
-    // left, the room's own controls (Sound, Walk / Fly, Free, Lite / Full) and the dev-copy chip on the right.
+    // left, the room's own controls (Sound, Walk / Fly, Free, Low / High) and the dev-copy chip on the right.
     const sceneBar = state.status === 'ready' && !isPreview && !isEmbed && roomHasRig
     const [showSlot, setShowSlot] = useState(null)
     // The bar's measured height: in walk mode the room's own header (exit, title) sits under it, never behind it.
@@ -519,7 +540,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 : `${spaceLabel || resolvedRouteSpaceId} — di.iiii`)
     )
 
-    // Inside / Free and Lite / Full: drawn in the page's corner column, or (in the scene bar) behind its Display chip.
+    // Inside / Free and Low / High: drawn in the page's corner column, or (in the scene bar) behind its Display chip.
     const insideButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && hasBuilding ? (
                     <button
                         type="button"
@@ -544,8 +565,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         type="button"
                         aria-pressed={!outputMode}
                         title={outputMode
-                            ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
-                            : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
+                            ? 'Quality Low: beams and haze, light enough for a phone. Tap for High, the full renderer (shadows, bloom, every lamp a real light)'
+                            : 'Quality High: the work renderer. Tap for Low, light enough for a phone'}
                         style={{
                             ...btnBase,
                             ...abs({ top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`, right: '1rem', minWidth: 104 }),
@@ -553,11 +574,35 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         }}
                         onClick={() => setOutputMode(!outputMode)}
                     >
-                        {outputMode ? 'Lite' : 'Full'}
+                        {outputMode ? 'Low' : 'High'}
                     </button>
                 ) : null
 
-    // Under Lite / Full: how the view moves (speed, turning) — one small button that opens a card, the visitor's own setting on
+    // Tech | Show (src/shared/renderPlan.js, decision 2026-10-15-studio-tech-show-render.md): what the room is drawn FOR.
+    // Show = the room as the audience sees it (the default); Tech = the crew's schematic, only the show's things.
+    const renderButtons = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
+                    <div role="group" aria-label="render" data-testid="render-switch" style={{ display: 'flex', alignItems: 'stretch', gap: 'var(--di-space-1, 3px)' }}>
+                        {[['tech', 'Tech', 'Tech: the rig as plain shapes for the crew in the live show — no air, no glow, no other objects'],
+                            ['show', 'Show', 'Show: the room as the audience sees it, with its air and glow']].map(([id, label, title]) => (
+                            <button
+                                key={id}
+                                type="button"
+                                data-testid={`render-${id}`}
+                                aria-pressed={renderMode === id}
+                                title={title}
+                                onClick={() => setRenderMode(id)}
+                                style={{
+                                    ...barButtonStyle,
+                                    color: renderMode === id ? 'var(--di-text, #fff)' : 'var(--di-text-muted, rgba(255,255,255,0.5))'
+                                }}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                ) : null
+
+    // Under Low / High: how the view moves (speed, turning) — one small button that opens a card, the visitor's own setting on
     // this device, the same one the Studio's Scene window sets (the standard move, 2026-10-13). With the scene bar it sits in
     // DISPLAY with the other rarely-needed switches (the view page starts clear, 2026-10-13 20:21).
     const moveButton = state.status === 'ready' && navMode === 'orbit' && walkButtons ? (
@@ -569,6 +614,29 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                 : abs({ top: `calc(${topClear} + ${hasBuilding ? '10.2rem' : '6.8rem'})`, right: '1rem' })}
                         />
                     </Suspense>
+                ) : null
+
+    // Auto fly: next to Walk / Fly (the scene bar's row) or the last line of the corner column. The flight is SmartView's;
+    // any input ends it, so this button is marked data-autofly and toggles itself.
+    // Only where the smart view runs: a room with a node graph is drawn by PublicGraphSurface, which has no flight yet (owed).
+    const flyButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && !hasGraph ? (
+                    <button
+                        type="button"
+                        data-autofly
+                        data-testid="auto-fly"
+                        aria-pressed={flying}
+                        title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                        style={{
+                            ...btnBase,
+                            ...abs({ top: `calc(${topClear} + ${hasBuilding ? '13.6rem' : '10.2rem'})`, right: '1rem', minWidth: 104 }),
+                            minHeight: 44,
+                            color: flying ? 'var(--di-cyan)' : btnBase.color,
+                            borderColor: flying ? 'var(--di-cyan)' : btnBase.borderColor
+                        }}
+                        onClick={() => setFlying((on) => !on)}
+                    >
+                        Auto fly
+                    </button>
                 ) : null
 
     const barControls = (
@@ -622,6 +690,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     Walk / Fly
                 </button>
             ) : null}
+            {flyButton}
 
             {sceneBar ? null : insideButton}
             {sceneBar ? null : liteButton}
@@ -687,6 +756,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             ) : document ? (
                 <Suspense fallback={loadingOverlay}>
                     <PublicProjectSceneSurface
+                        key={renderMode}
                         projectId={projectId}
                         spaceId={resolvedRouteSpaceId}
                         document={sceneDocument}
@@ -704,8 +774,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         lockInside={lockInside}
                         onBuilding={onBuilding}
                         onLockPaused={onLockPaused}
-                        layers={layers}
+                        layers={drawnLayers}
                         viewsBar={chrome.views}
+                        flyOn={flying}
+                        onFlyChange={setFlying}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'
@@ -735,8 +807,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         {canEdit ? <EditInStudio spaceId={resolvedRouteSpaceId} projectId={projectId} /> : null}
                     </>}
                     right={<>
-                        {/* Layers, Inside / Free and Lite / Full: one Display chip, closed until a viewer opens it */}
-                        {(navMode === 'orbit' && hasBuilding && chrome.layers) || (insideButton || liteButton) ? (
+                        {/* Layers, Inside / Free and Low / High: one Display chip, closed until a viewer opens it */}
+                        {(navMode === 'orbit' && hasBuilding && chrome.layers) || (insideButton || liteButton || renderButtons) ? (
                             <DisplayChip>
                                 {navMode === 'orbit' && hasBuilding && chrome.layers ? (
                                     <div role="group" aria-label="layers" data-testid="scene-layers" style={{ display: 'flex', alignItems: 'stretch', gap: 'var(--di-space-1, 3px)', flexWrap: 'wrap' }}>
@@ -746,7 +818,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                                 type="button"
                                                 data-testid={`layer-${id}`}
                                                 aria-pressed={layers[id] !== false}
-                                                title={`${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                                                title={id === 'cut' ? 'Cut away the roof and the walls facing you from outside' : `${layers[id] !== false ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
                                                 onClick={() => toggleLayer(id)}
                                                 style={{
                                                     ...barButtonStyle,
@@ -759,6 +831,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                                         ))}
                                     </div>
                                 ) : null}
+                                {renderButtons}
                                 {insideButton}
                                 {liteButton}
                                 {moveButton}

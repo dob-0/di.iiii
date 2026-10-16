@@ -1,0 +1,54 @@
+{
+ "_source": "MOXIR v2.11 on moxir-one v1774, the owner 2026-10-15 18:23: \"i like how it here, look it look like cool\" (ledger N855). The light environment he took; apply with scripts/place/apply_light_env.mjs --settings",
+ "renderSettings": {
+  "toneMapping": "ACESFilmic",
+  "toneMappingExposure": 2,
+  "bloom": {
+   "enabled": true
+  },
+  "atmosphere": {
+   "scattering": 0.02,
+   "anisotropy": 0.74,
+   "haze": {
+    "volume_m3": 186890,
+    "airChangesPerHour": 0.5,
+    "kindLevels": {
+     "smoke-machine": 1
+    },
+    "minutes": 40,
+    "calibrate": false,
+    "dries": false,
+    "model": "nf-ff",
+    "nearField": {
+     "radius_m": 3,
+     "airSpeed_m_s": 0.1
+    },
+    "source": "UNVALIDATED estimate: two-zone near-field/far-field model (Nicas 1996, AIHA J 57:542; hazeZones.js), one UP-YZ31P modelled on an Antari Z-1500 III EQUIVALENT at 150 ml/min continuous (upper bound), hall 186,890 m3. Air change and drying ASSUMED per state; the decay test + transmissometer decide (simulation-method 3.4 step 8)."
+   }
+  },
+  "surfaces": {
+   "floor": {
+    "albedo": 1.7,
+    "roughness": 0.6,
+    "variation": 0.25,
+    "scale": 0.35,
+    "reflect": 0.5
+   }
+  },
+  "exposure": {
+   "auto": false
+  }
+ },
+ "worldState": {
+  "ambientLight": {
+   "color": "#a39c92",
+   "intensity": 0.35
+  },
+  "fog": {
+   "near": 0,
+   "far": 94.7,
+   "color": null,
+   "enabled": true
+  }
+ }
+}

@@ -55,7 +55,7 @@ import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
-import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import { classifyArchitecture, parseLayersParam } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { resolveViews } from '../../project/viewport/smartView/viewData.js'
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -929,6 +929,8 @@ function StudioSceneContent({
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
+                        fly={smartView.fly}
+                        onFlyEnd={smartView.onFlyEnd}
                     />
                 </Suspense>
             ) : null}
@@ -1169,6 +1171,9 @@ export default function StudioViewport({
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
     onRigLook = null,
+    // The scene editor (ScenePicker): ops through the Studio's history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
     // The Studio's laser test (a work tool, nothing written to the document): every laser unit's field as a square.
     laserTest = false,
     onLaserTest = null,
@@ -1212,9 +1217,15 @@ export default function StudioViewport({
         select: selectViews
     })
     const { setPresets, release: releaseView } = sv
+    // Auto fly: the room page's own button (PublicProjectViewer) controls it through smartView.onFlyChange; the Studio's bar does it here.
+    const hostFly = typeof smartView?.onFlyChange === 'function'
+    const flying = hostFly ? Boolean(smartView.flyOn) : sv.flying
+    const setFlying = hostFly ? smartView.onFlyChange : sv.setFlying
     // The building switches of the Studio bar (Roof · Walls · Machines · Outside): null = everything shown; a host that
     // passes its own `smartView.layers` (the visitor page) keeps them.
-    const [studioLayers, setStudioLayers] = useState(null)
+    // The layer switches open from the address when it names them (?layers=, as the visitor's room reads it; 2026-10-15:
+    // ?layers=roof,walls,machines,outside = the whole building, Cut off), else null = every switch on.
+    const [studioLayers, setStudioLayers] = useState(() => (typeof window !== 'undefined' && /[?&]layers=/.test(window.location.search)) ? parseLayersParam(window.location.search) : null)
     const setStudioLayer = useCallback((id, shown) => setStudioLayers((prev) => ({ ...(prev || {}), [id]: shown })), [])
     const smartViewProps = useMemo(() => (smartOn ? {
         fovRef,
@@ -1226,8 +1237,10 @@ export default function StudioViewport({
         onLockPaused: smartView?.onLockPaused,
         layers: smartView?.layers || studioLayers,
         onPresets: setPresets,
-        onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, studioLayers, setPresets, releaseView])
+        onUserMove: releaseView,
+        fly: flying,
+        onFlyEnd: () => setFlying(false)
+    } : null), [smartOn, sv.command, sv.xray, flying, setFlying, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, studioLayers, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1415,7 +1428,7 @@ export default function StudioViewport({
             )}
 
             {onRigLook && (
-                <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} />
+                <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} onApplyOps={onSceneOps} onPlay={onPlayScene} />
             )}
 
             {transformStatus && (
@@ -1433,7 +1446,14 @@ export default function StudioViewport({
                     compact={isPhoneCompact}
                     layers={studioBar ? (smartView?.layers || studioLayers) : null}
                     onLayer={studioBar && !smartView?.layers ? setStudioLayer : null}
+                    flying={flying}
+                    onFly={studioBar ? setFlying : null}
                 />
+            ) : null}
+            {smartOn && flying ? (
+                <div role="status" data-autofly-hint style={{ position: 'absolute', left: '50%', bottom: '1.2rem', transform: 'translateX(-50%)', zIndex: 20, padding: '0.5rem 0.9rem', borderRadius: 2, background: 'rgba(5,7,10,0.7)', border: '1px solid var(--di-cyan-border, rgba(77,249,255,0.3))', color: 'var(--di-text, #fff)', font: '12px/1.2 var(--di-font-mono, monospace)', letterSpacing: '0.04em', pointerEvents: 'none' }}>
+                    flying · tap to take the controls
+                </div>
             ) : null}
 
             {showChrome && <FullscreenButton />}

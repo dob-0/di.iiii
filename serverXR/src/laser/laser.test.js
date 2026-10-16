@@ -9,6 +9,7 @@ import { generateShape, LASER_SHAPES } from '../../../src/project/nodes/laser.sh
 const require = createRequire(import.meta.url)
 const proto = require('./lasercubeProtocol')
 const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, GUARD } = require('./laserEngine')
+const guards = require('./laserGuards')
 
 const fakeSocket = () => {
     const sent = []
@@ -85,6 +86,7 @@ const armedWith = (config = CUBES) => {
     const rig = engineWith(config)
     for (const c of config.cubes) rig.answer(c.ip)
     expect(rig.engine.arm({ armed: true, confirm: ARM_PHRASE }).ok).toBe(true)
+    for (const c of config.cubes) rig.hear(c.ip, [0x8a, 0, 0x70, 0x17]) // the clear is confirmed: 6000 free
     return rig
 }
 
@@ -112,6 +114,11 @@ describe('the LaserCube protocol', () => {
         expect(proto.parseFullInfo(infoAnswer({ out: 1, dac: 30000, max: 40000, free: 5800, size: 6000, battery: 77, temp: 31, conn: 2 }))).toEqual({
             firmware: '1.7',
             outputEnabled: true,
+            statusFlags: 1,
+            interlockEnabled: false,
+            temperatureWarning: false,
+            overTemperature: false,
+            packetErrors: 0,
             dacRate: 30000,
             maxDacRate: 40000,
             rxBufferFree: 5800,
@@ -223,10 +230,11 @@ describe('the laser engine', () => {
         expect(none.engine.arm({ armed: true, confirm: ARM_PHRASE })).toMatchObject({ ok: false, armed: false })
         expect(cmds(none.socket)).not.toContainEqual([0x80, 1])
 
-        const { engine, socket, answer } = engineWith(CUBES)
+        const { engine, socket, answer, hear } = engineWith(CUBES)
         answer('10.0.0.51')
         socket.sent.length = 0
         expect(engine.arm({ armed: true, confirm: ARM_PHRASE })).toMatchObject({ ok: true, armed: true, refused: ['cube-2'] })
+        hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
         expect(socket.sent.filter((s) => s.ip === '10.0.0.52' && s.buf[0] === 0x80)).toEqual([])
         expect(engine.state().cubes[1]).toMatchObject({ armed: false, stop: { reason: 'no-info' } })
         engine.setFrame('all', circle)
@@ -236,6 +244,7 @@ describe('the laser engine', () => {
         // Its info arrives; arming again brings it in.
         answer('10.0.0.52', { ip: [10, 0, 0, 52] })
         engine.arm({ armed: true, confirm: ARM_PHRASE })
+        hear('10.0.0.52', [0x8a, 0, 0x70, 0x17])
         expect(engine.state().cubes[1]).toMatchObject({ armed: true, stop: null })
     })
     it('armed: switches the cubes on, then streams the frame in ≤140-point messages to the data port', () => {
@@ -256,6 +265,7 @@ describe('the laser engine', () => {
             const rig = engineWith(config)
             rig.answer('10.0.0.51', info)
             rig.engine.arm({ armed: true, confirm: ARM_PHRASE })
+            rig.hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
             rig.engine.setFrame('all', circle)
             rig.socket.sent.length = 0
             rig.engine.tick()
@@ -263,7 +273,7 @@ describe('the laser engine', () => {
         }
         expect(run({ dac: 20000, max: 40000 })).toBe(400) // 20 ms of 20 kpps
         expect(run({ dac: 60000, max: 35000 })).toBe(700) // the maximum is the ceiling
-        expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toBe(500) // laser.json may cap it lower
+        expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toBe(600) // laser.json's dacRate is only a request: the cube plays 30 kpps
     })
     it('sends no more than a cube says it has room for', () => {
         const { engine, socket, hear } = armedWith(ONE)
@@ -316,20 +326,27 @@ describe('the laser engine', () => {
         expect(opened).toBe(false)
         expect(engine.frames().all).toEqual([[0, 0.5, 1, 1, 1]])
     })
-    it('starts a new frame where the playing one ends, so a figure is never torn', () => {
+    it('starts a new frame where the playing one ends, so a figure is never torn (both as the guards draw them)', () => {
         const { engine, socket } = armedWith(ONE)
         const long = Array.from({ length: 1000 }, (_, i) => [Math.cos(i / 100), 0.5, 1, 0, 0])
+        const plan = guards.pathPlan(guards.DEFAULT_GUARDS, 30000)
+        const longOut = guards.optimisePath(long, plan).points
+        const circleOut = guards.optimisePath(circle, plan).points
         engine.setFrame('all', long)
-        engine.tick() // one tick at 30 kpps: points 0…599
+        engine.tick() // one tick at 30 kpps: the long frame's first 600 points (after the bridge from the centre)
+        const first = dataTo(socket).flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
+        const bridgeIn = guards.bridgePath([0, 0], longOut[0], plan).length
         engine.setFrame('all', circle)
         socket.sent.length = 0
-        engine.tick() // the long frame goes on (600…999), then the circle starts
+        engine.tick() // the long frame goes on to its end, then a bridge, then the circle
         const msgs = dataTo(socket)
         expect(pointsIn(msgs)).toBe(600)
-        expect(msgs[0].buf.readUInt16LE(4)).toBe(proto.toDeviceCoord(long[600][0]))
-        const at400 = msgs.flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))[400]
-        expect(at400).toBe(proto.toDeviceCoord(circle[0][0]))
-        expect([msgs[0].buf[3], msgs.at(-1).buf[3]]).toEqual([0, 2]) // the long one, the circle, the circle again
+        const xs = msgs.flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
+        const rest = longOut.slice(600 - bridgeIn)
+        const bridge = guards.bridgePath(longOut.at(-1), circleOut[0], plan)
+        const want = [...rest, ...bridge, ...circleOut, ...circleOut].slice(0, 600).map((p) => proto.toDeviceCoord(p[0]))
+        expect(first.length).toBe(600)
+        expect(xs).toEqual(want)
     })
 })
 
@@ -346,8 +363,8 @@ describe('the signal-loss stop', () => {
         const blank = dataTo(socket)
         expect(blank).toHaveLength(1)
         expect(litIn(blank)).toBe(0)
-        expect(cmds(socket)).toEqual([[0x80, 0], [0x80, 0]])
-        expect(socket.sent.map((s) => s.port)).toEqual([proto.PORT.DATA, proto.PORT.CMD, proto.PORT.CMD]) // blank first, then off
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 0], [0x80, 0]])
+        expect(socket.sent.map((s) => s.port)).toEqual([proto.PORT.CMD, proto.PORT.CMD, proto.PORT.CMD, proto.PORT.DATA, proto.PORT.CMD, proto.PORT.CMD]) // clear ×2, ask free, park, then off ×2
         expect(engine.state().cubes[0]).toMatchObject({ armed: true, stop: { reason: 'no-frame' } })
         expect(engine.frames().stopped).toEqual({ 'cube-1': 'no-frame' })
         socket.sent.length = 0
@@ -367,8 +384,16 @@ describe('the signal-loss stop', () => {
         at(10)
         engine.alive('all')
         engine.tick()
-        expect(cmds(socket)).toEqual([[0x80, 1]])
+        // R2-1: the clear is sent, but NOTHING streams until the cube confirms it (0x8a)
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 1]])
+        expect(dataTo(socket)).toEqual([])
+        hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
+        engine.alive('all')
+        engine.tick()
         expect(litIn(dataTo(socket))).toBeGreaterThan(0)
+        // the first data after a clear starts blank at the park (the bridge from the park point)
+        const first = dataTo(socket)[0].buf
+        expect([first.readUInt16LE(4), first.readUInt16LE(6), first.readUInt16LE(8), first.readUInt16LE(10), first.readUInt16LE(12)]).toEqual([0x800, 0x800, 0, 0, 0])
         expect(engine.state().cubes[0].stop).toBe(null)
     })
     it('a blackout is not a signal loss: nothing lit, nothing to stop', () => {
@@ -396,14 +421,16 @@ describe('the signal-loss stop', () => {
         engine.arm({ armed: true, confirm: ARM_PHRASE })
         expect(engine.state().cubes[0]).toMatchObject({ armed: true, stop: null })
     })
-    it('going down: every cube output-off twice and buffer answers off, then the socket closes', async () => {
+    it('going down: every armed cube clears its buffer, parks blank at the centre, then output-off twice and buffer answers off, then the socket closes', async () => {
         const { engine, socket } = armedWith()
         socket.sent.length = 0
         await engine.shutdown()
-        expect(socket.sent.map((s) => [s.ip, ...s.buf])).toEqual([
-            ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x78, 0],
-            ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x78, 0]
+        expect(socket.sent.map((s) => [s.ip, s.port === proto.PORT.DATA ? 'park' : s.buf[0], s.port === proto.PORT.DATA ? litIn([s]) : s.buf[1]])).toEqual([
+            ['10.0.0.51', 0x8d, undefined], ['10.0.0.51', 0x8d, undefined], ['10.0.0.51', 'park', 0], ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x80, 0], ['10.0.0.51', 0x78, 0],
+            ['10.0.0.52', 0x8d, undefined], ['10.0.0.52', 0x8d, undefined], ['10.0.0.52', 'park', 0], ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x80, 0], ['10.0.0.52', 0x78, 0]
         ])
+        const park = dataTo(socket, '10.0.0.51')[0].buf
+        expect([park.readUInt16LE(park.length - 10), park.readUInt16LE(park.length - 8)]).toEqual([0x800, 0x800])
         expect(socket.closed).toBe(true)
         expect(engine.state().armed).toBe(false)
     })
@@ -421,7 +448,7 @@ describe('the still-beam guard', () => {
         rig.socket.sent.length = 0
         holdStill(rig, dot(), 20)
         expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
-        expect(cmds(rig.socket)).toEqual([[0x80, 0], [0x80, 0]])
+        expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 0], [0x80, 0]])
         // The same still frame kept alive: stays off.
         rig.socket.sent.length = 0
         holdStill(rig, dot(), 100)
@@ -429,7 +456,8 @@ describe('the still-beam guard', () => {
         // A circle: back on.
         holdStill(rig, circle, 20)
         expect(rig.engine.state().cubes[0].stop).toBe(null)
-        expect(cmds(rig.socket)).toEqual([[0x80, 1]])
+        expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 1]])
+        expect(dataTo(rig.socket)).toEqual([])
     })
     it('a moving figure is never stopped, however long it is held', () => {
         const rig = armedWith(ONE)

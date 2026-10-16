@@ -245,14 +245,21 @@ export const decodeDmx = (channels, values, type = null) => {
 export default decodeDmx
 
 // What is in the beam's path, from the caps that say so (fixtureTypes.js — the B380F's
-// list carries them, each with its basis). Rotation channels are read as an index
-// (0…255 → 0…360°); the chart does not say whether they index or spin.
+// list carries them, each with its basis). A rotation channel whose cap states an
+// index range (the B380F's printed manual: 0-127 = 0…360°, 128+ spins) is read so:
+// inside the range an angle, above it a spin (angle 0, `spin: true` — a spinning
+// prism has no phase to draw). A cap without a range is read as an index 0…255 → 0…360°.
 const opticsAt = (spec, at) => {
     const caps = Object.values(spec)
     const optics = {}
     const rotationOf = (n) => {
         const c = caps.find((x) => x.cap?.prismRotation?.prism === n)
-        return c ? (at[c.role] / 255) * Math.PI * 2 : 0
+        if (!c) return { rotation: 0 }
+        const idx = c.cap.prismRotation.index
+        if (!idx) return { rotation: (at[c.role] / 255) * Math.PI * 2 }
+        const v = at[c.role]
+        if (v > idx.to) return { rotation: 0, spin: true }
+        return { rotation: ((v - idx.from) / (idx.to - idx.from)) * Math.PI * 2 }
     }
     const gobo = caps.find((c) => c.cap?.goboSlots)
     if (gobo) {
@@ -262,11 +269,13 @@ const opticsAt = (spec, at) => {
         if (gobo.cap.goboShake && v >= gobo.cap.goboShake.from) optics.goboShake = true
     }
     const p1 = caps.find((c) => c.cap?.prismIn)
-    if (p1 && at[p1.role] >= p1.cap.prismIn.from) optics.prism = { facets: p1.cap.prismIn.facets || 16, rotation: rotationOf(1) }
+    if (p1 && at[p1.role] >= p1.cap.prismIn.from) optics.prism = { facets: p1.cap.prismIn.facets || 16, ...rotationOf(1) }
     const p2 = caps.find((c) => c.cap?.prism2)
-    if (p2 && at[p2.role] >= (p2.cap.prism2.in?.from ?? 128)) optics.honeycomb = { rotation: rotationOf(2) }
+    if (p2 && at[p2.role] >= (p2.cap.prism2.in?.from ?? 128)) optics.honeycomb = { ...rotationOf(2) }
     const frost = caps.find((c) => c.cap?.frost)
-    if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
+    // a chart that states the frost's range (an insert, not a curve) is read as in/out; one that does not is read as linear
+    if (frost && frost.cap.frost.from != null) { if (at[frost.role] >= frost.cap.frost.from && at[frost.role] <= frost.cap.frost.to) optics.frost = 1 }
+    else if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
     return Object.keys(optics).length ? optics : null
 }
 
@@ -357,6 +366,20 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         const scale = has('dimmer') || level == null ? 1 : level
         if (has('warm')) out.warm = Math.round(((1 - f) / top) * 255 * scale)
         if (has('cool')) out.cool = Math.round((f / top) * 255 * scale)
+    }
+    // A laser's own colour slots (cap.laserColour) and its X/Y position (cap.aim, 0-125 by hand, pan/tilt in
+    // degrees from home mapped over ±halfDeg, centre exact): the static beam's bytes. Never read back by decode.
+    const laserColour = Object.values(spec).find((c) => c.cap?.laserColour)
+    if (laserColour && rgb) {
+        const v = nearestSlot(laserColour.cap.laserColour, rgb)
+        if (v != null) out[laserColour.role] = v
+    }
+    for (const c of Object.values(spec)) {
+        const a = c.cap?.aim
+        const deg = a ? (a.axis === 'x' ? want.pan : want.tilt) : null
+        if (deg == null) continue
+        const t = Math.max(-1, Math.min(1, Number(deg) / a.halfDeg))
+        out[c.role] = Math.round(a.centre + t * (t >= 0 ? a.to - a.centre : a.centre - a.from))
     }
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (cto && rgb) out[cto.role] = 0

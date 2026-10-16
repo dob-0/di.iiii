@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
@@ -65,12 +66,17 @@ vi.mock('../../raw/PublicGraphSurface.jsx', () => ({
 }))
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
-    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines }) {
+    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines, smartView }) {
+        const layers = smartView?.layers
+        const onBuilding = smartView?.onBuilding
+        useEffect(() => { if (globalThis.__mockBuilding) onBuilding?.(true) }, [onBuilding])
         return (
             <div>
+                <div data-testid="viewport-layers">{`cut:${layers?.cut !== false} roof:${layers?.roof !== false}`}</div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
                 <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
                 <div data-testid="viewport-timelines">{`play:${Boolean(playTimelines)}`}</div>
+                <div data-testid="viewport-fly">{`fly:${Boolean(smartView?.flyOn)}`}</div>
             </div>
         )
     }
@@ -598,6 +604,36 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 
+    // Auto fly (viewport/autoFly.js): a button beside Walk / Fly; ?fly=1 starts the flight on open.
+    it('offers Auto fly beside Walk / Fly, and the button starts and stops the flight', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        const button = await screen.findByRole('button', { name: 'Auto fly' })
+        expect(button.style.borderRadius || '').not.toMatch(/999|50%/)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:false')
+        fireEvent.click(button)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:true')
+        expect(button.getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(button)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:false')
+    })
+
+    it('starts the flight on open with ?fly=1', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        window.history.replaceState(null, '', '/main?fly=1')
+        try {
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByRole('button', { name: 'Auto fly' })
+            expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:true')
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
     // The standard move's settings (owner, 2026-10-13: "settable in settings that you can set how you want"): one small Move
     // button with the other corner controls, writing the same per-device preference the Studio's Scene window writes.
     it('offers Move with the other corner controls outside preview mode, and it sets the move', async () => {
@@ -729,11 +765,11 @@ describe('PublicProjectViewer', () => {
             await screen.findByRole('button', { name: 'Walk / Fly' })
             expect(screen.queryByTestId('rig-versions-chip')).toBeNull()
         })
-        it('the walk switch takes Walk / Fly and Lite away', async () => {
+        it('the walk switch takes Walk / Fly and Quality away', async () => {
             await visit({ walk: false })
             await screen.findByTestId('rig-versions-chip')
             expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
-            expect(screen.queryByRole('button', { name: /^(Lite|Full)$/ })).toBeNull()
+            expect(screen.queryByRole('button', { name: /^(Low|High)$/ })).toBeNull()
         })
         it('Edit in Studio is offered to a session that can edit, and not to one that cannot', async () => {
             authState.session = { requireAuth: true, authenticated: true, role: 'editor', spaces: ['main'] }
@@ -745,6 +781,80 @@ describe('PublicProjectViewer', () => {
             await screen.findByTestId('rig-versions-chip')
             expect(screen.queryByTestId('edit-in-studio')).toBeNull()
             authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }
+        })
+    })
+
+    describe('the scene bar of a rig room never wraps from 900 px (owner 2026-10-15: "why is the UI messed")', () => {
+        const visitRig = async () => {
+            window.localStorage.clear()
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: { ...sceneDocumentResponse.document, entities: [{ id: 'lamp', components: { fixture: { type: 'spot' } } }, { id: 'show', components: { rigVariant: { set: 's', id: 'a', title: 'A', siblings: [{ id: 'a', projectId: 'live-project', title: 'A' }, { id: 'b', projectId: 'p2', title: 'B' }] } } }] }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+            listSpaceContentsMock.mockResolvedValue([{ id: 'live-project' }, { id: 'p2' }])
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByText('viewer-scene:scene')
+            return screen.findByTestId('scene-bar')
+        }
+        it('is one row: two groups, the left one shrinks, the rules wrap only under 900 px', async () => {
+            const bar = await visitRig()
+            expect(bar.className).toBe('scene-bar')
+            expect(bar.style.flexWrap).toBe('') // the wrap is a media-query rule, never an inline style
+            expect(screen.getByTestId('scene-bar-left').className).toBe('scene-bar__left')
+            expect(screen.getByTestId('scene-bar-right').className).toBe('scene-bar__right')
+            const css = bar.querySelector('style').textContent
+            expect(css).toContain('.scene-bar{flex-wrap:nowrap}')
+            expect(css).toMatch(/\.scene-bar__left\{[^}]*flex:1 1 auto;flex-wrap:nowrap/)
+            expect(css).toMatch(/\.scene-bar__right\{[^}]*flex:0 0 auto;flex-wrap:nowrap/)
+            expect(css).toMatch(/@media \(max-width:899px\)\{\.scene-bar\{flex-wrap:wrap\}/)
+            // the versions chip is inside the left group (so it can take an ellipsis before the bar wraps), the Display chip in the right
+            expect(screen.getByTestId('scene-bar-left').contains(screen.getByTestId('rig-versions-chip'))).toBe(true)
+            expect(screen.getByTestId('scene-bar-right').contains(screen.getByTestId('display-chip'))).toBe(true)
+        })
+        describe('the building stands whole on the room page (owner 2026-10-15)', () => {
+            const openDisplay = async (search = '') => {
+                globalThis.__mockBuilding = true
+                window.history.replaceState(null, '', `/main/p/live-project${search}`)
+                await visitRig()
+                fireEvent.click(screen.getByTestId('display-chip'))
+            }
+            afterEach(() => { globalThis.__mockBuilding = false; window.history.replaceState(null, '', '/') })
+            it('Cut starts off, with no address parameter', async () => {
+                await openDisplay()
+                expect(await screen.findByTestId('viewport-layers')).toHaveTextContent('cut:false')
+                expect(screen.getByTestId('layer-cut').getAttribute('aria-pressed')).toBe('false')
+                expect(window.location.search).toBe('')
+            })
+            it('?layers= names the layers and wins', async () => {
+                await openDisplay('?layers=roof,walls,machines,outside,cut')
+                expect(await screen.findByTestId('viewport-layers')).toHaveTextContent('cut:true')
+            })
+            it('the Cut item toggles the cutaway and writes the address', async () => {
+                await openDisplay()
+                const cut = await screen.findByTestId('layer-cut')
+                expect(cut.title).toBe('Cut away the roof and the walls facing you from outside')
+                fireEvent.click(cut)
+                expect(screen.getByTestId('viewport-layers')).toHaveTextContent('cut:true')
+                expect(new URLSearchParams(window.location.search).get('layers')).toBe('roof,walls,machines,outside,cut')
+                fireEvent.click(screen.getByTestId('layer-cut'))
+                expect(screen.getByTestId('viewport-layers')).toHaveTextContent('cut:false')
+                expect(window.location.search).toBe('')
+            })
+        })
+        it('the Display menu lists its items as one width on the chip\'s left edge, rectangles', async () => {
+            await visitRig()
+            fireEvent.click(screen.getByTestId('display-chip'))
+            const menu = await screen.findByTestId('scene-display')
+            expect(menu.style.left).toBe('0px')
+            expect(menu.style.right).toBe('auto')
+            expect(parseFloat(menu.style.borderRadius)).toBeLessThanOrEqual(2)
+            // the rule must skip the <style> element itself, or the CSS text shows in the menu (2026-10-15)
+            expect(menu.querySelector('style').textContent).toContain('.scene-display>:not(style){display:flex;width:100%')
+            expect(menu.querySelector('style').textContent).not.toContain('.scene-display>*{')
+            const items = [...menu.querySelectorAll('button')]
+            expect(items.length).toBeGreaterThanOrEqual(2)
+            items.forEach((b) => expect(parseFloat(b.style.borderRadius || '2')).toBeLessThanOrEqual(2))
         })
     })
 

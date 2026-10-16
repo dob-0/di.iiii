@@ -39,6 +39,7 @@ import {
     StructurePanel,
     TimelinePanel,
 } from './StudioShellPanels.jsx'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -156,6 +157,7 @@ export default function StudioShell({
     onMakeSpacePublic,
     onSaveCurrentCamera,
     views,
+    lightEnv,
     onCopyShareLink,
     onViewLive,
     previewUrl,
@@ -182,6 +184,9 @@ export default function StudioShell({
     cues = [],
     liveCueId = null,
     onFireCue = null,
+    // The scene editor's two doors (ScenePicker): changes as ops through the Studio's own history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
     // Nodes' things in the room, and which room Studio stands in — the whole
     // room, or the inside of a Geo (StudioEditor; null on the open jam).
     // geoSwitcher: { geos, currentGeoId, onOpenGeo, onNewGeo }
@@ -571,7 +576,8 @@ export default function StudioShell({
     )
 
     const viewportShared = {
-        document,
+        // a Try in the Light environment section draws the viewport with another version's light; nothing is written
+        document: lightEnv?.previewDocument || document,
         selectedEntityId,
         selectedEntityIds,
         onSelectEntity: handleSelectEntity,
@@ -598,6 +604,8 @@ export default function StudioShell({
         onCloseHelp: () => setShowHelp(false),
         rigMirror: rigMirror.on,
         graphRoom,
+        onSceneOps,
+        onPlayScene,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -699,7 +707,7 @@ export default function StudioShell({
         ),
         world: (
             <>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} />
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} lightEnv={lightEnv} />
             </>
         )
     }
@@ -715,7 +723,7 @@ export default function StudioShell({
             />
 
             {loading && (
-                <div className="sfp-overlay-card">Loading project…</div>
+                <LoadingScreen variant="cover" label="Loading project" text="loading the project" waitingFor="the project file" />
             )}
             {loadError && (
                 <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>

@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
-import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps } from './epic-build.mjs'
+import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -249,5 +249,28 @@ describe('epic-build: solid steel stops a beam (2026-10-14)', () => {
         const rig = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../..', RIG_FILE), 'utf8'))
         const ids = (rig.solids || []).filter(isSteelSolid).map((s) => s.id)
         expect(ids.every((id) => !/-pa-|barrier|foh|deck|shell|out-|ash-wall|dj-table/.test(id))).toBe(true)
+    })
+})
+
+describe('the rig file\'s planned addresses (2026-10-15, laser-40w N852)', () => {
+    const rig = { fixtures: [
+        { id: 'l1', type: 'up-la40wf', p: [0, 6, 50], dmx: { universe: 1, address: 401, footprint: 32, mode: '32ch' }, laser: { colour: 'ash white', beams: [{ id: '41', r: [1.62, 0, 0], length_m: 60 }] } },
+        { id: 'cube', type: 'ext-lc-ultra-mk2', p: [0, 8, -40], laser: { beams: [{ id: '1a', r: [1.6, 0, 0], length_m: 60 }] } },
+        { id: 'smoke', type: 'up-yz31p', p: [0, 0, -30], dmx: { universe: 1, address: 501, footprint: 1, mode: '1ch' } }
+    ] }
+    it('a laser or smoke unit with a dmx block is on DMX at its address; a LaserCube stays off DMX', () => {
+        expect(dmxOf(rig.fixtures[0])).toEqual({ universe: 1, address: 401, mode: '32ch' })
+        expect(dmxOf(rig.fixtures[1])).toEqual({ dmx: false })
+        expect(dmxOf(rig.fixtures[2])).toEqual({ universe: 1, address: 501, mode: '1ch' })
+    })
+    it('--patch-only: fixture ops only where the document differs, putting off-DMX units on DMX', () => {
+        const doc = { entities: [
+            { id: 'rig-laser-41', components: { fixture: { type: 'up-la40wf', dmx: false } } },
+            { id: 'rig-laser-1a', components: { fixture: { type: 'ext-lc-ultra-mk2', dmx: false } } },
+            { id: 'smoke', components: { fixture: { type: 'up-yz31p', universe: 1, address: 501, mode: '1ch' } } }
+        ] }
+        const { ops, absent } = patchOps(doc, rig)
+        expect(absent).toEqual([])
+        expect(ops).toEqual([{ type: 'updateComponent', payload: { entityId: 'rig-laser-41', component: 'fixture', patch: { universe: 1, address: 401, mode: '32ch', dmx: null } } }])
     })
 })

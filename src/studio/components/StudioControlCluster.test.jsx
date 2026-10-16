@@ -42,7 +42,7 @@ describe('the Preview button', () => {
         render(<StudioControlCluster {...base} previewUrl={previewUrl} />)
         fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
         expect(open).toHaveBeenCalledTimes(1)
-        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/v2-9`, '_blank', 'noopener')
+        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/v2-9?render=show`, '_blank', 'noopener')
     })
 
     it('opens the permanent address when the project has no slug', () => {
@@ -50,7 +50,7 @@ describe('the Preview button', () => {
         const previewUrl = buildStudioPreviewUrl({ spaceId: 'moxir', projectId: 'moxir-v2-9' })
         render(<StudioControlCluster {...base} previewUrl={previewUrl} />)
         fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
-        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/p/moxir-v2-9`, '_blank', 'noopener')
+        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/p/moxir-v2-9?render=show`, '_blank', 'noopener')
     })
 
     it('is there in the simple jam view too: a preview is not power-user chrome', () => {

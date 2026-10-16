@@ -160,6 +160,105 @@ export const lineLuminance = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, widt
     return (Math.max(num(sigmaS), 0) * hgPhase(cosTheta, g) * Math.max(num(flux), 0) * T) / (Math.max(width, 1e-9) * sin)
 }
 
+// 7. CORE AND HALO (2026-10-15, owner: "the lasers don't even look like lasers"). What the eye sees of a laser in haze is a
+//    thin bright CORE (the singly scattered light, 1. and 2. above, as wide as the beam) and a faint HALO around it: light
+//    that scattered more than once on its way out of the beam. The pure arithmetic of both, for the renderer (owed: the
+//    shader, laserLineMaterial.js; the measurements are in laserLine.test.js).
+//    Core: drawn as wide as the beam, never thinner than MIN_CORE_PX pixels; what a pixel sums is kept (3.).
+//    Halo share: of the light singly scattered toward the eye, the part that scatters again over the path s it has already
+//    run in the beam's air is 1 − exp(−σs·s) (Beer–Lambert); the core keeps exp(−σs·s). Energy is kept, not lost.
+//    Halo radius: small-angle multiple scattering, the Fermi–Eyges result for a pencil beam (Eyges, Phys. Rev. 74, 1948;
+//    used for light beams in water by the beam-spread-function literature): the mean square radial spread after a path s
+//    is ⟨r²⟩ = (2/3)·σs·⟨θ²⟩·s³, with ⟨θ²⟩ ≈ 2·(1 − g) for a Henyey–Greenstein phase with asymmetry g (⟨cos θ⟩ = g, and
+//    1 − cos θ ≈ θ²/2). The halo radius is √⟨r²⟩. ASSUMPTION: HG under-states the sharp forward peak of real glycol-droplet
+//    Mie scattering, so this halo is wider and fainter than a real one; it is a stated model, unvalidated against a photo.
+//    Cap: no halo is drawn wider than HALO_SPACING_CAP of the angle to the next line of the same fan, so a comb of lines
+//    stays a comb of lines. The capped Gaussian still carries the whole haloShare (2026-10-15, shader job 2: the cap
+//    corrects the model's too-wide HG halo, it does not throw light away — what a pixel row sums stays I).
+//    A line with no neighbour in its own fan (a cube's single static beam) is capped as if its neighbour were
+//    LONE_LINE_SPACING_RAD away: the cube's own scan step (SCAN_STEP_DEG), the finest comb a cube draws. ASSUMPTION,
+//    unvalidated against a photo: without it a lone line's Fermi–Eyges halo is metres wide (8 m at s 20 m, σs 0.02,
+//    g 0.7) and the lines of six cubes, each a separate entity, sum into a fog under the roof again.
+export const MIN_CORE_PX = 1
+export const HALO_SPACING_CAP = 0.5
+export const LONE_LINE_SPACING_RAD = (SCAN_STEP_DEG * Math.PI) / 180
+
+/** The core's drawn width (m): the beam's own width at s, or MIN_CORE_PX pixels at the eye's distance, whichever is wider. */
+export const coreWidth = ({ s = 0, dist = 1, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, minPx = MIN_CORE_PX } = {}) =>
+    Math.max(beamWidth(s, diameter_mm, divergence_mrad), Math.max(dist, 0) * Math.max(pixelAngle, 0) * minPx)
+
+/** The share of the scattered light that sits in the halo after a path s (m) in air of σs (1/m): 1 − exp(−σs·s). */
+export const haloShare = (sigmaS, s) => 1 - Math.exp(-Math.max(num(sigmaS), 0) * Math.max(num(s), 0))
+
+/** Fermi–Eyges halo radius (m) after a path s: √((2/3)·σs·2(1 − g)·s³). */
+export const haloRadius = (sigmaS, g, s) => {
+    const gg = clamp(num(g, 0.7), -0.95, 0.95)
+    return Math.sqrt((2 / 3) * Math.max(num(sigmaS), 0) * 2 * (1 - gg) * Math.pow(Math.max(num(s), 0), 3))
+}
+
+/** The halo radius held under HALO_SPACING_CAP of the gap to the neighbouring line (spacing in radians, at path s). */
+export const haloRadiusCapped = (sigmaS, g, s, spacingRad = Infinity) => {
+    const r = haloRadius(sigmaS, g, s)
+    const cap = Number.isFinite(spacingRad) && spacingRad > 0 ? HALO_SPACING_CAP * spacingRad * Math.max(s, 0) : Infinity
+    return Math.min(r, cap)
+}
+
+/**
+ * A line's look at one point: the intensity per unit length I (= L·W, cd/m per lm of Φ, 2.), the core's luminance over its
+ * drawn width, and the halo's peak luminance (a Gaussian of the capped radius r across the line: peak = share·I / (√(2π)·r)).
+ * The shader (laserLineMaterial.js) draws exactly this: core·W + halo·√(2π)·r = I.
+ */
+export const coreHalo = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, s = 0, d = 0, dist = d, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, spacingRad = Infinity }) => {
+    const perLength = lineLuminance({ sigmaS, sigmaT, g, flux, cosTheta, width: 1, s, d })
+    const W = coreWidth({ s, dist, pixelAngle, diameter_mm, divergence_mrad })
+    const share = haloShare(sigmaS, s)
+    const r = haloRadiusCapped(sigmaS, g, s, spacingRad)
+    return {
+        perLength,
+        coreWidth: W,
+        core: ((1 - share) * perLength) / W,
+        haloRadius: r,
+        haloShare: share,
+        halo: r > 0 ? (share * perLength) / (Math.sqrt(2 * Math.PI) * r) : 0
+    }
+}
+
+/**
+ * Per line of a fan, the angle (rad) to its nearest neighbour in the same fan — what caps its halo (haloRadiusCapped).
+ * A fan of one line: LONE_LINE_SPACING_RAD. Lines that point the same way (two sub-lines of one point) do not count as
+ * neighbours. dirs: unit vectors.
+ */
+export const lineSpacings = (dirs) => {
+    const list = Array.isArray(dirs) ? dirs : []
+    return list.map((a, i) => {
+        let best = Infinity
+        for (let j = 0; j < list.length; j += 1) {
+            if (j === i) continue
+            const b = list[j]
+            const c = clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1, 1)
+            const angle = Math.acos(c)
+            if (angle > 1e-6 && angle < best) best = angle
+        }
+        return Number.isFinite(best) ? best : LONE_LINE_SPACING_RAD
+    })
+}
+
+// 8. THE END SPOT (2026-10-15). Where a line meets its first surface (beamReach.js) it lights a dot as wide as the beam
+//    there (beamWidth: 4 mm + 1 mrad → 4 cm at 40 m, 6 cm at 60 m). A diffuse (Lambertian) surface of reflectance ρ under
+//    illuminance E = Φ·T/A shows the luminance L = ρ·E/π (the definition of a Lambertian reflector; CIE S 017 17-21-087).
+//    Drawn at least MIN_CORE_PX wide; a dot drawn wider than the beam is dimmed by the area ratio, so its total light (L·A)
+//    stays the beam's. SPOT_ALBEDO 0.3: ASSUMPTION, a mid-grey building surface — the hit does not know its material yet.
+export const SPOT_ALBEDO = 0.3
+
+/** The end spot of a line reaching a surface at path s: { width (m, drawn), luminance (per unit Φ the line law uses) }. */
+export const laserSpot = ({ flux = 1, s = 0, sigmaT = 0, dist = 1, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, albedo = SPOT_ALBEDO } = {}) => {
+    const w = beamWidth(s, diameter_mm, divergence_mrad)
+    const drawn = coreWidth({ s, dist, pixelAngle, diameter_mm, divergence_mrad })
+    const area = (Math.PI * drawn * drawn) / 4
+    const E = (Math.max(num(flux), 0) * Math.exp(-Math.max(num(sigmaT), 0) * Math.max(num(s), 0))) / area
+    return { beamWidth: w, width: drawn, luminance: (clamp(num(albedo, SPOT_ALBEDO), 0, 1) * E) / Math.PI }
+}
+
 /** A frame's points, cleaned the way the Nodes editor's laser frame is: [x, y, r, g, b], x/y −1…1, colour 0…1; bad points dropped. */
 export const framePoints = (points, max = 2000) => {
     const out = []

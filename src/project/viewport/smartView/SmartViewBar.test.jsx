@@ -86,3 +86,17 @@ describe('SmartViewBar: live and work views', () => {
         expect(screen.getByRole('button', { name: 'Floor' }).title).not.toMatch(/work view/)
     })
 })
+
+describe('SmartViewBar Auto fly', () => {
+    it('shows the button only when a host handles it, pressed while flying, and asks to toggle', () => {
+        const calls = []
+        const { rerender } = render(<SmartViewBar presets={presets} variant="studio" />)
+        expect(screen.queryByRole('button', { name: 'Auto fly' })).toBeNull()
+        rerender(<SmartViewBar presets={presets} variant="studio" flying onFly={(v) => calls.push(v)} />)
+        const b = screen.getByRole('button', { name: 'Auto fly' })
+        expect(b.getAttribute('aria-pressed')).toBe('true')
+        expect(b.style.borderRadius).toBe('2px')
+        fireEvent.click(b)
+        expect(calls).toEqual([false])
+    })
+})

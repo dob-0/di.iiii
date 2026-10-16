@@ -11,7 +11,7 @@ export const VISITOR_PARTS = Object.freeze([
     { id: 'versions', label: 'Versions chip' },
     { id: 'show', label: 'SHOW chip' },
     { id: 'scenes', label: 'Scene bricks' },
-    { id: 'walk', label: 'Walk / Fly and Lite' },
+    { id: 'walk', label: 'Walk / Fly and Quality' },
     { id: 'views', label: 'Views bar' },
     { id: 'layers', label: 'Layers' }
 ])

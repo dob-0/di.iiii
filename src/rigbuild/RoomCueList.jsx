@@ -3,6 +3,7 @@ import { buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { ShowError, blockOf, chooseCue, cleanName, isLiveScene, liveOf, sceneButtons, setFavourites, toggledFavourites, youWords } from './showApi.js'
 import { FAVOURITES_EVENT } from './RoomFavourites.jsx'
 import { useShowFeed } from './useShowFeed.js'
+import LoadingScreen from '../components/LoadingScreen.jsx'
 
 // THE SCENE BUTTONS INSIDE THE ROOM (simple buttons, 2026-10-09: a press changes the scene and it HOLDS)
 //
@@ -107,7 +108,7 @@ export default function RoomCueList({ spaceId, projectId, onChosen }) {
     return (
         <div data-testid="room-cue-list" style={{ borderTop: '1px solid rgba(255,255,255,0.14)' }}>
             {error ? <p role="alert" style={{ margin: 0, padding: '0.5rem 0.95rem', background: EMBER, color: '#000', fontWeight: 700, fontSize: '0.8rem' }}>{error.status ? error.message : 'No link to the server — this list is old. Trying again…'}</p> : null}
-            {!data && !error ? <p style={{ margin: 0, padding: '0.5rem 0.95rem', fontSize: '0.8rem', opacity: 0.8 }}>Loading the scenes…</p> : null}
+            {!data && !error ? <LoadingScreen variant="inline" label="Loading the scenes" text="loading the scenes" /> : null}
             {notice || why ? <p role="status" data-block={block || ''} style={{ margin: 0, padding: '0.4rem 0.95rem', borderLeft: `2px solid ${notice ? EMBER : 'rgba(255,255,255,0.4)'}`, fontSize: '0.8rem', opacity: notice ? 1 : 0.75 }}>{notice || why}</p> : null}
             <ol aria-label="the scenes of the show" style={{ listStyle: 'none', margin: 0, padding: '0.5rem 0.6rem', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, maxHeight: 'min(52dvh, 24rem)', overflowY: 'auto' }}>
                 {sceneButtons(cues).map((cue) => {

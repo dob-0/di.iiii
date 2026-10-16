@@ -102,6 +102,13 @@ export const laserFramesOf = (rig, { dirOf, matrixN = MATRIX_N, spread = MATRIX_
         // Lit points at full (1, 1, 1): the room scales a frame by the look's colour (laserLine.js scanLines), so the
         // scene decides the colour as it does for a static line; the unit's own colour would be applied twice.
         const drive = [1, 1, 1]
+        // The rig's own frames win for every laser type (scripts/place/laser_frames.py: the show's per-scene `laser` and
+        // `laser_lines` design, 2026-10-15): a cube's lines and a 40 W unit's one static beam alike.
+        if (beams.every((b) => b.frames?.list?.length)) {
+            for (const b of beams) byBeam.set(`rig-laser-${b.id}`, { frames: b.frames, fieldHalfDeg: b.fieldHalfDeg ?? field.halfDeg })
+            units.push({ unit: f.id, type: f.type, picture: 'rig frames', lines: beams.length, frames: beams[0].frames.list.length, period: beams[0].frames.period, source: f.laser.frames_source || '', field })
+            continue
+        }
         if (f.type === 'up-la40wf') {
             const frame = matrixFrame({ n: matrixN, spread, drive })
             for (const b of beams) byBeam.set(`rig-laser-${b.id}`, { frame, fieldHalfDeg: field.halfDeg })

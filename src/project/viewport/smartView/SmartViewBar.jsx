@@ -93,7 +93,7 @@ const studioButton = (current, compact = false) => ({
 // The building switches (Roof · Walls · Machines · Outside) sit in this bar when `onLayer` is given — the Studio's case
 // (owner 2026-10-13: "the floor is hidden but I can't see the place where I turn the walls on and off"); the visitor page
 // draws its own group next to the SceneBar and passes none. `layers[id] === false` hides a layer, anything else shows it.
-export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false, layers = null, onLayer = null }) {
+export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false, layers = null, onLayer = null, flying = false, onFly = null }) {
     if (!presets.length) return null
     const studio = variant === 'studio'
     const button = studio ? (current) => studioButton(current, compact) : visitorButton
@@ -126,6 +126,18 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
             >
                 X-ray
             </button>
+            {typeof onFly === 'function' ? (
+                <button
+                    type="button"
+                    data-autofly
+                    aria-pressed={flying}
+                    title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                    style={button(flying)}
+                    onClick={() => onFly(!flying)}
+                >
+                    Auto fly
+                </button>
+            ) : null}
             {typeof onLayer === 'function' ? VIEW_LAYER_IDS.map((id) => {
                 const shown = layers?.[id] !== false
                 return (
@@ -134,7 +146,7 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
                         type="button"
                         aria-pressed={shown}
                         data-layer={id}
-                        title={`${shown ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                        title={id === 'cut' ? `${shown ? 'Whole building: stop cutting' : 'Cut'} the roof and the walls that face you from outside` : `${shown ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
                         style={{ ...button(shown), textDecoration: shown ? 'none' : 'line-through' }}
                         onClick={() => onLayer(id, !shown)}
                     >
