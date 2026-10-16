@@ -19,6 +19,7 @@
  */
 import { makeClient, readToken } from '../place/api.mjs'
 import { parseArgs, die, say } from '../place/common.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 /** The frame on at show time t (s) — the room page's pick (laserLine.js). Pure. */
 export const frameAt = (frames, t) => {
@@ -96,4 +97,4 @@ const main = async () => {
     setInterval(() => { if (busy) return; busy = true; tick().catch((e) => say(e.message)).finally(() => { busy = false }) }, ms)
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().catch((error) => die(error.message))
+if (isMainModule(import.meta.url)) main().catch((error) => die(error.message))

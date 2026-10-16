@@ -6,3 +6,6 @@
 00:13 colour-code photo-1121 + videos 1122/1123 (00:12): visible left→right: white, magenta, blue, green, lime/yellow (faint), orange, red — same direction as the 3D (low end = magenta side); the left-end white is unexplained (3D puts the white wash U1.089 in the middle) → test: U1.089 off
 00:14 U1.089 off → the left-end white went dark (owner: yes). Physical order from the high end = 017 025 033 041 049 057 065 073 081 089 (cable order); the 3D had cut-06 (089) in the middle
 00:15 re-addressed by place (cable order): cut-06 89→49, cut-05 49→57, cut-04 57→65, cut-03 65→73, cut-02 73→81, cut-01 81→89 — local v376; dev write 401 (owed); desk re-patched 60/60, looks reloaded
+00:34 aim test 1 (DJ table −4.8,0.95,5.2): photos 1198/1199 (Emilya): low-end beam U1.097 points ~straight down, high-end U1.001 points out to the side away from the truss; DJ table not in frame → test 2: both straight down by di
+00:38 aim test 2 straight down: owner 'no' for U1.097 then '2 beams pointed down' → tilt OK on both (photo-1205 shows U1.001's spot under it)
+00:40 aim test 3 (pan −90°, tilt 45°, toward the left/high end): photo-1209: U1.001 leans out toward the camera/front, roughly square to the truss, not along it → pan off ~90°; U1.097's beam hidden. Test 4: U1.001 pan 0° (90° turned)
