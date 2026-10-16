@@ -22,6 +22,20 @@
 - Rehearsal 00:5x on the real six (branch code, a copy of laser.json, the installed engine disarmed = one sender): dry
   (unarmed) run mapped cube-1…6 ← rig-laser-1…6 (6 lines each), index 66 → 71 over 20 s at period 1116 s / 256 frames
   (4.36 s a frame), buffers 6000 free on all six (no other sender). The armed run's result is in the ledger (N916.x).
+- The armed rehearsal (01:0x) found two things, both fixed in the second commit. (1) The engine's still-beam guard stopped
+  every cube within 200 ms: the show's comb lines are still beams (the previs strokes wobble under 0.6°), and the guard
+  allows only the still beams the officer listed in laser.json. Now `stillBeamsOfGroup` lists every still dot a cube's
+  frames hold over one period (as the engine's own `stillBeams` sees them, each once), and `POST /laser/api/show/still
+  { project, map?, confirm }` writes them per real cube into laser.json (kept with what was approved before) and reloads the
+  engine disarmed — the officer's sign-off is the phrase; without it the route answers 403 with the counts it would approve.
+  Measured on moxir-v2-11: 39–54 distinct dots a cube. (2) Every frame point is a direction in ITS LINE's field (the room's
+  `fieldDirection`: forward −Y, right +X, up +Z, tan(x · half-angle)), so a cube's six lines all read (0, 0) at their own
+  axes — one real cube would have drawn six dots on one spot. `cubeFrameAt` now carries each point to the world through
+  its line's rotation (an XYZ Euler, as three.js applies it — `eulerXYZ` is that matrix) and back through the cube's
+  (`aimOfGroup`: the mean of the lines' forwards, roll 0, the rig's own [−π/2 − pitch, 0, yaw] convention, undone exactly
+  by `aimAt`); a point outside the cube's field is blanked and counted (`outside` in the state), never pulled to the edge.
+  Limit, said: the real cube's roll and exact aim on the back wall are not in the document; the operator's geometric
+  correction in LaserOS (or a per-cube offset, owed) closes that gap.
 - Open, said: a Studio/viewer control for the show player (today it is the route); the cue clock and the compiled frames'
   phase (the frames were compiled with epoch 0, the document's showEpoch mod period = 22.5 s — the cubes match the ROOM
   exactly, as asked; whether the room matches the cues is a separate row); the full-field zone is the owner's line.

@@ -3,18 +3,30 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { createShowPlayer, lineGroupsOf, groupOfLine, frameIndexAt, cubeFrameAt, defaultMap, TICK_MS } = require('./laserShow')
+const {
+    createShowPlayer, lineGroupsOf, groupOfLine, frameIndexAt, cubeFrameAt, defaultMap, stillBeamsOfGroup,
+    eulerXYZ, fieldDirection, fieldPoint, aimAt, TICK_MS
+} = require('./laserShow')
+const { stillBeams } = require('./laserEngine')
 
-const line = (id, list, period = 10) => ({ id, type: 'spotLight', components: { beam: { laser: { mW: [1], nm: [525], frames: { period, list } } } } })
+const DEG = Math.PI / 180
+// The rig's own convention (scripts/place): a line's rotation is [−π/2 − tilt, 0, yaw], forward −Y in the lamp's frame.
+const aim = (yawDeg, tiltDeg = 0) => [-Math.PI / 2 - tiltDeg * DEG, 0, yawDeg * DEG]
+const line = (id, list, { period = 10, rotation = aim(0), fieldHalfDeg } = {}) =>
+    ({ id, type: 'spotLight', components: { transform: { rotation }, beam: { laser: { mW: [1], nm: [525], fieldHalfDeg, frames: { period, list } } } } })
+const near = (a, b, eps = 1e-3) => a.every((v, i) => Math.abs(v - b[i]) <= eps)
+
+// Two cubes: cube 1 = two lines yawed ±2° (a comb of two), cube 2 = one line.
 const DOC = {
     entities: [
-        line('rig-laser-1a', [[[0, 0, 0, 0, 0]], [[0.1, 0.2, 1, 1, 1], [0.2, 0.2, 1, 1, 1]]]),
-        line('rig-laser-1b', [[[0.5, 0.5, 0, 1, 0]], [[0, 0, 0, 0, 0]]]),
-        line('rig-laser-2a', [[[-0.5, 0.1, 1, 0, 0]], [[-0.5, 0.2, 1, 0, 0]]]),
+        line('rig-laser-1a', [[[0, 0, 0, 0, 0]], [[0, 0, 1, 1, 1], [0.1, 0, 1, 1, 1]]], { rotation: aim(-2) }),
+        line('rig-laser-1b', [[[0, 0, 0, 1, 0]], [[0, 0, 0, 0, 0]]], { rotation: aim(2) }),
+        line('rig-laser-2a', [[[0, 0.1, 1, 0, 0]], [[0, 0.2, 1, 0, 0]]], { rotation: aim(30, 10) }),
         { id: 'lamp', type: 'spotLight', components: { beam: { laser: { mW: [1], nm: [525], frame: [[0, 0, 1, 1, 1]] } } } },
         { id: 'wall', type: 'mesh' }
     ]
 }
+const X2 = 2 / 18.5 // 2° of yaw in field units (small angles: tan ≈ linear to 1e-4)
 
 const fakeEngine = (cubes = ['cube-1', 'cube-2'], { refuse = () => null } = {}) => {
     const calls = []
@@ -39,6 +51,51 @@ const playerWith = (engine, { doc = DOC, t0 = 1000 } = {}) => {
     return { player, clock, timers, at }
 }
 
+describe('the geometry: a line\'s field into its cube\'s field', () => {
+    it('fieldDirection and fieldPoint undo each other, and a point behind or outside the field is null', () => {
+        for (const [x, y] of [[0, 0], [0.5, -0.25], [-1, 1], [0.999, 0]]) expect(near(fieldPoint(fieldDirection(x, y)), [x, y], 1e-9)).toBe(true)
+        expect(fieldPoint([0, 1, 0])).toBe(null)
+        expect(fieldPoint([Math.tan(20 * DEG), -1, 0])).toBe(null)
+        expect(fieldDirection(0, 0)).toEqual([0, -1, 0])
+    })
+    it('eulerXYZ turns the rig\'s rotation into the world direction the rig means: yaw toward +x, tilt up, forward +z', () => {
+        const fwd = (r) => { const m = eulerXYZ(r); return [0, 1, 2].map((i) => m[i][0] * 0 + m[i][1] * -1 + m[i][2] * 0) }
+        expect(near(fwd(aim(0)), [0, 0, 1])).toBe(true)
+        expect(near(fwd(aim(90)), [1, 0, 0])).toBe(true)
+        expect(near(fwd(aim(0, 90)), [0, 1, 0])).toBe(true)
+        // XYZ order: the yaw turns the lamp first, the pitch then tips it about world X — not spherical angles.
+        expect(near(fwd(aim(30, 10)), [Math.sin(30 * DEG), Math.sin(10 * DEG) * Math.cos(30 * DEG), Math.cos(10 * DEG) * Math.cos(30 * DEG)])).toBe(true)
+        expect(near(aimAt(fwd(aim(30, 10))), aim(30, 10))).toBe(true)
+        expect(near(aimAt([1, 0, 0]), aim(90))).toBe(true)
+        expect(near(aimAt([0, Math.sin(10 * DEG), Math.cos(10 * DEG)]), aim(0, 10))).toBe(true)
+    })
+    it('aims the cube at the mean of its lines and places each line\'s points by their own yaw', () => {
+        const g = lineGroupsOf(DOC).get('rig-laser-1')
+        expect(near(g.cube.rotation, aim(0))).toBe(true)
+        expect(g.cube.fieldHalfDeg).toBe(18.5)
+        // t = 7: line a (yaw −2°) draws its centre and a point 0.1 to its right; line b is blank.
+        const { points, outside } = cubeFrameAt(g, 7)
+        expect(outside).toBe(0)
+        expect(points.map((p) => p.slice(2))).toEqual([[0, 0, 0], [1, 1, 1], [1, 1, 1], [0, 0, 0]])
+        expect(near(points[1].slice(0, 2), [-X2, 0])).toBe(true)
+        expect(near(points[2].slice(0, 2), [-X2 + 0.1, 0])).toBe(true)
+        // t = 3: line b (yaw +2°) lit at its centre → +2° in the cube's field.
+        expect(near(cubeFrameAt(g, 3).points[1].slice(0, 2), [X2, 0])).toBe(true)
+        // A cube of one line: its field is the cube's; a tilted, yawed aim changes nothing.
+        const g2 = lineGroupsOf(DOC).get('rig-laser-2')
+        expect(near(g2.cube.rotation, aim(30, 10))).toBe(true)
+        expect(near(cubeFrameAt(g2, 3).points[1].slice(0, 2), [0, 0.1])).toBe(true)
+    })
+    it('blanks and counts a point that falls outside the cube\'s field', () => {
+        const doc = { entities: [line('c-1a', [[[0.9, 0, 1, 1, 1], [0.95, 0, 1, 1, 1]]], { rotation: aim(10) }), line('c-1b', [[[0, 0, 1, 1, 1]]], { rotation: aim(-10) })] }
+        const g = lineGroupsOf(doc).get('c-1')
+        const { points, outside } = cubeFrameAt(g, 1)
+        expect(outside).toBe(2) // line a's points sit 26.6°+ from the cube's aim: beyond ±18.5°
+        expect(points.filter((p) => p[2] > 0)).toHaveLength(1)
+        expect(near(points.find((p) => p[2] > 0).slice(0, 2), [-10 / 18.5, 0], 2e-3)).toBe(true)
+    })
+})
+
 describe('a project\'s laser lines, grouped by cube', () => {
     it('groups a line by its id without the trailing letters; a line named otherwise is its own group', () => {
         expect(groupOfLine('rig-laser-1a')).toBe('rig-laser-1')
@@ -49,10 +106,10 @@ describe('a project\'s laser lines, grouped by cube', () => {
     it('keeps only lines with frames, sorted, and leaves a static frame and a wall out', () => {
         const groups = lineGroupsOf(DOC)
         expect([...groups.keys()]).toEqual(['rig-laser-1', 'rig-laser-2'])
-        expect(groups.get('rig-laser-1').map((l) => l.id)).toEqual(['rig-laser-1a', 'rig-laser-1b'])
-        expect(groups.get('rig-laser-1')[0].frames).toMatchObject({ period: 10 })
+        expect(groups.get('rig-laser-1').lines.map((l) => l.id)).toEqual(['rig-laser-1a', 'rig-laser-1b'])
+        expect(groups.get('rig-laser-1').lines[0].frames).toMatchObject({ period: 10 })
         expect(lineGroupsOf({}).size).toBe(0)
-        expect(lineGroupsOf({ entities: [line('x', [], 10), line('y', [[[0, 0, 1, 1, 1]]], 0)] }).size).toBe(0)
+        expect(lineGroupsOf({ entities: [line('x', []), line('y', [[[0, 0, 1, 1, 1]]], { period: 0 })] }).size).toBe(0)
     })
     it('picks the frame on now with the room\'s formula', () => {
         const frames = { period: 10, list: [[[0, 0, 0, 0, 0]], [[0, 0, 1, 1, 1]]] }
@@ -62,15 +119,24 @@ describe('a project\'s laser lines, grouped by cube', () => {
         expect(frameIndexAt(frames, -2)).toBe(1)
         expect(frameIndexAt(null, 3)).toBe(-1)
     })
-    it('joins a cube\'s lit lines with blank moves and draws one blank point when nothing is lit', () => {
-        const g = lineGroupsOf(DOC).get('rig-laser-1')
-        expect(cubeFrameAt(g, 3)).toEqual([[0.5, 0.5, 0, 0, 0], [0.5, 0.5, 0, 1, 0], [0.5, 0.5, 0, 0, 0]])
-        expect(cubeFrameAt(g, 7)).toEqual([[0.1, 0.2, 0, 0, 0], [0.1, 0.2, 1, 1, 1], [0.2, 0.2, 1, 1, 1], [0.2, 0.2, 0, 0, 0]])
-        expect(cubeFrameAt([{ id: 'a', frames: { period: 10, list: [[[0, 0, 0, 0, 0]]] } }], 3)).toEqual([[0, 0, 0, 0, 0]])
+    it('draws one blank point when nothing is lit', () => {
+        const g = lineGroupsOf({ entities: [line('a-1a', [[[0, 0, 0, 0, 0]]])] }).get('a-1')
+        expect(cubeFrameAt(g, 3)).toEqual({ points: [[0, 0, 0, 0, 0]], outside: 0 })
     })
     it('maps cubes and groups side by side in sorted order', () => {
         expect(defaultMap(['cube-2', 'cube-1'], ['rig-laser-2', 'rig-laser-1'])).toEqual({ 'cube-1': 'rig-laser-1', 'cube-2': 'rig-laser-2' })
         expect(defaultMap(['cube-1', 'cube-2', 'cube-3'], ['g'])).toEqual({ 'cube-1': 'g' })
+    })
+    it('lists the show\'s still dots per cube once each, as the engine\'s guard sees them', () => {
+        const g = lineGroupsOf(DOC).get('rig-laser-1')
+        // frame 0: line b's dot at +2°; frame 1: line a's stroke 0.1 wide (1.85°) is no dot. One still beam in all.
+        const dots = stillBeamsOfGroup(g, stillBeams)
+        expect(dots).toHaveLength(1)
+        expect(dots[0]).toMatchObject({ within: 0.01 })
+        expect(near([dots[0].x, dots[0].y], [X2, 0])).toBe(true)
+        // The same dot in two frames is listed once.
+        const twice = lineGroupsOf({ entities: [line('d-1a', [[[0.3, 0.3, 1, 0, 0]], [[0.3, 0.3, 0, 1, 0]], [[0, 0, 0, 0, 0]]])] }).get('d-1')
+        expect(stillBeamsOfGroup(twice, stillBeams)).toEqual([{ x: 0.3, y: 0.3, within: 0.01 }])
     })
 })
 
@@ -88,19 +154,20 @@ describe('the show player', () => {
         const engine = fakeEngine()
         const { player, at } = playerWith(engine)
         expect(await player.start({ project: 'p' })).toMatchObject({ ok: true, project: 'p', ignored: [] })
-        // t = 1000 s: frame 0 on both lines of cube 1 (b lit), frame 0 of cube 2.
-        expect(engine.calls.filter((c) => c[0] === 'set')).toEqual([
-            ['set', 'cube-1', [[0.5, 0.5, 0, 0, 0], [0.5, 0.5, 0, 1, 0], [0.5, 0.5, 0, 0, 0]], 'show:p'],
-            ['set', 'cube-2', [[-0.5, 0.1, 0, 0, 0], [-0.5, 0.1, 1, 0, 0], [-0.5, 0.1, 0, 0, 0]], 'show:p']
-        ])
-        expect(player.state()).toMatchObject({ playing: true, project: 'p', out: 'show:p', cubes: [{ cube: 'cube-1', group: 'rig-laser-1', lines: 2, index: 0, held: null }, { cube: 'cube-2', group: 'rig-laser-2', lines: 1, index: 0 }] })
+        // t = 1000 s: frame 0 on both cubes (cube 1: line b lit at +2°; cube 2: its line at y 0.1).
+        const sets = engine.calls.filter((c) => c[0] === 'set')
+        expect(sets.map((c) => [c[1], c[3]])).toEqual([['cube-1', 'show:p'], ['cube-2', 'show:p']])
+        expect(sets[0][2].map((p) => p.slice(2))).toEqual([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+        expect(near(sets[0][2][1].slice(0, 2), [X2, 0])).toBe(true)
+        expect(near(sets[1][2][1].slice(0, 2), [0, 0.1])).toBe(true)
+        expect(player.state()).toMatchObject({ playing: true, project: 'p', out: 'show:p', cubes: [{ cube: 'cube-1', group: 'rig-laser-1', lines: 2, index: 0, held: null, outside: 0 }, { cube: 'cube-2', group: 'rig-laser-2', lines: 1, index: 0 }] })
         engine.calls.length = 0
         at(TICK_MS) // still frame 0: alive only
         expect(engine.calls).toEqual([['alive', 'cube-1', 'show:p'], ['alive', 'cube-2', 'show:p']])
         engine.calls.length = 0
         at(5000) // t = 1005.05 s: frame 1
         expect(engine.calls.map((c) => c.slice(0, 2))).toEqual([['set', 'cube-1'], ['set', 'cube-2']])
-        expect(engine.calls[0][2]).toEqual([[0.1, 0.2, 0, 0, 0], [0.1, 0.2, 1, 1, 1], [0.2, 0.2, 1, 1, 1], [0.2, 0.2, 0, 0, 0]])
+        expect(engine.calls[0][2].map((p) => p.slice(2))).toEqual([[0, 0, 0], [1, 1, 1], [1, 1, 1], [0, 0, 0]])
         expect(player.state().cubes[0].index).toBe(1)
         engine.calls.length = 0
         expect(player.stop()).toEqual({ stopped: true, project: 'p' })
@@ -136,10 +203,10 @@ describe('the show player', () => {
         await new Promise((r) => setTimeout(r, 0))
         engine.calls.length = 0
         timers[0]()
-        expect(engine.calls.map((c) => c.slice(0, 3))).toEqual([
-            ['set', 'cube-1', [[0.9, 0.9, 0, 0, 0], [0.9, 0.9, 1, 0, 0], [0.9, 0.9, 0, 0, 0]]],
-            ['set', 'cube-2', [[0, 0, 0, 0, 0]]]
-        ])
+        expect(engine.calls.map((c) => c.slice(0, 2))).toEqual([['set', 'cube-1'], ['set', 'cube-2']])
+        expect(engine.calls[0][2].map((p) => p.slice(2))).toEqual([[0, 0, 0], [1, 0, 0], [0, 0, 0]])
+        expect(near(engine.calls[0][2][1].slice(0, 2), [0.9, 0.9], 1e-9)).toBe(true)
+        expect(engine.calls[1][2]).toEqual([[0, 0, 0, 0, 0]])
         expect(player.state()).toMatchObject({ error: null, cubes: [{ lines: 1 }, { lines: 1 }] })
         player.stop()
     })
