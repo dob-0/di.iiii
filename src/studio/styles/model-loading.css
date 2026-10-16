@@ -4,7 +4,7 @@
     left: 50%;
     top: 96px;
     transform: translateX(-50%);
-    z-index: 71;
+    z-index: 1200; /* above the Studio windows: it never takes a click (pointer-events: none) */
     display: flex;
     align-items: center;
     gap: var(--di-space-3);
