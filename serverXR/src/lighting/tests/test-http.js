@@ -1229,6 +1229,18 @@ check('two outputs cannot be told to open the same serial port', async () => {
   await POST('/api/output/send/remove', { id: a.body.send.id });
 });
 
+check('a USB widget told to carry Universe 2 sends Universe 2 (MOXIR 2026-10-17: it sent nothing)', async () => {
+  const port = process.platform === 'win32' ? 'COM8' : '/dev/ttyUSB8';
+  const was = (await GET('/api/state')).body.output.enabled;
+  await POST('/api/output', { enabled: true });
+  const a = await POST('/api/output/send', { driver: 'enttec', serialPort: port, universes: [1], enabled: true });
+  await new Promise((r) => setTimeout(r, 400));
+  const s = (await GET('/api/state')).body.status.extra.find((x) => x.id === a.body.send.id);
+  assert.ok(s.packetsSent > 0, 'its frames go out, packetsSent ' + s.packetsSent);
+  await POST('/api/output/send/remove', { id: a.body.send.id });
+  await POST('/api/output', { enabled: was });
+});
+
 check('a hand-edited show cannot smuggle in an output the route would refuse', async () => {
   const r = await POST('/api/output/send', { driver: 'artnet', targets: ['not-an-ip', '10.0.0.4'], universes: [1, 1, 99999, -3] });
   assert.deepStrictEqual(r.body.send.targets, ['10.0.0.4'], 'a target that is not an address is dropped');
