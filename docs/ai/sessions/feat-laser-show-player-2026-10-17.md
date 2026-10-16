@@ -39,3 +39,14 @@
 - Open, said: a Studio/viewer control for the show player (today it is the route); the cue clock and the compiled frames'
   phase (the frames were compiled with epoch 0, the document's showEpoch mod period = 22.5 s — the cubes match the ROOM
   exactly, as asked; whether the room matches the cues is a separate row); the full-field zone is the owner's line.
+
+## 03:1x — fit fills the keep-in zone, not the field
+
+Measured on the real six (run 3, 57 min, `~/work/agent-reports-2026-10-17/laser-show-run-3-fit.log`): fit about the
+field under the default upper-half zone cut 40 % of every picture's lit points (76 of 108 lit frames touched y < 0) and the
+clipped stubs at y ≈ 0 read as still beams — 75 guard stops. Change: `zoomOf(scale, strokes, zone)` fits the picture's lit
+box into the ZONE (FIT_EDGE 0.9 of each half-extent, centred on the zone's centre; the shorter side decides);
+`stillBeamsOfGroup` applies the engine's `applyZone` before counting dots, so the approval lists what the engine will see;
+the player and `/show/still` pass `engine.state().zone`. After: 0 % below y = 0 on all six groups, 0 stops in run 5.
+Limit: under the upper-half zone a picture fills half the field's height; the whole field is the officer's zone choice
+(laser.json `zone`), never the player's. Catalogue entries for the three show routes added (CI's catalogue contract).

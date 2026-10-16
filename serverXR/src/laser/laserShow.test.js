@@ -96,21 +96,42 @@ describe('the geometry: a line\'s field into its cube\'s field', () => {
         expect(cubeFrameAt(g, 3, { scale: 'x' }).points[1]).toEqual(cubeFrameAt(g, 3).points[1])
         expect(stillBeamsOfGroup(g, stillBeams, { scale: 4 })[0].x).toBeCloseTo(4 * X2, 3)
     })
-    it('\'fit\' fills the field with each picture about its own lit centre', () => {
+    it('\'fit\' fills the keep-in zone with each picture, centred in the zone, nothing of it clipped', () => {
         const g = lineGroupsOf(DOC).get('rig-laser-1')
-        // t = 7: one stroke 0.1 wide at −2°: its centre goes to 0; the zoom is capped at ×10, so its ends reach ±0.5.
+        // The default zone is the engine's, the upper half: centre (0, 0.5), room ±0.9 across and ±0.45 up and down.
+        // t = 7: one stroke 0.1 wide at −2°: the zoom is capped at ×10, so its ends reach ±0.5 about the zone's centre.
         const fit = cubeFrameAt(g, 7, { scale: 'fit' })
         expect(fit.outside).toBe(0)
-        expect(near(fit.points[1].slice(0, 2), [-0.5, 0], 2e-3)).toBe(true)
-        expect(near(fit.points[2].slice(0, 2), [0.5, 0], 2e-3)).toBe(true)
-        // A stroke 0.4 wide fills to the edge: ±0.9.
+        expect(near(fit.points[1].slice(0, 2), [-0.5, 0.5], 2e-3)).toBe(true)
+        expect(near(fit.points[2].slice(0, 2), [0.5, 0.5], 2e-3)).toBe(true)
+        // A stroke 0.4 wide fills the zone's width: ±0.9, at the zone's centre height.
         const wide = lineGroupsOf({ entities: [line('w-1a', [[[-0.2, 0.3, 1, 1, 1], [0.2, 0.3, 1, 1, 1]]])] }).get('w-1')
         const f2 = cubeFrameAt(wide, 1, { scale: 'fit' })
-        expect(near(f2.points[1].slice(0, 2), [-0.9, 0], 1e-6)).toBe(true)
-        expect(near(f2.points[2].slice(0, 2), [0.9, 0], 1e-6)).toBe(true)
-        // A single dot: nothing to stretch, it moves to the centre.
-        expect(cubeFrameAt(g, 3, { scale: 'fit' }).points[1].slice(0, 2)).toEqual([0, 0])
+        expect(near(f2.points[1].slice(0, 2), [-0.9, 0.5], 1e-6)).toBe(true)
+        expect(near(f2.points[2].slice(0, 2), [0.9, 0.5], 1e-6)).toBe(true)
+        // A stroke 0.4 tall fills the zone's height: 0.05 … 0.95 — the zone's shorter side decides.
+        const tall = lineGroupsOf({ entities: [line('t-1a', [[[0.1, -0.2, 1, 1, 1], [0.1, 0.2, 1, 1, 1]]])] }).get('t-1')
+        const f3 = cubeFrameAt(tall, 1, { scale: 'fit' })
+        expect(near(f3.points[1].slice(0, 2), [0, 0.05], 1e-6)).toBe(true)
+        expect(near(f3.points[2].slice(0, 2), [0, 0.95], 1e-6)).toBe(true)
+        // The whole field as the zone (the officer's choice): ±0.9 about (0, 0).
+        const full = { xMin: -1, xMax: 1, yMin: -1, yMax: 1 }
+        expect(near(cubeFrameAt(wide, 1, { scale: 'fit', zone: full }).points[2].slice(0, 2), [0.9, 0], 1e-6)).toBe(true)
+        // A single dot: nothing to stretch, it moves to the zone's centre.
+        expect(near(cubeFrameAt(g, 3, { scale: 'fit' }).points[1].slice(0, 2), [0, 0.5], 1e-9)).toBe(true)
         expect(cubeFrameAt(g, 3, { scale: 'fit' }).points).toHaveLength(3)
+    })
+    it('the still-beam approval judges the frame as the engine does: after the keep-in zone', () => {
+        // A stroke that only grazes the zone's edge: the engine blanks its lower part and the stub left near y = 0 is
+        // a dot to it (seen on MOXIR 2026-10-17 03:1x, every tripping dot at y ≈ 0). The approval must list that stub.
+        const graze = lineGroupsOf({ entities: [line('z-1a', [[[-0.3, -0.3, 1, 1, 1], [0.3, 0.003, 1, 1, 1], [0.3, 0.003, 1, 1, 1]]])] }).get('z-1')
+        const dots = stillBeamsOfGroup(graze, stillBeams)
+        expect(dots).toHaveLength(1)
+        expect(near([dots[0].x, dots[0].y], [0.3, 0.003], 1e-3)).toBe(true)
+        // With the whole field as the zone the stroke is a stroke: no dot.
+        expect(stillBeamsOfGroup(graze, stillBeams, { zone: { xMin: -1, xMax: 1, yMin: -1, yMax: 1 } })).toHaveLength(0)
+        // And in 'fit' nothing is clipped, so no stub appears either.
+        expect(stillBeamsOfGroup(graze, stillBeams, { scale: 'fit' })).toHaveLength(0)
     })
     it('blanks and counts a point that falls outside the cube\'s field', () => {
         const doc = { entities: [line('c-1a', [[[0.9, 0, 1, 1, 1], [0.95, 0, 1, 1, 1]]], { rotation: aim(10) }), line('c-1b', [[[0, 0, 1, 1, 1]]], { rotation: aim(-10) })] }

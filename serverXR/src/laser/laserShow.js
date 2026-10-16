@@ -30,6 +30,7 @@
 'use strict'
 
 const { normaliseFramePoints } = require('../../../shared/laserFrame.cjs')
+const { applyZone, normaliseZone, DEFAULT_ZONE } = require('./laserEngine') // the zone as the engine keeps it: fit fills it, approval looks after it
 
 const TICK_MS = 50 // well inside the engine's signal-loss stop (FRAME_TIMEOUT_MS 200)
 const RELOAD_MS = 15000 // the document read again: an edit during the show carries without a restart
@@ -167,7 +168,7 @@ const lineGroupsOf = (document) => {
  * cube with nothing lit draws one blank point (dark, as the compiled frames do). Pure.
  * @returns {{ points: number[][], outside: number }}
  */
-const cubeFrameAt = (group, t, { scale = 1 } = {}) => {
+const cubeFrameAt = (group, t, { scale = 1, zone = DEFAULT_ZONE } = {}) => {
     const strokes = []
     let outside = 0
     for (const l of group.lines) {
@@ -182,12 +183,12 @@ const cubeFrameAt = (group, t, { scale = 1 } = {}) => {
     }
     // The zoom (a projector's size control): a number about the cube's axis, or 'fit' — this picture fills the field
     // about its own lit centre. What leaves the field is blanked and counted.
-    const { k, cx, cy } = zoomOf(scale, strokes)
+    const { k, cx, cy, tx, ty } = zoomOf(scale, strokes, zone)
     const out = []
     for (const pts of strokes) {
         const z = pts.map((p) => {
-            const x = (p[0] - cx) * k
-            const y = (p[1] - cy) * k
+            const x = (p[0] - cx) * k + tx
+            const y = (p[1] - cy) * k + ty
             if (Math.abs(x) <= 1 && Math.abs(y) <= 1) return [x, y, p[2], p[3], p[4]]
             if (isLit(p)) outside += 1
             return [clamp(x, -1, 1), clamp(y, -1, 1), 0, 0, 0]
@@ -200,16 +201,25 @@ const cubeFrameAt = (group, t, { scale = 1 } = {}) => {
     return { points: out.length ? out : [BLANK], outside }
 }
 
-const FIT_EDGE = 0.9 // 'fit' fills the field to here, a margin inside its edge
+const FIT_EDGE = 0.9 // 'fit' fills the keep-in zone to here, a margin inside each of its edges
 
-/** The zoom of a picture: { k, cx, cy } — 'fit' about the lit centre to FIT_EDGE, a number about the axis. Pure. */
-const zoomOf = (scale, strokes) => {
-    if (scale !== 'fit') return { k: scaleOf(scale), cx: 0, cy: 0 }
+/**
+ * The zoom of a picture: { k, cx, cy, tx, ty } with x' = (x − cx)·k + tx. A number: about the cube's axis, a projector's
+ * size control. 'fit': the picture's lit box fills the cube's keep-in ZONE (not the field) to FIT_EDGE of each half-extent,
+ * centred on the zone's centre — so nothing of it is clipped by the zone, and no clipped stub reads as a still beam
+ * (measured 2026-10-17 03:1x on MOXIR: fit about the field under the upper-half zone cut 40 % of the lit points and
+ * tripped the still-beam guard 75 times in 57 min, every dot at y ≈ 0). Pure.
+ */
+const zoomOf = (scale, strokes, zone = DEFAULT_ZONE) => {
+    if (scale !== 'fit') return { k: scaleOf(scale), cx: 0, cy: 0, tx: 0, ty: 0 }
+    const z = normaliseZone(zone)
     let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity
     for (const pts of strokes) for (const p of pts) if (isLit(p)) { xMin = Math.min(xMin, p[0]); xMax = Math.max(xMax, p[0]); yMin = Math.min(yMin, p[1]); yMax = Math.max(yMax, p[1]) }
-    if (!(xMin <= xMax)) return { k: 1, cx: 0, cy: 0 }
-    const e = Math.max(xMax - xMin, yMax - yMin) / 2
-    return { k: e > 1e-6 ? Math.min(10, FIT_EDGE / e) : 1, cx: (xMin + xMax) / 2, cy: (yMin + yMax) / 2 }
+    if (!(xMin <= xMax)) return { k: 1, cx: 0, cy: 0, tx: 0, ty: 0 }
+    const ex = (xMax - xMin) / 2, ey = (yMax - yMin) / 2
+    const hx = ((z.xMax - z.xMin) / 2) * FIT_EDGE, hy = ((z.yMax - z.yMin) / 2) * FIT_EDGE
+    const k = Math.min(10, ex > 1e-6 ? hx / ex : 10, ey > 1e-6 ? hy / ey : 10)
+    return { k: clamp(k, 0.1, 10), cx: (xMin + xMax) / 2, cy: (yMin + yMax) / 2, tx: (z.xMin + z.xMax) / 2, ty: (z.yMin + z.yMax) / 2 }
 }
 
 /** The zoom, 0.1 … 10, 1 when not a number: the room's picture as drawn. Pure. */
@@ -232,12 +242,14 @@ const defaultMap = (cubeIds, groupIds) => {
  * own function), each once: [{ x, y, within }], `within` the engine's default tolerance. The frames are sampled at the
  * middle of every step of the finest list. Pure.
  */
-const stillBeamsOfGroup = (group, stillBeams, { within = 0.01, grid = 0.005, scale = 1 } = {}) => {
+const stillBeamsOfGroup = (group, stillBeams, { within = 0.01, grid = 0.005, scale = 1, zone = DEFAULT_ZONE } = {}) => {
+    const z = normaliseZone(zone)
     const n = Math.max(1, ...group.lines.map((l) => l.frames.list.length))
     const period = group.lines[0]?.frames.period ?? 1
     const seen = new Map()
     for (let i = 0; i < n; i += 1) {
-        const { points } = cubeFrameAt(group, ((i + 0.5) * period) / n, { scale })
+        // The engine judges the frame AFTER its keep-in zone (a clipped stub is a dot to it), so the approval looks there too.
+        const { points } = applyZone(cubeFrameAt(group, ((i + 0.5) * period) / n, { scale, zone: z }).points, z)
         for (const d of stillBeams(points)) {
             const key = `${Math.round(d.x / grid)},${Math.round(d.y / grid)}`
             if (!seen.has(key)) seen.set(key, { x: Math.round(d.x * 1e4) / 1e4, y: Math.round(d.y * 1e4) / 1e4, within })
@@ -294,11 +306,13 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
         if (!run) return
         const engine = getEngine()
         const t = now() / 1000
+        let zone = null // the engine's keep-in zone, read once per tick and only when a frame is drawn
         for (const m of run.map) {
             const key = frameKeyAt(m.lines, t)
             let res
             if (key !== m.key || m.held) {
-                const frame = cubeFrameAt(m.lines, t, { scale: run.scale })
+                zone ??= engine.state?.().zone ?? DEFAULT_ZONE
+                const frame = cubeFrameAt(m.lines, t, { scale: run.scale, zone })
                 m.outside = frame.outside
                 res = engine.setFrame(m.cube, frame.points, run.out)
             } else res = engine.alive(m.cube, run.out)
