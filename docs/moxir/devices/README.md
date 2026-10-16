@@ -17,6 +17,8 @@ The owner's photos of the printed manuals (2026-10-16 16:22, di.bo) are in `phot
 
 **Maker (owner's eye, 2026-10-15 16:3x):** UP-PL5403, UP-B380F, UP-LA40WF and UP-YZ31P are U-Plus Lighting (`maker` in fixtures.json and the type library; model and manual per kind). Charts with value ranges: `scripts/place/fixtures/charts/`. The rig's `kit_makers` block lists maker/model/manual per kind. The project's `rentalList` has no maker/model field in its schema (`normalizeRentalList`, src/shared/projectSchema.js + the server twin): the equipment sheet reads the maker from the type library.
 
+**Controllers on hand (owner 2026-10-16):** 2 tested ESP nodes (BA6FCC, BC5A64), 1 ENTTEC DMX USB PRO, 1 ESP on old firmware (Wi-Fi + Art-Net only) — `controllers.md`.
+
 ## Setup-day check list (owner's approvals 2026-10-15 17:1x)
 1. **B380F pan on ch 1** (the printed manual with the unit, 2026-10-16 = the 10-09 walk). Send pan ch 1 / tilt ch 2; the head must follow. If not, that unit is in another mode on its display. Ch 11–16 (prisms, focus, reset) are named by the manual, not walked: step one unit 0..255 per channel.
 2. **PL5403 8-ch mode set on the unit** (A001 on its display). 40 units, U2 = 40 × 8 = 320 of 512.
