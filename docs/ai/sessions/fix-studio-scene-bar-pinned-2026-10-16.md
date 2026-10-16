@@ -9,3 +9,7 @@ New / Duplicate / Delete / up / down sit at the top of the scrolling `.sfp-conte
   after 377..409 px (inside). Delete one scene: 52 -> 51, still 51 after reload.
 - **Validation:** `npx vitest run src/studio/components/ScenePicker` 12 passed; `npm run lint` ok. Sticky is layout, which jsdom cannot assert; the browser
   measurement is the proof. Not tested: the owner's own screen size, touch, a scene list shorter than the panel.
+
+## 2026-10-17 — CI fix
+
+node-22-compat and build-and-test failed on `styles/spine.test.js`: the sticky header had `background: rgb(4, 6, 14)`, a colour literal outside base.css. Replaced with `var(--di-surface)`. Spine test: 322 passed locally.
