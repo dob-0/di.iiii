@@ -96,38 +96,41 @@ export const TESTED_CHANNEL_LISTS = {
             // ch 5 colour (cap.laserColour), ch 6/7 position from the aim (cap.aim: 0-125 by hand, 64 = centre,
             // the scan half-angle is fixtures.json laser.scan_field_half_deg, ASSUMED), ch 16-18 = 0 (brightest),
             // everything else 0, ch 20-32 = 0 (the second graphic stays off). Maker chart:
-            // scripts/place/fixtures/charts/up-la40wf.json (APPROVED by the owner 2026-10-15 as the IP-LL40 in 32-ch mode; the tested values below agree with it).
+            // scripts/place/fixtures/charts/up-la40wf.json (APPROVED by the owner 2026-10-15 as the IP-LL40 in 32-ch mode; the PRINTED manual with the unit, photographed 2026-10-16, agrees row for row — its misprints are in the chart file; the tested values below agree with it).
             32: [
                 { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
-                { ...laserChannel(2, 'Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, 200-255 built-in graphics; static beam 200)'), default: 200 },
+                { ...laserChannel(2, 'Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, built-in graphics 200-255 by the PDF, 250-255 by the printed manual; static beam 250 — inside both)'), default: 250 },
                 { ...laserChannel(3, 'Graphic select (one graphic per two values; static beam 0 = graphic 1)'), default: 0 },
                 { ...laserChannel(4, 'Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 0)'), default: 0 },
                 { ...laserChannel(5, 'Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)'), default: 8, cap: { laserColour: LASER_COLOURS } },
                 { ...laserChannel(6, 'X position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'x', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
                 { ...laserChannel(7, 'Y position (0-125 by hand, 64 centre)'), default: 64, cap: { aim: { axis: 'y', from: 0, to: 125, centre: 64, halfDeg: 18.5, basis: 'ASSUMED — scan_field_half_deg, fixtures.json' } } },
-                ...[8, 9, 10].map((n) => laserChannel(n, `Ch ${n}`)),
-                laserChannel(11, 'Centre rotation (150 slow clockwise)'),
-                laserChannel(12, 'Ch 12'),
-                laserChannel(13, 'Wave 1'),
-                laserChannel(14, 'Wave 2'),
-                laserChannel(15, 'Strobe'),
+                laserChannel(8, 'Zoom (0-10 none, 11-87 by hand, 88-150 zoom, 151-200 zoom out, 201-255 loop)'),
+                laserChannel(9, 'X rotation (0 none, 1-128 by hand, 129-255 auto)'),
+                laserChannel(10, 'Y rotation (0 none, 1-128 by hand, 129-255 auto)'),
+                laserChannel(11, 'Centre rotation (0 none, 1-128 by hand, 129-192 clockwise, 193-255 counter-clockwise; 150 = slow clockwise, tested)'),
+                laserChannel(12, 'Gradual painting (0-10 none, 10-74 by hand, 75-104 grow, 105-144 fade, 145-184 loop fade, 185-224 / 225-255 end-to-end draw)'),
+                laserChannel(13, 'X wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)'),
+                laserChannel(14, 'Y wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)'),
+                laserChannel(15, 'Strobe (0-10 none, 11-199 auto slow to fast, 200-255 by sound)'),
                 laserChannel(16, 'Red level (0 brightest)'),
                 laserChannel(17, 'Green level (0 brightest)'),
                 laserChannel(18, 'Blue level (0 brightest)'),
-                laserChannel(19, 'Ch 19'),
+                laserChannel(19, 'Out-of-bounds (0-49 rebound, 50-99 to a line, 100-149 blanking, 150-255 pass through)'),
                 ...Array.from({ length: 13 }, (_, i) => laserChannel(20 + i, i === 2 ? 'Graphic 2 colour (mirror ch 5)' : `Graphic 2, ch ${20 + i}`))
             ]
         }
     }
 }
 
-// ARCHIVED modes: kept selectable (`mode: 'walk-2026-10-09'`), never the default, never exported (gdtf.js).
-// Each carries its reason (owner's rule 2026-10-15: every mark reads APPROVED or ARCHIVED).
+// ARCHIVED modes: kept selectable (`mode: 'walk-2026-10-09'`, `mode: 'pdf-380-ip-beam-2026-10-15'`), never the default,
+// never exported (gdtf.js). Each carries its reason (owner's rule 2026-10-15: every mark reads APPROVED or ARCHIVED).
+// A code may keep several (an array); the resolver takes one or many.
 export const ARCHIVED_CHANNEL_LISTS = {
-    'UP-B380F': {
+    'UP-B380F': [{
         name: 'walk-2026-10-09',
         footprint: 16,
-        reason: 'the desk profile walked on Sevan units 2026-10-09 (ch 1-10); replaced as the default by the unit\'s own manual chart (owner 2026-10-15); pan was ch 1 there, ch 10 in the manual — setup-day check #1 decides',
+        reason: 'the desk profile walked on Sevan units 2026-10-09 (ch 1-10). The printed manual with the unit (owner 2026-10-16) has this SAME order and is the default with the manual\'s value ranges; the walk stays for the record (its caps were ASSUMED where the manual now states them)',
         ...SEVAN,
         modes: {
             // Desk profile "Beam 16ch", the map from its manual: strobe 255 = open,
@@ -157,9 +160,36 @@ export const ARCHIVED_CHANNEL_LISTS = {
                 { role: 'control', label: 'Reset (always 0)', default: 0 }
             ]
         }
-    }
+    }, {
+        name: 'pdf-380-ip-beam-2026-10-15',
+        footprint: 16,
+        reason: 'the downloaded U-Plus "380 IP BEAM" PDF chart (pan ch 10, colour first), approved 2026-10-15 from a product page; NOT the unit\'s chart — the printed manual with the unit (owner 2026-10-16) has pan on ch 1. Kept so a desk that holds this profile still decodes',
+        fixture: 'U-Plus IP65 380W Beam, PDF manual "380 IP BEAM" (upluslighting.com 2024-01) — ARCHIVED 2026-10-16',
+        basis: 'ARCHIVED',
+        url: 'https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf',
+        licence: null,
+        modes: {
+            16: [
+                { role: 'color', label: 'Colour wheel (0 white, 10-14 colour 1 … 130-134 colour 13, 140+ rotate)', default: 0 },
+                { role: 'strobe', label: 'Strobe (0 close, 1-4 open, 51-240 slow to fast, 252-255 open)', default: 255, cap: { shutter: [{ from: 0, to: 0, open: false }, { from: 1, to: 4, open: true }, { from: 252, to: 255, open: true }] } },
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'gobo', label: 'Gobo (0-4 white, 5-69 gobo 1-13, 191+ shake)', cap: { gobo: true, goboSlots: { from: 5, to: 69, count: 13, basis: 'APPROVED chart: 5-wide slots stated' }, goboShake: { from: 191, basis: 'APPROVED chart' } } },
+                { role: 'prism', label: 'Prism (0-63 none, 64 prism 1, 128 prism 2, 192 both)', cap: { prism: true, prismIn: { from: 64, facets: 16, basis: 'APPROVED chart for the thresholds; which prism is 8 or 16 facets is ASSUMED' } } },
+                { role: 'rotation', label: 'Prism 1 rotation (0-127 angle, 128+ spin)', cap: { prismRotation: { prism: 1, basis: 'APPROVED chart; read as an index 0…255 → 0…360° (0-127 = 0-400°)' } } },
+                { role: 'aux1', label: 'Prism 2 rotation (0-127 angle, 128+ spin)', cap: { prismRotation: { prism: 2, basis: 'APPROVED chart; read as an index 0…255 → 0…360°' } } },
+                { role: 'frost', label: 'Frost (0-127 none, 128-191 frost, 192-255 colourful)', cap: { frost: { from: 128, to: 191, basis: 'APPROVED chart: an insert, not a curve' } } },
+                { role: 'focus', label: 'Focus' },
+                { role: 'pan', label: 'Pan', default: 128 },
+                { role: 'panFine', label: 'Pan fine', default: 0 },
+                { role: 'tilt', label: 'Tilt', default: 128 },
+                { role: 'tiltFine', label: 'Tilt fine', default: 0 },
+                { role: 'speed', label: 'Pan/tilt speed' },
+                { role: 'control', label: 'Reset (26-76 effects, 77-127 XY, 128+ all; always 0)', default: 0 },
+                { role: 'lamp', label: 'Lamp (10-100 off, 101-255 on; the desk never sends it, 0)', default: 0 }
+            ]
+        }
+    }]
 }
-
 const CODE_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,31}$/
 
 // The id every lamp uses: the rental/crew code, lowercased. A code, not a
@@ -202,8 +232,7 @@ const modesOf = (kind) => {
     // The ASSUMED test modes (assumedProfiles.js, RIG_BUILD.md §18.1) come AFTER the
     // real ones, so a lamp's default is still the maker's mode, and they are never
     // mistaken for it: `basis: 'ASSUMED'`, a name ending `-assumed`, their words.
-    const archived = ARCHIVED_CHANNEL_LISTS[kind.code]
-    const kept = archived ? [{
+    const kept = [].concat(ARCHIVED_CHANNEL_LISTS[kind.code] || []).map((archived) => ({
         name: archived.name,
         footprint: archived.footprint,
         channels: archived.modes[archived.footprint].map((c) => ({ ...c })),
@@ -212,7 +241,7 @@ const modesOf = (kind) => {
         basis: 'ARCHIVED',
         archived: true,
         reason: archived.reason
-    }] : []
+    }))
     return [...real, ...kept, ...assumedModesOf(kind.code)]
 }
 
@@ -233,33 +262,35 @@ const LASERCUBE_MK2_MANUAL = {
     licence: null
 }
 export const MAKER_CHANNEL_LISTS = {
-    // APPROVED (owner's eye and word, 2026-10-15): UP-B380F = U-Plus "IP65 380W Beam", the "380 IP BEAM" manual
-    // (upluslighting.com 2024-01), 16 ch, value ranges verbatim in scripts/place/fixtures/charts/up-b380f.json.
-    // The 10-09 walk (pan on ch 1) is kept as the archived mode `walk-2026-10-09` (ARCHIVED_CHANNEL_LISTS).
-    // The lamp channel (16) rests at 0 = no function: the desk never strikes or kills a lamp.
+    // APPROVED (the owner's word, 2026-10-16 16:2x — he sent the printed manual: "the beam real chart"): UP-B380F runs the
+    // PRINTED "MOVEHEAD FIXTURE USER MANUAL" shipped with the unit (ch. 3, pp. 13-15), 16 ch, pan FIRST — the order the 10-09
+    // walk found on the Sevan units. Value ranges verbatim in scripts/place/fixtures/charts/up-b380f.json; photos in
+    // docs/moxir/devices/photos/b380f-manual-p13…p15.jpg. The downloaded "380 IP BEAM" PDF (pan ch 10) is NOT the unit's chart:
+    // archived as mode `pdf-380-ip-beam-2026-10-15`; the walk stays as `walk-2026-10-09` (ARCHIVED_CHANNEL_LISTS).
+    // Ch 16 (reset) rests at 0 = none: the desk never strikes, kills or resets a lamp (100-105 lamp off, 200-205 on, 240+ reset).
     'UP-B380F': {
-        fixture: 'U-Plus IP65 380W Beam, manual "380 IP BEAM" (2024-01), APPROVED by the owner 2026-10-15',
+        fixture: 'U-Plus UP-B380F, the printed "MOVEHEAD FIXTURE USER MANUAL" with the unit (ch. 3 Channel table, pp. 13-15), photographed by the owner 2026-10-16',
         basis: 'APPROVED',
-        url: 'https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf',
+        url: null,
         licence: null,
         modes: {
             16: [
-                { role: 'color', label: 'Colour wheel (0 white, 10-14 colour 1 … 130-134 colour 13, 140+ rotate)', default: 0 },
-                { role: 'strobe', label: 'Strobe (0 close, 1-4 open, 51-240 slow to fast, 252-255 open)', default: 255, cap: { shutter: [{ from: 0, to: 0, open: false }, { from: 1, to: 4, open: true }, { from: 252, to: 255, open: true }] } },
-                { role: 'dimmer', label: 'Dimmer' },
-                { role: 'gobo', label: 'Gobo (0-4 white, 5-69 gobo 1-13, 191+ shake)', cap: { gobo: true, goboSlots: { from: 5, to: 69, count: 13, basis: 'APPROVED chart: 5-wide slots stated' }, goboShake: { from: 191, basis: 'APPROVED chart' } } },
-                { role: 'prism', label: 'Prism (0-63 none, 64 prism 1, 128 prism 2, 192 both)', cap: { prism: true, prismIn: { from: 64, facets: 16, basis: 'APPROVED chart for the thresholds; which prism is 8 or 16 facets is ASSUMED' } } },
-                { role: 'rotation', label: 'Prism 1 rotation (0-127 angle, 128+ spin)', cap: { prismRotation: { prism: 1, basis: 'APPROVED chart; read as an index 0…255 → 0…360° (0-127 = 0-400°)' } } },
-                { role: 'aux1', label: 'Prism 2 rotation (0-127 angle, 128+ spin)', cap: { prismRotation: { prism: 2, basis: 'APPROVED chart; read as an index 0…255 → 0…360°' } } },
-                { role: 'frost', label: 'Frost (0-127 none, 128-191 frost, 192-255 colourful)', cap: { frost: { from: 128, to: 191, basis: 'APPROVED chart: an insert, not a curve' } } },
-                { role: 'focus', label: 'Focus' },
-                { role: 'pan', label: 'Pan', default: 128 },
+                { role: 'pan', label: 'Pan (0-540°)', default: 128 },
+                { role: 'tilt', label: 'Tilt (0-270°)', default: 128 },
                 { role: 'panFine', label: 'Pan fine', default: 0 },
-                { role: 'tilt', label: 'Tilt', default: 128 },
                 { role: 'tiltFine', label: 'Tilt fine', default: 0 },
-                { role: 'speed', label: 'Pan/tilt speed' },
-                { role: 'control', label: 'Reset (26-76 effects, 77-127 XY, 128+ all; always 0)', default: 0 },
-                { role: 'lamp', label: 'Lamp (10-100 off, 101-255 on; the desk never sends it, 0)', default: 0 }
+                { role: 'speed', label: 'Pan/tilt speed (fast to slow)' },
+                { role: 'frost', label: 'Frost (0-127 none, 128-191 colourful, 192-255 frost)', cap: { frost: { from: 192, to: 255, basis: 'MANUAL (printed, 2026-10-16): 192-255 insert frost; 128-191 is a colour filter, not frost' } } },
+                { role: 'strobe', label: 'Strobe (0-3 dark, 4-103 pulse, 104-107 open, 108-207 fade, 208-212 open, 213-251 random, 252-255 open)', default: 255, cap: { shutter: [{ from: 0, to: 3, open: false }, { from: 104, to: 107, open: true }, { from: 208, to: 212, open: true }, { from: 252, to: 255, open: true }] } },
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'color', label: 'Colour wheel (0-4 white, 10-14 colour 1 … 130-134 colour 13, 5-wide splits between, 140-200 rotate fwd, 201-255 rev)', default: 0 },
+                { role: 'gobo', label: 'Gobo (0-4 white, 5-9 gobo 1 … 85-89 gobo 17, 90-128 rotate rev, 129-131 stop, 132-170 rotate fwd, 171-255 shake gobo 1-17)', cap: { gobo: true, goboSlots: { from: 5, to: 89, count: 17, basis: 'MANUAL (printed, 2026-10-16): 5-wide slots' }, goboShake: { from: 171, basis: 'MANUAL (printed, 2026-10-16): 171-255 shake gobo 1-17' } } },
+                { role: 'prism', label: 'Prism 1 (0-127 none, 128-255 in)', cap: { prism: true, prismIn: { from: 128, facets: 16, basis: 'MANUAL (printed, 2026-10-16): 128-255 insert prism 1; 16 facets from the spec (fixtures.json)' } } },
+                { role: 'rotation', label: 'Prism 1 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)', cap: { prismRotation: { prism: 1, index: { from: 0, to: 127 }, basis: 'MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse' } } },
+                { role: 'aux1', label: 'Prism 2 (0-127 none, 128-255 in)', cap: { prism2: { kind: 'honeycomb', in: { from: 128 }, basis: 'MANUAL (printed, 2026-10-16): 128-255 insert prism 2' } } },
+                { role: 'aux2', label: 'Prism 2 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)', cap: { prismRotation: { prism: 2, index: { from: 0, to: 127 }, basis: 'MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse' } } },
+                { role: 'focus', label: 'Focus (far to near)' },
+                { role: 'control', label: 'Reset (0-99 none; 100-105 lamp off, 200-205 lamp on, 210-215 reset XY, 220-235 reset effects, 240-255 reset all — always 0)', default: 0 }
             ]
         }
     },

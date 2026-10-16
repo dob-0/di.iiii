@@ -9,7 +9,51 @@
   "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
   "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
   "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
-  "basis": "APPROVED"
+  "basis": "APPROVED",
+  "printed": {
+   "what": "the PRINTED manual shipped with the unit: \"DMX-512 Channel function\" 19CH mode and 32CH mode tables, and \"LCD Menu and function introduction\" (menu rows 1-24)",
+   "photos": [
+    "docs/moxir/devices/photos/la40wf-manual-19ch-ch1-7.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-19ch-ch8-19.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-32ch-ch20-24.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-32ch-ch25-32.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-lcd-menu-1-9.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-lcd-menu-10-23.jpg"
+   ],
+   "date": "photographed 2026-10-16 16:22",
+   "read": "photographed by the owner 2026-10-16 16:22 (di.bo inbox 2026-10-16, photo-1093…1101), read 2026-10-16 16:3x, values verbatim",
+   "agrees": "row for row with the IP-LL30 PDF chart in this file (19 ch and 32 ch); the LCD menu matches the sheet",
+   "misprints": [
+    "ch 2 (mode): the print reads \"250-255 built-in graphics\" and lists nothing for 200-249; the PDF reads 200-255. Both hold 250-255, so the static beam sends 250 (was 200)",
+    "ch 25 (32 ch, zoom): the print repeats \"11-87\" where the 19-ch table (ch 8) reads \"88-150 zoom\"; kept 88-150"
+   ],
+   "lcd_menu": [
+    "1 DMX Address 1-512",
+    "2 Show Mode: ILD / PRG / Auto / Sound (switches to DMX by itself when DMX is connected)",
+    "3 Program: Progr 0-4 (1-3 edited on the console and imported)",
+    "4 SD File: folder name",
+    "5 SizeX -100..100",
+    "6 SizeY -100..100 (built-in program phase)",
+    "7 Speed 8-40 (set by the galvanometer)",
+    "8 DMX State without signal: Show / Black",
+    "9 Master-slave: Slave / Master",
+    "10 Y Phasic: positive / reverse",
+    "11 X Phasic: positive / reverse",
+    "12 Color Mode: RGB / White",
+    "13 Laser Lock ON/OFF (closes when the laser angle is too small)",
+    "14 Sound sense 0-100",
+    "15 SD Sound ON/OFF",
+    "16 Highlight 0-100 (at the colour junction)",
+    "17 ILDA Lock 0-100 / OFF (locks to the ILDA input on the RJ45)",
+    "18 Load Flash ON/OFF (ILD programs from the SD card LOAD folder)",
+    "19 Update Prog: OFF / Progr1-4 / all (show1.yuq-show4.yuq)",
+    "20 Red dimmer 0-255",
+    "21 Green dimmer 0-255",
+    "22 Blue dimmer 0-255 (20-22 valid in Auto/DMX, not ILDA)",
+    "23 DMX mode: 6ch/19ch/32ch/29ch/52ch — note \"19CH/32CH available\"",
+    "24 Language"
+   ]
+  }
  },
  "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
  "modes": {
