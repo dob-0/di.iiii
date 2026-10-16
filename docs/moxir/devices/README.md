@@ -37,3 +37,13 @@ the 18 beams and which 10 of the 40 washes are on the truss, and where the 5 was
 1. **B380F pan on ch 10 vs ch 1.** Send pan on ch 10 (the manual's order, the desk's default). If the head does not move and ch 1 moves it, switch the 18 fixtures to mode `walk-2026-10-09` and say so. No lamp is struck by either chart: ch 16 stays 0 (lamp on = 101–255 is a 3-second strike).
 2. **PL5403 8-ch mode set on the unit** (A001 on its display). 40 units, U2 = 40 × 8 = 320 of 512.
 3. **LA40WF 32-ch mode set in its menu**, laser lock and ILDA lock checked, the key and E-stop in place; then walk ch 3 to find which graphic is a single line or dot (graphic 1 = value 0 is the ASSUMED one). U1 = 18 × 16 + 2 × 32 + 1 = 353 of 512.
+
+## The patch as the owner set it in the plot (2026-10-16 20:3x–21:1x, moxir-v2-11 v260 → v370, read back)
+Set by the owner in `/moxir/plot/moxir-v2-11` "as it is in real life"; two fixes at his word (v262): truss wash `rig-par-cut-06` → U1 89–96,
+`rig-par-cut-07` unpatched (the 3D truss has 11 washes, the real one 10). Universe 1: truss beam 1–16 · 10 truss washes 17–96 · truss beam 97–112 ·
+5 ground washes 113–152 · 5 left-side beams 153–232 · 6 plane beams 233–328 · 18 washes 329–472. Universe 2: UP-LA40WF 1–32 / 33–64 · 5 washes
+73–112 · 5 right-side beams 113–192 · 1 hung wash 217–224. No address: 1 wash (cut-07) + 36 LaserCube lines (LAN by design).
+Venue facts (owner, 21:0x): the 6 LaserCubes hang on the BACK WALL, not on the crane (lines set on the wall's inner face z −53.4, physics 0/96);
+the crane is parked at the upper entrance with nothing on it and is not in use.
+Two sides (owner, 21:2x): the patch (real DMX) and the simulation are separate — scenes pick lamps by kind and place, never by address
+(measured: the unpatched cut-07 is posed in 53/53 scenes, lit in 31), so scenes are written before a lamp is patched. Owed: this rule in RIG_BUILD.md.
