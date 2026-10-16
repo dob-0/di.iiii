@@ -36,6 +36,10 @@ const FIND_GAP_MS = 5000
 //                              Out. status: answering | wrong-serial | no-answer | refused
 //   POST /laser/api/arm        { armed, cube, out, confirm? } — ONE cube on or off; the phrase only
 //                              on the first ON of a run (laserEngine.js rule 10)
+//   POST /laser/api/show       { project, map?: { cubeId: groupId }, reloadMs? } — play that project's laser lines
+//                              on the cubes by show time (laser/laserShow.js, 2026-10-17): the room's frames, the
+//                              engine's guards; restarts a running show. 404 no such project, 400 nothing to play
+//   POST /laser/api/show/stop  {} — the show player stops; its cubes go blank (a stop: STOPS_FROM_REMOTE)
 //   POST /laser/api/config     { cubes: [{ serial, ip, name }, …] } — write laser.json (laserConfig.js)
 //                              and reload: the engine is disarmed and closed first, then rebuilt
 //                              from the new file on the next request. No restart.
@@ -48,7 +52,7 @@ const FIND_GAP_MS = 5000
 // How long a Laser Out's address check waits for the cube's answer.
 const PROBE_WAIT_MS = 800
 
-function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now } = {}) {
+function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now, loadDocument } = {}) {
   const laserDir = path.join(dataDir, 'laser')
   let engine = null
   const getEngine = () => {
@@ -57,6 +61,10 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     engine = createLaserEngine({ dataDir: laserDir, log, ...engineOptions })
     return engine
   }
+  // The show player (laser/laserShow.js): a project's laser lines on the cubes. It asks for the engine of the
+  // moment on every tick, so a config reload (a new engine) does not stop the show.
+  const { createShowPlayer } = require('../laser/laserShow')
+  const player = createShowPlayer({ getEngine, loadDocument, now, log })
   // Disarm, close and forget the engine; the next request builds it from laser.json again.
   const reload = async () => {
     const old = engine
@@ -80,7 +88,12 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   const router = express.Router()
   router.use((req, res, next) => (req.method === 'GET' || req.method === 'HEAD' ? next() : requireOwnPage(req, res, next)))
   router.use(express.json({ limit: '512kb' }))
-  router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().state()) })
+  router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: player.state() }) })
+  router.post('/api/show', requireSameMachine, async (req, res) => {
+    const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs })
+    res.status(out.ok ? 200 : out.status || 400).json({ ...out, show: player.state() })
+  })
+  router.post('/api/show/stop', stopGate, (req, res) => res.json({ ok: true, ...player.stop(), show: player.state() }))
   router.get('/api/frames', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().frames()) })
   router.post('/api/frame', requireSameMachine, (req, res) => {
     const out = getEngine().setFrame(req.body?.cube, req.body?.points, req.body?.out ?? null)
@@ -183,6 +196,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     // Every cube blanked and switched off, the socket closed; resolves when the messages have left.
     close: () => {
       if (!engine) return Promise.resolve()
+      player.stop()
       const going = engine.shutdown()
       engine = null
       return going
