@@ -17,15 +17,22 @@ describe('what the desk puts in a B380F\'s path', () => {
         expect(decodeDmx(channels, values({ gobo: 120 }), {}).optics).toBeNull() // 70–190: rotate or white, not drawn
         expect(decodeDmx(channels, values({ gobo: 200 }), {}).optics.goboShake).toBe(true)
     })
-    it('a prism is in at 64+ (the chart); its rotation read as an index', () => {
-        expect(decodeDmx(channels, values({ prism: 63 }), {}).optics).toBeNull()
-        const o = decodeDmx(channels, values({ prism: 64, rotation: 255 }), {}).optics
+    it('a prism is in at 128+ (the printed manual); its rotation 0-127 is an index 0…360°, 128+ a spin with no phase', () => {
+        expect(decodeDmx(channels, values({ prism: 127 }), {}).optics).toBeNull()
+        const o = decodeDmx(channels, values({ prism: 128, rotation: 127 }), {}).optics
         expect(o.prism.facets).toBe(16)
         expect(o.prism.rotation).toBeCloseTo(Math.PI * 2, 9)
+        expect(o.prism.spin).toBeUndefined()
+        expect(decodeDmx(channels, values({ prism: 128, rotation: 64 }), {}).optics.prism.rotation).toBeCloseTo((64 / 127) * Math.PI * 2, 9)
+        const s = decodeDmx(channels, values({ prism: 128, rotation: 255 }), {}).optics.prism
+        expect(s).toMatchObject({ rotation: 0, spin: true })
+        expect(decodeDmx(channels, values({ aux1: 128, aux2: 150 }), {}).optics.honeycomb).toMatchObject({ rotation: 0, spin: true })
     })
-    it('frost is an insert at 128–191 only (192–255 is the colourful insert, not frost)', () => {
+    it('frost is an insert at 192–255 only (128–191 is the colourful insert, not frost — the printed manual)', () => {
         expect(decodeDmx(channels, values({ frost: 127 }), {}).optics).toBeNull()
-        expect(decodeDmx(channels, values({ frost: 150 }), {}).optics.frost).toBe(1)
-        expect(decodeDmx(channels, values({ frost: 255 }), {}).optics).toBeNull()
+        expect(decodeDmx(channels, values({ frost: 150 }), {}).optics).toBeNull()
+        expect(decodeDmx(channels, values({ frost: 191 }), {}).optics).toBeNull()
+        expect(decodeDmx(channels, values({ frost: 192 }), {}).optics.frost).toBe(1)
+        expect(decodeDmx(channels, values({ frost: 255 }), {}).optics.frost).toBe(1)
     })
 })

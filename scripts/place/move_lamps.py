@@ -5,7 +5,8 @@
         [--token-file <env with API_TOKEN=...>] [--backup <dir>] [--apply]
 
 The moves file is data with its own provenance: {"what", "source", "moves": [{"id", "position": [x, y, z],
-"rotation": [rx, ry, rz]?}]}. Dry run unless --apply: prints every lamp from -> to. With --apply it first saves the
+"rotation": [rx, ry, rz]?, "fixture": {...}?}]} — "fixture" is merged into the lamp's fixture component in the same batch
+(e.g. {"hung": true} for a lamp that now hangs under a truss: the looks' rules then point it from below, lookRules.js upOf). Dry run unless --apply: prints every lamp from -> to. With --apply it first saves the
 document it read to --backup (required), sends ONE batch of updateComponent transform ops at the version it read
 (the server refuses a stale base), then reads back and checks every lamp landed (1 mm). Refuses an id that is not in
 the project. After a move: re-aim the scenes and run physics_check.py (docs: the hard rule 'Physics first').
@@ -15,13 +16,20 @@ import argparse, json, os, sys, time, urllib.request
 def call(url, token=None, body=None):
     req = urllib.request.Request(url, data=None if body is None else json.dumps(body).encode(), method='GET' if body is None else 'POST')
     req.add_header('Content-Type', 'application/json')
+    # dev.diiii.xyz sits behind Cloudflare, which answers 403 to Python's default agent (2026-10-16)
+    req.add_header('User-Agent', 'di-move-lamps/1 (+https://github.com/dob-0/di.iiii)')
     if token: req.add_header('Authorization', f'Bearer {token}')
     with urllib.request.urlopen(req, timeout=60) as r: return json.loads(r.read())
 
 def token_of(path):
-    if not path: return None
-    for line in open(path):
-        if line.startswith('API_TOKEN='): return line.split('=', 1)[1].strip()
+    # the same order as scripts/place/api.mjs readToken: DI_API_TOKEN, then --token-file, then ~/.di/di.env; the same keys
+    if os.environ.get('DI_API_TOKEN'): return os.environ['DI_API_TOKEN'].strip()
+    for f in [path, os.path.expanduser('~/.di/di.env')]:
+        if not f or not os.path.exists(f): continue
+        lines = open(f).read().split('\n')
+        for key in ('ADMIN_API_TOKEN', 'API_TOKEN', 'DI_API_TOKEN'):
+            v = next((l[len(key) + 1:].strip() for l in lines if l.startswith(key + '=')), '')
+            if v: return v
     return None
 
 def main():
@@ -42,7 +50,11 @@ def main():
         print(f"{m['id']:<22} {[round(v, 2) for v in t.get('position', [0, 0, 0])]} -> {patch['position']}" + (f" rot {patch['rotation']}" if 'rotation' in patch else ''))
         ops.append({'type': 'updateComponent', 'opId': f"move-lamps-{int(time.time())}-{len(ops)}", 'clientId': 'move-lamps',
                     'payload': {'entityId': m['id'], 'component': 'transform', 'patch': patch}})
-    print(f'{a.project} @ v{version}: {len(ops)} lamps' + ('' if a.apply else ' (dry run; --apply to write)'))
+        if m.get('fixture'):
+            print(f"{'':<22} fixture + {m['fixture']}")
+            ops.append({'type': 'updateComponent', 'opId': f"move-lamps-{int(time.time())}-{len(ops)}", 'clientId': 'move-lamps',
+                        'payload': {'entityId': m['id'], 'component': 'fixture', 'patch': m['fixture']}})
+    print(f'{a.project} @ v{version}: {len(moves)} lamps, {len(ops)} ops' + ('' if a.apply else ' (dry run; --apply to write)'))
     if not a.apply: return
     if not a.backup: sys.exit('refusing: --apply needs --backup <dir>')
     os.makedirs(a.backup, exist_ok=True); json.dump(got, open(os.path.join(a.backup, 'document.json'), 'w'))
@@ -50,6 +62,7 @@ def main():
     after = call(f'{a.api}/api/projects/{a.project}/document'); adoc = after.get('document', after)
     aby = {e['id']: e for e in adoc['entities']}
     bad = [m['id'] for m in moves if max(abs(p - q) for p, q in zip(aby[m['id']]['components']['transform']['position'], m['position'])) > 0.001]
+    bad += [m['id'] + ' fixture' for m in moves if any(aby[m['id']]['components'].get('fixture', {}).get(k) != v for k, v in (m.get('fixture') or {}).items())]
     print(f"written: v{out.get('newVersion')}; entities {len(doc['entities'])} -> {len(adoc['entities'])}; off by > 1 mm: {bad or 'none'}")
     if bad or len(doc['entities']) != len(adoc['entities']): sys.exit(1)
 

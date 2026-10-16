@@ -108,13 +108,16 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
     const lightBusy = Boolean(data && (data.light?.otherList || data.light?.otherShow))
     const youBlock = blockOf(data, cooldownLeftMs)
     // not this viewer's to press (the server's word): the card does nothing and says so. The future audience-plays hook lifts it.
-    const watching = Boolean(youBlock) && youBlock !== 'cooldown' && !audiencePlays
+    // A PREVIEW (a clock show, onPreview) is this viewer's own page and posts nothing, so the server's word does not apply to it (owner
+    // 2026-10-15 22:0x: "why can't I click all scenes" - every card was held by the visitor block, and the laser cards by the operator rule).
+    const watching = Boolean(youBlock) && youBlock !== 'cooldown' && !audiencePlays && !onPreview
 
     const choose = useCallback(async (cue) => {
-        if (cue.laser || sending != null || watching) return
         // A show that plays by its own clock is not Light's: there is no runner to GO (the server answers 'no-light' to every card). The click
         // shows that scene to THIS viewer as the chip's preview ("PREVIEW · name · the show is on ..."); the clock keeps running for everyone else.
+        // Every scene previews, a laser scene too: nothing is sent to any device.
         if (onPreview) { onPreview(String(cue.lookId || '').replace(/^rig-/, '') || null); return }
+        if (cue.laser || sending != null || watching) return
         setSending(cue.index)
         setNotice('')
         const t0 = Date.now()
@@ -154,9 +157,9 @@ export default function RoomFavourites({ spaceId, projectId, bottom = '5.2rem', 
                 {shown.map((cue) => {
                     const isLive = isLiveScene(cue, live, cues)
                     const previewed = Boolean(previewLook) && String(cue.lookId || '').replace(/^rig-/, '') === previewLook
-                    const disabled = Boolean(cue.laser) || (!onPreview && (lightBlocked || lightBusy || youBlock === 'cooldown')) || sending != null
+                    const disabled = onPreview ? false : (Boolean(cue.laser) || lightBlocked || lightBusy || youBlock === 'cooldown' || sending != null)
                     const name = cue.title || cue.name
-                    const tip = watching ? `${name} — ${WATCH_WORDS}` : cue.laser ? `${name} — operator only` : name
+                    const tip = onPreview ? `${name} — preview, for you only` : watching ? `${name} — ${WATCH_WORDS}` : cue.laser ? `${name} — operator only` : name
                     return (
                         <li key={cue.lookId} style={{ minWidth: 0 }}>
                             <button type="button" disabled={disabled} aria-disabled={watching || undefined} data-fav={cue.lookId} data-cue={cue.index} aria-current={isLive ? 'true' : undefined} aria-pressed={previewed || undefined} title={tip}

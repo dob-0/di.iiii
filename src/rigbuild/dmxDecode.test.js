@@ -178,7 +178,7 @@ describe('the assumed profiles', () => {
         const b = type('UP-B380F')
         const real16 = b.modes.find((m) => m.name === '16ch')
         expect(real16.channelsSource.basis).toBe('APPROVED')
-        expect(real16.channels.map((c) => c.role).slice(0, 4)).toEqual(['color', 'strobe', 'dimmer', 'gobo'])
+        expect(real16.channels.map((c) => c.role).slice(0, 4)).toEqual(['pan', 'tilt', 'panFine', 'tiltFine']) // the printed manual (2026-10-16): pan first
         expect(b.defaultMode).toBe('16ch')
         expect(b.assumedMode).toBe('16ch-assumed')
         const par = type('UP-PL5403')
