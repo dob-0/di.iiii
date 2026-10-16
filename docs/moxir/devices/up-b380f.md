@@ -1,24 +1,29 @@
-# UP-B380F — U-Plus IP65 380W Beam moving head (18 units, U1, 16 ch each) — chart APPROVED (owner, 2026-10-15)
-**Desk profile = the unit's own "380 IP BEAM" manual chart** (mode `16ch`, `MAKER_CHANNEL_LISTS` in src/rigbuild/fixtureTypes.js; value ranges verbatim in `scripts/place/fixtures/charts/up-b380f.json`).
-Order: 1 colour · 2 strobe · 3 dimmer · 4 gobo · 5 prism · 6 prism 1 rotation · 7 prism 2 rotation · 8 frost · 9 focus · 10 pan · 11 pan fine · 12 tilt · 13 tilt fine · 14 pan/tilt speed · 15 reset · 16 lamp.
-The desk holds ch 15 and ch 16 at 0 (no function): it never resets, strikes or kills a lamp.
-**ARCHIVED (reason):** the 10-09 TESTED walk map (Sevan's units, ch 1–10 walked; docs/moxir/b380f-16ch-map-check-2026-10-09.md) — 1 pan · 2 tilt · 3 pan fine · 4 tilt fine · 5 speed · 6 frost · 7 strobe · 8 dimmer · 9 colour · 10 gobo · 11–16 prism/focus/reset.
-Kept selectable as mode `walk-2026-10-09` (ARCHIVED_CHANNEL_LISTS), never the default, never in the GDTF; replaced by the manual chart on the owner's word. It put pan on ch 1, the manual on ch 10 — setup-day check #1 settles which the units follow.
-**ARCHIVED:** the equivalent chart PROST380 (another maker's 380 W head) moved from `sources` to the manifest's `archive` block (fixtures.json). The indoor U-Plus "380 Beam" manual (16/20 ch, IP20, 12 kg) is NOT this unit; its chart is no longer stored (the PDF stays in ~/Downloads/moxir/devices/380-Beam.pdf).
-Owed: Sevan's own list (replaces nothing now; confirms it).
+# UP-B380F — U-Plus IP65 380W Beam moving head (18 units, U1, 16 ch each) — chart = the PRINTED manual with the unit (owner, 2026-10-16)
+**Desk profile = the printed "MOVEHEAD FIXTURE USER MANUAL" shipped with the unit**, Chapter 3 "Channel description", 1. Channel table (LIST-1), pages 13–15 —
+photographed by the owner 2026-10-16 16:22 ("the beam real chart"), read 16:3x, values verbatim in `scripts/place/fixtures/charts/up-b380f.json` (mode `16`, APPROVED).
+Photos: `photos/b380f-manual-p13-ch1-9.jpg`, `p14-ch9-10.jpg`, `p15-ch10-16.jpg`. The cover page is not photographed: the owner names it the beams' manual.
+Desk list: `MAKER_CHANNEL_LISTS['UP-B380F']` in `src/rigbuild/fixtureTypes.js` (mode `16ch`, the default).
 
-**Product pages for the owner's eye (2026-10-15 16:5x):** indoor "380 BEAM" https://www.upluslighting.com/product/mini-380w-beam-moving-head-stage-lights/ (380 W lamp, 600 W draw, 2°, 14 gobos + 14 colours, double prism, 16/20 ch, IP20, 300×240×530 mm, 12 kg) ·
-IP65 "380W Beam" https://upluslighting.com/product/stage-lights-ip-outdoor-waterproof-380w-beam-moving-head-lights-for-show-dj/ (371 W Osram, 400 W, 16 ch, 27 kg, tilt 270°) — a different unit. Owner's approval: pending.
-**APPROVED by the owner's eye (2026-10-15 17:0x, Screenshot_20261015_154953.png):** UP-B380F = UPlight Stage Equipment (Guangzhou) Co., Ltd. (= U-Plus Lighting), "IP65 380W Waterproof DJ Light Beam Moving Head for Outdoor Events",
-https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html (page read 2026-10-15): model no. UP-B380F, 350XL/380 bulb, rated 500 W,
-1.8°, pan 540° / tilt 270°, 14 colours, 13 gobos + open + a rotating wheel, 16-facet + honeycomb prism, strobe 0.5–14/s, IP65, 460×310×690 mm, 23 kg, **16 CH** — no channel list on the page.
-So the INDOOR "380 Beam" manual's order (above) does not apply to our unit; the IP65 unit's own manual is "380 IP BEAM" on upluslighting.com (downloaded 2026-10-15, see below) — its table is compared with the TESTED map in this file.
-**The unit's own chart — "380 IP BEAM" manual (upluslighting.com, 2024-01; ~/Downloads/moxir/devices/380-IP-BEAM.pdf; read 2026-10-15 17:1x) — APPROVED by the owner 17:1x ("yes the chart is right"):**
-371 W Osram, 400 W max, 2°, IP65, 16 ch, RDM, pan 540° / tilt 270° (16 bit), 13 colours + white, 13 gobos + white, double prism 8 + 16, frost, strobe 0–25 Hz, 424×367×725 mm, 27 kg.
-1 colour (0–4 white, 5-wide slots: 10–14 colour 1 … 130–134 colour 13, 140–199 rotate fwd, 200–255 rotate rev) · 2 strobe (0 close, 1–4 open, 51–240 slow→fast, 252–255 open) · 3 dimmer 0–255 ·
-4 gobo (0–4 white, 5–69 gobo 1–13 in 5-wide slots, 70–128 rotate fwd, 129–131 white, 132–190 rotate rev, 191–255 shake gobo 1–13) · 5 prism (0–63 none, 64–127 prism 1, 128–191 prism 2, 192–255 both) ·
-6 prism 1 rotation (0–127 0–400°, 128–191 fwd, 192–255 rev) · 7 prism 2 rotation (same) · 8 frost (0–127 none, 128–191 frost, 192–255 colourful) · 9 focus · 10 pan · 11 pan fine · 12 tilt · 13 tilt fine · 14 pan/tilt speed ·
-15 reset (26–76 effects, 77–127 XY, 128–255 all) · 16 lamp (10–100 off, 101–255 on).
-**Contradiction, stated:** the 10-09 walk on Sevan's units put pan on ch 1 and tilt on ch 2; this chart puts pan on ch 10 and tilt on ch 12. Both cannot be true for one unit in one mode. Decision
-(owner's approval 17:1x): the desk sends THIS chart; the 10-09 walk map is archived (fixtureTypes.js keeps it as `up-b380f-walk-2026-10-09`, not the default); setup-day check #1: send pan on ch 10 — if
-the head does not move and ch 1 moves it, switch the profile to the archived walk and say so. No lamp is lit by either chart until that check (ch 16 at 0 is "none"; lamp on = 101–255 — a 3-second lamp strike).
+**Order (pan FIRST):** 1 pan (0–540°) · 2 tilt (0–270°) · 3 pan fine · 4 tilt fine · 5 pan/tilt speed (fast→slow) · 6 frost · 7 strobe · 8 dimmer · 9 colour · 10 gobo ·
+11 prism 1 · 12 prism 1 rotation · 13 prism 2 · 14 prism 2 rotation · 15 focus (far→near) · 16 reset.
+- **6 frost:** 0–127 none · 128–191 "insert colourful" (a colour filter, not frost) · 192–255 insert frost. The room draws frost at 192–255 only.
+- **7 strobe:** 0–3 dark · 4–103 pulse strobe slow→fast · 104–107 open · 108–207 fade strobe slow→fast · 208–212 open · 213–251 random strobe slow→fast · 252–255 open. The desk rests at 255.
+- **9 colour:** 0–4 white · 5–9 white+colour 1 · 10–14 colour 1 · 15–19 colour 1+2 · … 5-wide slots up to 130–134 colour 13 · 135–139 colour 13+14 · 140–200 rotate forward (fast→slow) · 201–255 rotate reverse (slow→fast).
+- **10 gobo:** 0–4 white · 5–9 gobo 1 … 85–89 gobo 17 (5-wide) · 90–128 rotate reverse (fast→slow) · 129–131 stop · 132–170 rotate forward (slow→fast) · 171–175 shake gobo 1 … 251–255 shake gobo 17.
+- **11 / 13 prism 1 / prism 2:** 0–127 none · 128–255 insert. **12 / 14 rotation:** 0–127 = 0–360° (an index) · 128–190 forward (fast→slow) · 191–192 stop · 193–255 reverse (slow→fast). The room draws the index; a spin has no phase (`spin: true`).
+- **16 reset:** 0–99 none · 100–105 lamp OFF over 3 s · 106–199 none · 200–205 lamp ON over 3 s · 206–209 none · 210–215 reset XY motor · 216–219 none · 220–235 reset effect motor · 236–239 none · 240–255 reset fixture.
+  **The desk holds ch 16 at 0:** it never strikes, kills or resets a lamp. There is no separate lamp channel.
+
+**What this settles (2026-10-16):** the 2026-10-09 walk on Sevan's units (`docs/moxir/b380f-16ch-map-check-2026-10-09.md`, ch 1–10 walked) had this very order — the walk was right.
+The downloaded U-Plus "380 IP BEAM" PDF (upluslighting.com 2024-01, pan on ch 10, colour first), approved on 2026-10-15 from a product page, is **NOT the unit's chart**.
+It is **ARCHIVED**: `up-b380f.json` → `archive.pdf_380_ip_beam` (its value ranges kept), desk mode `pdf-380-ip-beam-2026-10-15` (`ARCHIVED_CHANNEL_LISTS`), manifest `archive.PDF-380-IP-BEAM`.
+The walk map stays as desk mode `walk-2026-10-09` (ARCHIVED, same order, its caps were ASSUMED where the manual now states them). Neither archived mode is a default or in the GDTF.
+**Still OPEN (manifest `specs.dmx_order.open`):** ch 11–16 are named by the manual but not yet walked on a unit; the old desk's "Beam 16ch" held ch 13 at 145 ("required or no light") — by the manual that inserts prism 2.
+Walk one unit 0..255 per channel on setup day; until then ch 11–16 rest at 0.
+
+**Setup-day check #1 (rewritten):** send pan on ch 1 and tilt on ch 2 — the head must follow (the manual, the walk and the desk agree). If it does not, say so at once: that unit runs another mode on its display (set it to the 16-ch mode).
+
+**History:** 2026-10-09 walk (TESTED ch 1–10, pan ch 1) → 2026-10-15 PDF chart approved from the product page (pan ch 10; contradiction written down; setup-day check "ch 10 vs ch 1") →
+2026-10-16 the printed manual with the unit (pan ch 1) — approved by the owner's send. Product pages and the maker's identity (U-Plus Lighting = UPlight Stage Equipment (Guangzhou) Co., Ltd.,
+owner's eye 2026-10-15 17:0x): see `git log -p` of this file before 2026-10-16 and `fixtures.json` kinds.beam380. The 10-15 "380-IP-BEAM.pdf" stays at `~/Downloads/moxir/devices/`.
+Owed: Sevan's own list (confirms, replaces nothing now).
