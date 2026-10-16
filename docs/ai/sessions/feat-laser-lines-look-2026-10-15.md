@@ -149,3 +149,66 @@ Meant: shader + bloom split + end spot + seen on the GPU. Happened: all code, te
 (98 °C at the check). Lesson kept from job 1 and applied: heat checked FIRST (05:0x, 93 °C), so no time was spent queueing.
 New lesson: the "Studio looks right" clue came from a Studio-only overlay (`LaserView`), not from a render flag — compare
 what each page MOUNTS before comparing flags.
+
+---
+
+# Job 3 — the owner's decision, tested; the GPU look (branch `feat/laser-white-core-2026-10-15`, from the show branch at 34db1267), 2026-10-15 16:0x
+
+Brief: `~/work/agent-reports-2026-10-15/moxir-50/briefs/lasers-continue.md`. Owner 15:5x: *"white core with colour halo — go fix the
+lasers and let me see what we have."* Found: the brief's "draft PR #956" was already MERGED, and the shader it asked for had landed
+as PR #958 (core + halo, out of the bloom, end spot), with the zig-zag fix #968 and the room-through-Studio pipeline #972 on top.
+The old worktree `~/work/di.iiii-lasers-look` was gone; re-made on a new branch (the merged one is closed). Both pages now draw
+the lasers through the one path (`StudioViewport` → `SpotLightObject` `LaserLines` → `laserLineMaterial.js`, held out of the
+glow by `laserOverBloom.js`); nothing to unify. `LaserView` (the laser server's live frames as 1-px lines) is now on both pages.
+
+## What landed
+
+- `laserLine.js` 9.: `toneMapAces` (three r185 ACESFilmic, the room's curve) and `whiteness`, so "white core, colour halo" is a
+  test, not a claim. `laserLine.test.js` 9.: cube line (cosθ 0.98, along the fan from the floor) and 40 W line (cosθ 0) at 5,
+  10, 20 m: core = max(beam, 1 px), never wider; halo ≤ half the 0.5° fan gap; core above the halo; a core ≥ 5× white reads
+  white (whiteness > 0.85); the halo keeps the green. 35/35; `src/objectComponents src/project/viewport` 64 files / 588 pass.
+- Arithmetic (fov 60, 720 rows, exposure 1.5, σs 0.02, g 0.74), green drive:
+
+| line | s m | core width | core HDR | core whiteness | halo σ px | halo HDR | halo sRGB (r,g,b) |
+|---|---|---|---|---|---|---|---|
+| cube | 5 | 1 px = 8.0 mm | 80.7 | 1.00 | 2.72 | 1.25 | 0.39, 0.82, 0.56 |
+| cube | 10 | 1 px = 16.0 mm | 29.9 | 0.99 | 2.72 | 0.97 | 0.28, 0.77, 0.47 |
+| cube | 20 | 1 px = 32.1 mm | 8.2 | 0.92 | 2.72 | 0.59 | 0.10, 0.62, 0.30 |
+| 40 W | 5 | 1 px = 8.0 mm | 11.4 | 0.94 | 2.72 | 0.18 | 0.00, 0.20, 0.05 |
+| 40 W | 10 | 1 px = 16.0 mm | 4.2 | 0.83 | 2.72 | 0.14 | 0.00, 0.14, 0.03 |
+| 40 W | 20 | 1 px = 32.1 mm | 1.2 | 0.44 | 2.72 | 0.08 | 0.00, 0.07, 0.02 |
+
+  Read: the ACES shoulder whitens a green core gradually (1× 0.44, 4× 0.83, 8× 0.92, 30× 0.99); "far above white" in the test
+  = 5×. The 40 W heads cross the view (side scatter), so they are dimmer per metre than the cube lines seen along their fan.
+- Tools: `laser-scene-shots.cjs --camera` (fixedCamera in the browser's copy + the room camera set through HdrBloom's DEV
+  handle `window.__diRoom.camera`, read back into shots.json); `laser-lines-measure.py` reads a shot's own `file`;
+  `before-after-sheet.py`; `picture-diff.py` (the lamp gate: changed pixels over 2 levels < 0.5 %).
+
+## The GPU look — one shot, the rest held by heat (16:0x–17:4x)
+
+- Scratch stack `lasers-look` on a snapshot of moxir-one (`sqlite3 .backup` of di.db + the files, 399 MB), lane 2.
+- Taken: ONE shot, Studio, The storm (frame 124 of 256; Green breath = 198, Second drop = 212, from the cues' holds over the
+  1116 s loop). The camera read back [0, 2.4, 6.5], not the plan's [0, 1.7, 19.8]: the Studio's camera-controls own the camera.
+  Fixed in the tool (setLookAt through `window.__diRoom.controls`), not yet seen working.
+- Held: CPU package 88–100 °C for ~90 min (lane 3's moxir-v2-11-mix room page at 119 % CPU for 40+ min, the di-show tabs,
+  4 `claude -p`); the 85 °C gate passed once (one shot) in that time. Not mine to close (lane 3, his tabs).
+- Sheet: `~/Downloads/moxir/v2-11/lasers-look.html` — your 043205 as before, the one Studio shot as after, the arithmetic.
+- Limit: node_modules is the shared link (three 0.185.1 installed, 0.186.1 locked); `toneMapAces` cites r185, the one installed.
+
+## OWED — the room page floor shots, the lamp diff, the measures (one command)
+
+```bash
+cd ~/work/di.iiii-lasers-look   # or a fresh worktree of this branch; scratch stack: see job 2's commands (snapshot, di-dev up)
+git show decae48f^:src/project/viewport/HdrBloom.jsx | sed 's/const { gl, scene, size, viewport } = useThree()/const { gl, scene, size, viewport, camera, controls } = useThree()/; s/window.__diRoom = { scene, gl }/window.__diRoom = { scene, gl, camera, controls }/' > /tmp/hb-before.jsx
+OUT=/tmp/laser-gpu BEFORE_HDRBLOOM=/tmp/hb-before.jsx scripts/measure/laser-look-gpu-chain.sh   # waits on the 85 °C gate itself
+python3 -I scripts/measure/picture-diff.py /tmp/laser-gpu/before-lamps/01-room-second-drop.png /tmp/laser-gpu/after-lamps/01-room-second-drop.png
+python3 -I scripts/measure/laser-lines-measure.py --doc <document.json> --shots /tmp/laser-gpu/after-lasers/shots.json --dir /tmp/laser-gpu/after-lasers
+```
+"Before" there = lasers inside the glow (the path until #958), same shader — the one lamp-path change of the laser work.
+
+## Review (job 3)
+
+Meant: build the drawing, see it on the GPU, sheet, docs. Happened: the drawing was already built and merged (#958/#968/#972);
+the decision is now a test (35/35), tools for the floor shots are in, ONE GPU shot (wrong camera), the rest held by heat ~90 min.
+Lesson: the brief named a PR "draft" that was merged 15 h earlier — check `gh pr view` state before planning a build (cost: none,
+caught in round 3). Lesson kept: heat first — and when another lane holds the CPU above the gate, say so early instead of waiting.
