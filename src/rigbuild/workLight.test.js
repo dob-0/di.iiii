@@ -23,4 +23,11 @@ describe('work light: every lamp white at its own strength, nothing else touched
         const out = workLightEntities([{ id: 'rig-wash', components: { appearance: { opacity: 1 } } }, { id: 'rig-wash:rig-the-road-in', components: { appearance: { opacity: 0.8 } } }])
         expect(out.map((e) => e.components.appearance.opacity)).toEqual([0, 0])
     })
+    it('a LaserCube line stops playing its frames and shines steady; its diodes stay', () => {
+        const line = { id: 'rig-laser-1a', components: { fixture: { type: 'ext-lc-ultra-mk2' }, light: { color: '#e8e4dc', intensity: 334252 }, beam: { visible: true, laser: { mW: [4000, 2000, 1500], frames: { period: 1116, list: [] } } } } }
+        const [out] = workLightEntities([line])
+        expect(out.components.beam.laser.frames).toBeNull()
+        expect(out.components.beam.laser.mW).toEqual([4000, 2000, 1500])
+        expect(line.components.beam.laser.frames).not.toBeNull()
+    })
 })
