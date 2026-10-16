@@ -86,6 +86,32 @@ describe('the geometry: a line\'s field into its cube\'s field', () => {
         expect(near(g2.cube.rotation, aim(30, 10))).toBe(true)
         expect(near(cubeFrameAt(g2, 3).points[1].slice(0, 2), [0, 0.1])).toBe(true)
     })
+    it('zooms the picture about the cube\'s axis with `scale`, blanking what leaves the field', () => {
+        const g = lineGroupsOf(DOC).get('rig-laser-1')
+        const big = cubeFrameAt(g, 3, { scale: 4 })
+        expect(near(big.points[1].slice(0, 2), [4 * X2, 0])).toBe(true)
+        expect(big.outside).toBe(0)
+        const gone = cubeFrameAt(g, 3, { scale: 10 }) // 20° of yaw: beyond the field
+        expect(gone).toEqual({ points: [[0, 0, 0, 0, 0]], outside: 1 })
+        expect(cubeFrameAt(g, 3, { scale: 'x' }).points[1]).toEqual(cubeFrameAt(g, 3).points[1])
+        expect(stillBeamsOfGroup(g, stillBeams, { scale: 4 })[0].x).toBeCloseTo(4 * X2, 3)
+    })
+    it('\'fit\' fills the field with each picture about its own lit centre', () => {
+        const g = lineGroupsOf(DOC).get('rig-laser-1')
+        // t = 7: one stroke 0.1 wide at −2°: its centre goes to 0; the zoom is capped at ×10, so its ends reach ±0.5.
+        const fit = cubeFrameAt(g, 7, { scale: 'fit' })
+        expect(fit.outside).toBe(0)
+        expect(near(fit.points[1].slice(0, 2), [-0.5, 0], 2e-3)).toBe(true)
+        expect(near(fit.points[2].slice(0, 2), [0.5, 0], 2e-3)).toBe(true)
+        // A stroke 0.4 wide fills to the edge: ±0.9.
+        const wide = lineGroupsOf({ entities: [line('w-1a', [[[-0.2, 0.3, 1, 1, 1], [0.2, 0.3, 1, 1, 1]]])] }).get('w-1')
+        const f2 = cubeFrameAt(wide, 1, { scale: 'fit' })
+        expect(near(f2.points[1].slice(0, 2), [-0.9, 0], 1e-6)).toBe(true)
+        expect(near(f2.points[2].slice(0, 2), [0.9, 0], 1e-6)).toBe(true)
+        // A single dot: nothing to stretch, it moves to the centre.
+        expect(cubeFrameAt(g, 3, { scale: 'fit' }).points[1].slice(0, 2)).toEqual([0, 0])
+        expect(cubeFrameAt(g, 3, { scale: 'fit' }).points).toHaveLength(3)
+    })
     it('blanks and counts a point that falls outside the cube\'s field', () => {
         const doc = { entities: [line('c-1a', [[[0.9, 0, 1, 1, 1], [0.95, 0, 1, 1, 1]]], { rotation: aim(10) }), line('c-1b', [[[0, 0, 1, 1, 1]]], { rotation: aim(-10) })] }
         const g = lineGroupsOf(doc).get('c-1')

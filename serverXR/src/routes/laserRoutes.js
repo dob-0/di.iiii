@@ -36,7 +36,8 @@ const FIND_GAP_MS = 5000
 //                              Out. status: answering | wrong-serial | no-answer | refused
 //   POST /laser/api/arm        { armed, cube, out, confirm? } — ONE cube on or off; the phrase only
 //                              on the first ON of a run (laserEngine.js rule 10)
-//   POST /laser/api/show       { project, map?: { cubeId: groupId }, reloadMs? } — play that project's laser lines
+//   POST /laser/api/show       { project, map?: { cubeId: groupId }, scale?, reloadMs? } — play that project's laser lines
+//                              (`scale` 0.1…10: the picture zoomed about each cube's axis; what leaves the field is blanked)
 //                              on the cubes by show time (laser/laserShow.js, 2026-10-17): the room's frames, the
 //                              engine's guards; restarts a running show. 404 no such project, 400 nothing to play
 //   POST /laser/api/show/stop  {} — the show player stops; its cubes go blank (a stop: STOPS_FROM_REMOTE)
@@ -94,16 +95,16 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.use(express.json({ limit: '512kb' }))
   router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: player.state() }) })
   router.post('/api/show', requireSameMachine, async (req, res) => {
-    const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs })
+    const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs, scale: req.body?.scale })
     res.status(out.ok ? 200 : out.status || 400).json({ ...out, show: player.state() })
   })
   router.post('/api/show/stop', stopGate, (req, res) => res.json({ ok: true, ...player.stop(), show: player.state() }))
   router.post('/api/show/still', requireSameMachine, async (req, res) => {
-    const got = await player.resolve({ project: req.body?.project, map: req.body?.map })
+    const got = await player.resolve({ project: req.body?.project, map: req.body?.map, scale: req.body?.scale })
     if (!got.ok) return res.status(got.status || 400).json(got)
     const { stillBeams, ARM_PHRASE } = require('../laser/laserEngine')
     const { stillBeamsOfGroup } = require('../laser/laserShow')
-    const perCube = got.map.map((m) => ({ cube: m.cube, group: m.group, stillBeams: stillBeamsOfGroup(m.lines, stillBeams) }))
+    const perCube = got.map.map((m) => ({ cube: m.cube, group: m.group, stillBeams: stillBeamsOfGroup(m.lines, stillBeams, { scale: got.scale }) }))
     const counts = Object.fromEntries(perCube.map((p) => [p.cube, p.stillBeams.length]))
     if (req.body?.confirm !== ARM_PHRASE) {
       return res.status(403).json({ ok: false, needsPhrase: true, error: 'not approved: the laser safety officer\'s sign-off phrase is missing or wrong', project: got.project, wouldApprove: counts })

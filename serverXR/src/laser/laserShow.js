@@ -167,25 +167,53 @@ const lineGroupsOf = (document) => {
  * cube with nothing lit draws one blank point (dark, as the compiled frames do). Pure.
  * @returns {{ points: number[][], outside: number }}
  */
-const cubeFrameAt = (group, t) => {
-    const out = []
+const cubeFrameAt = (group, t, { scale = 1 } = {}) => {
+    const strokes = []
     let outside = 0
     for (const l of group.lines) {
         const i = frameIndexAt(l.frames, t)
         if (i < 0) continue
-        const pts = []
-        for (const p of l.frames.list[i]) {
+        const pts = l.frames.list[i].map((p) => {
             const q = toCubeField(l, group.cube, p[0], p[1])
-            if (q) pts.push([q[0], q[1], p[2], p[3], p[4]])
-            else { if (isLit(p)) outside += 1; pts.push([clamp(p[0], -1, 1), clamp(p[1], -1, 1), 0, 0, 0]) }
-        }
-        if (!pts.some(isLit)) continue
-        const first = pts[0]
-        const last = pts[pts.length - 1]
-        out.push([first[0], first[1], 0, 0, 0], ...pts, [last[0], last[1], 0, 0, 0])
+            if (!q && isLit(p)) outside += 1
+            return q ? [q[0], q[1], p[2], p[3], p[4]] : [clamp(p[0], -1, 1), clamp(p[1], -1, 1), 0, 0, 0]
+        })
+        if (pts.some(isLit)) strokes.push(pts)
+    }
+    // The zoom (a projector's size control): a number about the cube's axis, or 'fit' — this picture fills the field
+    // about its own lit centre. What leaves the field is blanked and counted.
+    const { k, cx, cy } = zoomOf(scale, strokes)
+    const out = []
+    for (const pts of strokes) {
+        const z = pts.map((p) => {
+            const x = (p[0] - cx) * k
+            const y = (p[1] - cy) * k
+            if (Math.abs(x) <= 1 && Math.abs(y) <= 1) return [x, y, p[2], p[3], p[4]]
+            if (isLit(p)) outside += 1
+            return [clamp(x, -1, 1), clamp(y, -1, 1), 0, 0, 0]
+        })
+        if (!z.some(isLit)) continue
+        const first = z[0]
+        const last = z[z.length - 1]
+        out.push([first[0], first[1], 0, 0, 0], ...z, [last[0], last[1], 0, 0, 0])
     }
     return { points: out.length ? out : [BLANK], outside }
 }
+
+const FIT_EDGE = 0.9 // 'fit' fills the field to here, a margin inside its edge
+
+/** The zoom of a picture: { k, cx, cy } — 'fit' about the lit centre to FIT_EDGE, a number about the axis. Pure. */
+const zoomOf = (scale, strokes) => {
+    if (scale !== 'fit') return { k: scaleOf(scale), cx: 0, cy: 0 }
+    let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity
+    for (const pts of strokes) for (const p of pts) if (isLit(p)) { xMin = Math.min(xMin, p[0]); xMax = Math.max(xMax, p[0]); yMin = Math.min(yMin, p[1]); yMax = Math.max(yMax, p[1]) }
+    if (!(xMin <= xMax)) return { k: 1, cx: 0, cy: 0 }
+    const e = Math.max(xMax - xMin, yMax - yMin) / 2
+    return { k: e > 1e-6 ? Math.min(10, FIT_EDGE / e) : 1, cx: (xMin + xMax) / 2, cy: (yMin + yMax) / 2 }
+}
+
+/** The zoom, 0.1 … 10, 1 when not a number: the room's picture as drawn. Pure. */
+const scaleOf = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? clamp(n, 0.1, 10) : 1 }
 
 /** The frame indices of a group's lines at `t`, as one key: it changes exactly when the drawing changes. Pure. */
 const frameKeyAt = (group, t) => group.lines.map((l) => frameIndexAt(l.frames, t)).join(',')
@@ -204,12 +232,12 @@ const defaultMap = (cubeIds, groupIds) => {
  * own function), each once: [{ x, y, within }], `within` the engine's default tolerance. The frames are sampled at the
  * middle of every step of the finest list. Pure.
  */
-const stillBeamsOfGroup = (group, stillBeams, { within = 0.01, grid = 0.005 } = {}) => {
+const stillBeamsOfGroup = (group, stillBeams, { within = 0.01, grid = 0.005, scale = 1 } = {}) => {
     const n = Math.max(1, ...group.lines.map((l) => l.frames.list.length))
     const period = group.lines[0]?.frames.period ?? 1
     const seen = new Map()
     for (let i = 0; i < n; i += 1) {
-        const { points } = cubeFrameAt(group, ((i + 0.5) * period) / n)
+        const { points } = cubeFrameAt(group, ((i + 0.5) * period) / n, { scale })
         for (const d of stillBeams(points)) {
             const key = `${Math.round(d.x / grid)},${Math.round(d.y / grid)}`
             if (!seen.has(key)) seen.set(key, { x: Math.round(d.x * 1e4) / 1e4, y: Math.round(d.y * 1e4) / 1e4, within })
@@ -252,14 +280,14 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
     }
 
     /** The project's groups mapped to the cubes, without playing: for the still-beam approval. */
-    const resolve = async ({ project, map: wanted } = {}) => {
+    const resolve = async ({ project, map: wanted, scale } = {}) => {
         const id = typeof project === 'string' ? project.trim() : ''
         if (!id) return { ok: false, status: 400, error: 'say which project: { project }' }
         const got = await groupsFor(id)
         if (!got.ok) return got
         const { map, unknown } = mapFor(got.groups, wanted)
         if (!map.length) return { ok: false, status: 400, error: `nothing to play: ${unknown.join('; ') || 'no cubes'}` }
-        return { ok: true, project: id, groups: got.groups, map, unknown }
+        return { ok: true, project: id, groups: got.groups, map, unknown, scale: scale === 'fit' ? 'fit' : scaleOf(scale) }
     }
 
     const tick = () => {
@@ -270,7 +298,7 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
             const key = frameKeyAt(m.lines, t)
             let res
             if (key !== m.key || m.held) {
-                const frame = cubeFrameAt(m.lines, t)
+                const frame = cubeFrameAt(m.lines, t, { scale: run.scale })
                 m.outside = frame.outside
                 res = engine.setFrame(m.cube, frame.points, run.out)
             } else res = engine.alive(m.cube, run.out)
@@ -309,7 +337,7 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
         if (!got.ok) return got
         stop()
         const t0 = now()
-        run = { project: got.project, out: `show:${got.project}`, map: got.map, groups: got.groups, timer: null, startedAt: t0, reloadedAt: t0, reloadMs: Math.max(1000, num(opts.reloadMs, RELOAD_MS)), error: null, reloading: false }
+        run = { project: got.project, out: `show:${got.project}`, map: got.map, groups: got.groups, scale: got.scale, timer: null, startedAt: t0, reloadedAt: t0, reloadMs: Math.max(1000, num(opts.reloadMs, RELOAD_MS)), error: null, reloading: false }
         tick()
         run.timer = every(tick, TICK_MS)
         run.timer?.unref?.()
@@ -324,6 +352,7 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
             playing: true,
             project: run.project,
             out: run.out,
+            scale: run.scale,
             startedAt: run.startedAt,
             reloadedAt: run.reloadedAt,
             error: run.error,
@@ -345,6 +374,6 @@ const createShowPlayer = ({ getEngine, loadDocument, now = Date.now, setInterval
 }
 
 module.exports = {
-    createShowPlayer, lineGroupsOf, groupOfLine, framesOf, frameIndexAt, cubeFrameAt, frameKeyAt, defaultMap, stillBeamsOfGroup,
+    createShowPlayer, lineGroupsOf, groupOfLine, framesOf, frameIndexAt, cubeFrameAt, frameKeyAt, defaultMap, stillBeamsOfGroup, scaleOf,
     eulerXYZ, fieldDirection, fieldPoint, aimAt, aimOfGroup, toCubeField, TICK_MS, RELOAD_MS, FIELD_HALF_DEG
 }
