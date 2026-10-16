@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading feedback B</title>
+<!-- Static sketch for docs/ai/proposals/loading-feedback-B.md. Not product code.
+     Tokens copied from src/styles/base.css; nothing here is a new colour. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --di-cyan: #4df9ff;
+    --di-cyan-rgb: 77, 249, 255;
+    --di-cyan-line: rgba(77, 249, 255, 0.35);
+    --di-cyan-border: rgba(77, 249, 255, 0.3);
+    --di-line: rgba(77, 249, 255, 0.12);
+    --di-black: #000;
+    --di-surface: #0a0a0a;
+    --di-surface-2: #111114;
+    --di-surface-3: #17171b;
+    --di-ink: #fff;
+    --di-dim: rgba(255, 255, 255, 0.5);
+    --di-faint: rgba(255, 255, 255, 0.34);
+    --di-danger: #f25f5c;
+    --di-danger-rgb: 242, 95, 92;
+    --di-warning-rgb: 255, 179, 71;
+    --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --di-radius: 2px;
+    --di-space-1: 3px; --di-space-2: 7px; --di-space-3: 12px; --di-space-4: 16px; --di-space-5: 22px; --di-space-6: 30px;
+    --di-text-1: 0.5rem; --di-text-2: 0.625rem; --di-text-3: 0.76rem; --di-text-4: 0.9rem; --di-text-6: 1.25rem;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--di-black); color: var(--di-ink); font-family: var(--di-sans); -webkit-font-smoothing: antialiased; }
+
+.doc { max-width: 1240px; margin: 0 auto; padding: var(--di-space-6) var(--di-space-4); }
+.doc h1 { font-size: var(--di-text-6); font-weight: 600; margin: 0; }
+.doc p.lede { font-size: var(--di-text-3); color: var(--di-dim); max-width: 70ch; line-height: 1.55; margin: var(--di-space-2) 0 var(--di-space-5); }
+.doc h2 { font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.16em; text-transform: uppercase; color: var(--di-dim); font-weight: 500; margin: var(--di-space-6) 0 var(--di-space-3); }
+.note { font-size: var(--di-text-3); color: var(--di-dim); line-height: 1.5; max-width: 80ch; }
+.note b { color: var(--di-ink); font-weight: 500; }
+
+/* ── the Studio frame ── */
+.frame { position: relative; border: 1px solid var(--di-line); background: var(--di-black); overflow: hidden; }
+.frame--studio { aspect-ratio: 16 / 9; min-height: 420px; }
+
+.sbar { position: relative; z-index: 20; display: flex; align-items: center; gap: var(--di-space-3); padding: var(--di-space-3) var(--di-space-5); border-bottom: 1px solid var(--di-line); background: var(--di-black); font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.04em; line-height: 1.3; }
+.sbar-home { font-weight: 500; letter-spacing: 0.08em; }
+.sbar-crumb { color: var(--di-dim); }
+.sbar-crumb b { color: var(--di-ink); font-weight: 400; }
+.sbar-spacer { flex: 1; }
+.sbar-btn { border: 1px solid var(--di-line); padding: 2px var(--di-space-2); color: var(--di-dim); border-radius: var(--di-radius); }
+.sbar-btn--on { border-color: var(--di-cyan-border); color: var(--di-cyan); }
+
+.viewport { position: absolute; inset: 38px 0 0 0; }
+.viewport svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.panel { position: absolute; z-index: 10; background: var(--di-surface); border: 1px solid var(--di-line); border-radius: 0; font-size: var(--di-text-3); }
+.panel-head { font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.16em; text-transform: uppercase; color: var(--di-dim); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-line); }
+.panel-row { padding: 4px var(--di-space-3); display: flex; justify-content: space-between; gap: var(--di-space-2); color: var(--di-ink); }
+.panel-row .k { color: var(--di-faint); font-family: var(--di-mono); font-size: var(--di-text-2); }
+.panel-row--coming { color: var(--di-faint); }
+.panel-row--coming .k { color: var(--di-cyan); }
+.panel-row--failed { color: rgba(var(--di-danger-rgb), 0.9); }
+.panel-row--failed .k { color: var(--di-danger); }
+.outliner { top: 52px; left: 12px; width: 200px; }
+.inspector { top: 52px; right: 12px; width: 220px; }
+.tools { left: 50%; transform: translateX(-50%); bottom: 12px; display: flex; gap: 1px; background: var(--di-line); }
+.tools span { background: var(--di-surface); padding: 6px 10px; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-dim); }
+.tools span.on { color: var(--di-cyan); }
+
+/* ── the one component: StillComing ── */
+.still { position: absolute; z-index: 15; width: 300px; background: rgba(10, 10, 10, 0.92); border: 1px solid var(--di-line); border-radius: 0; font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.02em; }
+.still--corner { left: 12px; bottom: 12px; }
+.still-head { display: flex; justify-content: space-between; padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-line); color: var(--di-dim); }
+.still-head b { color: var(--di-ink); font-weight: 500; }
+.still-line { display: grid; grid-template-columns: 1fr auto; gap: 4px var(--di-space-3); padding: 6px var(--di-space-3) 7px; }
+.still-line + .still-line { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.still-what { color: var(--di-ink); }
+.still-num { color: var(--di-dim); text-align: right; }
+.still-bar { grid-column: 1 / -1; height: 2px; background: var(--di-line); }
+.still-bar > i { display: block; height: 100%; background: var(--di-cyan); }
+.still-line--wait .still-what { color: var(--di-dim); }
+.still-line--wait .still-bar { background: repeating-linear-gradient(90deg, var(--di-line) 0 4px, transparent 4px 8px); }
+.still-line--unpack .still-bar > i { background: repeating-linear-gradient(90deg, var(--di-cyan) 0 6px, rgba(var(--di-cyan-rgb), 0.4) 6px 12px); }
+.still-line--failed .still-what, .still-line--failed .still-num { color: var(--di-danger); }
+.still-line--failed .still-bar { background: rgba(var(--di-danger-rgb), 0.35); }
+.still-act { color: var(--di-cyan); text-decoration: underline; text-underline-offset: 2px; }
+.still-more { padding: 5px var(--di-space-3) 7px; color: var(--di-faint); border-top: 1px solid rgba(255, 255, 255, 0.05); }
+
+/* the label pinned to a ghost */
+.pin { position: absolute; z-index: 5; font-family: var(--di-mono); font-size: var(--di-text-2); padding: 3px 6px; background: rgba(0, 0, 0, 0.8); border: 1px solid var(--di-cyan-line); color: var(--di-ink); white-space: nowrap; }
+.pin em { font-style: normal; color: var(--di-dim); }
+.pin--failed { border-color: rgba(var(--di-danger-rgb), 0.6); color: var(--di-danger); }
+
+/* ── smaller frames ── */
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--di-space-4); }
+.frame--small { aspect-ratio: 4 / 3; }
+.cap { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-dim); margin-top: var(--di-space-2); line-height: 1.5; }
+.alone { position: absolute; inset: 38px 0 0 0; display: grid; place-items: center; background: var(--di-black); }
+.alone .still { position: static; }
+.ring { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.12); border-top-color: #fff; margin: 0 auto var(--di-space-3); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ring { animation: none; } .dash-move { animation: none !important; } }
+.dash-move { animation: dash 2.4s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -40; } }
+
+.phone { width: 260px; aspect-ratio: 9 / 19; border: 1px solid var(--di-line); position: relative; overflow: hidden; background: var(--di-black); margin: 0 auto; }
+.phone .sbar { padding: var(--di-space-2) var(--di-space-3); }
+.phone .still { width: auto; left: 8px; right: 8px; bottom: 8px; }
+
+.legend { display: grid; grid-template-columns: 22px 1fr; gap: 6px var(--di-space-3); align-items: center; font-size: var(--di-text-3); color: var(--di-dim); max-width: 640px; }
+.sw { height: 10px; border: 1px dashed var(--di-cyan-line); }
+.sw--solid { border: 0; height: 2px; background: var(--di-cyan); }
+.sw--fail { border-color: var(--di-danger); }
+.sw--lamp { width: 10px; height: 10px; border: 0; background: radial-gradient(circle, rgba(var(--di-warning-rgb), 1), rgba(var(--di-warning-rgb), 0) 70%); }
+
+@media (max-width: 760px) {
+    .frame--studio { aspect-ratio: auto; height: 520px; }
+    .outliner, .inspector { display: none; }
+    .still { width: auto; right: 12px; }
+    .sbar-crumb { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .sbar-btn:not(.sbar-btn--on) { display: none; }
+    /* on a phone the list folds to its head + the biggest line + the failure, so it never covers the room */
+    .frame--studio .still-line:not(:nth-child(2)):not(.still-line--failed) { display: none; }
+    .pin { font-size: var(--di-text-1); }
+    .pin--failed { left: 30% !important; }
+}
+</style>
+</head>
+<body>
+<main class="doc">
+    <h1>Loading feedback, design B: the place fills in</h1>
+    <p class="lede">What is already here stays drawn. What is still coming is drawn as its outline, with its name and how far it has come. What failed says so, in the same place. This is a static sketch of the Studio on a big project, about 4 s in. It is drawn in the house tokens from <code>src/styles/base.css</code>. Proposal: <code>docs/ai/proposals/loading-feedback-B.md</code>.</p>
+
+    <h2>1 · Studio, 4 s in: lamps are here, the hall is coming</h2>
+    <div class="frame frame--studio">
+        <div class="sbar">
+            <span class="sbar-home">di.iiii</span>
+            <span class="sbar-crumb">/ studio / <b>front-room</b></span>
+            <span class="sbar-spacer"></span>
+            <span class="sbar-btn sbar-btn--on">Studio</span>
+            <span class="sbar-btn">Preview</span>
+            <span class="sbar-btn">Share</span>
+        </div>
+
+        <div class="viewport">
+            <svg viewBox="0 0 1200 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                    <radialGradient id="lamp" cx="50%" cy="50%" r="50%">
+                        <stop offset="0" stop-color="#ffb347" stop-opacity="1"/>
+                        <stop offset="1" stop-color="#ffb347" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffb347" stop-opacity="0.22"/>
+                        <stop offset="1" stop-color="#ffb347" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <!-- the grid, already drawn -->
+                <g stroke="rgba(77,249,255,0.07)" stroke-width="1">
+                    <line x1="0" y1="500" x2="1200" y2="500"/><line x1="0" y1="540" x2="1200" y2="540"/><line x1="0" y1="590" x2="1200" y2="590"/>
+                    <line x1="600" y1="430" x2="600" y2="640"/><line x1="440" y1="430" x2="250" y2="640"/><line x1="760" y1="430" x2="950" y2="640"/>
+                    <line x1="280" y1="430" x2="-100" y2="640"/><line x1="920" y1="430" x2="1300" y2="640"/>
+                </g>
+                <!-- GHOST: the hall, as its outline (bounds from the cache: this file has loaded before) -->
+                <g fill="none" stroke="rgba(77,249,255,0.45)" stroke-width="1.2" stroke-dasharray="8 6" class="dash-move">
+                    <!-- back wall -->
+                    <rect x="330" y="150" width="540" height="280"/>
+                    <!-- front corners to back corners -->
+                    <line x1="80" y1="40" x2="330" y2="150"/>
+                    <line x1="1120" y1="40" x2="870" y2="150"/>
+                    <line x1="80" y1="620" x2="330" y2="430"/>
+                    <line x1="1120" y1="620" x2="870" y2="430"/>
+                    <!-- stage edge, also part of the hall glb -->
+                    <polyline points="420,430 450,395 750,395 780,430"/>
+                </g>
+                <!-- GHOST failed: the stage curtain -->
+                <g fill="none" stroke="#f25f5c" stroke-width="1.2" stroke-dasharray="4 4">
+                    <rect x="470" y="210" width="260" height="185"/>
+                    <line x1="470" y1="210" x2="730" y2="395" stroke-opacity="0.4"/>
+                    <line x1="730" y1="210" x2="470" y2="395" stroke-opacity="0.4"/>
+                </g>
+                <!-- LAMPS: already here, drawn as today -->
+                <g>
+                    <polygon points="380,120 330,430 470,430" fill="url(#beam)"/>
+                    <polygon points="820,120 730,430 870,430" fill="url(#beam)"/>
+                    <polygon points="600,105 540,395 660,395" fill="url(#beam)"/>
+                    <circle cx="380" cy="120" r="16" fill="url(#lamp)"/>
+                    <circle cx="490" cy="112" r="12" fill="url(#lamp)"/>
+                    <circle cx="600" cy="105" r="16" fill="url(#lamp)"/>
+                    <circle cx="710" cy="112" r="12" fill="url(#lamp)"/>
+                    <circle cx="820" cy="120" r="16" fill="url(#lamp)"/>
+                    <!-- lamp bodies still coming: tiny outlines at the lamps -->
+                    <g fill="none" stroke="rgba(77,249,255,0.45)" stroke-dasharray="3 3">
+                        <rect x="483" y="122" width="14" height="10"/>
+                        <rect x="703" y="122" width="14" height="10"/>
+                    </g>
+                </g>
+            </svg>
+
+            <div class="pin" style="left: 28%; top: 21%;">the hall <em>· 2.1 of 3.3 MB</em></div>
+            <div class="pin pin--failed" style="left: 44%; top: 63%;">the stage curtain did not arrive</div>
+
+            <div class="panel outliner">
+                <div class="panel-head">Outliner</div>
+                <div class="panel-row panel-row--coming"><span>Hall</span><span class="k">coming</span></div>
+                <div class="panel-row panel-row--failed"><span>Stage curtain</span><span class="k">failed</span></div>
+                <div class="panel-row"><span>Lamps</span><span class="k">14</span></div>
+                <div class="panel-row"><span>Sun</span><span class="k">light</span></div>
+                <div class="panel-row panel-row--coming"><span>Screen</span><span class="k">coming</span></div>
+            </div>
+
+            <div class="panel inspector">
+                <div class="panel-head">Inspector</div>
+                <div class="panel-row"><span style="color: var(--di-dim)">Select something to edit it.</span></div>
+            </div>
+
+            <div class="panel tools">
+                <span class="on">move</span><span>turn</span><span>size</span><span>add</span><span>views</span>
+            </div>
+
+            <!-- THE ONE COMPONENT, corner placement -->
+            <div class="still still--corner" role="status" aria-live="polite">
+                <div class="still-head"><span>still coming · <b>4</b></span><span>9.4 of 31.0 MB</span></div>
+                <div class="still-line">
+                    <span class="still-what">the hall</span><span class="still-num">2.1 of 3.3 MB</span>
+                    <span class="still-bar"><i style="width: 64%"></i></span>
+                </div>
+                <div class="still-line">
+                    <span class="still-what">lamp bodies</span><span class="still-num">11 of 14</span>
+                    <span class="still-bar"><i style="width: 78%"></i></span>
+                </div>
+                <div class="still-line still-line--unpack">
+                    <span class="still-what">the screen</span><span class="still-num">unpacking</span>
+                    <span class="still-bar"><i style="width: 100%"></i></span>
+                </div>
+                <div class="still-line still-line--wait">
+                    <span class="still-what">the sky</span><span class="still-num">waiting its turn</span>
+                    <span class="still-bar"></span>
+                </div>
+                <div class="still-line still-line--failed">
+                    <span class="still-what">the stage curtain</span><span class="still-num">404 · <span class="still-act">try again</span></span>
+                    <span class="still-bar"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <p class="note">The bar, the Outliner, the Inspector and the tools are drawn from the first frame. <b>Nothing is opaque over the scene.</b> The hall is its dashed outline; the dash moves only while bytes arrive, so a stall looks like a stall. The bytes are measured against the <code>size</code> each asset records at upload, so the total is right before the first byte comes. The failed piece is red where it would stand, and its line stays until it is dismissed or a retry works.</p>
+
+    <h2>2 · The same component, before anything can be drawn, and after</h2>
+    <div class="row">
+        <div>
+            <div class="frame frame--small">
+                <div class="sbar"><span class="sbar-home">di.iiii</span><span class="sbar-crumb">/ studio / <b>front-room</b></span></div>
+                <div class="alone">
+                    <div>
+                        <div class="ring" aria-hidden="true"></div>
+                        <div class="still" role="status">
+                            <div class="still-head"><span>still coming · <b>1</b></span><span>0.4 of 1.2 MB</span></div>
+                            <div class="still-line">
+                                <span class="still-what">the project file</span><span class="still-num">0.4 of 1.2 MB</span>
+                                <span class="still-bar"><i style="width: 33%"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="cap">alone · nothing drawn yet. The ring stays (owner, 2026-10-15) and now has a line under it that names the wait. In the Studio this covers the viewport only; the bar stays.</p>
+        </div>
+        <div>
+            <div class="frame frame--small">
+                <div class="sbar"><span class="sbar-home">di.iiii</span><span class="sbar-crumb">/ studio / <b>front-room</b></span></div>
+                <div class="viewport">
+                    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                        <rect x="0" y="0" width="400" height="260" fill="#050506"/>
+                        <polygon points="110,50 300,50 360,240 40,240" fill="#141418" stroke="rgba(255,255,255,0.08)"/>
+                        <circle cx="140" cy="45" r="7" fill="url(#lamp)"/><circle cx="270" cy="45" r="7" fill="url(#lamp)"/>
+                    </svg>
+                    <div class="still still--corner" style="width: 220px">
+                        <div class="still-line"><span class="still-what">all here</span><span class="still-num">31.0 MB</span></div>
+                    </div>
+                </div>
+            </div>
+            <p class="cap">done · one last line "all here", gone 1.2 s later. Waits under 400 ms never show; a list that shows stays at least 800 ms.</p>
+        </div>
+        <div>
+            <div class="phone">
+                <div class="sbar"><span class="sbar-home">di.iiii</span><span class="sbar-crumb">/ <b>front-room</b></span></div>
+                <div class="viewport">
+                    <svg viewBox="0 0 260 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                        <g fill="none" stroke="rgba(77,249,255,0.45)" stroke-dasharray="6 5">
+                            <rect x="60" y="150" width="140" height="150"/>
+                            <line x1="0" y1="80" x2="60" y2="150"/><line x1="260" y1="80" x2="200" y2="150"/>
+                            <line x1="0" y1="420" x2="60" y2="300"/><line x1="260" y1="420" x2="200" y2="300"/>
+                        </g>
+                        <circle cx="90" cy="140" r="9" fill="url(#lamp)"/><circle cx="130" cy="134" r="9" fill="url(#lamp)"/><circle cx="170" cy="140" r="9" fill="url(#lamp)"/>
+                    </svg>
+                    <div class="still still--corner">
+                        <div class="still-line">
+                            <span class="still-what">the hall</span><span class="still-num">2.1 of 3.3 MB · 3 more</span>
+                            <span class="still-bar"><i style="width: 64%"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="cap" style="text-align:center">room page, Show render, phone · one line and the count. The audience sees the walls arrive, not an editor.</p>
+        </div>
+    </div>
+
+    <h2>Legend</h2>
+    <div class="legend">
+        <span class="sw"></span><span>still coming: dashed <code>--di-cyan-line</code> outline at the object's real place and size</span>
+        <span class="sw--solid sw"></span><span>how far: a 2 px bar in <code>--di-cyan</code>, against the recorded bytes, or a count; never an invented percent</span>
+        <span class="sw sw--fail"></span><span>did not arrive: <code>--di-danger</code>, where the piece would stand, with the reason and "try again"</span>
+        <span class="sw sw--lamp"></span><span>here: drawn exactly as today, never dimmed or covered</span>
+    </div>
+</main>
+</body>
+</html>
