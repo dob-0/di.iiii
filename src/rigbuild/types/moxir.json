@@ -113,7 +113,215 @@
             {
               "role": "color",
               "label": "Colour wheel (0-4 white, 10-14 colour 1 … 130-134 colour 13, 5-wide splits between, 140-200 rotate fwd, 201-255 rev)",
-              "default": 0
+              "default": 0,
+              "cap": {
+                "wheel": [
+                  {
+                    "from": 0,
+                    "to": 4,
+                    "name": "open",
+                    "colour": "#ffffff"
+                  },
+                  {
+                    "from": 5,
+                    "to": 9,
+                    "half": [
+                      0,
+                      1
+                    ]
+                  },
+                  {
+                    "from": 10,
+                    "to": 14,
+                    "name": "red",
+                    "colour": "#ff1a00"
+                  },
+                  {
+                    "from": 15,
+                    "to": 19,
+                    "half": [
+                      1,
+                      2
+                    ]
+                  },
+                  {
+                    "from": 20,
+                    "to": 24,
+                    "name": "green",
+                    "colour": "#00d12a"
+                  },
+                  {
+                    "from": 25,
+                    "to": 29,
+                    "half": [
+                      2,
+                      3
+                    ]
+                  },
+                  {
+                    "from": 30,
+                    "to": 34,
+                    "name": "blue",
+                    "colour": "#1f3cff"
+                  },
+                  {
+                    "from": 35,
+                    "to": 39,
+                    "half": [
+                      3,
+                      4
+                    ]
+                  },
+                  {
+                    "from": 40,
+                    "to": 44,
+                    "name": "yellow",
+                    "colour": "#ffe000"
+                  },
+                  {
+                    "from": 45,
+                    "to": 49,
+                    "half": [
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "from": 50,
+                    "to": 54,
+                    "name": "magenta",
+                    "colour": "#ff2fc8"
+                  },
+                  {
+                    "from": 55,
+                    "to": 59,
+                    "half": [
+                      5,
+                      6
+                    ]
+                  },
+                  {
+                    "from": 60,
+                    "to": 64,
+                    "name": "white (unsure)"
+                  },
+                  {
+                    "from": 65,
+                    "to": 69,
+                    "half": [
+                      6,
+                      7
+                    ]
+                  },
+                  {
+                    "from": 70,
+                    "to": 74,
+                    "name": "amber",
+                    "colour": "#ffb000"
+                  },
+                  {
+                    "from": 75,
+                    "to": 79,
+                    "half": [
+                      7,
+                      8
+                    ]
+                  },
+                  {
+                    "from": 80,
+                    "to": 84,
+                    "name": "lavender (unsure)"
+                  },
+                  {
+                    "from": 85,
+                    "to": 89,
+                    "half": [
+                      8,
+                      9
+                    ]
+                  },
+                  {
+                    "from": 90,
+                    "to": 94,
+                    "name": "lime",
+                    "colour": "#8cff3a"
+                  },
+                  {
+                    "from": 95,
+                    "to": 99,
+                    "half": [
+                      9,
+                      10
+                    ]
+                  },
+                  {
+                    "from": 100,
+                    "to": 104,
+                    "name": "orange",
+                    "colour": "#ff7a00"
+                  },
+                  {
+                    "from": 105,
+                    "to": 109,
+                    "half": [
+                      10,
+                      11
+                    ]
+                  },
+                  {
+                    "from": 110,
+                    "to": 114,
+                    "name": "red-orange",
+                    "colour": "#ff4010"
+                  },
+                  {
+                    "from": 115,
+                    "to": 119,
+                    "half": [
+                      11,
+                      12
+                    ]
+                  },
+                  {
+                    "from": 120,
+                    "to": 124,
+                    "name": "warm white",
+                    "colour": "#fff0c0"
+                  },
+                  {
+                    "from": 125,
+                    "to": 129,
+                    "half": [
+                      12,
+                      13
+                    ]
+                  },
+                  {
+                    "from": 130,
+                    "to": 134,
+                    "name": "light blue",
+                    "colour": "#a8d8ff"
+                  },
+                  {
+                    "from": 135,
+                    "to": 139,
+                    "half": [
+                      13,
+                      0
+                    ]
+                  },
+                  {
+                    "from": 140,
+                    "to": 200,
+                    "spin": "forward"
+                  },
+                  {
+                    "from": 201,
+                    "to": 255,
+                    "spin": "reverse"
+                  }
+                ]
+              }
             },
             {
               "role": "gobo",
