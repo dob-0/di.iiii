@@ -1,5 +1,7 @@
 # feat/laser-play-2026-10-16 — MOXIR venue night (owner, 2026-10-16 22:3x–23:3x)
 
+## What changed
+
 - **Beam colours:** UP-B380F ch 9 wheel slots named at the venue (owner's eye 1-4, his photos via di.bo 5, 7-13) →
   `B380F_WHEEL_SEEN` in `src/rigbuild/fixtureTypes.js` (cap.wheel), `types/moxir.json` regenerated. Unsure slots 6, 8 carry no
   colour. Log `docs/moxir/devices/up-b380f-wheel-walk-2026-10-16.txt`, photos `docs/moxir/devices/photos/b380f-wheel-slot*`.
