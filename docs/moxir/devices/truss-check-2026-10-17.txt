@@ -1,0 +1,8 @@
+# MOXIR truss fixture-by-fixture check 2026-10-17 (desk identify, owner's eye). Expected order from the high end: 001 017 025 033 041 089 049 057 065 073 081 097
+00:06 U1.001 expected #1 (beam, high end) — seen: beam 1 on truss — MATCH
+00:06 U1.017 expected #2 (1st wash after the high beam, dj kicker) — seen: '2 nd wash on trus' — to confirm: 2nd wash (= a wash before it) or 2nd lamp (= match)
+00:06 U1.017 — owner: no wash between the beam and it → 2nd lamp — MATCH
+00:07 U1.025 expected #3 — seen 3rd — MATCH
+00:13 colour-code photo-1121 + videos 1122/1123 (00:12): visible left→right: white, magenta, blue, green, lime/yellow (faint), orange, red — same direction as the 3D (low end = magenta side); the left-end white is unexplained (3D puts the white wash U1.089 in the middle) → test: U1.089 off
+00:14 U1.089 off → the left-end white went dark (owner: yes). Physical order from the high end = 017 025 033 041 049 057 065 073 081 089 (cable order); the 3D had cut-06 (089) in the middle
+00:15 re-addressed by place (cable order): cut-06 89→49, cut-05 49→57, cut-04 57→65, cut-03 65→73, cut-02 73→81, cut-01 81→89 — local v376; dev write 401 (owed); desk re-patched 60/60, looks reloaded
