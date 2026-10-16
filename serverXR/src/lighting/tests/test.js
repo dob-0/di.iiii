@@ -245,6 +245,21 @@ check('fade interpolates between looks', () => {
   assert.ok(buf[0] > 100 && buf[0] < 155, 'halfway through the fade, got ' + buf[0]);
 });
 
+check('a colour wheel steps at the start of a fade while the dimmer fades (MOXIR 2026-10-17)', () => {
+  addProfile('test wheel 3ch', ['dimmer', 'color', 'gobo'], { replace: true });
+  const f = makeFixture({ profile: 'test wheel 3ch', address: 1, values: { dimmer: 0, color: 12, gobo: 0 } });
+  const e = new Engine(baseState([f]));
+  e.tick();
+  f.values.dimmer = 255; f.values.color = 132; f.values.gobo = 40;
+  e.startFade(1000);
+  e.fade.start = Date.now() - 500;
+  const buf = e.tick().get(0);
+  assert.ok(buf[0] > 100 && buf[0] < 155, 'the dimmer still fades, got ' + buf[0]);
+  assert.strictEqual(buf[1], 132, 'the wheel is already on the new slot, never a slot in between');
+  assert.strictEqual(buf[2], 40, 'the gobo wheel steps too');
+  removeProfile('test wheel 3ch');
+});
+
 check('addresses cannot run off the end of a universe', () => {
   const f = makeFixture({ profile: 'rgbw', address: 511, values: { r: 255, g: 255, b: 255, w: 255, dimmer: 255 } });
   const buf = new Engine(baseState([f])).render().get(0);
