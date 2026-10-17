@@ -55620,7 +55620,7 @@
     35,
     36
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 1.5,
    "anim": {
     "kind": "crazy jump",
@@ -55881,7 +55881,7 @@
      161
     ]
    },
-   "note": "Red white cool (white laser)"
+   "note": "Red white cool 2 (red laser, owner 02:3x)"
   }
  },
  "allowStatic": true,
