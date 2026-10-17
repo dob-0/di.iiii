@@ -253,7 +253,7 @@ describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers
     })
 })
 
-describe('the Laser node\'s eight shapes, as the guards draw them, still pass the still-beam guard', () => {
+describe('the Laser node\'s twelve shapes, as the guards draw them, still pass the still-beam guard', () => {
     it('none is still at size 0.5, 0.1 and 0.05 (120 and 500 points, 30 and 35 kpps); every one is when collapsed', () => {
         for (const rate of [30000, 35000]) {
             const plan = at(rate)
@@ -269,10 +269,10 @@ describe('the Laser node\'s eight shapes, as the guards draw them, still pass th
             }
         }
     })
-    it('keeps the measured headroom (worst share in one window at 30 kpps: 6.4 % / 19.8 % / 38.8 %)', () => {
+    it('keeps the measured headroom (worst share in one window at 30 kpps: 6.4 % / 21.7 % / 38.8 %; 2026-10-17: the galaxy at 0.1)', () => {
         const worst = (size) => Math.max(...LASER_SHAPES.flatMap((shape) => [120, 500].map((points) => dwellSpots(g.optimisePath(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, at(30000)).points, { minShare: 0 })[0].share)))
         expect(worst(0.5)).toBeCloseTo(0.064, 2)
-        expect(worst(0.1)).toBeCloseTo(0.198, 2)
+        expect(worst(0.1)).toBeCloseTo(0.217, 2)
         expect(worst(0.05)).toBeCloseTo(0.388, 2)
     })
     it('the engine judges the optimised frame: a moving circle held 2 s is never stopped', () => {
@@ -422,7 +422,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(8)
+        expect(LASER_SHAPES.length).toBe(12)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
