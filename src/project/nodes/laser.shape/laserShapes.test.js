@@ -76,16 +76,27 @@ describe('the TouchDesigner scenes (2026-10-17)', () => {
         expect(normaliseFramePoints(six).dropped).toBe(0)
     })
 
-    it('sunflower is dots: three lit points on one spot each, at most 36 of them, spread to the rim', () => {
-        const dots = generateShape({ shape: 'sunflower', size: 1, points: 2000 })
-        const lit = dots.filter((p) => p[2] + p[3] + p[4] > 0)
-        expect(lit.length).toBe(36 * 3)
-        for (let i = 0; i < lit.length; i += 3) {
-            expect(lit[i]).toEqual(lit[i + 1])
-            expect(lit[i]).toEqual(lit[i + 2])
-        }
-        expect(Math.max(...lit.map((p) => Math.hypot(p[0], p[1])))).toBeGreaterThan(0.95)
-        expect(generateShape({ shape: 'sunflower', points: 40 }).filter((p) => p[2] > 0 || p[3] > 0).length).toBe(10 * 3)
+    it('sunflower is one lit line through the seeds along their spiral arms: 13 arms at 120 points, 21 from 300 seeds on, never a dot', () => {
+        // every arm crosses the half radius once, out or in: the crossings count the arms
+        const arms = (pts) => pts.slice(1).filter((p, i) => (Math.hypot(p[0], p[1]) > 0.5) !== (Math.hypot(pts[i][0], pts[i][1]) > 0.5)).length
+        const flower = generateShape({ shape: 'sunflower', size: 1, points: 120 })
+        expect(blanks(flower)).toBe(0)
+        expect(flower.length).toBe(120)
+        expect(arms(flower)).toBe(13)
+        for (let i = 1; i < flower.length; i += 1) expect(flower[i].slice(0, 2)).not.toEqual(flower[i - 1].slice(0, 2))
+        const radii = flower.map((p) => Math.hypot(p[0], p[1]))
+        expect(Math.max(...radii)).toBeGreaterThan(0.95)
+        expect(Math.min(...radii)).toBeLessThan(0.1)
+        // the points sit evenly along the line: no step longer than a quarter radius, so the guards add none
+        const steps = flower.slice(1).map((p, i) => Math.hypot(p[0] - flower[i][0], p[1] - flower[i][1]))
+        expect(Math.max(...steps)).toBeLessThan(0.35)
+        // more points draw the same line more smoothly: the head keeps at most 300 seeds (21 arms), because a line
+        // through more seeds is longer than a cube draws in one frame
+        const head = generateShape({ shape: 'sunflower', size: 1, points: 1992 })
+        expect(head.length).toBe(1992)
+        expect(arms(head)).toBe(21)
+        // `copies` picks the nearest Fibonacci number of arms
+        expect(arms(generateShape({ shape: 'sunflower', size: 1, points: 120, copies: 10 }))).toBe(8)
     })
 
     it('noisy is nested rings that change with time and stay inside the circle', () => {

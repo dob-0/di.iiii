@@ -7,7 +7,7 @@ import { FRAME_MAX_POINTS } from '../../../shared/laserFrame.js'
 
 // The last four are the owner's TouchDesigner laser scenes (NairoDorian TD_LASER_CUBE_WIFI_LAN_2022.toe, read
 // 2026-10-17 with toeexpand): galaxy = Fibonacci_Spiral (golden spirals copied around the centre), sunflower =
-// Phyllotaxis (dots at the golden angle), noisy = Noisy_Art (breathing rings bent by noise, four-fold), grid =
+// Phyllotaxis (seeds at the golden angle, drawn along their spiral arms), noisy = Noisy_Art (breathing rings bent by noise, four-fold), grid =
 // Lines (the whole square with its cross and diagonals — the alignment picture).
 export const LASER_SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid']
 // A shape name may be a comma list ('galaxy,sunflower,noisy,grid'): with `cycle` seconds each shape plays in turn,
@@ -16,9 +16,32 @@ export const shapeListOf = (shape) => String(shape ?? '').split(',').map((s) => 
 // The golden angle (phyllotaxis) and the golden spiral's growth (TD: math.log((sqrt(5)+1)/2)*2/pi).
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 const GOLDEN_GROWTH = (Math.log((Math.sqrt(5) + 1) / 2) * 2) / Math.PI
-// The engine's path guards add dwell and blanking points around every lit stretch (about 45 points a dot at
-// 30 kpps), so a dot picture keeps its dots few: the frame stays under the cube's budget and above 15 frames a second.
-const MAX_DOTS = 36
+// The arm counts a sunflower may have — consecutive Fibonacci numbers. F arms turn δ = F·137.5° (mod 360) a seed
+// (3: 52°, 5: −33°, 8: 20°, 13: −12°, 21: 8°, 34: −5°, 55: 3°, 89: −2°, 144: 1°), and the number before F is
+// the step from one arm to its neighbour on the rim.
+const FIBONACCI = [2, 3, 5, 8, 13, 21, 34, 55, 89, 144]
+const THIRD_TURN = (Math.PI * 2) / 3
+const MAX_SEEDS = 300
+// A rounded turn-around from the end of one stroke (…, a, p) into the start of the next (q, b, …): a cubic Bézier
+// that leaves p along its stroke and enters q along the next, as `count` points between them. It reaches out by
+// 0.6 of the gap it bridges (never under 0.04 nor over 0.25 of the radius), so the loop stays round, not a hairpin.
+const petalBetween = (a, p, q, b, count) => {
+    const dir = (from, to) => {
+        const d = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1
+        return [(to[0] - from[0]) / d, (to[1] - from[1]) / d]
+    }
+    const u = dir(a, p)
+    const v = dir(q, b)
+    const size = clamp(0.6 * Math.hypot(q[0] - p[0], q[1] - p[1]), 0.04, 0.25)
+    const c1 = [p[0] + u[0] * size, p[1] + u[1] * size]
+    const c2 = [q[0] - v[0] * size, q[1] - v[1] * size]
+    return Array.from({ length: count }, (_, i) => {
+        const t = (i + 1) / (count + 1)
+        const s = 1 - t
+        const w = [s * s * s, 3 * s * s * t, 3 * s * t * t, t * t * t]
+        return [w[0] * p[0] + w[1] * c1[0] + w[2] * c2[0] + w[3] * q[0], w[0] * p[1] + w[1] * c1[1] + w[2] * c2[1] + w[3] * q[1]]
+    })
+}
 export const DEFAULT_LASER_COLOUR = '#00ff40'
 export const MIN_POINTS = 8
 
@@ -96,31 +119,60 @@ const STROKES = {
         return [Math.cos(a) * t, Math.sin(a) * t]
     })],
     // TD Fibonacci_Spiral: r = e^(k·θ) over two turns, the biggest radius 1, `copies` of it turned evenly
-    // around the centre (TD's copy1: 360/n). Each copy is its own stroke, reached by a blank move.
+    // around the centre (TD's copy1: 360/n). Each copy is its own stroke, reached by a blank move. The points
+    // sit at equal distances ALONG the curve — a log spiral's arc length grows with its radius, so r is spaced
+    // evenly; equal angle steps would heap half the points at the centre, a still beam (laser.test.js).
     galaxy: (n, { copies = 0 } = {}) => {
         const count = Math.round(clamp(copies > 0 ? copies : 6, 1, 24))
         const each = Math.max(8, Math.floor(n / count))
-        const turns = 2 * TAU
-        const rMax = Math.exp(GOLDEN_GROWTH * turns)
+        const rMin = Math.exp(-GOLDEN_GROWTH * 2 * TAU)
         return Array.from({ length: count }, (_, c) => {
             const turn = (c / count) * TAU
             return Array.from({ length: each }, (_, i) => {
-                const a = (i / (each - 1)) * turns
-                const r = Math.exp(GOLDEN_GROWTH * a) / rMax
+                const r = rMin + (1 - rMin) * (i / (each - 1))
+                const a = Math.log(r / rMin) / GOLDEN_GROWTH
                 return [Math.cos(a + turn) * r, Math.sin(a + turn) * r]
             })
         })
     },
-    // TD Phyllotaxis: dot i at angle i·137.5° and radius √(i/n) — a sunflower. A dot is three lit points on
-    // one spot; `points` is the budget, a dot costs about four of it, never more than MAX_DOTS dots.
-    sunflower: (n) => {
-        const dots = Math.round(clamp(Math.floor(n / 4), 5, MAX_DOTS))
-        return Array.from({ length: dots }, (_, i) => {
-            const a = i * GOLDEN_ANGLE
-            const r = Math.sqrt((i + 0.5) / dots)
-            const p = [Math.cos(a) * r, Math.sin(a) * r]
-            return [p, p, p]
-        })
+    // TD Phyllotaxis: seed k at angle k·137.5° and radius √(k/N) — a sunflower. TD lights each seed as a dot; a
+    // dot is a still beam (the engine's guard, laser.test.js), and a lifted pen costs ~45 blanking points a stroke,
+    // so the seeds are drawn as ONE line along their parastichies — the spiral arms the eye picks out of a head:
+    // arm j holds seeds j, j+F, j+2F, … (F a Fibonacci number: as many arms as make an arm turn about a third of a
+    // circle from centre to rim — 13 at 120 points, 55 at 2000; `copies` picks the nearest Fibonacci number
+    // instead). The line runs out along one arm, steps to the neighbouring arm on the rim (the Fibonacci number
+    // before F), back in along it, turns at the centre, out again — never lifted, never parked. Each turn-around is
+    // a small petal drawn with its own few points (a sharp reversal costs the galvo ~20 hold points at 35 kpps,
+    // measured; a curve of ≤ 30° steps costs none); the rest of the n points sit evenly along the arms, so at 1992
+    // points the frame stays inside the cube's budget (laserGuards.test.js, the real-cube fixture).
+    sunflower: (n, { copies = 0 } = {}) => {
+        // A line through N seeds is about 2·√N radii long (the seeds sit √(π/N) apart); a cube draws ~50 field
+        // widths a frame at 35 kpps (laserGuards.js: budget × litStep), so the head keeps at most MAX_SEEDS seeds —
+        // at the full size 1 that is ~35 widths plus the petals — and more points only draw the same line more smoothly.
+        const budget = Math.min(n, MAX_SEEDS)
+        const turn = (f) => Math.abs(((((f * GOLDEN_ANGLE) % TAU) + TAU + Math.PI) % TAU) - Math.PI)
+        const cost = copies > 0 ? (f) => Math.abs(f - copies) : (f) => Math.abs(Math.floor(budget / f) * turn(f) - THIRD_TURN)
+        const arms = FIBONACCI.slice(1).reduce((best, f) => (cost(f) < cost(best) ? f : best))
+        const step = FIBONACCI[FIBONACCI.indexOf(arms) - 1]
+        const each = Math.max(4, Math.floor(budget / arms))
+        const seeds = arms * each
+        const seed = (k) => {
+            const a = k * GOLDEN_ANGLE
+            const r = Math.sqrt((k + 0.5) / seeds)
+            return [Math.cos(a) * r, Math.sin(a) * r]
+        }
+        const perPetal = clamp(Math.floor(n / (3 * arms)), 2, 10)
+        const onArms = Math.max(3 * arms, n - perPetal * (arms - 1))
+        const line = []
+        for (let i = 0; i < arms; i += 1) {
+            const j = (i * step) % arms
+            const vertices = Array.from({ length: each }, (_, m) => seed(j + (i % 2 === 0 ? m : each - 1 - m) * arms))
+            const arm = along(vertices, Math.floor(onArms / arms) + (i < onArms % arms ? 1 : 0))
+            if (line.length) line.push(...petalBetween(line[line.length - 2], line[line.length - 1], arm[0], arm[1], perPetal))
+            line.push(...arm)
+        }
+        const reach = Math.max(...line.map((p) => Math.hypot(p[0], p[1])))
+        return [line.map((p) => [p[0] / reach, p[1] / reach])]
     },
     // TD Noisy_Art: a circle bent by noise that repeats four times around (TD copies a quarter 4×), `copies`
     // rings nested inside each other (TD's copy2: 3), the whole breathing on a 0.1 Hz swell. The noise drifts
