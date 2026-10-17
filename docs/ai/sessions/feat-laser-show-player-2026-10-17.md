@@ -70,3 +70,25 @@ The owner at the wall: *"i need more robust scenes … its nothing its so boring
 Owed: the room (laserLine.js) still holds each keyframe 4.4 s — give it the shared `poseAt`; epic-build needs a cubes-only
 switch (it dies on the 40 W lines being in the project but not in a cubes-only rig); the 28 dark scenes are the owner's call;
 the whole field needs the officer's zone (his line, N912/N932); the scenes-50 change should also reach dev (follow).
+
+## 04:5x — TouchDesigner against di: the same field, the safety box is the difference (N940, N941)
+
+- Owner 04:4x: TD's picture is "big and better". Measured on the file his TD has open
+  (`~/Desktop/ddd/Laser-Cube-TouchDesigner-main/TD_LASER_CUBE_WIFI_LAN_2022.toe`, expanded with TD 2023.11600's
+  `toeexpand.exe` under the same soda-9.0-1 wine TD runs on; no packet capture is possible here without root:
+  no capture capability on dumpcap/tcpdump, ptrace_scope 1):
+  `CHOP_TO_TABLE/math1`: pre-offset 1, gain `4095*0.5`, post-offset 0 (the `-4095/2` expression is stored but
+  inactive), rounded → x, y in 0…4095; `math2` gain 4095 for r, g, b; `LASER_SCALE` knob saved at 0.789
+  (`xscale` = `yscale` = the knob; the live knob may differ). The Python is the same protocol as di
+  (0x77 / 0x78 / 0x80 / 0x82 / 0x8a / 0xa9).
+- di: `toDeviceCoord` −1…1 → 0…4095 (`lasercubeProtocol.js`, MAX_VALUE 0xfff). Same 12-bit field, same width ceiling.
+- The difference is only what each side puts into −1…1: TD draws the whole square (x, y ±knob); di keeps the
+  keep-in zone y 0…1 (the upper half) and the show's `fit` sits at 0.9 of it. TD at 0.789 is 1.58 of the field
+  tall against di's 1.0 (calibration rectangle) / 0.9 (show); TD is narrower (1.58 against 2.0 / 1.8).
+- "Better": TD's Laser CHOP smooths the path on the host (step 0.015, corner holds, blanking delays,
+  docs/ai/research/laser-guards-touchdesigner-2026-10-14.md); di has no path smoothing yet (N641).
+- Raw: project `di-laser/cubes-in-raw` on the install (local-only; di-laser is followed from dev — owed: carry
+  it to dev or delete it after the show), a Laser node (square, size 1, height 0, green, 120 points) wired into
+  one Laser Out for all cubes. With the box closed its lower half is blanked, exactly like the calibration
+  rectangle; the owner's line (`! node ~/work/agent-reports-2026-10-17/zone-full.mjs`) opens the box and the
+  engine reloads at once (the script's `/config` call), so Raw's square becomes the full square by itself.
