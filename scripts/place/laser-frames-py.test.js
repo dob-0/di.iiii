@@ -131,3 +131,43 @@ describe.skipIf(!hasPython)('laser_frames.py: laser_lines (single-beam DMX laser
         expect(written).toBe(null)
     })
 })
+
+describe.skipIf(!hasPython)('laser_frames.py: beams, segments, keyframes (2026-10-17, the owner at the wall: "more robust scenes")', () => {
+    it('beams > the lines puts several rays on a line, each lit after a blank move to its own spot', () => {
+        const { status, summary, written } = run({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, beams: 6 })
+        expect(status).toBe(0)
+        expect(summary.ok).toBe(true)
+        const beam = written.fixtures[0].laser.beams[0]
+        const lit = beam.frames.list.filter((f) => f.some((p) => p[2] > 0))
+        expect(lit.length).toBeGreaterThan(0)
+        for (const f of lit) {
+            expect(f.filter((p) => p[2] > 0)).toHaveLength(3)                      // 6 beams on 2 lines: 3 rays a line
+            for (let k = 0; k < f.length; k += 1) {
+                if (f[k][2] <= 0) continue
+                expect(f[k - 1][2]).toBe(0)                                          // a blank move first …
+                expect(f[k - 1].slice(0, 2)).toEqual(f[k].slice(0, 2))              // … to the ray's own spot
+            }
+        }
+    })
+    it('segments makes a denser sky sheet', () => {
+        const { status, written } = run({ ...base, pattern: 'sky', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, amplitude_deg: 1, segments: 8 })
+        expect(status).toBe(0)
+        const f = written.fixtures[0].laser.beams[0].frames.list.find((fr) => fr.some((p) => p[2] > 0))
+        let longest = 0, runLen = 0
+        for (const p of f) { runLen = p[2] > 0 ? runLen + 1 : 0; longest = Math.max(longest, runLen) }
+        expect(longest).toBe(8)                                                      // one pose of the sheet: 8 lit points in a row
+    })
+    it('--keyframes writes one pose a frame and marks the frames for blending', () => {
+        const laser = { ...base, pattern: 'single-scan', pitch_deg: 4, yaw_deg: 9, amplitude_deg: 1.5 }
+        const plain = run(laser).written.fixtures[0].laser.beams[0].frames
+        const key = run(laser, ['--keyframes']).written.fixtures[0].laser.beams[0].frames
+        expect(plain.tween).toBeUndefined()
+        expect(plain.list.some((f) => f.filter((p) => p[2] > 0).length > 1)).toBe(true)   // the path within a frame
+        expect(key.tween).toBe(true)
+        expect(key.list.every((f) => f.filter((p) => p[2] > 0).length <= 1)).toBe(true)   // one pose a frame
+    })
+    it('beams and segments out of range are schema errors', () => {
+        expect(run({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, beams: 0 }).summary.schema_errors.join(' ')).toMatch(/beams/)
+        expect(run({ ...base, pattern: 'sky', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, segments: 1 }).summary.schema_errors.join(' ')).toMatch(/segments/)
+    })
+})
