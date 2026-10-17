@@ -3342,6 +3342,285 @@
     ]
    },
    "note": "Amber beams \u00b7 white washes strobe \u00b7 gradient laser"
+  },
+  "look:rig-v7-150": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "turn+sweep",
+    "x": 150,
+    "rot": 160,
+    "xrot": 150,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 white washes \u00b7 green laser"
+  },
+  "look:rig-v7-151": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "jump+zoom",
+    "x": 200,
+    "zoom": 220,
+    "rot": 200,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 white washes \u00b7 white laser"
+  },
+  "look:rig-v7-153": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "spin",
+    "x": 64,
+    "rot": 180,
+    "yrot": 160,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 lime washes \u00b7 green laser"
+  },
+  "look:rig-v7-154": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "wave",
+    "x": 150,
+    "xwave": 120,
+    "rot": 150,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 lime washes \u00b7 white laser"
+  },
+  "look:rig-v7-156": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "sweep",
+    "x": 145,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White beams \u00b7 white washes \u00b7 green laser"
+  },
+  "look:rig-v7-157": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "slow spin",
+    "x": 64,
+    "rot": 140,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White beams \u00b7 white washes \u00b7 white laser"
+  },
+  "look:rig-v7-159": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "jump+zoom",
+    "x": 200,
+    "zoom": 220,
+    "rot": 200,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White beams \u00b7 lime washes \u00b7 green laser"
+  },
+  "look:rig-v7-160": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
+    "rot": 180,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White beams \u00b7 lime washes \u00b7 white laser"
+  },
+  "look:rig-v7-162": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "wave",
+    "x": 150,
+    "xwave": 120,
+    "rot": 150,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 lime truss \u00b7 white walls \u00b7 green laser"
+  },
+  "look:rig-v7-163": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "zoom+spin",
+    "x": 150,
+    "zoom": 210,
+    "rot": 200,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White beams \u00b7 lime walls \u00b7 white truss \u00b7 green laser"
+  },
+  "look:rig-v7-164": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "sweep",
+    "x": 145,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams only \u00b7 white laser"
+  },
+  "look:rig-v7-165": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "slow spin",
+    "x": 64,
+    "rot": 140,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime washes only \u00b7 green laser"
+  },
+  "look:rig-v7-166": {
+   "graphics": [
+    1
+   ],
+   "colour": 42,
+   "every": 5,
+   "anim": {
+    "kind": "turn+sweep",
+    "x": 150,
+    "rot": 160,
+    "xrot": 150,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 lime washes chase \u00b7 green laser"
+  },
+  "look:rig-v7-167": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "jump+zoom",
+    "x": 200,
+    "zoom": 220,
+    "rot": 200,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White beams \u00b7 lime washes strobe \u00b7 white laser"
+  },
+  "look:rig-v7-168": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "every": 5,
+   "anim": {
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
+    "rot": 180,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "Lime beams \u00b7 white washes chase \u00b7 white laser"
   }
  },
  "allowStatic": true,
