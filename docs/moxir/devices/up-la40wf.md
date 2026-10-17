@@ -98,3 +98,17 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
 | 92 | 182 | by time | photo-1483.jpg |
 | 93 | 185 | by time | photo-1484.jpg |
 | 95 | 188 | by time | photo-1487.jpg |
+
+## Graphics: the test pattern and what we never use (owner, 2026-10-17)
+The owner: "i don like heart one and deleted that one and also the numberes and arrows, so dont use that values … you can make it approx". Then (11:5x): "in 40w i told what values is bad to not use … dont make it aprox other is ok".
+Values come from his 86 s sweep video (di.bo `1490-1116697124_1490.mp4`) with the desk's wire value printed under every frame:
+`photos/la40wf-shapes-by-value-1-2026-10-17.jpg` (1-71), `-2-` (72-168), `-3-` (170-255). A shape lasts about two values.
+The same on ch 3 and ch 20 of BOTH units (32 ch each: U2.137 ch 139/156, U2.169 ch 171/188). Data: `scripts/place/fixtures/charts/up-la40wf.json` → `graphics`.
+
+- **Test pattern: value 24 — the square** (it shows from 23 to 25).
+- **Never use — hearts:** 78-79, 166-167.
+- **Never use — arrows:** 74-75.
+- **Never use — numbers:** 246-253.
+- **Everything else is usable**, from value 1 up (owner: "other is ok").
+- **Safety, not taste:** single dots and blobs (about 146-165, 185-187) put all 40 W in one spot. Never toward people; only for an aim test on a surface.
+- **Exact, by the owner's word:** only the values he named are banned; no approximate neighbours are added.
