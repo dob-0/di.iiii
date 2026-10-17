@@ -9,7 +9,8 @@ import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
 arg = lambda k, d: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 LOOP = float(arg('--seconds', 62)); SEG = float(arg('--pattern-s', 8)); SPEED = float(arg('--speed', 1)); RGB = [float(x) for x in arg('--rgb', '1,1,1').split(',')]
-N, DARK, STEP, F = 256, 2.0, 0.035, 0.95
+N, DARK, STEP = 256, 2.0, 0.035
+F = float(arg('--field', 0.95))   # 1.0 = the cube's whole field (zone edge); owner 03:3x: "maximum scale of lines"
 def seg(a, b):
     n = max(2, int(math.dist(a, b) / STEP) + 1)
     return [[round(a[0] + (b[0] - a[0]) * i / (n - 1), 4), round(a[1] + (b[1] - a[1]) * i / (n - 1), 4)] + RGB for i in range(n)]
@@ -56,6 +57,10 @@ def scan(k, t, m):                     # --set scan (owner 02:0x: "loop lines x 
     if k == 8: g = 0.15 + 0.3 * (0.5 + 0.5 * math.sin(2 * math.pi * t)); return [seg((-F, y * g), (F, y * g)) for y in (-3, -1, 1, 3)]          # lines spreading out in Y
     if k == 9: return [seg((clip(x + o * m - 0.4), -F), (clip(x + o * m + 0.4), F)) for x in (-0.5, 0, 0.5)]   # slanted lines sliding X
     tri = F * (1 - 4 * abs(t - 0.5))      # straight down then straight up (owner 03:3x: "going down and up")
+    w = 2 * math.pi * t
+    if k == 16: return [seg((F * math.cos(w * m + j * math.pi / 6), F * math.sin(w * m + j * math.pi / 6)), (-F * math.cos(w * m + j * math.pi / 6), -F * math.sin(w * m + j * math.pi / 6))) for j in range(6)]   # full-field star, 6 lines
+    if k == 17: o2 = 0.3 * math.sin(w); return [seg((-F, clip(y + o2)), (F, clip(y + o2))) for y in (-0.66, 0, 0.66)] + [seg((clip(x - o2 * m), -F), (clip(x - o2 * m), F)) for x in (-0.66, 0, 0.66)]   # full grid, drifting
+    if k == 18: return [seg((-F * m, -F), (clip(-F * m + 2 * F * m * math.cos(math.pi / 2 * (j / 5) + 0.3 * math.sin(w))), clip(-F + 2 * F * math.sin(math.pi / 2 * (j / 5) + 0.3 * math.sin(w))))) for j in range(6)]   # fan from the corner, full field
     if k == 11: return [seg((-F, -tri), (F, -tri))]                                          # a line going down, then up
     if k == 12: return [seg((tri * m, -F), (tri * m, F))]                                     # a line going across, then back
     if k == 13: return [seg((-F, clip(F - 2 * F * (1 - abs(1 - 2 * ((t + j / 3) % 1))))), (F, clip(F - 2 * F * (1 - abs(1 - 2 * ((t + j / 3) % 1)))))) for j in range(3)]  # three lines cascading down and up
@@ -90,12 +95,12 @@ SET = arg('--set', 'crazy')
 # --red-every N: every Nth pattern red, the rest white.
 MIX_DOTS = [(scan, 0), (dots, 0), (pat, 0), (scan, 5), (dots, 1), (pat, 1), (scan, 1), (dots, 2), (pat, 2), (scan, 6), (dots, 3), (pat, 3),
             (scan, 4), (dots, 4), (pat, 4), (scan, 9), (dots, 5), (pat, 7), (scan, 10), (dots, 3), (pat, 6), (scan, 7), (dots, 0), (pat, 5),
-            (scan, 11), (scan, 12), (scan, 13), (scan, 14), (scan, 15)]
+            (scan, 11), (scan, 12), (scan, 13), (scan, 14), (scan, 15), (scan, 16), (scan, 17), (scan, 18)]
 MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2), (scan, 7), (pat, 2), (scan, 3), (scan, 8), (pat, 3),
        (scan, 4), (scan, 9), (pat, 4), (scan, 10), (pat, 5), (pat, 6), (pat, 7)]
 RED_EVERY = int(arg('--red-every', 0))
 if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
-NPAT = {'scan': 16, 'mix': len(MIX)}.get(SET, 8)
+NPAT = {'scan': 19, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
     if SET == 'scan': return scan(k, t, m)
     if SET == 'mix': f, j = MIX[k]; return f(j, t, m)
@@ -135,6 +140,15 @@ for k in range(N):
         col = colour_of(p)
         for s_i, stroke in enumerate(PICK(p, t, -1 if cube in '456' else 1)[:6]):
             new[ids[s_i]][k] = paint(stroke, col, t)
+if '--massive' in sys.argv:
+    seg_of = lambda k: int((k / lit_frames * LOOP) // SEG) % NPAT if k < lit_frames else None
+    for p in range(NPAT):
+        ks = [k for k in range(lit_frames) if seg_of(k) == p]
+        big = max([abs(c) for i in new for k in ks for q in new[i][k] for c in q[:2]] or [0])
+        if big <= 0: continue
+        g = F / big
+        for i in new:
+            for k in ks: new[i][k] = [[round(max(-F, min(F, q[0] * g)), 4), round(max(-F, min(F, q[1] * g)), 4)] + q[2:] for q in new[i][k]]
 for f in new.values():
     for k in range(N):
         if not f[k]: f[k] = [[0, 0, 0, 0, 0]]
