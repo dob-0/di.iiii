@@ -6,7 +6,9 @@
  *
  *   node scripts/rigbuild/cue-wire-check.mjs --project <id> [--api http://diiii.localhost/serverXR] [--token-file ~/.di/di.env]
  *        [--desk http://diiii.localhost/light/api] [--cues 0-49|14,41] [--seconds 3] [--hz 20] [--nodes ip,ip]
- *        [--json out.json] [--dry-run] [--no-restore]
+ *        [--json out.json] [--dry-run] [--no-restore] [--follow [--follow-minutes N]]
+ *   --follow  measure each picked cue when the desk's own runner plays it (no GO, nothing posted): the show keeps playing for
+ *             the people watching it; one loop of the show and two minutes by default.
  *
  * EXPECTED comes from the room's own maths, never re-derived here: the cue's look (desk `rig-<x>` = the document's look <x>), its
  * lit lamps (looks.js lookPoses level > 0) and its motion (lookMotion.js motionPlan / motionFrame, the room side the desk twin
@@ -169,6 +171,21 @@ export const nodeKindOf = ({ nodeDmxKeys, deskDmxKeys, input, state }) => {
     return { kind: 'own buffer', universe, why: `listens to Art-Net universe ${universe} (own /api/input), answers ${nodeDmxKeys.length} of the desk's ${deskDmxKeys.length} universes, own desk state with ${ownFixtures ?? '?'} fixtures` }
 }
 
+/** Minutes --follow waits for its cues: one loop of the show (every fade + hold) and two more, unless given. Pure. */
+export const followMinutes = (cues, override) => {
+    if (override != null && override !== true && Number.isFinite(Number(override))) return Number(override)
+    return Math.ceil(cues.reduce((s, c) => s + (Number(c.fade) || 0) + (Number(c.hold) || 0), 0) / 60) + 2
+}
+
+/** --follow: the cue to measure next, and how long to wait for its fade to end (measured from when the desk fired it).
+ *  null while the runner is stopped or plays a cue already measured or not picked. Pure. */
+export const followNext = ({ runner, todo, cues, nowMs }) => {
+    const i = runner?.index
+    if (!runner?.running || !Number.isInteger(i) || !todo.has(i) || !cues[i]) return null
+    const firedAt = Number.isFinite(runner.firedAt) ? runner.firedAt : nowMs
+    return { index: i, waitMs: Math.max(0, firedAt + ((Number(cues[i].fade) || 0) + 0.5) * 1000 - nowMs) }
+}
+
 // ---- the live part ---------------------------------------------------------------------------------------------------------
 
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms))
@@ -191,7 +208,9 @@ export const main = async (argv = process.argv.slice(2)) => {
     const seconds = Number(args.seconds ?? 3)
     const hz = Number(args.hz ?? 20)
     const dry = args['dry-run'] === true
-    const restore = args['no-restore'] !== true
+    const restore = args['no-restore'] !== true && args.follow !== true   // --follow never posts, so it has nothing to put back
+    const follow = args.follow === true
+    if (follow && args['dry-run']) die('--follow reads the wire while the show plays: drop --dry-run')
     const nodeIps = args.nodes === true || args.nodes === undefined ? null : String(args.nodes).split(',').map((s) => s.trim()).filter(Boolean)
 
     const client = makeClient(api, readToken(args['token-file'] ? String(args['token-file']) : null))
@@ -246,14 +265,9 @@ export const main = async (argv = process.argv.slice(2)) => {
 
     const results = []
     let okCount = 0
-    try {
-        for (const i of picked) {
+    // one cue, already up and past its fade: sample both wires and compare with the room's expectation
+    const checkCue = async (i, exp) => {
             const cue = cues[i]
-            const exp = expectationOf({ cue, look: lookOfCue(cue, rigLooks), lamps, entities, library, rigLooks, seconds, hz })
-            if (exp.error) { say(`${String(i).padStart(2)} ${cue.name}  ${exp.error}  MISMATCH`); results.push({ index: i, ...exp, ok: false }); continue }
-            if (dry) { say(cueLine(i, exp)); results.push({ index: i, ...exp }); continue }
-            await postJson(`${desk}/cues/go`, { index: i })
-            await sleep(((Number(cue.fade) || 0) + 0.5) * 1000)
             const deskSeries = new Map(exp.lamps.map((l) => [l.entityId, []]))
             const nodeSeries = new Map(exp.lamps.map((l) => [l.entityId, []]))
             const t0 = Date.now()
@@ -279,6 +293,35 @@ export const main = async (argv = process.argv.slice(2)) => {
             if (ok) okCount++
             for (const [label, w] of Object.entries(wires)) for (const m of w.mismatches.slice(0, 12)) say(`      ${label} ${m.entityId} (${m.kind}): expected lit ${m.expected.lit} move ${m.expected.moving} · measured lit ${m.measured.lit} move ${m.measured.moving} range ${m.measured.range.join('-')}`)
             results.push({ index: i, cue: { id: cue.id, name: cue.name, lookId: cue.lookId, fade: cue.fade }, motion: exp.motion, expected: exp.lamps, desk: { ...wires.desk, series: undefined }, node: wires.node || null, ok })
+    }
+    try {
+        if (follow) {
+            // FOLLOW: the desk's own runner plays the show; each picked cue is measured when it comes up, after its fade. No POST.
+            const todo = new Set(picked.filter((i) => {
+                const exp = expectationOf({ cue: cues[i], look: lookOfCue(cues[i], rigLooks), lamps, entities, library, rigLooks, seconds, hz })
+                if (exp.error) { say(`${String(i).padStart(2)} ${cues[i].name}  ${exp.error}  MISMATCH`); results.push({ index: i, ...exp, ok: false }) }
+                return !exp.error
+            }))
+            const deadline = Date.now() + followMinutes(cues, args['follow-minutes']) * 60000
+            say(`following the desk's runner: ${todo.size} cues to catch, up to ${Math.round((deadline - Date.now()) / 60000)} min`)
+            while (todo.size && Date.now() < deadline) {
+                const next = followNext({ runner: (await getJson(`${desk}/cues`)).cues, todo, cues, nowMs: Date.now() })
+                if (!next) { await sleep(500); continue }
+                if (next.waitMs > 0) await sleep(next.waitMs)
+                await checkCue(next.index, expectationOf({ cue: cues[next.index], look: lookOfCue(cues[next.index], rigLooks), lamps, entities, library, rigLooks, seconds, hz }))
+                todo.delete(next.index)
+            }
+            if (todo.size) say(`not caught before the deadline: cues ${[...todo].join(',')}`)
+        } else {
+            for (const i of picked) {
+                const cue = cues[i]
+                const exp = expectationOf({ cue, look: lookOfCue(cue, rigLooks), lamps, entities, library, rigLooks, seconds, hz })
+                if (exp.error) { say(`${String(i).padStart(2)} ${cue.name}  ${exp.error}  MISMATCH`); results.push({ index: i, ...exp, ok: false }); continue }
+                if (dry) { say(cueLine(i, exp)); results.push({ index: i, ...exp }); continue }
+                await postJson(`${desk}/cues/go`, { index: i })
+                await sleep(((Number(cue.fade) || 0) + 0.5) * 1000)
+                await checkCue(i, exp)
+            }
         }
     } finally {
         await restoreDesk()
