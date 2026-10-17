@@ -1395,7 +1395,8 @@ const normalizeBeamLaser = (laser) => {
             total += pts.length
             list.push(pts)
         }
-        if (list.length) out.frames = { period: Math.min(3600, Math.max(0.05, ensureNumber(laser.frames.period, 0))), list }
+        // `tween: true` (2026-10-17): the frames are keyframes; the room and the cubes' player blend between them.
+        if (list.length) out.frames = { period: Math.min(3600, Math.max(0.05, ensureNumber(laser.frames.period, 0))), list, ...(laser.frames.tween === true ? { tween: true } : {}) }
     }
     if (typeof laser.source === 'string') out.source = laser.source.slice(0, 500)
     return out
