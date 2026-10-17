@@ -528,12 +528,14 @@ function createDesk(opts = {}) {
   // The driver for one extra send, built or rebuilt when what it points at changes.
   function extraDriver(send) {
     const held = extraDrivers.get(send.id);
-    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority].join('|');
+    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority, send.universes.join()].join('|');
     if (held && held.sig !== sig) { held.drv.close(); extraDrivers.delete(send.id); }
     const again = extraDrivers.get(send.id);
     if (again) return again.drv;
     let drv = null;
-    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline });
+    // A widget carries ONE line: the universe it was told to (sendExtras sends that one). Built without it, the
+    // widget kept its default 0 and refused every other universe as unreachable — a U2 widget sent nothing (MOXIR 2026-10-17).
+    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline, universe: send.universes.length ? send.universes[0] : 0 });
     else if (send.driver === 'sacn') drv = new SACN({ offline, targets: send.targets, priority: send.priority, sourceName: 'di.iiii lighting desk' });
     // Art-Net needs no instance: one socket carries every destination, so an extra
     // Art-Net send is a list of addresses to also send each frame to, nothing more.

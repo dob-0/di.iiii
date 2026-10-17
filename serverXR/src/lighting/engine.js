@@ -6,6 +6,9 @@ const { lfoApply, isGenericChannels } = require('./lfo');
 const { layerValues, kindAllows } = require('./looks');
 const { headsFrame, headsPose } = require('./headMotion');
 
+// Roles that step, never fade (snapMask).
+const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
+
 // Generic profile library, named the way desks like Daslight name them:
 // the letters are the channel order.
 // Every profile here is a channel ORDER, not a particular product: pick the one whose
@@ -470,7 +473,26 @@ class Engine {
     // fade never ended, and every channel was written NaN — clamped to 0 — for ever.
     const n = +ms;
     if (!Number.isFinite(n) || n <= 0) { this.fade = null; return; }
-    this.fade = { from: this.snapshotLive(), start: Date.now(), ms: Math.min(60000, n) };
+    this.fade = { from: this.snapshotLive(), start: Date.now(), ms: Math.min(60000, n), snap: this.snapMask() };
+  }
+
+  // Channels that STEP rather than fade (a colour or gobo wheel, a prism, a shutter or function
+  // channel): sliding one through a crossfade shows every slot in between — a beam going
+  // red → light blue passed through the halves and other colours for the whole fade (MOXIR,
+  // 2026-10-17). They take the new value at the start of the fade, as a console's LTP channels do.
+  snapMask(state = this.state) {
+    const mask = new Map();
+    for (const f of (state && state.fixtures) || []) {
+      const p = PROFILES[f.profile];
+      if (!p || !Array.isArray(p.channels)) continue;
+      const u = f.universe | 0;
+      if (!mask.has(u)) mask.set(u, new Uint8Array(512));
+      p.channels.forEach((role, i) => {
+        const ch = (f.address | 0) - 1 + i;
+        if (STEP_ROLES.has(role) && ch >= 0 && ch < 512) mask.get(u)[ch] = 1;
+      });
+    }
+    return mask;
   }
 
   cancelFade() { this.fade = null; }
@@ -499,7 +521,8 @@ class Engine {
         for (const [u, tgt] of target) {
           const from = this.fade.from.get(u) || new Float64Array(512);
           const cur = this.buffer(this.live, u);
-          for (let i = 0; i < 512; i++) cur[i] = from[i] + (tgt[i] - from[i]) * t;
+          const snap = this.fade.snap && this.fade.snap.get(u);
+          for (let i = 0; i < 512; i++) cur[i] = snap && snap[i] ? tgt[i] : from[i] + (tgt[i] - from[i]) * t;
         }
         return this.toBuffers();
       }

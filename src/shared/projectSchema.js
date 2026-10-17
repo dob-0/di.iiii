@@ -633,6 +633,10 @@ export const normalizeFixture = (fixture) => {
     const position = fixtureText(fixture.position, 64)
     if (position) out.position = position
     if (fixture.hung === true) out.hung = true
+    // A head hung turned or with its pan reversed, measured on the rig (rigbuild/dmxPose.js fixturePanOf, 2026-10-17).
+    const panOffsetDeg = Number(fixture.panOffsetDeg)
+    if (Number.isFinite(panOffsetDeg) && panOffsetDeg !== 0) out.panOffsetDeg = Math.max(-360, Math.min(360, Math.round(panOffsetDeg * 100) / 100))
+    if (fixture.panInvert === true) out.panInvert = true
     // Kept off DMX by the owner (run by hand: hazers, smoke): never patched (rigbuild/autoPatch.js).
     if (fixture.dmx === false) out.dmx = false
     return out

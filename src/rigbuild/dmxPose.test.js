@@ -206,3 +206,15 @@ describe('zoom keeps the flux, not the candela (render audit C)', () => {
         expect(wide.intensity).toBeLessThan(narrow.intensity / 5)
     })
 })
+
+import { fixturePanOf, roomPanOf } from './dmxPose.js'
+describe('a lamp hung turned or with its pan reversed (MOXIR 2026-10-17)', () => {
+    it('offsets and reverses the pan, and the two conversions undo each other', () => {
+        expect(fixturePanOf(-90, null)).toBe(-90)
+        expect(fixturePanOf(-90, { panOffsetDeg: 45 })).toBe(-45)
+        expect(fixturePanOf(-90, { panOffsetDeg: 45, panInvert: true })).toBe(135)
+        expect(fixturePanOf(250, { panOffsetDeg: 45 })).toBe(-65)
+        for (const fx of [null, { panOffsetDeg: 45 }, { panOffsetDeg: 45, panInvert: true }, { panOffsetDeg: -120, panInvert: true }])
+            for (const p of [-170, -90, 0, 33, 90, 170]) expect((((roomPanOf(fixturePanOf(p, fx), fx) - p) % 360) + 360) % 360).toBeCloseTo(0)
+    })
+})

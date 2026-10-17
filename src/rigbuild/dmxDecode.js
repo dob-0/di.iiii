@@ -286,12 +286,23 @@ const opticsAt = (spec, at) => {
 // room the look designed. Pure. Values the look does not speak about are left out (the
 // fixture's own resting values stand).
 
+// CIELAB (D65) of an sRGB triple: the slot nearest to the eye, not to the numbers (2026-10-17: by plain RGB distance
+// sky blue #26bcff picked the deep blue slot, ΔE 98, over light blue).
+const labOf = ([r, g, b]) => {
+    const lin = (v) => { v /= 255; return v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92 }
+    const [R, G, B] = [lin(r), lin(g), lin(b)]
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116)
+    const X = f((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), Y = f(R * 0.2126 + G * 0.7152 + B * 0.0722), Z = f((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883)
+    return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)]
+}
+
 const nearestSlot = (ranges, rgb) => {
     let best = null
+    const want = labOf(rgb)
     for (const r of ranges || []) {
         if (!r.colour) continue
-        const c = hexRgb(r.colour)
-        const d = (c[0] - rgb[0]) ** 2 + (c[1] - rgb[1]) ** 2 + (c[2] - rgb[2]) ** 2
+        const c = labOf(hexRgb(r.colour))
+        const d = (c[0] - want[0]) ** 2 + (c[1] - want[1]) ** 2 + (c[2] - want[2]) ** 2
         if (!best || d < best.d) best = { d, r }
     }
     return best ? Math.round((best.r.from + best.r.to) / 2) : null
