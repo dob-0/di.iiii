@@ -3,7 +3,7 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
@@ -57,12 +57,37 @@ def scan(k, t, m):                     # --set scan (owner 02:0x: "loop lines x 
     if k == 9: return [seg((clip(x + o * m - 0.4), -F), (clip(x + o * m + 0.4), F)) for x in (-0.5, 0, 0.5)]   # slanted lines sliding X
     r = math.pi * t * m; c, sn = math.cos(r), math.sin(r)
     return [seg((-F * c, -F * sn), (F * c, F * sn))]                                          # one line turning slowly, like a radar
+def dot(x, y, lit=3):                  # one dot: a blank move there, then a short dwell lit (owner 03:2x: "a lot of dots")
+    x, y = clip(x), clip(y); return [[x, y, 0, 0, 0]] + [[x, y] + RGB for _ in range(lit)]
+def dots(k, t, m):
+    w = 2 * math.pi * t; out = []
+    if k == 0:   # grid of dots, rows sliding against each other
+        for r in range(4):
+            out.append(sum((dot(-0.8 + c * 0.4 + 0.2 * math.sin(w + r) * m, -0.75 + r * 0.5) for c in range(5)), []))
+    elif k == 1: # ring of 12 dots turning and breathing
+        rr = 0.4 + 0.45 * abs(math.sin(w))
+        out.append(sum((dot(rr * math.cos(w * m + j * math.pi / 6), rr * math.sin(w * m + j * math.pi / 6)) for j in range(12)), []))
+    elif k == 2: # rain: 6 columns of dots falling
+        for c in range(6):
+            out.append(sum((dot(-0.85 + c * 0.34, 0.95 - ((t * 2 + c * 0.17 + j * 0.33) % 1) * 1.9) for j in range(3)), []))
+    elif k == 3: # scattered dots jumping every pose (a fixed pseudo-random table, so the loop repeats)
+        n = int(t * 40)
+        out.append(sum((dot(math.sin(n * 12.9898 + j * 78.233) * 0.9, math.sin(n * 39.346 + j * 11.135) * 0.9) for j in range(16)), []))
+    elif k == 4: # spiral of dots unwinding
+        out.append(sum((dot((0.1 + j * 0.055) * math.cos(w * 2 * m + j * 0.6), (0.1 + j * 0.055) * math.sin(w * 2 * m + j * 0.6)) for j in range(16)), []))
+    else:        # a row of dots scanning up and down, and a column scanning across
+        y = 0.9 * math.sin(w); x = 0.9 * math.sin(w * 1.5) * m
+        out.append(sum((dot(-0.9 + i * 0.3, y) for i in range(7)), [])); out.append(sum((dot(x, -0.9 + i * 0.3) for i in range(7)), []))
+    return out
 SET = arg('--set', 'crazy')
 # --set mix (owner 02:1x: "more animations, red and white but more white"): the 5 scans and the 8 crazy patterns interleaved;
 # --red-every N: every Nth pattern red, the rest white.
+MIX_DOTS = [(scan, 0), (dots, 0), (pat, 0), (scan, 5), (dots, 1), (pat, 1), (scan, 1), (dots, 2), (pat, 2), (scan, 6), (dots, 3), (pat, 3),
+            (scan, 4), (dots, 4), (pat, 4), (scan, 9), (dots, 5), (pat, 7), (scan, 10), (dots, 3), (pat, 6), (scan, 7), (dots, 0), (pat, 5)]
 MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2), (scan, 7), (pat, 2), (scan, 3), (scan, 8), (pat, 3),
        (scan, 4), (scan, 9), (pat, 4), (scan, 10), (pat, 5), (pat, 6), (pat, 7)]
 RED_EVERY = int(arg('--red-every', 0))
+if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
 NPAT = {'scan': 11, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
     if SET == 'scan': return scan(k, t, m)
@@ -71,7 +96,7 @@ def PICK(k, t, m):
 GRAD_EVERY = int(arg('--gradient-every', 0))   # owner 02:2x: "white red gradient": every Nth pattern runs white -> red along each line, the gradient travelling
 def colour_of(k): return [1.0, 0.0, 0.0] if RED_EVERY and k % RED_EVERY == RED_EVERY - 1 else ('grad' if GRAD_EVERY and k % GRAD_EVERY == 1 else RGB)
 def paint(stroke, col, t):
-    if col != 'grad': return [q[:2] + col for q in stroke]
+    if col != 'grad': return [q[:2] + (col if max(q[2:5]) > 0 else [0, 0, 0]) for q in stroke]
     n = max(1, len(stroke) - 1)
     out = []
     for i, q in enumerate(stroke):
