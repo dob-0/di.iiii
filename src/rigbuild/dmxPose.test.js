@@ -8,6 +8,7 @@ import { dealOps } from './deal.js'
 import { flashEntities, lookPoses, posedEntities } from './looks.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
 import { beamOfPanTilt, deskProfileName, dmxEntities, laserAimShift, panTiltOfBeam, runningMode } from './dmxPose.js'
+import { createLaserShowStore, groupOfLine, laserShowOf, NOT_PLAYING, OFF_POLL_MS, POLL_MS, TIMEOUT_MS } from './laserShowState.js'
 import { deskLooksWithValues } from './deskLookValues.js'
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
@@ -163,27 +164,6 @@ describe('the room drawn from DMX', () => {
         if (gone.components.beam) expect(drawn.components.beam.visible).toBe(false)
     })
 
-    it('a LaserCube line (network laser, off DMX) draws its frames while the cubes play, and rests dark when they do not (MOXIR 2026-10-17)', () => {
-        const entities = dealt()
-        const cube = { id: 'rig-laser-1a', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#00ff00', intensity: 3, angle: 0.1 }, beam: { visible: true, haze: 1, laser: { mW: 3000, frames: { period: 8, list: [[[0, 0, 0, 1, 0]], [[0.5, 0, 0, 1, 0]]] } } }, fixture: { type: 'ext-lc-ultra-mk2', unit: 1, dmx: false } } }
-        const all = [...entities, cube]
-        const fixtures = deskOf(entities)
-        // the wall plays: the line is drawn exactly as the design holds it (its frames run on the show clock)
-        const playing = dmxEntities({ shown: all, document: all, fixtures, library: TYPE_LIBRARY, laserShow: { playing: true, project: 'p', clockShiftMs: 0, tween: true } })
-        expect(playing.entities.find((s) => s.id === cube.id)).toBe(cube)
-        // the wall is dark (or no word from the laser server): the #1011 safety holds, the line rests dark
-        for (const laserShow of [null, { playing: false }]) {
-            const dark = dmxEntities({ shown: all, document: all, fixtures, library: TYPE_LIBRARY, laserShow }).entities.find((s) => s.id === cube.id)
-            expect(dark.components.rigShown).toMatchObject({ level: 0, undriven: true })
-            expect(dark.components.beam.visible).toBe(false)
-        }
-        // a DMX lamp the desk does not drive stays dark even while the cubes play: the show lights the cubes only
-        const gone = entities.find((e) => e.components.fixture?.type === 'up-b380f')
-        const fewer = fixtures.filter((f) => f.index !== gone.components.fixture.index)
-        const still = dmxEntities({ shown: all, document: all, fixtures: fewer, library: TYPE_LIBRARY, laserShow: { playing: true } }).entities.find((s) => s.id === gone.id)
-        expect(still.components.rigShown).toMatchObject({ level: 0, undriven: true })
-    })
-
     it('a strobe TYPE is drawn as a flash at the desk\'s rate, never a cone', () => {
         const strobe = { id: 'S1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ffffff', intensity: 5, angle: 0.5 }, beam: { visible: true }, fixture: { type: 'ext-strobe', mode: '4ch-assumed', index: 9 } } }
         const flashed = flashEntities([strobe], TYPE_LIBRARY)
@@ -273,5 +253,116 @@ describe('a DMX laser\'s picture moves with its X/Y (owner 2026-10-17: "add move
         near(lit, [half / 18.5, 0, 1, 0, 0], 3) // X at the by-hand end: the picture moves a whole half-field, drawn red
         near(blank, [0.1 + half / 18.5, 0, 0, 0, 0], 3) // a blank move moves too and stays blank
         near(run({ aimSwap: true, aimInvertY: true })[0].slice(0, 2), [0, -half / 18.5], 3)
+    })
+})
+
+describe('the LaserCubes follow the laser server, not the desk (MOXIR 2026-10-17)', () => {
+    // A LaserCube line as the rig builder writes it: off DMX, no desk index, its picture in beam.laser.
+    const cubeLine = (id) => ({ id, type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#00ff00', intensity: 3, angle: 0.1 }, beam: { visible: true, haze: 1, laser: { mW: 3000, frames: { period: 8, list: [[[0, 0, 0, 1, 0]], [[0.5, 0, 0, 1, 0]]] } } }, fixture: { type: 'ext-lc-ultra-mk2', dmx: false } } })
+    // GET /laser/api/state as the engine (laserEngine.js state()) and di's player (laserShow.js state()) answer it.
+    const serverState = ({ playing = true, armed = ['cube-1', 'cube-2'] } = {}) => ({
+        armed: armed.length > 0,
+        cubes: ['cube-1', 'cube-2'].map((id) => ({ id, armed: armed.includes(id) })),
+        show: playing ? { playing: true, project: 'moxir', cubes: [{ cube: 'cube-1', group: 'rig-laser-1' }, { cube: 'cube-2', group: 'rig-laser-2' }] } : { playing: false }
+    })
+    const room = () => {
+        const lamps = dealt()
+        return { all: [...lamps, cubeLine('rig-laser-1a'), cubeLine('rig-laser-1f'), cubeLine('rig-laser-2a')], fixtures: deskOf(lamps) }
+    }
+    const drawnAs = ({ all, fixtures }, laserShow, id) => dmxEntities({ shown: all, document: all, fixtures, library: TYPE_LIBRARY, laserShow }).entities.find((e) => e.id === id)
+    const designOf = ({ all }, id) => all.find((e) => e.id === id)
+    const expectDark = (e) => {
+        expect(e.components.rigShown).toMatchObject({ level: 0, undriven: true })
+        expect(e.components.light.intensity).toBe(0)
+        if (e.components.beam) expect(e.components.beam.visible).toBe(false)
+    }
+
+    it('a line\'s cube is the player\'s own map: rig-laser-1a … 1f → group rig-laser-1 → the cube that plays it', () => {
+        expect(['rig-laser-1a', 'rig-laser-1f', 'rig-laser-6c', 'solo'].map(groupOfLine)).toEqual(['rig-laser-1', 'rig-laser-1', 'rig-laser-6', 'solo'])
+        expect(laserShowOf(serverState()).groups).toEqual(['rig-laser-1', 'rig-laser-2'])
+        expect(laserShowOf(serverState({ armed: ['cube-2'] })).groups).toEqual(['rig-laser-2'])
+        for (const s of [serverState({ playing: false }), null, {}, { show: { playing: true } }]) expect(laserShowOf(s)).toBe(NOT_PLAYING)
+    })
+
+    it('a network laser draws its frames, as the design holds them, while the show plays on its armed cube', () => {
+        const r = room()
+        const show = laserShowOf(serverState())
+        for (const id of ['rig-laser-1a', 'rig-laser-1f', 'rig-laser-2a']) expect(drawnAs(r, show, id)).toBe(designOf(r, id))
+    })
+
+    it('it rests dark when the show is not playing, its cube is disarmed or not mapped, or no word came', () => {
+        const r = room()
+        expectDark(drawnAs(r, laserShowOf(serverState({ playing: false })), 'rig-laser-1a'))
+        const cube2Only = laserShowOf(serverState({ armed: ['cube-2'] }))
+        expectDark(drawnAs(r, cube2Only, 'rig-laser-1a'))
+        expect(drawnAs(r, cube2Only, 'rig-laser-2a')).toBe(designOf(r, 'rig-laser-2a'))
+        expectDark(drawnAs(r, laserShowOf(serverState({ armed: [] })), 'rig-laser-2a')) // the engine disarmed
+        for (const none of [null, undefined, NOT_PLAYING]) expectDark(drawnAs(r, none, 'rig-laser-1a'))
+        const seventh = { ...r, all: [...r.all, cubeLine('rig-laser-7a')] } // a line no cube plays
+        expectDark(drawnAs(seventh, laserShowOf(serverState()), 'rig-laser-7a'))
+    })
+
+    it('a DMX laser with no desk row stays dark while the cubes play: the show lights the network lasers only', () => {
+        const r = room()
+        const show = laserShowOf(serverState())
+        // a 40 W DMX laser whose id even falls in a playing group: it is the desk's, and the desk does not drive it
+        const dmxLaser = { id: 'rig-laser-1z', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ff0000', intensity: 3, angle: 0.1 }, beam: { visible: true, laser: { frame: [[0, 0, 1, 0, 0]] } }, fixture: { type: 'up-la40wf', index: 999 } } }
+        expectDark(drawnAs({ ...r, all: [...r.all, dmxLaser] }, show, dmxLaser.id))
+        const gone = r.all.find((e) => e.components.fixture?.type === 'up-b380f')
+        expectDark(drawnAs({ ...r, fixtures: r.fixtures.filter((f) => f.index !== gone.components.fixture.index) }, show, gone.id))
+    })
+
+    it('one poll for the page: a read at once and every POLL_MS while the room listens, none after; a failed, refused or slow read is dark', async () => {
+        const timers = []
+        const setTimer = (fn, ms) => { const t = { fn, ms }; timers.push(t); return t }
+        const clearTimer = (t) => { const i = timers.indexOf(t); if (i >= 0) timers.splice(i, 1) }
+        const fire = (ms) => { const t = timers.find((x) => x.ms === ms); clearTimer(t); return t.fn() }
+        const polls = () => timers.filter((t) => t.ms !== TIMEOUT_MS).map((t) => t.ms)
+        let answer = () => ({ ok: true, status: 200, json: async () => serverState() })
+        const reads = []
+        const store = createLaserShowStore({ url: () => '/laser/api/state', fetchImpl: async (u, opts) => { reads.push(u); return answer(opts.signal) }, setTimer, clearTimer })
+        expect(timers).toHaveLength(0) // nobody listens: no read
+        let heard = 0
+        const leave = store.subscribe(() => { heard += 1 })
+        await fire(0)
+        expect(reads).toEqual(['/laser/api/state'])
+        expect(store.getSnapshot().groups).toEqual(['rig-laser-1', 'rig-laser-2'])
+        expect(drawnAs(room(), store.getSnapshot(), 'rig-laser-1a').components.rigShown).toBeUndefined()
+        await fire(POLL_MS) // the same answer: nothing re-renders
+        expect([reads.length, heard]).toEqual([2, 1])
+        answer = () => { throw new TypeError('Failed to fetch') } // the server is gone: dark
+        await fire(POLL_MS)
+        expect(store.getSnapshot()).toBe(NOT_PLAYING)
+        expectDark(drawnAs(room(), store.getSnapshot(), 'rig-laser-1a'))
+        answer = () => ({ ok: false, status: 500 }) // refused: dark
+        await fire(POLL_MS)
+        expect(store.getSnapshot()).toBe(NOT_PLAYING)
+        answer = () => ({ ok: true, status: 200, json: async () => serverState() })
+        await fire(POLL_MS)
+        expect(store.getSnapshot().playing).toBe(true)
+        // a read that hangs is cut at TIMEOUT_MS: dark, never the old show
+        answer = (signal) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))))
+        const hung = fire(POLL_MS)
+        fire(TIMEOUT_MS)
+        await hung
+        expect(store.getSnapshot()).toBe(NOT_PLAYING)
+        answer = () => ({ ok: false, status: 404 }) // a tier with no lasers: asked again only every OFF_POLL_MS
+        await fire(POLL_MS)
+        expect(timers.map((t) => t.ms)).toEqual([OFF_POLL_MS])
+        leave() // the last listener leaves: no poll is left
+        expect(timers).toHaveLength(0)
+        // a room that leaves and comes back while a read is in flight does not start a second poll
+        answer = () => ({ ok: true, status: 200, json: async () => serverState() })
+        const first = store.subscribe(() => {})
+        const inFlight = fire(0)
+        first()
+        expect(store.getSnapshot()).toBe(NOT_PLAYING) // forgotten while nobody listens
+        const again = store.subscribe(() => {})
+        expect(polls()).toEqual([])
+        await inFlight
+        expect(polls()).toEqual([POLL_MS])
+        expect(store.getSnapshot().playing).toBe(true)
+        again()
+        expect(timers).toHaveLength(0)
     })
 })

@@ -133,24 +133,4 @@ describe('the lasers at /laser', () => {
     const { base } = await boot()
     expect((await post(`${base}/laser/api/show`, { project: 'x' })).status).toBe(501)
   })
-
-  it('says an outside player\'s playhead in /state (memory only, nothing armed or sent) until it expires', async () => {
-    delete process.env.NODE_ENV
-    let t = 5_000_000
-    const { base, lane } = await boot({ now: () => t })
-    expect((await (await fetch(`${base}/laser/api/state`)).json()).show).toEqual({ playing: false })
-    const said = await post(`${base}/laser/api/show/playhead`, { project: 'show-a', clockShiftMs: 253400, tween: true, cubes: [{ cube: 'cube-1', group: 'g1' }], ttlMs: 4000 })
-    expect(said.status).toBe(200)
-    const state = await (await fetch(`${base}/laser/api/state`)).json()
-    expect(state.show).toMatchObject({ playing: true, source: 'outside', project: 'show-a', clockShiftMs: 253400, tween: true })
-    expect(state.armed).toBe(false)
-    expect(Object.keys((await (await fetch(`${base}/laser/api/frames`)).json()).byCube || {})).toHaveLength(0)
-    expect((await post(`${base}/laser/api/show/playhead`, { clockShiftMs: 1 })).status).toBe(400)
-    t += 4001
-    expect((await (await fetch(`${base}/laser/api/state`)).json()).show).toEqual({ playing: false })
-    await post(`${base}/laser/api/show/playhead`, { project: 'show-a' })
-    await post(`${base}/laser/api/show/playhead`, { playing: false })
-    expect((await (await fetch(`${base}/laser/api/state`)).json()).show).toEqual({ playing: false })
-    expect(lane.hasEngine()).toBe(true)
-  })
 })
