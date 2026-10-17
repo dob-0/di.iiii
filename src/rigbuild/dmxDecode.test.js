@@ -251,3 +251,38 @@ describe('per-emitter colour mixing (XYZ → linear Rec.709)', async () => {
         expect(emitterMix({ r: emitters.r, g: emitters.g }, { r: 255 })).toBe(null)
     })
 })
+
+import { decodeDmx as decodeForLaser } from './dmxDecode.js'
+import { TESTED_CHANNEL_LISTS as LISTS_FOR_LASER } from './fixtureTypes.js'
+describe('a laser drawn in the colour the desk picked (MOXIR 2026-10-17)', () => {
+    it('reads UP-LA40WF ch 5 as its colour slot', () => {
+        const find = (o) => { if (Array.isArray(o)) { if (o.some((c) => c?.cap?.laserColour)) return o; for (const x of o) { const r = find(x); if (r) return r } } else if (o && typeof o === 'object') for (const v of Object.values(o)) { const r = find(v); if (r) return r } return null }
+        const channels = find(LISTS_FOR_LASER['UP-LA40WF'])
+        const values = channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.laserColour ? 25 : 0))
+        expect(decodeForLaser(channels, values).colour).toBe('#ff0000')
+        const green = channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.laserColour ? 42 : 0))
+        expect(decodeForLaser(channels, green).colour).toBe('#00ff00')
+    })
+})
+
+describe('a laser the desk moves: X/Y read back (owner 2026-10-17: "add movement in 3d that i can sync that")', () => {
+    const findAim = (o) => { if (Array.isArray(o)) { if (o.some((c) => c?.cap?.aim)) return o; for (const x of o) { const r = findAim(x); if (r) return r } } else if (o && typeof o === 'object') for (const v of Object.values(o)) { const r = findAim(v); if (r) return r } return null }
+    const channels = findAim(LISTS_FOR_LASER['UP-LA40WF'])
+    const bytes = ([x, y]) => channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.aim?.axis === 'x' ? x : c.cap?.aim?.axis === 'y' ? y : c.default ?? 0))
+    const half = channels.find((c) => c.cap?.aim?.axis === 'x').cap.aim.halfDeg
+    it('centre is 0°, the by-hand ends are ±halfDeg, auto motion is drawn at centre and said', () => {
+        expect(decodeForLaser(channels, bytes([64, 64])).aim).toEqual({ x: 0, y: 0 })
+        expect(decodeForLaser(channels, bytes([125, 0])).aim).toEqual({ x: half, y: -half })
+        const auto = decodeForLaser(channels, bytes([200, 64]))
+        expect(auto.aim.x).toBe(0)
+        expect(auto.notes.join(' ')).toMatch(/auto motion/)
+    })
+    it('undoes encodeDmx to within one byte', () => {
+        for (const [pan, tilt] of [[0, 0], [10, -5], [-half, half], [3.3, 7.7]]) {
+            const out = encodeDmx(channels, { pan, tilt })
+            const back = decodeForLaser(channels, channels.map((c) => out[c.role] ?? (c.role === 'dimmer' ? 255 : c.default ?? 0))).aim
+            expect(Math.abs(back.x - pan)).toBeLessThan(0.35)
+            expect(Math.abs(back.y - tilt)).toBeLessThan(0.35)
+        }
+    })
+})

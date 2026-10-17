@@ -190,7 +190,9 @@ function makeFixture(f = {}) {
   for (const role of PROFILES[profile].channels) {
     values[role] = own[role] != null ? own[role] : ROLE_DEFAULTS[role];
   }
-  values.dimmer = f.values && f.values.dimmer != null ? f.values.dimmer : 255;
+  // The dimmer comes up full so a patched lamp is visibly alive — UNLESS the chart says otherwise: a DMX laser's output
+  // rests at 0 (its profile default), and forcing 255 here left a 40 W laser at full on every re-patch (MOXIR 2026-10-17).
+  values.dimmer = f.values && f.values.dimmer != null ? f.values.dimmer : (own.dimmer != null ? own.dimmer : 255);
   return {
     id: f.id || `fx${Date.now().toString(36)}${nextId++}`,
     index: f.index || 1,

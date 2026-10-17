@@ -2180,7 +2180,8 @@
           "channels": [
             {
               "role": "dimmer",
-              "label": "Ch 1 output (named dimmer so master/blackout reach it)"
+              "label": "Ch 1 output (named dimmer so master/blackout reach it)",
+              "default": 0
             },
             {
               "role": "c2",
