@@ -3,7 +3,7 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix] [--red-every N] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
@@ -68,7 +68,16 @@ def PICK(k, t, m):
     if SET == 'scan': return scan(k, t, m)
     if SET == 'mix': f, j = MIX[k]; return f(j, t, m)
     return pat(k, t, m)
-def colour_of(k): return [1.0, 0.0, 0.0] if RED_EVERY and k % RED_EVERY == RED_EVERY - 1 else RGB
+GRAD_EVERY = int(arg('--gradient-every', 0))   # owner 02:2x: "white red gradient": every Nth pattern runs white -> red along each line, the gradient travelling
+def colour_of(k): return [1.0, 0.0, 0.0] if RED_EVERY and k % RED_EVERY == RED_EVERY - 1 else ('grad' if GRAD_EVERY and k % GRAD_EVERY == 1 else RGB)
+def paint(stroke, col, t):
+    if col != 'grad': return [q[:2] + col for q in stroke]
+    n = max(1, len(stroke) - 1)
+    out = []
+    for i, q in enumerate(stroke):
+        w = 0.5 + 0.5 * math.cos(2 * math.pi * (i / n - t))     # 1 = white, 0 = red
+        out.append(q[:2] + [1.0, round(w, 3), round(w, 3)])
+    return out
 d = json.load(open(doc_f)); doc = d.get('document', d)
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
 new = {i: [[] for _ in range(N)] for i in lines}
@@ -80,7 +89,7 @@ for k in range(N):
         ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
         col = colour_of(p)
         for s_i, stroke in enumerate(PICK(p, t, -1 if cube in '456' else 1)[:6]):
-            new[ids[s_i]][k] = [q[:2] + col for q in stroke]
+            new[ids[s_i]][k] = paint(stroke, col, t)
 for f in new.values():
     for k in range(N):
         if not f[k]: f[k] = [[0, 0, 0, 0, 0]]
