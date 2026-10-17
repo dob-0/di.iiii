@@ -124,7 +124,7 @@ describe('the room drawn from DMX', () => {
         const { entities: shown } = dmxEntities({ shown: entities, document: entities, fixtures, library: TYPE_LIBRARY })
         const get = (id) => shown.find((e) => e.id === id).components
         const reach = Number(a.components.light.intensity)
-        expect(get(a.id).light.color).toBe('#ff2422')
+        expect(get(a.id).light.color).toBe('#c41c1a') // the Red slot as it is: a filter's darkness is light (2026-10-17), not stretched to full
         expect(get(a.id).light.intensity).toBeCloseTo(reach * 128 / 255, 1)
         expect(get(b.id).light.intensity).toBe(0)
         expect(get(c.id).beam.strobeHz).toBe(3) // 25 Hz on the console, capped at 3
@@ -139,7 +139,7 @@ describe('the room drawn from DMX', () => {
         const fixtures = deskOf(entities, { [lamp.id]: { color: 102, pan: 128, tilt: 255, tiltFine: 255 } }) // Cyan
         const { entities: shown } = dmxEntities({ shown: looked, document: entities, fixtures, library: TYPE_LIBRARY })
         const drawn = shown.find((e) => e.id === lamp.id)
-        expect(drawn.components.light.color).toBe('#00b4ff') // the Cyan slot (#00a6eb), drawn at full
+        expect(drawn.components.light.color).toBe('#00a6eb') // the Cyan slot, drawn as it is (2026-10-17: never stretched to full)
         expect(drawn.components.light.color).not.toBe('#ff0000')
         expect(driveOf(shown, lamp.id).tilt).toBeCloseTo(135, 0)
     })

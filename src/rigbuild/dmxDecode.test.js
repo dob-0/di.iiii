@@ -110,12 +110,14 @@ describe('encode is decode\'s inverse where it speaks', () => {
             const back = decodeDmx(m.channels, valuesOf(m, cell), type(code))
             expect(back.pan).toBeCloseTo(100, 1)
             expect(back.tilt).toBeCloseTo(-40, 1)
-            expect(back.level).toBeCloseTo(0.5, 1)
-            // drawn at full: the colour's hue, its brightness is the level. Normalised in LINEAR
-            // light (emitters are driven linearly — render audit B, 2026-10-01), so #c41c1a at
-            // full is #ff2626, not the sRGB-scaled #ff2422
+            // Emitters: drawn at full (the colour's hue), normalised in LINEAR light (render audit B,
+            // 2026-10-01: #c41c1a at full is #ff2626) — and since 2026-10-17 the colour's own darkness
+            // is light too, so it rides in the level: 0.5 × lin(0xc4). A wheel: #c41c1a IS this
+            // wheel's red slot, so the slot is drawn as it is and the level stays 0.5.
             const emitters = m.channels.some((c) => c.role === 'r')
-            expect(back.colour.toLowerCase()).toBe(emitters ? '#ff2626' : '#ff2422') // a wheel's filter is a colour code
+            const lin = (c) => ((c / 255 + 0.055) / 1.055) ** 2.4
+            expect(back.level).toBeCloseTo(emitters ? 0.5 * lin(0xc4) : 0.5, 2)
+            expect(back.colour.toLowerCase()).toBe(emitters ? '#ff2626' : '#c41c1a')
         }
     })
     it('a lamp OUT on a colour-only mode (RGBW, no dimmer) is sent all zeros, not nothing', () => {
@@ -262,6 +264,36 @@ describe('a laser drawn in the colour the desk picked (MOXIR 2026-10-17)', () =>
         expect(decodeForLaser(channels, values).colour).toBe('#ff0000')
         const green = channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.laserColour ? 42 : 0))
         expect(decodeForLaser(channels, green).colour).toBe('#00ff00')
+    })
+})
+
+describe('a colour keeps its brightness on the wire and in the room (MOXIR 2026-10-17)', () => {
+    const lin = (c) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+    const rgbw = [{ role: 'dimmer' }, { role: 'r' }, { role: 'g' }, { role: 'b' }, { role: 'w' }]
+    const wheel = [{ role: 'dimmer' }, { role: 'color', cap: { wheel: [
+        { from: 0, to: 4, name: 'open', colour: '#ffffff' }, { from: 10, to: 14, name: 'red', colour: '#ff2a0a' },
+        { from: 20, to: 24, name: 'green', colour: '#00d12a' }, { from: 30, to: 34, name: 'lime', colour: '#8cff3a' }] } }]
+    const at = (channels, byRole) => channels.map((c) => byRole[c.role] ?? 0)
+    it('RGBW: a dark red puts its darkness in the dimmer, the emitters keep the hue at full', () => {
+        const v = encodeDmx(rgbw, { level: 1, colour: '#a3200c' })
+        expect(v.dimmer).toBe(Math.round(255 * lin(0xa3)))
+        expect(v.r).toBe(255)
+        const d = decodeDmx(rgbw, at(rgbw, v))
+        expect(d.level).toBeCloseTo(lin(0xa3), 2)
+    })
+    it('RGBW: a colour at full is unchanged (dimmer = level)', () => {
+        expect(encodeDmx(rgbw, { level: 0.5, colour: '#ff0000' }).dimmer).toBe(128)
+    })
+    it('wheel: the slot is picked by hue, the slot\'s own darkness is the filter\'s, the rest goes to the dimmer', () => {
+        expect(encodeDmx(wheel, { level: 1, colour: '#00d12a' })).toMatchObject({ color: 22, dimmer: 255 })
+        expect(encodeDmx(wheel, { level: 1, colour: '#00ff33' })).toMatchObject({ color: 22, dimmer: 255 })
+        expect(encodeDmx(wheel, { level: 1, colour: '#ff2a0a' })).toMatchObject({ color: 12, dimmer: 255 })
+        expect(encodeDmx(wheel, { level: 1, colour: '#a3200c' })).toMatchObject({ color: 12, dimmer: Math.round(255 * lin(0xa3)) })
+    })
+    it('wheel: the room draws a slot as it is, never stretched to full', () => {
+        const d = decodeDmx(wheel, at(wheel, { dimmer: 255, color: 22 }))
+        expect(d.colour).toBe('#00d12a')
+        expect(d.level).toBe(1)
     })
 })
 

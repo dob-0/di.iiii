@@ -99,6 +99,14 @@ export const cueOps = (document, cues, loop, { source } = {}) => [
     { type: 'setMappingState', payload: { patch: { loop: Boolean(loop), ...(source === 'clock' ? { showSource: 'clock' } : {}) } } }
 ]
 
+/**
+ * The op that takes `showSource: 'clock'` off a document whose show a DESK is about to play, or none. With 'clock' the
+ * room plays its own clock and ignores the desk (showClock.js showDriver), so the hall and the 3D part ways (MOXIR
+ * 2026-10-17: the 3D strobed while the rig stood still). Pure.
+ */
+export const clockOffOps = (document) => (document?.mappingState?.showSource === 'clock'
+    ? [{ type: 'setMappingState', payload: { patch: { showSource: 'desk' } } }]
+    : [])
 /** A rig file's own show (`rig.show`, versions.mjs) in this script's show shape. Pure. */
 export const showOfRig = (rig, project) => {
     if (!rig?.show?.cues?.length) throw new Error('the rig file carries no show (rig.show.cues)')
@@ -168,6 +176,16 @@ const main = async () => {
         if (!wrote.ok) die(`writing the cue list: ${wrote.status} ${wrote.text.slice(0, 300)}`)
         say(`document: cue list + loop${show.source === 'clock' ? ' + showSource clock' : ''} written (version ${wrote.body.newVersion})`)
         if (documentOnly) { say('--document-only: the desk was not asked anything'); return }
+    }
+    // The desk plays this show, so the room must follow the desk, not a clock (clockOffOps).
+    {
+        const now = await client.get(`/api/projects/${project}/document`)
+        const off = now.ok ? clockOffOps(now.body.document) : []
+        if (off.length) {
+            const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: now.body.version, ops: off.map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-clock-${i}`, clientId: 'show-loop' })) })
+            if (!wrote.ok) die(`taking showSource clock off: ${wrote.status} ${wrote.text.slice(0, 200)}`)
+            say(`document: showSource clock taken off (version ${wrote.body.newVersion}) — the room follows this desk`)
+        }
     }
 
     const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
