@@ -17,6 +17,9 @@
  * --units    the first channel of each unit on that universe (U2 = raw universe 1)
  * --colour   ch5 value: 8 white, 25 red, 42 green (the colour table: 0-16 white, 17-33 red, 34-50 green, …)
  * --every    seconds per graphic while a laser cue plays (cycles the graphics list)
+ * --plan     a JSON file {"cues": {"<n>": {"graphics": [..], "colour": c, "every": s, "note": "why"}}}: per scene its own shapes,
+ *            colour and pace (v4, owner 2026-10-17 23:5x: "make them suit our scenes"); a cue in the plan plays even without --cues
+ * --dry-run  print what each cue would play and exit (sends nothing)
  * --preview  seconds to play at once, whatever the cue, so the officer can see where they land, then follow the cues
  * Holds only its own 14 channels; releases them (value -1) on exit, SIGINT or SIGTERM. Writes a line a change to stdout.
  */
@@ -33,9 +36,15 @@ const previewUntil = Date.now() + Number(args.preview || 0) * 1000
 // --graphics 1,5,8 — the shapes to cycle (owner 20:4x: "only lines and cool underground ones": the horizontal lines of the
 // walk sheet la40wf-shapes-by-value-1: 1 one line, 2 dashed, 5 two parallel, 8 and 10 staggered layers, 27 dashed, 48 three stacked)
 const GRAPHICS = String(args.graphics || '1,5,8,10,48,2,27').split(',').map(Number)
+const plan = args.plan ? JSON.parse((await import('node:fs')).readFileSync(String(args.plan), 'utf8')).cues || {} : {}
+for (const n of Object.keys(plan)) cues.add(Number(n))
 const NEVER = new Set([74, 75, 78, 79, 166, 167, 246, 247, 248, 249, 250, 251, 252, 253])
 const dot = (g) => (g >= 146 && g <= 165) || (g >= 185 && g <= 187)
-if (GRAPHICS.some((g) => NEVER.has(g) || dot(g))) throw new Error('a forbidden graphic is in the list')
+const bad = (list) => !list.length || list.some((g) => !Number.isInteger(g) || g < 0 || g > 255 || NEVER.has(g) || dot(g))
+if (bad(GRAPHICS)) throw new Error('a forbidden graphic is in the list')
+for (const [n, p] of Object.entries(plan)) if (bad(p.graphics || GRAPHICS)) throw new Error(`cue ${n}: a forbidden or empty graphic list`)
+const playOf = (cue) => { const p = plan[cue] || {}; return { list: p.graphics || GRAPHICS, colour: p.colour ?? colourOf.get(cue) ?? colour, every: (p.every ? Number(p.every) * 1000 : every) } }
+if (args['dry-run']) { for (const n of [...cues].sort((a, b) => a - b)) { const q = playOf(n); console.log(`cue ${n}: graphics ${q.list.join(',')} · colour ${q.colour} · every ${q.every / 1000}s${plan[n]?.note ? ' · ' + plan[n].note : ''}`) } process.exit(0) }
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }
 
 const raw = async (channels) => {
@@ -49,8 +58,9 @@ const tick = async () => {
     const i = st?.cues?.index
     const cue = Number.isInteger(i) ? i + 1 : null
     const on = Date.now() < previewUntil || (cue !== null && cues.has(cue))
-    const g = GRAPHICS[Math.floor(Date.now() / every) % GRAPHICS.length]
-    const c = colourOf.get(cue) ?? colour
+    const q = playOf(cue)
+    const g = q.list[Math.floor(Date.now() / q.every) % q.list.length]
+    const c = q.colour
     await raw(frame(on, g, c))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
