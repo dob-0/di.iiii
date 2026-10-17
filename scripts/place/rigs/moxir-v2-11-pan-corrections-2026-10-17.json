@@ -1,4 +1,1 @@
-{
-  "rig-beam-planes-07": { "panOffsetDeg": 45, "panInvert": false },
-  "rig-beam-planes-10": { "panOffsetDeg": 45, "panInvert": false }
-}
+{ "rig-beam-planes-07": { "panOffsetDeg": -270, "panInvert": false } }
