@@ -16,6 +16,9 @@ export const computeOutput = (node, portId, { input, asNumber, context }) => {
         colour: typeof colour === 'string' ? colour : undefined,
         level: asNumber(input('level'), 1),
         points: asNumber(input('points'), 120),
+        copies: asNumber(input('copies'), 0),
+        rainbow: input('rainbow') === true || input('rainbow') === 'true' || asNumber(input('rainbow'), 0) === 1,
+        cycle: asNumber(input('cycle'), 0),
     })
     return { kind: 'laser', points }
 }
