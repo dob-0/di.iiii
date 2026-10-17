@@ -232,6 +232,20 @@ export const decodeDmx = (channels, values, type = null) => {
     const [panRange, tiltRange] = Array.isArray(type?.pan_tilt_deg?.value) ? type.pan_tilt_deg.value : [540, 270]
     if (has('pan')) out.pan = Math.round(degFromHome(sixteen(at.pan, has('panFine') ? at.panFine : null), panRange) * 100) / 100
     if (has('tilt')) out.tilt = Math.round(degFromHome(sixteen(at.tilt, has('tiltFine') ? at.tiltFine : null), tiltRange) * 100) / 100
+    // A scanning laser's X/Y position (UP-LA40WF ch 6/7, cap.aim: 0-125 by hand, 64 = centre) read back as degrees on the
+    // unit's own scan axes — the exact inverse of encodeDmx below — so the room moves the laser's picture where the desk
+    // moves the unit (owner 2026-10-17: "add movement in 3d that i can sync that"). A byte above the by-hand range is the
+    // unit's own auto motion (circle, jump): drawn at centre and said in the notes.
+    for (const c of Object.values(spec)) {
+        const a = c.cap?.aim
+        if (!a || (a.axis !== 'x' && a.axis !== 'y')) continue
+        const v = at[c.role]
+        let deg = 0
+        if (v > a.to) out.notes.push(`laser ${a.axis.toUpperCase()} auto motion (${v}) — drawn at centre`)
+        else if (v >= a.centre) deg = a.to > a.centre ? ((v - a.centre) / (a.to - a.centre)) * a.halfDeg : 0
+        else deg = a.centre > a.from ? ((v - a.centre) / (a.centre - a.from)) * a.halfDeg : 0
+        out.aim = { x: 0, y: 0, ...(out.aim || {}), [a.axis]: Math.round(deg * 100) / 100 }
+    }
 
     // Beam.
     const zoom = Object.values(spec).find((c) => c.cap?.zoom)
