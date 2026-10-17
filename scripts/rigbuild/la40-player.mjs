@@ -57,6 +57,9 @@ const raw = async (channels) => {
 }
 // anim (plan, optional): ch6 X move, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave; ch7 Y is always 64 (no up-down sweep).
 const SPAN = 32
+// --trim 137:g=100,169:r=0 — a unit's own colour trim on its modulation channels (ch16 red, ch17 green, ch18 blue; 0 = full), for a
+// unit whose diodes mix differently (2026-10-18: unit 137's white had a green cast, unit 169's was clean; same DMX on both, tested).
+const TRIM = new Map(String(args.trim || '').split(',').filter(Boolean).map((t) => { const [u, kv] = t.split(':'); return [Number(u), Object.fromEntries(kv.split('+').map((x) => x.split('=')).map(([k, v]) => [k, Number(v)]))] }))
 // The full 32-ch mode (up-la40wf.json mode 32, APPROVED): ch1-19 the first graphic, ch20-32 a SECOND graphic drawn at the same time.
 // anim keys: x zoom xrot yrot rot paint xwave (1st) · g2 (graphic list for the 2nd, else none) x2 zoom2 xrot2 yrot2 rot2 paint2 xwave2.
 // Never set: Y move / Y wave (ch7, ch14, ch24, ch31 stay 64 / 0: no up-down sweep), strobe ch15 (flash rule), colour modulation ch16-18 (0 = full).
@@ -64,6 +67,8 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     const off = [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
     const v = !on ? off : [255, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
         g2 ?? 0, 0, c, a.x2 ?? 64, 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
+    const t = on ? TRIM.get(base) : null
+    if (t) { if (t.r != null) v[15] = t.r; if (t.g != null) v[16] = t.g; if (t.b != null) v[17] = t.b }
     return v.map((value, i) => ({ universe, channel: base + i, value }))
 })
 let state = ''
