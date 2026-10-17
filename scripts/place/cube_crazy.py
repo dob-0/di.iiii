@@ -3,7 +3,7 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
@@ -41,16 +41,26 @@ def pat(k, t, m):                      # t in [0,1) inside the pattern's 8 s; m 
     # 7: scissors — two diagonals opening and closing fast
     o = F * math.sin(w * 4)
     return [seg((-F, -o), (F, o)), seg((-F, o), (F, -o))]
+def scan(k, t, m):                     # --set scan (owner 02:0x: "loop lines x y like scanning, few animations in loop")
+    a = F * math.sin(2 * math.pi * t)      # one back-and-forth per cycle
+    if k == 0: return [seg((a * m, -F), (a * m, F))]                                        # one line scanning X
+    if k == 1: return [seg((-F, a), (F, a))]                                                # one line scanning Y
+    if k == 2: return [seg((a * m, -F), (a * m, F)), seg((-a * m, -F), (-a * m, F))]          # two lines scanning X, opposite
+    if k == 3: return [seg((-F, a), (F, a)), seg((-F, -a), (F, -a))]                         # two lines scanning Y, opposite
+    b = F * math.sin(2 * math.pi * t + math.pi / 2)
+    return [seg((a * m, -F), (a * m, F)), seg((-F, b), (F, b))]                              # X and Y together: a moving cross
+SET = arg('--set', 'crazy'); NPAT = 5 if SET == 'scan' else 8
+PICK = scan if SET == 'scan' else pat
 d = json.load(open(doc_f)); doc = d.get('document', d)
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
 new = {i: [[] for _ in range(N)] for i in lines}
 lit_frames = int(N * LOOP / (LOOP + DARK))
 for k in range(N):
     if k >= lit_frames: continue
-    tt = k / lit_frames * LOOP; p = int(tt // SEG) % 8; t = ((tt % SEG) / SEG * SPEED) % 1   # --pattern-s: seconds per pattern; --speed: cycles inside it
+    tt = k / lit_frames * LOOP; p = int(tt // SEG) % NPAT; t = ((tt % SEG) / SEG * SPEED) % 1   # --pattern-s: seconds per pattern; --speed: cycles inside it
     for cube in '123456':
         ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
-        for s_i, stroke in enumerate(pat(p, t, -1 if cube in '456' else 1)[:6]):
+        for s_i, stroke in enumerate(PICK(p, t, -1 if cube in '456' else 1)[:6]):
             new[ids[s_i]][k] = stroke
 for f in new.values():
     for k in range(N):
