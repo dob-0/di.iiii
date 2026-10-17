@@ -1,8 +1,8 @@
 {
  "version": "2.12",
- "title": "MOXIR v2.12 — the 50 scenes, washes + beams (v6 underground), lasers at 0",
+ "title": "MOXIR v2.12 — the 50 scenes, washes + beams v6 (underground), lasers v4",
  "date": "2026-10-17",
- "what": "v2.12: 50 scenes (MOXIR 2026-10-17 v6 (show day): the 50 scenes for the WASHES and the 18 BEAMS, lasers at 0 (owner 08:2x). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_check.mjs), so the v3 move is kept. intent = the sce",
+ "what": "v2.12: 50 scenes (MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the v4 design unchanged (owner 08:2x: lasers later). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_che",
  "written_by": "scripts/place/rig_generate.py",
  "generated_by": {
   "tool": "scripts/place/rig_generate.py",
@@ -25493,6 +25493,10 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.2
     ]
    },
    "motion": {
@@ -25514,6 +25518,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": "the owner's 'blackout + one beam': a part is 6 beams, the closest the data can say"
   },
@@ -25878,6 +25889,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#eefdfd",
+     0.3
+    ],
     "cut up": [
      "#eefdfd",
      0.25
@@ -25906,6 +25921,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -26004,6 +26026,10 @@
      "#d1eeff",
      0.4
     ],
+    "laser": [
+     "#00ff00",
+     0.35
+    ],
     "plane 1": [
      "#00d12a",
      0.6
@@ -26044,6 +26070,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": "the poster's green arrives: lasers diode green, lamps poster green (t1/t2 hue 126 deg)"
   },
@@ -26377,6 +26410,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#eefdfd",
+     0.4
+    ],
     "cut up": [
      "#66faff",
      0.25
@@ -26405,6 +26442,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -26519,6 +26563,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#eefdfd",
+     0.4
+    ],
     "cut down": [
      "#f4fcf4",
      0.25
@@ -26548,6 +26596,13 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
@@ -26563,6 +26618,10 @@
     "line R": [
      "#99ffce",
      0.4
+    ],
+    "laser": [
+     "#00ff00",
+     0.6
     ],
     "plane 1": [
      "#ffffff",
@@ -26609,6 +26668,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -26743,6 +26809,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#eefdfd",
+     0.5
+    ],
     "cut down": [
      "#b699ff",
      0.7
@@ -26780,6 +26850,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": "lavender enters on the cut: the colour of the peak to come"
   },
@@ -26837,6 +26914,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#eefdfd",
+     1
+    ],
     "cut down": [
      "#eefdfd",
      0.8
@@ -26873,6 +26954,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -27022,6 +27110,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#ff3a12",
+     0.8
+    ],
     "dj kicker": [
      "#ffbe7a",
      0.25
@@ -27047,6 +27139,13 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": "the owner's 'red room' (09-28 loop): red as an accent, 20 s; the floor stays rose-copper; pump = 3 flashes/s max (WCAG 2.3.1 red-flash limit met)"
   },
   {
@@ -27062,6 +27161,10 @@
     "line R": [
      "#ff9180",
      0.7
+    ],
+    "laser": [
+     "#00ff00",
+     0.8
     ],
     "side line left": [
      "#ffffff",
@@ -27137,6 +27240,13 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
@@ -27152,6 +27262,10 @@
     "line R": [
      "#ff9180",
      0.4
+    ],
+    "laser": [
+     "#00ff00",
+     1
     ],
     "line A": [
      "#ff9180",
@@ -27213,6 +27327,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -27340,6 +27461,10 @@
      "#fff0c0",
      1.0
     ],
+    "laser": [
+     "#b699ff",
+     0.6
+    ],
     "cut up": [
      "#b699ff",
      0.8
@@ -27368,6 +27493,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#b699ff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -27561,6 +27693,10 @@
      "#e04e00",
      0.6
     ],
+    "laser": [
+     "#b699ff",
+     0.5
+    ],
     "cut down": [
      "#ff9180",
      0.3
@@ -27589,6 +27725,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#b699ff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -27760,6 +27903,10 @@
      "#66faff",
      0.3
     ],
+    "laser": [
+     "#26bcff",
+     0.4
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -27788,6 +27935,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#26bcff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": "floor here = cut down at 0.3 (still), the strips join the wave in petrol (not pure blue: the eye cannot focus it on the floor)"
   },
@@ -28038,6 +28192,10 @@
      "#b699ff",
      0.3
     ],
+    "laser": [
+     "#66faff",
+     0.4
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -28067,6 +28225,13 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#66faff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
@@ -28081,6 +28246,10 @@
     ],
     "line R": [
      "#66faff",
+     0.4
+    ],
+    "laser": [
+     "#00ff00",
      0.4
     ],
     "dj back": [
@@ -28109,6 +28278,13 @@
      "up-b380f"
     ],
     "still": 0.3
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -28255,6 +28431,10 @@
      "#e8e4dc",
      0.3
     ],
+    "laser": [
+     "#eefdfd",
+     0.8
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -28285,6 +28465,13 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
@@ -28300,6 +28487,10 @@
     "line R": [
      "#b699ff",
      0.7
+    ],
+    "laser": [
+     "#eefdfd",
+     0.8
     ],
     "plane 1": [
      "#ffffff",
@@ -28378,6 +28569,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -28503,6 +28701,10 @@
      "#e8e4dc",
      0.25
     ],
+    "laser": [
+     "#eefdfd",
+     0.8
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -28531,6 +28733,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -28633,6 +28842,10 @@
      "#b699ff",
      0.7
     ],
+    "laser": [
+     "#ff3a12",
+     0.8
+    ],
     "side line left": [
      "#a8d8ff",
      1.0
@@ -28689,6 +28902,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": "red accent, lasers only: t4 as measured, red fans with pale violet round them (#9982d4)"
   },
@@ -28822,6 +29042,10 @@
      "#ffbe7a",
      0.25
     ],
+    "laser": [
+     "#ff9180",
+     0.4
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -28850,6 +29074,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#ff9180",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": "warmth after the peak without red or amber: rose-copper + 3200 K"
   },
@@ -29005,6 +29236,10 @@
      "#ffffff",
      0.4
     ],
+    "laser": [
+     "#eefdfd",
+     0.4
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -29033,6 +29268,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   }
