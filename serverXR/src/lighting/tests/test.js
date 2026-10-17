@@ -260,6 +260,14 @@ check('a colour wheel steps at the start of a fade while the dimmer fades (MOXIR
   removeProfile('test wheel 3ch');
 });
 
+check('a profile whose chart rests its dimmer at 0 (a DMX laser) comes up dark when patched (MOXIR 2026-10-17)', () => {
+  addProfile('test laser 3ch', ['dimmer', 'c2', 'c3'], { replace: true, defaults: { dimmer: 0, c2: 250 } });
+  const f = makeFixture({ profile: 'test laser 3ch', address: 1 });
+  assert.strictEqual(f.values.dimmer, 0, 'the laser rests dark, got ' + f.values.dimmer);
+  assert.strictEqual(makeFixture({ profile: 'dimmer', address: 1 }).values.dimmer, 255, 'a plain lamp still comes up alive');
+  removeProfile('test laser 3ch');
+});
+
 check('addresses cannot run off the end of a universe', () => {
   const f = makeFixture({ profile: 'rgbw', address: 511, values: { r: 255, g: 255, b: 255, w: 255, dimmer: 255 } });
   const buf = new Engine(baseState([f])).render().get(0);
