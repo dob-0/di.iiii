@@ -98,7 +98,7 @@ export const TESTED_CHANNEL_LISTS = {
             // everything else 0, ch 20-32 = 0 (the second graphic stays off). Maker chart:
             // scripts/place/fixtures/charts/up-la40wf.json (APPROVED by the owner 2026-10-15 as the IP-LL40 in 32-ch mode; the PRINTED manual with the unit, photographed 2026-10-16, agrees row for row — its misprints are in the chart file; the tested values below agree with it).
             32: [
-                { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
+                { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)', default: 0 }, // a laser RESTS dark: with no look on the desk it must emit nothing (MOXIR 2026-10-17: a cleared desk fell back to full)
                 { ...laserChannel(2, 'Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, built-in graphics 200-255 by the PDF, 250-255 by the printed manual; static beam 250 — inside both)'), default: 250 },
                 { ...laserChannel(3, 'Graphic select (one graphic per two values; static beam 0 = graphic 1)'), default: 0 },
                 { ...laserChannel(4, 'Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 0)'), default: 0 },
