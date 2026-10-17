@@ -75,7 +75,14 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
         const fx = e?.components?.fixture
         if (e?.type !== 'spotLight' || !fx?.type) return e
         const desk = byIndex.get(Number(fx.index))
-        if (!desk || !Array.isArray(desk.values)) return e
+        if (!desk || !Array.isArray(desk.values)) {
+            // With a desk connected, a lamp the desk does not drive is dark on the rig — so it is dark in the room too:
+            // an unpatched wash, or a LaserCube line the laser server is not playing (MOXIR 2026-10-17: the room kept
+            // drawing those from the design and flooded the view while the rig showed one beam).
+            changed = true
+            const beam = e.components.beam ? { ...e.components.beam, visible: false, haze: 0 } : undefined
+            return { ...e, components: { ...e.components, light: { ...(e.components.light || {}), intensity: 0 }, ...(beam ? { beam } : {}), rigShown: { level: 0, undriven: true } } }
+        }
         const type = typeById(library, fx.type)
         const mode = runningMode(type, fx.mode, desk.profile)
         if (!mode) return e
