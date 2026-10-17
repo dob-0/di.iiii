@@ -7,8 +7,10 @@ line patterns, every point at or above the cube's axis (y >= 0: nothing below th
   scanner one vertical line sweeping across
   cross   two diagonal lines crossing, opening and closing
 A lit stretch (consecutive lit frames of the show) keeps one pattern; the pattern moves with the frame's place in the stretch.
+--field full (the default since 2026-10-17 22:2x, owner: "cubes installed so they hurt no one, make it full by default") stretches
+every picture over the cube's whole field, top to bottom (y -0.95..0.95); --field upper keeps the old upper half (y >= 0).
 Cubes 4-6 mirror cubes 1-3. Colour = the frame's own lit colour at full power. Writes ops JSON for the project's ops route.
-  python3 -I scripts/place/cube_lines.py <document.json> <ops-out.json>
+  python3 -I scripts/place/cube_lines.py <document.json> <ops-out.json> [--field full|upper]
 """
 import json, math, re, sys, time
 STEP = 0.02
@@ -38,6 +40,8 @@ def picture(pattern, ph, mirror, rgb):
     open_ = 0.45 + 0.4 * (0.5 + 0.5 * math.sin(2 * math.pi * ph))
     return [seg((-0.95, 0.05), (0.95, open_ + 0.05), rgb), seg((-0.95, open_ + 0.05), (0.95, 0.05), rgb)]
 
+FIELD = sys.argv[sys.argv.index('--field') + 1] if '--field' in sys.argv else 'full'
+assert FIELD in ('full', 'upper'), FIELD
 d = json.load(open(sys.argv[1])); doc = d['document']
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
 n = len(next(iter(lines.values()))['components']['beam']['laser']['frames']['list'])
@@ -57,10 +61,11 @@ for cube in '123456':
         length = next((j for j in range(k, n) if j + 1 >= n or not any(x[0] == j + 1 for x in lit)), k) - start + 1
         ph = (k - start) / max(1, length)
         strokes = picture(PATTERNS[stretch % len(PATTERNS)], ph, cube in '456', rgb)
+        if FIELD == 'full': strokes = [[[q[0], round(max(-0.95, min(0.95, 2 * q[1] - 1)), 4)] + q[2:] for q in st] for st in strokes]
         for s_i, stroke in enumerate(strokes):          # one stroke per line entity a-f (the 7th fan line joins line f)
             new[ids[min(s_i, len(ids) - 1)]][k] += stroke
 now = int(time.time() * 1000)
 ops = [{'type': 'updateComponent', 'payload': {'entityId': i, 'component': 'beam', 'patch': {'laser': {**e['components']['beam']['laser'], 'frames': {**e['components']['beam']['laser']['frames'], 'list': new[i]}}}}, 'opId': f'cube-lines-{now}-{i}', 'clientId': 'cube-lines-2026-10-17', 'timestamp': now} for i, e in lines.items()]
 json.dump({'baseVersion': d['version'], 'ops': ops}, open(sys.argv[2], 'w'))
 ys = [p[1] for f in new.values() for fr in f for p in fr]
-print(f'v{d["version"]}: {len(ops)} lines redrawn; lit frames per cube {len(lit)}; points {len(ys)}; lowest y {min(ys):.2f} (>= 0 = nothing below the axis)')
+print(f'v{d["version"]}: {len(ops)} lines redrawn; lit frames per cube {len(lit)}; points {len(ys)}; lowest y {min(ys):.2f} (field {FIELD})')
