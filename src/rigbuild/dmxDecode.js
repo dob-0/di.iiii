@@ -181,6 +181,13 @@ export const decodeDmx = (channels, values, type = null) => {
         rgb = hexRgb(w?.colour) || [255, 255, 255]
         rgb = rgb.slice()
     }
+    // A laser's own colour slots (UP-LA40WF ch 5, cap.laserColour): the room draws the colour the desk picked, so a red
+    // laser on the rig is a red line in the room (MOXIR 2026-10-17: the room kept the design's white while the rig was red).
+    const laserColour = Object.values(spec).find((c) => c.cap?.laserColour)
+    if (!rgb && laserColour) {
+        const w = wheelAt(laserColour.cap.laserColour, at[laserColour.role])
+        rgb = (hexRgb(w?.colour) || [255, 255, 255]).slice()
+    }
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (rgb && cto && at[cto.role] > 0) {
         const peak = Math.max(...rgb) || 1
