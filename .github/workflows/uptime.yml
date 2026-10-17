@@ -18,6 +18,7 @@ on:
 permissions:
   actions: read
   contents: read
+  issues: write
 
 concurrency:
   group: uptime
@@ -39,6 +40,8 @@ jobs:
             "https://diiii.xyz/"
             "https://diiii.xyz/serverXR/api/health"
             "https://di-studio.xyz/serverXR/api/health"
+            "https://dev.diiii.xyz/serverXR/api/health"
+            "https://yokozo.xyz/"
           )
           probe() { # url -> prints "code content-type"
             curl -sS -o /dev/null -m 20 -w '%{http_code} %{content_type}' "$1" 2>/dev/null || echo "000 -"
@@ -87,13 +90,34 @@ jobs:
             exit 0
           fi
           if [[ $STATE == down ]]; then
-            text="di.iiii is DOWN from outside: $DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
+            text="DOWN from outside:$DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
           else
-            text="di.iiii is back up from outside — $(date -u '+%H:%M UTC')"
+            text="All sites back up from outside —$(date -u '+%H:%M UTC')"
           fi
           curl -sS -m 20 -o /dev/null -w 'telegram %{http_code}\n' \
             --data-urlencode "chat_id=$TG_CHAT" --data-urlencode "text=$text" \
             "https://api.telegram.org/bot${TG_TOKEN}/sendMessage"
+
+      - name: Open or update one issue when down
+        if: steps.probe.outputs.state == 'down'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOWN: ${{ steps.probe.outputs.down }}
+          PREV: ${{ steps.prev.outputs.state }}
+        shell: bash
+        run: |
+          title="uptime: site down"
+          num=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "in:title $title" \
+                  --json number,title -q ".[] | select(.title == \"$title\") | .number" | head -n1)
+          body="Down from GitHub's runners at $(date -u '+%Y-%m-%d %H:%M UTC'): $DOWN"
+          if [[ -n $num ]]; then
+            # One outage is one issue: comment when the state turns to down
+            # (up or unknown -> down), not on every check of the same outage.
+            # A change in WHICH sites are down during one outage is not detected.
+            if [[ $PREV != down ]]; then gh issue comment "$num" -R "$GITHUB_REPOSITORY" -b "$body"; fi
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi
 
       - name: Fail when down
         if: steps.probe.outputs.state == 'down'
