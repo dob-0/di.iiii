@@ -4,7 +4,8 @@ Owner 09:0x on v5: "lol now its color full make back underground plz". So: every
 outside) are the accepted v3-palette3 ones (base file); the 18 beams' v3 colours are mapped to the slot of the B380F wheel SEEN
 (fixtureTypes.js B380F_SLOTS_SEEN) that keeps the same intent; HEADS are v5's (fan, sweep, cross, circle, figure8, nod, wave);
 MOTION is v5's unless it is over the flash limit (scenes_flash.cjs), then v3's. LASERS: the v4 design unchanged (owner 08:2x: lasers
-are updated later, when ready; 09:4x: "laser cubes in 3d not visible" after v5/v6 had dropped them).
+are updated later, when ready; 09:4x: "laser cubes in 3d not visible" after v5/v6 had dropped them). BASE is the laser session's
+current file (v3-palette3 + lasers v5, 10:1x), so the lasers are theirs as they stand.
     python3 -I scenes_v6.py BASE_V3.json V5.json OUT.json FLASH_OVER_IDS"""
 import json, sys, copy
 BASE, V5, OUT, OVER = sys.argv[1], sys.argv[2], sys.argv[3], set(filter(None, sys.argv[4].split(',')))
@@ -63,14 +64,14 @@ for s in out['scenes']:
     s['intent'] = story(parts, s['heads'], motion)
     # lasers: the v4 design (laser part, laser, laser_lines, laser_colour, desk_caps) is kept exactly as the laser session left it
 out['version'] = 'v6-underground-2026-10-17'
-out['what'] = ('MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the v4 design unchanged (owner 08:2x: lasers later). Colours = the accepted '
+out['what'] = ('MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the current design of the laser session (v5), unchanged (owner 08:2x: lasers later). Colours = the accepted '
                'v3 palette 3 (owner 09:0x on v5: "now its color full, make back underground"); the beams\' v3 colours mapped to the B380F wheel '
                'slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where '
                'v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_check.mjs), so the v3 move is kept. intent = the scene in plain words from its data; intent_v3 = the v3 story.')
-out['source'] = base['source'] + ' · v6 2026-10-17 09:xx by dob-74, scratchpad scenes_v6.py from this file (v3+lasers v4) and moxir-scenes-50-v5-2026-10-17.json'
+out['source'] = base['source'] + ' · v6 2026-10-17 09:xx by dob-74, docs/moxir/scenes-v6-2026-10-17/scenes_v6.py from this file (v3 + lasers v5 of the laser session) and moxir-scenes-50-v5-2026-10-17.json'
 out['beam_wheel_seen'] = {k: {'slot': v[1], 'hex': v[0]} for k, v in BEAM_MAP.items()}
 out['rules']['heads_patterns'] = ['fan', 'sweep', 'cross', 'circle', 'figure8', 'nod', 'wave']
 out['rules']['beam_colours'] = 'B380F_SLOTS_SEEN only; v3 colours mapped by beam_wheel_seen'
-out['rules']['lasers'] = 'the v4 laser design unchanged (laser part, laser, laser_lines, desk cap 0.16); updated later by the laser work, when ready'
+out['rules']['lasers'] = 'the laser session\'s current design (v5: whole field, levels 1.0) unchanged; updated later by the laser work, when ready'
 json.dump(out, open(OUT, 'w'), indent=1, ensure_ascii=False)
 print('scenes', len(out['scenes']), '| beam slot uses', uses, '| motion from v3 in', sorted(OVER) or 'none')

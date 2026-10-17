@@ -1,6 +1,6 @@
 {
- "what": "MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the v4 design unchanged (owner 08:2x: lasers later). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_check.mjs), so the v3 move is kept. intent = the scene in plain words from its data; intent_v3 = the v3 story.",
- "source": "designed by the scenes-50 designer agent (Opus) of chat aa61368c, 2026-10-15; re-coloured v2 by the recolour agent (Opus, headless) 2026-10-15 03:15; v3 (Palette 3) by the recolour-3 agent (Opus, headless, lead f41c885f) 2026-10-15 06:0x; generator ~/work/agent-reports-2026-10-15/moxir-50/scenes-tools/scenes50.py + palette.py (v2 copies in scenes-tools/v2/); colours pixel-sampled by palette_sample.py (palette_samples.json); outside parts by outside_rule.py; rig scripts/place/rigs/moxir-v2-10-2026-10-15.json; motion vocabulary serverXR/src/lighting/fx.js · lasers v4 2026-10-17: the whole field (zone opened by the officer 07:1x), wide fans/sweeps/arches/curtains, cycles ≥ 14.5 s for the 4.36 s keyframes · v6 2026-10-17 09:xx by dob-74, scratchpad scenes_v6.py from this file (v3+lasers v4) and moxir-scenes-50-v5-2026-10-17.json",
+ "what": "MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the current design of the laser session (v5), unchanged (owner 08:2x: lasers later). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_check.mjs), so the v3 move is kept. intent = the scene in plain words from its data; intent_v3 = the v3 story.",
+ "source": "designed by the scenes-50 designer agent (Opus) of chat aa61368c, 2026-10-15; re-coloured v2 by the recolour agent (Opus, headless) 2026-10-15 03:15; v3 (Palette 3) by the recolour-3 agent (Opus, headless, lead f41c885f) 2026-10-15 06:0x; generator ~/work/agent-reports-2026-10-15/moxir-50/scenes-tools/scenes50.py + palette.py (v2 copies in scenes-tools/v2/); colours pixel-sampled by palette_sample.py (palette_samples.json); outside parts by outside_rule.py; rig scripts/place/rigs/moxir-v2-10-2026-10-15.json; motion vocabulary serverXR/src/lighting/fx.js · lasers v4 2026-10-17: the whole field (zone opened by the officer 07:1x), wide fans/sweeps/arches/curtains, cycles ≥ 14.5 s for the 4.36 s keyframes · lasers v5 2026-10-17 08:0x: the whole field, hall rules waived under the officer (--officer-checked), levels up to 1.0 · v6 2026-10-17 09:xx by dob-74, docs/moxir/scenes-v6-2026-10-17/scenes_v6.py from this file (v3 + lasers v5 of the laser session) and moxir-scenes-50-v5-2026-10-17.json",
  "licence": "di.iiii project data (the owner's); MOXIR teaser frames used as reference only, never published",
  "date": "2026-10-17",
  "version": "v6-underground-2026-10-17",
@@ -30,7 +30,7 @@
    "method": "palette.py eye(); thresholds are taste, unvalidated"
   },
   "beam_colours": "B380F_SLOTS_SEEN only; v3 colours mapped by beam_wheel_seen",
-  "lasers": "the v4 laser design unchanged (laser part, laser, laser_lines, desk cap 0.16); updated later by the laser work, when ready"
+  "lasers": "the laser session's current design (v5: whole field, levels 1.0) unchanged; updated later by the laser work, when ready"
  },
  "renamed_v3": {
   "red-scissors": "copper-scissors",
@@ -923,14 +923,14 @@
     "cubes": "inner",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.06,
+    "level": 0.35,
     "tempo": {
      "clock": "master",
      "bpm": 20,
      "beats": 32
     },
     "phase": "mirror",
-    "pitch_deg": 4,
+    "pitch_deg": 8,
     "yaw_deg": 0,
     "spread_deg": 0,
     "amplitude_deg": 15,
@@ -940,7 +940,7 @@
      "t5",
      "Pangolin: beam sweep"
     ],
-    "why": "first light: one searchlight each side sweeps the whole width of the field along the roof line, 96 s"
+    "why": "first light: one searchlight each side sweeps the whole field high across the roof, 96 s"
    },
    "energy": 0.35,
    "energy_tier": "low",
@@ -1435,24 +1435,24 @@
     "cubes": "outer",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.08,
+    "level": 0.45,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 16
     },
     "phase": "mirror",
-    "pitch_deg": 4,
+    "pitch_deg": 12,
     "yaw_deg": 0,
     "spread_deg": 0,
-    "amplitude_deg": 12,
+    "amplitude_deg": 14,
     "breathe": null,
     "hits": null,
     "refs": [
      "Pangolin: beam sweep",
      "left-right (same pattern, half tempo)"
     ],
-    "why": "two cold lines cross slowly like the columns, the whole width"
+    "why": "two cold lines high up cross slowly like the columns"
    },
    "energy": 0.6,
    "energy_tier": "mid",
@@ -1648,7 +1648,7 @@
     "cubes": "all",
     "colour": "#00ff00",
     "colour_key": "G",
-    "level": 0.16,
+    "level": 0.6,
     "tempo": {
      "clock": "master",
      "bpm": 33,
@@ -1658,15 +1658,15 @@
     "pitch_deg": 0,
     "yaw_deg": 0,
     "spread_deg": 0,
-    "amplitude_deg": 2.0,
+    "amplitude_deg": 3.0,
     "breathe": null,
     "hits": null,
     "refs": [
      "t5",
      "ILDA: beam net / lattice"
     ],
-    "why": "the green net, 18 lines a cube, crossing and parting",
-    "beams": 18
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
    },
    "energy": 0.6,
    "energy_tier": "mid",
@@ -2118,7 +2118,7 @@
     "cubes": "outer",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.1,
+    "level": 0.5,
     "tempo": {
      "clock": "master",
      "bpm": 33,
@@ -2334,25 +2334,25 @@
     "cubes": "all",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.1,
+    "level": 0.6,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 8
     },
     "phase": "mirror",
-    "pitch_deg": 4,
+    "pitch_deg": 8,
     "yaw_deg": 0,
-    "spread_deg": 10,
-    "amplitude_deg": 5,
+    "spread_deg": 12,
+    "amplitude_deg": 4,
     "breathe": null,
     "hits": null,
     "refs": [
      "t4",
      "Pangolin: fan"
     ],
-    "why": "scissors: wide fans open and close, mirrored",
-    "beams": 24
+    "why": "scissors: wide high fans open and close, mirrored",
+    "beams": 30
    },
    "energy": 0.85,
    "energy_tier": "full",
@@ -2461,7 +2461,7 @@
     "cubes": "all",
     "colour": "#00ff00",
     "colour_key": "G",
-    "level": 0.16,
+    "level": 0.6,
     "tempo": {
      "clock": "master",
      "bpm": 66,
@@ -2714,7 +2714,7 @@
     "cubes": "all",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.12,
+    "level": 0.7,
     "tempo": {
      "clock": "master",
      "bpm": 132,
@@ -2877,14 +2877,14 @@
     "cubes": "all",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.16,
+    "level": 1.0,
     "tempo": {
      "clock": "master",
      "bpm": 132,
      "beats": 16
     },
     "phase": "unison",
-    "pitch_deg": 4,
+    "pitch_deg": 10,
     "yaw_deg": 0,
     "spread_deg": 15,
     "amplitude_deg": 0,
@@ -2894,7 +2894,7 @@
      "t4 frame 5 (blue-white fans)",
      "Pangolin: fan"
     ],
-    "why": "the drop: a still white fan of 36 lines from each cube, the whole width under the roof — the cathedral floor of light",
+    "why": "the drop: a still white fan of 36 lines from each cube, the whole width, high into the roof — the cathedral, full power",
     "beams": 36
    },
    "energy": 1.0,
@@ -3127,17 +3127,17 @@
     "cubes": "all",
     "colour": "#ff3a12",
     "colour_key": "E",
-    "level": 0.16,
+    "level": 1.0,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 8
     },
     "phase": "mirror",
-    "pitch_deg": 4,
+    "pitch_deg": 8,
     "yaw_deg": 0,
-    "spread_deg": 10,
-    "amplitude_deg": 5,
+    "spread_deg": 12,
+    "amplitude_deg": 4,
     "breathe": null,
     "hits": {
      "per_beat": 1,
@@ -3147,7 +3147,7 @@
      "t4 frames 1, 6 (red fans)"
     ],
     "why": "red fans pump, wide, mirrored (no green in this scene)",
-    "beams": 24
+    "beams": 30
    },
    "energy": 1.0,
    "energy_tier": "full",
@@ -3287,16 +3287,16 @@
     "cubes": "all",
     "colour": "#00ff00",
     "colour_key": "G",
-    "level": 0.16,
+    "level": 1.0,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 8
     },
     "phase": "chase",
-    "pitch_deg": 4,
+    "pitch_deg": 6,
     "yaw_deg": 0,
-    "spread_deg": 12,
+    "spread_deg": 13,
     "amplitude_deg": 3,
     "breathe": null,
     "hits": {
@@ -3308,7 +3308,7 @@
      "t5"
     ],
     "why": "the storm: green fans chase across the six cubes",
-    "beams": 30
+    "beams": 36
    },
    "energy": 1.0,
    "energy_tier": "full",
@@ -3435,7 +3435,7 @@
     "cubes": "all",
     "colour": "#00ff00",
     "colour_key": "G",
-    "level": 0.16,
+    "level": 0.6,
     "tempo": {
      "clock": "master",
      "bpm": 66,
@@ -3670,14 +3670,14 @@
     "cubes": "all",
     "colour": "#b699ff",
     "colour_key": "LV",
-    "level": 0.1,
+    "level": 0.5,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 8
     },
     "phase": "chase",
-    "pitch_deg": 4,
+    "pitch_deg": 10,
     "yaw_deg": 0,
     "spread_deg": 0,
     "amplitude_deg": 15,
@@ -3977,24 +3977,24 @@
     "cubes": "all",
     "colour": "#b699ff",
     "colour_key": "LV",
-    "level": 0.1,
+    "level": 0.5,
     "tempo": {
      "clock": "master",
      "bpm": 20,
      "beats": 32
     },
     "phase": "unison",
-    "pitch_deg": 4,
-    "yaw_deg": 11,
-    "spread_deg": 3,
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 14,
     "amplitude_deg": 0,
     "breathe": null,
     "hits": null,
     "refs": [
      "Pangolin: tunnel (upper half only)"
     ],
-    "why": "sparkle peak: 24 lavender dots run round an arch on each flank, where the roof allows height, 96 s",
-    "beams": 24
+    "why": "sparkle peak: 30 lavender dots run round a great arch over each cube, 96 s",
+    "beams": 30
    },
    "energy": 0.95,
    "energy_tier": "full",
@@ -4262,23 +4262,23 @@
     "cubes": "all",
     "colour": "#26bcff",
     "colour_key": "DS",
-    "level": 0.1,
+    "level": 0.5,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 16
     },
     "phase": "unison",
-    "pitch_deg": 3.6,
+    "pitch_deg": 6,
     "yaw_deg": 0,
-    "spread_deg": 12,
-    "amplitude_deg": 0.4,
+    "spread_deg": 15,
+    "amplitude_deg": 8,
     "breathe": null,
     "hits": null,
     "refs": [
      "Pangolin: liquid sky"
     ],
-    "why": "blue wave: a deep-sea curtain the whole width, kept under the 4° lantern line (the roof glazing starts there), 20 points a line",
+    "why": "blue wave: a deep-sea curtain the whole width, waving 8° up and down",
     "segments": 20
    },
    "energy": 0.5,
@@ -4638,24 +4638,24 @@
     "cubes": "all",
     "colour": "#66faff",
     "colour_key": "PT",
-    "level": 0.1,
+    "level": 0.5,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 16
     },
     "phase": "chase",
-    "pitch_deg": 4,
-    "yaw_deg": 11,
-    "spread_deg": 3,
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 14,
     "amplitude_deg": 0,
     "breathe": null,
     "hits": null,
     "refs": [
      "Pangolin: tunnel (upper half only)"
     ],
-    "why": "deep tent: petrol arches on the flanks turning cube to cube",
-    "beams": 30
+    "why": "deep tent: petrol arches turning cube to cube",
+    "beams": 36
    },
    "energy": 0.6,
    "energy_tier": "mid",
@@ -4746,7 +4746,7 @@
     "cubes": "all",
     "colour": "#00ff00",
     "colour_key": "G",
-    "level": 0.16,
+    "level": 0.6,
     "tempo": {
      "clock": "master",
      "bpm": 20,
@@ -4756,14 +4756,14 @@
     "pitch_deg": 0,
     "yaw_deg": 0,
     "spread_deg": 0,
-    "amplitude_deg": 2.5,
+    "amplitude_deg": 3.5,
     "breathe": null,
     "hits": null,
     "refs": [
      "t5"
     ],
     "why": "the net alone, 18 lines, breathing slowly",
-    "beams": 18
+    "beams": 24
    },
    "energy": 0.3,
    "energy_tier": "low",
@@ -4996,7 +4996,7 @@
     "cubes": "all",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.12,
+    "level": 0.7,
     "tempo": {
      "clock": "master",
      "bpm": 132,
@@ -5160,14 +5160,14 @@
     "cubes": "all",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.16,
+    "level": 1.0,
     "tempo": {
      "clock": "master",
      "bpm": 132,
      "beats": 16
     },
     "phase": "unison",
-    "pitch_deg": 4,
+    "pitch_deg": 12,
     "yaw_deg": 0,
     "spread_deg": 15,
     "amplitude_deg": 0,
@@ -5179,7 +5179,7 @@
     "refs": [
      "t4 frame 5"
     ],
-    "why": "white-out: the wide still fans, hits on every beat",
+    "why": "white-out: the wide still fans high up, hits on every beat, full power",
     "beams": 36
    },
    "energy": 1.0,
@@ -5395,16 +5395,16 @@
     "cubes": "all",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.12,
+    "level": 0.7,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 8
     },
     "phase": "chase",
-    "pitch_deg": 4,
+    "pitch_deg": 8,
     "yaw_deg": 0,
-    "spread_deg": 12,
+    "spread_deg": 13,
     "amplitude_deg": 3,
     "breathe": null,
     "hits": null,
@@ -5412,7 +5412,7 @@
      "t4"
     ],
     "why": "the cathedral turns: white fans ripple cube to cube",
-    "beams": 30
+    "beams": 36
    },
    "energy": 0.9,
    "energy_tier": "full",
@@ -5628,17 +5628,17 @@
     "cubes": "all",
     "colour": "#ff3a12",
     "colour_key": "E",
-    "level": 0.16,
+    "level": 1.0,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 8
     },
     "phase": "mirror",
-    "pitch_deg": 4,
+    "pitch_deg": 8,
     "yaw_deg": 0,
-    "spread_deg": 10,
-    "amplitude_deg": 5,
+    "spread_deg": 12,
+    "amplitude_deg": 4,
     "breathe": null,
     "hits": {
      "per_beat": 1,
@@ -5648,7 +5648,7 @@
      "t4 frames 1, 6 (red fans)"
     ],
     "why": "red fans open on the bar, wide, mirrored",
-    "beams": 24
+    "beams": 30
    },
    "energy": 0.9,
    "energy_tier": "full",
@@ -5871,23 +5871,23 @@
     "cubes": "all",
     "colour": "#ff9180",
     "colour_key": "RC",
-    "level": 0.08,
+    "level": 0.4,
     "tempo": {
      "clock": "master",
      "bpm": 33,
      "beats": 32
     },
     "phase": "unison",
-    "pitch_deg": 3.6,
+    "pitch_deg": 6,
     "yaw_deg": 0,
-    "spread_deg": 12,
-    "amplitude_deg": 0.4,
+    "spread_deg": 15,
+    "amplitude_deg": 8,
     "breathe": null,
     "hits": null,
     "refs": [
      "Pangolin: liquid sky"
     ],
-    "why": "afterglow: a rose-copper curtain breathes down, the whole width, under the lantern line",
+    "why": "afterglow: a rose-copper curtain breathes down over the whole field",
     "segments": 20
    },
    "energy": 0.6,
@@ -6140,14 +6140,14 @@
     "cubes": "inner",
     "colour": "#eefdfd",
     "colour_key": "CW",
-    "level": 0.06,
+    "level": 0.35,
     "tempo": {
      "clock": "master",
      "bpm": 20,
      "beats": 32
     },
     "phase": "mirror",
-    "pitch_deg": 4,
+    "pitch_deg": 8,
     "yaw_deg": 0,
     "spread_deg": 0,
     "amplitude_deg": 15,

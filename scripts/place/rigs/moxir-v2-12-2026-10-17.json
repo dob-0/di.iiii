@@ -1,8 +1,8 @@
 {
  "version": "2.12",
- "title": "MOXIR v2.12 — the 50 scenes, washes + beams v6 (underground), lasers v4",
+ "title": "MOXIR v2.12 — the 50 scenes, washes + beams v6 (underground), lasers v5 (laser session)",
  "date": "2026-10-17",
- "what": "v2.12: 50 scenes (MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the v4 design unchanged (owner 08:2x: lasers later). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_che",
+ "what": "v2.12: 50 scenes (MOXIR 2026-10-17 v6 (show day): the 50 scenes re-made for the WASHES and the 18 BEAMS; the lasers are the current design of the laser session (v5), unchanged (owner 08:2x: lasers later). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing",
  "written_by": "scripts/place/rig_generate.py",
  "generated_by": {
   "tool": "scripts/place/rig_generate.py",
