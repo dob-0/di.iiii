@@ -163,6 +163,27 @@ describe('the room drawn from DMX', () => {
         if (gone.components.beam) expect(drawn.components.beam.visible).toBe(false)
     })
 
+    it('a LaserCube line (network laser, off DMX) draws its frames while the cubes play, and rests dark when they do not (MOXIR 2026-10-17)', () => {
+        const entities = dealt()
+        const cube = { id: 'rig-laser-1a', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#00ff00', intensity: 3, angle: 0.1 }, beam: { visible: true, haze: 1, laser: { mW: 3000, frames: { period: 8, list: [[[0, 0, 0, 1, 0]], [[0.5, 0, 0, 1, 0]]] } } }, fixture: { type: 'ext-lc-ultra-mk2', unit: 1, dmx: false } } }
+        const all = [...entities, cube]
+        const fixtures = deskOf(entities)
+        // the wall plays: the line is drawn exactly as the design holds it (its frames run on the show clock)
+        const playing = dmxEntities({ shown: all, document: all, fixtures, library: TYPE_LIBRARY, laserShow: { playing: true, project: 'p', clockShiftMs: 0, tween: true } })
+        expect(playing.entities.find((s) => s.id === cube.id)).toBe(cube)
+        // the wall is dark (or no word from the laser server): the #1011 safety holds, the line rests dark
+        for (const laserShow of [null, { playing: false }]) {
+            const dark = dmxEntities({ shown: all, document: all, fixtures, library: TYPE_LIBRARY, laserShow }).entities.find((s) => s.id === cube.id)
+            expect(dark.components.rigShown).toMatchObject({ level: 0, undriven: true })
+            expect(dark.components.beam.visible).toBe(false)
+        }
+        // a DMX lamp the desk does not drive stays dark even while the cubes play: the show lights the cubes only
+        const gone = entities.find((e) => e.components.fixture?.type === 'up-b380f')
+        const fewer = fixtures.filter((f) => f.index !== gone.components.fixture.index)
+        const still = dmxEntities({ shown: all, document: all, fixtures: fewer, library: TYPE_LIBRARY, laserShow: { playing: true } }).entities.find((s) => s.id === gone.id)
+        expect(still.components.rigShown).toMatchObject({ level: 0, undriven: true })
+    })
+
     it('a strobe TYPE is drawn as a flash at the desk\'s rate, never a cone', () => {
         const strobe = { id: 'S1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ffffff', intensity: 5, angle: 0.5 }, beam: { visible: true }, fixture: { type: 'ext-strobe', mode: '4ch-assumed', index: 9 } } }
         const flashed = flashEntities([strobe], TYPE_LIBRARY)

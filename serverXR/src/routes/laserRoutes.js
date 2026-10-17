@@ -40,6 +40,9 @@ const FIND_GAP_MS = 5000
 //                              (`scale` 0.1…10: the picture zoomed about each cube's axis, or 'fit': each picture fills the cube's keep-in zone; what leaves the field is blanked)
 //                              on the cubes by show time (laser/laserShow.js, 2026-10-17): the room's frames, the
 //                              engine's guards; restarts a running show. 404 no such project, 400 nothing to play
+//   POST /laser/api/show/playhead { project, clockShiftMs, tween, scale?, cubes: [{ cube, group }], ttlMs? } | { playing: false }
+//                              — a player in its own process says what it plays (laser/laserPlayhead.js); GET state's
+//                              `show` then reads playing (source 'outside') until ttlMs after the last word. Memory only.
 //   POST /laser/api/show/stop  {} — the show player stops; its cubes go blank (a stop: STOPS_FROM_REMOTE)
 //   POST /laser/api/show/still { project, map?, confirm: '<the sign-off phrase>' } — the laser safety officer approves
 //                              the still beams that project's frames hold, per real cube: written to laser.json
@@ -70,6 +73,11 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   // moment on every tick, so a config reload (a new engine) does not stop the show.
   const { createShowPlayer } = require('../laser/laserShow')
   const player = createShowPlayer({ getEngine, loadDocument, now, log })
+  // A player in its own process (scripts/laser/show-player.mjs) says what it plays here, so the room can follow the
+  // wall (laser/laserPlayhead.js): a claim in memory that expires, never a frame or an arm.
+  const { createPlayhead, showStateOf } = require('../laser/laserPlayhead')
+  const playhead = createPlayhead({ now })
+  const showState = () => showStateOf(player.state(), playhead.state())
   // Disarm, close and forget the engine; the next request builds it from laser.json again.
   const reload = async () => {
     const old = engine
@@ -93,7 +101,11 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   const router = express.Router()
   router.use((req, res, next) => (req.method === 'GET' || req.method === 'HEAD' ? next() : requireOwnPage(req, res, next)))
   router.use(express.json({ limit: '512kb' }))
-  router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: player.state() }) })
+  router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: showState() }) })
+  router.post('/api/show/playhead', requireSameMachine, (req, res) => {
+    const out = playhead.announce(req.body || {})
+    res.status(out.ok ? 200 : out.status || 400).json({ ...out, show: showState() })
+  })
   router.post('/api/show', requireSameMachine, async (req, res) => {
     const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs, scale: req.body?.scale, tween: req.body?.tween })
     res.status(out.ok ? 200 : out.status || 400).json({ ...out, show: player.state() })
