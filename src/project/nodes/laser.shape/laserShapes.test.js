@@ -64,6 +64,65 @@ describe('generateShape', () => {
     })
 })
 
+describe('the TouchDesigner scenes (2026-10-17)', () => {
+    const blanks = (points) => points.filter((p) => p[2] + p[3] + p[4] === 0).length
+
+    it('galaxy draws `copies` golden spirals, each reached by a blank move, the biggest radius 1', () => {
+        const six = generateShape({ shape: 'galaxy', size: 1, points: 300 })
+        expect(blanks(six)).toBe(5)
+        const two = generateShape({ shape: 'galaxy', size: 1, points: 300, copies: 2 })
+        expect(blanks(two)).toBe(1)
+        expect(Math.max(...two.map((p) => Math.hypot(p[0], p[1])))).toBeCloseTo(1, 6)
+        expect(normaliseFramePoints(six).dropped).toBe(0)
+    })
+
+    it('sunflower is dots: three lit points on one spot each, at most 36 of them, spread to the rim', () => {
+        const dots = generateShape({ shape: 'sunflower', size: 1, points: 2000 })
+        const lit = dots.filter((p) => p[2] + p[3] + p[4] > 0)
+        expect(lit.length).toBe(36 * 3)
+        for (let i = 0; i < lit.length; i += 3) {
+            expect(lit[i]).toEqual(lit[i + 1])
+            expect(lit[i]).toEqual(lit[i + 2])
+        }
+        expect(Math.max(...lit.map((p) => Math.hypot(p[0], p[1])))).toBeGreaterThan(0.95)
+        expect(generateShape({ shape: 'sunflower', points: 40 }).filter((p) => p[2] > 0 || p[3] > 0).length).toBe(10 * 3)
+    })
+
+    it('noisy is nested rings that change with time and stay inside the circle', () => {
+        const a = generateShape({ shape: 'noisy', size: 1, points: 300, time: 0 })
+        const b = generateShape({ shape: 'noisy', size: 1, points: 300, time: 2 })
+        expect(blanks(a)).toBe(2)
+        expect(a).not.toEqual(b)
+        expect(Math.max(...a.map((p) => Math.hypot(p[0], p[1])))).toBeLessThanOrEqual(1 + 1e-9)
+        expect(blanks(generateShape({ shape: 'noisy', points: 300, copies: 5 }))).toBe(4)
+    })
+
+    it('grid is the whole square, the cross and both diagonals: five strokes, corners at ±1', () => {
+        const g = generateShape({ shape: 'grid', size: 1, points: 200 })
+        expect(blanks(g)).toBe(4)
+        const xs = g.map((p) => p[0]), ys = g.map((p) => p[1])
+        expect(Math.min(...xs)).toBe(-1); expect(Math.max(...xs)).toBe(1)
+        expect(Math.min(...ys)).toBe(-1); expect(Math.max(...ys)).toBe(1)
+        expect(g.some((p) => Math.abs(p[0]) < 1e-9 && Math.abs(Math.abs(p[1]) - 0.5) < 0.2)).toBe(true)
+    })
+
+    it('rainbow runs the hue along the path, scaled by level, and drifts with time', () => {
+        const r = generateShape({ shape: 'circle', points: 120, rainbow: true, level: 0.5 })
+        const lit = r.filter((p) => p[2] + p[3] + p[4] > 0)
+        expect(new Set(lit.map((p) => p.slice(2).join(','))).size).toBeGreaterThan(20)
+        expect(Math.max(...lit.flatMap((p) => p.slice(2)))).toBeCloseTo(0.5, 6)
+        expect(generateShape({ shape: 'circle', points: 120, rainbow: true, time: 4 })[1]).not.toEqual(r[1])
+    })
+
+    it('a comma list with a cycle plays the shapes in turn; without a cycle the first', () => {
+        const list = 'square,circle'
+        expect(generateShape({ shape: list, cycle: 2, time: 1 })).toEqual(generateShape({ shape: 'square', time: 1 }))
+        expect(generateShape({ shape: list, cycle: 2, time: 3 })).toEqual(generateShape({ shape: 'circle', time: 3 }))
+        expect(generateShape({ shape: list, cycle: 2, time: 4.5 })).toEqual(generateShape({ shape: 'square', time: 4.5 }))
+        expect(generateShape({ shape: list, time: 3 })).toEqual(generateShape({ shape: 'square', time: 3 }))
+    })
+})
+
 describe('height', () => {
     it('lifts a shape up the field; at 0.5 a size-0.5 circle sits wholly in the upper half (the keep-in zone)', async () => {
         const { generateShape } = await import('./laserShapes.js')
