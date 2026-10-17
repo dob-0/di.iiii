@@ -192,8 +192,11 @@ const main = async () => {
         }
     }
 
-    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
-    if (!rig.ok) die(`the desk's rig for ${project}: ${rig.status}`)
+    // --rig-project <id>: a COPY project (a scenes draft) has no patch of its own on the desk; its lamps are the
+    // show's lamps (same entity ids), so its looks are valued over the show's patch (2026-10-17, v2 draft on the desk).
+    const rigProject = args['rig-project'] ? String(args['rig-project']) : project
+    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(rigProject)}`)
+    if (!rig.ok) die(`the desk's rig for ${rigProject}: ${rig.status}`)
     const fixtures = rig.body.fixtures || []
     const library = libraryWithShow(loadLibrary(), document.entities)
     const deskSet = deskLooksWithValues(looks, fixtures, { entities: withFixtureOverlay(document.entities, args['fixture-overlay'] ? String(args['fixture-overlay']) : null), library })
