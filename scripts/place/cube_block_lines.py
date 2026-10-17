@@ -22,6 +22,11 @@ def picture(k, ph, m, rgb):           # whole field, -0.95..0.95 (owner 22:2x: c
     if k == 3: x = m * 0.9 * s; return [seg((x, -0.95), (x, 0.95), rgb)]
     o = 0.9 * (0.5 + 0.5 * s); return [seg((-0.95, -o), (0.95, o), rgb), seg((-0.95, o), (0.95, -o), rgb)]
 doc_f, blocks_f, out_f = keep[1:4]
+SCOL = {}   # --scenes <scenes.json>: each block's colour = its scene's laser colour (the 40 W plan uses the same), not the compiled frames'
+if '--scenes' in keep:
+    for sc in json.load(open(keep[keep.index('--scenes') + 1]))['scenes']:
+        c = (sc.get('laser') or {}).get('colour')
+        if c: SCOL[sc['id']] = [round(int(c[i:i + 2], 16) / 255, 3) for i in (1, 3, 5)]
 FORCE = None   # --colour <prefix>=r,g,b : those blocks draw in that colour (owner 01:4x: the new scenes red only)
 if '--colour' in keep:
     pre, rgb_s = keep[keep.index('--colour') + 1].split('=')
@@ -43,7 +48,9 @@ for bi, (sid, b) in enumerate(sorted(blocks['blocks'].items(), key=lambda kv: kv
             if sid == 'dark' or not pts: continue
             r, g, bb = (sum(p[c] for p in pts) / len(pts) for c in (2, 3, 4)); top = max(r, g, bb) or 1
             rgb = [round(r / top, 3), round(g / top, 3), round(bb / top, 3)]
+            if sid in SCOL: t = max(SCOL[sid]) or 1; rgb = [round(x / t, 3) for x in SCOL[sid]]
             if FORCE and sid.startswith(FORCE[0]): rgb = FORCE[1]
+            if '--pure-red' in keep and rgb[0] == 1 and rgb[1] < 0.4 and rgb[2] < 0.2: rgb = [1.0, 0.0, 0.0]   # ember -> the 40 W's red (owner 01:4x: both lasers one colour)
             ph = (k - f0) / max(1, f1 - f0)
             for s_i, stroke in enumerate(picture(bi % 5, ph, -1 if cube in '456' else 1, rgb)):
                 new[ids[min(s_i, len(ids) - 1)]][k] += stroke
