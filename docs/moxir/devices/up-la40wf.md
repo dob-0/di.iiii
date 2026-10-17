@@ -98,3 +98,10 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
 | 92 | 182 | by time | photo-1483.jpg |
 | 93 | 185 | by time | photo-1484.jpg |
 | 95 | 188 | by time | photo-1487.jpg |
+
+## The two units do not mix colours the same (TESTED 2026-10-18 02:2x, the owner's eye in the hall)
+- Same DMX on both (desk output = wire, checked channel by channel); white (ch5 = 8): unit **137 shows a green cast**, unit 169 clean white.
+  Both listen (white test 02:23, one-unit test 02:25). Not a patch fault: the unit's own colour mix.
+- Fix in use: `la40-player.mjs --rgb --trim 137:g=100` — colour by the diodes (ch5 white + ch16-18 modulation, 0 = full, 255 = off:
+  red = 0/255/255, green = 255/0/255, white = 0/0/0) so both units show the same colour; white on 137 gets green modulation 100 (owner: "now it's ok").
+- Never pick a colour by ch5's table alone when both units must match.
