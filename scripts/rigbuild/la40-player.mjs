@@ -47,7 +47,7 @@ const dot = (g) => !allowStatic && ((g >= 146 && g <= 165) || (g >= 185 && g <= 
 const bad = (list) => !list.length || list.some((g) => !Number.isInteger(g) || g < 0 || g > 255 || NEVER.has(g) || dot(g))
 if (bad(GRAPHICS)) throw new Error('a forbidden graphic is in the list')
 for (const [n, p] of Object.entries(plan)) if (n !== '__allowStatic') if (bad(p.graphics || GRAPHICS)) throw new Error(`cue ${n}: a forbidden or empty graphic list`)
-const playOf = (cue) => { const p = plan[cue] || {}; return { list: p.graphics || GRAPHICS, colour: p.colour ?? colourOf.get(cue) ?? colour, every: (p.every ? Number(p.every) * 1000 : every) } }
+const playOf = (cue) => { const p = plan[cue] || {}; return { anim: p.anim || {}, list: p.graphics || GRAPHICS, colour: p.colour ?? colourOf.get(cue) ?? colour, every: (p.every ? Number(p.every) * 1000 : every) } }
 if (args['dry-run']) { for (const n of [...cues].sort((a, b) => a - b)) { const q = playOf(n); console.log(`cue ${n}: graphics ${q.list.join(',')} · colour ${q.colour} · every ${q.every / 1000}s${plan[n]?.note ? ' · ' + plan[n].note : ''}`) } process.exit(0) }
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }
 
@@ -55,7 +55,9 @@ const raw = async (channels) => {
     const r = await fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channels }) })
     if (!r.ok) throw new Error(`raw ${r.status} ${await r.text()}`)
 }
-const frame = (on, g, c) => units.flatMap((base) => (on ? [255, 250, g, 0, c, 64, 64] : [0, 0, 0, 0, 0, 64, 64]).map((value, i) => ({ universe, channel: base + i, value })))
+// anim (plan, optional): ch6 X move, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave; ch7 Y is always 64 (no up-down sweep).
+const SPAN = 14
+const frame = (on, g, c, a = {}) => units.flatMap((base) => (on ? [255, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, 0, 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0] : [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0]).map((value, i) => ({ universe, channel: base + i, value })))
 let state = ''
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
@@ -68,12 +70,12 @@ const tick = async () => {
     const q = playOf(cue)
     const g = q.list[Math.floor(Date.now() / q.every) % q.list.length]
     const c = q.colour
-    await raw(frame(on, g, c))
+    await raw(frame(on, g, c, q.anim))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
 }
 const release = async () => {
-    try { await raw(units.flatMap((base) => Array.from({ length: 7 }, (_, i) => ({ universe, channel: base + i, value: -1 })))); console.log('released') } catch (e) { console.log('release failed', e.message) }
+    try { await raw(units.flatMap((base) => Array.from({ length: SPAN }, (_, i) => ({ universe, channel: base + i, value: -1 })))); console.log('released') } catch (e) { console.log('release failed', e.message) }
     process.exit(0)
 }
 process.on('SIGINT', release); process.on('SIGTERM', release)

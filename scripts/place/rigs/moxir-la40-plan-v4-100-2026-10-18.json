@@ -250,7 +250,15 @@
    ],
    "colour": 8,
    "every": 8,
-   "note": "Cloistral \u00b7 Truss smoke: every allowed value, its own start (191)"
+   "note": "Cloistral \u00b7 Truss smoke: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "9": {
    "graphics": [
@@ -499,7 +507,15 @@
    ],
    "colour": 8,
    "every": 8,
-   "note": "Cloistral \u00b7 Cold ray: every allowed value, its own start (95)"
+   "note": "Cloistral \u00b7 Cold ray: every allowed value, sideways sweep + line drawing",
+   "anim": {
+    "x": 140,
+    "zoom": 0,
+    "rot": 0,
+    "paint": 200,
+    "xwave": 0,
+    "kind": "sideways sweep + line drawing"
+   }
   },
   "11": {
    "graphics": [
@@ -748,7 +764,15 @@
    ],
    "colour": 42,
    "every": 8,
-   "note": "Cloistral \u00b7 Green line: every allowed value, its own start (171)"
+   "note": "Cloistral \u00b7 Green line: every allowed value, sideways sweep + line drawing",
+   "anim": {
+    "x": 140,
+    "zoom": 0,
+    "rot": 0,
+    "paint": 200,
+    "xwave": 0,
+    "kind": "sideways sweep + line drawing"
+   }
   },
   "15": {
    "graphics": [
@@ -997,7 +1021,15 @@
    ],
    "colour": 42,
    "every": 8,
-   "note": "Cloistral \u00b7 Lime truss: every allowed value, its own start (71)"
+   "note": "Cloistral \u00b7 Lime truss: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "17": {
    "graphics": [
@@ -1246,7 +1278,15 @@
    ],
    "colour": 25,
    "every": 8,
-   "note": "Cloistral \u00b7 Ember net: every allowed value, its own start (149)"
+   "note": "Cloistral \u00b7 Ember net: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "20": {
    "graphics": [
@@ -1495,7 +1535,15 @@
    ],
    "colour": 25,
    "every": 8,
-   "note": "Cloistral \u00b7 Cold furnace: every allowed value, its own start (14)"
+   "note": "Cloistral \u00b7 Cold furnace: every allowed value, sweep + zoom loop",
+   "anim": {
+    "x": 150,
+    "zoom": 210,
+    "rot": 0,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "sweep + zoom loop"
+   }
   },
   "22": {
    "graphics": [
@@ -1744,7 +1792,15 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Innersha \u00b7 White pump: every allowed value, its own start (92)"
+   "note": "Innersha \u00b7 White pump: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "25": {
    "graphics": [
@@ -1993,7 +2049,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Innersha \u00b7 The word: every allowed value, its own start (205)"
+   "note": "Innersha \u00b7 The word: every allowed value, sideways sweep + line drawing",
+   "anim": {
+    "x": 140,
+    "zoom": 0,
+    "rot": 0,
+    "paint": 200,
+    "xwave": 0,
+    "kind": "sideways sweep + line drawing"
+   }
   },
   "28": {
    "graphics": [
@@ -2242,7 +2306,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Innersha \u00b7 Lime comb: every allowed value, its own start (68)"
+   "note": "Innersha \u00b7 Lime comb: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "31": {
    "graphics": [
@@ -2491,7 +2563,15 @@
    ],
    "colour": 25,
    "every": 6,
-   "note": "Innersha \u00b7 Ember run: every allowed value, its own start (185)"
+   "note": "Innersha \u00b7 Ember run: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "34": {
    "graphics": [
@@ -2740,7 +2820,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Innersha \u00b7 Lime net: every allowed value, its own start (48)"
+   "note": "Innersha \u00b7 Lime net: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "36": {
    "graphics": [
@@ -2989,7 +3077,15 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Innersha \u00b7 White radar: every allowed value, its own start (126)"
+   "note": "Innersha \u00b7 White radar: every allowed value, spin",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 180,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "spin"
+   }
   },
   "40": {
    "graphics": [
@@ -3238,7 +3334,15 @@
    ],
    "colour": 25,
    "every": 6,
-   "note": "Innersha \u00b7 Riser: every allowed value, its own start (28)"
+   "note": "Innersha \u00b7 Riser: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "41": {
    "graphics": [
@@ -3487,7 +3591,15 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Kerrie \u00b7 White cathedral: every allowed value, its own start (65)"
+   "note": "Kerrie \u00b7 White cathedral: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "43": {
    "graphics": [
@@ -3736,7 +3848,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Kerrie \u00b7 Lime storm: every allowed value, its own start (143)"
+   "note": "Kerrie \u00b7 Lime storm: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "47": {
    "graphics": [
@@ -3985,7 +4105,15 @@
    ],
    "colour": 25,
    "every": 6,
-   "note": "Kerrie \u00b7 Ember room: every allowed value, its own start (45)"
+   "note": "Kerrie \u00b7 Ember room: every allowed value, sweep + zoom loop",
+   "anim": {
+    "x": 150,
+    "zoom": 210,
+    "rot": 0,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "sweep + zoom loop"
+   }
   },
   "50": {
    "graphics": [
@@ -4234,7 +4362,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Kerrie \u00b7 Lime sparkle: every allowed value, its own start (160)"
+   "note": "Kerrie \u00b7 Lime sparkle: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "56": {
    "graphics": [
@@ -4483,7 +4619,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Kerrie \u00b7 Lime cathedral: every allowed value, its own start (140)"
+   "note": "Kerrie \u00b7 Lime cathedral: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "58": {
    "graphics": [
@@ -4732,7 +4876,15 @@
    ],
    "colour": 25,
    "every": 6,
-   "note": "Kerrie \u00b7 Ember radar: every allowed value, its own start (216)"
+   "note": "Kerrie \u00b7 Ember radar: every allowed value, spin",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 180,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "spin"
+   }
   },
   "60": {
    "graphics": [
@@ -4981,7 +5133,15 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Kerrie \u00b7 The instrument: every allowed value, its own start (42)"
+   "note": "Kerrie \u00b7 The instrument: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "65": {
    "graphics": [
@@ -5230,7 +5390,15 @@
    ],
    "colour": 8,
    "every": 8,
-   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Slow line: every allowed value, its own start (233)"
+   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Slow line: every allowed value, sideways sweep + line drawing",
+   "anim": {
+    "x": 140,
+    "zoom": 0,
+    "rot": 0,
+    "paint": 200,
+    "xwave": 0,
+    "kind": "sideways sweep + line drawing"
+   }
   },
   "67": {
    "graphics": [
@@ -5479,7 +5647,15 @@
    ],
    "colour": 25,
    "every": 8,
-   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Deep tent: every allowed value, its own start (59)"
+   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Deep tent: every allowed value, sweep + zoom loop",
+   "anim": {
+    "x": 150,
+    "zoom": 210,
+    "rot": 0,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "sweep + zoom loop"
+   }
   },
   "72": {
    "graphics": [
@@ -5728,7 +5904,15 @@
    ],
    "colour": 8,
    "every": 8,
-   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White truss down: every allowed value, its own start (2)"
+   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White truss down: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "77": {
    "graphics": [
@@ -5977,7 +6161,15 @@
    ],
    "colour": 25,
    "every": 8,
-   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow net: every allowed value, its own start (193)"
+   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow net: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "79": {
    "graphics": [
@@ -6226,7 +6418,15 @@
    ],
    "colour": 8,
    "every": 8,
-   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Cold rise: every allowed value, its own start (19)"
+   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Cold rise: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "80": {
    "graphics": [
@@ -6475,7 +6675,15 @@
    ],
    "colour": 42,
    "every": 8,
-   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Riser two: every allowed value, its own start (56)"
+   "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Riser two: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "81": {
    "graphics": [
@@ -6724,7 +6932,15 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Mixtinct \u00b7 Second drop: every allowed value, its own start (97)"
+   "note": "Mixtinct \u00b7 Second drop: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "83": {
    "graphics": [
@@ -6973,7 +7189,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Mixtinct \u00b7 The word, last: every allowed value, its own start (173)"
+   "note": "Mixtinct \u00b7 The word, last: every allowed value, sideways sweep + line drawing",
+   "anim": {
+    "x": 140,
+    "zoom": 0,
+    "rot": 0,
+    "paint": 200,
+    "xwave": 0,
+    "kind": "sideways sweep + line drawing"
+   }
   },
   "88": {
    "graphics": [
@@ -7222,7 +7446,15 @@
    ],
    "colour": 25,
    "every": 6,
-   "note": "Mixtinct \u00b7 Ember one beam: every allowed value, its own start (114)"
+   "note": "Mixtinct \u00b7 Ember one beam: every allowed value, sideways sweep + line drawing",
+   "anim": {
+    "x": 140,
+    "zoom": 0,
+    "rot": 0,
+    "paint": 200,
+    "xwave": 0,
+    "kind": "sideways sweep + line drawing"
+   }
   },
   "89": {
    "graphics": [
@@ -7471,7 +7703,15 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Mixtinct \u00b7 White bars wide: every allowed value, its own start (151)"
+   "note": "Mixtinct \u00b7 White bars wide: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "91": {
    "graphics": [
@@ -7720,7 +7960,15 @@
    ],
    "colour": 25,
    "every": 6,
-   "note": "Mixtinct \u00b7 Ember storm: every allowed value, its own start (227)"
+   "note": "Mixtinct \u00b7 Ember storm: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   },
   "94": {
    "graphics": [
@@ -7969,7 +8217,15 @@
    ],
    "colour": 42,
    "every": 6,
-   "note": "Mixtinct \u00b7 Lime cathedral, last: every allowed value, its own start (94)"
+   "note": "Mixtinct \u00b7 Lime cathedral, last: every allowed value, slow turn + small wave",
+   "anim": {
+    "x": 64,
+    "zoom": 0,
+    "rot": 140,
+    "paint": 0,
+    "xwave": 40,
+    "kind": "slow turn + small wave"
+   }
   },
   "95": {
    "graphics": [
@@ -8218,8 +8474,17 @@
    ],
    "colour": 8,
    "every": 6,
-   "note": "Mixtinct \u00b7 Final strobe: every allowed value, its own start (131)"
+   "note": "Mixtinct \u00b7 Final strobe: every allowed value, jump + zoom loop",
+   "anim": {
+    "x": 200,
+    "zoom": 230,
+    "rot": 220,
+    "paint": 0,
+    "xwave": 0,
+    "kind": "jump + zoom loop"
+   }
   }
  },
- "allowStatic": true
+ "allowStatic": true,
+ "anim_why": "owner 2026-10-18 00:2x: 'make the lasers animated and keep colours, make suit' \u2014 built-in motion of the up-la40wf (ch6 X move auto, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave), chosen by the scene's name; ch7 Y stays 64 (no vertical sweep toward the floor). UNTESTED on the wire: the shape walk tested ch1-7 only."
 }
