@@ -90,6 +90,10 @@ export const showCues = (show) => show.cues.map((c, i) => ({
     hold: c.hold,
     lightLook: deskLookId(c.look)
 }))
+/** Starting the show on the desk: cue 1, then "play in order". A GO on a named cue turns play-in-order OFF on the desk
+ *  (cuerun.js, owner 2026-10-09: "you press, the scene changes, and auto play stops"), so without the second call the
+ *  show sat on cue 1 (seen 2026-10-17 10:38: index 0, autoplay false, nextInMs null, six minutes after the start). Pure. */
+export const startCalls = () => [['/api/cues/go', { index: 0 }], ['/api/cues/autoplay', { autoplay: true }]]
 export const runnerList = (cues) => cues.map((c) => ({ id: c.id, name: c.name, lookId: c.lightLook, hold: c.hold, fade: c.fade }))
 
 /** Ops that replace a document's cue list with `cues` and set the loop. Pure. */
@@ -213,8 +217,11 @@ const main = async () => {
     const loaded = await desk.post('/api/cues/load', { project, list: runnerList(cues), loop: show.loop !== false })
     if (!loaded.ok) die(`loading the runner: ${loaded.status} ${loaded.text.slice(0, 200)}`)
     if (!args['no-start']) {
-        const go = await desk.post('/api/cues/go', { index: 0 })
+        const [[goPath, goBody], [playPath, playBody]] = startCalls()
+        const go = await desk.post(goPath, goBody)
         if (!go.ok) die(`GO: ${go.status} ${go.text.slice(0, 200)}`)
+        const play = await desk.post(playPath, playBody)
+        if (!play.ok) die(`play in order: ${play.status} ${play.text.slice(0, 200)}`)
         say(`desk: running — ${go.body.cues.index + 1}/${go.body.cues.n} ${go.body.cues.name}, loop ${go.body.cues.loop ? 'on' : 'off'}${go.body.cues.missing?.length ? `, MISSING looks: ${go.body.cues.missing.join(', ')}` : ''}`)
     }
     const summary = await desk.get('/api/summary')
