@@ -3,12 +3,12 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
 arg = lambda k, d: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
-LOOP = float(arg('--seconds', 62)); RGB = [float(x) for x in arg('--rgb', '1,1,1').split(',')]
+LOOP = float(arg('--seconds', 62)); SEG = float(arg('--pattern-s', 8)); SPEED = float(arg('--speed', 1)); RGB = [float(x) for x in arg('--rgb', '1,1,1').split(',')]
 N, DARK, STEP, F = 256, 2.0, 0.035, 0.95
 def seg(a, b):
     n = max(2, int(math.dist(a, b) / STEP) + 1)
@@ -47,7 +47,7 @@ new = {i: [[] for _ in range(N)] for i in lines}
 lit_frames = int(N * LOOP / (LOOP + DARK))
 for k in range(N):
     if k >= lit_frames: continue
-    tt = k / lit_frames * LOOP; p = int(tt // 8) % 8; t = (tt % 8) / 8
+    tt = k / lit_frames * LOOP; p = int(tt // SEG) % 8; t = ((tt % SEG) / SEG * SPEED) % 1   # --pattern-s: seconds per pattern; --speed: cycles inside it
     for cube in '123456':
         ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
         for s_i, stroke in enumerate(pat(p, t, -1 if cube in '456' else 1)[:6]):
