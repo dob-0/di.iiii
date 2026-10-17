@@ -1,0 +1,505 @@
+{
+ "what": "MOXIR white-green build (desk looks)",
+ "source": "docs/moxir/scenes-v6-2026-10-18/scenes_v6.py from scripts/place/rigs/moxir-scenes-100-v5-2026-10-18.json (schema, palette, the cube net by colour)",
+ "licence": "di.iiii project data (the owner's); MOXIR teaser frames used as reference only, never published",
+ "date": "2026-10-17",
+ "version": "7.0",
+ "rules": {
+  "still": 0.3,
+  "floor": "line L + line R lit in the scene's family colour like every wash (owner 12:0x); the v3 \"floor never red\" rule is withdrawn by that word",
+  "flash": "worst 1 s per lamp <= 3 flashes (WCAG 2.x flash definition, measured on fx.js)",
+  "heads_patterns": [
+   "nod",
+   "wave",
+   "circle",
+   "figure8"
+  ],
+  "tilt_max_deg": 30,
+  "laser_desk_cap": 0.16,
+  "eye_v3": {
+   "red_max_scenes": 6,
+   "red_never_on_floor": true,
+   "no_saturated_blue_or_violet_lamps": "linear B share >= 0.8 banned on every lamp (lasers excepted)",
+   "strobe_max_hsv_s": 0.25,
+   "no_red_green_or_red_blue_pair_under_motion": true,
+   "floor_focus_shift_max_D": 0.2,
+   "floor_held_max_hsv_s": 0.6,
+   "method": "palette.py eye(); thresholds are taste, unvalidated"
+  },
+  "beam_colours": "v2.2: open, red-orange, lime only (owner 20:1x: lime, not regular colours)",
+  "lasers": "the laser session's current design (v5: whole field, levels 1.0) unchanged; updated later by the laser work, when ready",
+  "beam_levels": "0 or >= 0.95 (A9)",
+  "wash_colours": "v2.2: ember #ff3a12, lime #9cff00, white #ffffff only (lead 20:15); beams open #ffffff, red-orange #ff5a1e, lime #8cff3a only; no other colour",
+  "family": "one colour family per scene (+ white at <= 0.1 in a colour scene); red and green never together (R4, R5)",
+  "holds": "per scene, 10..25 s",
+  "head_period": "whole bars at 132 bpm (3.636 s)",
+  "tilt": "15..25 deg",
+  "laser40": "the 40 W lines are a layer: laser40 per scene, laser_lines null unless --laser40 on (owner 12:0x: enough); graphics never 74,75,78,79,166,167,246-253",
+  "targets": {
+   "dark_share_mean_min": 0.55,
+   "per_render_dark_min": 0.45,
+   "white_share_loop_max": 0.45,
+   "method": "picture_palette.py on the 50 renders"
+  },
+  "levels": "full power: every part lit at 1.0 in every scene (owner 2026-10-18 00:5x \"full use all lights all lasers\")"
+ },
+ "renamed_v3": {
+  "red-scissors": "copper-scissors",
+  "uv-steel": "sea-steel",
+  "red-strobe": "ice-strobe"
+ },
+ "palette": [
+  {
+   "hex": "#ff3a12",
+   "name": "ember (washes)"
+  },
+  {
+   "hex": "#9cff00",
+   "name": "lime (washes)"
+  },
+  {
+   "hex": "#ffffff",
+   "name": "white (washes)"
+  },
+  {
+   "hex": "#eefdfd",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#00ff00",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#ff3a12",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#b699ff",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#26bcff",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#66faff",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#ff9180",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "key": "AM",
+   "name": "amber (washes, lasers)",
+   "hex": "#ffa000",
+   "how": "the owner, 2026-10-18 01:2x: \"amber washes\"",
+   "sampled": null
+  },
+  {
+   "key": "LB",
+   "name": "lime beam (B380F slot 9)",
+   "hex": "#9ec233",
+   "how": "owner 2026-10-18 03:1x",
+   "sampled": null
+  }
+ ],
+ "surfaces": [
+  {
+   "name": "concrete",
+   "hex": "#b4afb3",
+   "sampled": "t3 glow cluster 51 %"
+  },
+  {
+   "name": "rust",
+   "hex": "#a08c81",
+   "sampled": "t3 glow cluster 9 %"
+  },
+  {
+   "name": "dark steel",
+   "hex": "#2a2a2d",
+   "sampled": "t3 lit cluster 47 %"
+  }
+ ],
+ "beam_wheel": {
+  "#26bcff": {
+   "slot": "Cyan",
+   "hex": "#00a6eb"
+  },
+  "#33ff47": {
+   "slot": "Aquamarine",
+   "hex": "#7abd82"
+  },
+  "#66faff": {
+   "slot": "CTB 8000",
+   "hex": "#96c7b8"
+  },
+  "#73bdff": {
+   "slot": "CTB 8000",
+   "hex": "#96c7b8"
+  },
+  "#8f73ad": {
+   "slot": "Lavender",
+   "hex": "#8f73ad"
+  },
+  "#d1eeff": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#e8e4dc": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#eefdfd": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#f4fcf4": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#ff3a12": {
+   "slot": "Red",
+   "hex": "#c41c1a"
+  },
+  "#ff9180": {
+   "slot": "Pink",
+   "hex": "#ed8080"
+  },
+  "#ffbe7a": {
+   "slot": "CTO 190",
+   "hex": "#f5d985"
+  },
+  "#9ec233": {
+   "slot": "Light Green (lime, slot 9 forced 92)",
+   "hex": "#9ec233"
+  }
+ },
+ "colour_mix": {
+  "method": "share of lamp-level-seconds: level x number of lamps in the part (rig v2.10; outside re-parted as outside_rule.py) x (fade + hold), summed per colour over the 50 scenes",
+  "v1_ember_sheet": {
+   "red": 55.7,
+   "white": 40.9,
+   "green": 3.4
+  },
+  "v2_arcs": {
+   "white": 26.4,
+   "outside toxic green": 21.8,
+   "red": 11.3,
+   "green": 9.1,
+   "deep blue": 8.4,
+   "UV violet": 8.0,
+   "steel blue": 7.4,
+   "outside dark amber": 6.5,
+   "amber": 1.1
+  },
+  "now": {
+   "white": 27.8,
+   "outside toxic green": 22.6,
+   "lavender": 7.9,
+   "outside dark amber": 6.7,
+   "rose-copper": 5.7,
+   "green": 5.4,
+   "red": 5.1,
+   "petrol": 5.0,
+   "ice": 4.6,
+   "deep sea": 4.3,
+   "steel blue": 2.7,
+   "mint": 2.5
+  },
+  "inside_only": {
+   "v1": {
+    "red": 54.2,
+    "white": 42.3,
+    "green": 3.5
+   },
+   "v2": {
+    "white": 36.8,
+    "red": 15.8,
+    "green": 12.7,
+    "deep blue": 11.8,
+    "UV violet": 11.2,
+    "steel blue": 10.4,
+    "amber": 1.5
+   },
+   "v3": {
+    "white": 39.3,
+    "lavender": 11.2,
+    "rose-copper": 8.0,
+    "green": 7.6,
+    "red": 7.1,
+    "petrol": 7.0,
+    "ice": 6.5,
+    "deep sea": 6.0,
+    "steel blue": 3.8,
+    "mint": 3.5
+   }
+  },
+  "scenes_with_red_beyond_the_floor_per_act": {
+   "v1": [
+    8,
+    10,
+    6,
+    6,
+    5
+   ],
+   "v2": [
+    1,
+    0,
+    5,
+    1,
+    5
+   ],
+   "now": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ]
+  },
+  "scenes_with_red_inside_per_act": {
+   "v1": [
+    10,
+    10,
+    10,
+    10,
+    10
+   ],
+   "v2": [
+    1,
+    0,
+    10,
+    1,
+    5
+   ],
+   "v3": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ],
+   "rule": "saturated red (WCAG 2.2 R share >= 0.8, linear) or hue within 15 deg of red at S >= 0.6, any inside part; the owner-set entrance is outside and not counted"
+  },
+  "floor_strips_red_scenes": {
+   "v1": 50,
+   "v2": 10,
+   "v3": 0
+  }
+ },
+ "loop": true,
+ "loop_s": 43,
+ "scenes": [
+  {
+   "id": "v7-171",
+   "title": "White-green laser \u00b7 start",
+   "act": 6,
+   "intent": "only the lasers, white-green, 10 s; then the lights come in",
+   "parts": {
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 20,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 3,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 10
+   },
+   "notes": "owner 03:3x; laser white-green; then v7-172",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 4
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "owner: laser scenes are DOTS",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "red-amber"
+   ]
+  },
+  {
+   "id": "v7-172",
+   "title": "White washes \u00b7 lime beams \u00b7 white-green laser",
+   "act": 6,
+   "intent": "after the 10 s start: washes white, lime beams",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#ffffff",
+     1.0
+    ],
+    "line B": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#9ec233",
+     1.0
+    ],
+    "side line right": [
+     "#9ec233",
+     1.0
+    ],
+    "plane 1": [
+     "#9ec233",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 20,
+    "depth": 150,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.544,
+    "pan_deg": 110,
+    "tilt_deg": 22,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 30
+   },
+   "notes": "owner 03:3x; beams lime; laser white-green",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 4
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "owner: laser scenes are DOTS",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "red-amber"
+   ]
+  }
+ ],
+ "laser_schema": "di.iiii scripts/place/laser_frames.py (validate_laser); design: scenes-tools/laser_design.py 2026-10-15",
+ "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)",
+ "beam_wheel_seen": {
+  "#ffffff": {
+   "slot": "open",
+   "hex": "#ffffff"
+  },
+  "#ff5a1e": {
+   "slot": "red-orange",
+   "hex": "#ff5a1e"
+  },
+  "#8cff3a": {
+   "slot": "lime",
+   "hex": "#8cff3a"
+  }
+ }
+}

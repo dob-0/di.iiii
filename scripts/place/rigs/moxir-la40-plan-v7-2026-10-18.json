@@ -3640,6 +3640,56 @@
     ]
    },
    "note": "White walls \u00b7 green-white laser"
+  },
+  "look:rig-v7-171": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "colours": [
+    8,
+    42
+   ],
+   "every": 2,
+   "anim": {
+    "kind": "sweep+spin",
+    "x": 150,
+    "rot": 170,
+    "xrot": 150,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "then": {
+    "after_s": 10,
+    "look": "rig-v7-172"
+   },
+   "note": "White-green laser \u00b7 start (10 s, then v7-172)"
+  },
+  "look:rig-v7-172": {
+   "graphics": [
+    1
+   ],
+   "colour": 8,
+   "colours": [
+    8,
+    42
+   ],
+   "every": 2,
+   "anim": {
+    "kind": "sweep+spin",
+    "x": 150,
+    "rot": 170,
+    "xrot": 150,
+    "x2": 160,
+    "rot2": 210,
+    "g2": [
+     1
+    ]
+   },
+   "note": "White washes \u00b7 lime beams \u00b7 white-green laser"
   }
  },
  "allowStatic": true,

@@ -47,7 +47,7 @@ const dot = (g) => !allowStatic && ((g >= 146 && g <= 165) || (g >= 185 && g <= 
 const bad = (list) => !list.length || list.some((g) => !Number.isInteger(g) || g < 0 || g > 255 || NEVER.has(g) || dot(g))
 if (bad(GRAPHICS)) throw new Error('a forbidden graphic is in the list')
 for (const [n, p] of Object.entries(plan)) if (n !== '__allowStatic') if (bad(p.graphics || GRAPHICS)) throw new Error(`cue ${n}: a forbidden or empty graphic list`)
-const playOf = (cue) => { const p = plan[cue] || {}; return { anim: p.anim || {}, list: p.graphics || GRAPHICS, colour: p.colour ?? colourOf.get(cue) ?? colour, every: (p.every ? Number(p.every) * 1000 : every) } }
+const playOf = (cue) => { const p = plan[cue] || {}; return { then: p.then || null, colours: p.colours || null, anim: p.anim || {}, list: p.graphics || GRAPHICS, colour: p.colour ?? colourOf.get(cue) ?? colour, every: (p.every ? Number(p.every) * 1000 : every) } }
 if (args['dry-run']) { for (const n of [...cues].sort((a, b) => a - b)) { const q = playOf(n); console.log(`cue ${n}: graphics ${q.list.join(',')} · colour ${q.colour} · every ${q.every / 1000}s${plan[n]?.note ? ' · ' + plan[n].note : ''}`) } process.exit(0) }
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }
 
@@ -78,6 +78,7 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     return v.map((value, i) => ({ universe, channel: base + i, value }))
 })
 let state = ''
+let thenState = { key: null, at: 0, done: false }
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
     // The scene that is ON (the 'cue' layer's look), fired by the runner or by hand, mapped to its cue number; else the runner's index.
@@ -90,7 +91,15 @@ const tick = async () => {
     const on = Date.now() < previewUntil || Boolean(lookKey) || (!onLook || byLook >= 0) && cue !== null && cues.has(cue)
     const q = playOf(lookKey || cue)
     const g = q.list[Math.floor(Date.now() / q.every) % q.list.length]
-    const c = q.colour
+    // colours [a, b]: the colour changes with each picture (owner 03:3x: a white-green "gradient" — the units have no white-green blend)
+    const c = q.colours ? q.colours[Math.floor(Date.now() / q.every) % q.colours.length] : q.colour
+    // then {after_s, look}: a timed build — after this look has been ON for after_s, the desk's cue layer moves to the next look
+    if (lookKey !== thenState.key) thenState = { key: lookKey, at: Date.now(), done: false }
+    if (q.then && lookKey && !thenState.done && Date.now() - thenState.at >= q.then.after_s * 1000) {
+        thenState.done = true
+        await fetch(`${desk}/api/layer`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'cue', lookId: q.then.look, on: true }) })
+        console.log(`${new Date().toISOString().slice(11, 19)} then: ${lookKey} -> ${q.then.look}`)
+    }
     const L2 = q.anim.g2 || null
     const g2 = L2 && L2.length ? L2[(Math.floor(Date.now() / q.every) + Math.floor(L2.length / 2)) % L2.length] : null
     await raw(frame(on, g, c, q.anim, g2))
