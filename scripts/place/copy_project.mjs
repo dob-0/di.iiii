@@ -7,6 +7,7 @@
  * Between two stacks (2026-10-15, a version carried to the dev tier): the same id on both sides unless --to.
  *   node scripts/place/copy_project.mjs --from-api <url> --to-api <url> --space <space> --from <project> \
  *     [--from-token-file <env>] [--to-token-file <env>] [--to-token-key <KEY>] [--update] [--remote] [--backup <dir>] [--apply]
+ *   --assets-from <project>: read the asset bytes from that project (a checkpoint's assets stay under the project it was copied from).
  *   The target project is created when missing; an existing one is replaced only with --update (the server keeps its
  *   before-document-replace history; --backup also writes the target's old document). Only the assets the target lacks are sent.
  * Dry run unless --apply. Writes only to localhost / 127.0.0.1 unless --remote. Assets are downloaded and uploaded again (same
@@ -52,7 +53,7 @@ const assets = []
 for (const a of doc.assets || []) {
     const held = (existing.body?.document?.assets || []).find((b) => b.id === a.id)
     if (held && (await target.head(`/api/projects/${id}/assets/${a.id}`))) { assets.push(held); continue }
-    const got = await source.bytes(`/api/projects/${from}/assets/${a.id}`)
+    const got = await source.bytes(`/api/projects/${args['assets-from'] || from}/assets/${a.id}`)  // a checkpoint's document can point at its parent's assets (2026-10-17)
     if (!got.ok) die(`downloading ${a.name}: ${got.status}`)
     const form = new FormData(); form.append('asset', new Blob([got.buffer], { type: a.mimeType }), a.name)
     const up = await target.post(`/api/projects/${id}/assets`, form)
