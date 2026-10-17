@@ -12,19 +12,20 @@
  *   light   level × colour (linear light, back to a colour code) more than ΔE76 15 apart: a colour's own darkness is
  *           light too (dmxDecode.js encodeDmx folds it into the dimmer since 2026-10-17)
  *   aim     the two beam directions more than 5° apart (moving heads only)
- * The look's LEVEL MOTION (look.motion) is listed apart: it is what the desk does not play (owner 2026-10-17: "in 3d beams
- * are strobe but in real not"). Read-only: nothing is sent to the desk or the document.
+ * The look's LEVEL MOTION (look.motion) is listed apart: the desk plays it since PR #1018 (the hall moves with the room).
+ * Coverage (lookCoverage.mjs): rig lamps posed in 0 looks (dark in every look) and look group keys no lamp holds (orphans). Read-only: nothing is sent to the desk or the document.
  */
 import fs from 'node:fs'
 import { makeClient, readToken } from '../place/api.mjs'
 import { parseArgs, die, say } from '../place/common.mjs'
 import { loadLibrary } from './library.mjs'
-import { rigLooksOf, lookPoses } from '../../src/rigbuild/looks.js'
+import { rigLooksOf, lookPoses, lampGroups } from '../../src/rigbuild/looks.js'
 import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { typeById } from '../../src/rigbuild/fixtureTypes.js'
 import { runningMode, roomPanOf, beamOfPanTilt } from '../../src/rigbuild/dmxPose.js'
 import { decodeDmx } from '../../src/rigbuild/dmxDecode.js'
+import { unposedLamps, orphanKeys } from './lookCoverage.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 
 const hexRgb = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '')); if (!m) return null; const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255] }
@@ -55,9 +56,11 @@ const looks = rigLooksOf(entities) || die(`${project} has no rig looks`)
 const fresh = deskLooksWithValues(looks, rig, { entities, library })
 const byId = new Map(entities.map((e) => [e.id, e]))
 const out = { project, looks: [], totals: { lamps: 0, onoff: 0, light: 0, aim: 0 }, motion: {} }
+const allPoses = []
 looks.looks.forEach((look, i) => {
     if (args.look && look.id !== args.look) return
     const poses = lookPoses({ entities, library, lookId: look.id, rigLooks: looks })
+    allPoses.push(poses)
     const values = fresh[i]?.steps?.[0]?.values || {}
     const row = { id: look.id, title: look.title || look.id, onoff: [], light: [], aim: [] }
     for (const [fid, cell] of Object.entries(values)) {
@@ -85,5 +88,13 @@ looks.looks.forEach((look, i) => {
 const t = out.totals
 say(`${project}: ${out.looks.length} looks, ${t.lamps} lamp-looks checked — on/off ${t.onoff}, light off ${t.light}, aim off ${t.aim}`)
 for (const r of out.looks.filter((x) => x.onoff.length + x.light.length + x.aim.length).slice(0, 12)) say(`  ${r.title.padEnd(22)} on/off ${r.onoff.length} light ${r.light.length} aim ${r.aim.length}  ${[...r.light, ...r.aim, ...r.onoff].slice(0, 2).join(' | ')}`)
-say(`looks with level motion the desk does not play: ${Object.values(out.motion).flat().length} (${Object.entries(out.motion).map(([k, v]) => `${k} ${v.length}`).join(', ')})`)
+say(`looks with level motion (the desk plays it): ${Object.values(out.motion).flat().length} (${Object.entries(out.motion).map(([k, v]) => `${k} ${v.length}`).join(', ')})`)
+if (!args.look) {
+    const rigLampIds = entities.filter((e) => e.type === 'spotLight' && e.components?.fixture).map((e) => e.id)
+    out.unposed = unposedLamps(rigLampIds, allPoses)
+    out.orphans = orphanKeys(looks.looks, new Set(lampGroups({ entities, library }).groups.keys()))
+    say(`coverage: ${out.unposed.length} of ${rigLampIds.length} lamps posed in 0 looks, ${out.orphans.length} look group keys match no lamp`)
+    if (out.unposed.length) say(`  unposed (dark in every look): ${out.unposed.slice(0, 20).join(', ')}${out.unposed.length > 20 ? ' …' : ''}`)
+    for (const o of out.orphans.slice(0, 12)) say(`  orphan key ${o.key} (named by ${o.looks} looks)`)
+}
 if (args.json) fs.writeFileSync(String(args.json), JSON.stringify(out, null, 1))
