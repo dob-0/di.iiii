@@ -413,7 +413,9 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         // schema bounds it (normalizeLookMotion). A look with `heads` (2026-10-15) keeps it the same way (normalizeLookHeads).
         return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), ...(lk.act != null ? { act: lk.act } : {}), aims, colours, levels, ...(lk.parts ? { parts: lk.parts } : {}), ...(lk.laser_colour ? { laser_colour: lk.laser_colour } : {}), ...(lk.desk_caps ? { desk_caps: lk.desk_caps } : {}), ...(lk.motion ? { motion: lk.motion } : {}), ...(lk.heads ? { heads: lk.heads } : {}) }
     }
-    const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
+    // The project schema keeps at most 120 designed looks (shared/projectSchema.cjs RIG_LOOKS_CAP): the extra 'black' is added only
+    // when it fits — at 120 scenes it pushed the last scene's look off the end (MOXIR v7, 2026-10-18 01:3x).
+    const looks = rig.looks.some((l) => l.id === 'black') || rig.looks.length >= 120 ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
     return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
 }
 
