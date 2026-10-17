@@ -56,8 +56,16 @@ const raw = async (channels) => {
     if (!r.ok) throw new Error(`raw ${r.status} ${await r.text()}`)
 }
 // anim (plan, optional): ch6 X move, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave; ch7 Y is always 64 (no up-down sweep).
-const SPAN = 14
-const frame = (on, g, c, a = {}) => units.flatMap((base) => (on ? [255, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, 0, 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0] : [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0]).map((value, i) => ({ universe, channel: base + i, value })))
+const SPAN = 32
+// The full 32-ch mode (up-la40wf.json mode 32, APPROVED): ch1-19 the first graphic, ch20-32 a SECOND graphic drawn at the same time.
+// anim keys: x zoom xrot yrot rot paint xwave (1st) · g2 (graphic list for the 2nd, else none) x2 zoom2 xrot2 yrot2 rot2 paint2 xwave2.
+// Never set: Y move / Y wave (ch7, ch14, ch24, ch31 stay 64 / 0: no up-down sweep), strobe ch15 (flash rule), colour modulation ch16-18 (0 = full).
+const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
+    const off = [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
+    const v = !on ? off : [255, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
+        g2 ?? 0, 0, c, a.x2 ?? 64, 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
+    return v.map((value, i) => ({ universe, channel: base + i, value }))
+})
 let state = ''
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
@@ -70,7 +78,9 @@ const tick = async () => {
     const q = playOf(cue)
     const g = q.list[Math.floor(Date.now() / q.every) % q.list.length]
     const c = q.colour
-    await raw(frame(on, g, c, q.anim))
+    const L2 = q.anim.g2 || null
+    const g2 = L2 && L2.length ? L2[(Math.floor(Date.now() / q.every) + Math.floor(L2.length / 2)) % L2.length] : null
+    await raw(frame(on, g, c, q.anim, g2))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
 }
