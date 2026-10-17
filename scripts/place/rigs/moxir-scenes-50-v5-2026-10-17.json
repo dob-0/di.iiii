@@ -1,0 +1,5874 @@
+{
+ "what": "MOXIR 2026-10-17 v5 (show day): the 50 scenes re-authored for the WASHES and the 18 BEAMS, lasers at 0 (owner 08:2x: lasers later, when ready). Beam colours only from the B380F wheel slots SEEN (fixtureTypes.js B380F_SLOTS_SEEN; blue banned by the eye rule); heads use the whole headMotion.js vocabulary (fan, sweep, cross, circle, figure8, nod, wave x all/alternate/ripple/left-right), periods on the 132 bpm bar (1.82 s); fx.js modes on washes and beams. Kept from v3/v4: ids, acts, cue timing, energy, the floor strips, the outside, the v4 laser design under laser_parked.",
+ "source": "designed by the scenes-50 designer agent (Opus) of chat aa61368c, 2026-10-15; re-coloured v2 by the recolour agent (Opus, headless) 2026-10-15 03:15; v3 (Palette 3) by the recolour-3 agent (Opus, headless, lead f41c885f) 2026-10-15 06:0x; generator ~/work/agent-reports-2026-10-15/moxir-50/scenes-tools/scenes50.py + palette.py (v2 copies in scenes-tools/v2/); colours pixel-sampled by palette_sample.py (palette_samples.json); outside parts by outside_rule.py; rig scripts/place/rigs/moxir-v2-10-2026-10-15.json; motion vocabulary serverXR/src/lighting/fx.js · lasers v4 2026-10-17: the whole field (zone opened by the officer 07:1x), wide fans/sweeps/arches/curtains, cycles ≥ 14.5 s for the 4.36 s keyframes · v5 2026-10-17 08:xx by dob-74 (Fable), scratchpad scenes_v5.py; base = this file at v3-palette3+lasers-v4",
+ "licence": "di.iiii project data (the owner's); MOXIR teaser frames used as reference only, never published",
+ "date": "2026-10-17",
+ "version": "v5-washes-beams-2026-10-17",
+ "rules": {
+  "still": 0.3,
+  "floor": "line L + line R held still, never red, desaturated (HSV S <= 0.6), focus shift <= 0.2 D; level so luminance x level ~ 0.06: act 1 ice 0.07; act 2 mint 0.07; act 3 rose-copper 0.14; act 4 petrol 0.08; act 5 lavender 0.15; act 5 ends (scenes 48-50) ice 0.07; blue-wave: cut down lavender 0.3; luminance x level >= v1 floor (deep ember 0.25) = 0.0221",
+  "flash": "worst 1 s per lamp <= 3 flashes (WCAG 2.x flash definition, measured on fx.js)",
+  "heads_patterns": [
+   "fan",
+   "sweep",
+   "cross",
+   "circle",
+   "figure8",
+   "nod",
+   "wave"
+  ],
+  "tilt_max_deg": 30,
+  "laser_desk_cap": 0.16,
+  "eye_v3": {
+   "red_max_scenes": 6,
+   "red_never_on_floor": true,
+   "no_saturated_blue_or_violet_lamps": "linear B share >= 0.8 banned on every lamp (lasers excepted)",
+   "strobe_max_hsv_s": 0.25,
+   "no_red_green_or_red_blue_pair_under_motion": true,
+   "floor_focus_shift_max_D": 0.2,
+   "floor_held_max_hsv_s": 0.6,
+   "method": "palette.py eye(); thresholds are taste, unvalidated"
+  },
+  "beam_colours": "B380F_SLOTS_SEEN only (open, red, green, yellow, magenta, amber, lime, orange, red-orange, warm white, light blue); blue banned (eye rule)",
+  "head_peak_speed_max_deg_s": 120,
+  "lasers": "laser part absent from every scene (level 0) until the owner signs the lasers off; design kept in laser_parked"
+ },
+ "renamed_v3": {
+  "red-scissors": "copper-scissors",
+  "uv-steel": "sea-steel",
+  "red-strobe": "ice-strobe"
+ },
+ "palette": [
+  {
+   "key": "A",
+   "name": "ash",
+   "hex": "#e8e4dc",
+   "sampled": null,
+   "how": "ours",
+   "measured_source": "di.iiii work-light layer (moxir_worklight.py)",
+   "practice_source": "the owner: 'cold white / deep red'",
+   "role": "the warm white: blinders, the key on the DJ",
+   "beam_wheel_slot": "Open (white)",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.28,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.35,
+    "blue_share": 0.31,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.05,
+    "focus_shift_D": 0.01
+   }
+  },
+  {
+   "key": "E",
+   "name": "ember",
+   "hex": "#ff3a12",
+   "sampled": "#dd0001",
+   "how": "ours",
+   "measured_source": "ours; t4 laser fans: 66 % of saturated glow is red (sampled #dd0001)",
+   "practice_source": "the owner: 'deep red'",
+   "role": "the red peak only: act 3, the risers, act 5 hits",
+   "beam_wheel_slot": "Red",
+   "returned_by": {
+    "concrete": 0.45,
+    "rust": 0.34,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.95,
+    "blue_share": 0.01,
+    "saturated_red": true,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.93,
+    "focus_shift_D": 0.37
+   }
+  },
+  {
+   "key": "D",
+   "name": "deep ember",
+   "hex": "#a3200c",
+   "sampled": null,
+   "how": "ours",
+   "measured_source": "di.iiii work-light layer (moxir_worklight.py)",
+   "practice_source": "monochrome red as a tool (Moody & Dexter)",
+   "role": "the act 3 floor, rust moments",
+   "beam_wheel_slot": "Red",
+   "returned_by": {
+    "concrete": 0.45,
+    "rust": 0.34,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.95,
+    "blue_share": 0.01,
+    "saturated_red": true,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.93,
+    "focus_shift_D": 0.38
+   }
+  },
+  {
+   "key": "CW",
+   "name": "cold white",
+   "hex": "#eefdfd",
+   "sampled": "#eefdfd",
+   "how": "as sampled",
+   "measured_source": "t8 hangar: 22 % of the glow clusters (sampled #eefdfd)",
+   "practice_source": "Berlin techno's white beam/strobe room (Denk & von Thülen 2012)",
+   "role": "act 1 and the act 5 white-out, strobes",
+   "beam_wheel_slot": "Open (white)",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.28,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.3,
+    "blue_share": 0.35,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.06,
+    "focus_shift_D": -0.01
+   }
+  },
+  {
+   "key": "SB",
+   "name": "steel blue",
+   "hex": "#73bdff",
+   "sampled": "#7490a9",
+   "how": "hue of the sample, S 0.55",
+   "measured_source": "t8 hangar: 18 % of glow (#7490a9), 26 % (#b4c8d4)",
+   "practice_source": "Purkinje shift: blue-green reads brighter in the dark (CIE 1951 scotopic V'(λ), peak 507 nm)",
+   "role": "act 1 walls and floor, the way out",
+   "beam_wheel_slot": "CTB 8000",
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.26,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.1,
+    "blue_share": 0.6,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.55,
+    "focus_shift_D": -0.11
+   }
+  },
+  {
+   "key": "PG",
+   "name": "poster green",
+   "hex": "#33ff47",
+   "sampled": "#37743d",
+   "how": "hue of the sample, S 0.80",
+   "measured_source": "t1/t2 poster: 20 % of lit pixels (#37743d); saturated glow is 100 % green (median #74a97b)",
+   "practice_source": "MOXIR's own poster",
+   "role": "act 2: the hall turns the poster",
+   "beam_wheel_slot": "Aquamarine",
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.26,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.03,
+    "blue_share": 0.06,
+    "saturated_red": false,
+    "saturated_green": true,
+    "saturated_blue": false,
+    "hsv_s": 0.8,
+    "focus_shift_D": -0.07
+   }
+  },
+  {
+   "key": "GL",
+   "name": "poster glow",
+   "hex": "#f4fcf4",
+   "sampled": "#f4fcf4",
+   "how": "as sampled",
+   "measured_source": "t1/t2 poster: 33 % of the glow clusters (sampled #f4fcf4), the light column",
+   "practice_source": "MOXIR's own poster",
+   "role": "act 2: the green-tinted white",
+   "beam_wheel_slot": "Open (white)",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.28,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.33,
+    "blue_share": 0.33,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.03,
+    "focus_shift_D": -0.0
+   }
+  },
+  {
+   "key": "G",
+   "name": "laser green",
+   "hex": "#00ff00",
+   "sampled": "#6fa98d",
+   "how": "diode green (532 nm DPSS / 520 nm diode), lasers only",
+   "measured_source": "t5 rave: 29 % green + 52 % cyan of saturated glow (laser lines through haze, #6fa98d)",
+   "practice_source": "acid house green (M. Collin, Altered State, 1997)",
+   "role": "lasers only, act 1 to act 4",
+   "beam_wheel_slot": null,
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.26,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.0,
+    "blue_share": 0.0,
+    "saturated_red": false,
+    "saturated_green": true,
+    "saturated_blue": false,
+    "hsv_s": 1.0,
+    "focus_shift_D": -0.07
+   }
+  },
+  {
+   "key": "BL",
+   "name": "deep blue",
+   "hex": "#2631ff",
+   "sampled": "#3f45bc",
+   "how": "hue of the sample, S 0.85",
+   "measured_source": "t4 laser reference: 15 % of glow (#3f45bc), 22 % of saturated glow is blue",
+   "practice_source": "the breakdown cool-down (Butler 2006: breakdown as release)",
+   "role": "act 4 breakdown",
+   "beam_wheel_slot": "Cyan",
+   "returned_by": {
+    "concrete": 0.45,
+    "rust": 0.23,
+    "dark steel": 0.03
+   },
+   "palette": 2,
+   "in_use_v3": false,
+   "eye": {
+    "red_share": 0.02,
+    "blue_share": 0.95,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": true,
+    "hsv_s": 0.85,
+    "focus_shift_D": -0.41
+   }
+  },
+  {
+   "key": "UV",
+   "name": "UV violet",
+   "hex": "#7419ff",
+   "sampled": "#6228bb",
+   "how": "hue of the sample, S 0.90",
+   "measured_source": "t7: 28 % of saturated glow violet (#6228bb); t4: 6 % (#9662c8)",
+   "practice_source": "black light in rave culture (S. Reynolds, Energy Flash, 1998)",
+   "role": "act 3 with red, act 4 with blue",
+   "beam_wheel_slot": "Lavender",
+   "returned_by": {
+    "concrete": 0.45,
+    "rust": 0.26,
+    "dark steel": 0.03
+   },
+   "palette": 2,
+   "in_use_v3": false,
+   "eye": {
+    "red_share": 0.15,
+    "blue_share": 0.84,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": true,
+    "hsv_s": 0.9,
+    "focus_shift_D": -0.21
+   }
+  },
+  {
+   "key": "AM",
+   "name": "amber",
+   "hex": "#ffad4d",
+   "sampled": "#c9a57b",
+   "how": "hue of the sample, S 0.70",
+   "measured_source": "t8: 13 % of saturated glow amber (#c9a57b); t6: 13 % (#b69656)",
+   "practice_source": "sodium street light outside a factory (589 nm); amber only as warmth",
+   "role": "warmth only: the road at doors and at the end",
+   "beam_wheel_slot": "CTO 260",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.3,
+    "dark steel": 0.02
+   },
+   "palette": 2,
+   "in_use_v3": false,
+   "eye": {
+    "red_share": 0.67,
+    "blue_share": 0.05,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.7,
+    "focus_shift_D": 0.13
+   }
+  },
+  {
+   "key": "PT",
+   "name": "petrol",
+   "hex": "#66faff",
+   "sampled": "#6ea9ab",
+   "how": "hue of the sample, S 0.60",
+   "measured_source": "t5 rave: cyan is 52 % of the saturated glow (median #6ea9ab), the laser lines through haze",
+   "practice_source": "teal / blue-green gels (LEE 116 Medium Blue-Green, Rosco R95 Medium Blue Green); blue-green sits by the 507 nm peak of night vision, so it reads brightest in the dark (CIE 1951 V'(λ); mesopic photometry CIE 191:2010)",
+   "role": "the act 4 floor; teal accents in acts 1-3",
+   "beam_wheel_slot": "CTB 8000",
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.26,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.06,
+    "blue_share": 0.48,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.6,
+    "focus_shift_D": -0.1
+   }
+  },
+  {
+   "key": "IC",
+   "name": "ice",
+   "hex": "#d1eeff",
+   "sampled": "#b4c8d4",
+   "how": "hue of the sample, S 0.18",
+   "measured_source": "t8 hangar: 26 % of the glow (#b4c8d4), the cold beam columns",
+   "practice_source": "cold-tinted white: LEE 218 Eighth CTB / LEE 203 Quarter CTB; the white rooms of Berlin techno (Denk & von Thülen 2012)",
+   "role": "the act 1 floor and the end of act 5; ice rays; the act 5 strobe",
+   "beam_wheel_slot": "Open (white)",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.27,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.26,
+    "blue_share": 0.4,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.18,
+    "focus_shift_D": -0.03
+   }
+  },
+  {
+   "key": "LV",
+   "name": "lavender",
+   "hex": "#b699ff",
+   "sampled": "#9982d4",
+   "how": "hue of the sample, S 0.40",
+   "measured_source": "t4 laser reference: 13.3 % of the glow (#9982d4), the pale violet round the red fans",
+   "practice_source": "LEE 136 Pale Lavender / LEE 170 Deep Lavender; replaces saturated UV on the lamps (the beams' wheel already showed Lavender for UV)",
+   "role": "the peaks' violet (acts 3 and 5), the act 5 floor",
+   "beam_wheel_slot": "CTB 8000",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.28,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.26,
+    "blue_share": 0.56,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.4,
+    "focus_shift_D": -0.03
+   }
+  },
+  {
+   "key": "MI",
+   "name": "mint",
+   "hex": "#99ffce",
+   "sampled": "#6fa98d",
+   "how": "hue of the sample, S 0.40",
+   "measured_source": "t5 rave: green is 28.6 % of the saturated glow (median #6fa98d); the poster's pale glow #cfe5d0 (t1/t2, 12.4 %) is the same family",
+   "practice_source": "the poster's green made soft; no single gel matches (taste)",
+   "role": "the act 2 floor, soft green",
+   "beam_wheel_slot": "CTB 8000",
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.27,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.16,
+    "blue_share": 0.32,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.4,
+    "focus_shift_D": -0.06
+   }
+  },
+  {
+   "key": "RC",
+   "name": "rose-copper",
+   "hex": "#ff9180",
+   "sampled": "#ad756c",
+   "how": "hue of the sample, S 0.50",
+   "measured_source": "t5 rave: 2.3 % of the glow (#ad756c), warm haze; the hall's own rust (t3 #a08c81) returns warm light best (measured)",
+   "practice_source": "a warm that is not red: copper/rose tints instead of ember (taste); WCAG 2.2: not a saturated red (R share < 0.8)",
+   "role": "the act 3 floor; the warm accent where v2 had red",
+   "beam_wheel_slot": "Pink",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.3,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.67,
+    "blue_share": 0.14,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.5,
+    "focus_shift_D": 0.16
+   }
+  },
+  {
+   "key": "DS",
+   "name": "deep sea",
+   "hex": "#26bcff",
+   "sampled": "#73a0b4",
+   "how": "hue of the sample, S 0.85",
+   "measured_source": "t5 rave: blue median of the saturated glow #73a0b4; t8: 84 % of the saturated glow is blue (#7492af)",
+   "practice_source": "a cyan-blue (~480 nm dominant), not the 450 nm end of pure blue the eye cannot bring into focus (Thibos et al. 1992)",
+   "role": "act 4 rays and plane: the blue that is not pure blue",
+   "beam_wheel_slot": "Cyan",
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.26,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.01,
+    "blue_share": 0.66,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.85,
+    "focus_shift_D": -0.15
+   }
+  },
+  {
+   "key": "WW",
+   "name": "warm white",
+   "hex": "#ffbe7a",
+   "sampled": "#dbd9cf",
+   "how": "Planckian 3200 K (Kim et al. 2002 spline, IEC 61966-2-1 sRGB)",
+   "measured_source": "t5 rave: 25.6 % of the glow is warm white (#dbd9cf)",
+   "practice_source": "tungsten 3200 K: LEE 204 Full CTO turns daylight into it; the classic stage key",
+   "role": "the key and kicker on the DJ, the afterglow",
+   "beam_wheel_slot": "CTO 190",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.29,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.58,
+    "blue_share": 0.11,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.52,
+    "focus_shift_D": 0.1
+   }
+  },
+  {
+   "key": "LVB",
+   "name": "lavender (beams)",
+   "hex": "#8f73ad",
+   "sampled": "#8f73ad",
+   "how": "the wheel slot's own hex (Lavender, assumed Sharpy order, di.iiii assumedProfiles.js)",
+   "measured_source": "same hue family as lavender (t4 #9982d4); the washes' lavender #b699ff would snap to CTB 8000 (greenish) on the wheel, so the beams carry the slot's hex",
+   "practice_source": "LEE 136 / 170 lavender family",
+   "role": "lavender on the 18 beams",
+   "beam_wheel_slot": "Lavender",
+   "returned_by": {
+    "concrete": 0.44,
+    "rust": 0.28,
+    "dark steel": 0.02
+   },
+   "palette": 3,
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.32,
+    "blue_share": 0.48,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.34,
+    "focus_shift_D": -0.0
+   }
+  },
+  {
+   "name": "toxic green",
+   "hex": "#a5ff0f",
+   "role": "the outside: every road wash, the outer wall (owner 2026-10-15: dirty toxic green)",
+   "source": "owner's words 2026-10-15 03:5x; hue = chartreuse (acid green of the 1990s rave palette, S. Reynolds, Energy Flash 1998); exact hex = taste",
+   "key": "OUT",
+   "sampled": null,
+   "how": "owner's choice (outside_rule.py)",
+   "measured_source": "owner's words 2026-10-15 03:5x; hue = chartreuse (acid green of the 1990s rave palette, S. Reynolds, Energy Flash 1998); exact hex = taste",
+   "practice_source": "owner's words 2026-10-15 03:5x; hue = chartreuse (acid green of the 1990s rave palette, S. Reynolds, Energy Flash 1998); exact hex = taste",
+   "beam_wheel_slot": null,
+   "returned_by": {
+    "concrete": 0.43,
+    "rust": 0.27,
+    "dark steel": 0.02
+   },
+   "palette": "outside",
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.27,
+    "blue_share": 0.0,
+    "saturated_red": false,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 0.94,
+    "focus_shift_D": -0.02
+   }
+  },
+  {
+   "name": "dark amber",
+   "hex": "#e04e00",
+   "role": "the entrance pair only (owner: dark amber close to red)",
+   "source": "owner's words 2026-10-15 03:5x; exact hex = taste",
+   "key": "OUT",
+   "sampled": null,
+   "how": "owner's choice (outside_rule.py)",
+   "measured_source": "owner's words 2026-10-15 03:5x; exact hex = taste",
+   "practice_source": "owner's words 2026-10-15 03:5x; exact hex = taste",
+   "beam_wheel_slot": null,
+   "returned_by": {
+    "concrete": 0.45,
+    "rust": 0.33,
+    "dark steel": 0.02
+   },
+   "palette": "outside",
+   "in_use_v3": true,
+   "eye": {
+    "red_share": 0.91,
+    "blue_share": 0.0,
+    "saturated_red": true,
+    "saturated_green": false,
+    "saturated_blue": false,
+    "hsv_s": 1.0,
+    "focus_shift_D": 0.31
+   }
+  }
+ ],
+ "surfaces": [
+  {
+   "name": "concrete",
+   "hex": "#b4afb3",
+   "sampled": "t3 glow cluster 51 %"
+  },
+  {
+   "name": "rust",
+   "hex": "#a08c81",
+   "sampled": "t3 glow cluster 9 %"
+  },
+  {
+   "name": "dark steel",
+   "hex": "#2a2a2d",
+   "sampled": "t3 lit cluster 47 %"
+  }
+ ],
+ "beam_wheel": {
+  "#26bcff": {
+   "slot": "Cyan",
+   "hex": "#00a6eb"
+  },
+  "#33ff47": {
+   "slot": "Aquamarine",
+   "hex": "#7abd82"
+  },
+  "#66faff": {
+   "slot": "CTB 8000",
+   "hex": "#96c7b8"
+  },
+  "#73bdff": {
+   "slot": "CTB 8000",
+   "hex": "#96c7b8"
+  },
+  "#8f73ad": {
+   "slot": "Lavender",
+   "hex": "#8f73ad"
+  },
+  "#d1eeff": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#e8e4dc": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#eefdfd": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#f4fcf4": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#ff3a12": {
+   "slot": "Red",
+   "hex": "#c41c1a"
+  },
+  "#ff9180": {
+   "slot": "Pink",
+   "hex": "#ed8080"
+  },
+  "#ffbe7a": {
+   "slot": "CTO 190",
+   "hex": "#f5d985"
+  }
+ },
+ "colour_mix": {
+  "method": "share of lamp-level-seconds: level x number of lamps in the part (rig v2.10; outside re-parted as outside_rule.py) x (fade + hold), summed per colour over the 50 scenes",
+  "v1_ember_sheet": {
+   "red": 55.7,
+   "white": 40.9,
+   "green": 3.4
+  },
+  "v2_arcs": {
+   "white": 26.4,
+   "outside toxic green": 21.8,
+   "red": 11.3,
+   "green": 9.1,
+   "deep blue": 8.4,
+   "UV violet": 8.0,
+   "steel blue": 7.4,
+   "outside dark amber": 6.5,
+   "amber": 1.1
+  },
+  "now": {
+   "white": 27.8,
+   "outside toxic green": 22.6,
+   "lavender": 7.9,
+   "outside dark amber": 6.7,
+   "rose-copper": 5.7,
+   "green": 5.4,
+   "red": 5.1,
+   "petrol": 5.0,
+   "ice": 4.6,
+   "deep sea": 4.3,
+   "steel blue": 2.7,
+   "mint": 2.5
+  },
+  "inside_only": {
+   "v1": {
+    "red": 54.2,
+    "white": 42.3,
+    "green": 3.5
+   },
+   "v2": {
+    "white": 36.8,
+    "red": 15.8,
+    "green": 12.7,
+    "deep blue": 11.8,
+    "UV violet": 11.2,
+    "steel blue": 10.4,
+    "amber": 1.5
+   },
+   "v3": {
+    "white": 39.3,
+    "lavender": 11.2,
+    "rose-copper": 8.0,
+    "green": 7.6,
+    "red": 7.1,
+    "petrol": 7.0,
+    "ice": 6.5,
+    "deep sea": 6.0,
+    "steel blue": 3.8,
+    "mint": 3.5
+   }
+  },
+  "scenes_with_red_beyond_the_floor_per_act": {
+   "v1": [
+    8,
+    10,
+    6,
+    6,
+    5
+   ],
+   "v2": [
+    1,
+    0,
+    5,
+    1,
+    5
+   ],
+   "now": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ]
+  },
+  "scenes_with_red_inside_per_act": {
+   "v1": [
+    10,
+    10,
+    10,
+    10,
+    10
+   ],
+   "v2": [
+    1,
+    0,
+    10,
+    1,
+    5
+   ],
+   "v3": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ],
+   "rule": "saturated red (WCAG 2.2 R share >= 0.8, linear) or hue within 15 deg of red at S >= 0.6, any inside part; the owner-set entrance is outside and not counted"
+  },
+  "floor_strips_red_scenes": {
+   "v1": 50,
+   "v2": 10,
+   "v3": 0
+  }
+ },
+ "loop": true,
+ "loop_s": 1266,
+ "scenes": [
+  {
+   "id": "the-road-in",
+   "title": "The road in",
+   "act": 1,
+   "intent": "Doors. Outside the road and the entrance; inside the plane stands as six ice columns in a still fan, breathing; the truss low steel.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     0.5
+    ],
+    "cut up": [
+     "#73bdff",
+     0.3
+    ],
+    "cut down": [
+     "#73bdff",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 120,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 35,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 30
+   },
+   "notes": "outside = the owner's rule (road toxic green, entrance dark amber, 03:5x), unchanged",
+   "energy": 0.25,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "first-light",
+   "title": "First light",
+   "act": 1,
+   "intent": "The plane alone: six open-white columns lean toward the DJ one after another, a ripple of light blue; nothing else.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     0.8
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 140,
+    "spatial": "patch",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 22,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 28
+   },
+   "notes": "the owner's 'blackout + one beam': a part is 6 beams, the closest the data can say",
+   "energy": 0.35,
+   "energy_tier": "low",
+   "laser_parked": {
+    "pattern": "single-scan",
+    "cubes": "inner",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 15,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "Pangolin: beam sweep"
+    ],
+    "why": "first light: one searchlight each side sweeps the whole width of the field along the roof line, 96 s"
+   }
+  },
+  {
+   "id": "slow-sweep",
+   "title": "Slow sweep",
+   "act": 1,
+   "intent": "The plane sweeps once every eight bars, left and right mirrored like a slow gate; cold white up on the truss.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     0.9
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.5
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 160,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 14.55,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 28
+   },
+   "notes": "",
+   "energy": 0.5,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "steel-breath",
+   "title": "Steel breath",
+   "act": 1,
+   "intent": "Steel blue rays breathe in a slow wave toward the DJ; the plane in light blue nods in a ripple; petrol behind the DJ.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     0.7
+    ],
+    "line A": [
+     "#73bdff",
+     0.6
+    ],
+    "line B": [
+     "#73bdff",
+     0.6
+    ],
+    "line C": [
+     "#73bdff",
+     0.6
+    ],
+    "line D": [
+     "#73bdff",
+     0.6
+    ],
+    "dj back": [
+     "#66faff",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.3
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 180,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 26
+   },
+   "notes": "",
+   "energy": 0.45,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "dj-alone",
+   "title": "The DJ alone",
+   "act": 1,
+   "intent": "The DJ in warm white, the plane in warm white too, leaning slowly as one; the truss holds him; the floor steel.",
+   "parts": {
+    "plane 1": [
+     "#fff0c0",
+     0.6
+    ],
+    "dj back": [
+     "#73bdff",
+     0.4
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.4
+    ],
+    "cut up": [
+     "#e8e4dc",
+     0.25
+    ],
+    "cut down": [
+     "#e8e4dc",
+     0.25
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 150,
+    "spatial": "patch",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 24
+   },
+   "notes": "warm white = the tungsten key of the stage (LEE 204 Full CTO), the one warm thing of act 1",
+   "energy": 0.3,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "ice-rays",
+   "title": "Ice rays",
+   "act": 1,
+   "intent": "The four rays rise in ice, a wave rolling toward the DJ; the walls wake as light blue columns in a fan, still.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     0.7
+    ],
+    "side line left": [
+     "#a8d8ff",
+     0.6
+    ],
+    "side line right": [
+     "#a8d8ff",
+     0.6
+    ],
+    "line A": [
+     "#d1eeff",
+     0.8
+    ],
+    "line B": [
+     "#d1eeff",
+     0.8
+    ],
+    "line C": [
+     "#d1eeff",
+     0.8
+    ],
+    "line D": [
+     "#d1eeff",
+     0.8
+    ],
+    "cut up": [
+     "#d1eeff",
+     0.5
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 30,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 26
+   },
+   "notes": "",
+   "energy": 0.55,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "the-wall-wakes",
+   "title": "The wall wakes",
+   "act": 1,
+   "intent": "All eighteen beams in light blue: a sweep walks down the walls to the DJ in a ripple while the plane crosses like scissors; the truss petrol up.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line left": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line right": [
+     "#a8d8ff",
+     1.0
+    ],
+    "line A": [
+     "#66faff",
+     0.7
+    ],
+    "line B": [
+     "#66faff",
+     0.7
+    ],
+    "line C": [
+     "#66faff",
+     0.7
+    ],
+    "line D": [
+     "#66faff",
+     0.7
+    ],
+    "cut up": [
+     "#66faff",
+     0.8
+    ],
+    "cut down": [
+     "#66faff",
+     0.7
+    ],
+    "dj back": [
+     "#66faff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#d1eeff",
+     0.7
+    ],
+    "line R": [
+     "#d1eeff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 132,
+    "depth": 220,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 7.27,
+    "pan_deg": 40,
+    "tilt_deg": 0,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 26
+   },
+   "notes": "",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "cold-columns",
+   "title": "Cold columns",
+   "act": 1,
+   "intent": "The walls in open white, twelve straight columns in the haze, crossing gently in alternate pairs; the plane dark; cold white chases down the rays.",
+   "parts": {
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#eefdfd",
+     0.6
+    ],
+    "line B": [
+     "#eefdfd",
+     0.6
+    ],
+    "line C": [
+     "#eefdfd",
+     0.6
+    ],
+    "line D": [
+     "#eefdfd",
+     0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.5
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 200,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 14.55,
+    "pan_deg": 25,
+    "tilt_deg": 0,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.6,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "single-scan",
+    "cubes": "outer",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.08,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 12,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: beam sweep",
+     "left-right (same pattern, half tempo)"
+    ],
+    "why": "two cold lines cross slowly like the columns, the whole width"
+   }
+  },
+  {
+   "id": "rust-low",
+   "title": "Rust, low",
+   "act": 1,
+   "intent": "Rose-copper rays spark each on their own count; the plane in amber, a slow figure-eight; warm white on the cut down: the rust of the hall.",
+   "parts": {
+    "plane 1": [
+     "#ffb000",
+     0.7
+    ],
+    "line A": [
+     "#ff9180",
+     0.7
+    ],
+    "line B": [
+     "#ff9180",
+     0.7
+    ],
+    "line C": [
+     "#ff9180",
+     0.7
+    ],
+    "line D": [
+     "#ff9180",
+     0.7
+    ],
+    "cut up": [
+     "#ffbe7a",
+     0.5
+    ],
+    "cut down": [
+     "#ffbe7a",
+     0.6
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 29.09,
+    "pan_deg": 35,
+    "tilt_deg": 15,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 24
+   },
+   "notes": "the one warm moment of act 1, now without red: rose-copper (t5 #ad756c hue; rust returns warm light best, measured); sparkle only at 20 bpm",
+   "energy": 0.55,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "first-net",
+   "title": "First net",
+   "act": 1,
+   "intent": "The first green: the plane in lime, a circle ripple; mint up on the truss, mint rays breathing; the hall turns toward the poster.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     0.8
+    ],
+    "line A": [
+     "#99ffce",
+     0.6
+    ],
+    "line B": [
+     "#99ffce",
+     0.6
+    ],
+    "line C": [
+     "#99ffce",
+     0.6
+    ],
+    "line D": [
+     "#99ffce",
+     0.6
+    ],
+    "cut up": [
+     "#99ffce",
+     0.7
+    ],
+    "cut down": [
+     "#99ffce",
+     0.5
+    ],
+    "dj back": [
+     "#99ffce",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 170,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.55,
+    "pan_deg": 25,
+    "tilt_deg": 15,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 26
+   },
+   "notes": "the poster's green arrives: lasers diode green, lamps poster green (t1/t2 hue 126 deg)",
+   "energy": 0.6,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 2.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 18 lines a cube, crossing and parting",
+    "beams": 18
+   }
+  },
+  {
+   "id": "green-chase",
+   "title": "Green chase",
+   "act": 2,
+   "intent": "The walls in lime chase down to the DJ, the sweep ripples along both walls; the plane green; the truss poster glow.",
+   "parts": {
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "line A": [
+     "#33ff47",
+     0.7
+    ],
+    "line B": [
+     "#33ff47",
+     0.7
+    ],
+    "line C": [
+     "#33ff47",
+     0.7
+    ],
+    "line D": [
+     "#33ff47",
+     0.7
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.8
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.7
+    ],
+    "dj back": [
+     "#33ff47",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 230,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 7.27,
+    "pan_deg": 40,
+    "tilt_deg": 0,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.85,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "run-to-the-dj",
+   "title": "Run to the DJ",
+   "act": 2,
+   "intent": "The poster glow runs down both walls to the DJ on every half beat; all eighteen beams lime, the walls mirrored, the plane a fast nod.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "line A": [
+     "#f4fcf4",
+     0.8
+    ],
+    "line B": [
+     "#f4fcf4",
+     0.8
+    ],
+    "line C": [
+     "#f4fcf4",
+     0.8
+    ],
+    "line D": [
+     "#f4fcf4",
+     0.8
+    ],
+    "cut up": [
+     "#33ff47",
+     0.9
+    ],
+    "cut down": [
+     "#33ff47",
+     0.7
+    ],
+    "dj back": [
+     "#33ff47",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 264,
+    "depth": 240,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 3.64,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "rays-pulse",
+   "title": "Rays pulse",
+   "act": 2,
+   "intent": "Rays and truss pulse mint at half time; the plane in lime draws a wave; the walls stand in a wide green fan.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#00d12a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
+    ],
+    "line A": [
+     "#99ffce",
+     0.8
+    ],
+    "line B": [
+     "#99ffce",
+     0.8
+    ],
+    "line C": [
+     "#99ffce",
+     0.8
+    ],
+    "line D": [
+     "#99ffce",
+     0.8
+    ],
+    "cut up": [
+     "#99ffce",
+     0.9
+    ],
+    "cut down": [
+     "#99ffce",
+     0.7
+    ],
+    "dj back": [
+     "#33ff47",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 220,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 7.27,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.85,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "the-cut",
+   "title": "The cut",
+   "act": 2,
+   "intent": "The truss over the DJ in poster glow, blocks flipping; mint behind him; the plane and walls in lime cross as mirrored scissors.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "line A": [
+     "#f4fcf4",
+     0.7
+    ],
+    "line B": [
+     "#f4fcf4",
+     0.7
+    ],
+    "line C": [
+     "#f4fcf4",
+     0.7
+    ],
+    "line D": [
+     "#f4fcf4",
+     0.7
+    ],
+    "cut up": [
+     "#f4fcf4",
+     1.0
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.8
+    ],
+    "dj back": [
+     "#99ffce",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 132,
+    "depth": 240,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 7.27,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 22
+   },
+   "notes": "",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "left-right",
+   "title": "Left, right",
+   "act": 2,
+   "intent": "The two walls answer each other in open white, bars left and right; the beams trace a mirrored figure-eight; the plane lime.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#eefdfd",
+     0.7
+    ],
+    "line B": [
+     "#eefdfd",
+     0.7
+    ],
+    "line C": [
+     "#eefdfd",
+     0.7
+    ],
+    "line D": [
+     "#eefdfd",
+     0.7
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.8
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.7
+    ],
+    "dj back": [
+     "#33ff47",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 240,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 7.27,
+    "pan_deg": 50,
+    "tilt_deg": 20,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.85,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "single-scan",
+    "cubes": "outer",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 15,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: beam sweep"
+    ],
+    "why": "the outer cubes answer each other across the whole field (14.5 s, what the frames can show)"
+   }
+  },
+  {
+   "id": "glow-comet",
+   "title": "Glow comet",
+   "act": 2,
+   "intent": "One comet of poster glow leaves the truss and runs through the rays toward the entrance; the plane green, a slow ripple of lean.",
+   "parts": {
+    "plane 1": [
+     "#00d12a",
+     0.7
+    ],
+    "line A": [
+     "#f4fcf4",
+     0.6
+    ],
+    "line B": [
+     "#f4fcf4",
+     0.6
+    ],
+    "line C": [
+     "#f4fcf4",
+     0.6
+    ],
+    "line D": [
+     "#f4fcf4",
+     0.6
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.7
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.5
+    ],
+    "dj back": [
+     "#33ff47",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#99ffce",
+     0.4
+    ],
+    "line R": [
+     "#99ffce",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 132,
+    "depth": 220,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 22
+   },
+   "notes": "",
+   "energy": 0.6,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "scissors",
+   "title": "Scissors",
+   "act": 2,
+   "intent": "The six plane beams in lime lean against each other like scissors; the walls in green sweep mirrored; the truss poster glow breathing.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#00d12a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
+    ],
+    "line A": [
+     "#99ffce",
+     0.7
+    ],
+    "line B": [
+     "#99ffce",
+     0.7
+    ],
+    "line C": [
+     "#99ffce",
+     0.7
+    ],
+    "line D": [
+     "#99ffce",
+     0.7
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.8
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.7
+    ],
+    "dj back": [
+     "#33ff47",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 66,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 7.27,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.85,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan-sweep",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 10,
+    "amplitude_deg": 5,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t4",
+     "Pangolin: fan"
+    ],
+    "why": "scissors: wide fans open and close, mirrored",
+    "beams": 24
+   }
+  },
+  {
+   "id": "green-comb",
+   "title": "Green comb",
+   "act": 2,
+   "intent": "A comb: the plane in lime as a still fan, the walls pulsing green at half time in a chase; cold white truss up, mint top light.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#00d12a",
+     0.7
+    ],
+    "side line right": [
+     "#00d12a",
+     0.7
+    ],
+    "line A": [
+     "#f4fcf4",
+     0.6
+    ],
+    "line B": [
+     "#f4fcf4",
+     0.6
+    ],
+    "line C": [
+     "#f4fcf4",
+     0.6
+    ],
+    "line D": [
+     "#f4fcf4",
+     0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.7
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.5
+    ],
+    "dj back": [
+     "#99ffce",
+     0.6
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#99ffce",
+     0.4
+    ],
+    "line R": [
+     "#99ffce",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 220,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 40,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 22
+   },
+   "notes": "",
+   "energy": 0.6,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "comb",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 2
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 0.5,
+     "duty": 0.5
+    },
+    "refs": [
+     "t5",
+     "jam"
+    ],
+    "why": "the comb, 24 teeth, pulsing at half time",
+    "beams": 24
+   }
+  },
+  {
+   "id": "pingpong-rays",
+   "title": "Ping-pong rays",
+   "act": 2,
+   "intent": "A petrol head bounces across the rays, left to right and back; the walls in lime sweep in a ripple down the hall; the plane open white.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "line A": [
+     "#66faff",
+     0.8
+    ],
+    "line B": [
+     "#66faff",
+     0.8
+    ],
+    "line C": [
+     "#66faff",
+     0.8
+    ],
+    "line D": [
+     "#66faff",
+     0.8
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.7
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.7
+    ],
+    "dj back": [
+     "#33ff47",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 132,
+    "depth": 240,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 7.27,
+    "pan_deg": 40,
+    "tilt_deg": 0,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 22
+   },
+   "notes": "",
+   "energy": 0.85,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "riser",
+   "title": "Riser",
+   "act": 2,
+   "intent": "Before the drop: white walls and plane pulse on the beat, the beams circle faster and faster; mint rays; the truss turns lavender.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#99ffce",
+     0.9
+    ],
+    "line B": [
+     "#99ffce",
+     0.9
+    ],
+    "line C": [
+     "#99ffce",
+     0.9
+    ],
+    "line D": [
+     "#99ffce",
+     0.9
+    ],
+    "cut up": [
+     "#b699ff",
+     1.0
+    ],
+    "cut down": [
+     "#b699ff",
+     0.8
+    ],
+    "dj back": [
+     "#b699ff",
+     0.8
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.64,
+    "pan_deg": 30,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 16
+   },
+   "notes": "lavender enters on the cut: the colour of the peak to come",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "comb",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.12,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 4
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.4
+    },
+    "refs": [
+     "t5"
+    ],
+    "why": "the riser comb, 24 teeth",
+    "beams": 24
+   }
+  },
+  {
+   "id": "white-cathedral",
+   "title": "White cathedral",
+   "act": 3,
+   "intent": "The drop: all eighteen beams open white in a wide fan over lavender rays; the truss pumps cold white up and down; lavender behind the DJ.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#b699ff",
+     0.9
+    ],
+    "line B": [
+     "#b699ff",
+     0.9
+    ],
+    "line C": [
+     "#b699ff",
+     0.9
+    ],
+    "line D": [
+     "#b699ff",
+     0.9
+    ],
+    "cut up": [
+     "#eefdfd",
+     1.0
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.8
+    ],
+    "dj back": [
+     "#b699ff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 180,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 20
+   },
+   "notes": "",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 15,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t4 frame 5 (blue-white fans)",
+     "Pangolin: fan"
+    ],
+    "why": "the drop: a still white fan of 36 lines from each cube, the whole width under the roof — the cathedral floor of light",
+    "beams": 36
+   }
+  },
+  {
+   "id": "strobe-hit",
+   "title": "Strobe hit",
+   "act": 3,
+   "intent": "The whole hall strobes cold white for 6 s, the beams with it (under 3 flashes a second); the walls as a still fan.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#eefdfd",
+     1.0
+    ],
+    "line B": [
+     "#eefdfd",
+     1.0
+    ],
+    "line C": [
+     "#eefdfd",
+     1.0
+    ],
+    "line D": [
+     "#eefdfd",
+     1.0
+    ],
+    "cut up": [
+     "#eefdfd",
+     1.0
+    ],
+    "cut down": [
+     "#eefdfd",
+     1.0
+    ],
+    "dj back": [
+     "#eefdfd",
+     0.8
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.7
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 40,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 6
+   },
+   "notes": "",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "red-room",
+   "title": "Red room",
+   "act": 3,
+   "intent": "Red: all eighteen beams red, the rays ember pumping on the beat, the truss ember; a nod ripples across the plane; warm key on the DJ. The one red room.",
+   "parts": {
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
+    ],
+    "line A": [
+     "#ff3a12",
+     0.8
+    ],
+    "line B": [
+     "#ff3a12",
+     0.8
+    ],
+    "line C": [
+     "#ff3a12",
+     0.8
+    ],
+    "line D": [
+     "#ff3a12",
+     0.8
+    ],
+    "cut up": [
+     "#ff3a12",
+     0.9
+    ],
+    "cut down": [
+     "#ff3a12",
+     0.7
+    ],
+    "dj back": [
+     "#a3200c",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.27,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 20
+   },
+   "notes": "the owner's 'red room' (09-28 loop): red as an accent, 20 s; the floor stays rose-copper; pump = 3 flashes/s max (WCAG 2.3.1 red-flash limit met)",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan-sweep",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 10,
+    "amplitude_deg": 5,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "t4 frames 1, 6 (red fans)"
+    ],
+    "why": "red fans pump, wide, mirrored (no green in this scene)",
+    "beams": 24
+   }
+  },
+  {
+   "id": "the-storm",
+   "title": "The storm",
+   "act": 3,
+   "intent": "The storm: open-white walls in bars across the hall, the beams in a fast mirrored figure-eight; petrol rays and petrol behind the DJ; the truss full cold white.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#66faff",
+     0.9
+    ],
+    "line B": [
+     "#66faff",
+     0.9
+    ],
+    "line C": [
+     "#66faff",
+     0.9
+    ],
+    "line D": [
+     "#66faff",
+     0.9
+    ],
+    "cut up": [
+     "#eefdfd",
+     1.0
+    ],
+    "cut down": [
+     "#eefdfd",
+     1.0
+    ],
+    "dj back": [
+     "#66faff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.64,
+    "pan_deg": 40,
+    "tilt_deg": 15,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 20
+   },
+   "notes": "",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan-sweep",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "chase",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 12,
+    "amplitude_deg": 3,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "t4",
+     "t5"
+    ],
+    "why": "the storm: green fans chase across the six cubes",
+    "beams": 30
+   }
+  },
+  {
+   "id": "matrix",
+   "title": "The matrix",
+   "act": 3,
+   "intent": "Rose-copper rays breathe under a lavender plane that circles slowly; the walls in amber as a still fan; the truss rose-copper up.",
+   "parts": {
+    "plane 1": [
+     "#ff2fc8",
+     0.8
+    ],
+    "side line left": [
+     "#ffb000",
+     0.7
+    ],
+    "side line right": [
+     "#ffb000",
+     0.7
+    ],
+    "line A": [
+     "#ff9180",
+     0.8
+    ],
+    "line B": [
+     "#ff9180",
+     0.8
+    ],
+    "line C": [
+     "#ff9180",
+     0.8
+    ],
+    "line D": [
+     "#ff9180",
+     0.8
+    ],
+    "cut up": [
+     "#ff9180",
+     0.8
+    ],
+    "cut down": [
+     "#ff9180",
+     0.5
+    ],
+    "dj back": [
+     "#b699ff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#ff9180",
+     0.4
+    ],
+    "line R": [
+     "#ff9180",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 66,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.55,
+    "pan_deg": 25,
+    "tilt_deg": 15,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 20
+   },
+   "notes": "",
+   "energy": 0.7,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "comb",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 0,
+    "breathe": {
+     "min": 0.3
+    },
+    "hits": null,
+    "refs": [
+     "t5",
+     "rig v2.8 MATRIX comb"
+    ],
+    "why": "the matrix comb at its cap, 24 teeth, breathing 0.3–1",
+    "beams": 24
+   }
+  },
+  {
+   "id": "pump-white",
+   "title": "Pump white",
+   "act": 3,
+   "intent": "All eighteen beams and the truss hit on the beat in open white; the beams turn a mirrored bow-tie; the rays ice.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#d1eeff",
+     0.9
+    ],
+    "line B": [
+     "#d1eeff",
+     0.9
+    ],
+    "line C": [
+     "#d1eeff",
+     0.9
+    ],
+    "line D": [
+     "#d1eeff",
+     0.9
+    ],
+    "cut up": [
+     "#eefdfd",
+     1.0
+    ],
+    "cut down": [
+     "#eefdfd",
+     1.0
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 230,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.27,
+    "pan_deg": 45,
+    "tilt_deg": 20,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 18
+   },
+   "notes": "",
+   "energy": 0.95,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "radar",
+   "title": "Radar",
+   "act": 3,
+   "intent": "A lavender radar line sweeps round the rays and the truss; the beams in light blue circle in a ripple, the walls sweep down the hall.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line left": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line right": [
+     "#a8d8ff",
+     1.0
+    ],
+    "line A": [
+     "#b699ff",
+     0.9
+    ],
+    "line B": [
+     "#b699ff",
+     0.9
+    ],
+    "line C": [
+     "#b699ff",
+     0.9
+    ],
+    "line D": [
+     "#b699ff",
+     0.9
+    ],
+    "cut up": [
+     "#b699ff",
+     0.9
+    ],
+    "cut down": [
+     "#b699ff",
+     0.7
+    ],
+    "dj back": [
+     "#b699ff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "radar",
+    "bpm": 132,
+    "depth": 230,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 7.27,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 20
+   },
+   "notes": "",
+   "energy": 0.85,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "single-scan",
+    "cubes": "all",
+    "colour": "#b699ff",
+    "colour_key": "LV",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "chase",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 15,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: beam sweep"
+    ],
+    "why": "radar: one lavender line per cube sweeps the whole field, west → east chase"
+   }
+  },
+  {
+   "id": "blinders",
+   "title": "Blinders",
+   "act": 3,
+   "intent": "The blinder moment: the cut, the kicker, the key and the rays hit full ash on every beat; the beams warm white, a wide still fan.",
+   "parts": {
+    "plane 1": [
+     "#fff0c0",
+     1.0
+    ],
+    "side line left": [
+     "#fff0c0",
+     1.0
+    ],
+    "side line right": [
+     "#fff0c0",
+     1.0
+    ],
+    "line A": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line B": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line C": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line D": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj back": [
+     "#e8e4dc",
+     0.9
+    ],
+    "stage key": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 50,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 8
+   },
+   "notes": "no blinder fixtures in the kit: the truss washes stand in; ash (the warm white) is closest to a tungsten blinder (taste)",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "copper-scissors",
+   "title": "Copper scissors",
+   "act": 3,
+   "intent": "Rose-copper walls and an amber plane flip on the half beat; the beams cross fast in mirrored scissors; the truss rose-copper.",
+   "parts": {
+    "plane 1": [
+     "#ffb000",
+     1.0
+    ],
+    "side line left": [
+     "#ff7a00",
+     1.0
+    ],
+    "side line right": [
+     "#ff7a00",
+     1.0
+    ],
+    "line A": [
+     "#ff9180",
+     0.9
+    ],
+    "line B": [
+     "#ff9180",
+     0.9
+    ],
+    "line C": [
+     "#ff9180",
+     0.9
+    ],
+    "line D": [
+     "#ff9180",
+     0.9
+    ],
+    "cut up": [
+     "#ff9180",
+     0.9
+    ],
+    "cut down": [
+     "#ff9180",
+     0.7
+    ],
+    "dj back": [
+     "#ff9180",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 3.64,
+    "pan_deg": 35,
+    "tilt_deg": 0,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 18
+   },
+   "notes": "v2 id red-scissors: ember walls became rose-copper (the beams show the wheel's Pink)",
+   "energy": 0.95,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "sparkle-peak",
+   "title": "Sparkle peak",
+   "act": 3,
+   "intent": "Lavender walls and an open-white plane sparkle, each on its own count; the plane draws a slow wave; the truss lavender up, cold white down.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ff2fc8",
+     1.0
+    ],
+    "side line right": [
+     "#ff2fc8",
+     1.0
+    ],
+    "line A": [
+     "#b699ff",
+     0.9
+    ],
+    "line B": [
+     "#b699ff",
+     0.9
+    ],
+    "line C": [
+     "#b699ff",
+     0.9
+    ],
+    "line D": [
+     "#b699ff",
+     0.9
+    ],
+    "cut up": [
+     "#b699ff",
+     0.9
+    ],
+    "cut down": [
+     "#b699ff",
+     0.8
+    ],
+    "dj back": [
+     "#b699ff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 33,
+    "depth": 230,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 7.27,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 20
+   },
+   "notes": "",
+   "energy": 0.95,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "tunnel",
+    "cubes": "all",
+    "colour": "#b699ff",
+    "colour_key": "LV",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 4,
+    "yaw_deg": 11,
+    "spread_deg": 3,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: tunnel (upper half only)"
+    ],
+    "why": "sparkle peak: 24 lavender dots run round an arch on each flank, where the roof allows height, 96 s",
+    "beams": 24
+   }
+  },
+  {
+   "id": "drop-away",
+   "title": "Drop away",
+   "act": 4,
+   "intent": "Almost dark: the plane in deep sea, one slow lean; the floor petrol. The truss: only a deep-sea back light.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     0.35
+    ],
+    "dj back": [
+     "#26bcff",
+     0.3
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 120,
+    "spatial": "patch",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.09,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 28
+   },
+   "notes": "",
+   "energy": 0.3,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "one-beam-back",
+   "title": "One beam back",
+   "act": 4,
+   "intent": "The plane returns in warm white, low, a lean travelling across it; warm white on the DJ; the truss finds him.",
+   "parts": {
+    "plane 1": [
+     "#fff0c0",
+     0.4
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.4
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 29.09,
+    "pan_deg": 0,
+    "tilt_deg": 22,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 28
+   },
+   "notes": "",
+   "energy": 0.25,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "blue-wave",
+   "title": "Blue wave",
+   "act": 4,
+   "intent": "A deep-sea wave rolls along the rays toward the DJ; the plane in magenta, the first rare colour, in a slow circle; the cut lavender.",
+   "parts": {
+    "plane 1": [
+     "#ff2fc8",
+     0.6
+    ],
+    "line A": [
+     "#26bcff",
+     0.7
+    ],
+    "line B": [
+     "#26bcff",
+     0.7
+    ],
+    "line C": [
+     "#26bcff",
+     0.7
+    ],
+    "line D": [
+     "#26bcff",
+     0.7
+    ],
+    "cut up": [
+     "#b699ff",
+     0.5
+    ],
+    "cut down": [
+     "#b699ff",
+     0.5
+    ],
+    "dj back": [
+     "#26bcff",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#66faff",
+     0.9
+    ],
+    "line R": [
+     "#66faff",
+     0.9
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.09,
+    "pan_deg": 20,
+    "tilt_deg": 15,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 28
+   },
+   "notes": "floor here = cut down at 0.3 (still), the strips join the wave in petrol (not pure blue: the eye cannot focus it on the floor)",
+   "energy": 0.5,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "sky",
+    "cubes": "all",
+    "colour": "#26bcff",
+    "colour_key": "DS",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 3.6,
+    "yaw_deg": 0,
+    "spread_deg": 12,
+    "amplitude_deg": 0.4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: liquid sky"
+    ],
+    "why": "blue wave: a deep-sea curtain the whole width, kept under the 4° lantern line (the roof glazing starts there), 20 points a line",
+    "segments": 20
+   }
+  },
+  {
+   "id": "ice-mist",
+   "title": "Ice mist",
+   "act": 4,
+   "intent": "The walls in low light blue and the cut in cold white breathe together; the beams barely cross; the plane dark; ice mist from the truss.",
+   "parts": {
+    "side line left": [
+     "#a8d8ff",
+     0.45
+    ],
+    "side line right": [
+     "#a8d8ff",
+     0.45
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.5
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.3
+    ],
+    "line A": [
+     "#d1eeff",
+     0.4
+    ],
+    "line B": [
+     "#d1eeff",
+     0.4
+    ],
+    "line C": [
+     "#d1eeff",
+     0.4
+    ],
+    "line D": [
+     "#d1eeff",
+     0.4
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.3
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 150,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 29.09,
+    "pan_deg": 15,
+    "tilt_deg": 0,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 28
+   },
+   "notes": "",
+   "energy": 0.4,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "slow-eight",
+   "title": "Slow eight",
+   "act": 4,
+   "intent": "Only the plane, in magenta, drawing one slow mirrored figure-eight every sixteen bars; lavender up into the haze.",
+   "parts": {
+    "plane 1": [
+     "#ff2fc8",
+     0.6
+    ],
+    "cut up": [
+     "#b699ff",
+     0.4
+    ],
+    "cut down": [
+     "#b699ff",
+     0.0
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.3
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 29.09,
+    "pan_deg": 45,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 30
+   },
+   "notes": "",
+   "energy": 0.45,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "sea-steel",
+   "title": "Sea steel",
+   "act": 4,
+   "intent": "Outside, the road and the entrance spark; inside the rays glow deep sea and the walls stand in amber as a slow sweep; the cut steel.",
+   "parts": {
+    "side line left": [
+     "#ffb000",
+     0.5
+    ],
+    "side line right": [
+     "#ffb000",
+     0.5
+    ],
+    "line A": [
+     "#26bcff",
+     0.6
+    ],
+    "line B": [
+     "#26bcff",
+     0.6
+    ],
+    "line C": [
+     "#26bcff",
+     0.6
+    ],
+    "line D": [
+     "#26bcff",
+     0.6
+    ],
+    "cut up": [
+     "#73bdff",
+     0.5
+    ],
+    "cut down": [
+     "#73bdff",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.8
+    ],
+    "entrance": [
+     "#e04e00",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 29.09,
+    "pan_deg": 35,
+    "tilt_deg": 0,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 26
+   },
+   "notes": "v2 id uv-steel: the UV went with the outside rule; the rays are deep sea now",
+   "energy": 0.5,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "deep-tent",
+   "title": "Deep tent",
+   "act": 4,
+   "intent": "A tent: rays deep sea, the plane magenta, the walls amber, all swelling slowly; the beams meet in a wide fan over the floor; the truss lavender up.",
+   "parts": {
+    "plane 1": [
+     "#ff2fc8",
+     0.7
+    ],
+    "side line left": [
+     "#ffb000",
+     0.6
+    ],
+    "side line right": [
+     "#ffb000",
+     0.6
+    ],
+    "line A": [
+     "#26bcff",
+     0.7
+    ],
+    "line B": [
+     "#26bcff",
+     0.7
+    ],
+    "line C": [
+     "#26bcff",
+     0.7
+    ],
+    "line D": [
+     "#26bcff",
+     0.7
+    ],
+    "cut up": [
+     "#b699ff",
+     0.7
+    ],
+    "cut down": [
+     "#b699ff",
+     0.5
+    ],
+    "dj back": [
+     "#26bcff",
+     0.6
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 28
+   },
+   "notes": "",
+   "energy": 0.6,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "tunnel",
+    "cubes": "all",
+    "colour": "#66faff",
+    "colour_key": "PT",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "chase",
+    "pitch_deg": 4,
+    "yaw_deg": 11,
+    "spread_deg": 3,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: tunnel (upper half only)"
+    ],
+    "why": "deep tent: petrol arches on the flanks turning cube to cube",
+    "beams": 30
+   }
+  },
+  {
+   "id": "green-breath",
+   "title": "Green breath",
+   "act": 4,
+   "intent": "The hall breathes very slowly in green: the plane in green as a still fan, low; the floor petrol; only a deep-sea back light.",
+   "parts": {
+    "plane 1": [
+     "#00d12a",
+     0.35
+    ],
+    "dj back": [
+     "#26bcff",
+     0.3
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 120,
+    "spatial": "patch",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 30,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 26
+   },
+   "notes": "",
+   "energy": 0.3,
+   "energy_tier": "low",
+   "laser_parked": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 2.5,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5"
+    ],
+    "why": "the net alone, 18 lines, breathing slowly",
+    "beams": 18
+   }
+  },
+  {
+   "id": "cold-rise",
+   "title": "Cold rise",
+   "act": 4,
+   "intent": "The build back: a cold white comet climbs the walls toward the entrance over deep-sea rays; the walls light blue in a nod ripple; the plane open white.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line right": [
+     "#a8d8ff",
+     1.0
+    ],
+    "line A": [
+     "#26bcff",
+     0.7
+    ],
+    "line B": [
+     "#26bcff",
+     0.7
+    ],
+    "line C": [
+     "#26bcff",
+     0.7
+    ],
+    "line D": [
+     "#26bcff",
+     0.7
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.8
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.5
+    ],
+    "dj back": [
+     "#26bcff",
+     0.6
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#66faff",
+     0.4
+    ],
+    "line R": [
+     "#66faff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 132,
+    "depth": 230,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.27,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.7,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "riser-two",
+   "title": "Riser two",
+   "act": 4,
+   "intent": "The second riser: magenta walls, open-white plane, rose-copper rays and cut pulse on the beat; the beams circle fast, mirrored.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ff2fc8",
+     1.0
+    ],
+    "side line right": [
+     "#ff2fc8",
+     1.0
+    ],
+    "line A": [
+     "#ff9180",
+     0.9
+    ],
+    "line B": [
+     "#ff9180",
+     0.9
+    ],
+    "line C": [
+     "#ff9180",
+     0.9
+    ],
+    "line D": [
+     "#ff9180",
+     0.9
+    ],
+    "cut up": [
+     "#ff9180",
+     1.0
+    ],
+    "cut down": [
+     "#ff9180",
+     0.8
+    ],
+    "dj back": [
+     "#b699ff",
+     0.8
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#66faff",
+     0.7
+    ],
+    "line R": [
+     "#66faff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.64,
+    "pan_deg": 30,
+    "tilt_deg": 20,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 16
+   },
+   "notes": "",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "comb",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.12,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 4
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.4
+    },
+    "refs": [
+     "t5"
+    ],
+    "why": "the second riser comb, 24 teeth",
+    "beams": 24
+   }
+  },
+  {
+   "id": "second-drop",
+   "title": "Second drop",
+   "act": 5,
+   "intent": "White-out: all eighteen beams open white in a fast mirrored figure-eight; the rays pump ice; the truss full cold white.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#d1eeff",
+     0.9
+    ],
+    "line B": [
+     "#d1eeff",
+     0.9
+    ],
+    "line C": [
+     "#d1eeff",
+     0.9
+    ],
+    "line D": [
+     "#d1eeff",
+     0.9
+    ],
+    "cut up": [
+     "#eefdfd",
+     1.0
+    ],
+    "cut down": [
+     "#eefdfd",
+     1.0
+    ],
+    "dj back": [
+     "#eefdfd",
+     0.8
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 230,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.64,
+    "pan_deg": 40,
+    "tilt_deg": 15,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 20
+   },
+   "notes": "",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 15,
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "t4 frame 5"
+    ],
+    "why": "white-out: the wide still fans, hits on every beat",
+    "beams": 36
+   }
+  },
+  {
+   "id": "ice-strobe",
+   "title": "Ice strobe",
+   "act": 5,
+   "intent": "The whole hall strobes ice for 6 s: the hit of the second peak; the beams open white, a wide still fan.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#d1eeff",
+     1.0
+    ],
+    "line B": [
+     "#d1eeff",
+     1.0
+    ],
+    "line C": [
+     "#d1eeff",
+     1.0
+    ],
+    "line D": [
+     "#d1eeff",
+     1.0
+    ],
+    "cut up": [
+     "#d1eeff",
+     1.0
+    ],
+    "cut down": [
+     "#d1eeff",
+     1.0
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.8
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.7
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     0.7
+    ],
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 6
+   },
+   "notes": "v2 id red-strobe: no strobe in a saturated colour (WCAG 2.2 2.3.1 red flash; Harding et al. 2005), so ice",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "cathedral-turns",
+   "title": "The cathedral turns",
+   "act": 5,
+   "intent": "All the beams in open white circle in a ripple, the cathedral turning; the cut breathes steel blue; cold white rays.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#eefdfd",
+     0.8
+    ],
+    "line B": [
+     "#eefdfd",
+     0.8
+    ],
+    "line C": [
+     "#eefdfd",
+     0.8
+    ],
+    "line D": [
+     "#eefdfd",
+     0.8
+    ],
+    "cut up": [
+     "#73bdff",
+     0.9
+    ],
+    "cut down": [
+     "#73bdff",
+     0.7
+    ],
+    "dj back": [
+     "#73bdff",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 66,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.27,
+    "pan_deg": 40,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 22
+   },
+   "notes": "",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan-sweep",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.12,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "chase",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 12,
+    "amplitude_deg": 3,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t4"
+    ],
+    "why": "the cathedral turns: white fans ripple cube to cube",
+    "beams": 30
+   }
+  },
+  {
+   "id": "ice-and-fire",
+   "title": "Ice and fire",
+   "act": 5,
+   "intent": "Ice and fire: open-white walls, a red plane, ice rays; blocks flip across the hall; the beams trace a mirrored X.",
+   "parts": {
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#d1eeff",
+     0.9
+    ],
+    "line B": [
+     "#d1eeff",
+     0.9
+    ],
+    "line C": [
+     "#d1eeff",
+     0.9
+    ],
+    "line D": [
+     "#d1eeff",
+     0.9
+    ],
+    "cut up": [
+     "#d1eeff",
+     1.0
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.8
+    ],
+    "dj back": [
+     "#ff3a12",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 7.27,
+    "pan_deg": 45,
+    "tilt_deg": 0,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 20
+   },
+   "notes": "red accent: the ember plane holds (beams are not in the flip), the flipping rays are ice",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "red-fans",
+   "title": "Red fans",
+   "act": 5,
+   "intent": "Red fans: the walls in red as wide fans, the plane warm white, the rays ember in bars; the truss rose-copper up and ember down.",
+   "parts": {
+    "plane 1": [
+     "#fff0c0",
+     1.0
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
+    ],
+    "line A": [
+     "#ff3a12",
+     0.9
+    ],
+    "line B": [
+     "#ff3a12",
+     0.9
+    ],
+    "line C": [
+     "#ff3a12",
+     0.9
+    ],
+    "line D": [
+     "#ff3a12",
+     0.9
+    ],
+    "cut up": [
+     "#ff9180",
+     0.9
+    ],
+    "cut down": [
+     "#ff9180",
+     0.8
+    ],
+    "dj back": [
+     "#a3200c",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.7
+    ],
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "fan",
+    "period_s": 14.55,
+    "pan_deg": 50,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 20
+   },
+   "notes": "red accent, lasers only: t4 as measured, red fans with pale violet round them (#9982d4)",
+   "energy": 0.9,
+   "energy_tier": "full",
+   "laser_parked": {
+    "pattern": "fan-sweep",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 10,
+    "amplitude_deg": 5,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.6
+    },
+    "refs": [
+     "t4 frames 1, 6 (red fans)"
+    ],
+    "why": "red fans open on the bar, wide, mirrored",
+    "beams": 24
+   }
+  },
+  {
+   "id": "last-strobe",
+   "title": "Last strobe",
+   "act": 5,
+   "intent": "The final hit: everything strobes for 8 s, open-white beams in a fast mirrored sweep, warm ash washes.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line B": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line C": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line D": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut up": [
+     "#e8e4dc",
+     1.0
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj back": [
+     "#e8e4dc",
+     0.9
+    ],
+    "stage key": [
+     "#e8e4dc",
+     1.0
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     1.0
+    ],
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 3.64,
+    "pan_deg": 35,
+    "tilt_deg": 0,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 8
+   },
+   "notes": "",
+   "energy": 1.0,
+   "energy_tier": "full",
+   "laser_parked": null
+  },
+  {
+   "id": "afterglow",
+   "title": "Afterglow",
+   "act": 5,
+   "intent": "Afterglow: rose-copper rays and a warm white plane breathe down; the walls in amber, a slow ripple of lean; a warm pool on the DJ.",
+   "parts": {
+    "plane 1": [
+     "#fff0c0",
+     0.6
+    ],
+    "side line left": [
+     "#ffb000",
+     0.6
+    ],
+    "side line right": [
+     "#ffb000",
+     0.6
+    ],
+    "line A": [
+     "#ff9180",
+     0.6
+    ],
+    "line B": [
+     "#ff9180",
+     0.6
+    ],
+    "line C": [
+     "#ff9180",
+     0.6
+    ],
+    "line D": [
+     "#ff9180",
+     0.6
+    ],
+    "cut up": [
+     "#ffbe7a",
+     0.5
+    ],
+    "cut down": [
+     "#ffbe7a",
+     0.6
+    ],
+    "dj back": [
+     "#ff9180",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#b699ff",
+     0.4
+    ],
+    "line R": [
+     "#b699ff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 180,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 26
+   },
+   "notes": "warmth after the peak without red or amber: rose-copper + 3200 K",
+   "energy": 0.6,
+   "energy_tier": "mid",
+   "laser_parked": {
+    "pattern": "sky",
+    "cubes": "all",
+    "colour": "#ff9180",
+    "colour_key": "RC",
+    "level": 0.08,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 3.6,
+    "yaw_deg": 0,
+    "spread_deg": 12,
+    "amplitude_deg": 0.4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "Pangolin: liquid sky"
+    ],
+    "why": "afterglow: a rose-copper curtain breathes down, the whole width, under the lantern line",
+    "segments": 20
+   }
+  },
+  {
+   "id": "the-last-run",
+   "title": "The last run",
+   "act": 5,
+   "intent": "The way out: steel blue runs up the walls toward the entrance, the walls in light blue sweep the same way; ice behind the DJ.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     0.8
+    ],
+    "side line left": [
+     "#a8d8ff",
+     0.8
+    ],
+    "side line right": [
+     "#a8d8ff",
+     0.8
+    ],
+    "line A": [
+     "#73bdff",
+     0.7
+    ],
+    "line B": [
+     "#73bdff",
+     0.7
+    ],
+    "line C": [
+     "#73bdff",
+     0.7
+    ],
+    "line D": [
+     "#73bdff",
+     0.7
+    ],
+    "cut up": [
+     "#73bdff",
+     0.8
+    ],
+    "cut down": [
+     "#73bdff",
+     0.5
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.6
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.5
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 220,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "sweep",
+    "period_s": 7.27,
+    "pan_deg": 40,
+    "tilt_deg": 0,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 24
+   },
+   "notes": "",
+   "energy": 0.7,
+   "energy_tier": "mid",
+   "laser_parked": null
+  },
+  {
+   "id": "embers-out",
+   "title": "Embers out",
+   "act": 5,
+   "intent": "The last embers: outside the road and the entrance spark; inside only deep-ember rays and the plane in orange, low, a slow nod.",
+   "parts": {
+    "plane 1": [
+     "#ff7a00",
+     0.35
+    ],
+    "line A": [
+     "#a3200c",
+     0.5
+    ],
+    "line B": [
+     "#a3200c",
+     0.5
+    ],
+    "line C": [
+     "#a3200c",
+     0.5
+    ],
+    "line D": [
+     "#a3200c",
+     0.5
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.6
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 33,
+    "depth": 160,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.09,
+    "pan_deg": 0,
+    "tilt_deg": 15,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 26
+   },
+   "notes": "red accent: deep ember at 0.4, sparkle 20 bpm (3 flashes/s max), over an ice floor",
+   "energy": 0.35,
+   "energy_tier": "low",
+   "laser_parked": null
+  },
+  {
+   "id": "one-beam-loop",
+   "title": "One beam (loop)",
+   "act": 5,
+   "intent": "Back to the start: the plane alone in low light blue, one slow lean; the loop begins again. The truss dark.",
+   "parts": {
+    "plane 1": [
+     "#a8d8ff",
+     0.4
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
+    ],
+    "line L": [
+     "#d1eeff",
+     0.4
+    ],
+    "line R": [
+     "#d1eeff",
+     0.4
+    ],
+    "road": [
+     "#a5ff0f",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 120,
+    "spatial": "patch",
+    "kinds": [
+     "up-b380f"
+    ],
+    "still": 0.3
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.09,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 26
+   },
+   "notes": "",
+   "energy": 0.25,
+   "energy_tier": "low",
+   "laser_parked": {
+    "pattern": "single-scan",
+    "cubes": "inner",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "pitch_deg": 4,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 15,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5"
+    ],
+    "why": "back to the start: the one searchlight of first light"
+   }
+  }
+ ],
+ "laser_schema": "di.iiii scripts/place/laser_frames.py (validate_laser); design: scenes-tools/laser_design.py 2026-10-15",
+ "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)"
+}
