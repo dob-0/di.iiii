@@ -1,0 +1,7147 @@
+{
+ "what": "MOXIR v5: the v4 scenes + the six cubes per scene at full power (level 1.0); 20 cube scenes aimed level (pitch 0) so no line leaves through the lantern",
+ "source": "docs/moxir/scenes-v4-2026-10-18/scenes_v4.py from scripts/place/rigs/moxir-scenes-50-v2-2-2026-10-17.json (v2.2: palette, rules, the cube lasers' designs by colour)",
+ "licence": "di.iiii project data (the owner's); MOXIR teaser frames used as reference only, never published",
+ "date": "2026-10-17",
+ "version": "5.0",
+ "rules": {
+  "still": 0.3,
+  "floor": "line L + line R lit in the scene's family colour like every wash (owner 12:0x); the v3 \"floor never red\" rule is withdrawn by that word",
+  "flash": "worst 1 s per lamp <= 3 flashes (WCAG 2.x flash definition, measured on fx.js)",
+  "heads_patterns": [
+   "nod",
+   "wave",
+   "circle",
+   "figure8"
+  ],
+  "tilt_max_deg": 30,
+  "laser_desk_cap": 0.16,
+  "eye_v3": {
+   "red_max_scenes": 6,
+   "red_never_on_floor": true,
+   "no_saturated_blue_or_violet_lamps": "linear B share >= 0.8 banned on every lamp (lasers excepted)",
+   "strobe_max_hsv_s": 0.25,
+   "no_red_green_or_red_blue_pair_under_motion": true,
+   "floor_focus_shift_max_D": 0.2,
+   "floor_held_max_hsv_s": 0.6,
+   "method": "palette.py eye(); thresholds are taste, unvalidated"
+  },
+  "beam_colours": "v2.2: open, red-orange, lime only (owner 20:1x: lime, not regular colours)",
+  "lasers": "the laser session's current design (v5: whole field, levels 1.0) unchanged; updated later by the laser work, when ready",
+  "beam_levels": "0 or >= 0.95 (A9)",
+  "wash_colours": "v2.2: ember #ff3a12, lime #9cff00, white #ffffff only (lead 20:15); beams open #ffffff, red-orange #ff5a1e, lime #8cff3a only; no other colour",
+  "family": "one colour family per scene (+ white at <= 0.1 in a colour scene); red and green never together (R4, R5)",
+  "holds": "per scene, free (v4 does not follow the v6 laser frames' loop)",
+  "head_period": "whole bars at 132 bpm (3.636 s)",
+  "tilt": "15..25 deg",
+  "laser40": "the 40 W lines are a layer: laser40 per scene, laser_lines null unless --laser40 on (owner 12:0x: enough); graphics never 74,75,78,79,166,167,246-253",
+  "targets": {
+   "dark_share_mean_min": 0.55,
+   "per_render_dark_min": 0.45,
+   "white_share_loop_max": 0.45,
+   "method": "picture_palette.py on the 50 renders"
+  },
+  "levels": "full power: every lit part 1.0 (owner 2026-10-18 00:2x \"new 100 use full power\")"
+ },
+ "renamed_v3": {
+  "red-scissors": "copper-scissors",
+  "uv-steel": "sea-steel",
+  "red-strobe": "ice-strobe"
+ },
+ "palette": [
+  {
+   "hex": "#ff3a12",
+   "name": "ember (washes)"
+  },
+  {
+   "hex": "#9cff00",
+   "name": "lime (washes)"
+  },
+  {
+   "hex": "#ffffff",
+   "name": "white (washes)"
+  },
+  {
+   "hex": "#eefdfd",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#00ff00",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#ff3a12",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#b699ff",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#26bcff",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#66faff",
+   "name": "laser (the laser session's colour)"
+  },
+  {
+   "hex": "#ff9180",
+   "name": "laser (the laser session's colour)"
+  }
+ ],
+ "surfaces": [
+  {
+   "name": "concrete",
+   "hex": "#b4afb3",
+   "sampled": "t3 glow cluster 51 %"
+  },
+  {
+   "name": "rust",
+   "hex": "#a08c81",
+   "sampled": "t3 glow cluster 9 %"
+  },
+  {
+   "name": "dark steel",
+   "hex": "#2a2a2d",
+   "sampled": "t3 lit cluster 47 %"
+  }
+ ],
+ "beam_wheel": {
+  "#26bcff": {
+   "slot": "Cyan",
+   "hex": "#00a6eb"
+  },
+  "#33ff47": {
+   "slot": "Aquamarine",
+   "hex": "#7abd82"
+  },
+  "#66faff": {
+   "slot": "CTB 8000",
+   "hex": "#96c7b8"
+  },
+  "#73bdff": {
+   "slot": "CTB 8000",
+   "hex": "#96c7b8"
+  },
+  "#8f73ad": {
+   "slot": "Lavender",
+   "hex": "#8f73ad"
+  },
+  "#d1eeff": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#e8e4dc": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#eefdfd": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#f4fcf4": {
+   "slot": "Open (white)",
+   "hex": "#ffffff"
+  },
+  "#ff3a12": {
+   "slot": "Red",
+   "hex": "#c41c1a"
+  },
+  "#ff9180": {
+   "slot": "Pink",
+   "hex": "#ed8080"
+  },
+  "#ffbe7a": {
+   "slot": "CTO 190",
+   "hex": "#f5d985"
+  }
+ },
+ "colour_mix": {
+  "method": "share of lamp-level-seconds: level x number of lamps in the part (rig v2.10; outside re-parted as outside_rule.py) x (fade + hold), summed per colour over the 50 scenes",
+  "v1_ember_sheet": {
+   "red": 55.7,
+   "white": 40.9,
+   "green": 3.4
+  },
+  "v2_arcs": {
+   "white": 26.4,
+   "outside toxic green": 21.8,
+   "red": 11.3,
+   "green": 9.1,
+   "deep blue": 8.4,
+   "UV violet": 8.0,
+   "steel blue": 7.4,
+   "outside dark amber": 6.5,
+   "amber": 1.1
+  },
+  "now": {
+   "white": 27.8,
+   "outside toxic green": 22.6,
+   "lavender": 7.9,
+   "outside dark amber": 6.7,
+   "rose-copper": 5.7,
+   "green": 5.4,
+   "red": 5.1,
+   "petrol": 5.0,
+   "ice": 4.6,
+   "deep sea": 4.3,
+   "steel blue": 2.7,
+   "mint": 2.5
+  },
+  "inside_only": {
+   "v1": {
+    "red": 54.2,
+    "white": 42.3,
+    "green": 3.5
+   },
+   "v2": {
+    "white": 36.8,
+    "red": 15.8,
+    "green": 12.7,
+    "deep blue": 11.8,
+    "UV violet": 11.2,
+    "steel blue": 10.4,
+    "amber": 1.5
+   },
+   "v3": {
+    "white": 39.3,
+    "lavender": 11.2,
+    "rose-copper": 8.0,
+    "green": 7.6,
+    "red": 7.1,
+    "petrol": 7.0,
+    "ice": 6.5,
+    "deep sea": 6.0,
+    "steel blue": 3.8,
+    "mint": 3.5
+   }
+  },
+  "scenes_with_red_beyond_the_floor_per_act": {
+   "v1": [
+    8,
+    10,
+    6,
+    6,
+    5
+   ],
+   "v2": [
+    1,
+    0,
+    5,
+    1,
+    5
+   ],
+   "now": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ]
+  },
+  "scenes_with_red_inside_per_act": {
+   "v1": [
+    10,
+    10,
+    10,
+    10,
+    10
+   ],
+   "v2": [
+    1,
+    0,
+    10,
+    1,
+    5
+   ],
+   "v3": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ],
+   "rule": "saturated red (WCAG 2.2 R share >= 0.8, linear) or hue within 15 deg of red at S >= 0.6, any inside part; the owner-set entrance is outside and not counted"
+  },
+  "floor_strips_red_scenes": {
+   "v1": 50,
+   "v2": 10,
+   "v3": 0
+  }
+ },
+ "loop": true,
+ "loop_s": 1776,
+ "scenes": [
+  {
+   "id": "v4-001",
+   "title": "Cloistral \u00b7 Ash door",
+   "act": 1,
+   "intent": "One white wash behind the DJ, nothing else; the hall black around him.",
+   "parts": {
+    "dj back": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 1; family white; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-002",
+   "title": "Cloistral \u00b7 Rust line",
+   "act": 1,
+   "intent": "Only the left floor line, ember, rolling toward the DJ.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 2; family ember; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-003",
+   "title": "Cloistral \u00b7 First beam",
+   "act": 1,
+   "intent": "One plane of open white beams behind the DJ leaning slowly; no wash at all.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 3; family white; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-004",
+   "title": "Cloistral \u00b7 Lime seam",
+   "act": 1,
+   "intent": "The right floor line lime; the left side beams lime, leaning across it.",
+   "parts": {
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 4; family lime; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-005",
+   "title": "Cloistral \u00b7 Truss smoke",
+   "act": 1,
+   "intent": "The truss up into the haze, white; the 40 W draw white lines above the heads.",
+   "parts": {
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 5; family white; full power: every lit part 1.0; lit 2",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-006",
+   "title": "Cloistral \u00b7 Ember ride",
+   "act": 1,
+   "intent": "Both side beams ember, one slow wide ride across the hall, mirrored; no wash.",
+   "parts": {
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 6; family ember; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-007",
+   "title": "Cloistral \u00b7 Back and kicker",
+   "act": 1,
+   "intent": "The DJ from behind and the kicker in front, white pulses out from him.",
+   "parts": {
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "radial",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 7; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-008",
+   "title": "Cloistral \u00b7 Lime columns",
+   "act": 1,
+   "intent": "The truss down lime on the floor; the side beams lean in scissors.",
+   "parts": {
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 8; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-009",
+   "title": "Cloistral \u00b7 Cold ray",
+   "act": 1,
+   "intent": "Open white behind the DJ scanning fast; the 40 W white lines over the floor.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 9; family white; full power: every lit part 1.0; lit 2",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-010",
+   "title": "Cloistral \u00b7 Ember wall",
+   "act": 1,
+   "intent": "Both floor lines ember, a comet runs toward the DJ.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 10; family ember; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-011",
+   "title": "Cloistral \u00b7 Green line",
+   "act": 1,
+   "intent": "Lime beams behind the DJ ride a wide figure eight; 40 W green lines.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 11; family lime; full power: every lit part 1.0; lit 2",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-012",
+   "title": "Cloistral \u00b7 Black cut",
+   "act": 1,
+   "intent": "Four seconds of nothing.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 4
+   },
+   "notes": "v4 scene 12; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-013",
+   "title": "Cloistral \u00b7 White silhouette",
+   "act": 1,
+   "intent": "The DJ white from behind; the left side beams alone, waving.",
+   "parts": {
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 13; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-014",
+   "title": "Cloistral \u00b7 Ember kicker",
+   "act": 1,
+   "intent": "The kicker ember on the DJ; ember beams behind him nod slowly.",
+   "parts": {
+    "dj kicker": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "radial",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 14; family ember; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-015",
+   "title": "Cloistral \u00b7 Lime truss",
+   "act": 1,
+   "intent": "The truss lime up and down, rolling; the 40 W green lines above.",
+   "parts": {
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 15; family lime; full power: every lit part 1.0; lit 3",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-016",
+   "title": "Cloistral \u00b7 White sides",
+   "act": 1,
+   "intent": "Both side beams open white riding circles in a ripple; no wash.",
+   "parts": {
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 16; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-017",
+   "title": "Cloistral \u00b7 Ember net",
+   "act": 1,
+   "intent": "All 18 beams ember in one slow ripple ride; the 40 W red.",
+   "parts": {
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 17; family ember; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-018",
+   "title": "Cloistral \u00b7 Lime floor",
+   "act": 1,
+   "intent": "Both floor lines lime, ping-ponging across the hall.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 18; family lime; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-019",
+   "title": "Cloistral \u00b7 White room",
+   "act": 1,
+   "intent": "Every wash white, breathing: the first full room, no beam.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 19; family white; full power: every lit part 1.0; lit 6",
+   "laser": null,
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-020",
+   "title": "Cloistral \u00b7 Cold furnace",
+   "act": 1,
+   "intent": "Ember from behind the DJ and his beams leaning slowly; the 40 W red over the floor.",
+   "parts": {
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 20; family ember; full power: every lit part 1.0; lit 3",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-021",
+   "title": "Innersha \u00b7 Ignition",
+   "act": 2,
+   "intent": "Ember chases the floor lines toward the DJ; only the left side rides.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 21; family ember; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-022",
+   "title": "Innersha \u00b7 White pump",
+   "act": 2,
+   "intent": "The truss white pumping on the beat; white behind the DJ scans fast.",
+   "parts": {
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 22; family white; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-023",
+   "title": "Innersha \u00b7 Lime bars",
+   "act": 2,
+   "intent": "Lime bars flip across the floor; the right side nods.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 23; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-024",
+   "title": "Innersha \u00b7 Ember out",
+   "act": 2,
+   "intent": "Ember chases out from the DJ; his beams on a fast wide ride.",
+   "parts": {
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "radial-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 24; family ember; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-025",
+   "title": "Innersha \u00b7 The word",
+   "act": 2,
+   "intent": "The teaser's column: 18 lime beams straight up, pumping; the 40 W green.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 25; family lime; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-026",
+   "title": "Innersha \u00b7 White comet",
+   "act": 2,
+   "intent": "A white comet runs the floor lines toward the door; the left side scans circles.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 26; family white; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-027",
+   "title": "Innersha \u00b7 Ember scissors",
+   "act": 2,
+   "intent": "Ember from behind the DJ; the right side beams scissor fast.",
+   "parts": {
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 3.636,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 27; family ember; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-028",
+   "title": "Innersha \u00b7 Lime comb",
+   "act": 2,
+   "intent": "The truss lime ping-pongs; lime behind the DJ rides a figure eight.",
+   "parts": {
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 28; family lime; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-029",
+   "title": "Innersha \u00b7 White bars",
+   "act": 2,
+   "intent": "White bars; all beams scan mirrored, the DJ lit both sides.",
+   "parts": {
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 29; family white; full power: every lit part 1.0; lit 5",
+   "laser": null,
+   "energy": 0.5,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-030",
+   "title": "Innersha \u00b7 Black cut II",
+   "act": 2,
+   "intent": "Four seconds of nothing.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 4
+   },
+   "notes": "v4 scene 30; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-031",
+   "title": "Innersha \u00b7 Ember run",
+   "act": 2,
+   "intent": "The left floor line ember runs; ember behind the DJ scans; 40 W red.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 7.272,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 31; family ember; full power: every lit part 1.0; lit 3",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-032",
+   "title": "Innersha \u00b7 Lime riser line",
+   "act": 2,
+   "intent": "The right floor line a lime comet; the left side rides fast and wide.",
+   "parts": {
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 32; family lime; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-033",
+   "title": "Innersha \u00b7 White kicker",
+   "act": 2,
+   "intent": "Only the kicker white on the DJ; the right side scissors.",
+   "parts": {
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "radial",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 3.636,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 33; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-034",
+   "title": "Innersha \u00b7 Lime net",
+   "act": 2,
+   "intent": "All 18 beams lime chasing, riding circles in a ripple; 40 W green.",
+   "parts": {
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 3,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 34; family lime; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-035",
+   "title": "Innersha \u00b7 Ember blocks",
+   "act": 2,
+   "intent": "Ember blocks flip on the floor and the truss; no beam.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut up": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 35; family ember; full power: every lit part 1.0; lit 4",
+   "laser": null,
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-036",
+   "title": "Innersha \u00b7 White radar",
+   "act": 2,
+   "intent": "A white radar line sweeps; all beams ride wide; 40 W white.",
+   "parts": {
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "radar",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 36; family white; full power: every lit part 1.0; lit 6",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-037",
+   "title": "Innersha \u00b7 Lime pump",
+   "act": 2,
+   "intent": "The DJ lime from both sides, pumping; his beams scan in a ripple.",
+   "parts": {
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 37; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-038",
+   "title": "Innersha \u00b7 Ember side",
+   "act": 2,
+   "intent": "Only the left side ember, a fast figure eight; nothing else lit.",
+   "parts": {
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 7.272,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 38; family ember; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-039",
+   "title": "Innersha \u00b7 White chase",
+   "act": 2,
+   "intent": "White chases the floor lines; white behind the DJ waves.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 39; family white; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-040",
+   "title": "Innersha \u00b7 Riser",
+   "act": 2,
+   "intent": "Everything ember, pumping; all 18 beams ride fast; 40 W red. The rise.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut up": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 40; family ember; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-041",
+   "title": "Kerrie \u00b7 White cathedral",
+   "act": 3,
+   "intent": "Every lamp open white strobing at 3 a second; the beams scan circles; 40 W white.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 41; family white; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-042",
+   "title": "Kerrie \u00b7 Blackout",
+   "act": 3,
+   "intent": "The cut.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 4
+   },
+   "notes": "v4 scene 42; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-043",
+   "title": "Kerrie \u00b7 Lime storm",
+   "act": 3,
+   "intent": "Lime bars on the truss; all beams scan fast, mirrored; 40 W green.",
+   "parts": {
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 43; family lime; full power: every lit part 1.0; lit 6",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-044",
+   "title": "Kerrie \u00b7 Ember one",
+   "act": 3,
+   "intent": "Only the back of the DJ, ember, pumping. Everything else black.",
+   "parts": {
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 10
+   },
+   "notes": "v4 scene 44; family ember; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-045",
+   "title": "Kerrie \u00b7 Blinders",
+   "act": 3,
+   "intent": "Every wash open white strobing; no beam. Eight seconds.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 8
+   },
+   "notes": "v4 scene 45; family white; full power: every lit part 1.0; lit 6",
+   "laser": null,
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-046",
+   "title": "Kerrie \u00b7 Lime scan",
+   "act": 3,
+   "intent": "Only the left side lime, scanning fast in figure eights.",
+   "parts": {
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 46; family lime; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-047",
+   "title": "Kerrie \u00b7 Ember room",
+   "act": 3,
+   "intent": "The room ember from the floor, every beam nodding together; 40 W red.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut up": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 47; family ember; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-048",
+   "title": "Kerrie \u00b7 Blackout II",
+   "act": 3,
+   "intent": "The cut.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 3
+   },
+   "notes": "v4 scene 48; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-049",
+   "title": "Kerrie \u00b7 White radar line",
+   "act": 3,
+   "intent": "A white radar on the floor lines; the right side rides wide.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "radar",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 49; family white; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-050",
+   "title": "Kerrie \u00b7 Lime sparkle",
+   "act": 3,
+   "intent": "Lime sparkles over the floor and truss; the DJ's beams nod fast; 40 W green.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 20,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 3.636,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 50; family lime; full power: every lit part 1.0; lit 6",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-051",
+   "title": "Kerrie \u00b7 Ember bars",
+   "act": 3,
+   "intent": "Ember bars on the truss; the left side rides fast.",
+   "parts": {
+    "cut up": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 51; family ember; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-052",
+   "title": "Kerrie \u00b7 White beams strobe",
+   "act": 3,
+   "intent": "Only the 18 beams, open white, straight up, strobing.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 8
+   },
+   "notes": "v4 scene 52; family white; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-053",
+   "title": "Kerrie \u00b7 Lime blocks",
+   "act": 3,
+   "intent": "Lime blocks on the DJ; the right side scans circles.",
+   "parts": {
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 53; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-054",
+   "title": "Kerrie \u00b7 Hit",
+   "act": 3,
+   "intent": "The truss up and the DJ's beams, white, pumping hits.",
+   "parts": {
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 3.636,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 10
+   },
+   "notes": "v4 scene 54; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-055",
+   "title": "Kerrie \u00b7 Ember scissors II",
+   "act": 3,
+   "intent": "The kicker ember; the left side scissors fast.",
+   "parts": {
+    "dj kicker": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 3.636,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 55; family ember; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-056",
+   "title": "Kerrie \u00b7 Lime cathedral",
+   "act": 3,
+   "intent": "Everything lime, pumping; all beams scanning circles; 40 W green.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 56; family lime; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-057",
+   "title": "Kerrie \u00b7 Floor strobe",
+   "act": 3,
+   "intent": "Only the floor lines, white, strobing.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 8
+   },
+   "notes": "v4 scene 57; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-058",
+   "title": "Kerrie \u00b7 Ember radar",
+   "act": 3,
+   "intent": "All 18 beams ember, a radar sweep, riding wide; 40 W red.",
+   "parts": {
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "radar",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 58; family ember; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-059",
+   "title": "Kerrie \u00b7 Blackout III",
+   "act": 3,
+   "intent": "The cut.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 4
+   },
+   "notes": "v4 scene 59; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-060",
+   "title": "Kerrie \u00b7 The instrument",
+   "act": 3,
+   "intent": "Every lamp white strobing while all beams ride wide and fast; 40 W white.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 60; family white; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-061",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Drop",
+   "act": 4,
+   "intent": "The drop: only ember from behind the DJ, breathing.",
+   "parts": {
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 61; family ember; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-062",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 One beam back",
+   "act": 4,
+   "intent": "Open white beams behind the DJ, a slow lean wave; nothing else.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 22,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 62; family white; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-063",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Green ash",
+   "act": 4,
+   "intent": "The darkest: the left floor line lime, rolling to black.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 63; family lime; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-064",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember floor",
+   "act": 4,
+   "intent": "The right floor line ember; both sides ride slowly across the hall.",
+   "parts": {
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 64; family ember; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-065",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Slow line",
+   "act": 4,
+   "intent": "Both sides white draw one slow wide figure eight; 40 W white lines.",
+   "parts": {
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 29.088,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 65; family white; full power: every lit part 1.0; lit 3",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-066",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime mist",
+   "act": 4,
+   "intent": "The truss lime up into the haze, sparkling faintly.",
+   "parts": {
+    "cut up": [
+     "#9cff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 20,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 66; family lime; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-067",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Deep tent",
+   "act": 4,
+   "intent": "A tent of ember sides over the truss down; 40 W red.",
+   "parts": {
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 15,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 67; family ember; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-068",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Green breath",
+   "act": 4,
+   "intent": "The DJ lime from both sides, breathing; his beams lean slowly.",
+   "parts": {
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 68; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-069",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White kicker alone",
+   "act": 4,
+   "intent": "Only the kicker, white, pulsing on the DJ.",
+   "parts": {
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "radial",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 69; family white; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-070",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember line ride",
+   "act": 4,
+   "intent": "Ember beams behind the DJ ride slow circles; nothing else.",
+   "parts": {
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 70; family ember; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-071",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime cross",
+   "act": 4,
+   "intent": "Both floor lines lime, slowly crossing.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 71; family lime; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-072",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White truss down",
+   "act": 4,
+   "intent": "The truss down white; the left side waves; 40 W white.",
+   "parts": {
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 72; family white; full power: every lit part 1.0; lit 3",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-073",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash cut",
+   "act": 4,
+   "intent": "Six seconds of nothing.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 6
+   },
+   "notes": "v4 scene 73; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-074",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember comet",
+   "act": 4,
+   "intent": "An ember comet along both floor lines; the DJ's beams scan.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 7.272,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 74; family ember; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-075",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime one side",
+   "act": 4,
+   "intent": "Only the left side lime, a slow wide ride.",
+   "parts": {
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 75; family lime; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-076",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White ash",
+   "act": 4,
+   "intent": "The truss white up and down, rolling.",
+   "parts": {
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "y",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 76; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-077",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow net",
+   "act": 4,
+   "intent": "All 18 beams ember, a slow figure-eight ripple; 40 W red.",
+   "parts": {
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 29.088,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 20
+   },
+   "notes": "v4 scene 77; family ember; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-078",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime back",
+   "act": 4,
+   "intent": "Lime from behind the DJ; the right side nods.",
+   "parts": {
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 78; family lime; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-079",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Cold rise",
+   "act": 4,
+   "intent": "A white comet toward the DJ; his beams scan; 40 W white. The second rise.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 79; family white; full power: every lit part 1.0; lit 4",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-080",
+   "title": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Riser two",
+   "act": 4,
+   "intent": "Everything lime, pumping; 18 beams ride wide and fast; 40 W green.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 2,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 80; family lime; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-081",
+   "title": "Mixtinct \u00b7 Second drop",
+   "act": 5,
+   "intent": "Every lamp white, pumping; the beams scan fast, mirrored; 40 W white.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 81; family white; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-082",
+   "title": "Mixtinct \u00b7 Blackout IV",
+   "act": 5,
+   "intent": "The cut before the word.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 4
+   },
+   "notes": "v4 scene 82; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-083",
+   "title": "Mixtinct \u00b7 The word, last",
+   "act": 5,
+   "intent": "The word at full: the truss lime, 18 lime beams riding wide; 40 W green.",
+   "parts": {
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 83; family lime; full power: every lit part 1.0; lit 6",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-084",
+   "title": "Mixtinct \u00b7 Ember room, last",
+   "act": 5,
+   "intent": "Ember from the floor and behind the DJ in bars; the left side scissors.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 3.636,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 84; family ember; full power: every lit part 1.0; lit 4",
+   "laser": null,
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-085",
+   "title": "Mixtinct \u00b7 White blocks",
+   "act": 5,
+   "intent": "White blocks flip; white behind the DJ scans.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 85; family white; full power: every lit part 1.0; lit 4",
+   "laser": null,
+   "energy": 0.4,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-086",
+   "title": "Mixtinct \u00b7 Last strobe",
+   "act": 5,
+   "intent": "Every wash white, strobing. Eight seconds.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 8
+   },
+   "notes": "v4 scene 86; family white; full power: every lit part 1.0; lit 6",
+   "laser": null,
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-087",
+   "title": "Mixtinct \u00b7 Lime out",
+   "act": 5,
+   "intent": "Lime chases out from the DJ; the right side rides fast.",
+   "parts": {
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "radial-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 87; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-088",
+   "title": "Mixtinct \u00b7 Ember one beam",
+   "act": 5,
+   "intent": "Only the DJ's beams, ember, pumping and scanning; 40 W red.",
+   "parts": {
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 12
+   },
+   "notes": "v4 scene 88; family ember; full power: every lit part 1.0; lit 2",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-089",
+   "title": "Mixtinct \u00b7 White bars wide",
+   "act": 5,
+   "intent": "White bars on the floor; all beams ride circles; 40 W white.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 89; family white; full power: every lit part 1.0; lit 6",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 at every aim and cube group it broke a hall rule (lantern / entry wall / column line) without a waiver; now the net, which passes, in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-090",
+   "title": "Mixtinct \u00b7 Lime sparkle out",
+   "act": 5,
+   "intent": "Only lime from behind the DJ, sparkling.",
+   "parts": {
+    "dj back": [
+     "#9cff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 20,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 90; family lime; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-091",
+   "title": "Mixtinct \u00b7 Ember storm",
+   "act": 5,
+   "intent": "Ember bars on the truss; all beams scan fast, mirrored; 40 W red.",
+   "parts": {
+    "cut up": [
+     "#ff3a12",
+     1.0
+    ],
+    "cut down": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "laser": [
+     "#ff3a12",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 91; family ember; full power: every lit part 1.0; lit 6",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#ff3a12",
+    "colour_key": "E",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was fan-sweep \u2014 lantern glazing at pitch 8; now the net in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 0.6,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8\u00b0 and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-092",
+   "title": "Mixtinct \u00b7 White radar, last",
+   "act": 5,
+   "intent": "Only the left side white, a radar ride.",
+   "parts": {
+    "side line left": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "radar",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 1,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 92; family white; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-093",
+   "title": "Mixtinct \u00b7 Blackout V",
+   "act": 5,
+   "intent": "The cut.",
+   "parts": {},
+   "motion": null,
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 4
+   },
+   "notes": "v4 scene 93; family blackout; full power: every lit part 1.0; lit 0",
+   "laser": null,
+   "energy": 0.0,
+   "laser_lines": null,
+   "laser40": null,
+   "family": []
+  },
+  {
+   "id": "v4-094",
+   "title": "Mixtinct \u00b7 Lime cathedral, last",
+   "act": 5,
+   "intent": "Everything lime, every beam nodding together; 40 W green.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "cut up": [
+     "#9cff00",
+     1.0
+    ],
+    "cut down": [
+     "#9cff00",
+     1.0
+    ],
+    "dj back": [
+     "#9cff00",
+     1.0
+    ],
+    "dj kicker": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "laser": [
+     "#00ff00",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 14
+   },
+   "notes": "v4 scene 94; family lime; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#00ff00",
+    "colour_key": "G",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "the green net, 24 lines a cube, crossing and parting",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-095",
+   "title": "Mixtinct \u00b7 Final strobe",
+   "act": 5,
+   "intent": "The last instrument: every lamp white strobing, the beams scanning circles; 40 W white.",
+   "parts": {
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "laser": [
+     "#eefdfd",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "strobe",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "cue": {
+    "fade_s": 0,
+    "hold_s": 10
+   },
+   "notes": "v4 scene 95; family white; full power: every lit part 1.0; lit 10",
+   "laser": {
+    "pattern": "net",
+    "cubes": "all",
+    "colour": "#eefdfd",
+    "colour_key": "CW",
+    "level": 1.0,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "pitch_deg": 0,
+    "yaw_deg": 0,
+    "spread_deg": 0,
+    "amplitude_deg": 3.0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "t5",
+     "ILDA: beam net / lattice"
+    ],
+    "why": "v5: was single-scan \u2014 lantern glazing at pitch 8; now the net in this scene's colour and tempo",
+    "beams": 24
+   },
+   "energy": 1.0,
+   "laser_lines": null,
+   "laser40": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4\u00b0 and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6\u00b0 up and 3\u00b0 toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-096",
+   "title": "Mixtinct \u00b7 Afterglow",
+   "act": 5,
+   "intent": "The furnace cooling: the floor lines ember breathing; the left side waves.",
+   "parts": {
+    "line L": [
+     "#ff3a12",
+     1.0
+    ],
+    "line R": [
+     "#ff3a12",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 96; family ember; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-097",
+   "title": "Mixtinct \u00b7 The last run",
+   "act": 5,
+   "intent": "Lime chases toward the DJ one last time; his beams ride wide.",
+   "parts": {
+    "line L": [
+     "#9cff00",
+     1.0
+    ],
+    "line R": [
+     "#9cff00",
+     1.0
+    ],
+    "plane 1": [
+     "#8cff3a",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 4,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 97; family lime; full power: every lit part 1.0; lit 3",
+   "laser": null,
+   "energy": 0.3,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "lime"
+   ]
+  },
+  {
+   "id": "v4-098",
+   "title": "Mixtinct \u00b7 Embers out",
+   "act": 5,
+   "intent": "Ember behind the DJ sparkling out; his beams straight up.",
+   "parts": {
+    "dj back": [
+     "#ff3a12",
+     1.0
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "sparkle",
+    "bpm": 20,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 16
+   },
+   "notes": "v4 scene 98; family ember; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "ember"
+   ]
+  },
+  {
+   "id": "v4-099",
+   "title": "Mixtinct \u00b7 White ash out",
+   "act": 5,
+   "intent": "The truss white, breathing out.",
+   "parts": {
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 5,
+    "hold_s": 18
+   },
+   "notes": "v4 scene 99; family white; full power: every lit part 1.0; lit 2",
+   "laser": null,
+   "energy": 0.2,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  },
+  {
+   "id": "v4-100",
+   "title": "Mixtinct \u00b7 One beam (loop)",
+   "act": 5,
+   "intent": "Open white beams behind the DJ leaning slowly; it ties to scene 1.",
+   "parts": {
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 6,
+    "hold_s": 22
+   },
+   "notes": "v4 scene 100; family white; full power: every lit part 1.0; lit 1",
+   "laser": null,
+   "energy": 0.1,
+   "laser_lines": null,
+   "laser40": null,
+   "family": [
+    "white"
+   ]
+  }
+ ],
+ "laser_schema": "di.iiii scripts/place/laser_frames.py (validate_laser); design: scenes-tools/laser_design.py 2026-10-15",
+ "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)",
+ "beam_wheel_seen": {
+  "#ffffff": {
+   "slot": "open",
+   "hex": "#ffffff"
+  },
+  "#ff5a1e": {
+   "slot": "red-orange",
+   "hex": "#ff5a1e"
+  },
+  "#8cff3a": {
+   "slot": "lime",
+   "hex": "#8cff3a"
+  }
+ }
+}
