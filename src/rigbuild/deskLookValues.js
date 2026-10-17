@@ -11,10 +11,14 @@
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
 import { deskLooks, lookPoses, posedEntities, rigLooksOf, flashKindOf } from './looks.js'
 import { deskHeadsOf } from './headMotion.js'
+import { deskMotionOf, djCentre } from './lookMotion.js'
 import { typeById } from './fixtureTypes.js'
 import { encodeDmx } from './dmxDecode.js'
 import { lookStrobeHz } from './strobeCap.js'
 import { panTiltOfBeam, runningMode, fixturePanOf } from './dmxPose.js'
+
+// Fixture categories a look's level motion never reaches: not lamps, so no rhythm on their output (2026-10-17).
+const NO_MOTION = new Set(['laser', 'hazer', 'smoke-machine', 'spark-machine'])
 
 
 /**
@@ -67,12 +71,17 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
         // HEAD MOTION (headMotion.js): the heads this look moves, with what the desk needs per head (order, hung, range). The desk
         // plays the offsets onto the rest pan/tilt above, from the moment the look is fired; the room draws the same offsets.
         // A lamp the look leaves dark (level 0) or a laser is no unit: it takes no part in the fan.
-        const heads = deskHeadsOf({
-            entities: posedEntities(entities, poses), library, look,
-            levelOf: (id) => (typeById(library, byEntity.get(id)?.components?.fixture?.type)?.category === 'laser' ? 0 : (poses.get(id)?.level ?? 0)),
-            idOf: (e) => deskIdOf.get(e.id) || null
-        })
-        return { ...shell, ...(heads ? { heads } : {}), steps: [{ values }], valuesFrom: Object.keys(values).length ? 'channel lists (assumed where marked)' : null }
+        const posed = posedEntities(entities, poses)
+        const categoryOf = (id) => typeById(library, byEntity.get(id)?.components?.fixture?.type)?.category
+        const idOf = (e) => deskIdOf.get(e.id) || null
+        const heads = deskHeadsOf({ entities: posed, library, look, levelOf: (id) => (categoryOf(id) === 'laser' ? 0 : (poses.get(id)?.level ?? 0)), idOf })
+        // LEVEL MOTION (lookMotion.js): the lamps this look moves (its motion's kinds, lit above `still`), in effect order with
+        // their place in it, handed to the desk as `units`. The desk plays fx.js's curve on them from the moment the look is
+        // fired (serverXR/src/lighting/lookMotion.js), so the hall moves with the room instead of standing still under it
+        // (MOXIR, measured 2026-10-17). A laser, a hazer, a smoke or a spark machine is never a unit: a rhythm on an output
+        // channel is not light.
+        const motion = deskMotionOf({ entities: posed, look, levelOf: (id) => (NO_MOTION.has(categoryOf(id)) ? 0 : (poses.get(id)?.level ?? 0)), idOf, centre: djCentre(entities) })
+        return { ...shell, ...(heads ? { heads } : {}), ...(motion ? { motion } : {}), steps: [{ values }], valuesFrom: Object.keys(values).length ? 'channel lists (assumed where marked)' : null }
     })
 }
 

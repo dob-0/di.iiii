@@ -4,6 +4,7 @@
  * colour with the 3D colour lamp type by lamp type (the colour sync, owner 2026-10-17: "lets sync with all colors so make all red").
  *
  *   PROJECT=<id> node scripts/rigbuild/all-colour.mjs --colour '#ff0000' [--level 1] [--extra 2:up-b380f:16ch:1x6,2:up-pl5403:8ch:97x7]
+ *   PROJECT=<id> node scripts/rigbuild/all-colour.mjs --colour <hex> --universe 1   (one universe only)
  *   PROJECT=<id> node scripts/rigbuild/all-colour.mjs --release
  *
  * Every lamp patched on the desk for the project, plus --extra lamps given by address (universe:type:mode:first x count, for
@@ -56,6 +57,8 @@ for (const spec of String(args.extra || '').split(',').filter(Boolean)) {
     const type = typeById(library, typeId); const mode = runningMode(type, modeName, null) || die(`--extra ${spec}: no mode ${modeName} for ${typeId}`)
     for (let i = 0; i < count; i++) lamps.push({ label: `U${u}.${first + i * mode.channels.length}`, type, mode, universe: Number(u) - 1, address: first + i * mode.channels.length })
 }
+// --universe N (as written, U1 = 1): only that universe's lamps — one cable checked at a time (owner 2026-10-17: "universe 1 … all in one color").
+if (args.universe != null) { const u = Number(args.universe) - 1; lamps.splice(0, lamps.length, ...lamps.filter((l) => l.universe === u)) }
 const held = []; const byType = {}
 const taken = new Set(lamps.map((l) => `${l.universe}:${l.address}`))
 for (const l of lamps) {
