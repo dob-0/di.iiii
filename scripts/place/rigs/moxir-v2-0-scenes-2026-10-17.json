@@ -1,8 +1,8 @@
 {
- "version": "2.20",
- "title": "MOXIR scenes v2.0 (draft)",
+ "version": "2.21",
+ "title": "MOXIR scenes v2.1 (draft)",
  "date": "2026-10-17",
- "what": "v2.0 underground loop, every device; CONCEPT.md in agent-reports-2026-10-17/scenes-v2",
+ "what": "v2.1 techno loop, every device; rules LEAD-BRIEF-addendum.md (g); CONCEPT.md in agent-reports-2026-10-17/scenes-v2",
  "written_by": "scripts/place/rig_generate.py",
  "generated_by": {
   "tool": "scripts/place/rig_generate.py",
@@ -25417,36 +25417,56 @@
  "looks": [
   {
    "id": "cold-furnace",
-   "title": "Cold furnace",
+   "title": "Cloistral · Cold furnace",
    "act": 1,
-   "intent": "The hall as found: two rust glows on the back wall, the DJ a shadow, the floor barely there. Washes breathe.",
+   "intent": "The hall as found: the back wall red, two pieces bright, every other wash a red ember. Washes breathe.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.12
+     "#ff0000",
+     0.8
     ],
     "line B": [
-     "#e04e00",
-     0.12
+     "#ff0000",
+     0.8
     ],
-    "dj back": [
-     "#e04e00",
-     0.15
+    "line C": [
+     "#ff0000",
+     0.2
+    ],
+    "line D": [
+     "#ff0000",
+     0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.06
+     "#ff0000",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.06
+     "#ff0000",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.2
+    ],
+    "cut down": [
+     "#ff0000",
+     0.2
+    ],
+    "dj back": [
+     "#ff0000",
+     0.2
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.2
+    ],
+    "stage key": [
+     "#ff0000",
+     0.2
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -25457,55 +25477,71 @@
    "motion": {
     "mode": "breathe",
     "bpm": 33,
-    "depth": 100,
+    "depth": 120,
     "spatial": "patch",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 1; outside = the owner's rule (copied from v6 scene 1); laser = the laser session's design of v6 scene 1 (the-road-in), unchanged"
+   "notes": "v2.0 scene 1; family red; outside = the owner's rule (v6 scene 1); laser = the laser session's design of v6 scene 1 (the-road-in), colours theirs; hold = v6"
   },
   {
-   "id": "sodium",
-   "title": "Sodium",
+   "id": "red-wall",
+   "title": "Cloistral · Red wall",
    "act": 1,
-   "intent": "The sodium lamps of the yard come on along the back wall and roll toward the DJ.",
+   "intent": "Red rolls along the wall toward the DJ; the red beams behind him lean slowly.",
    "parts": {
     "line A": [
-     "#ffad4d",
-     0.18
+     "#ff0000",
+     0.25
     ],
     "line B": [
-     "#ffad4d",
-     0.18
+     "#ff0000",
+     0.25
     ],
     "line C": [
-     "#ffad4d",
-     0.18
+     "#ff0000",
+     0.8
     ],
     "line D": [
-     "#ffad4d",
-     0.18
-    ],
-    "dj back": [
-     "#e04e00",
-     0.2
+     "#ff0000",
+     0.8
     ],
     "line L": [
-     "#e8e4dc",
-     0.06
+     "#ff0000",
+     0.25
     ],
     "line R": [
-     "#e8e4dc",
-     0.06
+     "#ff0000",
+     0.25
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.25
+    ],
+    "cut down": [
+     "#ff0000",
+     0.25
+    ],
+    "dj back": [
+     "#ff0000",
+     0.6
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.25
+    ],
+    "stage key": [
+     "#ff0000",
+     0.25
+    ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -25520,12 +25556,22 @@
    "motion": {
     "mode": "sine",
     "bpm": 33,
-    "depth": 120,
+    "depth": 200,
     "spatial": "y-",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
    },
    "laser_colour": "#eefdfd",
    "desk_caps": {
@@ -25534,44 +25580,68 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 2; outside = the owner's rule (copied from v6 scene 2); laser = the laser session's design of v6 scene 2 (first-light), unchanged"
+   "notes": "v2.0 scene 2; family red; outside = the owner's rule (v6 scene 2); laser = the laser session's design of v6 scene 2 (first-light), colours theirs; hold = v6"
   },
   {
-   "id": "rust-on-the-wall",
-   "title": "Rust on the wall",
+   "id": "first-ride",
+   "title": "Cloistral · First ride",
    "act": 1,
-   "intent": "One half of the wall in rust, the truss a faint rust up into the haze.",
+   "intent": "White: the truss up into the haze, the side beams open white ride across the hall, mirrored.",
    "parts": {
+    "line A": [
+     "#ffffff",
+     0.2
+    ],
+    "line B": [
+     "#ffffff",
+     0.2
+    ],
     "line C": [
-     "#e04e00",
-     0.3
+     "#ffffff",
+     0.2
     ],
     "line D": [
-     "#e04e00",
-     0.3
-    ],
-    "cut up": [
-     "#e04e00",
-     0.1
-    ],
-    "dj back": [
-     "#e04e00",
+     "#ffffff",
      0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.06
+     "#ffffff",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.06
+     "#ffffff",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     0.9
+    ],
+    "cut down": [
+     "#ffffff",
+     0.2
+    ],
+    "dj back": [
+     "#ffffff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.2
+    ],
+    "stage key": [
+     "#ffffff",
+     0.2
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -25582,86 +25652,77 @@
    "motion": {
     "mode": "breathe",
     "bpm": 33,
-    "depth": 100,
+    "depth": 150,
     "spatial": "patch",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 3; outside = the owner's rule (copied from v6 scene 3); laser = the laser session's design of v6 scene 3 (slow-sweep), unchanged"
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 3; family white; outside = the owner's rule (v6 scene 3); laser = the laser session's design of v6 scene 3 (slow-sweep), colours theirs; hold = v6"
   },
   {
    "id": "silhouette",
-   "title": "Silhouette",
+   "title": "Cloistral · Silhouette",
    "act": 1,
-   "intent": "Only the DJ, from behind, in amber. Everything else dark.",
-   "parts": {
-    "dj back": [
-     "#ffad4d",
-     0.45
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.05
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.05
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "none",
-    "bpm": 60,
-    "depth": 0,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "notes": "v2.0 scene 4; outside = the owner's rule (copied from v6 scene 4); laser = the laser session's design of v6 scene 4 (steel-breath), unchanged"
-  },
-  {
-   "id": "first-piece",
-   "title": "First piece",
-   "act": 1,
-   "intent": "Two pieces of the back wall in deep ember, pulsing left to right; the middle stays dark.",
+   "intent": "The DJ a silhouette in red from behind, the kicker as counter-light; red pulses out from him.",
    "parts": {
     "line A": [
-     "#a3200c",
-     0.4
+     "#ff0000",
+     0.2
+    ],
+    "line B": [
+     "#ff0000",
+     0.2
+    ],
+    "line C": [
+     "#ff0000",
+     0.2
     ],
     "line D": [
-     "#a3200c",
-     0.4
+     "#ff0000",
+     0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.08
+     "#ff0000",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.08
+     "#ff0000",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.2
+    ],
+    "cut down": [
+     "#ff0000",
+     0.2
+    ],
+    "dj back": [
+     "#ff0000",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.6
+    ],
+    "stage key": [
+     "#ff0000",
+     0.2
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -25672,540 +25733,71 @@
    "motion": {
     "mode": "pulse",
     "bpm": 66,
-    "depth": 160,
-    "spatial": "x",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "notes": "v2.0 scene 5; outside = the owner's rule (copied from v6 scene 5); laser = the laser session's design of v6 scene 5 (dj-alone), unchanged"
-  },
-  {
-   "id": "one-ray",
-   "title": "One ray",
-   "act": 1,
-   "intent": "The first beam: warm white behind the DJ, a slow lean wave in a ripple. Rust stays behind him.",
-   "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.35
-    ],
-    "dj back": [
-     "#e04e00",
-     0.2
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.06
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.06
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "breathe",
-    "bpm": 33,
-    "depth": 100,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "wave",
-    "period_s": 24,
-    "pan_deg": 0,
-    "tilt_deg": 12,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "notes": "v2.0 scene 6; outside = the owner's rule (copied from v6 scene 6); laser = the laser session's design of v6 scene 6 (ice-rays), unchanged"
-  },
-  {
-   "id": "the-wall-wakes",
-   "title": "The wall wakes",
-   "act": 1,
-   "intent": "SIGNATURE: a comet of dark amber runs the whole back wall toward the DJ; nothing else is on.",
-   "parts": {
-    "line A": [
-     "#e04e00",
-     0.6
-    ],
-    "line B": [
-     "#e04e00",
-     0.6
-    ],
-    "line C": [
-     "#e04e00",
-     0.6
-    ],
-    "line D": [
-     "#e04e00",
-     0.6
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.05
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.05
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "comet",
-    "bpm": 66,
     "depth": 255,
-    "spatial": "y-",
+    "spatial": "radial",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0
+    "still": 0.0
    },
-   "notes": "v2.0 scene 7; outside = the owner's rule (copied from v6 scene 7); laser = the laser session's design of v6 scene 7 (the-wall-wakes), unchanged"
+   "notes": "v2.0 scene 4; family red; outside = the owner's rule (v6 scene 4); laser = the laser session's design of v6 scene 4 (steel-breath), colours theirs; hold = v6"
   },
   {
-   "id": "columns-of-rust",
-   "title": "Columns of rust",
+   "id": "green-pieces",
+   "title": "Cloistral · Green pieces",
    "act": 1,
-   "intent": "The side beams in amber lean toward the floor and back, neighbours opposite; the wall keeps its rust.",
-   "parts": {
-    "side line left": [
-     "#ffb000",
-     0.4
-    ],
-    "side line right": [
-     "#ffb000",
-     0.4
-    ],
-    "line B": [
-     "#e04e00",
-     0.25
-    ],
-    "line C": [
-     "#e04e00",
-     0.25
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.06
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.06
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
-     "#eefdfd",
-     0.3
-    ]
-   },
-   "motion": {
-    "mode": "breathe",
-    "bpm": 33,
-    "depth": 100,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "nod",
-    "period_s": 16,
-    "pan_deg": 0,
-    "tilt_deg": 15,
-    "spatial": "alternate",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#eefdfd",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 8; outside = the owner's rule (copied from v6 scene 8); laser = the laser session's design of v6 scene 8 (cold-columns), unchanged"
-  },
-  {
-   "id": "ash-rays",
-   "title": "Ash rays",
-   "act": 1,
-   "intent": "The first cold light: ash rays up the back wall, ice on the truss. Monochrome, like the posters.",
+   "intent": "Green: two pieces of the wall, flipping in blocks; green behind the DJ scans fast, neighbours opposite.",
    "parts": {
     "line A": [
-     "#e8e4dc",
-     0.3
+     "#00ff00",
+     0.9
     ],
     "line B": [
-     "#e8e4dc",
-     0.3
+     "#00ff00",
+     0.25
     ],
     "line C": [
-     "#e8e4dc",
-     0.3
+     "#00ff00",
+     0.25
     ],
     "line D": [
-     "#e8e4dc",
-     0.3
+     "#00ff00",
+     0.9
+    ],
+    "line L": [
+     "#00ff00",
+     0.25
+    ],
+    "line R": [
+     "#00ff00",
+     0.25
     ],
     "cut up": [
-     "#d1eeff",
-     0.15
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.08
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.08
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "sine",
-    "bpm": 33,
-    "depth": 120,
-    "spatial": "y-",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "notes": "v2.0 scene 9; outside = the owner's rule (copied from v6 scene 9); laser = the laser session's design of v6 scene 9 (rust-low), unchanged"
-  },
-  {
-   "id": "first-net",
-   "title": "First net",
-   "act": 1,
-   "intent": "Warm white behind the DJ, amber on the sides, a bow-tie turn in a ripple; the cubes draw their first net.",
-   "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.5
-    ],
-    "side line left": [
-     "#ffb000",
-     0.4
-    ],
-    "side line right": [
-     "#ffb000",
-     0.4
-    ],
-    "line A": [
-     "#e04e00",
-     0.3
-    ],
-    "line B": [
-     "#e04e00",
-     0.3
-    ],
-    "line C": [
-     "#e04e00",
-     0.3
-    ],
-    "line D": [
-     "#e04e00",
-     0.3
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.08
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.08
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
      "#00ff00",
-     0.35
-    ]
-   },
-   "motion": {
-    "mode": "breathe",
-    "bpm": 33,
-    "depth": 100,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "circle",
-    "period_s": 20,
-    "pan_deg": 0,
-    "tilt_deg": 15,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#00ff00",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 10; outside = the owner's rule (copied from v6 scene 10); laser = the laser session's design of v6 scene 10 (first-net), unchanged"
-  },
-  {
-   "id": "ignition",
-   "title": "Ignition",
-   "act": 2,
-   "intent": "Amber chases along the back wall toward the DJ; the sides in red-orange nod together.",
-   "parts": {
-    "line A": [
-     "#ffad4d",
-     0.5
-    ],
-    "line B": [
-     "#ffad4d",
-     0.5
-    ],
-    "line C": [
-     "#ffad4d",
-     0.5
-    ],
-    "line D": [
-     "#ffad4d",
-     0.5
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.4
-    ],
-    "side line left": [
-     "#ff5a1e",
-     0.5
-    ],
-    "side line right": [
-     "#ff5a1e",
-     0.5
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.1
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.1
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "chase",
-    "bpm": 132,
-    "depth": 200,
-    "spatial": "y-",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "nod",
-    "period_s": 12,
-    "pan_deg": 0,
-    "tilt_deg": 20,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "notes": "v2.0 scene 11; outside = the owner's rule (copied from v6 scene 11); laser = the laser session's design of v6 scene 11 (green-chase), unchanged"
-  },
-  {
-   "id": "run-to-the-dj",
-   "title": "Run to the DJ",
-   "act": 2,
-   "intent": "Ash chases the hall toward the DJ; open white behind him nods in a ripple.",
-   "parts": {
-    "line A": [
-     "#e8e4dc",
-     0.5
-    ],
-    "line B": [
-     "#e8e4dc",
-     0.5
-    ],
-    "line C": [
-     "#e8e4dc",
-     0.5
-    ],
-    "line D": [
-     "#e8e4dc",
-     0.5
+     0.25
     ],
     "cut down": [
-     "#e8e4dc",
-     0.3
+     "#00ff00",
+     0.25
+    ],
+    "dj back": [
+     "#00ff00",
+     0.25
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.25
+    ],
+    "stage key": [
+     "#00ff00",
+     0.25
     ],
     "plane 1": [
-     "#ffffff",
-     0.6
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.1
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.1
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     "#00d12a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "chase",
-    "bpm": 132,
-    "depth": 255,
-    "spatial": "y-",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "nod",
-    "period_s": 8,
-    "pan_deg": 0,
-    "tilt_deg": 20,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "notes": "v2.0 scene 12; outside = the owner's rule (copied from v6 scene 12); laser = the laser session's design of v6 scene 12 (run-to-the-dj), unchanged"
-  },
-  {
-   "id": "white-in-pieces",
-   "title": "White in pieces",
-   "act": 2,
-   "intent": "Cold white on two pieces of the wall, flipping in blocks; the sides draw an X in warm white.",
-   "parts": {
-    "line B": [
-     "#eefdfd",
-     0.6
-    ],
-    "line D": [
-     "#eefdfd",
-     0.6
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.3
-    ],
-    "side line left": [
-     "#fff0c0",
-     0.4
-    ],
-    "side line right": [
-     "#fff0c0",
-     0.4
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.1
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.1
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26221,68 +25813,723 @@
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "figure8",
-    "period_s": 14,
-    "pan_deg": 0,
+    "period_s": 3.636,
+    "pan_deg": 90,
     "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 5; family green; outside = the owner's rule (v6 scene 5); laser = the laser session's design of v6 scene 5 (dj-alone), colours theirs; hold = v6"
+  },
+  {
+   "id": "one-ray",
+   "title": "Cloistral · One ray",
+   "act": 1,
+   "intent": "White floor lines, a comet toward the DJ; warm white behind him waves.",
+   "parts": {
+    "line A": [
+     "#ffffff",
+     0.2
+    ],
+    "line B": [
+     "#ffffff",
+     0.2
+    ],
+    "line C": [
+     "#ffffff",
+     0.2
+    ],
+    "line D": [
+     "#ffffff",
+     0.2
+    ],
+    "line L": [
+     "#ffffff",
+     0.8
+    ],
+    "line R": [
+     "#ffffff",
+     0.8
+    ],
+    "cut up": [
+     "#ffffff",
+     0.2
+    ],
+    "cut down": [
+     "#ffffff",
+     0.2
+    ],
+    "dj back": [
+     "#ffffff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.2
+    ],
+    "stage key": [
+     "#ffffff",
+     0.2
+    ],
+    "plane 1": [
+     "#fff0c0",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 15,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 6; family white; outside = the owner's rule (v6 scene 6); laser = the laser session's design of v6 scene 6 (ice-rays), colours theirs; hold = v6"
+  },
+  {
+   "id": "the-wall-wakes",
+   "title": "Cloistral · The wall wakes",
+   "act": 1,
+   "intent": "SIGNATURE: a red comet runs the whole back wall toward the DJ; the sides ride wide across the hall.",
+   "parts": {
+    "line A": [
+     "#ff0000",
+     0.9
+    ],
+    "line B": [
+     "#ff0000",
+     0.9
+    ],
+    "line C": [
+     "#ff0000",
+     0.9
+    ],
+    "line D": [
+     "#ff0000",
+     0.9
+    ],
+    "line L": [
+     "#ff0000",
+     0.25
+    ],
+    "line R": [
+     "#ff0000",
+     0.25
+    ],
+    "cut up": [
+     "#ff0000",
+     0.25
+    ],
+    "cut down": [
+     "#ff0000",
+     0.25
+    ],
+    "dj back": [
+     "#ff0000",
+     0.25
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.25
+    ],
+    "stage key": [
+     "#ff0000",
+     0.25
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "comet",
+    "bpm": 66,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
     "spatial": "left-right",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 13; outside = the owner's rule (copied from v6 scene 13); laser = the laser session's design of v6 scene 13 (rays-pulse), unchanged"
+   "notes": "v2.0 scene 7; family red; outside = the owner's rule (v6 scene 7); laser = the laser session's design of v6 scene 7 (the-wall-wakes), colours theirs; hold = v6"
   },
   {
-   "id": "rust-bars",
-   "title": "Rust bars",
-   "act": 2,
-   "intent": "Dark amber bars flip across the wall; orange behind the DJ nods, neighbours opposite.",
+   "id": "columns",
+   "title": "Cloistral · Columns",
+   "act": 1,
+   "intent": "Green columns: the sides lean toward the floor and back, left green, right lime; the truss green down on the floor.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.6
+     "#00ff00",
+     0.25
     ],
     "line B": [
-     "#e04e00",
-     0.6
+     "#00ff00",
+     0.25
     ],
     "line C": [
-     "#e04e00",
-     0.6
+     "#00ff00",
+     0.25
     ],
     "line D": [
+     "#00ff00",
+     0.25
+    ],
+    "line L": [
+     "#00ff00",
+     0.25
+    ],
+    "line R": [
+     "#00ff00",
+     0.25
+    ],
+    "cut up": [
+     "#00ff00",
+     0.25
+    ],
+    "cut down": [
+     "#00ff00",
+     0.8
+    ],
+    "dj back": [
+     "#00ff00",
+     0.25
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.25
+    ],
+    "stage key": [
+     "#00ff00",
+     0.25
+    ],
+    "side line left": [
+     "#00d12a",
+     1.0
+    ],
+    "side line right": [
+     "#8cff3a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
      "#e04e00",
      0.6
     ],
-    "cut down": [
-     "#ffad4d",
-     0.4
+    "laser": [
+     "#eefdfd",
+     0.3
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 150,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
     ],
-    "plane 1": [
-     "#ff7a00",
-     0.6
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 8; family green; outside = the owner's rule (v6 scene 8); laser = the laser session's design of v6 scene 8 (cold-columns), colours theirs; hold = v6"
+  },
+  {
+   "id": "white-rays",
+   "title": "Cloistral · White rays",
+   "act": 1,
+   "intent": "White rays up the back wall rolling toward the DJ; open white behind him scans in a ripple.",
+   "parts": {
+    "line A": [
+     "#ffffff",
+     0.7
     ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.4
+    "line B": [
+     "#ffffff",
+     0.7
+    ],
+    "line C": [
+     "#ffffff",
+     0.7
+    ],
+    "line D": [
+     "#ffffff",
+     0.7
     ],
     "line L": [
-     "#e8e4dc",
-     0.1
+     "#ffffff",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.1
+     "#ffffff",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     0.7
+    ],
+    "cut down": [
+     "#ffffff",
+     0.2
+    ],
+    "dj back": [
+     "#ffffff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.2
+    ],
+    "stage key": [
+     "#ffffff",
+     0.2
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 9; family white; outside = the owner's rule (v6 scene 9); laser = the laser session's design of v6 scene 9 (rust-low), colours theirs; hold = v6"
+  },
+  {
+   "id": "first-net",
+   "title": "Cloistral · First net",
+   "act": 1,
+   "intent": "All 18 beams red, a slow wide ride in a ripple; the cubes draw their first net.",
+   "parts": {
+    "line A": [
+     "#ff0000",
+     0.3
+    ],
+    "line B": [
+     "#ff0000",
+     0.3
+    ],
+    "line C": [
+     "#ff0000",
+     0.3
+    ],
+    "line D": [
+     "#ff0000",
+     0.3
+    ],
+    "line L": [
+     "#ff0000",
+     0.3
+    ],
+    "line R": [
+     "#ff0000",
+     0.3
+    ],
+    "cut up": [
+     "#ff0000",
+     0.3
+    ],
+    "cut down": [
+     "#ff0000",
+     0.3
+    ],
+    "dj back": [
+     "#ff0000",
+     0.8
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.3
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
+    ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#00ff00",
+     0.35
+    ]
+   },
+   "motion": {
+    "mode": "pulse",
+    "bpm": 66,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 10; family red; outside = the owner's rule (v6 scene 10); laser = the laser session's design of v6 scene 10 (first-net), colours theirs; hold = v6"
+  },
+  {
+   "id": "ignition",
+   "title": "Innersha · Ignition",
+   "act": 2,
+   "intent": "Red chases along the wall toward the DJ; only the left side rides; the kicker counter-lights.",
+   "parts": {
+    "line A": [
+     "#ff0000",
+     1.0
+    ],
+    "line B": [
+     "#ff0000",
+     1.0
+    ],
+    "line C": [
+     "#ff0000",
+     1.0
+    ],
+    "line D": [
+     "#ff0000",
+     1.0
+    ],
+    "line L": [
+     "#ff0000",
+     0.3
+    ],
+    "line R": [
+     "#ff0000",
+     0.3
+    ],
+    "cut up": [
+     "#ff0000",
+     0.3
+    ],
+    "cut down": [
+     "#ff0000",
+     0.3
+    ],
+    "dj back": [
+     "#ff0000",
+     0.3
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.8
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "y-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 11; family red; outside = the owner's rule (v6 scene 11); laser = the laser session's design of v6 scene 11 (green-chase), colours theirs; hold = v6"
+  },
+  {
+   "id": "run-to-the-dj",
+   "title": "Innersha · Run to the DJ",
+   "act": 2,
+   "intent": "White pumps on the beat, the truss full, the stage key on the DJ; open white scans behind him, warm white left only.",
+   "parts": {
+    "line A": [
+     "#ffffff",
+     0.3
+    ],
+    "line B": [
+     "#ffffff",
+     0.3
+    ],
+    "line C": [
+     "#ffffff",
+     0.3
+    ],
+    "line D": [
+     "#ffffff",
+     0.3
+    ],
+    "line L": [
+     "#ffffff",
+     0.3
+    ],
+    "line R": [
+     "#ffffff",
+     0.3
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.3
+    ],
+    "stage key": [
+     "#ffffff",
+     0.8
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#fff0c0",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 12; family white; outside = the owner's rule (v6 scene 12); laser = the laser session's design of v6 scene 12 (run-to-the-dj), colours theirs; hold = v6"
+  },
+  {
+   "id": "green-bars",
+   "title": "Innersha · Green bars",
+   "act": 2,
+   "intent": "Green bars flip across the hall; the beams nod mirrored, lime on the left.",
+   "parts": {
+    "line A": [
+     "#00ff00",
+     0.3
+    ],
+    "line B": [
+     "#00ff00",
+     1.0
+    ],
+    "line C": [
+     "#00ff00",
+     0.3
+    ],
+    "line D": [
+     "#00ff00",
+     1.0
+    ],
+    "line L": [
+     "#00ff00",
+     0.3
+    ],
+    "line R": [
+     "#00ff00",
+     0.3
+    ],
+    "cut up": [
+     "#00ff00",
+     0.3
+    ],
+    "cut down": [
+     "#00ff00",
+     0.3
+    ],
+    "dj back": [
+     "#00ff00",
+     0.3
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.3
+    ],
+    "stage key": [
+     "#00ff00",
+     0.3
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26296,74 +26543,181 @@
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "nod",
-    "period_s": 10,
+    "period_s": 7.272,
     "pan_deg": 0,
     "tilt_deg": 25,
-    "spatial": "alternate",
+    "spatial": "left-right",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 14; outside = the owner's rule (copied from v6 scene 14); laser = the laser session's design of v6 scene 14 (the-cut), unchanged"
+   "notes": "v2.0 scene 13; family green; outside = the owner's rule (v6 scene 13); laser = the laser session's design of v6 scene 13 (rays-pulse), colours theirs; hold = v6"
+  },
+  {
+   "id": "red-out",
+   "title": "Innersha · Red out from the DJ",
+   "act": 2,
+   "intent": "Red chases out from the DJ through the hall; red-orange behind him, red sides on a fast wide ride.",
+   "parts": {
+    "line A": [
+     "#ff0000",
+     0.3
+    ],
+    "line B": [
+     "#ff0000",
+     0.3
+    ],
+    "line C": [
+     "#ff0000",
+     0.3
+    ],
+    "line D": [
+     "#ff0000",
+     0.3
+    ],
+    "line L": [
+     "#ff0000",
+     0.3
+    ],
+    "line R": [
+     "#ff0000",
+     0.3
+    ],
+    "cut up": [
+     "#ff0000",
+     0.3
+    ],
+    "cut down": [
+     "#ff0000",
+     1.0
+    ],
+    "dj back": [
+     "#ff0000",
+     0.3
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.8
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "radial-",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 14; family red; outside = the owner's rule (v6 scene 14); laser = the laser session's design of v6 scene 14 (the-cut), colours theirs; hold = v6"
   },
   {
    "id": "the-word",
-   "title": "The word",
+   "title": "Innersha · The word",
    "act": 2,
-   "intent": "SIGNATURE: everything green at once, the teaser's wordmark; floor off. A lean wave in a ripple.",
+   "intent": "SIGNATURE: the teaser's column — 18 green beams straight up, pumping on the beat; the washes a green ember.",
    "parts": {
     "line A": [
-     "#33ff47",
-     0.7
+     "#00ff00",
+     0.15
     ],
     "line B": [
-     "#33ff47",
-     0.7
+     "#00ff00",
+     0.15
     ],
     "line C": [
-     "#33ff47",
-     0.7
+     "#00ff00",
+     0.15
     ],
     "line D": [
-     "#33ff47",
-     0.7
+     "#00ff00",
+     0.15
+    ],
+    "line L": [
+     "#00ff00",
+     0.15
+    ],
+    "line R": [
+     "#00ff00",
+     0.15
     ],
     "cut up": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     0.15
     ],
     "cut down": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     0.15
     ],
     "dj back": [
-     "#33ff47",
-     0.4
+     "#00ff00",
+     0.15
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.15
+    ],
+    "stage key": [
+     "#00ff00",
+     0.15
     ],
     "plane 1": [
      "#00d12a",
-     0.8
+     1.0
     ],
     "side line left": [
      "#00d12a",
-     0.8
+     1.0
     ],
     "side line right": [
-     "#00d12a",
-     0.8
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     "#8cff3a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26376,24 +26730,15 @@
     ]
    },
    "motion": {
-    "mode": "pulse",
-    "bpm": 66,
-    "depth": 120,
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "wave",
-    "period_s": 16,
-    "pan_deg": 0,
-    "tilt_deg": 15,
-    "spatial": "ripple",
-    "kinds": [
+     "up-pl5403",
      "up-b380f"
-    ]
+    ],
+    "still": 0.0
    },
    "laser_colour": "#eefdfd",
    "desk_caps": {
@@ -26402,56 +26747,68 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 15; outside = the owner's rule (copied from v6 scene 15); laser = the laser session's design of v6 scene 15 (left-right), unchanged"
+   "notes": "v2.0 scene 15; family green; outside = the owner's rule (v6 scene 15); laser = the laser session's design of v6 scene 15 (left-right), colours theirs; hold = v6"
   },
   {
-   "id": "glow-comet",
-   "title": "Glow comet",
+   "id": "white-comet",
+   "title": "Innersha · White comet",
    "act": 2,
-   "intent": "An amber comet runs the wall toward the entrance; the sides in amber nod in a ripple.",
+   "intent": "A white comet runs the floor lines toward the entrance; open white sides scan in circles.",
    "parts": {
     "line A": [
-     "#ffad4d",
-     0.5
+     "#ffffff",
+     0.3
     ],
     "line B": [
-     "#ffad4d",
-     0.5
+     "#ffffff",
+     0.3
     ],
     "line C": [
-     "#ffad4d",
-     0.5
+     "#ffffff",
+     0.3
     ],
     "line D": [
-     "#ffad4d",
-     0.5
-    ],
-    "cut up": [
-     "#d1eeff",
-     0.2
-    ],
-    "side line left": [
-     "#ffb000",
-     0.5
-    ],
-    "side line right": [
-     "#ffb000",
-     0.5
+     "#ffffff",
+     0.3
     ],
     "line L": [
-     "#e8e4dc",
-     0.1
+     "#ffffff",
+     1.0
     ],
     "line R": [
-     "#e8e4dc",
-     0.1
+     "#ffffff",
+     1.0
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     0.3
+    ],
+    "cut down": [
+     "#ffffff",
+     0.3
+    ],
+    "dj back": [
+     "#ffffff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.3
+    ],
+    "stage key": [
+     "#ffffff",
+     0.3
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#fff0c0",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26465,62 +26822,83 @@
     "depth": 255,
     "spatial": "y",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "nod",
-    "period_s": 12,
-    "pan_deg": 0,
-    "tilt_deg": 18,
+    "pattern": "circle",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 20,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 16; outside = the owner's rule (copied from v6 scene 16); laser = the laser session's design of v6 scene 16 (glow-comet), unchanged"
+   "notes": "v2.0 scene 16; family white; outside = the owner's rule (v6 scene 16); laser = the laser session's design of v6 scene 16 (glow-comet), colours theirs; hold = v6"
   },
   {
    "id": "scissors",
-   "title": "Scissors",
+   "title": "Innersha · Scissors",
    "act": 2,
-   "intent": "Warm white scissors: the sides lean fast, neighbours opposite; rust in the middle of the wall.",
+   "intent": "Red scissors: the sides lean fast, neighbours opposite, red left, red-orange right; red behind the DJ.",
    "parts": {
-    "side line left": [
-     "#fff0c0",
-     0.7
-    ],
-    "side line right": [
-     "#fff0c0",
-     0.7
-    ],
-    "plane 1": [
-     "#fff0c0",
-     0.5
+    "line A": [
+     "#ff0000",
+     0.3
     ],
     "line B": [
-     "#e04e00",
-     0.4
+     "#ff0000",
+     0.3
     ],
     "line C": [
-     "#e04e00",
-     0.4
+     "#ff0000",
+     0.3
+    ],
+    "line D": [
+     "#ff0000",
+     0.3
     ],
     "line L": [
-     "#e8e4dc",
-     0.1
+     "#ff0000",
+     0.3
     ],
     "line R": [
-     "#e8e4dc",
-     0.1
+     "#ff0000",
+     0.3
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.3
+    ],
+    "cut down": [
+     "#ff0000",
+     0.3
+    ],
+    "dj back": [
+     "#ff0000",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.3
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26533,18 +26911,19 @@
     ]
    },
    "motion": {
-    "mode": "breathe",
-    "bpm": 66,
-    "depth": 120,
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "nod",
-    "period_s": 6,
+    "period_s": 3.636,
     "pan_deg": 0,
     "tilt_deg": 25,
     "spatial": "alternate",
@@ -26559,40 +26938,64 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 17; outside = the owner's rule (copied from v6 scene 17); laser = the laser session's design of v6 scene 17 (scissors), unchanged"
+   "notes": "v2.0 scene 17; family red; outside = the owner's rule (v6 scene 17); laser = the laser session's design of v6 scene 17 (scissors), colours theirs; hold = v6"
   },
   {
    "id": "green-comb",
-   "title": "Green comb",
+   "title": "Innersha · Green comb",
    "act": 2,
-   "intent": "Green ping-pongs along the wall, green behind the DJ waves; floor off; the cubes comb the air.",
+   "intent": "Green ping-pongs along the wall; green behind the DJ rides a wide figure eight.",
    "parts": {
     "line A": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     1.0
     ],
     "line B": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     1.0
     ],
     "line C": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     1.0
     ],
     "line D": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     1.0
+    ],
+    "line L": [
+     "#00ff00",
+     0.3
+    ],
+    "line R": [
+     "#00ff00",
+     0.3
+    ],
+    "cut up": [
+     "#00ff00",
+     0.3
+    ],
+    "cut down": [
+     "#00ff00",
+     0.3
+    ],
+    "dj back": [
+     "#00ff00",
+     0.3
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.3
+    ],
+    "stage key": [
+     "#00ff00",
+     0.3
     ],
     "plane 1": [
      "#00d12a",
-     0.6
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26610,15 +27013,16 @@
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "wave",
-    "period_s": 10,
-    "pan_deg": 0,
-    "tilt_deg": 15,
+    "pattern": "figure8",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
@@ -26631,64 +27035,72 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 18; outside = the owner's rule (copied from v6 scene 18); laser = the laser session's design of v6 scene 18 (green-comb), unchanged"
+   "notes": "v2.0 scene 18; family green; outside = the owner's rule (v6 scene 18); laser = the laser session's design of v6 scene 18 (green-comb), colours theirs; hold = v6"
   },
   {
-   "id": "pingpong-rust",
-   "title": "Ping-pong rust",
+   "id": "white-bars",
+   "title": "Innersha · White bars",
    "act": 2,
-   "intent": "Dark amber ping-pongs the wall; the truss amber; orange sides nod in a ripple.",
+   "intent": "White bars flip across the hall; the beams scan mirrored, warm white on the left.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.7
+     "#ffffff",
+     0.3
     ],
     "line B": [
-     "#e04e00",
-     0.7
+     "#ffffff",
+     0.3
     ],
     "line C": [
-     "#e04e00",
-     0.7
+     "#ffffff",
+     0.3
     ],
     "line D": [
-     "#e04e00",
-     0.7
-    ],
-    "cut up": [
-     "#ffad4d",
-     0.5
-    ],
-    "cut down": [
-     "#ffad4d",
-     0.5
-    ],
-    "side line left": [
-     "#ff7a00",
-     0.6
-    ],
-    "side line right": [
-     "#ff7a00",
-     0.6
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.5
+     "#ffffff",
+     0.3
     ],
     "line L": [
-     "#e8e4dc",
-     0.12
+     "#ffffff",
+     0.3
     ],
     "line R": [
-     "#e8e4dc",
-     0.12
+     "#ffffff",
+     0.3
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.8
+    ],
+    "stage key": [
+     "#ffffff",
+     0.3
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#fff0c0",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26697,87 +27109,92 @@
     ]
    },
    "motion": {
-    "mode": "pingpong",
+    "mode": "bars",
     "bpm": 132,
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "nod",
-    "period_s": 8,
-    "pan_deg": 0,
-    "tilt_deg": 20,
-    "spatial": "ripple",
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 25,
+    "spatial": "left-right",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 19; outside = the owner's rule (copied from v6 scene 19); laser = the laser session's design of v6 scene 19 (pingpong-rays), unchanged"
+   "notes": "v2.0 scene 19; family white; outside = the owner's rule (v6 scene 19); laser = the laser session's design of v6 scene 19 (pingpong-rays), colours theirs; hold = v6"
   },
   {
    "id": "riser",
-   "title": "Riser",
+   "title": "Innersha · Riser",
    "act": 2,
-   "intent": "Everything up: ash wall, cold truss, open white turning fast in a ripple. The rise before the first drop.",
+   "intent": "Everything red, pumping; all 18 beams ride wide and fast in a ripple. The rise before the first drop.",
    "parts": {
     "line A": [
-     "#e8e4dc",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line B": [
-     "#e8e4dc",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line C": [
-     "#e8e4dc",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line D": [
-     "#e8e4dc",
-     0.8
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.6
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.6
-    ],
-    "dj back": [
-     "#ffbe7a",
-     0.5
-    ],
-    "plane 1": [
-     "#ffffff",
-     0.9
-    ],
-    "side line left": [
-     "#ffffff",
-     0.9
-    ],
-    "side line right": [
-     "#ffffff",
-     0.9
+     "#ff0000",
+     1.0
     ],
     "line L": [
-     "#e8e4dc",
-     0.15
+     "#ff0000",
+     1.0
     ],
     "line R": [
-     "#e8e4dc",
-     0.15
+     "#ff0000",
+     1.0
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     1.0
+    ],
+    "cut down": [
+     "#ff0000",
+     1.0
+    ],
+    "dj back": [
+     "#ff0000",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff0000",
+     1.0
+    ],
+    "stage key": [
+     "#ff0000",
+     1.0
+    ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26790,20 +27207,21 @@
     ]
    },
    "motion": {
-    "mode": "pulse",
+    "mode": "pump",
     "bpm": 132,
-    "depth": 200,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "circle",
-    "period_s": 6,
-    "pan_deg": 0,
-    "tilt_deg": 20,
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
@@ -26816,14 +27234,58 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 20; outside = the owner's rule (copied from v6 scene 20); laser = the laser session's design of v6 scene 20 (riser), unchanged"
+   "notes": "v2.0 scene 20; family red; outside = the owner's rule (v6 scene 20); laser = the laser session's design of v6 scene 20 (riser), colours theirs; hold = v6"
   },
   {
    "id": "white-cathedral",
-   "title": "White cathedral",
+   "title": "Kerrie · White cathedral",
    "act": 3,
-   "intent": "The cathedral: 18 open-white beams turning in a ripple, the truss cold, the wall cold. Pumps on the beat.",
+   "intent": "The cathedral: every lamp open white, strobing at 3 a second, the 18 beams scanning circles in a ripple.",
    "parts": {
+    "line A": [
+     "#ffffff",
+     1.0
+    ],
+    "line B": [
+     "#ffffff",
+     1.0
+    ],
+    "line C": [
+     "#ffffff",
+     1.0
+    ],
+    "line D": [
+     "#ffffff",
+     1.0
+    ],
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "stage key": [
+     "#ffffff",
+     1.0
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -26833,47 +27295,11 @@
      1.0
     ],
     "side line right": [
-     "#ffffff",
+     "#fff0c0",
      1.0
     ],
-    "cut up": [
-     "#eefdfd",
-     0.8
-    ],
-    "line A": [
-     "#eefdfd",
-     0.5
-    ],
-    "line B": [
-     "#eefdfd",
-     0.5
-    ],
-    "line C": [
-     "#eefdfd",
-     0.5
-    ],
-    "line D": [
-     "#eefdfd",
-     0.5
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.6
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.2
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.2
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26886,20 +27312,21 @@
     ]
    },
    "motion": {
-    "mode": "pump",
+    "mode": "strobe",
     "bpm": 132,
-    "depth": 180,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "circle",
-    "period_s": 8,
-    "pan_deg": 0,
-    "tilt_deg": 20,
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
@@ -26912,14 +27339,285 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 21; outside = the owner's rule (copied from v6 scene 21); laser = the laser session's design of v6 scene 21 (white-cathedral), unchanged"
+   "notes": "v2.0 scene 21; family white; outside = the owner's rule (v6 scene 21); laser = the laser session's design of v6 scene 21 (white-cathedral), colours theirs; hold = v6"
   },
   {
-   "id": "strobe-hit",
-   "title": "Strobe hit",
+   "id": "blackout",
+   "title": "Kerrie · Blackout",
    "act": 3,
-   "intent": "Six seconds of strobe: beams straight up, the wall ash. No colour. Then dark.",
+   "intent": "Six seconds of nothing. The deliberate blackout cut before the red room.",
    "parts": {
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "notes": "v2.0 scene 22; family blackout; outside = the owner's rule (v6 scene 22); laser = the laser session's design of v6 scene 22 (strobe-hit), colours theirs; hold = v6"
+  },
+  {
+   "id": "red-room",
+   "title": "Kerrie · Red room",
+   "act": 3,
+   "intent": "SIGNATURE: the room red from the floor; red beams nod together; pumping.",
+   "parts": {
+    "line A": [
+     "#ff0000",
+     1.0
+    ],
+    "line B": [
+     "#ff0000",
+     1.0
+    ],
+    "line C": [
+     "#ff0000",
+     1.0
+    ],
+    "line D": [
+     "#ff0000",
+     1.0
+    ],
+    "line L": [
+     "#ff0000",
+     0.3
+    ],
+    "line R": [
+     "#ff0000",
+     0.3
+    ],
+    "cut up": [
+     "#ff0000",
+     0.3
+    ],
+    "cut down": [
+     "#ff0000",
+     0.3
+    ],
+    "dj back": [
+     "#ff0000",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.3
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
+    ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#ff3a12",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 7.272,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "all",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 23; family red; outside = the owner's rule (v6 scene 23); laser = the laser session's design of v6 scene 23 (red-room), colours theirs; hold = v6"
+  },
+  {
+   "id": "green-storm",
+   "title": "Kerrie · Green storm",
+   "act": 3,
+   "intent": "Green bars across the hall; the beams scan fast, mirrored, lime left.",
+   "parts": {
+    "line A": [
+     "#00ff00",
+     0.3
+    ],
+    "line B": [
+     "#00ff00",
+     0.3
+    ],
+    "line C": [
+     "#00ff00",
+     0.3
+    ],
+    "line D": [
+     "#00ff00",
+     0.3
+    ],
+    "line L": [
+     "#00ff00",
+     0.3
+    ],
+    "line R": [
+     "#00ff00",
+     0.3
+    ],
+    "cut up": [
+     "#00ff00",
+     1.0
+    ],
+    "cut down": [
+     "#00ff00",
+     1.0
+    ],
+    "dj back": [
+     "#00ff00",
+     0.3
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.3
+    ],
+    "stage key": [
+     "#00ff00",
+     0.3
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#00ff00",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "bars",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 24; family green; outside = the owner's rule (v6 scene 24); laser = the laser session's design of v6 scene 24 (the-storm), colours theirs; hold = v6"
+  },
+  {
+   "id": "radar",
+   "title": "Kerrie · Radar",
+   "act": 3,
+   "intent": "A white radar line sweeps the hall; the beams ride wide, warm white on the right; the stage key on the DJ.",
+   "parts": {
+    "line A": [
+     "#ffffff",
+     0.3
+    ],
+    "line B": [
+     "#ffffff",
+     0.3
+    ],
+    "line C": [
+     "#ffffff",
+     0.3
+    ],
+    "line D": [
+     "#ffffff",
+     0.3
+    ],
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     0.3
+    ],
+    "cut down": [
+     "#ffffff",
+     0.3
+    ],
+    "dj back": [
+     "#ffffff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.3
+    ],
+    "stage key": [
+     "#ffffff",
+     1.0
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -26929,47 +27627,289 @@
      1.0
     ],
     "side line right": [
+     "#fff0c0",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#00ff00",
+     1
+    ]
+   },
+   "motion": {
+    "mode": "radar",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#00ff00",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 25; family white; outside = the owner's rule (v6 scene 25); laser = the laser session's design of v6 scene 25 (matrix), colours theirs; hold = v6"
+  },
+  {
+   "id": "red-blocks",
+   "title": "Kerrie · Red blocks",
+   "act": 3,
+   "intent": "Red blocks flip; the kicker counter-lights the DJ; red-orange straight up behind him, still.",
+   "parts": {
+    "line A": [
+     "#ff0000",
+     0.25
+    ],
+    "line B": [
+     "#ff0000",
+     0.25
+    ],
+    "line C": [
+     "#ff0000",
+     0.25
+    ],
+    "line D": [
+     "#ff0000",
+     0.25
+    ],
+    "line L": [
+     "#ff0000",
+     0.25
+    ],
+    "line R": [
+     "#ff0000",
+     0.25
+    ],
+    "cut up": [
+     "#ff0000",
+     0.25
+    ],
+    "cut down": [
+     "#ff0000",
+     0.25
+    ],
+    "dj back": [
+     "#ff0000",
+     0.8
+    ],
+    "dj kicker": [
+     "#ff0000",
+     1.0
+    ],
+    "stage key": [
+     "#ff0000",
+     0.25
+    ],
+    "plane 1": [
+     "#ff5a1e",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "blocks",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "notes": "v2.0 scene 26; family red; outside = the owner's rule (v6 scene 26); laser = the laser session's design of v6 scene 26 (pump-white), colours theirs; hold = v6"
+  },
+  {
+   "id": "green-scan",
+   "title": "Kerrie · Green scan",
+   "act": 3,
+   "intent": "Green ping-pongs the wall; only the left side scans, fast, neighbours opposite.",
+   "parts": {
+    "line A": [
+     "#00ff00",
+     1.0
+    ],
+    "line B": [
+     "#00ff00",
+     1.0
+    ],
+    "line C": [
+     "#00ff00",
+     1.0
+    ],
+    "line D": [
+     "#00ff00",
+     1.0
+    ],
+    "line L": [
+     "#00ff00",
+     0.3
+    ],
+    "line R": [
+     "#00ff00",
+     0.3
+    ],
+    "cut up": [
+     "#00ff00",
+     0.3
+    ],
+    "cut down": [
+     "#00ff00",
+     0.3
+    ],
+    "dj back": [
+     "#00ff00",
+     0.3
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.3
+    ],
+    "stage key": [
+     "#00ff00",
+     0.3
+    ],
+    "side line left": [
+     "#00d12a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#b699ff",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pingpong",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "x",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 90,
+    "tilt_deg": 20,
+    "spatial": "alternate",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#b699ff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 27; family green; outside = the owner's rule (v6 scene 27); laser = the laser session's design of v6 scene 27 (radar), colours theirs; hold = v6"
+  },
+  {
+   "id": "blinders",
+   "title": "Kerrie · Blinders",
+   "act": 3,
+   "intent": "SIGNATURE: the instrument. Every lamp open white straight up, strobing. Eight seconds.",
+   "parts": {
+    "line A": [
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#e8e4dc",
-     0.8
-    ],
     "line B": [
-     "#e8e4dc",
-     0.8
+     "#ffffff",
+     1.0
     ],
     "line C": [
-     "#e8e4dc",
-     0.8
+     "#ffffff",
+     1.0
     ],
     "line D": [
-     "#e8e4dc",
-     0.8
-    ],
-    "cut up": [
-     "#e8e4dc",
-     0.6
-    ],
-    "cut down": [
-     "#e8e4dc",
-     0.6
+     "#ffffff",
+     1.0
     ],
     "line L": [
-     "#e8e4dc",
-     0.1
+     "#ffffff",
+     1.0
     ],
     "line R": [
-     "#e8e4dc",
-     0.1
+     "#ffffff",
+     1.0
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "stage key": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#fff0c0",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -26986,167 +27926,79 @@
      "up-pl5403",
      "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 22; outside = the owner's rule (copied from v6 scene 22); laser = the laser session's design of v6 scene 22 (strobe-hit), unchanged"
+   "notes": "v2.0 scene 28; family white; outside = the owner's rule (v6 scene 28); laser = the laser session's design of v6 scene 28 (blinders), colours theirs; hold = v6"
   },
   {
-   "id": "red-room",
-   "title": "Red room",
+   "id": "red-bars",
+   "title": "Kerrie · Red bars",
    "act": 3,
-   "intent": "SIGNATURE: the room red from the floor; red beams nod together; no white at all; floor off.",
+   "intent": "Red bars across the hall, red-orange on the left; the beams ride wide and fast in a ripple.",
    "parts": {
     "line A": [
-     "#ff3a12",
-     0.7
+     "#ff0000",
+     1.0
     ],
     "line B": [
-     "#ff3a12",
-     0.7
+     "#ff0000",
+     0.3
     ],
     "line C": [
-     "#ff3a12",
-     0.7
+     "#ff0000",
+     0.3
     ],
     "line D": [
-     "#ff3a12",
-     0.7
-    ],
-    "cut down": [
-     "#ff3a12",
-     0.4
-    ],
-    "dj back": [
-     "#a3200c",
-     0.5
-    ],
-    "plane 1": [
-     "#ff2a0a",
-     0.8
-    ],
-    "side line left": [
-     "#ff2a0a",
-     0.8
-    ],
-    "side line right": [
-     "#ff2a0a",
-     0.8
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
-     "#ff3a12",
-     0.8
-    ]
-   },
-   "motion": {
-    "mode": "pump",
-    "bpm": 132,
-    "depth": 160,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "nod",
-    "period_s": 8,
-    "pan_deg": 0,
-    "tilt_deg": 25,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#ff3a12",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 23; outside = the owner's rule (copied from v6 scene 23); laser = the laser session's design of v6 scene 23 (red-room), unchanged"
-  },
-  {
-   "id": "the-storm",
-   "title": "The storm",
-   "act": 3,
-   "intent": "Open white draws fast X's, mirrored; ash bars flip across the wall.",
-   "parts": {
-    "plane 1": [
-     "#ffffff",
+     "#ff0000",
      1.0
-    ],
-    "side line left": [
-     "#ffffff",
-     1.0
-    ],
-    "side line right": [
-     "#ffffff",
-     1.0
-    ],
-    "line A": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line B": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line C": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line D": [
-     "#e8e4dc",
-     0.7
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.6
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.6
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.5
     ],
     "line L": [
-     "#e8e4dc",
-     0.15
+     "#ff0000",
+     0.3
     ],
     "line R": [
-     "#e8e4dc",
-     0.15
+     "#ff0000",
+     0.3
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.3
+    ],
+    "cut down": [
+     "#ff0000",
+     1.0
+    ],
+    "dj back": [
+     "#ff0000",
+     0.3
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.3
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
+    ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
      "#e04e00",
      0.6
-    ],
-    "laser": [
-     "#00ff00",
-     0.8
     ]
    },
    "motion": {
@@ -27154,478 +28006,88 @@
     "bpm": 132,
     "depth": 255,
     "spatial": "x",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "figure8",
-    "period_s": 4,
-    "pan_deg": 0,
-    "tilt_deg": 15,
-    "spatial": "left-right",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#00ff00",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 24; outside = the owner's rule (copied from v6 scene 24); laser = the laser session's design of v6 scene 24 (the-storm), unchanged"
-  },
-  {
-   "id": "the-word-two",
-   "title": "The word, again",
-   "act": 3,
-   "intent": "SIGNATURE: green, whole rig, the beams turning; floor off.",
-   "parts": {
-    "line A": [
-     "#33ff47",
-     0.8
-    ],
-    "line B": [
-     "#33ff47",
-     0.8
-    ],
-    "line C": [
-     "#33ff47",
-     0.8
-    ],
-    "line D": [
-     "#33ff47",
-     0.8
-    ],
-    "cut up": [
-     "#33ff47",
-     0.6
-    ],
-    "cut down": [
-     "#33ff47",
-     0.6
-    ],
-    "dj back": [
-     "#33ff47",
-     0.5
-    ],
-    "plane 1": [
-     "#00d12a",
-     1.0
-    ],
-    "side line left": [
-     "#00d12a",
-     1.0
-    ],
-    "side line right": [
-     "#00d12a",
-     1.0
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
-     "#00ff00",
-     1
-    ]
-   },
-   "motion": {
-    "mode": "breathe",
-    "bpm": 66,
-    "depth": 120,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "circle",
-    "period_s": 10,
-    "pan_deg": 0,
-    "tilt_deg": 20,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#00ff00",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 25; outside = the owner's rule (copied from v6 scene 25); laser = the laser session's design of v6 scene 25 (matrix), unchanged"
-  },
-  {
-   "id": "dark-between",
-   "title": "Dark between",
-   "act": 3,
-   "intent": "The gap inside the peak: rust behind the DJ, one warm beam straight up. Eight seconds of almost nothing.",
-   "parts": {
-    "dj back": [
-     "#e04e00",
-     0.3
-    ],
-    "plane 1": [
-     "#fff0c0",
-     0.3
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.08
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.08
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "none",
-    "bpm": 60,
-    "depth": 0,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "notes": "v2.0 scene 26; outside = the owner's rule (copied from v6 scene 26); laser = the laser session's design of v6 scene 26 (pump-white), unchanged"
-  },
-  {
-   "id": "radar",
-   "title": "Radar",
-   "act": 3,
-   "intent": "A radar line sweeps the wall; the side beams open white nod in a ripple.",
-   "parts": {
-    "side line left": [
-     "#ffffff",
-     0.9
-    ],
-    "side line right": [
-     "#ffffff",
-     0.9
-    ],
-    "line A": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line B": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line C": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line D": [
-     "#e8e4dc",
-     0.7
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.4
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.12
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.12
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
-     "#00ff00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "radar",
-    "bpm": 132,
-    "depth": 255,
-    "spatial": "x",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "nod",
-    "period_s": 6,
-    "pan_deg": 0,
-    "tilt_deg": 20,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#00ff00",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 27; outside = the owner's rule (copied from v6 scene 27); laser = the laser session's design of v6 scene 27 (radar), unchanged"
-  },
-  {
-   "id": "blinders",
-   "title": "Blinders",
-   "act": 3,
-   "intent": "SIGNATURE: the instrument. Every lamp open, straight up, pumping on the beat. Eight seconds, then dark.",
-   "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
-    ],
-    "side line left": [
-     "#ffffff",
-     1.0
-    ],
-    "side line right": [
-     "#ffffff",
-     1.0
-    ],
-    "line A": [
-     "#eefdfd",
-     1.0
-    ],
-    "line B": [
-     "#eefdfd",
-     1.0
-    ],
-    "line C": [
-     "#eefdfd",
-     1.0
-    ],
-    "line D": [
-     "#eefdfd",
-     1.0
-    ],
-    "cut up": [
-     "#eefdfd",
-     1.0
-    ],
-    "cut down": [
-     "#eefdfd",
-     1.0
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.8
-    ],
-    "stage key": [
-     "#e8e4dc",
-     0.8
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.3
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.3
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "pump",
-    "bpm": 132,
-    "depth": 220,
-    "spatial": "patch",
     "kinds": [
      "up-pl5403",
      "up-b380f"
     ],
-    "still": 0.3
-   },
-   "notes": "v2.0 scene 28; outside = the owner's rule (copied from v6 scene 28); laser = the laser session's design of v6 scene 28 (blinders), unchanged"
-  },
-  {
-   "id": "copper-bars",
-   "title": "Copper bars",
-   "act": 3,
-   "intent": "Amber bars across the wall, red-orange beams scissoring. The furnace at full heat.",
-   "parts": {
-    "line A": [
-     "#ffad4d",
-     0.8
-    ],
-    "line B": [
-     "#ffad4d",
-     0.8
-    ],
-    "line C": [
-     "#ffad4d",
-     0.8
-    ],
-    "line D": [
-     "#ffad4d",
-     0.8
-    ],
-    "cut down": [
-     "#e04e00",
-     0.6
-    ],
-    "plane 1": [
-     "#ff5a1e",
-     0.9
-    ],
-    "side line left": [
-     "#ff5a1e",
-     0.9
-    ],
-    "side line right": [
-     "#ff5a1e",
-     0.9
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.6
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.15
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.15
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
-   "motion": {
-    "mode": "bars",
-    "bpm": 132,
-    "depth": 255,
-    "spatial": "x",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "nod",
-    "period_s": 6,
-    "pan_deg": 0,
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
     "tilt_deg": 25,
-    "spatial": "alternate",
+    "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 29; outside = the owner's rule (copied from v6 scene 29); laser = the laser session's design of v6 scene 29 (copper-scissors), unchanged"
+   "notes": "v2.0 scene 29; family red; outside = the owner's rule (v6 scene 29); laser = the laser session's design of v6 scene 29 (copper-scissors), colours theirs; hold = v6"
   },
   {
-   "id": "sparkle-peak",
-   "title": "Sparkle peak",
+   "id": "green-sparkle",
+   "title": "Kerrie · Green sparkle",
    "act": 3,
-   "intent": "Ash sparkles across the wall (never above 20 bpm); open white waves in a ripple.",
+   "intent": "Green sparkles across the hall (20 a minute, never more); the beams nod fast, mirrored.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     0.9
-    ],
-    "side line left": [
-     "#ffffff",
-     0.9
-    ],
-    "side line right": [
-     "#ffffff",
-     0.9
-    ],
     "line A": [
-     "#e8e4dc",
-     0.8
+     "#00ff00",
+     0.3
     ],
     "line B": [
-     "#e8e4dc",
-     0.8
+     "#00ff00",
+     1.0
     ],
     "line C": [
-     "#e8e4dc",
-     0.8
+     "#00ff00",
+     1.0
     ],
     "line D": [
-     "#e8e4dc",
-     0.8
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.6
+     "#00ff00",
+     0.3
     ],
     "line L": [
-     "#e8e4dc",
-     0.15
+     "#00ff00",
+     0.3
     ],
     "line R": [
-     "#e8e4dc",
-     0.15
+     "#00ff00",
+     0.3
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#00ff00",
+     1.0
+    ],
+    "cut down": [
+     "#00ff00",
+     0.3
+    ],
+    "dj back": [
+     "#00ff00",
+     0.3
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.3
+    ],
+    "stage key": [
+     "#00ff00",
+     0.3
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -27633,7 +28095,7 @@
      0.6
     ],
     "laser": [
-     "#00ff00",
+     "#b699ff",
      0.5
     ]
    },
@@ -27643,69 +28105,82 @@
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "wave",
-    "period_s": 8,
+    "pattern": "nod",
+    "period_s": 3.636,
     "pan_deg": 0,
     "tilt_deg": 25,
-    "spatial": "ripple",
+    "spatial": "left-right",
     "kinds": [
      "up-b380f"
     ]
    },
-   "laser_colour": "#00ff00",
+   "laser_colour": "#b699ff",
    "desk_caps": {
     "laser": {
      "fader": 0.16,
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 30; outside = the owner's rule (copied from v6 scene 30); laser = the laser session's design of v6 scene 30 (sparkle-peak), unchanged"
+   "notes": "v2.0 scene 30; family green; outside = the owner's rule (v6 scene 30); laser = the laser session's design of v6 scene 30 (sparkle-peak), colours theirs; hold = v6"
   },
   {
-   "id": "drop-to-ash",
-   "title": "Drop to ash",
+   "id": "drop",
+   "title": "Éléktra b2b Kogeno · Drop",
    "act": 4,
-   "intent": "The drop: the wall down to a rust ember, the DJ a shadow again.",
+   "intent": "The drop: red embers everywhere, the DJ from behind; everything breathes to black.",
    "parts": {
     "line A": [
-     "#e04e00",
+     "#ff0000",
      0.2
     ],
     "line B": [
-     "#e04e00",
+     "#ff0000",
      0.2
     ],
     "line C": [
-     "#e04e00",
+     "#ff0000",
      0.2
     ],
     "line D": [
-     "#e04e00",
+     "#ff0000",
+     0.2
+    ],
+    "line L": [
+     "#ff0000",
+     0.2
+    ],
+    "line R": [
+     "#ff0000",
+     0.2
+    ],
+    "cut up": [
+     "#ff0000",
+     0.2
+    ],
+    "cut down": [
+     "#ff0000",
      0.2
     ],
     "dj back": [
-     "#e04e00",
-     0.15
+     "#ff0000",
+     0.8
     ],
-    "line L": [
-     "#e8e4dc",
-     0.05
+    "dj kicker": [
+     "#ff0000",
+     0.2
     ],
-    "line R": [
-     "#e8e4dc",
-     0.05
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "stage key": [
+     "#ff0000",
+     0.2
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -27716,39 +28191,71 @@
    "motion": {
     "mode": "breathe",
     "bpm": 33,
-    "depth": 100,
+    "depth": 200,
     "spatial": "patch",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 31; outside = the owner's rule (copied from v6 scene 31); laser = the laser session's design of v6 scene 31 (drop-away), unchanged"
+   "notes": "v2.0 scene 31; family red; outside = the owner's rule (v6 scene 31); laser = the laser session's design of v6 scene 31 (drop-away), colours theirs; hold = v6"
   },
   {
    "id": "one-beam-back",
-   "title": "One beam back",
+   "title": "Éléktra b2b Kogeno · One beam back",
    "act": 4,
-   "intent": "One warm white beam behind the DJ, a slow lean wave; nothing else.",
+   "intent": "Warm white behind the DJ, a slow lean wave; the washes a white ember.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.3
+    "line A": [
+     "#ffffff",
+     0.2
+    ],
+    "line B": [
+     "#ffffff",
+     0.2
+    ],
+    "line C": [
+     "#ffffff",
+     0.2
+    ],
+    "line D": [
+     "#ffffff",
+     0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.05
+     "#ffffff",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.05
+     "#ffffff",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     0.2
+    ],
+    "cut down": [
+     "#ffffff",
+     0.2
+    ],
+    "dj back": [
+     "#ffffff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.2
+    ],
+    "stage key": [
+     "#ffffff",
+     0.2
+    ],
+    "plane 1": [
+     "#fff0c0",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -27764,11 +28271,11 @@
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "wave",
-    "period_s": 30,
+    "period_s": 29.088,
     "pan_deg": 0,
     "tilt_deg": 22,
     "spatial": "ripple",
@@ -27776,32 +28283,60 @@
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 32; outside = the owner's rule (copied from v6 scene 32); laser = the laser session's design of v6 scene 32 (one-beam-back), unchanged"
+   "notes": "v2.0 scene 32; family white; outside = the owner's rule (v6 scene 32); laser = the laser session's design of v6 scene 32 (one-beam-back), colours theirs; hold = v6"
   },
   {
-   "id": "ash",
-   "title": "Ash",
+   "id": "green-ash",
+   "title": "Éléktra b2b Kogeno · Green ash",
    "act": 4,
-   "intent": "SIGNATURE: the darkest scene. Two embers just visible in the haze, one beam, the cubes one slow line.",
+   "intent": "SIGNATURE: the darkest scene. Green rolls to black along the wall; the cubes one slow line.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.06
+     "#00ff00",
+     0.6
+    ],
+    "line B": [
+     "#00ff00",
+     0.15
+    ],
+    "line C": [
+     "#00ff00",
+     0.15
     ],
     "line D": [
-     "#e04e00",
-     0.06
+     "#00ff00",
+     0.6
     ],
-    "plane 1": [
-     "#fff0c0",
-     0.2
+    "line L": [
+     "#00ff00",
+     0.15
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "line R": [
+     "#00ff00",
+     0.15
+    ],
+    "cut up": [
+     "#00ff00",
+     0.15
+    ],
+    "cut down": [
+     "#00ff00",
+     0.15
+    ],
+    "dj back": [
+     "#00ff00",
+     0.15
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.15
+    ],
+    "stage key": [
+     "#00ff00",
+     0.15
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -27809,69 +28344,89 @@
      0.6
     ],
     "laser": [
-     "#00ff00",
+     "#26bcff",
      0.4
     ]
    },
    "motion": {
-    "mode": "none",
-    "bpm": 60,
-    "depth": 0,
-    "spatial": "patch",
+    "mode": "sine",
+    "bpm": 33,
+    "depth": 255,
+    "spatial": "y-",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "laser_colour": "#00ff00",
+   "laser_colour": "#26bcff",
    "desk_caps": {
     "laser": {
      "fader": 0.16,
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 33; outside = the owner's rule (copied from v6 scene 33); laser = the laser session's design of v6 scene 33 (blue-wave), unchanged"
+   "notes": "v2.0 scene 33; family green; outside = the owner's rule (v6 scene 33); laser = the laser session's design of v6 scene 33 (blue-wave), colours theirs; hold = v6"
   },
   {
    "id": "ember-floor",
-   "title": "Ember floor",
+   "title": "Éléktra b2b Kogeno · Ember floor",
    "act": 4,
-   "intent": "The ember floor rolls slowly toward the DJ.",
+   "intent": "The floor lines red rolling toward the DJ; red sides ride slowly across the hall.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.1
+     "#ff0000",
+     0.2
     ],
     "line B": [
-     "#e04e00",
-     0.1
+     "#ff0000",
+     0.2
     ],
     "line C": [
-     "#e04e00",
-     0.1
+     "#ff0000",
+     0.2
     ],
     "line D": [
-     "#e04e00",
-     0.1
-    ],
-    "dj back": [
-     "#e04e00",
-     0.1
+     "#ff0000",
+     0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.04
+     "#ff0000",
+     0.7
     ],
     "line R": [
-     "#e8e4dc",
-     0.04
+     "#ff0000",
+     0.7
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.2
+    ],
+    "cut down": [
+     "#ff0000",
+     0.2
+    ],
+    "dj back": [
+     "#ff0000",
+     0.2
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.2
+    ],
+    "stage key": [
+     "#ff0000",
+     0.2
+    ],
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -27882,51 +28437,85 @@
    "motion": {
     "mode": "sine",
     "bpm": 33,
-    "depth": 120,
+    "depth": 200,
     "spatial": "y-",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 34; outside = the owner's rule (copied from v6 scene 34); laser = the laser session's design of v6 scene 34 (ice-mist), unchanged"
+   "heads": {
+    "pattern": "circle",
+    "period_s": 29.088,
+    "pan_deg": 120,
+    "tilt_deg": 25,
+    "spatial": "left-right",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "notes": "v2.0 scene 34; family red; outside = the owner's rule (v6 scene 34); laser = the laser session's design of v6 scene 34 (ice-mist), colours theirs; hold = v6"
   },
   {
    "id": "slow-line",
-   "title": "Slow line",
+   "title": "Éléktra b2b Kogeno · Slow line",
    "act": 4,
-   "intent": "The sides in warm white draw one slow X over forty seconds.",
+   "intent": "Warm white sides draw one slow wide figure eight over the hall; the washes a white ember, still.",
    "parts": {
+    "line A": [
+     "#ffffff",
+     0.2
+    ],
+    "line B": [
+     "#ffffff",
+     0.2
+    ],
+    "line C": [
+     "#ffffff",
+     0.2
+    ],
+    "line D": [
+     "#ffffff",
+     0.2
+    ],
+    "line L": [
+     "#ffffff",
+     0.2
+    ],
+    "line R": [
+     "#ffffff",
+     0.2
+    ],
+    "cut up": [
+     "#ffffff",
+     0.2
+    ],
+    "cut down": [
+     "#ffffff",
+     0.2
+    ],
+    "dj back": [
+     "#ffffff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.2
+    ],
+    "stage key": [
+     "#ffffff",
+     0.2
+    ],
     "side line left": [
      "#fff0c0",
-     0.25
+     1.0
     ],
     "side line right": [
      "#fff0c0",
-     0.25
-    ],
-    "line B": [
-     "#e04e00",
-     0.08
-    ],
-    "line C": [
-     "#e04e00",
-     0.08
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.05
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.05
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -27942,64 +28531,72 @@
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "figure8",
-    "period_s": 40,
-    "pan_deg": 0,
+    "period_s": 29.088,
+    "pan_deg": 150,
     "tilt_deg": 25,
     "spatial": "left-right",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 35; outside = the owner's rule (copied from v6 scene 35); laser = the laser session's design of v6 scene 35 (slow-eight), unchanged"
+   "notes": "v2.0 scene 35; family white; outside = the owner's rule (v6 scene 35); laser = the laser session's design of v6 scene 35 (slow-eight), colours theirs; hold = v6"
   },
   {
-   "id": "cold-mist",
-   "title": "Cold mist",
+   "id": "green-mist",
+   "title": "Éléktra b2b Kogeno · Green mist",
    "act": 4,
-   "intent": "Ice on the truss, ash sparkling faintly on the wall. The haze reads.",
+   "intent": "Green on the truss, sparkling faintly; the haze reads.",
    "parts": {
-    "cut up": [
-     "#d1eeff",
-     0.3
-    ],
-    "cut down": [
-     "#d1eeff",
-     0.15
-    ],
     "line A": [
-     "#e8e4dc",
-     0.12
+     "#00ff00",
+     0.2
     ],
     "line B": [
-     "#e8e4dc",
-     0.12
+     "#00ff00",
+     0.2
     ],
     "line C": [
-     "#e8e4dc",
-     0.12
+     "#00ff00",
+     0.2
     ],
     "line D": [
-     "#e8e4dc",
-     0.12
+     "#00ff00",
+     0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.05
+     "#00ff00",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.05
+     "#00ff00",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#00ff00",
+     0.7
+    ],
+    "cut down": [
+     "#00ff00",
+     0.7
+    ],
+    "dj back": [
+     "#00ff00",
+     0.2
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.2
+    ],
+    "stage key": [
+     "#00ff00",
+     0.2
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.8
     ],
     "entrance": [
@@ -28010,63 +28607,75 @@
    "motion": {
     "mode": "sparkle",
     "bpm": 20,
-    "depth": 200,
+    "depth": 255,
     "spatial": "x",
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 36; outside = the owner's rule (copied from v6 scene 36); laser = the laser session's design of v6 scene 36 (sea-steel), unchanged"
+   "notes": "v2.0 scene 36; family green; outside = the owner's rule (v6 scene 36); laser = the laser session's design of v6 scene 36 (sea-steel), colours theirs; hold = v6"
   },
   {
    "id": "deep-tent",
-   "title": "Deep tent",
+   "title": "Éléktra b2b Kogeno · Deep tent",
    "act": 4,
-   "intent": "A tent of warm white from the sides over a rust floor; the 40 W lasers draw the roof.",
+   "intent": "A tent of red from the sides over a red wall; the 40 W layer is off tonight.",
    "parts": {
-    "side line left": [
-     "#fff0c0",
-     0.4
-    ],
-    "side line right": [
-     "#fff0c0",
-     0.4
-    ],
     "line A": [
-     "#e04e00",
-     0.25
+     "#ff0000",
+     0.6
     ],
     "line B": [
-     "#e04e00",
-     0.25
+     "#ff0000",
+     0.6
     ],
     "line C": [
-     "#e04e00",
-     0.25
+     "#ff0000",
+     0.6
     ],
     "line D": [
-     "#e04e00",
+     "#ff0000",
+     0.6
+    ],
+    "line L": [
+     "#ff0000",
+     0.25
+    ],
+    "line R": [
+     "#ff0000",
+     0.25
+    ],
+    "cut up": [
+     "#ff0000",
+     0.25
+    ],
+    "cut down": [
+     "#ff0000",
      0.25
     ],
     "dj back": [
-     "#e04e00",
-     0.2
+     "#ff0000",
+     0.6
     ],
-    "line L": [
-     "#e8e4dc",
-     0.06
+    "dj kicker": [
+     "#ff0000",
+     0.25
     ],
-    "line R": [
-     "#e8e4dc",
-     0.06
+    "stage key": [
+     "#ff0000",
+     0.25
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff5a1e",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28074,75 +28683,7 @@
      0.6
     ],
     "laser": [
-     "#eefdfd",
-     0.4
-    ]
-   },
-   "motion": {
-    "mode": "breathe",
-    "bpm": 33,
-    "depth": 100,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "wave",
-    "period_s": 20,
-    "pan_deg": 0,
-    "tilt_deg": 12,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#eefdfd",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 37; outside = the owner's rule (copied from v6 scene 37); laser = the laser session's design of v6 scene 37 (deep-tent), unchanged"
-  },
-  {
-   "id": "green-breath",
-   "title": "Green breath",
-   "act": 4,
-   "intent": "Green breathes on the wall, floor off; the cubes breathe with it.",
-   "parts": {
-    "line A": [
-     "#33ff47",
-     0.3
-    ],
-    "line B": [
-     "#33ff47",
-     0.3
-    ],
-    "line C": [
-     "#33ff47",
-     0.3
-    ],
-    "line D": [
-     "#33ff47",
-     0.3
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
-     "#00ff00",
+     "#66faff",
      0.4
     ]
    },
@@ -28154,7 +28695,113 @@
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 14.544,
+    "pan_deg": 0,
+    "tilt_deg": 15,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#66faff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 37; family red; outside = the owner's rule (v6 scene 37); laser = the laser session's design of v6 scene 37 (deep-tent), colours theirs; hold = v6"
+  },
+  {
+   "id": "green-breath",
+   "title": "Éléktra b2b Kogeno · Green breath",
+   "act": 4,
+   "intent": "Green breathes on the wall; green behind the DJ leans slowly; the cubes breathe with it.",
+   "parts": {
+    "line A": [
+     "#00ff00",
+     0.5
+    ],
+    "line B": [
+     "#00ff00",
+     0.5
+    ],
+    "line C": [
+     "#00ff00",
+     0.5
+    ],
+    "line D": [
+     "#00ff00",
+     0.5
+    ],
+    "line L": [
+     "#00ff00",
+     0.2
+    ],
+    "line R": [
+     "#00ff00",
+     0.2
+    ],
+    "cut up": [
+     "#00ff00",
+     0.2
+    ],
+    "cut down": [
+     "#00ff00",
+     0.2
+    ],
+    "dj back": [
+     "#00ff00",
+     0.2
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.2
+    ],
+    "stage key": [
+     "#00ff00",
+     0.2
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#00ff00",
+     0.4
+    ]
+   },
+   "motion": {
+    "mode": "breathe",
+    "bpm": 33,
+    "depth": 200,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "nod",
+    "period_s": 29.088,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
    },
    "laser_colour": "#00ff00",
    "desk_caps": {
@@ -28163,52 +28810,64 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 38; outside = the owner's rule (copied from v6 scene 38); laser = the laser session's design of v6 scene 38 (green-breath), unchanged"
+   "notes": "v2.0 scene 38; family green; outside = the owner's rule (v6 scene 38); laser = the laser session's design of v6 scene 38 (green-breath), colours theirs; hold = v6"
   },
   {
    "id": "cold-rise",
-   "title": "Cold rise",
+   "title": "Éléktra b2b Kogeno · Cold rise",
    "act": 4,
-   "intent": "An ash comet toward the DJ; open white nods behind him. The second rise begins.",
+   "intent": "A white comet toward the DJ; open white scans behind him. The second rise begins.",
    "parts": {
     "line A": [
-     "#e8e4dc",
-     0.5
+     "#ffffff",
+     0.8
     ],
     "line B": [
-     "#e8e4dc",
-     0.5
+     "#ffffff",
+     0.8
     ],
     "line C": [
-     "#e8e4dc",
-     0.5
+     "#ffffff",
+     0.8
     ],
     "line D": [
-     "#e8e4dc",
-     0.5
+     "#ffffff",
+     0.8
+    ],
+    "line L": [
+     "#ffffff",
+     0.3
+    ],
+    "line R": [
+     "#ffffff",
+     0.3
     ],
     "cut up": [
-     "#eefdfd",
-     0.4
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     0.3
+    ],
+    "dj back": [
+     "#ffffff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.3
+    ],
+    "stage key": [
+     "#ffffff",
+     0.3
     ],
     "plane 1": [
      "#ffffff",
-     0.5
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.1
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.1
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28224,176 +28883,84 @@
     "kinds": [
      "up-pl5403"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "nod",
-    "period_s": 10,
-    "pan_deg": 0,
+    "pattern": "figure8",
+    "period_s": 3.636,
+    "pan_deg": 120,
     "tilt_deg": 25,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 39; outside = the owner's rule (copied from v6 scene 39); laser = the laser session's design of v6 scene 39 (cold-rise), unchanged"
+   "notes": "v2.0 scene 39; family white; outside = the owner's rule (v6 scene 39); laser = the laser session's design of v6 scene 39 (cold-rise), colours theirs; hold = v6"
   },
   {
    "id": "riser-two",
-   "title": "Riser two",
+   "title": "Éléktra b2b Kogeno · Riser two",
    "act": 4,
-   "intent": "The warm riser: amber wall, warm truss, warm white beams turning fast.",
+   "intent": "The red riser: everything red, pumping, 18 beams riding wide and fast.",
    "parts": {
     "line A": [
-     "#ffad4d",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line B": [
-     "#ffad4d",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line C": [
-     "#ffad4d",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line D": [
-     "#ffad4d",
-     0.8
-    ],
-    "cut up": [
-     "#ffbe7a",
-     0.6
-    ],
-    "cut down": [
-     "#ffbe7a",
-     0.6
-    ],
-    "plane 1": [
-     "#fff0c0",
-     0.9
-    ],
-    "side line left": [
-     "#fff0c0",
-     0.9
-    ],
-    "side line right": [
-     "#fff0c0",
-     0.9
+     "#ff0000",
+     1.0
     ],
     "line L": [
-     "#e8e4dc",
-     0.15
+     "#ff0000",
+     1.0
     ],
     "line R": [
-     "#e8e4dc",
-     0.15
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
-    "road": [
-     "#a5ff0f",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ],
-    "laser": [
-     "#eefdfd",
-     0.8
-    ]
-   },
-   "motion": {
-    "mode": "pulse",
-    "bpm": 132,
-    "depth": 200,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403"
-    ],
-    "still": 0.3
-   },
-   "heads": {
-    "pattern": "circle",
-    "period_s": 6,
-    "pan_deg": 0,
-    "tilt_deg": 20,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
-   "laser_colour": "#eefdfd",
-   "desk_caps": {
-    "laser": {
-     "fader": 0.16,
-     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
-    }
-   },
-   "notes": "v2.0 scene 40; outside = the owner's rule (copied from v6 scene 40); laser = the laser session's design of v6 scene 40 (riser-two), unchanged"
-  },
-  {
-   "id": "second-drop",
-   "title": "Second drop",
-   "act": 5,
-   "intent": "The second drop: open white X's, the wall cold, pumping.",
-   "parts": {
-    "plane 1": [
-     "#ffffff",
+     "#ff0000",
      1.0
-    ],
-    "side line left": [
-     "#ffffff",
-     1.0
-    ],
-    "side line right": [
-     "#ffffff",
-     1.0
-    ],
-    "line A": [
-     "#eefdfd",
-     0.8
-    ],
-    "line B": [
-     "#eefdfd",
-     0.8
-    ],
-    "line C": [
-     "#eefdfd",
-     0.8
-    ],
-    "line D": [
-     "#eefdfd",
-     0.8
     ],
     "cut up": [
-     "#eefdfd",
-     0.7
+     "#ff0000",
+     1.0
     ],
     "cut down": [
-     "#eefdfd",
-     0.7
+     "#ff0000",
+     1.0
+    ],
+    "dj back": [
+     "#ff0000",
+     1.0
     ],
     "dj kicker": [
-     "#ffbe7a",
-     0.6
+     "#ff0000",
+     1.0
     ],
-    "line L": [
-     "#e8e4dc",
-     0.2
+    "stage key": [
+     "#ff0000",
+     1.0
     ],
-    "line R": [
-     "#e8e4dc",
-     0.2
+    "plane 1": [
+     "#ff2a0a",
+     1.0
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "side line left": [
+     "#ff2a0a",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28408,18 +28975,124 @@
    "motion": {
     "mode": "pump",
     "bpm": 132,
-    "depth": 200,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "circle",
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
+    "spatial": "ripple",
+    "kinds": [
+     "up-b380f"
+    ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
+   "notes": "v2.0 scene 40; family red; outside = the owner's rule (v6 scene 40); laser = the laser session's design of v6 scene 40 (riser-two), colours theirs; hold = v6"
+  },
+  {
+   "id": "second-drop",
+   "title": "Mixtinct · Second drop",
+   "act": 5,
+   "intent": "The second drop: every lamp white, pumping; the beams scan fast, mirrored.",
+   "parts": {
+    "line A": [
+     "#ffffff",
+     1.0
+    ],
+    "line B": [
+     "#ffffff",
+     1.0
+    ],
+    "line C": [
+     "#ffffff",
+     1.0
+    ],
+    "line D": [
+     "#ffffff",
+     1.0
+    ],
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "stage key": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#fff0c0",
+     1.0
+    ],
+    "road": [
+     "#a5ff00",
+     0.5
+    ],
+    "entrance": [
+     "#e04e00",
+     0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.8
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 132,
+    "depth": 255,
+    "spatial": "patch",
+    "kinds": [
+     "up-pl5403",
+     "up-b380f"
+    ],
+    "still": 0.0
    },
    "heads": {
     "pattern": "figure8",
-    "period_s": 4,
-    "pan_deg": 0,
-    "tilt_deg": 15,
+    "period_s": 3.636,
+    "pan_deg": 120,
+    "tilt_deg": 25,
     "spatial": "left-right",
     "kinds": [
      "up-b380f"
@@ -28432,64 +29105,16 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 41; outside = the owner's rule (copied from v6 scene 41); laser = the laser session's design of v6 scene 41 (second-drop), unchanged"
+   "notes": "v2.0 scene 41; family white; outside = the owner's rule (v6 scene 41); laser = the laser session's design of v6 scene 41 (second-drop), colours theirs; hold = v6"
   },
   {
-   "id": "ash-strobe",
-   "title": "Ash strobe",
+   "id": "blackout-two",
+   "title": "Mixtinct · Blackout II",
    "act": 5,
-   "intent": "Strobe, no colour, six seconds.",
+   "intent": "Six seconds of nothing before the word.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
-    ],
-    "side line left": [
-     "#ffffff",
-     1.0
-    ],
-    "side line right": [
-     "#ffffff",
-     1.0
-    ],
-    "line A": [
-     "#e8e4dc",
-     0.8
-    ],
-    "line B": [
-     "#e8e4dc",
-     0.8
-    ],
-    "line C": [
-     "#e8e4dc",
-     0.8
-    ],
-    "line D": [
-     "#e8e4dc",
-     0.8
-    ],
-    "cut up": [
-     "#e8e4dc",
-     0.5
-    ],
-    "cut down": [
-     "#e8e4dc",
-     0.5
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.1
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.1
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28497,52 +29122,57 @@
      0.6
     ]
    },
-   "motion": {
-    "mode": "strobe",
-    "bpm": 132,
-    "depth": 255,
-    "spatial": "patch",
-    "kinds": [
-     "up-pl5403",
-     "up-b380f"
-    ],
-    "still": 0.3
-   },
-   "notes": "v2.0 scene 42; outside = the owner's rule (copied from v6 scene 42); laser = the laser session's design of v6 scene 42 (ice-strobe), unchanged"
+   "notes": "v2.0 scene 42; family blackout; outside = the owner's rule (v6 scene 42); laser = the laser session's design of v6 scene 42 (ice-strobe), colours theirs; hold = v6"
   },
   {
-   "id": "the-word-three",
-   "title": "The word, last",
+   "id": "the-word-last",
+   "title": "Mixtinct · The word, last",
    "act": 5,
-   "intent": "SIGNATURE: the word at full: green rig, green cubes, beams turning, pumping.",
+   "intent": "SIGNATURE: the word at full: green rig, 18 green beams riding wide, pumping.",
    "parts": {
     "line A": [
-     "#33ff47",
-     0.8
+     "#00ff00",
+     0.3
     ],
     "line B": [
-     "#33ff47",
-     0.8
+     "#00ff00",
+     0.3
     ],
     "line C": [
-     "#33ff47",
-     0.8
+     "#00ff00",
+     0.3
     ],
     "line D": [
-     "#33ff47",
-     0.8
+     "#00ff00",
+     0.3
+    ],
+    "line L": [
+     "#00ff00",
+     0.3
+    ],
+    "line R": [
+     "#00ff00",
+     0.3
     ],
     "cut up": [
-     "#33ff47",
-     0.6
+     "#00ff00",
+     1.0
     ],
     "cut down": [
-     "#33ff47",
-     0.6
+     "#00ff00",
+     1.0
     ],
     "dj back": [
-     "#33ff47",
-     0.5
+     "#00ff00",
+     0.3
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.3
+    ],
+    "stage key": [
+     "#00ff00",
+     0.3
     ],
     "plane 1": [
      "#00d12a",
@@ -28553,15 +29183,11 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
-    ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28576,18 +29202,19 @@
    "motion": {
     "mode": "pump",
     "bpm": 132,
-    "depth": 160,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "circle",
-    "period_s": 8,
-    "pan_deg": 0,
-    "tilt_deg": 20,
+    "period_s": 7.272,
+    "pan_deg": 150,
+    "tilt_deg": 25,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
@@ -28600,56 +29227,72 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 43; outside = the owner's rule (copied from v6 scene 43); laser = the laser session's design of v6 scene 43 (cathedral-turns), unchanged"
+   "notes": "v2.0 scene 43; family green; outside = the owner's rule (v6 scene 43); laser = the laser session's design of v6 scene 43 (cathedral-turns), colours theirs; hold = v6"
   },
   {
-   "id": "red-room-two",
-   "title": "Red room, last",
+   "id": "red-room-last",
+   "title": "Mixtinct · Red room, last",
    "act": 5,
-   "intent": "SIGNATURE: red from the floor, red beams scissoring, red bars across the wall; no white; floor off.",
+   "intent": "SIGNATURE: red from the floor, red bars, the beams scissoring fast, red-orange left.",
    "parts": {
     "line A": [
-     "#ff3a12",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line B": [
-     "#ff3a12",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line C": [
-     "#ff3a12",
-     0.8
+     "#ff0000",
+     1.0
     ],
     "line D": [
-     "#ff3a12",
-     0.8
+     "#ff0000",
+     1.0
+    ],
+    "line L": [
+     "#ff0000",
+     0.3
+    ],
+    "line R": [
+     "#ff0000",
+     0.3
+    ],
+    "cut up": [
+     "#ff0000",
+     0.3
     ],
     "cut down": [
-     "#ff3a12",
-     0.5
+     "#ff0000",
+     1.0
     ],
     "dj back": [
-     "#a3200c",
-     0.6
+     "#ff0000",
+     1.0
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.3
+    ],
+    "stage key": [
+     "#ff0000",
+     0.3
     ],
     "plane 1": [
      "#ff2a0a",
-     0.9
+     1.0
     ],
     "side line left": [
-     "#ff2a0a",
-     0.9
+     "#ff5a1e",
+     1.0
     ],
     "side line right": [
      "#ff2a0a",
-     0.9
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28663,13 +29306,14 @@
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "nod",
-    "period_s": 6,
+    "period_s": 3.636,
     "pan_deg": 0,
     "tilt_deg": 25,
     "spatial": "alternate",
@@ -28677,64 +29321,68 @@
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 44; outside = the owner's rule (copied from v6 scene 44); laser = the laser session's design of v6 scene 44 (ice-and-fire), unchanged"
+   "notes": "v2.0 scene 44; family red; outside = the owner's rule (v6 scene 44); laser = the laser session's design of v6 scene 44 (ice-and-fire), colours theirs; hold = v6"
   },
   {
-   "id": "ash-and-rust",
-   "title": "Ash and rust",
+   "id": "white-blocks",
+   "title": "Mixtinct · White blocks",
    "act": 5,
-   "intent": "The two temperatures of the posters: ash and rust in alternate pieces, flipping in blocks; white sides, orange behind the DJ.",
+   "intent": "White blocks flip across the hall; warm white behind the DJ, open white left only, scanning.",
    "parts": {
     "line A": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line C": [
-     "#e8e4dc",
-     0.7
+     "#ffffff",
+     0.3
     ],
     "line B": [
-     "#e04e00",
-     0.7
+     "#ffffff",
+     0.3
+    ],
+    "line C": [
+     "#ffffff",
+     0.3
     ],
     "line D": [
-     "#e04e00",
-     0.7
+     "#ffffff",
+     0.3
+    ],
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
     ],
     "cut up": [
-     "#eefdfd",
-     0.5
+     "#ffffff",
+     1.0
     ],
     "cut down": [
-     "#e04e00",
-     0.5
+     "#ffffff",
+     0.3
+    ],
+    "dj back": [
+     "#ffffff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.3
+    ],
+    "stage key": [
+     "#ffffff",
+     0.3
+    ],
+    "plane 1": [
+     "#fff0c0",
+     1.0
     ],
     "side line left": [
      "#ffffff",
-     0.8
-    ],
-    "side line right": [
-     "#ffffff",
-     0.8
-    ],
-    "plane 1": [
-     "#ff7a00",
-     0.8
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.15
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.15
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28752,16 +29400,17 @@
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "figure8",
-    "period_s": 8,
-    "pan_deg": 0,
+    "period_s": 3.636,
+    "pan_deg": 90,
     "tilt_deg": 20,
-    "spatial": "left-right",
+    "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
@@ -28773,14 +29422,58 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 45; outside = the owner's rule (copied from v6 scene 45); laser = the laser session's design of v6 scene 45 (red-fans), unchanged"
+   "notes": "v2.0 scene 45; family white; outside = the owner's rule (v6 scene 45); laser = the laser session's design of v6 scene 45 (red-fans), colours theirs; hold = v6"
   },
   {
    "id": "last-strobe",
-   "title": "Last strobe",
+   "title": "Mixtinct · Last strobe",
    "act": 5,
-   "intent": "The last strobe: everything open, eight seconds, then the afterglow.",
+   "intent": "The last strobe: everything open white, eight seconds.",
    "parts": {
+    "line A": [
+     "#ffffff",
+     1.0
+    ],
+    "line B": [
+     "#ffffff",
+     1.0
+    ],
+    "line C": [
+     "#ffffff",
+     1.0
+    ],
+    "line D": [
+     "#ffffff",
+     1.0
+    ],
+    "line L": [
+     "#ffffff",
+     1.0
+    ],
+    "line R": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffffff",
+     1.0
+    ],
+    "stage key": [
+     "#ffffff",
+     1.0
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -28790,51 +29483,11 @@
      1.0
     ],
     "side line right": [
-     "#ffffff",
+     "#fff0c0",
      1.0
-    ],
-    "line A": [
-     "#eefdfd",
-     1.0
-    ],
-    "line B": [
-     "#eefdfd",
-     1.0
-    ],
-    "line C": [
-     "#eefdfd",
-     1.0
-    ],
-    "line D": [
-     "#eefdfd",
-     1.0
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.8
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.8
-    ],
-    "dj kicker": [
-     "#e8e4dc",
-     0.8
-    ],
-    "line L": [
-     "#e8e4dc",
-     0.2
-    ],
-    "line R": [
-     "#e8e4dc",
-     0.2
-    ],
-    "haze": [
-     "#e8e4dc",
-     0.5
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28851,62 +29504,70 @@
      "up-pl5403",
      "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 46; outside = the owner's rule (copied from v6 scene 46); laser = the laser session's design of v6 scene 46 (last-strobe), unchanged"
+   "notes": "v2.0 scene 46; family white; outside = the owner's rule (v6 scene 46); laser = the laser session's design of v6 scene 46 (last-strobe), colours theirs; hold = v6"
   },
   {
    "id": "afterglow",
-   "title": "Afterglow",
+   "title": "Mixtinct · Afterglow",
    "act": 5,
-   "intent": "The furnace cooling: rust breathing, ice on the truss, warm white waving from the sides.",
+   "intent": "The furnace cooling: red breathing, red-orange sides waving.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.4
+     "#ff0000",
+     0.6
     ],
     "line B": [
-     "#e04e00",
-     0.4
+     "#ff0000",
+     0.6
     ],
     "line C": [
-     "#e04e00",
-     0.4
+     "#ff0000",
+     0.6
     ],
     "line D": [
-     "#e04e00",
-     0.4
-    ],
-    "cut up": [
-     "#d1eeff",
-     0.15
-    ],
-    "dj back": [
-     "#e04e00",
-     0.3
-    ],
-    "side line left": [
-     "#fff0c0",
-     0.4
-    ],
-    "side line right": [
-     "#fff0c0",
-     0.4
+     "#ff0000",
+     0.6
     ],
     "line L": [
-     "#e8e4dc",
-     0.08
+     "#ff0000",
+     0.25
     ],
     "line R": [
-     "#e8e4dc",
-     0.08
+     "#ff0000",
+     0.25
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.25
+    ],
+    "cut down": [
+     "#ff0000",
+     0.25
+    ],
+    "dj back": [
+     "#ff0000",
+     0.6
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.25
+    ],
+    "stage key": [
+     "#ff0000",
+     0.25
+    ],
+    "side line left": [
+     "#ff5a1e",
+     1.0
+    ],
+    "side line right": [
+     "#ff2a0a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -28914,23 +29575,24 @@
      0.6
     ],
     "laser": [
-     "#eefdfd",
+     "#ff9180",
      0.4
     ]
    },
    "motion": {
     "mode": "breathe",
     "bpm": 33,
-    "depth": 120,
+    "depth": 150,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "wave",
-    "period_s": 16,
+    "period_s": 14.544,
     "pan_deg": 0,
     "tilt_deg": 20,
     "spatial": "ripple",
@@ -28938,59 +29600,75 @@
      "up-b380f"
     ]
    },
-   "laser_colour": "#eefdfd",
+   "laser_colour": "#ff9180",
    "desk_caps": {
     "laser": {
      "fader": 0.16,
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 47; outside = the owner's rule (copied from v6 scene 47); laser = the laser session's design of v6 scene 47 (afterglow), unchanged"
+   "notes": "v2.0 scene 47; family red; outside = the owner's rule (v6 scene 47); laser = the laser session's design of v6 scene 47 (afterglow), colours theirs; hold = v6"
   },
   {
    "id": "the-last-run",
-   "title": "The last run",
+   "title": "Mixtinct · The last run",
    "act": 5,
-   "intent": "Amber chases toward the DJ one last time; amber behind him nods low.",
+   "intent": "Green chases toward the DJ one last time; green behind him and lime on the left ride wide.",
    "parts": {
     "line A": [
-     "#ffad4d",
-     0.5
+     "#00ff00",
+     0.8
     ],
     "line B": [
-     "#ffad4d",
-     0.5
+     "#00ff00",
+     0.8
     ],
     "line C": [
-     "#ffad4d",
-     0.5
+     "#00ff00",
+     0.8
     ],
     "line D": [
-     "#ffad4d",
-     0.5
-    ],
-    "plane 1": [
-     "#ffb000",
-     0.5
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.3
+     "#00ff00",
+     0.8
     ],
     "line L": [
-     "#e8e4dc",
-     0.08
+     "#00ff00",
+     0.25
     ],
     "line R": [
-     "#e8e4dc",
-     0.08
+     "#00ff00",
+     0.25
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#00ff00",
+     0.25
+    ],
+    "cut down": [
+     "#00ff00",
+     0.25
+    ],
+    "dj back": [
+     "#00ff00",
+     0.25
+    ],
+    "dj kicker": [
+     "#00ff00",
+     0.6
+    ],
+    "stage key": [
+     "#00ff00",
+     0.25
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "side line left": [
+     "#8cff3a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -29004,62 +29682,79 @@
     "depth": 255,
     "spatial": "y-",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
-    "pattern": "nod",
-    "period_s": 8,
-    "pan_deg": 0,
-    "tilt_deg": 10,
+    "pattern": "circle",
+    "period_s": 14.544,
+    "pan_deg": 120,
+    "tilt_deg": 25,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 48; outside = the owner's rule (copied from v6 scene 48); laser = the laser session's design of v6 scene 48 (the-last-run), unchanged"
+   "notes": "v2.0 scene 48; family green; outside = the owner's rule (v6 scene 48); laser = the laser session's design of v6 scene 48 (the-last-run), colours theirs; hold = v6"
   },
   {
    "id": "embers-out",
-   "title": "Embers out",
+   "title": "Mixtinct · Embers out",
    "act": 5,
-   "intent": "Rust sparkling out across the wall, the DJ a shadow.",
+   "intent": "Red sparkling out across the hall, the DJ a shadow.",
    "parts": {
     "line A": [
-     "#e04e00",
-     0.25
+     "#ff0000",
+     0.2
     ],
     "line B": [
-     "#e04e00",
-     0.25
+     "#ff0000",
+     0.2
     ],
     "line C": [
-     "#e04e00",
-     0.25
+     "#ff0000",
+     0.2
     ],
     "line D": [
-     "#e04e00",
-     0.25
-    ],
-    "dj back": [
-     "#e04e00",
-     0.15
+     "#ff0000",
+     0.2
     ],
     "line L": [
-     "#e8e4dc",
-     0.05
+     "#ff0000",
+     0.2
     ],
     "line R": [
-     "#e8e4dc",
-     0.05
+     "#ff0000",
+     0.2
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ff0000",
+     0.2
+    ],
+    "cut down": [
+     "#ff0000",
+     0.2
+    ],
+    "dj back": [
+     "#ff0000",
+     0.6
+    ],
+    "dj kicker": [
+     "#ff0000",
+     0.2
+    ],
+    "stage key": [
+     "#ff0000",
+     0.2
+    ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.6
     ],
     "entrance": [
@@ -29073,40 +29768,69 @@
     "depth": 255,
     "spatial": "x",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
-   "notes": "v2.0 scene 49; outside = the owner's rule (copied from v6 scene 49); laser = the laser session's design of v6 scene 49 (embers-out), unchanged"
+   "notes": "v2.0 scene 49; family red; outside = the owner's rule (v6 scene 49); laser = the laser session's design of v6 scene 49 (embers-out), colours theirs; hold = v6"
   },
   {
    "id": "one-beam-loop",
-   "title": "One beam (loop)",
+   "title": "Mixtinct · One beam (loop)",
    "act": 5,
-   "intent": "SIGNATURE: one warm white beam on the DJ from behind, everything else dark; it ties to scene 1.",
+   "intent": "SIGNATURE: one warm white beam on the DJ from behind, the washes a white ember; it ties to scene 1.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.3
+    "line A": [
+     "#ffffff",
+     0.15
     ],
-    "dj back": [
-     "#e04e00",
-     0.12
+    "line B": [
+     "#ffffff",
+     0.15
+    ],
+    "line C": [
+     "#ffffff",
+     0.15
+    ],
+    "line D": [
+     "#ffffff",
+     0.15
     ],
     "line L": [
-     "#e8e4dc",
-     0.05
+     "#ffffff",
+     0.15
     ],
     "line R": [
-     "#e8e4dc",
-     0.05
+     "#ffffff",
+     0.15
     ],
-    "haze": [
-     "#e8e4dc",
-     0.5
+    "cut up": [
+     "#ffffff",
+     0.15
+    ],
+    "cut down": [
+     "#ffffff",
+     0.15
+    ],
+    "dj back": [
+     "#ffffff",
+     0.15
+    ],
+    "dj kicker": [
+     "#ffffff",
+     0.15
+    ],
+    "stage key": [
+     "#ffffff",
+     0.15
+    ],
+    "plane 1": [
+     "#fff0c0",
+     1.0
     ],
     "road": [
-     "#a5ff0f",
+     "#a5ff00",
      0.5
     ],
     "entrance": [
@@ -29121,16 +29845,17 @@
    "motion": {
     "mode": "breathe",
     "bpm": 33,
-    "depth": 80,
+    "depth": 100,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403"
+     "up-pl5403",
+     "up-b380f"
     ],
-    "still": 0.3
+    "still": 0.0
    },
    "heads": {
     "pattern": "nod",
-    "period_s": 28,
+    "period_s": 29.088,
     "pan_deg": 0,
     "tilt_deg": 18,
     "spatial": "ripple",
@@ -29145,307 +29870,307 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 50; outside = the owner's rule (copied from v6 scene 50); laser = the laser session's design of v6 scene 50 (one-beam-loop), unchanged"
+   "notes": "v2.0 scene 50; family white; outside = the owner's rule (v6 scene 50); laser = the laser session's design of v6 scene 50 (one-beam-loop), colours theirs; hold = v6"
   }
  ],
  "cues": [
   {
    "look": "cold-furnace",
-   "name": "Cold furnace",
+   "name": "Cloistral · Cold furnace",
    "fade": 6,
    "hold": 30
   },
   {
-   "look": "sodium",
-   "name": "Sodium",
+   "look": "red-wall",
+   "name": "Cloistral · Red wall",
    "fade": 6,
    "hold": 28
   },
   {
-   "look": "rust-on-the-wall",
-   "name": "Rust on the wall",
+   "look": "first-ride",
+   "name": "Cloistral · First ride",
    "fade": 5,
    "hold": 28
   },
   {
    "look": "silhouette",
-   "name": "Silhouette",
+   "name": "Cloistral · Silhouette",
    "fade": 5,
    "hold": 26
   },
   {
-   "look": "first-piece",
-   "name": "First piece",
+   "look": "green-pieces",
+   "name": "Cloistral · Green pieces",
    "fade": 4,
-   "hold": 26
+   "hold": 24
   },
   {
    "look": "one-ray",
-   "name": "One ray",
+   "name": "Cloistral · One ray",
    "fade": 4,
    "hold": 26
   },
   {
    "look": "the-wall-wakes",
-   "name": "The wall wakes",
+   "name": "Cloistral · The wall wakes",
    "fade": 4,
    "hold": 26
   },
   {
-   "look": "columns-of-rust",
-   "name": "Columns of rust",
+   "look": "columns",
+   "name": "Cloistral · Columns",
    "fade": 4,
    "hold": 24
   },
   {
-   "look": "ash-rays",
-   "name": "Ash rays",
+   "look": "white-rays",
+   "name": "Cloistral · White rays",
    "fade": 4,
    "hold": 24
   },
   {
    "look": "first-net",
-   "name": "First net",
+   "name": "Cloistral · First net",
    "fade": 5,
    "hold": 26
   },
   {
    "look": "ignition",
-   "name": "Ignition",
+   "name": "Innersha · Ignition",
    "fade": 3,
    "hold": 24
   },
   {
    "look": "run-to-the-dj",
-   "name": "Run to the DJ",
+   "name": "Innersha · Run to the DJ",
    "fade": 2,
    "hold": 24
   },
   {
-   "look": "white-in-pieces",
-   "name": "White in pieces",
+   "look": "green-bars",
+   "name": "Innersha · Green bars",
+   "fade": 3,
+   "hold": 24
+  },
+  {
+   "look": "red-out",
+   "name": "Innersha · Red out from the DJ",
    "fade": 3,
    "hold": 22
   },
   {
-   "look": "rust-bars",
-   "name": "Rust bars",
-   "fade": 3,
+   "look": "the-word",
+   "name": "Innersha · The word",
+   "fade": 2,
    "hold": 24
   },
   {
-   "look": "the-word",
-   "name": "The word",
-   "fade": 2,
-   "hold": 20
-  },
-  {
-   "look": "glow-comet",
-   "name": "Glow comet",
+   "look": "white-comet",
+   "name": "Innersha · White comet",
    "fade": 3,
    "hold": 22
   },
   {
    "look": "scissors",
-   "name": "Scissors",
+   "name": "Innersha · Scissors",
    "fade": 3,
    "hold": 24
   },
   {
    "look": "green-comb",
-   "name": "Green comb",
+   "name": "Innersha · Green comb",
    "fade": 3,
    "hold": 22
   },
   {
-   "look": "pingpong-rust",
-   "name": "Ping-pong rust",
+   "look": "white-bars",
+   "name": "Innersha · White bars",
    "fade": 3,
    "hold": 22
   },
   {
    "look": "riser",
-   "name": "Riser",
+   "name": "Innersha · Riser",
    "fade": 2,
    "hold": 16
   },
   {
    "look": "white-cathedral",
-   "name": "White cathedral",
+   "name": "Kerrie · White cathedral",
    "fade": 0,
-   "hold": 18
+   "hold": 20
   },
   {
-   "look": "strobe-hit",
-   "name": "Strobe hit",
+   "look": "blackout",
+   "name": "Kerrie · Blackout",
    "fade": 0,
    "hold": 6
   },
   {
    "look": "red-room",
-   "name": "Red room",
+   "name": "Kerrie · Red room",
    "fade": 0,
    "hold": 20
   },
   {
-   "look": "the-storm",
-   "name": "The storm",
+   "look": "green-storm",
+   "name": "Kerrie · Green storm",
    "fade": 1,
    "hold": 20
-  },
-  {
-   "look": "the-word-two",
-   "name": "The word, again",
-   "fade": 1,
-   "hold": 20
-  },
-  {
-   "look": "dark-between",
-   "name": "Dark between",
-   "fade": 0,
-   "hold": 8
   },
   {
    "look": "radar",
-   "name": "Radar",
+   "name": "Kerrie · Radar",
+   "fade": 1,
+   "hold": 20
+  },
+  {
+   "look": "red-blocks",
+   "name": "Kerrie · Red blocks",
+   "fade": 1,
+   "hold": 18
+  },
+  {
+   "look": "green-scan",
+   "name": "Kerrie · Green scan",
    "fade": 1,
    "hold": 20
   },
   {
    "look": "blinders",
-   "name": "Blinders",
+   "name": "Kerrie · Blinders",
    "fade": 0,
    "hold": 8
   },
   {
-   "look": "copper-bars",
-   "name": "Copper bars",
+   "look": "red-bars",
+   "name": "Kerrie · Red bars",
    "fade": 0,
    "hold": 18
   },
   {
-   "look": "sparkle-peak",
-   "name": "Sparkle peak",
+   "look": "green-sparkle",
+   "name": "Kerrie · Green sparkle",
    "fade": 1,
    "hold": 20
   },
   {
-   "look": "drop-to-ash",
-   "name": "Drop to ash",
+   "look": "drop",
+   "name": "Éléktra b2b Kogeno · Drop",
    "fade": 6,
    "hold": 28
   },
   {
    "look": "one-beam-back",
-   "name": "One beam back",
+   "name": "Éléktra b2b Kogeno · One beam back",
    "fade": 6,
    "hold": 28
   },
   {
-   "look": "ash",
-   "name": "Ash",
+   "look": "green-ash",
+   "name": "Éléktra b2b Kogeno · Green ash",
    "fade": 6,
-   "hold": 30
+   "hold": 28
   },
   {
    "look": "ember-floor",
-   "name": "Ember floor",
+   "name": "Éléktra b2b Kogeno · Ember floor",
    "fade": 6,
    "hold": 28
   },
   {
    "look": "slow-line",
-   "name": "Slow line",
+   "name": "Éléktra b2b Kogeno · Slow line",
    "fade": 5,
    "hold": 30
   },
   {
-   "look": "cold-mist",
-   "name": "Cold mist",
+   "look": "green-mist",
+   "name": "Éléktra b2b Kogeno · Green mist",
    "fade": 5,
    "hold": 26
   },
   {
    "look": "deep-tent",
-   "name": "Deep tent",
+   "name": "Éléktra b2b Kogeno · Deep tent",
    "fade": 6,
    "hold": 28
   },
   {
    "look": "green-breath",
-   "name": "Green breath",
+   "name": "Éléktra b2b Kogeno · Green breath",
    "fade": 6,
    "hold": 26
   },
   {
    "look": "cold-rise",
-   "name": "Cold rise",
+   "name": "Éléktra b2b Kogeno · Cold rise",
    "fade": 4,
    "hold": 24
   },
   {
    "look": "riser-two",
-   "name": "Riser two",
+   "name": "Éléktra b2b Kogeno · Riser two",
    "fade": 2,
    "hold": 16
   },
   {
    "look": "second-drop",
-   "name": "Second drop",
+   "name": "Mixtinct · Second drop",
    "fade": 0,
    "hold": 20
   },
   {
-   "look": "ash-strobe",
-   "name": "Ash strobe",
+   "look": "blackout-two",
+   "name": "Mixtinct · Blackout II",
    "fade": 0,
    "hold": 6
   },
   {
-   "look": "the-word-three",
-   "name": "The word, last",
+   "look": "the-word-last",
+   "name": "Mixtinct · The word, last",
+   "fade": 1,
+   "hold": 22
+  },
+  {
+   "look": "red-room-last",
+   "name": "Mixtinct · Red room, last",
    "fade": 1,
    "hold": 20
   },
   {
-   "look": "red-room-two",
-   "name": "Red room, last",
-   "fade": 1,
-   "hold": 20
-  },
-  {
-   "look": "ash-and-rust",
-   "name": "Ash and rust",
+   "look": "white-blocks",
+   "name": "Mixtinct · White blocks",
    "fade": 1,
    "hold": 20
   },
   {
    "look": "last-strobe",
-   "name": "Last strobe",
+   "name": "Mixtinct · Last strobe",
    "fade": 0,
    "hold": 8
   },
   {
    "look": "afterglow",
-   "name": "Afterglow",
+   "name": "Mixtinct · Afterglow",
    "fade": 4,
    "hold": 26
   },
   {
    "look": "the-last-run",
-   "name": "The last run",
+   "name": "Mixtinct · The last run",
    "fade": 4,
    "hold": 24
   },
   {
    "look": "embers-out",
-   "name": "Embers out",
+   "name": "Mixtinct · Embers out",
    "fade": 5,
    "hold": 26
   },
   {
    "look": "one-beam-loop",
-   "name": "One beam (loop)",
+   "name": "Mixtinct · One beam (loop)",
    "fade": 6,
    "hold": 26
   }

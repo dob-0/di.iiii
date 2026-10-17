@@ -1,37 +1,38 @@
-# MOXIR scenes v2.0 — the underground loop, every device, measured against the brand (2026-10-17, show day)
+# MOXIR scenes v2.1 — the techno loop: gamut colours, strobes, rides and scans, every device (2026-10-17, show day)
 
-**Asks.** Owner 10:4x on the v6 renders: *"it too much white so yes white is good but keep it underground look to lineup and posters and the
-mood do the deep analyze"*; *"this white we can take as v1, it good than this colorfull one and make the v2 … use full potential of di.iiii to
-write coolest scenes ever"*; *"use all fixed devices now we have all all"*; *"make everything in 3d and in hall exact the same"*.
-Lead: Fable (owner 10:5x "give the fabel to lead"); Sonnet builders under it. v1 = project moxir-v2-11 (the v6 data), live in the hall,
-never written; checkpoint `moxir-v2-11-checkpoint-2026-10-17` (document v694).
+**Asks.** Owner 10:4x on the v6 renders (= v1, live in the hall): *"too much white … keep it underground, look to line-up, posters and the mood"*; *"make the v2 …
+use full potential of di.iiii"*; *"use all fixed devices"*. 11:2x: *"hall and real 3d exact same … not many bright, use the contrast of the dark and bright …
+keep colors techno, we have color gamut so use that … beams full power, skip the gobos"*. 12:0x: *"strobes is good and cool crazy movements rides scans, yes
+lineup right, washes colourful that I can see"*; 40 W: *"what we have from 40w is enough"*. Lead: Fable (owner 10:5x), under the MOXIR lead (session laser from 11:1x).
+Rules: `~/work/agent-reports-2026-10-17/lead/LEAD-BRIEF-addendum.md` (section (g) wins). v1 = moxir-v2-11, never written.
 
-**On hand (read first, no research):** the measured mood analysis (handover 10:2x: posters 99.5 % white share, monochrome; teaser 100 % green
-word, 52 % dark; the place red 60 / amber 40, 39 % dark; v6 renders 80 % white share), the v6 generator, the guards, the laser session's
-current scenes (v3-palette3+lasers-v5 = identical laser data to the v6 file, RECON.md §3).
+**On hand (read first, no research):** the measured mood analysis (handover 10:2x), the v6 generator and guards, the laser session's current scenes (identical laser
+data in the v6 file), the lead's audit (devices, coverage, references), the 18 position ops for the copy (`lead/scenes/unposed-ops-for-v2-copy.json`).
 
-## v2.0 = darkness first, white as a strike, the room's rust and the teaser's green; every device plays
-- **Concept** (the arc, the palette rules with their numbers, every device's role, the motion vocabulary per act, six signature moments):
-  `~/work/agent-reports-2026-10-17/scenes-v2/CONCEPT.md`. Five acts: cold furnace · ignition · the instrument · ash · last furnace; 50 scenes, loop 1254 s.
-- **Generator + data:** `docs/moxir/scenes-v2-2026-10-17/scenes_v2.py` (the 50 scenes as data; modelled on scenes_v6.py) →
-  `scripts/place/rigs/moxir-scenes-50-v2-0-2026-10-17.json` → `rig_generate.py build` with the v2.11 hang → `scripts/place/rigs/moxir-v2-0-scenes-2026-10-17.json`
-  (version 2.20, 67 units, 50 looks, 50 cues). The outside parts (road, entrance) and the lasers (pattern, cubes, level, tempo, phase, pitch,
-  lines) are copied scene by scene from the v6 file = the laser session's design; only four laser colours v2 has no place for become green or
-  cold white (`LASER_MAP`). The hazer is a part of every scene.
-- **Palette:** ash, cold white, ice (≤ 0.3), warm white, amber, dark amber, ember, deep ember, poster green, toxic green (outside), laser green.
-  No blue, violet, mint, lavender. Beams only in seen slots: open white 33, warm white 20, green 10, amber 7, red 6, red-orange 5, orange 4 (scene uses).
-- **Built into** the NEW private project `moxir-scenes-v2-0` ("MOXIR scenes v2.0 (draft)") on the installed di: a copy of the checkpoint with v2's
-  looks + cues (`copy_project.mjs` → `epic-build.mjs --looks-only --apply`). Not loaded on the hall's desk: the owner looks first.
+## v2.1 = one colour family per scene in the techno gamut, beams at full power, strobes and rides, every wash lit; holds = v1
+- **Generator + data:** `docs/moxir/scenes-v2-2026-10-17/scenes_v2.py` (the 50 scenes as data, rules as asserts: beams 0 or ≥ 0.95; washes only `#ff0000`
+  `#00ff00` `#ffffff`; one colour family (+ white ≤ 0.1); strobes white only; sparkle ≤ 20 bpm; glitch banned (16 flashes/s measured); head periods whole bars
+  at 132 bpm, tilt 15–25°, no pan-only pattern; left ≠ right and beams in `motion.kinds` in acts 2/3/5; each scene differs from both neighbours in ≥ 2 of 6
+  carriers; hold_s = v6 scene k, Σ 1116 s) → `scripts/place/rigs/moxir-scenes-50-v2-0-2026-10-17.json` (`v2.1-techno-2026-10-17`) →
+  `rig_generate.py build` + hang v2.11 → `scripts/place/rigs/moxir-v2-0-scenes-2026-10-17.json` (2.21, 67 units, 50 looks, 50 cues).
+- **Every device:** 40 washes (incl. the 18 floor washes, lit in 48 scenes each) · 18 beams in seen slots (lit in 43 scenes, moving in 38: rides = circle/figure8,
+  pan 120–150°, tilt 25°, 2–8 bars; scans = 1 bar) · cubes = the laser session's design per scene, colours theirs · 40 W lines under `laser40`, a layer off unless
+  `--laser40 on` · the haze part dropped (it reaches no unit). Line-up as act names: Cloistral · Innersha · Kerrie · Éléktra b2b Kogeno · Mixtinct.
+- **Into the copy** `moxir-scenes-v2-0` (installed di, private): the 18 position ops at v104 → v122, then `epic-build.mjs --looks-only --apply` → **v225**
+  (51 looks, 50 cues). Through a loopback proxy (epic-build refuses `*.localhost`; owed: a `--host` flag). Not loaded on the hall's desk: the lead's job.
+- `scripts/place/copy_project.mjs --assets-from <project>` (one line, build agent): a checkpoint's document points at its parent's assets. Test owed.
 
-| guard | result | where |
-|---|---|---|
-| scenes_build.py --check (palette) | 50 scenes, loop 1254 s: ok | this note |
-| scenes_flash.cjs | 50 scenes, 0 over 3 flashes a second | this note |
-| heads_check.mjs | BUILD.md | agent-reports-2026-10-17/scenes-v2/BUILD.md |
-| physics_check.py (no --fix) | BUILD.md | same |
-| look-roundtrip.mjs (desk == 3D) | BUILD.md | same |
-| cue-wire-check --dry-run (PR #1020's tool) | BUILD.md | same |
-| picture_palette.py on the 50 renders vs targets | PICTURES.md | agent-reports-2026-10-17/scenes-v2/PICTURES.md, index.html |
+| guard | result |
+|---|---|
+| `scenes_build.py --check` | 50 scenes, loop 1269 s: ok |
+| `scenes_flash.cjs` | 50 scenes, 0 over 3 flashes a second |
+| `heads_check.mjs` (installed copy, v225) | 38 looks with heads, 0 turn their beams less than 3° |
+| `physics_check.py` (scratch copy, same looks) | 97 beams, 0 leaks (3 hall files) |
+| `look-roundtrip.mjs` | not proven: the scratch desk carried no rig for the project (planes-37 has no address → no exact patch); run after the lead's load |
+| generator numbers | bright time 0.89 (addendum ≤ 0.20 overridden by 12:0x "washes colourful in every scene"), beams full in 43, equal neighbours 0 |
 
-**Not done / owed:** see REPORT.md (the line-up is unknown; the six green "word" moments are where a name goes).
-**Sterile:** scratch stack `scenes-v2` down and wiped, lane 3 down, no process of this job left (REPORT.md has the check output).
+**Not done / owed:** pictures and the review page (18:00 brief: none; `plan.json`, `front.html`, `meta.json` ready); look-roundtrip on the loaded desk;
+cue-wire-check in dry run against v2 on the desk; a hang part for the 40 W; the dev-router sends `scenes-v2.diiii.localhost/serverXR` to another stack's API
+(di-atlas); `di-dev` has no prune (68 dead registry rows blocked every port; pruned by hand, backup kept). Full record:
+`~/work/agent-reports-2026-10-17/scenes-v2/` (CONCEPT.md, RECON.md, BUILD.md, READY.md, REPORT.md).
+**Sterile:** scratch stack `scenes-v2` down and wiped, lane 3 down, loopback proxy stopped, the build agent's esbuild stopped; `scenes-v5` is another session's.
