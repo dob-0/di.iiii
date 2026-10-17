@@ -144,14 +144,23 @@ describe('the room drawn from DMX', () => {
         expect(driveOf(shown, lamp.id).tilt).toBeCloseTo(135, 0)
     })
 
-    it('a lamp with no decodable list, or no desk fixture, is drawn exactly as before', () => {
+    it('a lamp the desk drives but whose list cannot be decoded is drawn exactly as before', () => {
         const entities = dealt().map((e) => (e.components.fixture?.type === 'up-250bsw' ? { ...e, components: { ...e.components, fixture: { ...e.components.fixture, mode: '24ch' } } } : e))
-        const fixtures = deskOf(entities.filter((e) => e.components.fixture?.type !== 'up-250bsw'))
-        // and one B380F whose desk fixture is gone
-        const gone = entities.find((e) => e.components.fixture?.type === 'up-b380f')
-        const { entities: shown } = dmxEntities({ shown: entities, document: entities, fixtures: fixtures.filter((f) => f.index !== gone.components.fixture.index), library: TYPE_LIBRARY })
+        // the desk holds a fixture for it, but under a profile no mode of the type matches (24 ch) — nothing to decode
+        const fixtures = deskOf(entities).map((f) => (entities.find((e) => e.components.fixture?.index === f.index)?.components.fixture.type === 'up-250bsw' ? { ...f, profile: 'UP-250BSW 24ch' } : f))
+        const { entities: shown } = dmxEntities({ shown: entities, document: entities, fixtures, library: TYPE_LIBRARY })
         for (const e of entities.filter((x) => x.components.fixture?.type === 'up-250bsw')) expect(shown.find((s) => s.id === e.id)).toBe(e)
-        expect(shown.find((s) => s.id === gone.id)).toBe(gone)
+    })
+
+    it('with a desk connected, a lamp the desk does not drive is drawn dark, as it is on the rig (MOXIR 2026-10-17)', () => {
+        const entities = dealt()
+        const gone = entities.find((e) => e.components.fixture?.type === 'up-b380f')
+        const fixtures = deskOf(entities).filter((f) => f.index !== gone.components.fixture.index)
+        const { entities: shown } = dmxEntities({ shown: entities, document: entities, fixtures, library: TYPE_LIBRARY })
+        const drawn = shown.find((s) => s.id === gone.id)
+        expect(drawn.components.rigShown).toMatchObject({ level: 0, undriven: true })
+        expect(drawn.components.light.intensity).toBe(0)
+        if (gone.components.beam) expect(drawn.components.beam.visible).toBe(false)
     })
 
     it('a strobe TYPE is drawn as a flash at the desk\'s rate, never a cone', () => {

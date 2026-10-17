@@ -75,7 +75,14 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
         const fx = e?.components?.fixture
         if (e?.type !== 'spotLight' || !fx?.type) return e
         const desk = byIndex.get(Number(fx.index))
-        if (!desk || !Array.isArray(desk.values)) return e
+        if (!desk || !Array.isArray(desk.values)) {
+            // With a desk connected, a lamp the desk does not drive is dark on the rig — so it is dark in the room too:
+            // an unpatched wash, or a LaserCube line the laser server is not playing (MOXIR 2026-10-17: the room kept
+            // drawing those from the design and flooded the view while the rig showed one beam).
+            changed = true
+            const beam = e.components.beam ? { ...e.components.beam, visible: false, haze: 0 } : undefined
+            return { ...e, components: { ...e.components, light: { ...(e.components.light || {}), intensity: 0 }, ...(beam ? { beam } : {}), rigShown: { level: 0, undriven: true } } }
+        }
         const type = typeById(library, fx.type)
         const mode = runningMode(type, fx.mode, desk.profile)
         if (!mode) return e
@@ -138,6 +145,14 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
             // (dmxDecode.js opticsAt → src/objectComponents/beamOptics.js)
             if (d.optics) beam.optics = { prism: d.optics.prism, honeycomb: d.optics.honeycomb, frost: d.optics.frost, gobo: d.optics.gobo }
             else delete beam.optics
+            // A DMX laser (UP-LA40WF) draws its own picture (beam.laser.frame, points [x, y, r, g, b]): its lit points take
+            // the colour and output the desk sends, so the room shows the laser the rig shows (MOXIR 2026-10-17: the
+            // room kept the design's white grid while the rig played red). Blank moves (r = g = b = 0) stay blank.
+            if (beam.laser && Array.isArray(beam.laser.frame) && d.colour) {
+                const hex = String(d.colour).replace('#', '')
+                const [r, g, b] = [0, 2, 4].map((i) => (parseInt(hex.slice(i, i + 2), 16) || 0) / 255 * d.level)
+                beam.laser = { ...beam.laser, frame: beam.laser.frame.map((p) => (Array.isArray(p) && (p[2] || p[3] || p[4]) ? [p[0], p[1], r, g, b] : p)) }
+            }
             components.beam = beam
         }
         components.rigShown = { level: d.level }
