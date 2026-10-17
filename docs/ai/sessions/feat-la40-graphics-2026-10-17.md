@@ -9,3 +9,10 @@
   blob graphics, 5 broken, 21 duplicates (each named with the earlier graphic it repeats); 14 not seen in the video. Prose and sheets
   in `docs/moxir/devices/up-la40wf.md`. The list holds for ch 3 and ch 20 of both units.
 - Owed: fast-sweep graphics (under 0.35 s in the video) may be one off; a show uses a value only after one look on the real unit.
+
+## 2026-10-17 — the owner's never-use list replaces the agent's categories
+- Owner: "i don like heart one and deleted that one and also the numberes and arrows, so dont use that values what itold and you can make it approx".
+- `graphics.neverUse` now: hearts 78-79, 166-167; arrows 74-75 (+ arrowheads 92-93, 98-99, 108-109, 177-178); numbers 246-253
+  (+ number-like 180, 203-205). Test pattern stays value 24 (the square). Dots and blobs stay as a SAFETY note, not taste.
+- Read from the sweep video with the wire value printed under every frame (three sheets `la40wf-shapes-by-value-*`); the earlier
+  graphic-numbered sheets are removed (their graphic numbers were one off in places and confused the reading).
