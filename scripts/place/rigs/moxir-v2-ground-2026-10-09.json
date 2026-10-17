@@ -11756,6 +11756,15 @@
    29.0,
    "the FOH riser: the desk and the Art-Net switch (MOXIR.md: E-stop 1 at FOH)"
   ],
+  "counts": {
+   "cut": 10,
+   "planes": 40
+  },
+  "show_counts": {
+   "cut": 11,
+   "planes": 39
+  },
+  "layer_note": "this rig lays the official plan with its own counts (cut 10 / planes 40; the official file says cut 11 / planes 39 for the show rig); where they differ, the units after the moved one sit on other addresses here than in the show patch (the composed rig, moxir-v2-patch-v2-1-*.json)",
   "slots": {
    "1": 353,
    "2": 400
