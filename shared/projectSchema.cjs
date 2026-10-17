@@ -993,6 +993,9 @@ const normalizeFixture = (fixture) => {
   const panOffsetDeg = Number(fixture.panOffsetDeg)
   if (Number.isFinite(panOffsetDeg) && panOffsetDeg !== 0) out.panOffsetDeg = Math.max(-360, Math.min(360, Math.round(panOffsetDeg * 100) / 100))
   if (fixture.panInvert === true) out.panInvert = true
+  if (fixture.aimSwap === true) out.aimSwap = true
+  if (fixture.aimInvertX === true) out.aimInvertX = true
+  if (fixture.aimInvertY === true) out.aimInvertY = true
   // Kept off DMX by the owner (run by hand: hazers, smoke): never patched (rigbuild/autoPatch.js).
   if (fixture.dmx === false) out.dmx = false
   return out
