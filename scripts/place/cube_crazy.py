@@ -3,7 +3,7 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots|smooth] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
@@ -96,6 +96,20 @@ def dots(k, t, m):
         y = 0.9 * math.sin(w); x = 0.9 * math.sin(w * 1.5) * m
         out.append(sum((dot(-0.9 + i * 0.3, y) for i in range(7)), [])); out.append(sum((dot(x, -0.9 + i * 0.3) for i in range(7)), []))
     return out
+def many(k, t, m):                     # --set smooth (owner 03:4x: "more lines, move them smooth"): six lines, one slow cycle
+    w = 2 * math.pi * t; wrap = lambda v: ((v + F) % (2 * F)) - F
+    if k == 0: return [seg((wrap(-F + j * F / 3 + 2 * F * t) * m, -F), (wrap(-F + j * F / 3 + 2 * F * t) * m, F)) for j in range(6)]          # six lines sliding across, endless
+    if k == 1: return [seg((-F, wrap(-F + j * F / 3 + 2 * F * t)), (F, wrap(-F + j * F / 3 + 2 * F * t))) for j in range(6)]                  # six lines sliding down, endless
+    if k == 2: return [seg((0, 0), (F * math.cos(w / 2 * m + j * math.pi / 3), F * math.sin(w / 2 * m + j * math.pi / 3))) for j in range(6)]   # six spokes turning
+    if k == 3: return [seg((clip(-F + j * 0.4 + 0.4 * math.sin(w) * m - 0.5), -F), (clip(-F + j * 0.4 + 0.4 * math.sin(w) * m + 0.5), F)) for j in range(6)]   # six diagonals swaying
+    if k == 4: g = 0.12 + 0.24 * (0.5 - 0.5 * math.cos(w)); return [seg(((j - 2.5) * g * m, -F), ((j - 2.5) * g * m, F)) for j in range(6)]    # six lines opening and closing across
+    if k == 5: g = 0.12 + 0.24 * (0.5 - 0.5 * math.cos(w)); return [seg((-F, (j - 2.5) * g), (F, (j - 2.5) * g)) for j in range(6)]             # six lines opening and closing up-down
+    if k == 6: o = 0.3 * math.sin(w); return [seg((clip(x + o * m), -F), (clip(x + o * m), F)) for x in (-0.6, 0, 0.6)] + [seg((-F, clip(y - o)), (F, clip(y - o))) for y in (-0.6, 0, 0.6)]   # a grid drifting
+    if k == 7: return [seg((0, -F), (clip(2 * F * math.cos(math.pi * (j + 1) / 7 + 0.35 * math.sin(w) * m)), clip(-F + 2 * F * math.sin(math.pi * (j + 1) / 7 + 0.35 * math.sin(w) * m)))) for j in range(6)]   # a fan from the floor swaying
+    if k == 8:
+        a = w / 4 * m; c, sn = math.cos(a), math.sin(a)
+        return [seg((clip(-F * c - (j - 2.5) * 0.3 * sn), clip(-F * sn + (j - 2.5) * 0.3 * c)), (clip(F * c - (j - 2.5) * 0.3 * sn), clip(F * sn + (j - 2.5) * 0.3 * c))) for j in range(6)]   # six parallel lines turning together
+    return [seg((clip(-F + j * 0.38 + 0.25 * math.sin(w + j * 0.8) * m), -F), (clip(-F + j * 0.38 + 0.25 * math.sin(w + j * 0.8) * m), F)) for j in range(6)]   # 9: a wave running through six lines
 SET = arg('--set', 'crazy')
 # --set mix (owner 02:1x: "more animations, red and white but more white"): the 5 scans and the 8 crazy patterns interleaved;
 # --red-every N: every Nth pattern red, the rest white.
@@ -107,6 +121,7 @@ MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2)
        (scan, 4), (scan, 9), (pat, 4), (scan, 10), (pat, 5), (pat, 6), (pat, 7)]
 RED_EVERY = int(arg('--red-every', 0))
 if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
+if SET == 'smooth': MIX = [(many, 0), (scan, 11), (many, 1), (scan, 12), (many, 2), (scan, 19), (many, 3), (many, 4), (scan, 20), (many, 5), (many, 6), (scan, 21), (many, 7), (many, 8), (scan, 23), (many, 9)]; SET = 'mix'
 NPAT = {'scan': 25, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
     if SET == 'scan': return scan(k, t, m)
