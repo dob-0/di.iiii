@@ -20,3 +20,9 @@
 - Owed: the script of command 1 in the loop (`group-identify`) is only on branch `feat/group-identify-2026-10-17`, which has no PR, so it is not on
   dev yet; command 4 still runs a scratch script (owed: `patch.mjs --exact` skipping unaddressed lamps); the lasers are next and need the owner's
   safety word.
+
+## 2026-10-17 later: the v1 scenes, the 3D and the hall
+- The owner tested the 50 v1 scenes on the rig: "in 3d beams are strobe but in real not". Causes and fixes are in docs/ai/known-fixes.md (2026-10-17, "The 3D and the hall played different shows").
+- New command `scripts/rigbuild/look-roundtrip.mjs`: per look and lamp, what the 3D draws from the desk's values against the look (on/off, light = level × colour, aim). Before the colour fix: light off 62 of 3060; after: 0.
+- `encodeDmx`/`decodeDmx`: a colour's own darkness is light (dimmer), a wheel slot is drawn as it is. `show-loop.mjs`: a desk show never keeps `showSource: 'clock'`.
+- Still open: the looks' level motion on the desk (48 of 51 looks), being built on `feat/desk-look-motion-2026-10-17`.

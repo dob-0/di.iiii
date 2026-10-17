@@ -23,3 +23,12 @@ describe('show-loop with no --show/--rig: the document\'s own cues are the show 
         expect(() => showOfDocument({}, 'none')).toThrow(/no cue list/)
     })
 })
+
+describe('a show the desk plays never keeps a clock (MOXIR 2026-10-17)', () => {
+    it('clockOffOps takes showSource clock off, and leaves any other document alone', async () => {
+        const { clockOffOps } = await import('./show-loop.mjs')
+        expect(clockOffOps({ mappingState: { showSource: 'clock', cues: [] } })).toEqual([{ type: 'setMappingState', payload: { patch: { showSource: 'desk' } } }])
+        expect(clockOffOps({ mappingState: { cues: [] } })).toEqual([])
+        expect(clockOffOps(null)).toEqual([])
+    })
+})
