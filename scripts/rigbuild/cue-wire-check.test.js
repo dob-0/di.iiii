@@ -8,7 +8,7 @@ vi.mock('../../src/rigbuild/looks.js', async (orig) => {
     return { ...real, lookPoses: () => new Map([...LEVELS].filter(([, v]) => v > 0).map(([id, level]) => [id, { level, rotation: [0, 0, 0], position: [0, 6, 0] }])) }
 })
 
-import { parseCueRange, statsOf, lampsOf, lookOfCue, expectationOf, measureOf, compareLamps, cueLine, nodeUniverseOf, nodeKindOf, main, MOVE_THRESHOLD, followNext, followMinutes } from './cue-wire-check.mjs'
+import { parseCueRange, statsOf, lampsOf, lookOfCue, expectationOf, measureOf, compareLamps, cueLine, nodeUniverseOf, nodeKindOf, main, MOVE_THRESHOLD, followNext, followMinutes, layerPlays } from './cue-wire-check.mjs'
 import { TYPE_LIBRARY } from '../../src/rigbuild/types/index.js'
 
 const lamp = (id, type, universe, address, extra = {}) => ({ id, type: 'spotLight', components: { transform: { position: [id === 'w2' ? 3 : 0, 6, 0] }, fixture: { type, universe, address }, ...extra } })
@@ -239,5 +239,17 @@ describe('--follow: measure each cue while the desk plays the show (no GO)', () 
     it('gives one loop of the show and two minutes, unless told', () => {
         expect(followMinutes(cues)).toBe(Math.ceil((36 + 26 + 32) / 60) + 2)
         expect(followMinutes(cues, '5')).toBe(5)
+    })
+})
+
+describe('a sample counts only while the cue layer plays the cue\'s own look', () => {
+    const cue = { lookId: 'rig-the-cut' }
+    it('passes when the layer held the look before and after, or the desk has no /layers', () => {
+        expect(layerPlays(cue, 'rig-the-cut', 'rig-the-cut')).toBe(true)
+        expect(layerPlays(cue, null, null)).toBe(true)
+    })
+    it('fails when a look fired by hand took the layer before or during the window', () => {
+        expect(layerPlays(cue, 'rig-last-strobe', 'rig-last-strobe')).toBe(false)
+        expect(layerPlays(cue, 'rig-the-cut', 'rig-afterglow')).toBe(false)
     })
 })

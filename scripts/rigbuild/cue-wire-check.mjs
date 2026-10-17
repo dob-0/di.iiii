@@ -171,6 +171,10 @@ export const nodeKindOf = ({ nodeDmxKeys, deskDmxKeys, input, state }) => {
     return { kind: 'own buffer', universe, why: `listens to Art-Net universe ${universe} (own /api/input), answers ${nodeDmxKeys.length} of the desk's ${deskDmxKeys.length} universes, own desk state with ${ownFixtures ?? '?'} fixtures` }
 }
 
+/** Was the cue layer playing the cue's own look before and after the sample window? A null read (an older desk without
+ *  /layers) is taken as yes. Pure. */
+export const layerPlays = (cue, before, after) => [before, after].every((id) => id == null || id === cue?.lookId)
+
 /** Minutes --follow waits for its cues: one loop of the show (every fade + hold) and two more, unless given. Pure. */
 export const followMinutes = (cues, override) => {
     if (override != null && override !== true && Number.isFinite(Number(override))) return Number(override)
@@ -268,8 +272,12 @@ export const main = async (argv = process.argv.slice(2)) => {
     const results = []
     let okCount = 0
     // one cue, already up and past its fade: sample both wires and compare with the room's expectation
+    // the cue layer must be playing THIS cue's look for the whole window: a look fired by hand meanwhile (the cards page, the
+    // Studio, a phone) puts another look on the layer, and its lamps would be read as this cue's (seen 2026-10-17 10:40)
+    const layerLook = async () => ((await getJson(`${desk}/layers`).catch(() => null))?.layers || []).find((l) => l.id === 'cue')?.lookId ?? null
     const checkCue = async (i, exp) => {
             const cue = cues[i]
+            const before = await layerLook()
             const deskSeries = new Map(exp.lamps.map((l) => [l.entityId, []]))
             const nodeSeries = new Map(exp.lamps.map((l) => [l.entityId, []]))
             const t0 = Date.now()
@@ -283,6 +291,12 @@ export const main = async (argv = process.argv.slice(2)) => {
                     if (nb) nodeSeries.get(l.entityId).push(nb[l.index] ?? 0)
                 }
                 await sleep(Math.max(0, t0 + ((tick + 1) * 1000) / hz - Date.now()))
+            }
+            const after = await layerLook()
+            if (!layerPlays(cue, before, after)) {
+                say(`${String(i).padStart(2)} ${cue.name}  SKIPPED: the cue layer played ${before === after ? before : `${before} then ${after}`}, not ${cue.lookId} (a look fired by hand?)`)
+                results.push({ index: i, cue: { id: cue.id, name: cue.name, lookId: cue.lookId }, skipped: { before, after } })
+                return
             }
             const dm = measureOf(exp.lamps, (l) => (deskSeries.get(l.entityId).length ? deskSeries.get(l.entityId) : null), { seconds })
             const nm = nodes.length ? measureOf(exp.lamps, (l) => (nodeSeries.get(l.entityId).length ? nodeSeries.get(l.entityId) : null), { seconds }) : null
@@ -329,7 +343,7 @@ export const main = async (argv = process.argv.slice(2)) => {
         await restoreDesk()
     }
     if (dry) say(`dry run: ${picked.length} cues expected, nothing sent, no wire read`)
-    else say(`cues OK ${okCount}/${picked.length}`)
+    else say(`cues OK ${okCount}/${picked.length}${results.some((r) => r.skipped) ? ` (skipped ${results.filter((r) => r.skipped).length}: another look on the layer)` : ''}`)
     if (args.json && args.json !== true) fs.writeFileSync(String(args.json), JSON.stringify({ project, desk, when: new Date().toISOString(), seconds, hz, dry, deskKeys, nodes, skipped, was, results }, null, 2))
     return okCount
 }

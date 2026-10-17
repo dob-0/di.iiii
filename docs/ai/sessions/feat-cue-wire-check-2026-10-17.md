@@ -20,3 +20,7 @@
   (cuerun.js, owner 2026-10-09), so the show sat on cue 1: seen 2026-10-17 10:38 (index 0, autoplay false, nextInMs null, six
   minutes after the start). It now sends `startCalls()`: the GO, then `POST /api/cues/autoplay {autoplay:true}` (test in
   `show-loop.test.js`).
+- A sample counts only while the cue layer plays the cue's own look (`layerPlays`, read from `GET /layers` before and after
+  the window). Seen 2026-10-17 10:40: looks fired by hand ("Afterglow", then "Last strobe") took the cue layer and paused the
+  runner, and the first follow run read their lamps as "The road in", "First net", "Rays pulse" mismatches. Such a window
+  is now SKIPPED and counted apart.
