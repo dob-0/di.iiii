@@ -91,10 +91,10 @@ for e in EXTRA:
 for k in range(N):
     hit = next((x for x in xb if x[0] <= k < x[1]), None)
     if hit:
-        f0, f1, e = hit; t = ((k - f0) / max(1, f1 - f0) * (float(e[5]) if len(e) > 5 else 1)) % 1; fn = scan if e[1] == 'scan' else pat; col = [float(x) for x in e[3].split(',')]
+        f0, f1, e = hit; t = ((k - f0) / max(1, f1 - f0) * (float(e[5]) if len(e) > 5 else 1)) % 1; fn = scan if e[1] == 'scan' else pat; col = 'grad' if e[3] == 'grad' else [float(x) for x in e[3].split(',')]
         for cube in '123456':
             ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
-            for s_i, stroke in enumerate(fn(int(e[2]), t, -1 if cube in '456' else 1)[:6]): new[ids[s_i]][k] = [q[:2] + col for q in stroke]
+            for s_i, stroke in enumerate(fn(int(e[2]), t, -1 if cube in '456' else 1)[:6]): new[ids[s_i]][k] = paint(stroke, col, t)
         continue
     if k >= lit_frames: continue
     tt = k / lit_frames * LOOP; p = int(tt // SEG) % NPAT; t = ((tt % SEG) / SEG * SPEED) % 1   # --pattern-s: seconds per pattern; --speed: cycles inside it
