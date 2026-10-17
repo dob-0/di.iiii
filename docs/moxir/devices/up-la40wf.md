@@ -98,3 +98,18 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
 | 92 | 182 | by time | photo-1483.jpg |
 | 93 | 185 | by time | photo-1484.jpg |
 | 95 | 188 | by time | photo-1487.jpg |
+
+## Graphics to use and to avoid (2026-10-17) — the test pattern is value 24 (the square)
+The owner filmed one fader sweep through all 128 graphics (di.bo `1490-1116697124_1490.mp4`, start 08:55:40 local) and asked:
+"write in memory that is bad shapes that we will not use … and what value is the test pattern". Each graphic's frame was taken
+at the middle of its time on the wire (`la40wf-shape-wire-log-2026-10-17.txt`); the start was fixed on the sweep's slow opening
+and checked against the slow-walk photos (from graphic 17 on they agree shape for shape). Sheets: `photos/la40wf-shapes-video-1-64-2026-10-17.jpg`,
+`photos/la40wf-shapes-video-65-128-2026-10-17.jpg`. The same list is data in `scripts/place/fixtures/charts/up-la40wf.json` → `graphics`.
+Graphic g = value // 2 + 1, so graphic g is values 2g−2 and 2g−1. It holds for ch 3 and ch 20 of BOTH units (32 ch each: U2.137 ch 139/156, U2.169 ch 171/188).
+
+- **Test pattern: value 24 (graphic 13, a square).** Photo and video agree.
+- **Avoid, dot or blob** (all 40 W in one spot): graphics 48, 56, 57, 73, 74, 76, 77, 81, 82, 83, 111.
+- **Avoid, broken** (scribbles): graphics 103, 124, 125, 126, 127.
+- **Avoid, duplicate** (same picture as an earlier graphic; zoom and rotation make the rest): 67→14, 72→19, 84→40, 90→50, 97→13, 98→59, 99→25, 100→8, 104→14, 106→4, 107→6, 108→6, 109→18, 110→15, 114→1, 115→4, 117→1, 118→4, 119→49, 122→20, 123→16.
+- **Not seen in the video** (look once before use): graphics 1, 2, 3, 69, 75, 78, 79, 80, 94, 95, 96, 112, 113, 121.
+- **Limit:** in the fast part of the sweep a graphic showed under 0.35 s, so those may be off by one. A show uses a value only after one look on the real unit.
