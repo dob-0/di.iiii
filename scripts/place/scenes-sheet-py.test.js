@@ -80,6 +80,15 @@ describe.skipIf(!hasPython)('scenes_sheet.py', () => {
         expect(h).toContain('washes: held still')
         expect(h).not.toContain('held still at 132 bpm')
     })
+    it("puts each scene's picture from a shots.json in its card, matched by number, with a path relative to the page", () => {
+        const dir = tmp(); const out = path.join(dir, 'o.html'); fs.mkdirSync(path.join(dir, 'shots'))
+        const shots = { shots: [{ n: 1, scene: '01 First one', file: '01-x-01 First one.png' }, { n: 2, scene: '02 Second one', error: 'refused: package 90 C' }] }
+        const r = py('scenes_sheet.py', [put(dir, 's.json', scenes), out, '--pictures', put(path.join(dir, 'shots'), 'shots.json', shots)])
+        const h = fs.readFileSync(out, 'utf8'); fs.rmSync(dir, { recursive: true, force: true })
+        expect(r.status).toBe(0)
+        expect(h).toContain('<img src="shots/01-x-01 First one.png" alt="First one"')
+        expect((h.match(/<img /g) || []).length).toBe(1)
+    })
     it('builds the v6 MOXIR sheet (50 scenes, washes and beams, every head move)', () => {
         const dir = tmp(); const out = path.join(dir, 'o.html')
         const r = py('scenes_sheet.py', [path.join(here, 'rigs', 'moxir-scenes-50-v6-2026-10-17.json'), out])

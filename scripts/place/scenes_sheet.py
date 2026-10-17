@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """scenes_sheet.py — the owner's picture per scene: an HTML sheet of a show's scenes file (venue-to-show skill, step "scenes sheet").
 
-    python3 -I scenes_sheet.py SCENES.json OUT.html [--meta META.json] [--front FRONT.html]
+    python3 -I scenes_sheet.py SCENES.json OUT.html [--meta META.json] [--front FRONT.html] [--pictures shots.json]
 
 SCENES.json: the scenes file (scenes[], palette[], beam_wheel{}, loop_s). Every scene row is read from it: title, intent, parts with
 colour and level, motion, heads, cue timing. META.json (optional): {"title", "subtitle_html", "footer_html", "acts": {"1": {"name",
@@ -51,7 +51,7 @@ i{display:inline-block;width:22px;height:16px;border:1px solid #0003;flex:none;v
 '''
 
 
-def build(d, meta=None, front=''):
+def build(d, meta=None, front='', pictures=None):
     meta = meta or {}
     PAL = d.get('palette', []); NAME = {p['hex']: p['name'] for p in PAL}; ORDER = [p['hex'] for p in PAL]; WH = d.get('beam_wheel', {})
     ACTS = meta.get('acts', {})
@@ -69,9 +69,11 @@ def build(d, meta=None, front=''):
             sws += f'<span class="sw">{sw(c)}{e(NAME.get(c, c))} <code>{c}</code>{b}</span>'
         parts = ', '.join(f"{e(k.replace(' (behind the DJ)', ''))} {e(NAME.get(v[0], v[0]))} {round(v[1] * 100)}%" for k, v in s['parts'].items())
         note = f'<p class="note">{e(s["notes"])}</p>' if s.get('notes') else ''
+        pic = (pictures or {}).get(n)
+        img = f'<figure><img src="{e(pic)}" alt="{e(s["title"])}" loading="lazy" style="width:100%;height:auto;display:block;background:#000"></figure>' if pic else ''
         mm, ss = divmod(t0, 60)
         rows += (f'<article><div class="hd"><span class="n">{n:02d}</span><b>{e(s["title"])}</b><span class="t">at {mm}:{ss:02d} &middot; fade {s["cue"]["fade_s"]} s &middot; hold {s["cue"]["hold_s"]} s</span></div>'
-                 f'<p>{e(s["intent"])}</p><p class="mv">{moves(s)}</p><div class="sws">{sws}</div><p class="pp">{parts}</p>{note}</article>')
+                 f'{img}<p>{e(s["intent"])}</p><p class="mv">{moves(s)}</p><div class="sws">{sws}</div><p class="pp">{parts}</p>{note}</article>')
         t0 += s['cue']['fade_s'] + s['cue']['hold_s']
     title = e(meta.get('title', 'Scenes'))
     loop = f' &middot; the loop runs {d["loop_s"] // 60} min {d["loop_s"] % 60} s, then starts again' if d.get('loop_s') else ''
@@ -94,10 +96,19 @@ def main(argv=None):
     ap.add_argument('scenes'); ap.add_argument('out')
     ap.add_argument('--meta', help='JSON: title, subtitle_html, footer_html, acts, nav')
     ap.add_argument('--front', help='HTML fragment inserted before the scenes')
+    ap.add_argument('--pictures', help='shots.json of a picture run (env-pick-shots.cjs): one picture per scene, matched by its "NN " number or title')
     a = ap.parse_args(argv)
     meta = json.load(open(a.meta)) if a.meta else {}
     front = open(a.front).read() if a.front else ''
-    page = build(json.load(open(a.scenes)), meta, front)
+    d = json.load(open(a.scenes))
+    pictures = {}
+    if a.pictures:
+        shots = json.load(open(a.pictures)).get('shots', [])
+        base = os.path.dirname(os.path.abspath(a.pictures)); here = os.path.dirname(os.path.abspath(a.out))
+        for n, s in enumerate(d['scenes'], 1):
+            hit = next((x for x in shots if x.get('file') and not x.get('error') and (str(x.get('scene', '')).startswith(f'{n:02d} ') or x.get('scene') == s['title'])), None)
+            if hit: pictures[n] = os.path.relpath(os.path.join(base, hit['file']), here)
+    page = build(d, meta, front, pictures)
     open(a.out, 'w').write(page); print(a.out, len(page), 'bytes')
 
 
