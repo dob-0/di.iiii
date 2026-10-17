@@ -434,6 +434,9 @@ function createDesk(opts = {}) {
     // (sanitizeLayer drops them): a fade in progress does not survive a restart.
     const before = layer.lookId;
     layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    // The beat the replaced look keeps through the crossfade: its own firedAt (lookMotion.js motionFrame blends the two
+    // looks' level motion over fadeMs, the old on its beat, the new on this one). In memory only, like fromLookId.
+    layer.fromFiredAt = before && before !== look.id ? (Number.isFinite(layer.firedAt) ? layer.firedAt : null) : (before === look.id ? layer.fromFiredAt || null : null);
     layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
     layer.firedAt = Date.now();
     layer.lookId = look.id;

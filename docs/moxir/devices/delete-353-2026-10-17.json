@@ -1,0 +1,5 @@
+{
+  "what": "MOXIR: the wash drawn at U1.353 (rig-par-planes-13, UP-PL5403 'line B', floor x -11.14 z -42.02, behind the stage on the left) is deleted from the project: the hall has no wash at that address.",
+  "source": "owner at the venue 2026-10-17 ~07:5x, with U1.353 alone lit red (every other universe-1 wash held at 0, node 1 read back): 'no now one wash lights and we dont have wash 353 delete it' (read: no wash lights; there is no wash 353).",
+  "undo": "the backup document.json beside the desk rig/state in /mnt/data/backups/di-backups/moxir-v2-11-before-delete-353-2026-10-17/; the op's inverse is createEntity of that entity"
+}

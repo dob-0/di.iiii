@@ -27,3 +27,49 @@
 06:27 truss beam 2 U1.097: pan 43 / tilt 0 → real along the truss, 3D toward the audience. di's model (hung, tilt 0): pan 0 +x, 43 +z (front), 85 −x, 128 −z (back). Real = di a quarter turn on → beam 2 panOffsetDeg +90 (kept in the correction file until the server keeps the field: PR #1012)
 06:30 truss beam 2: pan 43 / tilt 0 → to the RIGHT seen from the audience (+x, the high end); di drew +z → offset +90 confirmed in sign. Check: pan 85 → expect toward the audience
 06:31 truss beam 2: pan 85 / tilt 0 → toward the audience (owner: to me) → +90 confirmed, no reversal. Both truss beams done: beam 1 no correction, beam 2 +90
+06:33 truss wash place check: U1.017 (cut-11, x −0.73, tilted toward the DJ) = hall (owner: thats right)
+06:4x truss washes in ten colours (group-identify.mjs --universe 1 --from 17 --to 96): owner "others right" — all ten places match.
+06:4x rig-par-cut-07 (drawn on the truss, no twin there, no address) -> floor past the truss low end (-11.55, 0.32, 3.31), pointing up, U1.329;
+      rig-par-planes-37 gives U1.329 back (no address; checked with the floor washes). doc v538, physics 0 leaks / 98 beams, desk 62/62 patched,
+      node 1 U1.329 = [255,0,255,0,...] (green), node 2 U2.137-200 all 0. Moves file: truss-moves-cut07-floor-2026-10-17.json.
+06:5x U1.329 wash (rig-par-cut-07) -> floor beside the column at x -12 z 6, next to speaker L (-11.2, 0.32, 5.8); owner "yes to the next colume of the speakers". v539.
+07:0x beams behind the DJ U1.233-313 (6): colours and order right (owner).
+07:0x side line left U1.153-217: the hall runs the other way (U1.217 nearest the audience). 3D lamps swapped end for end, addresses kept; v543, physics 0 leaks.
+07:1x side line left: owner 'in 3d lef side ok'. side line right U2.001-065 wrong too: 3D lamps swapped end for end (U2.001 nearest the audience), addresses kept; v547, physics 0 leaks.
+07:2x side line right: one by one, U2.001 = farthest (owner). The 07:1x end-for-end swap was wrong; swapped back to the first order (U2.001 farthest, U2.065 nearest); v551, physics 0 leaks. Both sides lit in colours again.
+07:2x side line right: owner 'yes right now'. Both side lines confirmed (places/order).
+07:3x side line right seen with the heads up 45 deg: owner 'oh yes right is ok'.
+07:3x side line left seen with the heads up 45 deg: owner 'yes'. Both side lines confirmed again.
+07:4x road six U1.417-457 lit at the controller: owner 'now all turned off' -> not the six washes on his left (not seen in the hall). Trying the line washes U1.121/129/137/353/369/401.
+07:5x U1.353 alone lit: no wash lights in the hall; owner 'we dont have wash 353 delete it ... i mean in address 353' -> rig-par-planes-13 deleted (v552, backup before-delete-353), desk re-patched 61/61, physics 0 leaks / 97 beams, lasers 0.
+08:0x U1.401 alone green: owner 'i cant see any green light now' (not deleted, awaiting his word). Beam 2 panOffsetDeg 90 written (v553; installed di 0.4.4-dev.4ed08cc1 keeps it).
+08:2x universe 1 all lamps colour-coded by area (truss green): owner 'all right' -> every U1 place matches the 3D (U1.401 and the left-wall six included).
+08:3x beam directions test 1 (3D: all 45 deg up to the audience's right): owner 'dj is wrong dj looks to the backstage' (left side right). Test 2: toward the audience, 60 deg up.
+08:4x test 2 (3D: toward the audience 60 deg up): left side right; DJ beams leaned to the audience's right -> turned, not mirrored: panOffsetDeg -90 on rig-beam-planes-01..06 (backup before-dj-beams-pan). Re-test toward the audience with it.
+08:4x DJ beams with panOffsetDeg -90 lean toward the audience in the hall: owner 'yes'. DJ + left side directions done.
+08:5x right side test 1 (3D: 45 deg up toward the hall middle = audience's left): owner 'no it looks to the right'. Test 2: toward the audience 60 deg up.
+08:5x right side test 2 (3D: toward the audience): owner 'they look to the backstage' -> turned 180: panOffsetDeg 180 on rig-beam-planes-16/18/09/15/11 (backup before-right-beams-pan). Re-test toward the audience with it.
+08:5x right side beams with panOffsetDeg 180 lean toward the audience in the hall: owner 'yes'. All beam directions done: truss beam 1 none, truss beam 2 +90, DJ beams -90, left side none, right side 180 (doc v564).
+09:0x universe 2 washes U2.081-129 colour order: owner 'thats to right'. Universe 1 and universe 2 places + beam directions all confirmed; lasers next (needs the safety word).
+09:1x LASER SAFETY: owner 'nobody in front and will not never' — both 40 W lasers lit for the 3D check (static dot, centre, full).
+09:2x lasers: owner 'swap with places' -> rig-laser-41 (U2.137, red) now right of centre, rig-laser-42 (U2.169, green) left; laser-swap-2026-10-17.json.
+09:2x lasers: owner 'yes' — places (after the swap) and aim toward the stage match the 3D. X/Y test next.
+09:3x lasers X test (ch6 64->100): owner 'yes they look up' — the dots go up, same as the 3D. Y test next.
+09:3x lasers Y test: owner 'idk' — walking the built-in graphics for a circle (ch4 0 normal display): red ch3=0, green ch3=2.
+09:3x graphics walk: ch3 0 (graphic 1) and ch3 2 (graphic 2) = lines (owner). Now ch3 4 / 6.
+09:4x lasers pointed down for the floor (owner 'point it to the ground'): X 10, output 50 %.
+09:4x lasers X 0: owner 'idk'. Direction walk with the owner facing the lasers (DJ behind him): step 1 X 125.
+09:5x lasers: owner 'change the shape that can figure it out' -> direction loop: line graphic, 4 s steps, centre white / X125 red / X0 green / Y125 blue / Y0 yellow, 6 cycles.
+07:4x (real clock) lasers direction loop: owner 'no its up' — every step stays up; loop stopped, both at centre (red/green). NOTE: hour stamps 08:xx/09:xx above are estimates — the real clock read 06:59 at the side-line work and 07:43 at this loop.
+07:5x lasers static beams again (point display, centre, full). 3D: U2.137 (right place) 6.6 deg up, 14 deg to the audience's left, hits the roof deck at (-10.7, 13.3, -4.3); U2.169 (left place) 6.8 deg up, 6.5 deg right, hits the lantern glazing at (5.5, 16.5, -31.2) — its line was 60.02 m, stopping in mid-air; set to 85.9 m (first hit). OWED: lasers driven by DMX need their line length from the first surface at run time, not a stored number.
+08:3x (real clock) the beam chat's raw holds on U2.137-200 RELEASED for the laser chat (laser-40w-patch-session leads the 40 W, N968-N973); desk values for both lasers were empty -> lasers rest dark (installed engine: dimmer default 0).
+08:3x CORRECTION from the laser chat: the desk keeps ONE raw layer for all; the release of U2.137-200 also cleared the owner's live shape settings (both lasers dark at 09:19:59 by their clock, mid-comparison at value 181). Their fader had worked all along; my 'your fader was blocked' was wrong.
+08:5x (real clock) SHOW RUNNING on the live rig: v1 (= the scenes chat's v6) — 51 looks from scenes-v5's moxir-v2-12 copied into moxir-v2-11's rig-show (v641), 50 cues (v692), show-loop on the desk: 1/50 The road in, loop 1116 s. My U1/U2.1-136 holds released first; U2.137-200 left to the laser chat.
+09:0x (real clock) v1 SCENES vs HALL — owner "in 3d beams are strobe but in real not", "the cut is not the right".
+  Cause 1: mappingState.showSource 'clock' (copied from rig v2.12) -> the 3D room played the show on its own clock and IGNORED the desk (showClock.js showDriver). Fixed: showSource removed (v693) -> the room follows the desk's DMX.
+  Cause 2 (product gap): the looks' LEVEL MOTION (motion: breathe/pulse/chase/sparkle/strobe/... in 48 of 51 looks) never reaches the desk: deskLooks/deskLookValues send one static step + heads only; engine.js plays only the global fx + head motion. Measured: during "The matrix" (breathe 66 bpm) the wash dimmers on node 1 were identical in 3 samples over 0.7 s.
+  Fix in progress: desk plays each look's motion with the room's lookMotion math (branch feat/desk-look-motion-2026-10-17, agent). Charts re-checked against the di.bo photos (agent, chart-audit-2026-10-17.md).
+09:1x look round-trip (scripts/rigbuild/look-roundtrip.mjs, new): 51 looks, 3060 lamp-looks — what the 3D draws from the desk's values vs the look:
+  level off 0, aim off 0, colour off 62 (ΔE76 > 15). All 62 are brightness, not hue: the encoder sends a colour at full strength and drops its value
+  (4 % of lit lamp-looks ask for a darkened colour, value 0.8-0.95, mean 0.99); and the 3D draws the B380F green slot #00d12a normalised as #00ff33.
+  The real gap is the level motion of 48 looks (desk fix in progress). Owed small fix: fold a colour's value into the dimmer in encodeDmx.

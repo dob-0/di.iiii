@@ -1309,6 +1309,22 @@ check('a look library round-trips, and a bad one is refused whole', async () => 
   assert.strictEqual(bad.status, 400);
 });
 
+check('a look keeps its motion (the levels it moves, lookMotion.js); junk motion is dropped, numbers are clamped', async () => {
+  const motion = { mode: 'breathe', bpm: 66, depth: 200, spatial: 'patch', kinds: ['up-pl5403'], still: 0.3, units: [{ id: 'm1', x: 0.25, y: -0.5 }, { id: 'm2', x: 1.75, y: 0.5 }] };
+  const made = await POST('/api/looks/add', { look: { id: 'mv', name: 'Breathe', steps: [{ values: { '*': { dimmer: 200 } } }], motion } });
+  assert.strictEqual(made.status, 200, made.text);
+  assert.deepStrictEqual(made.body.look.motion, motion, 'the look comes back with its motion, the same numbers');
+  const { body: read } = await GET('/api/looks');
+  assert.deepStrictEqual(read.looks.find((l) => l.id === 'mv').motion, motion, 'GET /api/looks carries it');
+  const junk = await POST('/api/looks/add', { look: { id: 'mj', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'wobble', units: [{ id: 'm1' }] } } });
+  assert.strictEqual(junk.body.look.motion, undefined, 'an unknown mode is no motion');
+  const noUnits = await POST('/api/looks/add', { look: { id: 'mn', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'pulse' } } });
+  assert.strictEqual(noUnits.body.look.motion, undefined, 'motion with nothing to move is no motion');
+  const clamped = await POST('/api/looks/add', { look: { id: 'mc', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'strobe', bpm: 9999, depth: -4, spatial: 'sideways', units: [{ id: 'm1' }, { id: 'm1' }] } } });
+  assert.deepStrictEqual(clamped.body.look.motion, { mode: 'strobe', bpm: 300, depth: 0, spatial: 'patch', kinds: [], still: 0, units: [{ id: 'm1', x: 0, y: 0 }] });
+  for (const id of ['mv', 'mj', 'mn', 'mc']) await POST('/api/looks/remove', { id });
+});
+
 check('a layer drives the wire, and its fader is one small request', async () => {
   const f = await patch('drgb', { address: 400 });
   await POST('/api/fixture', { id: f.id, values: { dimmer: 255, r: 0, g: 0, b: 0 } });
