@@ -43,3 +43,16 @@ from `B380F_WHEEL_SEEN`, no beam at eye level, lasers 0 unless the owner signs o
    from the 3D. Lesson kept here and in memory: a scope word ("later", "not now") leaves a thing as it is; it never removes it.
 6. **Taking a file from another session's branch at the moment I branched** gave me their v4 lasers while they already ran v5. Before landing
    anything that carries another session's part, re-read THEIR current file and compare (here: 22 scenes differed). Their message 10:1x caught it.
+
+## Handover (10:5x): the beam chat leads the MOXIR scenes now (owner's order, relayed by beam)
+Owner (via beam): *"this white we can take as v1, it good than this colorfull one and make the v2"* and *"too much white … keep it underground
+look to lineup and posters and the mood, do the deep analyze."* v6 = their v1. I stopped writing scenes and sent the handover (tools, inputs, traps).
+The measured start of the analysis, one method for all (`picture_palette.py`, `agent-reports-2026-10-17/moxir-scenes-v6/analysis-palette.json`):
+
+| group | dark | white glow | coloured glow | white share of the glow | colour of the glow |
+|---|---|---|---|---|---|
+| brand posters (inbox 09-30, 10) | 11 % | 68 % (paper) | 0.4 % | 99.5 % | monochrome; colour only in rust photo strips |
+| teaser (2 clips) | 52 % | 9.7 % | 1.5 % | 87 % | 100 % green |
+| the place (12 photos, 09-29) | 39 % | 3.2 % | 4.6 % | 41 % | red 60 %, amber 40 % (rust, sodium) |
+| v6 renders (50) | 53 % | 2.3 % | 0.6 % | 80 % | red, amber, green, blue |
+The line-up is in none of our files and not on the web (two searches): only the owner has it.
