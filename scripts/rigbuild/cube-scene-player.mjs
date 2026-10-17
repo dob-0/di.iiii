@@ -62,13 +62,13 @@ const readScene = async () => {
     const list = st?.cues?.list || [];
     const onLook = (st?.layers || []).find((l) => l.id === 'cue' && l.on !== false)?.lookId;
     let i = onLook ? list.findIndex((c) => c.lookId === onLook) : -1;
-    const direct = BLOCKS && onLook && i < 0 ? BLOCKS[String(onLook).replace(/^rig-/, '')] : null;   // a desk-only look with its own block
+    const direct = BLOCKS && onLook && i < 0 ? (BLOCKS[String(onLook).replace(/^rig-/, '')] || BLOCKS['*'] || null) : null;   // '*' = any other look   // a desk-only look with its own block
     if (direct && scene.index !== onLook) { scene = { index: onLook, at: Date.now(), start: direct.start, hold: Math.max(1, direct.len) }; console.log(`${new Date().toISOString().slice(11, 19)} desk look ${onLook} → cube clock ${direct.start}s`); return; }
     if (direct) return;
     if (i < 0 && Number.isInteger(st?.cues?.index)) i = st.cues.index;
     if (i >= 0 && i !== scene.index) {
       // --blocks: one motion cycle per laser scene (cube_cycles.py); a scene without one plays the dark block. Else the loop clock.
-      const b = BLOCKS ? (BLOCKS[String(list[i].lookId || '').replace(/^rig-/, '')] || BLOCKS.dark) : null;
+      const b = BLOCKS ? (BLOCKS[String(list[i].lookId || '').replace(/^rig-/, '')] || BLOCKS['*'] || BLOCKS.dark) : null;
       const start = b ? b.start : list.slice(0, i).reduce((s, c) => s + (+c.hold || 0), 0);
       scene = { index: i, at: Date.now(), start, hold: Math.max(1, b ? b.len : (+list[i].hold || 1)) };
       console.log(`${new Date().toISOString().slice(11, 19)} scene ${i + 1} ${list[i].name} → cube clock ${start}s`);

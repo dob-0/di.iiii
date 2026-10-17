@@ -2,8 +2,8 @@
  "loop_s": 78.0,
  "blocks": {
   "dark": {
-   "start": 76.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 76.0
   },
   "v6-001": {
    "start": 0.0,
@@ -494,9 +494,13 @@
    "len": 76.0
   },
   "v7-123": {
-   "start": 76.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 76.0
+  },
+  "*": {
+   "start": 0.0,
+   "len": 76.0
   }
  },
- "why_all": "owner 02:0x: \"laser cube is turned off\" \u2014 the cubes play in every scene, also the ones made without lasers"
+ "why_all": "owner 02:2x: \"add laser cube on all the scenes\" \u2014 every scene, every desk-only look, and anything unknown plays the loop"
 }
