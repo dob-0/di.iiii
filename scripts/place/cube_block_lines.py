@@ -22,6 +22,10 @@ def picture(k, ph, m, rgb):           # whole field, -0.95..0.95 (owner 22:2x: c
     if k == 3: x = m * 0.9 * s; return [seg((x, -0.95), (x, 0.95), rgb)]
     o = 0.9 * (0.5 + 0.5 * s); return [seg((-0.95, -o), (0.95, o), rgb), seg((-0.95, o), (0.95, -o), rgb)]
 doc_f, blocks_f, out_f = keep[1:4]
+FORCE = None   # --colour <prefix>=r,g,b : those blocks draw in that colour (owner 01:4x: the new scenes red only)
+if '--colour' in keep:
+    pre, rgb_s = keep[keep.index('--colour') + 1].split('=')
+    FORCE = (pre, [float(x) for x in rgb_s.split(',')])
 SKIP = keep[keep.index('--keep-prefix') + 1] if '--keep-prefix' in keep else None   # blocks whose ids start so keep their compiled frames (e.g. the dots)
 d = json.load(open(doc_f)); doc = d.get('document', d); blocks = json.load(open(blocks_f))
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
@@ -39,6 +43,7 @@ for bi, (sid, b) in enumerate(sorted(blocks['blocks'].items(), key=lambda kv: kv
             if sid == 'dark' or not pts: continue
             r, g, bb = (sum(p[c] for p in pts) / len(pts) for c in (2, 3, 4)); top = max(r, g, bb) or 1
             rgb = [round(r / top, 3), round(g / top, 3), round(bb / top, 3)]
+            if FORCE and sid.startswith(FORCE[0]): rgb = FORCE[1]
             ph = (k - f0) / max(1, f1 - f0)
             for s_i, stroke in enumerate(picture(bi % 5, ph, -1 if cube in '456' else 1, rgb)):
                 new[ids[min(s_i, len(ids) - 1)]][k] += stroke
