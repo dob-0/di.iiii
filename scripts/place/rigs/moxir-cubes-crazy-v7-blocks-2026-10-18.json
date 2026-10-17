@@ -564,6 +564,46 @@
   "v7-139": {
    "start": 144.0,
    "len": 6.0
+  },
+  "v7-140": {
+   "start": 66.0,
+   "len": 6.0
+  },
+  "v7-141": {
+   "start": 60.0,
+   "len": 6.0
+  },
+  "v7-142": {
+   "start": 84.0,
+   "len": 6.0
+  },
+  "v7-143": {
+   "start": 72.0,
+   "len": 6.0
+  },
+  "v7-144": {
+   "start": 78.0,
+   "len": 6.0
+  },
+  "v7-145": {
+   "start": 102.0,
+   "len": 6.0
+  },
+  "v7-146": {
+   "start": 90.0,
+   "len": 6.0
+  },
+  "v7-147": {
+   "start": 96.0,
+   "len": 6.0
+  },
+  "v7-148": {
+   "start": 150.5,
+   "len": 1.0
+  },
+  "v7-149": {
+   "start": 108.0,
+   "len": 6.0
   }
  },
  "why_all": "owner 02:2x: \"add laser cube on all the scenes\" \u2014 every scene, every desk-only look, and anything unknown plays the loop"
