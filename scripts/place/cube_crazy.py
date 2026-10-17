@@ -108,12 +108,12 @@ def PICK(k, t, m):
 GRAD_EVERY = int(arg('--gradient-every', 0))   # owner 02:2x: "white red gradient": every Nth pattern runs white -> red along each line, the gradient travelling
 def colour_of(k): return [1.0, 0.0, 0.0] if RED_EVERY and k % RED_EVERY == RED_EVERY - 1 else ('grad' if GRAD_EVERY and k % GRAD_EVERY == 1 else RGB)
 def paint(stroke, col, t):
-    if col != 'grad': return [q[:2] + (col if max(q[2:5]) > 0 else [0, 0, 0]) for q in stroke]
+    if col not in ('grad', 'gradg'): return [q[:2] + (col if max(q[2:5]) > 0 else [0, 0, 0]) for q in stroke]
     n = max(1, len(stroke) - 1)
     out = []
     for i, q in enumerate(stroke):
         w = 0.5 + 0.5 * math.cos(2 * math.pi * (i / n - t))     # 1 = white, 0 = red
-        out.append(q[:2] + [1.0, round(w, 3), round(w, 3)])
+        out.append(q[:2] + ([1.0, round(w, 3), round(w, 3)] if col == 'grad' else [round(w, 3), 1.0, round(w, 3)]))   # gradg: white -> green
     return out
 EXTRA = [e.split(':') for e in arg('--extra', '').split(';') if e]   # id:set:k:r,g,b:seconds[:speed]
 EXTRA_S = sum(float(e[4]) for e in EXTRA)
@@ -128,7 +128,7 @@ for e in EXTRA:
 for k in range(N):
     hit = next((x for x in xb if x[0] <= k < x[1]), None)
     if hit:
-        f0, f1, e = hit; t = ((k - f0) / max(1, f1 - f0) * (float(e[5]) if len(e) > 5 else 1)) % 1; fn = scan if e[1] == 'scan' else pat; col = 'grad' if e[3] == 'grad' else [float(x) for x in e[3].split(',')]
+        f0, f1, e = hit; t = ((k - f0) / max(1, f1 - f0) * (float(e[5]) if len(e) > 5 else 1)) % 1; fn = scan if e[1] == 'scan' else pat; col = e[3] if e[3] in ('grad', 'gradg') else [float(x) for x in e[3].split(',')]
         for cube in '123456':
             ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
             for s_i, stroke in enumerate(fn(int(e[2]), t, -1 if cube in '456' else 1)[:6]): new[ids[s_i]][k] = paint(stroke, col, t)

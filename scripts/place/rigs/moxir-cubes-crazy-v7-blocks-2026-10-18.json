@@ -2,7 +2,7 @@
  "loop_s": 98.0,
  "blocks": {
   "dark": {
-   "start": 96.5,
+   "start": 104.5,
    "len": 1.0
   },
   "v6-001": {
@@ -684,6 +684,10 @@
   "v7-169": {
    "start": 0.0,
    "len": 96.0
+  },
+  "v7-170": {
+   "start": 96.0,
+   "len": 8.0
   }
  },
  "why_all": "owner 02:2x: \"add laser cube on all the scenes\" \u2014 every scene, every desk-only look, and anything unknown plays the loop",
