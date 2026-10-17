@@ -55,6 +55,12 @@ def scan(k, t, m):                     # --set scan (owner 02:0x: "loop lines x 
     if k == 7: g = 0.15 + 0.3 * (0.5 + 0.5 * math.sin(2 * math.pi * t)); return [seg((x * g * m, -F), (x * g * m, F)) for x in (-3, -1, 1, 3)]  # lines spreading out in X
     if k == 8: g = 0.15 + 0.3 * (0.5 + 0.5 * math.sin(2 * math.pi * t)); return [seg((-F, y * g), (F, y * g)) for y in (-3, -1, 1, 3)]          # lines spreading out in Y
     if k == 9: return [seg((clip(x + o * m - 0.4), -F), (clip(x + o * m + 0.4), F)) for x in (-0.5, 0, 0.5)]   # slanted lines sliding X
+    tri = F * (1 - 4 * abs(t - 0.5))      # straight down then straight up (owner 03:3x: "going down and up")
+    if k == 11: return [seg((-F, -tri), (F, -tri))]                                          # a line going down, then up
+    if k == 12: return [seg((tri * m, -F), (tri * m, F))]                                     # a line going across, then back
+    if k == 13: return [seg((-F, clip(F - 2 * F * (1 - abs(1 - 2 * ((t + j / 3) % 1))))), (F, clip(F - 2 * F * (1 - abs(1 - 2 * ((t + j / 3) % 1)))))) for j in range(3)]  # three lines cascading down and up
+    if k == 14: return [seg((tri * m * 0.6, -F), (tri * m * 0.6, F)), seg((-F, -tri), (F, -tri))]   # a cross travelling down-across and back
+    if k == 15: return [seg((-F, clip(-tri - 0.5)), (F, clip(-tri + 0.5))), seg((-F, clip(-tri + 0.5)), (F, clip(-tri - 0.5)))]          # an X sweeping down and up
     r = math.pi * t * m; c, sn = math.cos(r), math.sin(r)
     return [seg((-F * c, -F * sn), (F * c, F * sn))]                                          # one line turning slowly, like a radar
 def dot(x, y, lit=3):                  # one dot: a blank move there, then a short dwell lit (owner 03:2x: "a lot of dots")
@@ -83,12 +89,13 @@ SET = arg('--set', 'crazy')
 # --set mix (owner 02:1x: "more animations, red and white but more white"): the 5 scans and the 8 crazy patterns interleaved;
 # --red-every N: every Nth pattern red, the rest white.
 MIX_DOTS = [(scan, 0), (dots, 0), (pat, 0), (scan, 5), (dots, 1), (pat, 1), (scan, 1), (dots, 2), (pat, 2), (scan, 6), (dots, 3), (pat, 3),
-            (scan, 4), (dots, 4), (pat, 4), (scan, 9), (dots, 5), (pat, 7), (scan, 10), (dots, 3), (pat, 6), (scan, 7), (dots, 0), (pat, 5)]
+            (scan, 4), (dots, 4), (pat, 4), (scan, 9), (dots, 5), (pat, 7), (scan, 10), (dots, 3), (pat, 6), (scan, 7), (dots, 0), (pat, 5),
+            (scan, 11), (scan, 12), (scan, 13), (scan, 14), (scan, 15)]
 MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2), (scan, 7), (pat, 2), (scan, 3), (scan, 8), (pat, 3),
        (scan, 4), (scan, 9), (pat, 4), (scan, 10), (pat, 5), (pat, 6), (pat, 7)]
 RED_EVERY = int(arg('--red-every', 0))
 if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
-NPAT = {'scan': 11, 'mix': len(MIX)}.get(SET, 8)
+NPAT = {'scan': 16, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
     if SET == 'scan': return scan(k, t, m)
     if SET == 'mix': f, j = MIX[k]; return f(j, t, m)
