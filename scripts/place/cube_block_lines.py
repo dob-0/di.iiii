@@ -22,6 +22,7 @@ def picture(k, ph, m, rgb):           # whole field, -0.95..0.95 (owner 22:2x: c
     if k == 3: x = m * 0.9 * s; return [seg((x, -0.95), (x, 0.95), rgb)]
     o = 0.9 * (0.5 + 0.5 * s); return [seg((-0.95, -o), (0.95, o), rgb), seg((-0.95, o), (0.95, -o), rgb)]
 doc_f, blocks_f, out_f = keep[1:4]
+SKIP = keep[keep.index('--keep-prefix') + 1] if '--keep-prefix' in keep else None   # blocks whose ids start so keep their compiled frames (e.g. the dots)
 d = json.load(open(doc_f)); doc = d.get('document', d); blocks = json.load(open(blocks_f))
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
 fr0 = next(iter(lines.values()))['components']['beam']['laser']['frames']; n = len(fr0['list']); period = fr0['period']
@@ -32,6 +33,9 @@ for bi, (sid, b) in enumerate(sorted(blocks['blocks'].items(), key=lambda kv: kv
         ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
         for k in range(f0, min(f1, n)):
             pts = [p for i in ids for p in lines[i]['components']['beam']['laser']['frames']['list'][k] if len(p) >= 5 and max(p[2:5]) > 0]
+            if SKIP and sid.startswith(SKIP):
+                for i in ids: new[i][k] = lines[i]['components']['beam']['laser']['frames']['list'][k]
+                continue
             if sid == 'dark' or not pts: continue
             r, g, bb = (sum(p[c] for p in pts) / len(pts) for c in (2, 3, 4)); top = max(r, g, bb) or 1
             rgb = [round(r / top, 3), round(g / top, 3), round(bb / top, 3)]
