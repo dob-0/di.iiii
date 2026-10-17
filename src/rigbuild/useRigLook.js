@@ -7,7 +7,7 @@ import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
 import { dmxEntities } from './dmxPose.js'
 import { isAssumedMode, typeById } from './fixtureTypes.js'
 import { getServerOffset } from './serverClock.js'
-import { motionFrame, motionOf, motionPlan, serverNowOf, withMotion } from './lookMotion.js'
+import { djCentre, motionFrame, motionOf, motionPlan, serverNowOf, withMotion } from './lookMotion.js'
 import { headFrame, headPlan, headsOf, withHeads } from './headMotion.js'
 
 // THE ROOM FOLLOWS THE LOOK (docs/architecture/RIG_BUILD.md §11.4). While the desk plays
@@ -56,13 +56,6 @@ export const roomInLook = ({ entities, library, looks, lookId }) => {
     if (!poses.size) return entities
     const look = looks.looks.find((l) => l.id === lookId)
     return withWashLevel(posedEntities(entities, poses), washLevelOf(look))
-}
-
-// Where a look's radial motion measures from: the DJ (the booth), else null (the middle of the moving lamps).
-const djCentre = (entities) => {
-    const dj = entities.find((e) => e.id === 'rig-dj-table')
-    const p = dj?.components?.transform?.position
-    return Array.isArray(p) ? [p[0], 0, p[2]] : null
 }
 
 /** How far a fade has come, 0..1, at `now`. No fade (or none recorded) is 1. */
