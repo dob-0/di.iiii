@@ -22,3 +22,4 @@
 06:18 truss beam 1 at pan 0 / tilt 0 → straight back and up to the backstage (owner). With pan 0 / tilt 255 = forward and up: pan 0 % faces the front-back plane, tilt runs the way di thinks → beam 1 panOffsetDeg −270 (= +90)
 06:20 beam 1: pan 43 / tilt 0 → parallel to the truss (owner: yes it right); now pan 85 / tilt 0 (+180° from pan 0) → expect toward the DJ / front
 06:22 beam 1: pan 85 / tilt 0 → toward the DJ / front (owner: yes); now pan 128 / tilt 0 (+270°) → expect parallel to the truss, the other side
+06:24 beam 1: pan 128 / tilt 0 → hall and 3D the same (owner: right both). With the head now hanging straight in the 3D, no pan correction is needed — the earlier mismatch was the crooked rotation (fixed 06:2x). Correction file emptied.
