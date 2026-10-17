@@ -1,8 +1,8 @@
 {
- "version": "2.21",
- "title": "MOXIR scenes v2.1 (draft)",
+ "version": "2.22",
+ "title": "MOXIR scenes v2.2 (the show)",
  "date": "2026-10-17",
- "what": "v2.1 techno loop, every device; rules LEAD-BRIEF-addendum.md (g); CONCEPT.md in agent-reports-2026-10-17/scenes-v2",
+ "what": "v2.2: lime / ember / white, hall-only parts, strobes, rides and scans; 40 W lines as data (desk-dark until the sign-off passthrough); lead brief 20:1x",
  "written_by": "scripts/place/rig_generate.py",
  "generated_by": {
   "tool": "scripts/place/rig_generate.py",
@@ -25421,57 +25421,29 @@
    "act": 1,
    "intent": "The hall as found: the back wall red, two pieces bright, every other wash a red ember. Washes breathe.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.8
-    ],
-    "line B": [
-     "#ff0000",
-     0.8
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
-     0.2
+     "#ff3a12",
+     0.8
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.2
-    ],
-    "stage key": [
-     "#ff0000",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -25492,61 +25464,33 @@
    "act": 1,
    "intent": "Red rolls along the wall toward the DJ; the red beams behind him lean slowly.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.25
-    ],
-    "line B": [
-     "#ff0000",
-     0.25
-    ],
-    "line C": [
-     "#ff0000",
-     0.8
-    ],
-    "line D": [
-     "#ff0000",
-     0.8
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.8
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -25588,22 +25532,6 @@
    "act": 1,
    "intent": "White: the truss up into the haze, the side beams open white ride across the hall, mirrored.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.2
@@ -25628,10 +25556,6 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "side line left": [
      "#ffffff",
      1.0
@@ -25639,14 +25563,6 @@
     "side line right": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -25677,56 +25593,28 @@
    "act": 1,
    "intent": "The DJ a silhouette in red from behind, the kicker as counter-light; red pulses out from him.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.6
-    ],
-    "stage key": [
-     "#ff0000",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
+     "#ff3a12",
      0.6
     ]
    },
@@ -25748,61 +25636,33 @@
    "act": 1,
    "intent": "Green: two pieces of the wall, flipping in blocks; green behind the DJ scans fast, neighbours opposite.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.9
-    ],
-    "line B": [
-     "#00ff00",
-     0.25
-    ],
-    "line C": [
-     "#00ff00",
-     0.25
-    ],
-    "line D": [
-     "#00ff00",
-     0.9
-    ],
     "line L": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.9
     ],
     "line R": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.9
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj kicker": [
-     "#00ff00",
-     0.25
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -25825,7 +25685,7 @@
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 5; family green; outside = the owner's rule (v6 scene 5); laser = the laser session's design of v6 scene 5 (dj-alone), colours theirs; hold = v6"
+   "notes": "v2.0 scene 5; family lime; outside = the owner's rule (v6 scene 5); laser = the laser session's design of v6 scene 5 (dj-alone), colours theirs; hold = v6"
   },
   {
    "id": "one-ray",
@@ -25833,22 +25693,6 @@
    "act": 1,
    "intent": "White floor lines, a comet toward the DJ; warm white behind him waves.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.8
@@ -25873,21 +25717,9 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -25918,65 +25750,37 @@
    "act": 1,
    "intent": "SIGNATURE: a red comet runs the whole back wall toward the DJ; the sides ride wide across the hall.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.9
-    ],
-    "line B": [
-     "#ff0000",
-     0.9
-    ],
-    "line C": [
-     "#ff0000",
-     0.9
-    ],
-    "line D": [
-     "#ff0000",
-     0.9
-    ],
     "line L": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.9
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.9
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26007,65 +25811,37 @@
    "act": 1,
    "intent": "Green columns: the sides lean toward the floor and back, left green, right lime; the truss green down on the floor.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.25
-    ],
-    "line B": [
-     "#00ff00",
-     0.25
-    ],
-    "line C": [
-     "#00ff00",
-     0.25
-    ],
-    "line D": [
-     "#00ff00",
-     0.25
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.8
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj kicker": [
-     "#00ff00",
-     0.25
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line right": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -26099,7 +25875,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 8; family green; outside = the owner's rule (v6 scene 8); laser = the laser session's design of v6 scene 8 (cold-columns), colours theirs; hold = v6"
+   "notes": "v2.0 scene 8; family lime; outside = the owner's rule (v6 scene 8); laser = the laser session's design of v6 scene 8 (cold-columns), colours theirs; hold = v6"
   },
   {
    "id": "white-rays",
@@ -26107,29 +25883,13 @@
    "act": 1,
    "intent": "White rays up the back wall rolling toward the DJ; open white behind him scans in a ripple.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.7
-    ],
-    "line B": [
-     "#ffffff",
-     0.7
-    ],
-    "line C": [
-     "#ffffff",
-     0.7
-    ],
-    "line D": [
-     "#ffffff",
-     0.7
-    ],
     "line L": [
      "#ffffff",
-     0.2
+     0.7
     ],
     "line R": [
      "#ffffff",
-     0.2
+     0.7
     ],
     "cut up": [
      "#ffffff",
@@ -26147,21 +25907,9 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "plane 1": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26192,69 +25940,41 @@
    "act": 1,
    "intent": "All 18 beams red, a slow wide ride in a ripple; the cubes draw their first net.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.3
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     0.3
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -26296,61 +26016,33 @@
    "act": 2,
    "intent": "Red chases along the wall toward the DJ; only the left side rides; the kicker counter-lights.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
-    "stage key": [
-     "#ff0000",
-     0.3
-    ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26382,22 +26074,6 @@
    "act": 2,
    "intent": "White pumps on the beat, the truss full, the stage key on the DJ; open white scans behind him, warm white left only.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      0.3
@@ -26420,10 +26096,6 @@
     ],
     "dj kicker": [
      "#ffffff",
-     0.3
-    ],
-    "stage key": [
-     "#ffffff",
      0.8
     ],
     "plane 1": [
@@ -26431,16 +26103,8 @@
      1.0
     ],
     "side line left": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26472,52 +26136,32 @@
    "act": 2,
    "intent": "Green bars flip across the hall; the beams nod mirrored, lime on the left.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     0.3
-    ],
-    "line D": [
-     "#00ff00",
-     1.0
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
@@ -26525,16 +26169,8 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26558,7 +26194,7 @@
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 13; family green; outside = the owner's rule (v6 scene 13); laser = the laser session's design of v6 scene 13 (rays-pulse), colours theirs; hold = v6"
+   "notes": "v2.0 scene 13; family lime; outside = the owner's rule (v6 scene 13); laser = the laser session's design of v6 scene 13 (rays-pulse), colours theirs; hold = v6"
   },
   {
    "id": "red-out",
@@ -26566,69 +26202,41 @@
    "act": 2,
    "intent": "Red chases out from the DJ through the hall; red-orange behind him, red sides on a fast wide ride.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.3
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     0.3
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.8
-    ],
-    "stage key": [
-     "#ff0000",
-     0.3
     ],
     "plane 1": [
      "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26660,69 +26268,41 @@
    "act": 2,
    "intent": "SIGNATURE: the teaser's column — 18 green beams straight up, pumping on the beat; the washes a green ember.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.15
-    ],
-    "line B": [
-     "#00ff00",
-     0.15
-    ],
-    "line C": [
-     "#00ff00",
-     0.15
-    ],
-    "line D": [
-     "#00ff00",
-     0.15
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj kicker": [
-     "#00ff00",
-     0.15
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line right": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -26747,7 +26327,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 15; family green; outside = the owner's rule (v6 scene 15); laser = the laser session's design of v6 scene 15 (left-right), colours theirs; hold = v6"
+   "notes": "v2.0 scene 15; family lime; outside = the owner's rule (v6 scene 15); laser = the laser session's design of v6 scene 15 (left-right), colours theirs; hold = v6"
   },
   {
    "id": "white-comet",
@@ -26755,22 +26335,6 @@
    "act": 2,
    "intent": "A white comet runs the floor lines toward the entrance; open white sides scan in circles.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -26795,25 +26359,9 @@
      "#ffffff",
      0.3
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "side line left": [
      "#ffffff",
      1.0
-    ],
-    "side line right": [
-     "#fff0c0",
-     1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -26845,65 +26393,33 @@
    "act": 2,
    "intent": "Red scissors: the sides lean fast, neighbours opposite, red left, red-orange right; red behind the DJ.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.3
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     0.3
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "side line left": [
-     "#ff2a0a",
-     1.0
-    ],
-    "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -26946,61 +26462,33 @@
    "act": 2,
    "intent": "Green ping-pongs along the wall; green behind the DJ rides a wide figure eight.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     1.0
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     1.0
-    ],
-    "line D": [
-     "#00ff00",
-     1.0
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -27035,7 +26523,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 18; family green; outside = the owner's rule (v6 scene 18); laser = the laser session's design of v6 scene 18 (green-comb), colours theirs; hold = v6"
+   "notes": "v2.0 scene 18; family lime; outside = the owner's rule (v6 scene 18); laser = the laser session's design of v6 scene 18 (green-comb), colours theirs; hold = v6"
   },
   {
    "id": "white-bars",
@@ -27043,22 +26531,6 @@
    "act": 2,
    "intent": "White bars flip across the hall; the beams scan mirrored, warm white on the left.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      0.3
@@ -27083,29 +26555,17 @@
      "#ffffff",
      0.8
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "plane 1": [
      "#ffffff",
      1.0
     ],
     "side line left": [
-     "#fff0c0",
+     "#ffffff",
      1.0
     ],
     "side line right": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -27137,69 +26597,41 @@
    "act": 2,
    "intent": "Everything red, pumping; all 18 beams ride wide and fast in a ripple. The rise before the first drop.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     1.0
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -27242,22 +26674,6 @@
    "act": 3,
    "intent": "The cathedral: every lamp open white, strobing at 3 a second, the 18 beams scanning circles in a ripple.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -27282,10 +26698,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -27295,16 +26707,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -27346,16 +26750,7 @@
    "title": "Kerrie · Blackout",
    "act": 3,
    "intent": "Six seconds of nothing. The deliberate blackout cut before the red room.",
-   "parts": {
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
+   "parts": {},
    "notes": "v2.0 scene 22; family blackout; outside = the owner's rule (v6 scene 22); laser = the laser session's design of v6 scene 22 (strobe-hit), colours theirs; hold = v6"
   },
   {
@@ -27364,69 +26759,41 @@
    "act": 3,
    "intent": "SIGNATURE: the room red from the floor; red beams nod together; pumping.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#ff3a12",
@@ -27469,52 +26836,32 @@
    "act": 3,
    "intent": "Green bars across the hall; the beams scan fast, mirrored, lime left.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     0.3
-    ],
-    "line C": [
-     "#00ff00",
-     0.3
-    ],
-    "line D": [
-     "#00ff00",
-     0.3
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
@@ -27522,16 +26869,8 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -27566,7 +26905,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 24; family green; outside = the owner's rule (v6 scene 24); laser = the laser session's design of v6 scene 24 (the-storm), colours theirs; hold = v6"
+   "notes": "v2.0 scene 24; family lime; outside = the owner's rule (v6 scene 24); laser = the laser session's design of v6 scene 24 (the-storm), colours theirs; hold = v6"
   },
   {
    "id": "radar",
@@ -27574,22 +26913,6 @@
    "act": 3,
    "intent": "A white radar line sweeps the hall; the beams ride wide, warm white on the right; the stage key on the DJ.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -27612,10 +26935,6 @@
     ],
     "dj kicker": [
      "#ffffff",
-     0.3
-    ],
-    "stage key": [
-     "#ffffff",
      1.0
     ],
     "plane 1": [
@@ -27627,16 +26946,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -27679,61 +26990,33 @@
    "act": 3,
    "intent": "Red blocks flip; the kicker counter-lights the DJ; red-orange straight up behind him, still.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.25
-    ],
-    "line B": [
-     "#ff0000",
-     0.25
-    ],
-    "line C": [
-     "#ff0000",
-     0.25
-    ],
-    "line D": [
-     "#ff0000",
-     0.25
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      1.0
-    ],
-    "stage key": [
-     "#ff0000",
-     0.25
     ],
     "plane 1": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -27755,61 +27038,33 @@
    "act": 3,
    "intent": "Green ping-pongs the wall; only the left side scans, fast, neighbours opposite.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     1.0
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     1.0
-    ],
-    "line D": [
-     "#00ff00",
-     1.0
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#b699ff",
@@ -27844,7 +27099,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 27; family green; outside = the owner's rule (v6 scene 27); laser = the laser session's design of v6 scene 27 (radar), colours theirs; hold = v6"
+   "notes": "v2.0 scene 27; family lime; outside = the owner's rule (v6 scene 27); laser = the laser session's design of v6 scene 27 (radar), colours theirs; hold = v6"
   },
   {
    "id": "blinders",
@@ -27852,22 +27107,6 @@
    "act": 3,
    "intent": "SIGNATURE: the instrument. Every lamp open white straight up, strobing. Eight seconds.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -27892,10 +27131,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -27905,16 +27140,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -27936,52 +27163,32 @@
    "act": 3,
    "intent": "Red bars across the hall, red-orange on the left; the beams ride wide and fast in a ripple.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
@@ -27989,16 +27196,8 @@
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -28030,52 +27229,32 @@
    "act": 3,
    "intent": "Green sparkles across the hall (20 a minute, never more); the beams nod fast, mirrored.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     1.0
-    ],
-    "line D": [
-     "#00ff00",
-     0.3
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
@@ -28083,16 +27262,8 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#b699ff",
@@ -28127,7 +27298,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 30; family green; outside = the owner's rule (v6 scene 30); laser = the laser session's design of v6 scene 30 (sparkle-peak), colours theirs; hold = v6"
+   "notes": "v2.0 scene 30; family lime; outside = the owner's rule (v6 scene 30); laser = the laser session's design of v6 scene 30 (sparkle-peak), colours theirs; hold = v6"
   },
   {
    "id": "drop",
@@ -28135,57 +27306,29 @@
    "act": 4,
    "intent": "The drop: red embers everywhere, the DJ from behind; everything breathes to black.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.2
-    ],
-    "stage key": [
-     "#ff0000",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -28206,22 +27349,6 @@
    "act": 4,
    "intent": "Warm white behind the DJ, a slow lean wave; the washes a white ember.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.2
@@ -28246,21 +27373,9 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -28291,57 +27406,29 @@
    "act": 4,
    "intent": "SIGNATURE: the darkest scene. Green rolls to black along the wall; the cubes one slow line.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.6
-    ],
-    "line B": [
-     "#00ff00",
-     0.15
-    ],
-    "line C": [
-     "#00ff00",
-     0.15
-    ],
-    "line D": [
-     "#00ff00",
-     0.6
-    ],
     "line L": [
-     "#00ff00",
-     0.15
+     "#9cff00",
+     0.6
     ],
     "line R": [
-     "#00ff00",
-     0.15
+     "#9cff00",
+     0.6
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj kicker": [
-     "#00ff00",
+     "#9cff00",
      0.15
-    ],
-    "stage key": [
-     "#00ff00",
-     0.15
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#26bcff",
@@ -28365,7 +27452,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 33; family green; outside = the owner's rule (v6 scene 33); laser = the laser session's design of v6 scene 33 (blue-wave), colours theirs; hold = v6"
+   "notes": "v2.0 scene 33; family lime; outside = the owner's rule (v6 scene 33); laser = the laser session's design of v6 scene 33 (blue-wave), colours theirs; hold = v6"
   },
   {
    "id": "ember-floor",
@@ -28373,65 +27460,37 @@
    "act": 4,
    "intent": "The floor lines red rolling toward the DJ; red sides ride slowly across the hall.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.7
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.7
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj kicker": [
-     "#ff0000",
-     0.2
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -28462,22 +27521,6 @@
    "act": 4,
    "intent": "Warm white sides draw one slow wide figure eight over the hall; the washes a white ember, still.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.2
@@ -28502,25 +27545,13 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "side line left": [
-     "#fff0c0",
+     "#ffffff",
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -28551,57 +27582,29 @@
    "act": 4,
    "intent": "Green on the truss, sparkling faintly; the haze reads.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.2
-    ],
-    "line B": [
-     "#00ff00",
-     0.2
-    ],
-    "line C": [
-     "#00ff00",
-     0.2
-    ],
-    "line D": [
-     "#00ff00",
-     0.2
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.7
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.7
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "dj kicker": [
-     "#00ff00",
+     "#9cff00",
      0.2
-    ],
-    "stage key": [
-     "#00ff00",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.8
-    ],
-    "entrance": [
-     "#e04e00",
-     0.8
     ]
    },
    "motion": {
@@ -28614,7 +27617,7 @@
     ],
     "still": 0.0
    },
-   "notes": "v2.0 scene 36; family green; outside = the owner's rule (v6 scene 36); laser = the laser session's design of v6 scene 36 (sea-steel), colours theirs; hold = v6"
+   "notes": "v2.0 scene 36; family lime; outside = the owner's rule (v6 scene 36); laser = the laser session's design of v6 scene 36 (sea-steel), colours theirs; hold = v6"
   },
   {
    "id": "deep-tent",
@@ -28622,65 +27625,37 @@
    "act": 4,
    "intent": "A tent of red from the sides over a red wall; the 40 W layer is off tonight.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.6
-    ],
-    "line B": [
-     "#ff0000",
-     0.6
-    ],
-    "line C": [
-     "#ff0000",
-     0.6
-    ],
-    "line D": [
-     "#ff0000",
-     0.6
-    ],
     "line L": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#66faff",
@@ -28722,61 +27697,33 @@
    "act": 4,
    "intent": "Green breathes on the wall; green behind the DJ leans slowly; the cubes breathe with it.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.5
-    ],
-    "line B": [
-     "#00ff00",
-     0.5
-    ],
-    "line C": [
-     "#00ff00",
-     0.5
-    ],
-    "line D": [
-     "#00ff00",
-     0.5
-    ],
     "line L": [
-     "#00ff00",
-     0.2
+     "#9cff00",
+     0.5
     ],
     "line R": [
-     "#00ff00",
-     0.2
+     "#9cff00",
+     0.5
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "dj kicker": [
-     "#00ff00",
-     0.2
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -28810,7 +27757,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 38; family green; outside = the owner's rule (v6 scene 38); laser = the laser session's design of v6 scene 38 (green-breath), colours theirs; hold = v6"
+   "notes": "v2.0 scene 38; family lime; outside = the owner's rule (v6 scene 38); laser = the laser session's design of v6 scene 38 (green-breath), colours theirs; hold = v6"
   },
   {
    "id": "cold-rise",
@@ -28818,29 +27765,13 @@
    "act": 4,
    "intent": "A white comet toward the DJ; open white scans behind him. The second rise begins.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.8
-    ],
-    "line B": [
-     "#ffffff",
-     0.8
-    ],
-    "line C": [
-     "#ffffff",
-     0.8
-    ],
-    "line D": [
-     "#ffffff",
-     0.8
-    ],
     "line L": [
      "#ffffff",
-     0.3
+     0.8
     ],
     "line R": [
      "#ffffff",
-     0.3
+     0.8
     ],
     "cut up": [
      "#ffffff",
@@ -28858,21 +27789,9 @@
      "#ffffff",
      0.3
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "plane 1": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -28903,69 +27822,41 @@
    "act": 4,
    "intent": "The red riser: everything red, pumping, 18 beams riding wide and fast.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     1.0
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -29008,22 +27899,6 @@
    "act": 5,
    "intent": "The second drop: every lamp white, pumping; the beams scan fast, mirrored.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -29048,10 +27923,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -29061,16 +27932,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -29112,16 +27975,7 @@
    "title": "Mixtinct · Blackout II",
    "act": 5,
    "intent": "Six seconds of nothing before the word.",
-   "parts": {
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
+   "parts": {},
    "notes": "v2.0 scene 42; family blackout; outside = the owner's rule (v6 scene 42); laser = the laser session's design of v6 scene 42 (ice-strobe), colours theirs; hold = v6"
   },
   {
@@ -29130,69 +27984,41 @@
    "act": 5,
    "intent": "SIGNATURE: the word at full: green rig, 18 green beams riding wide, pumping.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     0.3
-    ],
-    "line C": [
-     "#00ff00",
-     0.3
-    ],
-    "line D": [
-     "#00ff00",
-     0.3
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line right": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -29227,7 +28053,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "v2.0 scene 43; family green; outside = the owner's rule (v6 scene 43); laser = the laser session's design of v6 scene 43 (cathedral-turns), colours theirs; hold = v6"
+   "notes": "v2.0 scene 43; family lime; outside = the owner's rule (v6 scene 43); laser = the laser session's design of v6 scene 43 (cathedral-turns), colours theirs; hold = v6"
   },
   {
    "id": "red-room-last",
@@ -29235,52 +28061,32 @@
    "act": 5,
    "intent": "SIGNATURE: red from the floor, red bars, the beams scissoring fast, red-orange left.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
@@ -29288,16 +28094,8 @@
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -29329,22 +28127,6 @@
    "act": 5,
    "intent": "White blocks flip across the hall; warm white behind the DJ, open white left only, scanning.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -29369,25 +28151,13 @@
      "#ffffff",
      0.3
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
     ],
     "side line left": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#ff3a12",
@@ -29430,22 +28200,6 @@
    "act": 5,
    "intent": "The last strobe: everything open white, eight seconds.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -29470,10 +28224,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -29483,16 +28233,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -29514,65 +28256,33 @@
    "act": 5,
    "intent": "The furnace cooling: red breathing, red-orange sides waving.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.6
-    ],
-    "line B": [
-     "#ff0000",
-     0.6
-    ],
-    "line C": [
-     "#ff0000",
-     0.6
-    ],
-    "line D": [
-     "#ff0000",
-     0.6
-    ],
     "line L": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "side line left": [
      "#ff5a1e",
      1.0
-    ],
-    "side line right": [
-     "#ff2a0a",
-     1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#ff9180",
@@ -29615,65 +28325,37 @@
    "act": 5,
    "intent": "Green chases toward the DJ one last time; green behind him and lime on the left ride wide.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.8
-    ],
-    "line B": [
-     "#00ff00",
-     0.8
-    ],
-    "line C": [
-     "#00ff00",
-     0.8
-    ],
-    "line D": [
-     "#00ff00",
-     0.8
-    ],
     "line L": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.8
     ],
     "line R": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.8
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj kicker": [
-     "#00ff00",
+     "#9cff00",
      0.6
     ],
-    "stage key": [
-     "#00ff00",
-     0.25
-    ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -29697,7 +28379,7 @@
      "up-b380f"
     ]
    },
-   "notes": "v2.0 scene 48; family green; outside = the owner's rule (v6 scene 48); laser = the laser session's design of v6 scene 48 (the-last-run), colours theirs; hold = v6"
+   "notes": "v2.0 scene 48; family lime; outside = the owner's rule (v6 scene 48); laser = the laser session's design of v6 scene 48 (the-last-run), colours theirs; hold = v6"
   },
   {
    "id": "embers-out",
@@ -29705,61 +28387,33 @@
    "act": 5,
    "intent": "Red sparkling out across the hall, the DJ a shadow.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.2
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.6
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -29781,22 +28435,6 @@
    "act": 5,
    "intent": "SIGNATURE: one warm white beam on the DJ from behind, the washes a white ember; it ties to scene 1.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.15
-    ],
-    "line B": [
-     "#ffffff",
-     0.15
-    ],
-    "line C": [
-     "#ffffff",
-     0.15
-    ],
-    "line D": [
-     "#ffffff",
-     0.15
-    ],
     "line L": [
      "#ffffff",
      0.15
@@ -29821,21 +28459,9 @@
      "#ffffff",
      0.15
     ],
-    "stage key": [
-     "#ffffff",
-     0.15
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",

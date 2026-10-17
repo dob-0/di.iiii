@@ -18,23 +18,26 @@ strobes only white; beams 0 or >= 0.95; head periods multiples of one bar at 132
 import json, sys, copy, colorsys
 BASE, OUT = sys.argv[1], sys.argv[2]
 LASER40 = '--laser40' in sys.argv and sys.argv[sys.argv.index('--laser40') + 1] == 'on'
-RED, GRN, WHT = '#ff0000', '#00ff00', '#ffffff'                 # wash recipes (B2)
-W, WW, R, RO, G, LIME = '#ffffff', '#fff0c0', '#ff2a0a', '#ff5a1e', '#00d12a', '#8cff3a'   # B380F slots seen (B1)
-SLOTS = {W: 'open', WW: 'warm white', R: 'red', RO: 'red-orange', G: 'green', LIME: 'lime'}
-FAMILY = {RED: 'red', R: 'red', RO: 'red', GRN: 'green', G: 'green', LIME: 'green', WHT: 'white', W: 'white', WW: 'white'}
-PALETTE = [(RED, 'red (clean)'), (GRN, 'green (clean)'), (WHT, 'white (W beads)'), ('#a5ff00', 'toxic green (road, outside rule)'),
-           ('#e04e00', 'dark amber (entrance, outside rule)')]
+RED, GRN, WHT = '#ff3a12', '#9cff00', '#ffffff'                 # v2.2 wash palette (lead 20:15, owner 20:1x 'lime one is better'): ember, lime, white
+W, RO, LIME = '#ffffff', '#ff5a1e', '#8cff3a'                    # v2.2 beam palette: open, red-orange, lime (the only slots tonight)
+WW, R, G = W, RO, LIME                                           # the v2.1 variants collapse onto the three slots
+SLOTS = {W: 'open', RO: 'red-orange', LIME: 'lime'}
+FAMILY = {RED: 'red', RO: 'red', GRN: 'lime', LIME: 'lime', WHT: 'white', W: 'white'}
+PALETTE = [(RED, 'ember (washes)'), (GRN, 'lime (washes)'), (WHT, 'white (washes)')]
 LASER_PALETTE = ['#eefdfd', '#00ff00', '#ff3a12', '#b699ff', '#26bcff', '#66faff', '#ff9180']   # the laser session's colours, theirs to change
 WASH, BEAM = 'up-pl5403', 'up-b380f'
 BOTH = (WASH, BEAM)
-WASHES = ('line A', 'line B', 'line C', 'line D', 'line L', 'line R', 'cut up', 'cut down', 'dj back', 'dj kicker', 'stage key')
+WASHES = ('line L', 'line R', 'cut up', 'cut down', 'dj back', 'dj kicker')   # the hall tonight (lead 20:1x): no line A-D, road, entrance, stage key
+HALL_MAP = {'line A': 'line L', 'line B': 'line L', 'line C': 'line R', 'line D': 'line R', 'stage key': 'dj kicker'}   # v2.1 leads on lamps that left the hall
 BEAMS = ('plane 1', 'side line left', 'side line right')
 BAR = 3.636                                                     # one bar at 132 bpm (addendum E2: period = k x 3.636 s)
 B1, B2, B4, B8 = BAR, 2 * BAR, 4 * BAR, 8 * BAR
 ARTIST = {1: 'Cloistral', 2: 'Innersha', 3: 'Kerrie', 4: 'Éléktra b2b Kogeno', 5: 'Mixtinct'}   # the teaser's line-up (owner 12:0x "yes lineup right")
 def washes(colour, lead, rest=0.25):
     """every wash part lit (owner 12:0x) in ONE colour: the lead parts at their level, the rest at `rest`."""
-    return {p: [colour, float(lead.get(p, rest))] for p in WASHES if lead.get(p, rest) > 0}
+    led = {}
+    for p, l in lead.items(): q = HALL_MAP.get(p, p); led[q] = max(led.get(q, 0), l)
+    return {p: [colour, float(led.get(p, rest))] for p in WASHES if led.get(p, rest) > 0}
 def beams(plane=None, left=None, right=None):
     out = {}
     for p, c in (('plane 1', plane), ('side line left', left), ('side line right', right)):
@@ -163,9 +166,10 @@ for k, (sid, title, act, energy, parts, motion, heads, fade, intent) in enumerat
     b6 = base['scenes'][k]
     hold = b6['cue']['hold_s']                                   # A1: hold_s of scene k = v6 scene k (the laser frames' loop)
     parts = {p: [c, float(l)] for p, (c, l) in parts.items()}
-    for p in ('road', 'entrance', 'laser'):                      # the outside rule and the laser session's levels, unchanged
-        if p in b6['parts']: parts[p] = list(b6['parts'][p])
-    if 'road' in parts and parts['road'][0] == '#a5ff0f': parts['road'][0] = '#a5ff00'   # B2: the clean toxic green (no trace emitter)
+    if 'laser' in b6['parts']: parts['laser'] = list(b6['parts']['laser'])   # the laser session's level (the lead raises the cubes to full separately)
+    whole = all(p in parts and parts[p][1] >= 0.95 for p in BEAMS) and len(parts) >= len(WASHES) + 3   # a whole-rig hit is symmetric by design
+    if act in (2, 3, 5) and not whole and 'side line right' in parts and parts.get('side line left') == parts['side line right']:
+        del parts['side line right']                                # one bright group at a time (R: one group): the left side alone
     fams = set()
     for p, (c, l) in parts.items():
         if p in ('road', 'entrance', 'laser'): continue
@@ -193,7 +197,7 @@ for k, (sid, title, act, energy, parts, motion, heads, fade, intent) in enumerat
         if not (15 <= heads['tilt_deg'] <= 25): errors.append(f'{sid}: tilt {heads["tilt_deg"]} outside 15..25')
     if fade > hold: errors.append(f'{sid}: fade {fade} > hold {hold}')
     if act in (2, 3, 5) and motion and motion['mode'] != 'none' and BEAM not in motion['kinds']: errors.append(f'{sid}: act {act} motion without the beams in kinds (E2)')
-    if act in (2, 3, 5) and parts and parts.get('side line left') == parts.get('side line right') and parts.get('side line left'): errors.append(f'{sid}: side line left == right in act {act} (E1)')
+    if act in (2, 3, 5) and parts and not whole and parts.get('side line left') == parts.get('side line right') and parts.get('side line left'): errors.append(f'{sid}: side line left == right in act {act} (E1)')
     laser_lines = copy.deepcopy(b6.get('laser_lines'))
     s = {'id': sid, 'title': f'{ARTIST[act]} · {title}', 'act': act, 'intent': intent, 'parts': parts, 'motion': motion, 'heads': heads,
          'laser_colour': b6.get('laser_colour'), 'desk_caps': b6.get('desk_caps'), 'cue': {'fade_s': fade, 'hold_s': hold},
@@ -224,7 +228,7 @@ beams_full = sum(1 for s in scenes if any(p in s['parts'] for p in BEAMS))
 moving = sum(1 for s in scenes if s['heads']); strobing = sum(1 for s in scenes if (s['motion'] or {}).get('mode') in ('strobe', 'pump', 'bars', 'glitch'))
 cover = {p: sum(1 for s in scenes if p in s['parts'] and s['parts'][p][1] > 0) for p in WASHES + BEAMS}
 out['scenes'], out['loop'], out['loop_s'] = scenes, True, loop_s
-out['version'] = 'v2.1-techno-2026-10-17'
+out['version'] = 'v2.2-lime-2026-10-17'
 out['palette'] = [{'hex': h, 'name': n} for h, n in PALETTE] + [{'hex': h, 'name': 'laser (the laser session\'s colour)'} for h in LASER_PALETTE]
 out['beam_wheel_seen'] = {h: {'slot': n, 'hex': h} for h, n in SLOTS.items()}
 out['what'] = ('MOXIR scenes v2.0 (2026-10-17): the underground loop, 50 scenes in 5 acts named by the line-up (Cloistral, Innersha, Kerrie, Éléktra b2b Kogeno, '
@@ -233,8 +237,8 @@ out['what'] = ('MOXIR scenes v2.0 (2026-10-17): the underground loop, 50 scenes 
                'holds = v6 (the laser frames\' loop); lasers = the laser session\'s design, colours theirs; 40 W lines under laser40, off unless --laser40 on. '
                'Rules: agent-reports-2026-10-17/lead/LEAD-BRIEF-addendum.md (section (g) wins); concept: scenes-v2/CONCEPT.md. v1 = the v6 data, live in the hall, untouched.')
 out['source'] = base['source'] + ' · v2.0 2026-10-17 by Fable (lead), docs/moxir/scenes-v2-2026-10-17/scenes_v2.py from this file (outside parts, lasers, holds kept scene by scene)'
-out['rules'].update({'heads_patterns': ['nod', 'wave', 'circle', 'figure8'], 'beam_colours': 'B380F_SLOTS_SEEN: open, warm white, red, red-orange, green, lime',
-    'beam_levels': '0 or >= 0.95 (A9)', 'wash_colours': 'clean recipes only: #ff0000 #00ff00 #ffffff (B2); road #a5ff00; entrance the owner\'s rule',
+out['rules'].update({'heads_patterns': ['nod', 'wave', 'circle', 'figure8'], 'beam_colours': 'v2.2: open, red-orange, lime only (owner 20:1x: lime, not regular colours)',
+    'beam_levels': '0 or >= 0.95 (A9)', 'wash_colours': 'v2.2: ember #ff3a12, lime #9cff00, white #ffffff only (lead 20:15); beams open #ffffff, red-orange #ff5a1e, lime #8cff3a only; no other colour',
     'family': 'one colour family per scene (+ white at <= 0.1 in a colour scene); red and green never together (R4, R5)',
     'holds': 'hold_s of scene k = v6 scene k, sum 1116 s (A1)', 'head_period': 'whole bars at 132 bpm (3.636 s)', 'tilt': '15..25 deg',
     'floor': 'line L + line R lit in the scene\'s family colour like every wash (owner 12:0x); the v3 "floor never red" rule is withdrawn by that word',

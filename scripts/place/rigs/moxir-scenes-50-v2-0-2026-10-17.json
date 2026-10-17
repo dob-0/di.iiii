@@ -3,7 +3,7 @@
  "source": "designed by the scenes-50 designer agent (Opus) of chat aa61368c, 2026-10-15; re-coloured v2 by the recolour agent (Opus, headless) 2026-10-15 03:15; v3 (Palette 3) by the recolour-3 agent (Opus, headless, lead f41c885f) 2026-10-15 06:0x; generator ~/work/agent-reports-2026-10-15/moxir-50/scenes-tools/scenes50.py + palette.py (v2 copies in scenes-tools/v2/); colours pixel-sampled by palette_sample.py (palette_samples.json); outside parts by outside_rule.py; rig scripts/place/rigs/moxir-v2-10-2026-10-15.json; motion vocabulary serverXR/src/lighting/fx.js · lasers v4 2026-10-17: the whole field (zone opened by the officer 07:1x), wide fans/sweeps/arches/curtains, cycles ≥ 14.5 s for the 4.36 s keyframes · lasers v5 2026-10-17 08:0x: the whole field, hall rules waived under the officer (--officer-checked), levels up to 1.0 · v6 2026-10-17 09:xx by dob-74, docs/moxir/scenes-v6-2026-10-17/scenes_v6.py from this file (v3 + lasers v5 of the laser session) and moxir-scenes-50-v5-2026-10-17.json · v2.0 2026-10-17 by Fable (lead), docs/moxir/scenes-v2-2026-10-17/scenes_v2.py from this file (outside parts, lasers, holds kept scene by scene)",
  "licence": "di.iiii project data (the owner's); MOXIR teaser frames used as reference only, never published",
  "date": "2026-10-17",
- "version": "v2.1-techno-2026-10-17",
+ "version": "v2.2-lime-2026-10-17",
  "rules": {
   "still": 0.3,
   "floor": "line L + line R lit in the scene's family colour like every wash (owner 12:0x); the v3 \"floor never red\" rule is withdrawn by that word",
@@ -26,10 +26,10 @@
    "floor_held_max_hsv_s": 0.6,
    "method": "palette.py eye(); thresholds are taste, unvalidated"
   },
-  "beam_colours": "B380F_SLOTS_SEEN: open, warm white, red, red-orange, green, lime",
+  "beam_colours": "v2.2: open, red-orange, lime only (owner 20:1x: lime, not regular colours)",
   "lasers": "the laser session's current design (v5: whole field, levels 1.0) unchanged; updated later by the laser work, when ready",
   "beam_levels": "0 or >= 0.95 (A9)",
-  "wash_colours": "clean recipes only: #ff0000 #00ff00 #ffffff (B2); road #a5ff00; entrance the owner's rule",
+  "wash_colours": "v2.2: ember #ff3a12, lime #9cff00, white #ffffff only (lead 20:15); beams open #ffffff, red-orange #ff5a1e, lime #8cff3a only; no other colour",
   "family": "one colour family per scene (+ white at <= 0.1 in a colour scene); red and green never together (R4, R5)",
   "holds": "hold_s of scene k = v6 scene k, sum 1116 s (A1)",
   "head_period": "whole bars at 132 bpm (3.636 s)",
@@ -49,20 +49,15 @@
    "scenes_heads_moving": 38,
    "scenes_strobing_or_pumping": 16,
    "part_coverage_scenes": {
-    "line A": 48,
-    "line B": 48,
-    "line C": 48,
-    "line D": 48,
     "line L": 48,
     "line R": 48,
     "cut up": 48,
     "cut down": 48,
     "dj back": 48,
     "dj kicker": 48,
-    "stage key": 48,
     "plane 1": 32,
     "side line left": 32,
-    "side line right": 27
+    "side line right": 24
    }
   }
  },
@@ -73,24 +68,16 @@
  },
  "palette": [
   {
-   "hex": "#ff0000",
-   "name": "red (clean)"
+   "hex": "#ff3a12",
+   "name": "ember (washes)"
   },
   {
-   "hex": "#00ff00",
-   "name": "green (clean)"
+   "hex": "#9cff00",
+   "name": "lime (washes)"
   },
   {
    "hex": "#ffffff",
-   "name": "white (W beads)"
-  },
-  {
-   "hex": "#a5ff00",
-   "name": "toxic green (road, outside rule)"
-  },
-  {
-   "hex": "#e04e00",
-   "name": "dark amber (entrance, outside rule)"
+   "name": "white (washes)"
   },
   {
    "hex": "#eefdfd",
@@ -310,57 +297,29 @@
    "act": 1,
    "intent": "The hall as found: the back wall red, two pieces bright, every other wash a red ember. Washes breathe.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.8
-    ],
-    "line B": [
-     "#ff0000",
-     0.8
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
-     0.2
+     "#ff3a12",
+     0.8
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.2
-    ],
-    "stage key": [
-     "#ff0000",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -397,61 +356,33 @@
    "act": 1,
    "intent": "Red rolls along the wall toward the DJ; the red beams behind him lean slowly.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.25
-    ],
-    "line B": [
-     "#ff0000",
-     0.25
-    ],
-    "line C": [
-     "#ff0000",
-     0.8
-    ],
-    "line D": [
-     "#ff0000",
-     0.8
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.8
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -516,7 +447,28 @@
    },
    "energy": 0.3,
    "energy_tier": "low",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4° and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -550,22 +502,6 @@
    "act": 1,
    "intent": "White: the truss up into the haze, the side beams open white ride across the hall, mirrored.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.2
@@ -590,10 +526,6 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "side line left": [
      "#ffffff",
      1.0
@@ -601,14 +533,6 @@
     "side line right": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -654,56 +578,28 @@
    "act": 1,
    "intent": "The DJ a silhouette in red from behind, the kicker as counter-light; red pulses out from him.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.6
-    ],
-    "stage key": [
-     "#ff0000",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
+     "#ff3a12",
      0.6
     ]
    },
@@ -741,61 +637,33 @@
    "act": 1,
    "intent": "Green: two pieces of the wall, flipping in blocks; green behind the DJ scans fast, neighbours opposite.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.9
-    ],
-    "line B": [
-     "#00ff00",
-     0.25
-    ],
-    "line C": [
-     "#00ff00",
-     0.25
-    ],
-    "line D": [
-     "#00ff00",
-     0.9
-    ],
     "line L": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.9
     ],
     "line R": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.9
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj kicker": [
-     "#00ff00",
-     0.25
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -824,14 +692,14 @@
     "fade_s": 4,
     "hold_s": 24
    },
-   "notes": "v2.0 scene 5; family green; outside = the owner's rule (v6 scene 5); laser = the laser session's design of v6 scene 5 (dj-alone), colours theirs; hold = v6",
+   "notes": "v2.0 scene 5; family lime; outside = the owner's rule (v6 scene 5); laser = the laser session's design of v6 scene 5 (dj-alone), colours theirs; hold = v6",
    "laser": null,
    "energy": 0.4,
    "energy_tier": "low",
    "laser_lines": null,
    "laser40": null,
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane light blue; truss steel blue up, warm white down; steel blue behind the DJ; warm white on the DJ; floor ice. Beams: lean toward the floor and back, together. Washes pulse."
   },
@@ -841,22 +709,6 @@
    "act": 1,
    "intent": "White floor lines, a comet toward the DJ; warm white behind him waves.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.8
@@ -881,21 +733,9 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -941,65 +781,37 @@
    "act": 1,
    "intent": "SIGNATURE: a red comet runs the whole back wall toward the DJ; the sides ride wide across the hall.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.9
-    ],
-    "line B": [
-     "#ff0000",
-     0.9
-    ],
-    "line C": [
-     "#ff0000",
-     0.9
-    ],
-    "line D": [
-     "#ff0000",
-     0.9
-    ],
     "line L": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.9
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.9
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -1045,65 +857,37 @@
    "act": 1,
    "intent": "Green columns: the sides lean toward the floor and back, left green, right lime; the truss green down on the floor.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.25
-    ],
-    "line B": [
-     "#00ff00",
-     0.25
-    ],
-    "line C": [
-     "#00ff00",
-     0.25
-    ],
-    "line D": [
-     "#00ff00",
-     0.25
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.8
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj kicker": [
-     "#00ff00",
-     0.25
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line right": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -1141,7 +925,7 @@
     "fade_s": 4,
     "hold_s": 24
    },
-   "notes": "v2.0 scene 8; family green; outside = the owner's rule (v6 scene 8); laser = the laser session's design of v6 scene 8 (cold-columns), colours theirs; hold = v6",
+   "notes": "v2.0 scene 8; family lime; outside = the owner's rule (v6 scene 8); laser = the laser session's design of v6 scene 8 (cold-columns), colours theirs; hold = v6",
    "laser": {
     "pattern": "single-scan",
     "cubes": "outer",
@@ -1168,7 +952,28 @@
    },
    "energy": 0.45,
    "energy_tier": "low",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.08,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4° and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -1192,7 +997,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Walls open white; truss cold white up; ice behind the DJ; floor ice. Beams: lean toward the floor and back, neighbours opposite. Washes chase."
   },
@@ -1202,29 +1007,13 @@
    "act": 1,
    "intent": "White rays up the back wall rolling toward the DJ; open white behind him scans in a ripple.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.7
-    ],
-    "line B": [
-     "#ffffff",
-     0.7
-    ],
-    "line C": [
-     "#ffffff",
-     0.7
-    ],
-    "line D": [
-     "#ffffff",
-     0.7
-    ],
     "line L": [
      "#ffffff",
-     0.2
+     0.7
     ],
     "line R": [
      "#ffffff",
-     0.2
+     0.7
     ],
     "cut up": [
      "#ffffff",
@@ -1242,21 +1031,9 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "plane 1": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -1302,69 +1079,41 @@
    "act": 1,
    "intent": "All 18 beams red, a slow wide ride in a ripple; the cubes draw their first net.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.3
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     0.3
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -1430,7 +1179,28 @@
    },
    "energy": 0.55,
    "energy_tier": "mid",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -1464,61 +1234,33 @@
    "act": 2,
    "intent": "Red chases along the wall toward the DJ; only the left side rides; the kicker counter-lights.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
-    "stage key": [
-     "#ff0000",
-     0.3
-    ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -1565,22 +1307,6 @@
    "act": 2,
    "intent": "White pumps on the beat, the truss full, the stage key on the DJ; open white scans behind him, warm white left only.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      0.3
@@ -1603,10 +1329,6 @@
     ],
     "dj kicker": [
      "#ffffff",
-     0.3
-    ],
-    "stage key": [
-     "#ffffff",
      0.8
     ],
     "plane 1": [
@@ -1614,16 +1336,8 @@
      1.0
     ],
     "side line left": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -1670,52 +1384,32 @@
    "act": 2,
    "intent": "Green bars flip across the hall; the beams nod mirrored, lime on the left.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     0.3
-    ],
-    "line D": [
-     "#00ff00",
-     1.0
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
@@ -1723,16 +1417,8 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -1762,14 +1448,14 @@
     "fade_s": 3,
     "hold_s": 24
    },
-   "notes": "v2.0 scene 13; family green; outside = the owner's rule (v6 scene 13); laser = the laser session's design of v6 scene 13 (rays-pulse), colours theirs; hold = v6",
+   "notes": "v2.0 scene 13; family lime; outside = the owner's rule (v6 scene 13); laser = the laser session's design of v6 scene 13 (rays-pulse), colours theirs; hold = v6",
    "laser": null,
    "energy": 0.65,
    "energy_tier": "mid",
    "laser_lines": null,
    "laser40": null,
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane open white, walls open white; rays mint; truss mint down; warm white on the DJ; floor mint. Beams: a lean wave, in a ripple. Washes pulse."
   },
@@ -1779,69 +1465,41 @@
    "act": 2,
    "intent": "Red chases out from the DJ through the hall; red-orange behind him, red sides on a fast wide ride.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.3
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     0.3
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.8
-    ],
-    "stage key": [
-     "#ff0000",
-     0.3
     ],
     "plane 1": [
      "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -1888,69 +1546,41 @@
    "act": 2,
    "intent": "SIGNATURE: the teaser's column — 18 green beams straight up, pumping on the beat; the washes a green ember.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.15
-    ],
-    "line B": [
-     "#00ff00",
-     0.15
-    ],
-    "line C": [
-     "#00ff00",
-     0.15
-    ],
-    "line D": [
-     "#00ff00",
-     0.15
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj kicker": [
-     "#00ff00",
-     0.15
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line right": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -1980,7 +1610,7 @@
     "fade_s": 2,
     "hold_s": 24
    },
-   "notes": "v2.0 scene 15; family green; outside = the owner's rule (v6 scene 15); laser = the laser session's design of v6 scene 15 (left-right), colours theirs; hold = v6",
+   "notes": "v2.0 scene 15; family lime; outside = the owner's rule (v6 scene 15); laser = the laser session's design of v6 scene 15 (left-right), colours theirs; hold = v6",
    "laser": {
     "pattern": "single-scan",
     "cubes": "outer",
@@ -2006,7 +1636,28 @@
    },
    "energy": 0.8,
    "energy_tier": "mid",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4° and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -2030,7 +1681,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane light blue, walls open white; truss petrol up; petrol behind the DJ; floor mint. Beams: an X, mirrored. Washes flip in bars."
   },
@@ -2040,22 +1691,6 @@
    "act": 2,
    "intent": "A white comet runs the floor lines toward the entrance; open white sides scan in circles.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -2080,25 +1715,9 @@
      "#ffffff",
      0.3
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "side line left": [
      "#ffffff",
      1.0
-    ],
-    "side line right": [
-     "#fff0c0",
-     1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -2145,65 +1764,33 @@
    "act": 2,
    "intent": "Red scissors: the sides lean fast, neighbours opposite, red left, red-orange right; red behind the DJ.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.3
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     0.3
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "side line left": [
-     "#ff2a0a",
-     1.0
-    ],
-    "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -2270,7 +1857,28 @@
    },
    "energy": 0.75,
    "energy_tier": "mid",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8° and opens with them, same tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -2304,61 +1912,33 @@
    "act": 2,
    "intent": "Green ping-pongs along the wall; green behind the DJ rides a wide figure eight.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     1.0
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     1.0
-    ],
-    "line D": [
-     "#00ff00",
-     1.0
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -2397,7 +1977,7 @@
     "fade_s": 3,
     "hold_s": 22
    },
-   "notes": "v2.0 scene 18; family green; outside = the owner's rule (v6 scene 18); laser = the laser session's design of v6 scene 18 (green-comb), colours theirs; hold = v6",
+   "notes": "v2.0 scene 18; family lime; outside = the owner's rule (v6 scene 18); laser = the laser session's design of v6 scene 18 (green-comb), colours theirs; hold = v6",
    "laser": {
     "pattern": "comb",
     "cubes": "all",
@@ -2428,7 +2008,31 @@
    },
    "energy": 0.7,
    "energy_tier": "mid",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 2
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 0.5,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -2455,7 +2059,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane open white; truss cold white up, mint down; warm white on the DJ; floor mint. Beams: a lean wave, in a ripple. Washes pulse."
   },
@@ -2465,22 +2069,6 @@
    "act": 2,
    "intent": "White bars flip across the hall; the beams scan mirrored, warm white on the left.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      0.3
@@ -2505,29 +2093,17 @@
      "#ffffff",
      0.8
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "plane 1": [
      "#ffffff",
      1.0
     ],
     "side line left": [
-     "#fff0c0",
+     "#ffffff",
      1.0
     ],
     "side line right": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -2574,69 +2150,41 @@
    "act": 2,
    "intent": "Everything red, pumping; all 18 beams ride wide and fast in a ripple. The rise before the first drop.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     1.0
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -2705,7 +2253,31 @@
    },
    "energy": 0.9,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.12,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 4
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.4
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -2742,22 +2314,6 @@
    "act": 3,
    "intent": "The cathedral: every lamp open white, strobing at 3 a second, the 18 beams scanning circles in a ripple.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -2782,10 +2338,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -2795,16 +2347,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -2871,7 +2415,28 @@
    },
    "energy": 1.0,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -2904,16 +2469,7 @@
    "title": "Kerrie · Blackout",
    "act": 3,
    "intent": "Six seconds of nothing. The deliberate blackout cut before the red room.",
-   "parts": {
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
+   "parts": {},
    "motion": null,
    "heads": null,
    "laser_colour": null,
@@ -2937,69 +2493,41 @@
    "act": 3,
    "intent": "SIGNATURE: the room red from the floor; red beams nod together; pumping.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#ff3a12",
@@ -3068,7 +2596,31 @@
    },
    "energy": 1.0,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8° and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -3105,52 +2657,32 @@
    "act": 3,
    "intent": "Green bars across the hall; the beams scan fast, mirrored, lime left.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     0.3
-    ],
-    "line C": [
-     "#00ff00",
-     0.3
-    ],
-    "line D": [
-     "#00ff00",
-     0.3
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
@@ -3158,16 +2690,8 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -3206,7 +2730,7 @@
     "fade_s": 1,
     "hold_s": 20
    },
-   "notes": "v2.0 scene 24; family green; outside = the owner's rule (v6 scene 24); laser = the laser session's design of v6 scene 24 (the-storm), colours theirs; hold = v6",
+   "notes": "v2.0 scene 24; family lime; outside = the owner's rule (v6 scene 24); laser = the laser session's design of v6 scene 24 (the-storm), colours theirs; hold = v6",
    "laser": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -3237,7 +2761,31 @@
    },
    "energy": 1.0,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "chase",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8° and opens with them, same tempo (chase: the second unit half a cycle later); colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -3264,7 +2812,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane open white, walls open white; rays petrol; truss cold white up, cold white down; petrol behind the DJ; warm white on the DJ; floor rose-copper. Beams: an X, mirrored. Washes flip in bars."
   },
@@ -3274,22 +2822,6 @@
    "act": 3,
    "intent": "A white radar line sweeps the hall; the beams ride wide, warm white on the right; the stage key on the DJ.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -3312,10 +2844,6 @@
     ],
     "dj kicker": [
      "#ffffff",
-     0.3
-    ],
-    "stage key": [
-     "#ffffff",
      1.0
     ],
     "plane 1": [
@@ -3327,16 +2855,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -3405,7 +2925,30 @@
    },
    "energy": 0.9,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": {
+     "min": 0.4
+    },
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -3441,61 +2984,33 @@
    "act": 3,
    "intent": "Red blocks flip; the kicker counter-lights the DJ; red-orange straight up behind him, still.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.25
-    ],
-    "line B": [
-     "#ff0000",
-     0.25
-    ],
-    "line C": [
-     "#ff0000",
-     0.25
-    ],
-    "line D": [
-     "#ff0000",
-     0.25
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      1.0
-    ],
-    "stage key": [
-     "#ff0000",
-     0.25
     ],
     "plane 1": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -3533,61 +3048,33 @@
    "act": 3,
    "intent": "Green ping-pongs the wall; only the left side scans, fast, neighbours opposite.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     1.0
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     1.0
-    ],
-    "line D": [
-     "#00ff00",
-     1.0
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#b699ff",
@@ -3626,7 +3113,7 @@
     "fade_s": 1,
     "hold_s": 20
    },
-   "notes": "v2.0 scene 27; family green; outside = the owner's rule (v6 scene 27); laser = the laser session's design of v6 scene 27 (radar), colours theirs; hold = v6",
+   "notes": "v2.0 scene 27; family lime; outside = the owner's rule (v6 scene 27); laser = the laser session's design of v6 scene 27 (radar), colours theirs; hold = v6",
    "laser": {
     "pattern": "single-scan",
     "cubes": "all",
@@ -3652,7 +3139,28 @@
    },
    "energy": 0.9,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff00ff",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 16
+    },
+    "phase": "chase",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4° and open again, at the cubes' tempo; colour #ff00ff = the unit's nearest diode colour to the scene laser #b699ff (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -3676,7 +3184,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane warm white, walls warm white; rays lavender; truss lavender up; warm white on the DJ; floor rose-copper. Beams: a bow-tie turn, in a ripple. Washes sweep a radar line."
   },
@@ -3686,22 +3194,6 @@
    "act": 3,
    "intent": "SIGNATURE: the instrument. Every lamp open white straight up, strobing. Eight seconds.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -3726,10 +3218,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -3739,16 +3227,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -3786,52 +3266,32 @@
    "act": 3,
    "intent": "Red bars across the hall, red-orange on the left; the beams ride wide and fast in a ripple.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     0.3
-    ],
-    "line C": [
-     "#ff0000",
-     0.3
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
@@ -3839,16 +3299,8 @@
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -3895,52 +3347,32 @@
    "act": 3,
    "intent": "Green sparkles across the hall (20 a minute, never more); the beams nod fast, mirrored.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     1.0
-    ],
-    "line C": [
-     "#00ff00",
-     1.0
-    ],
-    "line D": [
-     "#00ff00",
-     0.3
-    ],
     "line L": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "line R": [
-     "#00ff00",
-     0.3
+     "#9cff00",
+     1.0
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
@@ -3948,16 +3380,8 @@
      1.0
     ],
     "side line right": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#b699ff",
@@ -3996,7 +3420,7 @@
     "fade_s": 1,
     "hold_s": 20
    },
-   "notes": "v2.0 scene 30; family green; outside = the owner's rule (v6 scene 30); laser = the laser session's design of v6 scene 30 (sparkle-peak), colours theirs; hold = v6",
+   "notes": "v2.0 scene 30; family lime; outside = the owner's rule (v6 scene 30); laser = the laser session's design of v6 scene 30 (sparkle-peak), colours theirs; hold = v6",
    "laser": {
     "pattern": "tunnel",
     "cubes": "all",
@@ -4023,7 +3447,28 @@
    },
    "energy": 0.9,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "lift",
+    "units": "all",
+    "colour": "#ff00ff",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "unison",
+    "amplitude_deg": 1.5,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes draw a ring / a sheet overhead; the 40 W lines rise 1.5° and settle (more reaches the lantern glazing: light would leave the building); colour #ff00ff = the unit's nearest diode colour to the scene laser #b699ff (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "lift",
     "units": "all",
@@ -4047,7 +3492,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane open white, walls light blue; truss rose-copper up, rose-copper down; warm white on the DJ; floor rose-copper. Beams: a lean wave, in a ripple. Washes sparkle."
   },
@@ -4057,57 +3502,29 @@
    "act": 4,
    "intent": "The drop: red embers everywhere, the DJ from behind; everything breathes to black.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.8
     ],
     "dj kicker": [
-     "#ff0000",
+     "#ff3a12",
      0.2
-    ],
-    "stage key": [
-     "#ff0000",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -4144,22 +3561,6 @@
    "act": 4,
    "intent": "Warm white behind the DJ, a slow lean wave; the washes a white ember.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.2
@@ -4184,21 +3585,9 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -4244,57 +3633,29 @@
    "act": 4,
    "intent": "SIGNATURE: the darkest scene. Green rolls to black along the wall; the cubes one slow line.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.6
-    ],
-    "line B": [
-     "#00ff00",
-     0.15
-    ],
-    "line C": [
-     "#00ff00",
-     0.15
-    ],
-    "line D": [
-     "#00ff00",
-     0.6
-    ],
     "line L": [
-     "#00ff00",
-     0.15
+     "#9cff00",
+     0.6
     ],
     "line R": [
-     "#00ff00",
-     0.15
+     "#9cff00",
+     0.6
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.15
     ],
     "dj kicker": [
-     "#00ff00",
+     "#9cff00",
      0.15
-    ],
-    "stage key": [
-     "#00ff00",
-     0.15
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#26bcff",
@@ -4323,7 +3684,7 @@
     "fade_s": 6,
     "hold_s": 28
    },
-   "notes": "v2.0 scene 33; family green; outside = the owner's rule (v6 scene 33); laser = the laser session's design of v6 scene 33 (blue-wave), colours theirs; hold = v6",
+   "notes": "v2.0 scene 33; family lime; outside = the owner's rule (v6 scene 33); laser = the laser session's design of v6 scene 33 (blue-wave), colours theirs; hold = v6",
    "laser": {
     "pattern": "sky",
     "cubes": "all",
@@ -4350,7 +3711,28 @@
    },
    "energy": 0.2,
    "energy_tier": "low",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "lift",
+    "units": "all",
+    "colour": "#00ffff",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 1.5,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes draw a ring / a sheet overhead; the 40 W lines rise 1.5° and settle (more reaches the lantern glazing: light would leave the building); colour #00ffff = the unit's nearest diode colour to the scene laser #26bcff (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "lift",
     "units": "all",
@@ -4374,7 +3756,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane light blue; rays deep sea; truss deep sea up, lavender down; petrol behind the DJ; floor petrol. Beams: a bow-tie turn, in a ripple. Washes roll in a wave."
   },
@@ -4384,65 +3766,37 @@
    "act": 4,
    "intent": "The floor lines red rolling toward the DJ; red sides ride slowly across the hall.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.7
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.7
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj kicker": [
-     "#ff0000",
-     0.2
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -4488,22 +3842,6 @@
    "act": 4,
    "intent": "Warm white sides draw one slow wide figure eight over the hall; the washes a white ember, still.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.2
-    ],
-    "line B": [
-     "#ffffff",
-     0.2
-    ],
-    "line C": [
-     "#ffffff",
-     0.2
-    ],
-    "line D": [
-     "#ffffff",
-     0.2
-    ],
     "line L": [
      "#ffffff",
      0.2
@@ -4528,25 +3866,13 @@
      "#ffffff",
      0.2
     ],
-    "stage key": [
-     "#ffffff",
-     0.2
-    ],
     "side line left": [
-     "#fff0c0",
+     "#ffffff",
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -4592,57 +3918,29 @@
    "act": 4,
    "intent": "Green on the truss, sparkling faintly; the haze reads.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.2
-    ],
-    "line B": [
-     "#00ff00",
-     0.2
-    ],
-    "line C": [
-     "#00ff00",
-     0.2
-    ],
-    "line D": [
-     "#00ff00",
-     0.2
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.7
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.7
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "dj kicker": [
-     "#00ff00",
+     "#9cff00",
      0.2
-    ],
-    "stage key": [
-     "#00ff00",
-     0.2
-    ],
-    "road": [
-     "#a5ff00",
-     0.8
-    ],
-    "entrance": [
-     "#e04e00",
-     0.8
     ]
    },
    "motion": {
@@ -4662,14 +3960,14 @@
     "fade_s": 5,
     "hold_s": 26
    },
-   "notes": "v2.0 scene 36; family green; outside = the owner's rule (v6 scene 36); laser = the laser session's design of v6 scene 36 (sea-steel), colours theirs; hold = v6",
+   "notes": "v2.0 scene 36; family lime; outside = the owner's rule (v6 scene 36); laser = the laser session's design of v6 scene 36 (sea-steel), colours theirs; hold = v6",
    "laser": null,
    "energy": 0.35,
    "energy_tier": "low",
    "laser_lines": null,
    "laser40": null,
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane light blue; rays deep sea; truss deep sea down; petrol behind the DJ; ash on the DJ; floor petrol. Washes sparkle."
   },
@@ -4679,65 +3977,37 @@
    "act": 4,
    "intent": "A tent of red from the sides over a red wall; the 40 W layer is off tonight.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.6
-    ],
-    "line B": [
-     "#ff0000",
-     0.6
-    ],
-    "line C": [
-     "#ff0000",
-     0.6
-    ],
-    "line D": [
-     "#ff0000",
-     0.6
-    ],
     "line L": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
      "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#66faff",
@@ -4802,7 +4072,28 @@
    },
    "energy": 0.4,
    "energy_tier": "low",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "lift",
+    "units": "all",
+    "colour": "#00ffff",
+    "level": 0.1,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 1.5,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes draw a ring / a sheet overhead; the 40 W lines rise 1.5° and settle (more reaches the lantern glazing: light would leave the building); colour #00ffff = the unit's nearest diode colour to the scene laser #66faff (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "lift",
     "units": "all",
@@ -4836,61 +4127,33 @@
    "act": 4,
    "intent": "Green breathes on the wall; green behind the DJ leans slowly; the cubes breathe with it.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.5
-    ],
-    "line B": [
-     "#00ff00",
-     0.5
-    ],
-    "line C": [
-     "#00ff00",
-     0.5
-    ],
-    "line D": [
-     "#00ff00",
-     0.5
-    ],
     "line L": [
-     "#00ff00",
-     0.2
+     "#9cff00",
+     0.5
     ],
     "line R": [
-     "#00ff00",
-     0.2
+     "#9cff00",
+     0.5
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "dj kicker": [
-     "#00ff00",
-     0.2
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.2
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#00ff00",
@@ -4928,7 +4191,7 @@
     "fade_s": 6,
     "hold_s": 26
    },
-   "notes": "v2.0 scene 38; family green; outside = the owner's rule (v6 scene 38); laser = the laser session's design of v6 scene 38 (green-breath), colours theirs; hold = v6",
+   "notes": "v2.0 scene 38; family lime; outside = the owner's rule (v6 scene 38); laser = the laser session's design of v6 scene 38 (green-breath), colours theirs; hold = v6",
    "laser": {
     "pattern": "net",
     "cubes": "all",
@@ -4955,7 +4218,28 @@
    },
    "energy": 0.35,
    "energy_tier": "low",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#00ff00",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #00ff00 = the unit's nearest diode colour to the scene laser #00ff00 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -4979,7 +4263,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Deep sea behind the DJ; ash on the DJ; floor petrol. Washes breathe."
   },
@@ -4989,29 +4273,13 @@
    "act": 4,
    "intent": "A white comet toward the DJ; open white scans behind him. The second rise begins.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.8
-    ],
-    "line B": [
-     "#ffffff",
-     0.8
-    ],
-    "line C": [
-     "#ffffff",
-     0.8
-    ],
-    "line D": [
-     "#ffffff",
-     0.8
-    ],
     "line L": [
      "#ffffff",
-     0.3
+     0.8
     ],
     "line R": [
      "#ffffff",
-     0.3
+     0.8
     ],
     "cut up": [
      "#ffffff",
@@ -5029,21 +4297,9 @@
      "#ffffff",
      0.3
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "plane 1": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -5089,69 +4345,41 @@
    "act": 4,
    "intent": "The red riser: everything red, pumping, 18 beams riding wide and fast.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     1.0
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -5220,7 +4448,31 @@
    },
    "energy": 0.9,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.12,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 4
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.4
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -5257,22 +4509,6 @@
    "act": 5,
    "intent": "The second drop: every lamp white, pumping; the beams scan fast, mirrored.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -5297,10 +4533,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -5310,16 +4542,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -5388,7 +4612,31 @@
    },
    "energy": 1.0,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "still",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 16
+    },
+    "phase": "unison",
+    "amplitude_deg": 0,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.5
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes hold still beams (comb / net / fan); the 40 W lines hold the crossed X; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "still",
     "units": "all",
@@ -5424,16 +4672,7 @@
    "title": "Mixtinct · Blackout II",
    "act": 5,
    "intent": "Six seconds of nothing before the word.",
-   "parts": {
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
-    ]
-   },
+   "parts": {},
    "motion": null,
    "heads": null,
    "laser_colour": null,
@@ -5457,69 +4696,41 @@
    "act": 5,
    "intent": "SIGNATURE: the word at full: green rig, 18 green beams riding wide, pumping.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.3
-    ],
-    "line B": [
-     "#00ff00",
-     0.3
-    ],
-    "line C": [
-     "#00ff00",
-     0.3
-    ],
-    "line D": [
-     "#00ff00",
-     0.3
-    ],
     "line L": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "line R": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      1.0
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "dj kicker": [
-     "#00ff00",
-     0.3
-    ],
-    "stage key": [
-     "#00ff00",
+     "#9cff00",
      0.3
     ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line right": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -5558,7 +4769,7 @@
     "fade_s": 1,
     "hold_s": 22
    },
-   "notes": "v2.0 scene 43; family green; outside = the owner's rule (v6 scene 43); laser = the laser session's design of v6 scene 43 (cathedral-turns), colours theirs; hold = v6",
+   "notes": "v2.0 scene 43; family lime; outside = the owner's rule (v6 scene 43); laser = the laser session's design of v6 scene 43 (cathedral-turns), colours theirs; hold = v6",
    "laser": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -5585,7 +4796,28 @@
    },
    "energy": 1.0,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.12,
+    "tempo": {
+     "clock": "master",
+     "bpm": 66,
+     "beats": 16
+    },
+    "phase": "chase",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8° and opens with them, same tempo (chase: the second unit half a cycle later); colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -5609,7 +4841,7 @@
     "base_yaw_in_deg": 3
    },
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Plane open white, walls open white; truss steel blue up, cold white down; lavender behind the DJ; ash on the DJ; floor lavender. Beams: a bow-tie turn, in a ripple. Washes breathe."
   },
@@ -5619,52 +4851,32 @@
    "act": 5,
    "intent": "SIGNATURE: red from the floor, red bars, the beams scissoring fast, red-orange left.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     1.0
-    ],
-    "line B": [
-     "#ff0000",
-     1.0
-    ],
-    "line C": [
-     "#ff0000",
-     1.0
-    ],
-    "line D": [
-     "#ff0000",
-     1.0
-    ],
     "line L": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "line R": [
-     "#ff0000",
-     0.3
+     "#ff3a12",
+     1.0
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      1.0
     ],
     "dj kicker": [
-     "#ff0000",
-     0.3
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.3
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
     ],
     "side line left": [
@@ -5672,16 +4884,8 @@
      1.0
     ],
     "side line right": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -5728,22 +4932,6 @@
    "act": 5,
    "intent": "White blocks flip across the hall; warm white behind the DJ, open white left only, scanning.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.3
-    ],
-    "line B": [
-     "#ffffff",
-     0.3
-    ],
-    "line C": [
-     "#ffffff",
-     0.3
-    ],
-    "line D": [
-     "#ffffff",
-     0.3
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -5768,25 +4956,13 @@
      "#ffffff",
      0.3
     ],
-    "stage key": [
-     "#ffffff",
-     0.3
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
     ],
     "side line left": [
      "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#ff3a12",
@@ -5855,7 +5031,31 @@
    },
    "energy": 0.95,
    "energy_tier": "full",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.16,
+    "tempo": {
+     "clock": "master",
+     "bpm": 132,
+     "beats": 8
+    },
+    "phase": "mirror",
+    "amplitude_deg": 8,
+    "breathe": null,
+    "hits": {
+     "per_beat": 1,
+     "duty": 0.6
+    },
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cube fans sweep; the 40 W X closes by up to 8° and opens with them, same tempo; colour #ff0000 = the unit's nearest diode colour to the scene laser #ff3a12 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -5892,22 +5092,6 @@
    "act": 5,
    "intent": "The last strobe: everything open white, eight seconds.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     1.0
-    ],
-    "line B": [
-     "#ffffff",
-     1.0
-    ],
-    "line C": [
-     "#ffffff",
-     1.0
-    ],
-    "line D": [
-     "#ffffff",
-     1.0
-    ],
     "line L": [
      "#ffffff",
      1.0
@@ -5932,10 +5116,6 @@
      "#ffffff",
      1.0
     ],
-    "stage key": [
-     "#ffffff",
-     1.0
-    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -5945,16 +5125,8 @@
      1.0
     ],
     "side line right": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -5992,65 +5164,33 @@
    "act": 5,
    "intent": "The furnace cooling: red breathing, red-orange sides waving.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.6
-    ],
-    "line B": [
-     "#ff0000",
-     0.6
-    ],
-    "line C": [
-     "#ff0000",
-     0.6
-    ],
-    "line D": [
-     "#ff0000",
-     0.6
-    ],
     "line L": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "line R": [
-     "#ff0000",
-     0.25
+     "#ff3a12",
+     0.6
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.25
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.25
     ],
     "side line left": [
      "#ff5a1e",
      1.0
-    ],
-    "side line right": [
-     "#ff2a0a",
-     1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#ff9180",
@@ -6116,7 +5256,28 @@
    },
    "energy": 0.5,
    "energy_tier": "mid",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "lift",
+    "units": "all",
+    "colour": "#ff0000",
+    "level": 0.08,
+    "tempo": {
+     "clock": "master",
+     "bpm": 33,
+     "beats": 32
+    },
+    "phase": "unison",
+    "amplitude_deg": 1.5,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes draw a ring / a sheet overhead; the 40 W lines rise 1.5° and settle (more reaches the lantern glazing: light would leave the building); colour #ff0000 = the unit's nearest diode colour to the scene laser #ff9180 (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "lift",
     "units": "all",
@@ -6150,65 +5311,37 @@
    "act": 5,
    "intent": "Green chases toward the DJ one last time; green behind him and lime on the left ride wide.",
    "parts": {
-    "line A": [
-     "#00ff00",
-     0.8
-    ],
-    "line B": [
-     "#00ff00",
-     0.8
-    ],
-    "line C": [
-     "#00ff00",
-     0.8
-    ],
-    "line D": [
-     "#00ff00",
-     0.8
-    ],
     "line L": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.8
     ],
     "line R": [
-     "#00ff00",
-     0.25
+     "#9cff00",
+     0.8
     ],
     "cut up": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "cut down": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj back": [
-     "#00ff00",
+     "#9cff00",
      0.25
     ],
     "dj kicker": [
-     "#00ff00",
+     "#9cff00",
      0.6
     ],
-    "stage key": [
-     "#00ff00",
-     0.25
-    ],
     "plane 1": [
-     "#00d12a",
+     "#8cff3a",
      1.0
     ],
     "side line left": [
      "#8cff3a",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -6238,14 +5371,14 @@
     "fade_s": 4,
     "hold_s": 24
    },
-   "notes": "v2.0 scene 48; family green; outside = the owner's rule (v6 scene 48); laser = the laser session's design of v6 scene 48 (the-last-run), colours theirs; hold = v6",
+   "notes": "v2.0 scene 48; family lime; outside = the owner's rule (v6 scene 48); laser = the laser session's design of v6 scene 48 (the-last-run), colours theirs; hold = v6",
    "laser": null,
    "energy": 0.6,
    "energy_tier": "mid",
    "laser_lines": null,
    "laser40": null,
    "family": [
-    "green"
+    "lime"
    ],
    "intent_v1": "Walls light blue; truss steel blue up; ice behind the DJ; ash on the DJ; floor ice. Beams: lean toward the floor and back, together. Washes chase."
   },
@@ -6255,61 +5388,33 @@
    "act": 5,
    "intent": "Red sparkling out across the hall, the DJ a shadow.",
    "parts": {
-    "line A": [
-     "#ff0000",
-     0.2
-    ],
-    "line B": [
-     "#ff0000",
-     0.2
-    ],
-    "line C": [
-     "#ff0000",
-     0.2
-    ],
-    "line D": [
-     "#ff0000",
-     0.2
-    ],
     "line L": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "line R": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut up": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "cut down": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "dj back": [
-     "#ff0000",
+     "#ff3a12",
      0.6
     ],
     "dj kicker": [
-     "#ff0000",
-     0.2
-    ],
-    "stage key": [
-     "#ff0000",
+     "#ff3a12",
      0.2
     ],
     "plane 1": [
-     "#ff2a0a",
+     "#ff5a1e",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.6
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ]
    },
    "motion": {
@@ -6347,22 +5452,6 @@
    "act": 5,
    "intent": "SIGNATURE: one warm white beam on the DJ from behind, the washes a white ember; it ties to scene 1.",
    "parts": {
-    "line A": [
-     "#ffffff",
-     0.15
-    ],
-    "line B": [
-     "#ffffff",
-     0.15
-    ],
-    "line C": [
-     "#ffffff",
-     0.15
-    ],
-    "line D": [
-     "#ffffff",
-     0.15
-    ],
     "line L": [
      "#ffffff",
      0.15
@@ -6387,21 +5476,9 @@
      "#ffffff",
      0.15
     ],
-    "stage key": [
-     "#ffffff",
-     0.15
-    ],
     "plane 1": [
-     "#fff0c0",
+     "#ffffff",
      1.0
-    ],
-    "road": [
-     "#a5ff00",
-     0.5
-    ],
-    "entrance": [
-     "#e04e00",
-     0.6
     ],
     "laser": [
      "#eefdfd",
@@ -6466,7 +5543,28 @@
    },
    "energy": 0.2,
    "energy_tier": "low",
-   "laser_lines": null,
+   "laser_lines": {
+    "pattern": "sweep",
+    "units": "all",
+    "colour": "#ffffff",
+    "level": 0.06,
+    "tempo": {
+     "clock": "master",
+     "bpm": 20,
+     "beats": 32
+    },
+    "phase": "mirror",
+    "amplitude_deg": 4,
+    "breathe": null,
+    "hits": null,
+    "refs": [
+     "scripts/place/fixtures/charts/up-la40wf.json (UP-LA40WF / IP-LL40, 32 ch, APPROVED 2026-10-15)",
+     "owner 17:5x: \"look we dont need any dmx charts you fouund right\" (N852)"
+    ],
+    "why": "the cubes scan one line each; the two 40 W lines close the X by up to 4° and open again, at the cubes' tempo; colour #ffffff = the unit's nearest diode colour to the scene laser #eefdfd (chart ch 5 makes 7 colours); base 0.6° up and 3° toward the centre line (ch 7 / ch 6 offsets; the units stay where the owner set them 02:18): the rigged aims cross the near crane (z 3.2) at 8.84 m < the 9.2 m rule, and line 42 crosses the east-west column line at 9.36 m < the 10.8 m truss bottom (laser_frames.py, 2026-10-15); with the base both clear (crane 9.38/9.40 m)",
+    "base_lift_deg": 0.6,
+    "base_yaw_in_deg": 3
+   },
    "laser40": {
     "pattern": "sweep",
     "units": "all",
@@ -6502,21 +5600,9 @@
    "slot": "open",
    "hex": "#ffffff"
   },
-  "#fff0c0": {
-   "slot": "warm white",
-   "hex": "#fff0c0"
-  },
-  "#ff2a0a": {
-   "slot": "red",
-   "hex": "#ff2a0a"
-  },
   "#ff5a1e": {
    "slot": "red-orange",
    "hex": "#ff5a1e"
-  },
-  "#00d12a": {
-   "slot": "green",
-   "hex": "#00d12a"
   },
   "#8cff3a": {
    "slot": "lime",

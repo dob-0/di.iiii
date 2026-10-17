@@ -36,3 +36,12 @@ cue-wire-check in dry run against v2 on the desk; a hang part for the 40 W; the 
 (di-atlas); `di-dev` has no prune (68 dead registry rows blocked every port; pruned by hand, backup kept). Full record:
 `~/work/agent-reports-2026-10-17/scenes-v2/` (CONCEPT.md, RECON.md, BUILD.md, READY.md, REPORT.md).
 **Sterile:** scratch stack `scenes-v2` down and wiped, lane 3 down, loopback proxy stopped, the build agent's esbuild stopped; `scenes-v5` is another session's.
+
+## v2.2 (20:2x) — the show's palette and the hall's lamps; written into the copy at v417
+Owner 20:1x: *"lime one is better, make all like that … don't use much regular colors … use the full power of the lasers too, it's safe."* Lead 20:1x: the copy is THE SHOW on the desk.
+- Palette = the lead's 20:15 re-colour, now in the generator and `scenes_build --check`: washes lime `#9cff00` / ember `#ff3a12` / white; beams lime `#8cff3a` / red-orange `#ff5a1e` / open.
+  Families red 19 · lime 13 · white 16 · blackout 2. Hall-only parts (line L 5, line R 7, cut up/down, dj back, dj kicker; the 18 beams); `HALL_MAP` moves v2.1's
+  leads off the lamps that left the hall. One bright group: the left side alone where both sides would be identical (whole-rig hits symmetric by design).
+- 40 W: the data carries the lines (`--laser40 on`, 22 scenes) but **no look lights a 40 W**: `laserSignedOff` is dropped by `scenes_to_rig.py` / `epic-build.mjs`
+  and a look can set only the dimmer — ch 3 defaults to the static beam (`fixtureTypes.js`), which the brief forbids. Fix named in READY-v2-2.md (passthrough + a moving default).
+- Guards: check ok · flash 0 over 3/s · heads 38 moving, 0 < 3° · read-back 51/51 looks, 50/50 cues. Backup of the copy before the write: `scenes-v2/backup-before-v2-2.json` (v314).
