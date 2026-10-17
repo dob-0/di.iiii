@@ -21,6 +21,7 @@ const { createShowPlayer, lineGroupsOf, stillBeamsOfGroup, defaultMap, frameInde
 const argOf = (k, d) => process.argv.includes(k) ? process.argv[process.argv.indexOf(k) + 1] : d;
 const PROJECT = argOf('--project', null); if (!PROJECT) { console.log('needs --project'); process.exit(2); }
 const SPACE = argOf('--space', 'moxir'); const DESK = argOf('--desk', 'http://diiii.localhost/light');
+const BLOCKS = process.argv.includes('--blocks') ? JSON.parse(fs.readFileSync(process.argv[process.argv.indexOf('--blocks') + 1], 'utf8')).blocks : null;
 const DOC = path.join(os.homedir(), '.local/share/di.iiii/data/spaces', SPACE, 'projects', PROJECT, 'document.json');
 const SECS = +(argOf('--seconds', 36000));
 const ARM = process.argv.includes('--arm');
@@ -63,8 +64,10 @@ const readScene = async () => {
     let i = onLook ? list.findIndex((c) => c.lookId === onLook) : -1;
     if (i < 0 && Number.isInteger(st?.cues?.index)) i = st.cues.index;
     if (i >= 0 && i !== scene.index) {
-      const start = list.slice(0, i).reduce((s, c) => s + (+c.hold || 0), 0);
-      scene = { index: i, at: Date.now(), start, hold: Math.max(1, +list[i].hold || 1) };
+      // --blocks: one motion cycle per laser scene (cube_cycles.py); a scene without one plays the dark block. Else the loop clock.
+      const b = BLOCKS ? (BLOCKS[String(list[i].lookId || '').replace(/^rig-/, '')] || BLOCKS.dark) : null;
+      const start = b ? b.start : list.slice(0, i).reduce((s, c) => s + (+c.hold || 0), 0);
+      scene = { index: i, at: Date.now(), start, hold: Math.max(1, b ? b.len : (+list[i].hold || 1)) };
       console.log(`${new Date().toISOString().slice(11, 19)} scene ${i + 1} ${list[i].name} → cube clock ${start}s`);
     }
   } catch {}
