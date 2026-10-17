@@ -518,8 +518,8 @@
    "len": 96.0
   },
   "v7-126": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-129": {
    "start": 0.0,
@@ -598,8 +598,8 @@
    "len": 96.0
   },
   "v7-148": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-149": {
    "start": 0.0,
@@ -614,8 +614,8 @@
    "len": 96.0
   },
   "v7-152": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-153": {
    "start": 0.0,
@@ -626,8 +626,8 @@
    "len": 96.0
   },
   "v7-155": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-156": {
    "start": 0.0,
@@ -638,8 +638,8 @@
    "len": 96.0
   },
   "v7-158": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-159": {
    "start": 0.0,
@@ -650,8 +650,8 @@
    "len": 96.0
   },
   "v7-161": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-162": {
    "start": 0.0,
@@ -682,9 +682,10 @@
    "len": 96.0
   },
   "v7-169": {
-   "start": 96.5,
-   "len": 1.0
+   "start": 0.0,
+   "len": 96.0
   }
  },
- "why_all": "owner 02:2x: \"add laser cube on all the scenes\" \u2014 every scene, every desk-only look, and anything unknown plays the loop"
+ "why_all": "owner 02:2x: \"add laser cube on all the scenes\" \u2014 every scene, every desk-only look, and anything unknown plays the loop",
+ "why_on": "owner 03:2x: \"turn on\" \u2014 cubes in every scene, the \"no laser\" ones too"
 }
