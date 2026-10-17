@@ -10,3 +10,13 @@
 - Node finding: a node runs the same desk code standalone with its own Art-Net input (own `/api/input`, own `/api/state` with its own fixtures, answers 1 of the 2 universes, each byte equal to the desk's matching universe). Its `/api/dmx` is its OWN received buffer, not a bridge to the desk; the tool says so per node (`nodeKindOf`) and leaves a node out that is not clearly so.
 - Safety: GET only apart from `POST /cues/go` per cue and the restore (back to the cue that was up, or `/cues/stop`); `--dry-run` posts nothing and reads no wire; Ctrl-C restores.
 - Not tested here: a GO on the live desk (the lead's, after the desk motion fix #1018 is installed).
+
+## Later the same morning (lead chat): --follow, and the show that sat on cue 1
+
+- `--follow` measures each picked cue while the desk's own runner plays the show: no GO, nothing posted, so the people watching
+  keep their show. It waits for each cue's fade from the desk's `firedAt` (`followNext`, `followMinutes`, tests in
+  `cue-wire-check.test.js`). The restore after a GO run now also turns play-in-order back on when it was on.
+- `show-loop.mjs` started the show with `POST /api/cues/go {index:0}` only, and a GO on a named cue turns play-in-order OFF
+  (cuerun.js, owner 2026-10-09), so the show sat on cue 1: seen 2026-10-17 10:38 (index 0, autoplay false, nextInMs null, six
+  minutes after the start). It now sends `startCalls()`: the GO, then `POST /api/cues/autoplay {autoplay:true}` (test in
+  `show-loop.test.js`).

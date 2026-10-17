@@ -8,7 +8,7 @@ vi.mock('../../src/rigbuild/looks.js', async (orig) => {
     return { ...real, lookPoses: () => new Map([...LEVELS].filter(([, v]) => v > 0).map(([id, level]) => [id, { level, rotation: [0, 0, 0], position: [0, 6, 0] }])) }
 })
 
-import { parseCueRange, statsOf, lampsOf, lookOfCue, expectationOf, measureOf, compareLamps, cueLine, nodeUniverseOf, nodeKindOf, main, MOVE_THRESHOLD } from './cue-wire-check.mjs'
+import { parseCueRange, statsOf, lampsOf, lookOfCue, expectationOf, measureOf, compareLamps, cueLine, nodeUniverseOf, nodeKindOf, main, MOVE_THRESHOLD, followNext, followMinutes } from './cue-wire-check.mjs'
 import { TYPE_LIBRARY } from '../../src/rigbuild/types/index.js'
 
 const lamp = (id, type, universe, address, extra = {}) => ({ id, type: 'spotLight', components: { transform: { position: [id === 'w2' ? 3 : 0, 6, 0] }, fixture: { type, universe, address }, ...extra } })
@@ -222,5 +222,22 @@ describe('main, against a fake hall (no network beyond 127.0.0.1)', () => {
         expect(hall.log.posts).toEqual([])
         expect(hall.log.gets).not.toContain('/light/api/dmx')
         expect(lines.join('\n')).toMatch(/1 Calm {2}still {2}expect lit 3 move 0/)
+    })
+})
+
+describe('--follow: measure each cue while the desk plays the show (no GO)', () => {
+    const cues = [{ fade: 6, hold: 30 }, { fade: 0, hold: 26 }, { fade: 4, hold: 28 }]
+    it('waits for the playing cue\'s fade, counted from when the desk fired it', () => {
+        expect(followNext({ runner: { index: 0, running: true, firedAt: 1000 }, todo: new Set([0, 1]), cues, nowMs: 2000 })).toEqual({ index: 0, waitMs: 5500 })
+        expect(followNext({ runner: { index: 1, running: true, firedAt: 1000 }, todo: new Set([1]), cues, nowMs: 9000 })).toEqual({ index: 1, waitMs: 0 })
+    })
+    it('skips a stopped runner, a cue already measured and a cue not picked', () => {
+        expect(followNext({ runner: { index: 0, running: false, firedAt: 1 }, todo: new Set([0]), cues, nowMs: 2 })).toBeNull()
+        expect(followNext({ runner: { index: 2, running: true, firedAt: 1 }, todo: new Set([0, 1]), cues, nowMs: 2 })).toBeNull()
+        expect(followNext({ runner: { index: -1, running: true }, todo: new Set([0]), cues, nowMs: 2 })).toBeNull()
+    })
+    it('gives one loop of the show and two minutes, unless told', () => {
+        expect(followMinutes(cues)).toBe(Math.ceil((36 + 26 + 32) / 60) + 2)
+        expect(followMinutes(cues, '5')).toBe(5)
     })
 })

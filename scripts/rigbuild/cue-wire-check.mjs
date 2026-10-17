@@ -221,7 +221,7 @@ export const main = async (argv = process.argv.slice(2)) => {
     const rigLooks = rigLooksOf(entities)
     const [state, rigBody, cuesBody] = await Promise.all([getJson(`${desk}/state`), getJson(`${desk}/rig?project=${encodeURIComponent(project)}`), getJson(`${desk}/cues`)])
     const cues = cuesBody.cues?.list || []
-    const was = { index: cuesBody.cues?.index ?? -1, running: !!cuesBody.cues?.running }
+    const was = { index: cuesBody.cues?.index ?? -1, running: !!cuesBody.cues?.running, autoplay: !!cuesBody.cues?.autoplay }
     const picked = parseCueRange(args.cues, cues.length)
     const targets = nodeIps || state.output?.targets || []
     const { lamps, skipped } = lampsOf({ deskFixtures: rigBody.fixtures || [], profiles: state.profiles, entities, library })
@@ -256,7 +256,9 @@ export const main = async (argv = process.argv.slice(2)) => {
         try {
             if (was.index >= 0) await postJson(`${desk}/cues/go`, { index: was.index })
             else await postJson(`${desk}/cues/stop`, {})
-            say(`restored: ${was.index >= 0 ? `GO cue ${was.index}` : 'stop (no cue was up)'}`)
+            // a GO on a named cue turns play-in-order off on the desk: put it back when the show was playing by itself
+            if (was.index >= 0 && was.autoplay) await postJson(`${desk}/cues/autoplay`, { autoplay: true })
+            say(`restored: ${was.index >= 0 ? `GO cue ${was.index}${was.autoplay ? ', play in order on' : ''}` : 'stop (no cue was up)'}`)
         } catch (e) {
             say(`RESTORE FAILED (${e.message}): the desk was at cue ${was.index}, running ${was.running}`)
         }
