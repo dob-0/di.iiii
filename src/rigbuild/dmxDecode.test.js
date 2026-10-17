@@ -251,3 +251,16 @@ describe('per-emitter colour mixing (XYZ → linear Rec.709)', async () => {
         expect(emitterMix({ r: emitters.r, g: emitters.g }, { r: 255 })).toBe(null)
     })
 })
+
+import { decodeDmx as decodeForLaser } from './dmxDecode.js'
+import { TESTED_CHANNEL_LISTS as LISTS_FOR_LASER } from './fixtureTypes.js'
+describe('a laser drawn in the colour the desk picked (MOXIR 2026-10-17)', () => {
+    it('reads UP-LA40WF ch 5 as its colour slot', () => {
+        const find = (o) => { if (Array.isArray(o)) { if (o.some((c) => c?.cap?.laserColour)) return o; for (const x of o) { const r = find(x); if (r) return r } } else if (o && typeof o === 'object') for (const v of Object.values(o)) { const r = find(v); if (r) return r } return null }
+        const channels = find(LISTS_FOR_LASER['UP-LA40WF'])
+        const values = channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.laserColour ? 25 : 0))
+        expect(decodeForLaser(channels, values).colour).toBe('#ff0000')
+        const green = channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.laserColour ? 42 : 0))
+        expect(decodeForLaser(channels, green).colour).toBe('#00ff00')
+    })
+})
