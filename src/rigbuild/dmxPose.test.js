@@ -7,7 +7,7 @@ import { positionsOf } from './positions.js'
 import { dealOps } from './deal.js'
 import { flashEntities, lookPoses, posedEntities } from './looks.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
-import { beamOfPanTilt, deskProfileName, dmxEntities, panTiltOfBeam, runningMode } from './dmxPose.js'
+import { beamOfPanTilt, deskProfileName, dmxEntities, laserAimShift, panTiltOfBeam, runningMode } from './dmxPose.js'
 import { deskLooksWithValues } from './deskLookValues.js'
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
@@ -225,5 +225,32 @@ describe('a lamp hung turned or with its pan reversed (MOXIR 2026-10-17)', () =>
         expect(fixturePanOf(250, { panOffsetDeg: 45 })).toBe(-65)
         for (const fx of [null, { panOffsetDeg: 45 }, { panOffsetDeg: 45, panInvert: true }, { panOffsetDeg: -120, panInvert: true }])
             for (const p of [-170, -90, 0, 33, 90, 170]) expect((((roomPanOf(fixturePanOf(p, fx), fx) - p) % 360) + 360) % 360).toBeCloseTo(0)
+    })
+})
+
+describe('a DMX laser\'s picture moves with its X/Y (owner 2026-10-17: "add movement in 3d that i can sync that")', () => {
+    it('shifts by the read-back over the field, turned by the unit\'s swap / invert', () => {
+        expect(laserAimShift({ x: 18.5, y: 0 }, null, 18.5)).toEqual([1, 0])
+        expect(laserAimShift({ x: 9.25, y: -4.625 }, null, 18.5)).toEqual([0.5, -0.25])
+        expect(laserAimShift({ x: 9.25, y: 0 }, { aimSwap: true }, 18.5)).toEqual([0, 0.5])
+        expect(laserAimShift({ x: 9.25, y: 0 }, { aimInvertX: true }, 18.5)).toEqual([-0.5, 0])
+        expect(laserAimShift({ x: 9.25, y: 0 }, { aimSwap: true, aimInvertY: true }, 18.5)).toEqual([0, -0.5])
+        expect(laserAimShift(null)).toEqual([0, 0])
+    })
+    it('dmxEntities moves the 40 W picture where the desk sends it, in the desk\'s colour, blank points kept blank', () => {
+        const type = typeById(TYPE_LIBRARY, 'up-la40wf')
+        const mode = runningMode(type, '32ch', null) || type.modes.find((m) => /32/.test(m.name))
+        const laser = { id: 'L40', type: 'spotLight', components: { fixture: { index: 7, type: 'up-la40wf', mode: mode.name }, transform: { position: [0, 6, 0], rotation: [1.69, 0, 0] }, light: { intensity: 1, color: '#ffffff' }, beam: { visible: true, length: 50, laser: { fieldHalfDeg: 18.5, frame: [[0, 0, 1, 1, 1], [0.1, 0, 0, 0, 0]] } } } }
+        const half = mode.channels.find((c) => c.cap?.aim?.axis === 'x').cap.aim.halfDeg
+        const values = mode.channels.map((c) => (c.role === 'dimmer' ? 255 : c.cap?.laserColour ? 25 : c.cap?.aim?.axis === 'x' ? 125 : c.cap?.aim?.axis === 'y' ? 64 : c.default ?? 0))
+        const fixtures = [{ index: 7, id: 'fx7', key: 'p:L40', profile: deskProfileName('UP-LA40WF', mode.name), values }]
+        const run = (fx) => {
+            const e = { ...laser, components: { ...laser.components, fixture: { ...laser.components.fixture, ...fx } } }
+            return dmxEntities({ shown: [e], document: [e], fixtures, library: TYPE_LIBRARY }).entities[0].components.beam.laser.frame
+        }
+        const [lit, blank] = run({})
+        near(lit, [half / 18.5, 0, 1, 0, 0], 3) // X at the by-hand end: the picture moves a whole half-field, drawn red
+        near(blank, [0.1 + half / 18.5, 0, 0, 0, 0], 3) // a blank move moves too and stays blank
+        near(run({ aimSwap: true, aimInvertY: true })[0].slice(0, 2), [0, -half / 18.5], 3)
     })
 })
