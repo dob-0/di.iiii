@@ -55893,13 +55893,16 @@
     27
    ],
    "colour": 25,
-   "every": 6,
+   "every": 4,
    "anim": {
-    "kind": "sweep+draw",
-    "x": 140,
+    "kind": "sweep+draw+turn",
+    "x": 150,
     "paint": 200,
-    "rot": 0,
+    "rot": 160,
+    "xrot": 150,
     "zoom": 0,
+    "x2": 160,
+    "rot2": 200,
     "g2": [
      1,
      5,
@@ -55921,12 +55924,15 @@
     27
    ],
    "colour": 8,
-   "every": 8,
+   "every": 4,
    "anim": {
-    "kind": "slow turn",
-    "x": 64,
-    "rot": 140,
-    "xwave": 40,
+    "kind": "turn+wave+sweep",
+    "x": 145,
+    "rot": 150,
+    "xwave": 90,
+    "yrot": 150,
+    "x2": 150,
+    "rot2": 210,
     "g2": [
      1,
      5,
@@ -55948,12 +55954,15 @@
     27
    ],
    "colour": 8,
-   "every": 8,
+   "every": 4,
    "anim": {
-    "kind": "slow zoom",
+    "kind": "zoom+sweep+spin",
     "x": 150,
-    "zoom": 205,
-    "rot": 0,
+    "zoom": 210,
+    "rot": 170,
+    "xrot": 150,
+    "x2": 160,
+    "zoom2": 220,
     "g2": [
      1,
      5,
@@ -55975,12 +55984,15 @@
     27
    ],
    "colour": 25,
-   "every": 8,
+   "every": 4,
    "anim": {
-    "kind": "slow spin",
-    "x": 64,
-    "rot": 150,
-    "yrot": 140,
+    "kind": "spin+jump+zoom",
+    "x": 190,
+    "rot": 180,
+    "yrot": 160,
+    "zoom": 205,
+    "x2": 200,
+    "rot2": 230,
     "g2": [
      1,
      5,

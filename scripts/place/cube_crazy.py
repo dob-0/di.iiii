@@ -78,7 +78,7 @@ def paint(stroke, col, t):
         w = 0.5 + 0.5 * math.cos(2 * math.pi * (i / n - t))     # 1 = white, 0 = red
         out.append(q[:2] + [1.0, round(w, 3), round(w, 3)])
     return out
-EXTRA = [e.split(':') for e in arg('--extra', '').split(';') if e]   # id:set:k:r,g,b:seconds
+EXTRA = [e.split(':') for e in arg('--extra', '').split(';') if e]   # id:set:k:r,g,b:seconds[:speed]
 EXTRA_S = sum(float(e[4]) for e in EXTRA)
 d = json.load(open(doc_f)); doc = d.get('document', d)
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
@@ -91,7 +91,7 @@ for e in EXTRA:
 for k in range(N):
     hit = next((x for x in xb if x[0] <= k < x[1]), None)
     if hit:
-        f0, f1, e = hit; t = (k - f0) / max(1, f1 - f0); fn = scan if e[1] == 'scan' else pat; col = [float(x) for x in e[3].split(',')]
+        f0, f1, e = hit; t = ((k - f0) / max(1, f1 - f0) * (float(e[5]) if len(e) > 5 else 1)) % 1; fn = scan if e[1] == 'scan' else pat; col = [float(x) for x in e[3].split(',')]
         for cube in '123456':
             ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
             for s_i, stroke in enumerate(fn(int(e[2]), t, -1 if cube in '456' else 1)[:6]): new[ids[s_i]][k] = [q[:2] + col for q in stroke]
