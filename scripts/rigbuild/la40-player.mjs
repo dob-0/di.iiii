@@ -39,7 +39,7 @@ const GRAPHICS = String(args.graphics || '1,5,8,10,48,2,27').split(',').map(Numb
 const planFile = args.plan ? JSON.parse((await import('node:fs')).readFileSync(String(args.plan), 'utf8')) : {}
 const plan = planFile.cues || {}
 plan.__allowStatic = planFile.allowStatic === true
-for (const n of Object.keys(plan)) if (n !== '__allowStatic') cues.add(Number(n))
+for (const n of Object.keys(plan)) if (n !== '__allowStatic' && !n.startsWith('look:')) cues.add(Number(n))
 const NEVER = new Set([74, 75, 78, 79, 166, 167, 246, 247, 248, 249, 250, 251, 252, 253])
 // Static dots refused unless the plan says the owner allowed them (owner 2026-10-18 00:1x: "yes" — dots and 0 play at MOXIR).
 const allowStatic = Boolean(args['allow-static']) || plan.__allowStatic === true
@@ -74,8 +74,10 @@ const tick = async () => {
     const byLook = onLook ? (st?.cues?.list || []).findIndex((c) => c.lookId === onLook) : -1
     const i = byLook >= 0 ? byLook : st?.cues?.index
     const cue = Number.isInteger(i) && i >= 0 ? i + 1 : null
-    const on = Date.now() < previewUntil || (cue !== null && cues.has(cue))
-    const q = playOf(cue)
+    // a look that lives only on the desk (not in the cue list) plays the plan's "look:<id>" entry (2026-10-18, Red white cool)
+    const lookKey = onLook && byLook < 0 && plan[`look:${onLook}`] ? `look:${onLook}` : null
+    const on = Date.now() < previewUntil || Boolean(lookKey) || (!onLook || byLook >= 0) && cue !== null && cues.has(cue)
+    const q = playOf(lookKey || cue)
     const g = q.list[Math.floor(Date.now() / q.every) % q.list.length]
     const c = q.colour
     const L2 = q.anim.g2 || null
