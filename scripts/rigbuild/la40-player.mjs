@@ -57,6 +57,11 @@ const raw = async (channels) => {
 }
 // anim (plan, optional): ch6 X move, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave; ch7 Y is always 64 (no up-down sweep).
 const SPAN = 32
+// --rgb (owner 2026-10-18 02:3x: "both 40 W the same colour in every scene"): the units' own colour tables differ (unit 137 mixes white
+// greenish, same DMX tested), so colour is set by the diodes instead: ch5 white (8) and ch16-18 modulation (0 = full, 255 = off).
+// 25 red -> red diode only; 42 green -> green only; 8 white -> all three (+ --trim). Both units get the same diode set.
+const RGB_MODE = Boolean(args.rgb)
+const DIODES = { 25: [0, 255, 255], 42: [255, 0, 255], 8: [0, 0, 0], 76: [0, 90, 255] }
 // --trim 137:g=100,169:r=0 — a unit's own colour trim on its modulation channels (ch16 red, ch17 green, ch18 blue; 0 = full), for a
 // unit whose diodes mix differently (2026-10-18: unit 137's white had a green cast, unit 169's was clean; same DMX on both, tested).
 const TRIM = new Map(String(args.trim || '').split(',').filter(Boolean).map((t) => { const [u, kv] = t.split(':'); return [Number(u), Object.fromEntries(kv.split('+').map((x) => x.split('=')).map(([k, v]) => [k, Number(v)]))] }))
@@ -67,7 +72,8 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     const off = [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
     const v = !on ? off : [255, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
         g2 ?? 0, 0, c, a.x2 ?? 64, 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
-    const t = on ? TRIM.get(base) : null
+    if (on && RGB_MODE && DIODES[c]) { v[4] = 8; v[21] = 8; [v[15], v[16], v[17]] = DIODES[c] }
+    const t = on && (!RGB_MODE || c === 8) ? TRIM.get(base) : null
     if (t) { if (t.r != null) v[15] = t.r; if (t.g != null) v[16] = t.g; if (t.b != null) v[17] = t.b }
     return v.map((value, i) => ({ universe, channel: base + i, value }))
 })
