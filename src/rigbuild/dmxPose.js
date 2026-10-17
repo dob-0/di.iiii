@@ -138,6 +138,14 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
             // (dmxDecode.js opticsAt → src/objectComponents/beamOptics.js)
             if (d.optics) beam.optics = { prism: d.optics.prism, honeycomb: d.optics.honeycomb, frost: d.optics.frost, gobo: d.optics.gobo }
             else delete beam.optics
+            // A DMX laser (UP-LA40WF) draws its own picture (beam.laser.frame, points [x, y, r, g, b]): its lit points take
+            // the colour and output the desk sends, so the room shows the laser the rig shows (MOXIR 2026-10-17: the
+            // room kept the design's white grid while the rig played red). Blank moves (r = g = b = 0) stay blank.
+            if (beam.laser && Array.isArray(beam.laser.frame) && d.colour) {
+                const hex = String(d.colour).replace('#', '')
+                const [r, g, b] = [0, 2, 4].map((i) => (parseInt(hex.slice(i, i + 2), 16) || 0) / 255 * d.level)
+                beam.laser = { ...beam.laser, frame: beam.laser.frame.map((p) => (Array.isArray(p) && (p[2] || p[3] || p[4]) ? [p[0], p[1], r, g, b] : p)) }
+            }
             components.beam = beam
         }
         components.rigShown = { level: d.level }
