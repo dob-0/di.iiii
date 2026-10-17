@@ -14,7 +14,8 @@ SPEC.json = {"config": {...}, "scenes": [...], <any other top-level key is copie
   scene: id title act intent parts{part: [hex, level]} motion heads laser_colour fade_s hold_s notes
          floor (false = no floor strips) floor_colour ([hex, level] overrides the act's floor)
 The build adds the floor strips (a scene's own parts win), the cue {fade_s, hold_s}, desk_caps, loop true and loop_s = sum of cues.
-Checks: unique ids, act 1.., hex colours, levels 0..1, cue seconds >= 0, parts allowed. The desk cap is data for the desk (a part's look level is a previs value); laser levels are checked by laser_frames.py.
+Checks: unique ids, act 1.., hex colours, levels 0..1, cue seconds >= 0, parts allowed, and (when the file has a `palette`) every part colour is
+one of palette[].hex or beam_wheel_seen[].hex — the production's accepted colours (2026-10-17). The desk cap is data for the desk (a part's look level is a previs value); laser levels are checked by laser_frames.py.
 The colour audit (palette, eye rules, colour mix) is scripts/place/palette_*.py, not here."""
 import argparse, json, re, sys
 
@@ -57,6 +58,14 @@ def check(doc, allowed=None):
             if not isinstance(v[1], (int, float)) or not 0 <= v[1] <= 1: e.append(f'{i}: part {k!r} level {v[1]!r} not in 0..1')
         cue = s.get('cue', {})
         if not all(isinstance(cue.get(k), (int, float)) and cue[k] >= 0 for k in ('fade_s', 'hold_s')): e.append(f'{i}: cue needs fade_s and hold_s >= 0')
+    pal = doc.get('palette')                       # 2026-10-17: a scene's colours stay inside the file's OWN accepted palette (v5 went 'colourful')
+    if isinstance(pal, list) and pal:
+        ok = {str(p.get('hex', '')).lower() for p in pal if isinstance(p, dict)}
+        ok |= {str(v.get('hex', '')).lower() for v in (doc.get('beam_wheel_seen') or {}).values() if isinstance(v, dict)}
+        for s in doc['scenes']:
+            for k, v in s.get('parts', {}).items():
+                if isinstance(v, list) and v and isinstance(v[0], str) and HEX.match(v[0]) and v[0].lower() not in ok:
+                    e.append(f"{s.get('id')}: part {k!r} colour {v[0]} is not in the file's palette (palette[].hex or beam_wheel_seen[].hex)")
     if doc.get('loop') and abs(doc.get('loop_s', -1) - sum(s['cue']['fade_s'] + s['cue']['hold_s'] for s in doc['scenes'] if 'cue' in s)) > 1e-6:
         e.append('loop_s differs from the sum of the cues')
     return e
