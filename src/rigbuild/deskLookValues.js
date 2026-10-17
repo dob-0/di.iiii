@@ -18,7 +18,7 @@ import { lookStrobeHz } from './strobeCap.js'
 import { panTiltOfBeam, runningMode, fixturePanOf } from './dmxPose.js'
 
 // Fixture categories a look's level motion never reaches: not lamps, so no rhythm on their output (2026-10-17).
-const NO_MOTION = new Set(['laser', 'hazer', 'smoke-machine', 'spark-machine'])
+export const NO_MOTION = new Set(['laser', 'hazer', 'smoke-machine', 'spark-machine'])
 
 
 /**
