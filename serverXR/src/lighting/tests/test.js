@@ -804,6 +804,31 @@ check('a palette that names itself costs a lookup, not a frame', () => {
   assert.deepStrictEqual(out.get('a'), undefined, 'it resolves to nothing rather than hanging');
 });
 
+check("a look's motion moves the dimmer on the wire from the layer's firedAt; without it the frame is the old one", () => {
+  const { sanitizeLook, sanitizeLayer } = require('../looks');
+  const { motionLevels } = require('../lookMotion');
+  const desk = (motion) => {
+    const f = makeFixture({ id: 'w1', profile: 'drgb', address: 1, universe: 0, values: { dimmer: 255, r: 255, g: 255, b: 255 } });
+    const look = sanitizeLook({ id: 'L', steps: [{ values: { w1: { dimmer: 200 } } }], fixtures: ['w1'], ...(motion ? { motion } : {}) });
+    const layer = sanitizeLayer({ id: 'c', lookId: 'L', level: 1, merge: 'ltp' });
+    layer.firedAt = 1000;
+    return new Engine({ master: 255, blackout: false, fixtures: [f], raw: {}, scenes: [], activeScene: null, chase: { enabled: false, sceneIds: [], holdMs: 1000, fadeMs: 0 }, looks: [look], layers: [layer], fx: { mode: 'none', enabled: false, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0 } });
+  };
+  const motion = { mode: 'breathe', bpm: 66, depth: 200, spatial: 'patch', kinds: ['wash'], still: 0, units: [{ id: 'w1', x: 0.5, y: 0.5 }] };
+  const still = desk(null), moving = desk(motion);
+  const seen = new Set();
+  for (let ms = 0; ms <= 2000; ms += 25) {
+    const a = still.render(still.state, 1000 + ms).get(0)[0];
+    const b = moving.render(moving.state, 1000 + ms).get(0)[0];
+    assert.strictEqual(a, 200, "no motion: the look's dimmer, every frame");
+    const want = Math.round(200 * motionLevels(moving.state.looks[0].motion, 1000 + ms, 1000).get('w1') / 255);
+    assert.ok(Math.abs(b - want) <= 1, `at +${ms} ms the wire reads ${b}, fx.js says ${want}`);
+    seen.add(b);
+  }
+  assert.ok(seen.size > 10, `a breathe over 2 s passes through many levels, got ${seen.size}`);
+  assert.strictEqual(moving.render(moving.state, 1000).get(0)[0], 43, 'at the fire a breathe of depth 200 sits at its floor: 200 x 55/255');
+});
+
 check('a kind keeps a colour palette off the heads', () => {
   const looks = sanitizeLooks([{ id: 'k', kind: 'colour',
     steps: [{ values: { '*': { r: 200, pan: 10, dimmer: 255 } } }] }]);
