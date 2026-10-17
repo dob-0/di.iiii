@@ -55882,6 +55882,115 @@
     ]
    },
    "note": "Red white cool 2 (red laser, owner 02:3x)"
+  },
+  "look:rig-v7-124": {
+   "graphics": [
+    1,
+    5,
+    8,
+    10,
+    48,
+    27
+   ],
+   "colour": 25,
+   "every": 6,
+   "anim": {
+    "kind": "sweep+draw",
+    "x": 140,
+    "paint": 200,
+    "rot": 0,
+    "zoom": 0,
+    "g2": [
+     1,
+     5,
+     8,
+     10,
+     48,
+     27
+    ]
+   },
+   "note": "red beams set v7-124: smooth"
+  },
+  "look:rig-v7-125": {
+   "graphics": [
+    1,
+    5,
+    8,
+    10,
+    48,
+    27
+   ],
+   "colour": 8,
+   "every": 8,
+   "anim": {
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
+    "xwave": 40,
+    "g2": [
+     1,
+     5,
+     8,
+     10,
+     48,
+     27
+    ]
+   },
+   "note": "red beams set v7-125: smooth"
+  },
+  "look:rig-v7-127": {
+   "graphics": [
+    1,
+    5,
+    8,
+    10,
+    48,
+    27
+   ],
+   "colour": 8,
+   "every": 8,
+   "anim": {
+    "kind": "slow zoom",
+    "x": 150,
+    "zoom": 205,
+    "rot": 0,
+    "g2": [
+     1,
+     5,
+     8,
+     10,
+     48,
+     27
+    ]
+   },
+   "note": "red beams set v7-127: smooth"
+  },
+  "look:rig-v7-128": {
+   "graphics": [
+    1,
+    5,
+    8,
+    10,
+    48,
+    27
+   ],
+   "colour": 25,
+   "every": 8,
+   "anim": {
+    "kind": "slow spin",
+    "x": 64,
+    "rot": 150,
+    "yrot": 140,
+    "g2": [
+     1,
+     5,
+     8,
+     10,
+     48,
+     27
+    ]
+   },
+   "note": "red beams set v7-128: smooth"
   }
  },
  "allowStatic": true,

@@ -78,11 +78,24 @@ def paint(stroke, col, t):
         w = 0.5 + 0.5 * math.cos(2 * math.pi * (i / n - t))     # 1 = white, 0 = red
         out.append(q[:2] + [1.0, round(w, 3), round(w, 3)])
     return out
+EXTRA = [e.split(':') for e in arg('--extra', '').split(';') if e]   # id:set:k:r,g,b:seconds
+EXTRA_S = sum(float(e[4]) for e in EXTRA)
 d = json.load(open(doc_f)); doc = d.get('document', d)
 lines = {e['id']: e for e in doc['entities'] if re.fullmatch(r'rig-laser-[1-6][a-f]', e['id'])}
 new = {i: [[] for _ in range(N)] for i in lines}
-lit_frames = int(N * LOOP / (LOOP + DARK))
+TOTAL = LOOP + EXTRA_S + DARK
+lit_frames = int(N * LOOP / TOTAL)
+xb = []; t0 = LOOP
+for e in EXTRA:
+    xb.append((int(N * t0 / TOTAL), int(N * (t0 + float(e[4])) / TOTAL), e)); t0 += float(e[4])
 for k in range(N):
+    hit = next((x for x in xb if x[0] <= k < x[1]), None)
+    if hit:
+        f0, f1, e = hit; t = (k - f0) / max(1, f1 - f0); fn = scan if e[1] == 'scan' else pat; col = [float(x) for x in e[3].split(',')]
+        for cube in '123456':
+            ids = sorted(i for i in lines if i.startswith(f'rig-laser-{cube}'))
+            for s_i, stroke in enumerate(fn(int(e[2]), t, -1 if cube in '456' else 1)[:6]): new[ids[s_i]][k] = [q[:2] + col for q in stroke]
+        continue
     if k >= lit_frames: continue
     tt = k / lit_frames * LOOP; p = int(tt // SEG) % NPAT; t = ((tt % SEG) / SEG * SPEED) % 1   # --pattern-s: seconds per pattern; --speed: cycles inside it
     for cube in '123456':
@@ -93,10 +106,12 @@ for k in range(N):
 for f in new.values():
     for k in range(N):
         if not f[k]: f[k] = [[0, 0, 0, 0, 0]]
-now = int(time.time() * 1000); period = LOOP + DARK
+now = int(time.time() * 1000); period = TOTAL
 ops = [{'type': 'updateComponent', 'payload': {'entityId': i, 'component': 'beam', 'patch': {'laser': {**e['components']['beam']['laser'], 'frames': {'period': period, 'list': new[i], 'tween': True}}}}, 'opId': f'cube-crazy-{now}-{i}', 'clientId': 'cube-crazy', 'timestamp': now} for i, e in lines.items()]
 json.dump({'baseVersion': d.get('version'), 'ops': ops}, open(ops_f, 'w'))
-blocks = {'dark': {'start': round(LOOP + 0.5, 3), 'len': 1.0}}
+blocks = {'dark': {'start': round(TOTAL - DARK + 0.5, 3), 'len': 1.0}}
+t0 = LOOP
+for e in EXTRA: blocks[e[0]] = {'start': round(t0, 3), 'len': float(e[4])}; t0 += float(e[4])
 for s in json.load(open(scenes_f))['scenes']:
     if s.get('laser'): blocks[s['id']] = {'start': 0.0, 'len': LOOP}
 json.dump({'loop_s': period, 'blocks': blocks}, open(blocks_f, 'w'), indent=1)
