@@ -36,13 +36,17 @@ const previewUntil = Date.now() + Number(args.preview || 0) * 1000
 // --graphics 1,5,8 — the shapes to cycle (owner 20:4x: "only lines and cool underground ones": the horizontal lines of the
 // walk sheet la40wf-shapes-by-value-1: 1 one line, 2 dashed, 5 two parallel, 8 and 10 staggered layers, 27 dashed, 48 three stacked)
 const GRAPHICS = String(args.graphics || '1,5,8,10,48,2,27').split(',').map(Number)
-const plan = args.plan ? JSON.parse((await import('node:fs')).readFileSync(String(args.plan), 'utf8')).cues || {} : {}
-for (const n of Object.keys(plan)) cues.add(Number(n))
+const planFile = args.plan ? JSON.parse((await import('node:fs')).readFileSync(String(args.plan), 'utf8')) : {}
+const plan = planFile.cues || {}
+plan.__allowStatic = planFile.allowStatic === true
+for (const n of Object.keys(plan)) if (n !== '__allowStatic') cues.add(Number(n))
 const NEVER = new Set([74, 75, 78, 79, 166, 167, 246, 247, 248, 249, 250, 251, 252, 253])
-const dot = (g) => (g >= 146 && g <= 165) || (g >= 185 && g <= 187)
+// Static dots refused unless the plan says the owner allowed them (owner 2026-10-18 00:1x: "yes" — dots and 0 play at MOXIR).
+const allowStatic = Boolean(args['allow-static']) || plan.__allowStatic === true
+const dot = (g) => !allowStatic && ((g >= 146 && g <= 165) || (g >= 185 && g <= 187))
 const bad = (list) => !list.length || list.some((g) => !Number.isInteger(g) || g < 0 || g > 255 || NEVER.has(g) || dot(g))
 if (bad(GRAPHICS)) throw new Error('a forbidden graphic is in the list')
-for (const [n, p] of Object.entries(plan)) if (bad(p.graphics || GRAPHICS)) throw new Error(`cue ${n}: a forbidden or empty graphic list`)
+for (const [n, p] of Object.entries(plan)) if (n !== '__allowStatic') if (bad(p.graphics || GRAPHICS)) throw new Error(`cue ${n}: a forbidden or empty graphic list`)
 const playOf = (cue) => { const p = plan[cue] || {}; return { list: p.graphics || GRAPHICS, colour: p.colour ?? colourOf.get(cue) ?? colour, every: (p.every ? Number(p.every) * 1000 : every) } }
 if (args['dry-run']) { for (const n of [...cues].sort((a, b) => a - b)) { const q = playOf(n); console.log(`cue ${n}: graphics ${q.list.join(',')} · colour ${q.colour} · every ${q.every / 1000}s${plan[n]?.note ? ' · ' + plan[n].note : ''}`) } process.exit(0) }
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }
