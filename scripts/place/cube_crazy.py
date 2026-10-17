@@ -61,6 +61,12 @@ def scan(k, t, m):                     # --set scan (owner 02:0x: "loop lines x 
     if k == 16: return [seg((F * math.cos(w * m + j * math.pi / 6), F * math.sin(w * m + j * math.pi / 6)), (-F * math.cos(w * m + j * math.pi / 6), -F * math.sin(w * m + j * math.pi / 6))) for j in range(6)]   # full-field star, 6 lines
     if k == 17: o2 = 0.3 * math.sin(w); return [seg((-F, clip(y + o2)), (F, clip(y + o2))) for y in (-0.66, 0, 0.66)] + [seg((clip(x - o2 * m), -F), (clip(x - o2 * m), F)) for x in (-0.66, 0, 0.66)]   # full grid, drifting
     if k == 18: return [seg((-F * m, -F), (clip(-F * m + 2 * F * m * math.cos(math.pi / 2 * (j / 5) + 0.3 * math.sin(w))), clip(-F + 2 * F * math.sin(math.pi / 2 * (j / 5) + 0.3 * math.sin(w))))) for j in range(6)]   # fan from the corner, full field
+    if k == 19: return [seg((tri * m, -F), (tri * m, F)), seg((-tri * m, -F), (-tri * m, F))]                       # two lines crossing each other across
+    if k == 20: return [seg((clip((tri + o3) * m), -F), (clip((tri + o3) * m), F)) for o3 in (-0.4, 0, 0.4)]          # three lines scanning across together
+    if k == 21: return [seg((tri * m, -F), (tri * m, F)), seg((-F, F * (1 - 4 * abs(((t + 0.25) % 1) - 0.5))), (F, F * (1 - 4 * abs(((t + 0.25) % 1) - 0.5))))]   # grid scan
+    if k == 22: return [seg((clip(tri * m - 0.6), -F), (clip(tri * m + 0.6), F))]                                    # a diagonal scanning over
+    if k == 23: a3 = math.pi / 2 + (math.pi / 2.2) * math.sin(2 * math.pi * t) * m; return [seg((0, -F), (clip(2 * F * math.cos(a3)), clip(-F + 2 * F * math.sin(a3))))]   # searchlight from the bottom
+    if k == 24: g3 = F * abs(math.sin(2 * math.pi * t)); return [seg((-F, g3), (F, g3)), seg((-F, -g3), (F, -g3))]    # two lines meeting and parting
     if k == 11: return [seg((-F, -tri), (F, -tri))]                                          # a line going down, then up
     if k == 12: return [seg((tri * m, -F), (tri * m, F))]                                     # a line going across, then back
     if k == 13: return [seg((-F, clip(F - 2 * F * (1 - abs(1 - 2 * ((t + j / 3) % 1))))), (F, clip(F - 2 * F * (1 - abs(1 - 2 * ((t + j / 3) % 1)))))) for j in range(3)]  # three lines cascading down and up
@@ -95,12 +101,13 @@ SET = arg('--set', 'crazy')
 # --red-every N: every Nth pattern red, the rest white.
 MIX_DOTS = [(scan, 0), (dots, 0), (pat, 0), (scan, 5), (dots, 1), (pat, 1), (scan, 1), (dots, 2), (pat, 2), (scan, 6), (dots, 3), (pat, 3),
             (scan, 4), (dots, 4), (pat, 4), (scan, 9), (dots, 5), (pat, 7), (scan, 10), (dots, 3), (pat, 6), (scan, 7), (dots, 0), (pat, 5),
-            (scan, 11), (scan, 12), (scan, 13), (scan, 14), (scan, 15), (scan, 16), (scan, 17), (scan, 18)]
+            (scan, 11), (scan, 12), (scan, 13), (scan, 14), (scan, 15), (scan, 16), (scan, 17), (scan, 18),
+            (scan, 19), (scan, 20), (scan, 21), (scan, 22), (scan, 23), (scan, 24)]
 MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2), (scan, 7), (pat, 2), (scan, 3), (scan, 8), (pat, 3),
        (scan, 4), (scan, 9), (pat, 4), (scan, 10), (pat, 5), (pat, 6), (pat, 7)]
 RED_EVERY = int(arg('--red-every', 0))
 if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
-NPAT = {'scan': 19, 'mix': len(MIX)}.get(SET, 8)
+NPAT = {'scan': 25, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
     if SET == 'scan': return scan(k, t, m)
     if SET == 'mix': f, j = MIX[k]; return f(j, t, m)
