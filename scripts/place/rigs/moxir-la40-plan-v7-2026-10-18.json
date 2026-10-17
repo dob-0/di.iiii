@@ -248,7 +248,7 @@
     35,
     36
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -1256,7 +1256,7 @@
     113,
     114
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -1761,7 +1761,7 @@
     150,
     151
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 200,
@@ -2770,7 +2770,7 @@
     226,
     227
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -3274,7 +3274,7 @@
     15,
     16
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 140,
@@ -4283,7 +4283,7 @@
     93,
     94
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -4788,7 +4788,7 @@
     130,
     131
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -5796,7 +5796,7 @@
     206,
     207
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 140,
@@ -6300,7 +6300,7 @@
     243,
     244
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 200,
@@ -7309,7 +7309,7 @@
     69,
     70
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -7814,7 +7814,7 @@
     110,
     111
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 140,
@@ -8822,7 +8822,7 @@
     186,
     187
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 200,
@@ -9327,7 +9327,7 @@
     223,
     224
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -10337,7 +10337,7 @@
     49,
     50
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -10841,7 +10841,7 @@
     90,
     91
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -11851,7 +11851,7 @@
     164,
     165
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -12355,7 +12355,7 @@
     203,
     204
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -13364,7 +13364,7 @@
     29,
     30
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -13869,7 +13869,7 @@
     66,
     67
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -14878,7 +14878,7 @@
     144,
     145
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -15382,7 +15382,7 @@
     183,
     184
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -16391,7 +16391,7 @@
     9,
     10
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -16896,7 +16896,7 @@
     46,
     47
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -17905,7 +17905,7 @@
     124,
     125
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -18409,7 +18409,7 @@
     161,
     162
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -19418,7 +19418,7 @@
     237,
     238
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -19923,7 +19923,7 @@
     26,
     27
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -20428,7 +20428,7 @@
     63,
     64
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -21438,7 +21438,7 @@
     141,
     142
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -21942,7 +21942,7 @@
     180,
     181
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -22951,7 +22951,7 @@
     6,
     7
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -23456,7 +23456,7 @@
     43,
     44
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -24465,7 +24465,7 @@
     121,
     122
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -24969,7 +24969,7 @@
     158,
     159
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -25979,7 +25979,7 @@
     234,
     235
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -26484,7 +26484,7 @@
     23,
     24
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -27492,7 +27492,7 @@
     101,
     102
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -27997,7 +27997,7 @@
     138,
     139
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -29007,7 +29007,7 @@
     214,
     215
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -29511,7 +29511,7 @@
     3,
     4
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -31024,7 +31024,7 @@
     118,
     119
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 140,
@@ -31528,7 +31528,7 @@
     155,
     156
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -32536,7 +32536,7 @@
     231,
     232
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -33041,7 +33041,7 @@
     20,
     21
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 140,
@@ -34049,7 +34049,7 @@
     98,
     99
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -34553,7 +34553,7 @@
     135,
     136
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -35562,7 +35562,7 @@
     211,
     212
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -36066,7 +36066,7 @@
     0,
     1
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -37075,7 +37075,7 @@
     76,
     77
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 200,
@@ -37580,7 +37580,7 @@
     115,
     116
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 64,
@@ -38588,7 +38588,7 @@
     191,
     192
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 150,
@@ -39093,7 +39093,7 @@
     228,
     229
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 200,
@@ -40102,7 +40102,7 @@
     54,
     55
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 6,
    "anim": {
     "x": 200,
@@ -41112,7 +41112,7 @@
     132,
     133
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -41617,7 +41617,7 @@
     171,
     172
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -42625,7 +42625,7 @@
     245,
     254
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -43130,7 +43130,7 @@
     34,
     35
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 150,
@@ -44139,7 +44139,7 @@
     112,
     113
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -44644,7 +44644,7 @@
     149,
     150
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -45653,7 +45653,7 @@
     225,
     226
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -46157,7 +46157,7 @@
     14,
     15
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -47167,7 +47167,7 @@
     92,
     93
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 200,
@@ -47672,7 +47672,7 @@
     129,
     130
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -48680,7 +48680,7 @@
     205,
     206
    ],
-   "colour": 42,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 140,
@@ -49184,7 +49184,7 @@
     242,
     243
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -50193,7 +50193,7 @@
     68,
     69
    ],
-   "colour": 8,
+   "colour": 25,
    "every": 4,
    "anim": {
     "x": 64,
@@ -54491,5 +54491,6 @@
  "allowStatic": true,
  "anim_why": "owner 2026-10-18 00:2x: 'make the lasers animated and keep colours, make suit' \u2014 built-in motion of the up-la40wf (ch6 X move auto, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave), chosen by the scene's name; ch7 Y stays 64 (no vertical sweep toward the floor). UNTESTED on the wire: the shape walk tested ch1-7 only.",
  "full_why": "all 32 channels: X/Y rotation and a second graphic with its own motion (la40_full.py, 2026-10-18)",
- "what": "v7 40 W plan: v6 (cues 1-100) + the laser-dot scenes of the 20 (owner 01:2x)"
+ "what": "v7 40 W plan: v6 (cues 1-100) + the laser-dot scenes of the 20 (owner 01:2x)",
+ "colour_why": "owner 01:4x: both lasers red in every scene"
 }
