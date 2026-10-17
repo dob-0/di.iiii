@@ -30,7 +30,9 @@ const colour = Number(args.colour ?? 25)
 const colourOf = new Map(String(args.colours || '').split(',').filter(Boolean).map((p) => p.split(':').map(Number)))
 const every = Number(args.every || 8) * 1000
 const previewUntil = Date.now() + Number(args.preview || 0) * 1000
-const GRAPHICS = [24, 30, 36, 42, 48, 54]
+// --graphics 1,5,8 — the shapes to cycle (owner 20:4x: "only lines and cool underground ones": the horizontal lines of the
+// walk sheet la40wf-shapes-by-value-1: 1 one line, 2 dashed, 5 two parallel, 8 and 10 staggered layers, 27 dashed, 48 three stacked)
+const GRAPHICS = String(args.graphics || '1,5,8,10,48,2,27').split(',').map(Number)
 const NEVER = new Set([74, 75, 78, 79, 166, 167, 246, 247, 248, 249, 250, 251, 252, 253])
 const dot = (g) => (g >= 146 && g <= 165) || (g >= 185 && g <= 187)
 if (GRAPHICS.some((g) => NEVER.has(g) || dot(g))) throw new Error('a forbidden graphic is in the list')
