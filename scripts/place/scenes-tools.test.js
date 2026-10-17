@@ -65,6 +65,15 @@ describe.skipIf(!hasPython)('scenes_build.py', () => {
         expect(bad([{ ...ok, parts: { x: ['#ffffff', 1.5] } }]).stderr).toContain('not in 0..1')
         expect(bad([ok], { parts: ['y'] }).stderr).toContain('not in config.parts')
     })
+    it("refuses a colour outside the file's own palette; a beam slot from beam_wheel_seen passes (2026-10-17)", () => {
+        const d = tmp(); const out = path.join(d, 'x.json')
+        const spec = (hex) => ({ config: {}, palette: [{ key: 'A', name: 'ash', hex: '#e8e4dc' }], beam_wheel_seen: { '#e8e4dc': { slot: 'open white', hex: '#ffffff' } },
+            scenes: [{ id: 'a', title: 'A', act: 1, parts: { wash: ['#e8e4dc', 1], beam: [hex, 1] } }] })
+        expect(py('scenes_build.py', ['--spec', wr(d, 'ok.json', spec('#ffffff')), '--out', out]).status).toBe(0)
+        const r = py('scenes_build.py', ['--spec', wr(d, 'lime.json', spec('#8cff3a')), '--out', out])
+        expect(r.status).toBe(1)
+        expect(r.stderr).toContain("colour #8cff3a is not in the file's palette")
+    })
 })
 
 describe.skipIf(!hasPython)('scenes_outside_rule.py', () => {

@@ -1,9 +1,9 @@
 {
- "what": "MOXIR 2026-10-17 v5 (show day): the 50 scenes re-authored for the WASHES and the 18 BEAMS, lasers at 0 (owner 08:2x: lasers later, when ready). Beam colours only from the B380F wheel slots SEEN (fixtureTypes.js B380F_SLOTS_SEEN; blue banned by the eye rule); heads use the whole headMotion.js vocabulary (fan, sweep, cross, circle, figure8, nod, wave x all/alternate/ripple/left-right), periods on the 132 bpm bar (1.82 s); fx.js modes on washes and beams. Kept from v3/v4: ids, acts, cue timing, energy, the floor strips, the outside, the v4 laser design under laser_parked.",
- "source": "designed by the scenes-50 designer agent (Opus) of chat aa61368c, 2026-10-15; re-coloured v2 by the recolour agent (Opus, headless) 2026-10-15 03:15; v3 (Palette 3) by the recolour-3 agent (Opus, headless, lead f41c885f) 2026-10-15 06:0x; generator ~/work/agent-reports-2026-10-15/moxir-50/scenes-tools/scenes50.py + palette.py (v2 copies in scenes-tools/v2/); colours pixel-sampled by palette_sample.py (palette_samples.json); outside parts by outside_rule.py; rig scripts/place/rigs/moxir-v2-10-2026-10-15.json; motion vocabulary serverXR/src/lighting/fx.js · lasers v4 2026-10-17: the whole field (zone opened by the officer 07:1x), wide fans/sweeps/arches/curtains, cycles ≥ 14.5 s for the 4.36 s keyframes · v5 2026-10-17 08:xx by dob-74 (Fable), scratchpad scenes_v5.py; base = this file at v3-palette3+lasers-v4",
+ "what": "MOXIR 2026-10-17 v6 (show day): the 50 scenes for the WASHES and the 18 BEAMS, lasers at 0 (owner 08:2x). Colours = the accepted v3 palette 3 (owner 09:0x on v5: \"now its color full, make back underground\"); the beams' v3 colours mapped to the B380F wheel slots SEEN (beam_wheel_seen); heads = the v5 moves (fan, sweep, cross, circle, figure8, nod, wave); washes motion = v5, or v3 where v5 broke the flash limit (scenes_flash.cjs); where the v5 move was pan-only (sweep, cross, fan) it turned nothing on the upright beams (heads_check.mjs), so the v3 move is kept. intent = the scene in plain words from its data; intent_v3 = the v3 story.",
+ "source": "designed by the scenes-50 designer agent (Opus) of chat aa61368c, 2026-10-15; re-coloured v2 by the recolour agent (Opus, headless) 2026-10-15 03:15; v3 (Palette 3) by the recolour-3 agent (Opus, headless, lead f41c885f) 2026-10-15 06:0x; generator ~/work/agent-reports-2026-10-15/moxir-50/scenes-tools/scenes50.py + palette.py (v2 copies in scenes-tools/v2/); colours pixel-sampled by palette_sample.py (palette_samples.json); outside parts by outside_rule.py; rig scripts/place/rigs/moxir-v2-10-2026-10-15.json; motion vocabulary serverXR/src/lighting/fx.js · lasers v4 2026-10-17: the whole field (zone opened by the officer 07:1x), wide fans/sweeps/arches/curtains, cycles ≥ 14.5 s for the 4.36 s keyframes · v6 2026-10-17 09:xx by dob-74, docs/moxir/scenes-v6-2026-10-17/scenes_v6.py from this file (v3+lasers v4) and moxir-scenes-50-v5-2026-10-17.json",
  "licence": "di.iiii project data (the owner's); MOXIR teaser frames used as reference only, never published",
  "date": "2026-10-17",
- "version": "v5-washes-beams-2026-10-17",
+ "version": "v6-underground-2026-10-17",
  "rules": {
   "still": 0.3,
   "floor": "line L + line R held still, never red, desaturated (HSV S <= 0.6), focus shift <= 0.2 D; level so luminance x level ~ 0.06: act 1 ice 0.07; act 2 mint 0.07; act 3 rose-copper 0.14; act 4 petrol 0.08; act 5 lavender 0.15; act 5 ends (scenes 48-50) ice 0.07; blue-wave: cut down lavender 0.3; luminance x level >= v1 floor (deep ember 0.25) = 0.0221",
@@ -29,9 +29,8 @@
    "floor_held_max_hsv_s": 0.6,
    "method": "palette.py eye(); thresholds are taste, unvalidated"
   },
-  "beam_colours": "B380F_SLOTS_SEEN only (open, red, green, yellow, magenta, amber, lime, orange, red-orange, warm white, light blue); blue banned (eye rule)",
-  "head_peak_speed_max_deg_s": 120,
-  "lasers": "laser part absent from every scene (level 0) until the owner signs the lasers off; design kept in laser_parked"
+  "beam_colours": "B380F_SLOTS_SEEN only; v3 colours mapped by beam_wheel_seen",
+  "lasers": "laser part absent from every scene (level 0) until the owner signs the lasers off; v4 design kept in laser_parked"
  },
  "renamed_v3": {
   "red-scissors": "copper-scissors",
@@ -796,24 +795,8 @@
    "id": "the-road-in",
    "title": "The road in",
    "act": 1,
-   "intent": "Doors. Outside the road and the entrance; inside the plane stands as six ice columns in a still fan, breathing; the truss low steel.",
+   "intent": "Plane light blue; truss ice up; floor ice. Beams: a lean wave, in a ripple. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     0.5
-    ],
-    "cut up": [
-     "#73bdff",
-     0.3
-    ],
-    "cut down": [
-     "#73bdff",
-     0.3
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.2
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -822,6 +805,10 @@
      "#d1eeff",
      0.4
     ],
+    "plane 1": [
+     "#a8d8ff",
+     0.35
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -829,6 +816,10 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#d1eeff",
+     0.15
     ]
    },
    "motion": {
@@ -842,11 +833,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 35,
-    "tilt_deg": 0,
-    "spatial": "all",
+    "pattern": "wave",
+    "period_s": 29.09,
+    "pan_deg": 0,
+    "tilt_deg": 10,
+    "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
@@ -859,22 +850,15 @@
    "notes": "outside = the owner's rule (road toxic green, entrance dark amber, 03:5x), unchanged",
    "energy": 0.25,
    "energy_tier": "low",
+   "intent_v3": "Doors: outside, the road glows toxic green and the entrance dark amber; inside, the plane in low steel blue and the truss over the DJ a faint ice glow up into the haze.",
    "laser_parked": null
   },
   {
    "id": "first-light",
    "title": "First light",
    "act": 1,
-   "intent": "The plane alone: six open-white columns lean toward the DJ one after another, a ripple of light blue; nothing else.",
+   "intent": "Plane open white; floor ice. Beams: a lean wave, together. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     0.8
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.25
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -882,6 +866,10 @@
     "line R": [
      "#d1eeff",
      0.4
+    ],
+    "plane 1": [
+     "#ffffff",
+     0.55
     ],
     "road": [
      "#a5ff0f",
@@ -920,6 +908,7 @@
    "notes": "the owner's 'blackout + one beam': a part is 6 beams, the closest the data can say",
    "energy": 0.35,
    "energy_tier": "low",
+   "intent_v3": "Blackout and the plane behind the DJ alone in cold white, leaning very slowly; one cold laser line wakes each side of the DJ; the truss stays dark.",
    "laser_parked": {
     "pattern": "single-scan",
     "cubes": "inner",
@@ -949,24 +938,8 @@
    "id": "slow-sweep",
    "title": "Slow sweep",
    "act": 1,
-   "intent": "The plane sweeps once every eight bars, left and right mirrored like a slow gate; cold white up on the truss.",
+   "intent": "Plane open white; truss cold white up, ice down; ice behind the DJ; warm white on the DJ; floor ice. Beams: lean toward the floor and back, together. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     0.9
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.5
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -975,6 +948,14 @@
      "#d1eeff",
      0.4
     ],
+    "plane 1": [
+     "#ffffff",
+     0.8
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.5
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -982,6 +963,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.2
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.15
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -995,11 +988,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "sweep",
-    "period_s": 14.55,
-    "pan_deg": 45,
-    "tilt_deg": 0,
-    "spatial": "left-right",
+    "pattern": "nod",
+    "period_s": 21.82,
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "all",
     "kinds": [
      "up-b380f"
     ]
@@ -1012,42 +1005,15 @@
    "notes": "",
    "energy": 0.5,
    "energy_tier": "mid",
+   "intent_v3": "The six cold white beams lean toward the floor and back, one slow sweep every 22 s; the truss glows cold up into the haze, a thin ice top light and a warm kicker find the DJ.",
    "laser_parked": null
   },
   {
    "id": "steel-breath",
    "title": "Steel breath",
    "act": 1,
-   "intent": "Steel blue rays breathe in a slow wave toward the DJ; the plane in light blue nods in a ripple; petrol behind the DJ.",
+   "intent": "Plane light blue; truss steel blue down; petrol behind the DJ; cold white on the DJ; floor ice. Beams: a lean wave, in a ripple. Washes roll in a wave.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     0.7
-    ],
-    "line A": [
-     "#73bdff",
-     0.6
-    ],
-    "line B": [
-     "#73bdff",
-     0.6
-    ],
-    "line C": [
-     "#73bdff",
-     0.6
-    ],
-    "line D": [
-     "#73bdff",
-     0.6
-    ],
-    "dj back": [
-     "#66faff",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.3
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -1056,6 +1022,18 @@
      "#d1eeff",
      0.4
     ],
+    "plane 1": [
+     "#a8d8ff",
+     0.7
+    ],
+    "dj back": [
+     "#66faff",
+     0.2
+    ],
+    "stage key": [
+     "#eefdfd",
+     0.15
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1063,6 +1041,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#73bdff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -1093,38 +1079,15 @@
    "notes": "",
    "energy": 0.45,
    "energy_tier": "low",
+   "intent_v3": "The DJ plane turns steel blue and breathes; a ripple of lean runs across it; on the truss petrol behind the DJ, a steel blue top light, a cold key and a warm kicker hold him still.",
    "laser_parked": null
   },
   {
    "id": "dj-alone",
    "title": "The DJ alone",
    "act": 1,
-   "intent": "The DJ in warm white, the plane in warm white too, leaning slowly as one; the truss holds him; the floor steel.",
+   "intent": "Plane light blue; truss steel blue up, warm white down; steel blue behind the DJ; warm white on the DJ; floor ice. Beams: lean toward the floor and back, together. Washes pulse.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.6
-    ],
-    "dj back": [
-     "#73bdff",
-     0.4
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.4
-    ],
-    "cut up": [
-     "#e8e4dc",
-     0.25
-    ],
-    "cut down": [
-     "#e8e4dc",
-     0.25
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -1133,6 +1096,22 @@
      "#d1eeff",
      0.4
     ],
+    "plane 1": [
+     "#a8d8ff",
+     0.6
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "dj back": [
+     "#73bdff",
+     0.2
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1140,6 +1119,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#73bdff",
+     0.2
+    ],
+    "cut down": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -1170,54 +1157,15 @@
    "notes": "warm white = the tungsten key of the stage (LEE 204 Full CTO), the one warm thing of act 1",
    "energy": 0.3,
    "energy_tier": "low",
+   "intent_v3": "Steel blue plane, a soft pulse on the beams only; the whole truss holds the DJ: warm white (3200 K) kicker, key and top light, steel blue behind and above.",
    "laser_parked": null
   },
   {
    "id": "ice-rays",
    "title": "Ice rays",
    "act": 1,
-   "intent": "The four rays rise in ice, a wave rolling toward the DJ; the walls wake as light blue columns in a fan, still.",
+   "intent": "Plane open white; rays ice; truss ice up; ice behind the DJ; floor ice. Washes roll in a wave.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     0.7
-    ],
-    "side line left": [
-     "#a8d8ff",
-     0.6
-    ],
-    "side line right": [
-     "#a8d8ff",
-     0.6
-    ],
-    "line A": [
-     "#d1eeff",
-     0.8
-    ],
-    "line B": [
-     "#d1eeff",
-     0.8
-    ],
-    "line C": [
-     "#d1eeff",
-     0.8
-    ],
-    "line D": [
-     "#d1eeff",
-     0.8
-    ],
-    "cut up": [
-     "#d1eeff",
-     0.5
-    ],
-    "cut down": [
-     "#d1eeff",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -1226,6 +1174,22 @@
      "#d1eeff",
      0.4
     ],
+    "line A": [
+     "#d1eeff",
+     0.6
+    ],
+    "line B": [
+     "#d1eeff",
+     0.6
+    ],
+    "line C": [
+     "#d1eeff",
+     0.6
+    ],
+    "line D": [
+     "#d1eeff",
+     0.6
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1233,6 +1197,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#ffffff",
+     0.55
+    ],
+    "cut up": [
+     "#d1eeff",
+     0.5
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.25
     ]
    },
    "motion": {
@@ -1245,16 +1221,7 @@
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 30,
-    "tilt_deg": 0,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 4,
@@ -1263,17 +1230,22 @@
    "notes": "",
    "energy": 0.55,
    "energy_tier": "mid",
+   "intent_v3": "The four rays behind the DJ rise in ice, a slow wave rolling toward him; the wave ends on the truss, its up-washes breathing ice into the haze, ice held behind the DJ.",
    "laser_parked": null
   },
   {
    "id": "the-wall-wakes",
    "title": "The wall wakes",
    "act": 1,
-   "intent": "All eighteen beams in light blue: a sweep walks down the walls to the DJ in a ripple while the plane crosses like scissors; the truss petrol up.",
+   "intent": "Plane light blue, walls light blue; truss petrol down; cold white on the DJ; floor ice. Beams: lean toward the floor and back, neighbours opposite. Washes run a comet.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     1.0
+    "line L": [
+     "#d1eeff",
+     0.7
+    ],
+    "line R": [
+     "#d1eeff",
+     0.7
     ],
     "side line left": [
      "#a8d8ff",
@@ -1283,46 +1255,6 @@
      "#a8d8ff",
      1.0
     ],
-    "line A": [
-     "#66faff",
-     0.7
-    ],
-    "line B": [
-     "#66faff",
-     0.7
-    ],
-    "line C": [
-     "#66faff",
-     0.7
-    ],
-    "line D": [
-     "#66faff",
-     0.7
-    ],
-    "cut up": [
-     "#66faff",
-     0.8
-    ],
-    "cut down": [
-     "#66faff",
-     0.7
-    ],
-    "dj back": [
-     "#66faff",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#d1eeff",
-     0.7
-    ],
-    "line R": [
-     "#d1eeff",
-     0.7
-    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1330,6 +1262,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     1.0
+    ],
+    "cut down": [
+     "#66faff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
+    ],
+    "stage key": [
+     "#eefdfd",
+     0.2
     ]
    },
    "motion": {
@@ -1343,11 +1291,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
-    "period_s": 7.27,
-    "pan_deg": 40,
-    "tilt_deg": 0,
-    "spatial": "ripple",
+    "pattern": "nod",
+    "period_s": 18.18,
+    "pan_deg": 0,
+    "tilt_deg": 10,
+    "spatial": "alternate",
     "kinds": [
      "up-b380f"
     ]
@@ -1360,50 +1308,15 @@
    "notes": "",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "The twelve side beams in petrol; a comet walks down the walls to the DJ, where the truss holds a petrol top light, a cold key and a warm kicker.",
    "laser_parked": null
   },
   {
    "id": "cold-columns",
    "title": "Cold columns",
    "act": 1,
-   "intent": "The walls in open white, twelve straight columns in the haze, crossing gently in alternate pairs; the plane dark; cold white chases down the rays.",
+   "intent": "Walls open white; truss cold white up; ice behind the DJ; floor ice. Beams: lean toward the floor and back, neighbours opposite. Washes chase.",
    "parts": {
-    "side line left": [
-     "#ffffff",
-     1.0
-    ],
-    "side line right": [
-     "#ffffff",
-     1.0
-    ],
-    "line A": [
-     "#eefdfd",
-     0.6
-    ],
-    "line B": [
-     "#eefdfd",
-     0.6
-    ],
-    "line C": [
-     "#eefdfd",
-     0.6
-    ],
-    "line D": [
-     "#eefdfd",
-     0.6
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.5
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -1412,6 +1325,14 @@
      "#d1eeff",
      0.4
     ],
+    "side line left": [
+     "#ffffff",
+     0.6
+    ],
+    "side line right": [
+     "#ffffff",
+     0.6
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1419,6 +1340,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.25
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.2
     ]
    },
    "motion": {
@@ -1432,10 +1361,10 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
-    "period_s": 14.55,
-    "pan_deg": 25,
-    "tilt_deg": 0,
+    "pattern": "nod",
+    "period_s": 21.82,
+    "pan_deg": 0,
+    "tilt_deg": 12,
     "spatial": "alternate",
     "kinds": [
      "up-b380f"
@@ -1449,6 +1378,7 @@
    "notes": "",
    "energy": 0.6,
    "energy_tier": "mid",
+   "intent_v3": "The side beams in cold white, straight columns in the haze, crossing gently; two cold laser lines answer from the outer cubes; the truss glows cold upward, ice behind the DJ.",
    "laser_parked": {
     "pattern": "single-scan",
     "cubes": "outer",
@@ -1478,40 +1408,8 @@
    "id": "rust-low",
    "title": "Rust, low",
    "act": 1,
-   "intent": "Rose-copper rays spark each on their own count; the plane in amber, a slow figure-eight; warm white on the cut down: the rust of the hall.",
+   "intent": "Plane warm white; rays rose-copper; truss rose-copper up, warm white down; warm white on the DJ; floor ice. Beams: an X, mirrored. Washes sparkle.",
    "parts": {
-    "plane 1": [
-     "#ffb000",
-     0.7
-    ],
-    "line A": [
-     "#ff9180",
-     0.7
-    ],
-    "line B": [
-     "#ff9180",
-     0.7
-    ],
-    "line C": [
-     "#ff9180",
-     0.7
-    ],
-    "line D": [
-     "#ff9180",
-     0.7
-    ],
-    "cut up": [
-     "#ffbe7a",
-     0.5
-    ],
-    "cut down": [
-     "#ffbe7a",
-     0.6
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -1520,6 +1418,26 @@
      "#d1eeff",
      0.4
     ],
+    "line A": [
+     "#ff9180",
+     0.5
+    ],
+    "line B": [
+     "#ff9180",
+     0.5
+    ],
+    "line C": [
+     "#ff9180",
+     0.5
+    ],
+    "line D": [
+     "#ff9180",
+     0.5
+    ],
+    "cut down": [
+     "#ffbe7a",
+     0.5
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1527,12 +1445,28 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#fff0c0",
+     0.55
+    ],
+    "cut up": [
+     "#ff9180",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
     "mode": "sparkle",
-    "bpm": 33,
-    "depth": 200,
+    "bpm": 20,
+    "depth": 180,
     "spatial": "x",
     "kinds": [
      "up-pl5403"
@@ -1557,50 +1491,15 @@
    "notes": "the one warm moment of act 1, now without red: rose-copper (t5 #ad756c hue; rust returns warm light best, measured); sparkle only at 20 bpm",
    "energy": 0.55,
    "energy_tier": "mid",
+   "intent_v3": "The rays in rose-copper and the cut down in warm white, each lamp sparking on its own count: the rust of the hall; the truss up-washes hold rose-copper, a warm key and kicker on the DJ.",
    "laser_parked": null
   },
   {
    "id": "first-net",
    "title": "First net",
    "act": 1,
-   "intent": "The first green: the plane in lime, a circle ripple; mint up on the truss, mint rays breathing; the hall turns toward the poster.",
+   "intent": "Plane green; truss mint up; warm white on the DJ; floor ice. Beams: a bow-tie turn, in a ripple. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#8cff3a",
-     0.8
-    ],
-    "line A": [
-     "#99ffce",
-     0.6
-    ],
-    "line B": [
-     "#99ffce",
-     0.6
-    ],
-    "line C": [
-     "#99ffce",
-     0.6
-    ],
-    "line D": [
-     "#99ffce",
-     0.6
-    ],
-    "cut up": [
-     "#99ffce",
-     0.7
-    ],
-    "cut down": [
-     "#99ffce",
-     0.5
-    ],
-    "dj back": [
-     "#99ffce",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -1609,6 +1508,10 @@
      "#d1eeff",
      0.4
     ],
+    "plane 1": [
+     "#00d12a",
+     0.6
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1616,6 +1519,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#99ffce",
+     0.2
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.15
     ]
    },
    "motion": {
@@ -1646,6 +1557,7 @@
    "notes": "the poster's green arrives: lasers diode green, lamps poster green (t1/t2 hue 126 deg)",
    "energy": 0.6,
    "energy_tier": "mid",
+   "intent_v3": "The green laser net appears over the floor, breathing, the DJ plane in poster green; the truss glows mint upward and a warm key keeps the DJ readable.",
    "laser_parked": {
     "pattern": "net",
     "cubes": "all",
@@ -1676,52 +1588,8 @@
    "id": "green-chase",
    "title": "Green chase",
    "act": 2,
-   "intent": "The walls in lime chase down to the DJ, the sweep ripples along both walls; the plane green; the truss poster glow.",
+   "intent": "Plane green, walls green; truss mint down; petrol behind the DJ; warm white on the DJ; floor mint. Beams: lean toward the floor and back, in a ripple. Washes chase.",
    "parts": {
-    "plane 1": [
-     "#00d12a",
-     1.0
-    ],
-    "side line left": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line right": [
-     "#8cff3a",
-     1.0
-    ],
-    "line A": [
-     "#33ff47",
-     0.7
-    ],
-    "line B": [
-     "#33ff47",
-     0.7
-    ],
-    "line C": [
-     "#33ff47",
-     0.7
-    ],
-    "line D": [
-     "#33ff47",
-     0.7
-    ],
-    "cut up": [
-     "#f4fcf4",
-     0.8
-    ],
-    "cut down": [
-     "#f4fcf4",
-     0.7
-    ],
-    "dj back": [
-     "#33ff47",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#99ffce",
      0.7
@@ -1730,6 +1598,14 @@
      "#99ffce",
      0.7
     ],
+    "side line left": [
+     "#00d12a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1737,6 +1613,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "cut down": [
+     "#99ffce",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "dj back": [
+     "#66faff",
+     0.3
     ]
    },
    "motion": {
@@ -1750,10 +1642,10 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "sweep",
+    "pattern": "nod",
     "period_s": 7.27,
-    "pan_deg": 40,
-    "tilt_deg": 0,
+    "pan_deg": 0,
+    "tilt_deg": 15,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
@@ -1767,62 +1659,15 @@
    "notes": "",
    "energy": 0.85,
    "energy_tier": "full",
+   "intent_v3": "The side beams in poster green chase down the walls, a lean ripples along them; the chase lands on the truss: a mint top light, petrol behind, a warm kicker on the DJ.",
    "laser_parked": null
   },
   {
    "id": "run-to-the-dj",
    "title": "Run to the DJ",
    "act": 2,
-   "intent": "The poster glow runs down both walls to the DJ on every half beat; all eighteen beams lime, the walls mirrored, the plane a fast nod.",
+   "intent": "Plane green, walls open white; truss poster glow up, poster glow down; warm white on the DJ; floor mint. Beams: lean toward the floor and back, neighbours opposite. Washes chase.",
    "parts": {
-    "plane 1": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line left": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line right": [
-     "#8cff3a",
-     1.0
-    ],
-    "line A": [
-     "#f4fcf4",
-     0.8
-    ],
-    "line B": [
-     "#f4fcf4",
-     0.8
-    ],
-    "line C": [
-     "#f4fcf4",
-     0.8
-    ],
-    "line D": [
-     "#f4fcf4",
-     0.8
-    ],
-    "cut up": [
-     "#33ff47",
-     0.9
-    ],
-    "cut down": [
-     "#33ff47",
-     0.7
-    ],
-    "dj back": [
-     "#33ff47",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#99ffce",
      0.7
@@ -1831,6 +1676,18 @@
      "#99ffce",
      0.7
     ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -1838,6 +1695,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.5
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
     ]
    },
    "motion": {
@@ -1868,25 +1737,22 @@
    "notes": "",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "The poster glow runs down both walls to the DJ on every half beat; the plane glows green and the truss over him holds the glow, up into the haze and down on him, with a warm kicker.",
    "laser_parked": null
   },
   {
    "id": "rays-pulse",
    "title": "Rays pulse",
    "act": 2,
-   "intent": "Rays and truss pulse mint at half time; the plane in lime draws a wave; the walls stand in a wide green fan.",
+   "intent": "Plane open white, walls open white; rays mint; truss mint down; warm white on the DJ; floor mint. Beams: a lean wave, in a ripple. Washes pulse.",
    "parts": {
-    "plane 1": [
-     "#8cff3a",
-     1.0
+    "line L": [
+     "#99ffce",
+     0.7
     ],
-    "side line left": [
-     "#00d12a",
-     1.0
-    ],
-    "side line right": [
-     "#00d12a",
-     1.0
+    "line R": [
+     "#99ffce",
+     0.7
     ],
     "line A": [
      "#99ffce",
@@ -1904,29 +1770,9 @@
      "#99ffce",
      0.8
     ],
-    "cut up": [
-     "#99ffce",
-     0.9
-    ],
-    "cut down": [
-     "#99ffce",
-     0.7
-    ],
-    "dj back": [
-     "#33ff47",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#99ffce",
-     0.7
-    ],
-    "line R": [
-     "#99ffce",
-     0.7
+    "plane 1": [
+     "#ffffff",
+     1.0
     ],
     "road": [
      "#a5ff0f",
@@ -1935,6 +1781,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "cut down": [
+     "#99ffce",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -1965,67 +1827,40 @@
    "notes": "",
    "energy": 0.85,
    "energy_tier": "full",
+   "intent_v3": "The rays and the truss top light pulse mint at half time; the plane behind leans in a wave of poster glow; a warm key holds the DJ.",
    "laser_parked": null
   },
   {
    "id": "the-cut",
    "title": "The cut",
    "act": 2,
-   "intent": "The truss over the DJ in poster glow, blocks flipping; mint behind him; the plane and walls in lime cross as mirrored scissors.",
+   "intent": "Plane green, walls green; truss poster glow up, poster glow down; mint behind the DJ; warm white on the DJ; floor mint. Beams: lean toward the floor and back, neighbours opposite. Washes flip in blocks.",
    "parts": {
-    "plane 1": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line left": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line right": [
-     "#8cff3a",
-     1.0
-    ],
-    "line A": [
-     "#f4fcf4",
-     0.7
-    ],
-    "line B": [
-     "#f4fcf4",
-     0.7
-    ],
-    "line C": [
-     "#f4fcf4",
-     0.7
-    ],
-    "line D": [
-     "#f4fcf4",
-     0.7
-    ],
-    "cut up": [
-     "#f4fcf4",
-     1.0
-    ],
-    "cut down": [
-     "#f4fcf4",
-     0.8
-    ],
-    "dj back": [
-     "#99ffce",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#99ffce",
      0.7
     ],
     "line R": [
+     "#99ffce",
+     0.7
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.9
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.9
+    ],
+    "side line left": [
+     "#00d12a",
+     1.0
+    ],
+    "side line right": [
+     "#00d12a",
+     1.0
+    ],
+    "dj back": [
      "#99ffce",
      0.7
     ],
@@ -2036,6 +1871,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#00d12a",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -2049,11 +1896,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
-    "period_s": 7.27,
-    "pan_deg": 45,
-    "tilt_deg": 0,
-    "spatial": "left-right",
+    "pattern": "nod",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 12,
+    "spatial": "alternate",
     "kinds": [
      "up-b380f"
     ]
@@ -2066,17 +1913,22 @@
    "notes": "",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "The truss over the DJ in poster glow, blocks flipping, mint behind the DJ, a warm key and kicker held on him; the walls steady in green.",
    "laser_parked": null
   },
   {
    "id": "left-right",
    "title": "Left, right",
    "act": 2,
-   "intent": "The two walls answer each other in open white, bars left and right; the beams trace a mirrored figure-eight; the plane lime.",
+   "intent": "Plane light blue, walls open white; truss petrol up; petrol behind the DJ; floor mint. Beams: an X, mirrored. Washes flip in bars.",
    "parts": {
-    "plane 1": [
-     "#8cff3a",
-     1.0
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
     ],
     "side line left": [
      "#ffffff",
@@ -2086,45 +1938,9 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#eefdfd",
-     0.7
-    ],
-    "line B": [
-     "#eefdfd",
-     0.7
-    ],
-    "line C": [
-     "#eefdfd",
-     0.7
-    ],
-    "line D": [
-     "#eefdfd",
-     0.7
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.8
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.7
-    ],
-    "dj back": [
-     "#33ff47",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#99ffce",
-     0.7
-    ],
-    "line R": [
-     "#99ffce",
-     0.7
+    "plane 1": [
+     "#a8d8ff",
+     1.0
     ],
     "road": [
      "#a5ff0f",
@@ -2133,6 +1949,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#66faff",
+     0.25
+    ],
+    "dj back": [
+     "#66faff",
+     0.25
     ]
    },
    "motion": {
@@ -2163,6 +1987,7 @@
    "notes": "",
    "energy": 0.85,
    "energy_tier": "full",
+   "intent_v3": "The two walls answer each other in cold white, and two cold laser lines from the outer cubes; the beams trace a mirrored X over a petrol plane; the truss glows petrol up and behind the DJ.",
    "laser_parked": {
     "pattern": "single-scan",
     "cubes": "outer",
@@ -2191,44 +2016,8 @@
    "id": "glow-comet",
    "title": "Glow comet",
    "act": 2,
-   "intent": "One comet of poster glow leaves the truss and runs through the rays toward the entrance; the plane green, a slow ripple of lean.",
+   "intent": "Plane open white; rays poster glow; truss poster glow up, mint down; warm white on the DJ; floor mint. Beams: a lean wave, in a ripple. Washes run a comet.",
    "parts": {
-    "plane 1": [
-     "#00d12a",
-     0.7
-    ],
-    "line A": [
-     "#f4fcf4",
-     0.6
-    ],
-    "line B": [
-     "#f4fcf4",
-     0.6
-    ],
-    "line C": [
-     "#f4fcf4",
-     0.6
-    ],
-    "line D": [
-     "#f4fcf4",
-     0.6
-    ],
-    "cut up": [
-     "#f4fcf4",
-     0.7
-    ],
-    "cut down": [
-     "#f4fcf4",
-     0.5
-    ],
-    "dj back": [
-     "#33ff47",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#99ffce",
      0.4
@@ -2237,6 +2026,26 @@
      "#99ffce",
      0.4
     ],
+    "line A": [
+     "#f4fcf4",
+     0.7
+    ],
+    "line B": [
+     "#f4fcf4",
+     0.7
+    ],
+    "line C": [
+     "#f4fcf4",
+     0.7
+    ],
+    "line D": [
+     "#f4fcf4",
+     0.7
+    ],
+    "cut down": [
+     "#99ffce",
+     0.5
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -2244,6 +2053,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#ffffff",
+     0.6
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.6
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -2274,16 +2095,25 @@
    "notes": "",
    "energy": 0.6,
    "energy_tier": "mid",
+   "intent_v3": "One comet of poster glow leaves the truss up-washes over the DJ and runs through the rays out toward the entrance over a mint cut down; a warm kicker on the DJ.",
    "laser_parked": null
   },
   {
    "id": "scissors",
    "title": "Scissors",
    "act": 2,
-   "intent": "The six plane beams in lime lean against each other like scissors; the walls in green sweep mirrored; the truss poster glow breathing.",
+   "intent": "Plane open white, walls green; truss poster glow down; mint behind the DJ; floor mint. Beams: lean toward the floor and back, neighbours opposite. Washes breathe.",
    "parts": {
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
+    ],
     "plane 1": [
-     "#8cff3a",
+     "#ffffff",
      1.0
     ],
     "side line left": [
@@ -2294,46 +2124,6 @@
      "#00d12a",
      1.0
     ],
-    "line A": [
-     "#99ffce",
-     0.7
-    ],
-    "line B": [
-     "#99ffce",
-     0.7
-    ],
-    "line C": [
-     "#99ffce",
-     0.7
-    ],
-    "line D": [
-     "#99ffce",
-     0.7
-    ],
-    "cut up": [
-     "#f4fcf4",
-     0.8
-    ],
-    "cut down": [
-     "#f4fcf4",
-     0.7
-    ],
-    "dj back": [
-     "#33ff47",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#99ffce",
-     0.7
-    ],
-    "line R": [
-     "#99ffce",
-     0.7
-    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -2341,6 +2131,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.25
+    ],
+    "dj back": [
+     "#99ffce",
+     0.3
     ]
    },
    "motion": {
@@ -2354,10 +2152,10 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
+    "pattern": "nod",
     "period_s": 7.27,
-    "pan_deg": 45,
-    "tilt_deg": 0,
+    "pan_deg": 0,
+    "tilt_deg": 25,
     "spatial": "alternate",
     "kinds": [
      "up-b380f"
@@ -2371,6 +2169,7 @@
    "notes": "",
    "energy": 0.85,
    "energy_tier": "full",
+   "intent_v3": "The six beams behind the DJ in poster glow lean against each other like scissors, the cold laser fans open and close with them; the truss holds a glow top light, mint behind the DJ.",
    "laser_parked": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -2401,52 +2200,8 @@
    "id": "green-comb",
    "title": "Green comb",
    "act": 2,
-   "intent": "A comb: the plane in lime as a still fan, the walls pulsing green at half time in a chase; cold white truss up, mint top light.",
+   "intent": "Plane open white; truss cold white up, mint down; warm white on the DJ; floor mint. Beams: a lean wave, in a ripple. Washes pulse.",
    "parts": {
-    "plane 1": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line left": [
-     "#00d12a",
-     0.7
-    ],
-    "side line right": [
-     "#00d12a",
-     0.7
-    ],
-    "line A": [
-     "#f4fcf4",
-     0.6
-    ],
-    "line B": [
-     "#f4fcf4",
-     0.6
-    ],
-    "line C": [
-     "#f4fcf4",
-     0.6
-    ],
-    "line D": [
-     "#f4fcf4",
-     0.6
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.7
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.5
-    ],
-    "dj back": [
-     "#99ffce",
-     0.6
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#99ffce",
      0.4
@@ -2455,6 +2210,10 @@
      "#99ffce",
      0.4
     ],
+    "plane 1": [
+     "#ffffff",
+     0.6
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -2462,6 +2221,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.25
+    ],
+    "cut down": [
+     "#99ffce",
+     0.2
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -2476,11 +2247,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 40,
-    "tilt_deg": 0,
-    "spatial": "all",
+    "pattern": "wave",
+    "period_s": 7.27,
+    "pan_deg": 0,
+    "tilt_deg": 15,
+    "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
@@ -2493,6 +2264,7 @@
    "notes": "",
    "energy": 0.6,
    "energy_tier": "mid",
+   "intent_v3": "The laser comb pulses green at half time over a cold white plane; the truss glows cold upward, a mint top light and a warm key on the DJ.",
    "laser_parked": {
     "pattern": "comb",
     "cubes": "all",
@@ -2526,19 +2298,15 @@
    "id": "pingpong-rays",
    "title": "Ping-pong rays",
    "act": 2,
-   "intent": "A petrol head bounces across the rays, left to right and back; the walls in lime sweep in a ripple down the hall; the plane open white.",
+   "intent": "Plane open white, walls open white; rays petrol; warm white on the DJ; floor mint. Beams: lean toward the floor and back, together. Washes ping-pong.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
+    "line L": [
+     "#99ffce",
+     0.7
     ],
-    "side line left": [
-     "#8cff3a",
-     1.0
-    ],
-    "side line right": [
-     "#8cff3a",
-     1.0
+    "line R": [
+     "#99ffce",
+     0.7
     ],
     "line A": [
      "#66faff",
@@ -2556,29 +2324,9 @@
      "#66faff",
      0.8
     ],
-    "cut up": [
-     "#eefdfd",
-     0.7
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.7
-    ],
-    "dj back": [
-     "#33ff47",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#99ffce",
-     0.7
-    ],
-    "line R": [
-     "#99ffce",
-     0.7
+    "plane 1": [
+     "#ffffff",
+     1.0
     ],
     "road": [
      "#a5ff0f",
@@ -2587,6 +2335,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -2600,11 +2360,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "sweep",
-    "period_s": 7.27,
-    "pan_deg": 40,
-    "tilt_deg": 0,
-    "spatial": "ripple",
+    "pattern": "nod",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 15,
+    "spatial": "all",
     "kinds": [
      "up-b380f"
     ]
@@ -2617,17 +2377,22 @@
    "notes": "",
    "energy": 0.85,
    "energy_tier": "full",
+   "intent_v3": "A petrol head bounces across the rays, left to right and back, under a cold white plane; the truss dark but a warm kicker on the DJ.",
    "laser_parked": null
   },
   {
    "id": "riser",
    "title": "Riser",
    "act": 2,
-   "intent": "Before the drop: white walls and plane pulse on the beat, the beams circle faster and faster; mint rays; the truss turns lavender.",
+   "intent": "Plane open white, walls open white; rays mint; truss lavender up, lavender down; lavender behind the DJ; warm white on the DJ; floor mint. Beams: a bow-tie turn, in a ripple. Washes pulse.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
+    "line L": [
+     "#99ffce",
+     0.7
+    ],
+    "line R": [
+     "#99ffce",
+     0.7
     ],
     "side line left": [
      "#ffffff",
@@ -2637,48 +2402,28 @@
      "#ffffff",
      1.0
     ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
     "line A": [
      "#99ffce",
-     0.9
+     0.7
     ],
     "line B": [
      "#99ffce",
-     0.9
+     0.7
     ],
     "line C": [
      "#99ffce",
-     0.9
+     0.7
     ],
     "line D": [
      "#99ffce",
-     0.9
+     0.7
     ],
     "cut up": [
      "#b699ff",
-     1.0
-    ],
-    "cut down": [
-     "#b699ff",
-     0.8
-    ],
-    "dj back": [
-     "#b699ff",
-     0.8
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#99ffce",
-     0.7
-    ],
-    "line R": [
-     "#99ffce",
      0.7
     ],
     "road": [
@@ -2688,6 +2433,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#b699ff",
+     0.7
+    ],
+    "dj back": [
+     "#b699ff",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -2719,6 +2480,7 @@
    "notes": "lavender enters on the cut: the colour of the peak to come",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "Before the drop: white walls and plane, mint rays, the white laser comb hits; the whole truss turns lavender, up, down and behind, pulsing on the beat; a warm key and kicker on the DJ.",
    "laser_parked": {
     "pattern": "comb",
     "cubes": "all",
@@ -2751,8 +2513,16 @@
    "id": "white-cathedral",
    "title": "White cathedral",
    "act": 3,
-   "intent": "The drop: all eighteen beams open white in a wide fan over lavender rays; the truss pumps cold white up and down; lavender behind the DJ.",
+   "intent": "Plane open white, walls open white; rays lavender; truss cold white up, cold white down; lavender behind the DJ; warm white on the DJ; floor rose-copper. Beams: a bow-tie turn, mirrored. Washes pump on the beat.",
    "parts": {
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -2764,6 +2534,10 @@
     "side line right": [
      "#ffffff",
      1.0
+    ],
+    "cut up": [
+     "#eefdfd",
+     1
     ],
     "line A": [
      "#b699ff",
@@ -2781,34 +2555,6 @@
      "#b699ff",
      0.9
     ],
-    "cut up": [
-     "#eefdfd",
-     1.0
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.8
-    ],
-    "dj back": [
-     "#b699ff",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#ff9180",
-     0.7
-    ],
-    "line R": [
-     "#ff9180",
-     0.7
-    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -2816,6 +2562,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.8
+    ],
+    "dj back": [
+     "#b699ff",
+     0.6
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -2829,11 +2591,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "fan",
+    "pattern": "circle",
     "period_s": 14.55,
-    "pan_deg": 45,
-    "tilt_deg": 0,
-    "spatial": "all",
+    "pan_deg": 60,
+    "tilt_deg": 20,
+    "spatial": "left-right",
     "kinds": [
      "up-b380f"
     ]
@@ -2846,6 +2608,7 @@
    "notes": "",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "The drop: every beam and the laser fans in cold white over lavender rays; the walls turn a mirrored bow-tie; the truss pumps cold white up and down with the rays, lavender behind the DJ, a warm key held on him.",
    "laser_parked": {
     "pattern": "fan",
     "cubes": "all",
@@ -2876,8 +2639,16 @@
    "id": "strobe-hit",
    "title": "Strobe hit",
    "act": 3,
-   "intent": "The whole hall strobes cold white for 6 s, the beams with it (under 3 flashes a second); the walls as a still fan.",
+   "intent": "Plane open white, walls open white; rays cold white; truss cold white up, cold white down; cold white behind the DJ; ash on the DJ; floor rose-copper. Washes strobe (under 3 a second).",
    "parts": {
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -2890,49 +2661,33 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#eefdfd",
-     1.0
-    ],
-    "line B": [
-     "#eefdfd",
-     1.0
-    ],
-    "line C": [
-     "#eefdfd",
-     1.0
-    ],
-    "line D": [
-     "#eefdfd",
-     1.0
-    ],
     "cut up": [
      "#eefdfd",
-     1.0
+     1
     ],
     "cut down": [
      "#eefdfd",
-     1.0
+     1
     ],
-    "dj back": [
+    "line A": [
      "#eefdfd",
-     0.8
+     1
     ],
-    "stage key": [
-     "#e8e4dc",
-     0.7
+    "line B": [
+     "#eefdfd",
+     1
+    ],
+    "line C": [
+     "#eefdfd",
+     1
+    ],
+    "line D": [
+     "#eefdfd",
+     1
     ],
     "dj kicker": [
-     "#e8e4dc",
-     0.7
-    ],
-    "line L": [
-     "#ff9180",
-     0.7
-    ],
-    "line R": [
-     "#ff9180",
-     0.7
+     "#eefdfd",
+     1
     ],
     "road": [
      "#a5ff0f",
@@ -2941,6 +2696,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "dj back": [
+     "#eefdfd",
+     1
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.25
     ]
    },
    "motion": {
@@ -2954,16 +2717,7 @@
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 40,
-    "tilt_deg": 0,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 0,
@@ -2972,17 +2726,22 @@
    "notes": "",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "The whole hall strobes cold white for 6 s, the truss with it (engine cap: under 3 flashes a second); only a warm key holds the DJ still.",
    "laser_parked": null
   },
   {
    "id": "red-room",
    "title": "Red room",
    "act": 3,
-   "intent": "Red: all eighteen beams red, the rays ember pumping on the beat, the truss ember; a nod ripples across the plane; warm key on the DJ. The one red room.",
+   "intent": "Plane red, walls red; rays ember; truss ember up, ember down; ember behind the DJ; warm white on the DJ; floor rose-copper. Beams: lean toward the floor and back, in a ripple. Washes pump on the beat.",
    "parts": {
-    "plane 1": [
-     "#ff2a0a",
-     1.0
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
     ],
     "side line left": [
      "#ff2a0a",
@@ -2992,44 +2751,36 @@
      "#ff2a0a",
      1.0
     ],
+    "plane 1": [
+     "#ff2a0a",
+     1.0
+    ],
     "line A": [
      "#ff3a12",
-     0.8
+     1
     ],
     "line B": [
      "#ff3a12",
-     0.8
+     1
     ],
     "line C": [
      "#ff3a12",
-     0.8
+     1
     ],
     "line D": [
      "#ff3a12",
-     0.8
+     1
     ],
     "cut up": [
      "#ff3a12",
-     0.9
+     0.8
     ],
     "cut down": [
      "#ff3a12",
-     0.7
+     0.8
     ],
     "dj back": [
-     "#a3200c",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#ff9180",
-     0.7
-    ],
-    "line R": [
-     "#ff9180",
+     "#ff3a12",
      0.7
     ],
     "road": [
@@ -3039,6 +2790,10 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -3069,6 +2824,7 @@
    "notes": "the owner's 'red room' (09-28 loop): red as an accent, 20 s; the floor stays rose-copper; pump = 3 flashes/s max (WCAG 2.3.1 red-flash limit met)",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "Everything in ember pumping on the beat, the truss too, the red laser fans opening; a lean ripples across all beams; only a warm kicker keeps the DJ's face. The one red scene of the first peak.",
    "laser_parked": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -3101,11 +2857,15 @@
    "id": "the-storm",
    "title": "The storm",
    "act": 3,
-   "intent": "The storm: open-white walls in bars across the hall, the beams in a fast mirrored figure-eight; petrol rays and petrol behind the DJ; the truss full cold white.",
+   "intent": "Plane open white, walls open white; rays petrol; truss cold white up, cold white down; petrol behind the DJ; warm white on the DJ; floor rose-copper. Beams: an X, mirrored. Washes flip in bars.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
     ],
     "side line left": [
      "#ffffff",
@@ -3115,49 +2875,29 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#66faff",
-     0.9
-    ],
-    "line B": [
-     "#66faff",
-     0.9
-    ],
-    "line C": [
-     "#66faff",
-     0.9
-    ],
-    "line D": [
-     "#66faff",
-     0.9
-    ],
     "cut up": [
      "#eefdfd",
-     1.0
+     1
     ],
     "cut down": [
      "#eefdfd",
-     1.0
+     1
     ],
-    "dj back": [
+    "line A": [
      "#66faff",
-     0.7
+     0.8
     ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
+    "line B": [
+     "#66faff",
+     0.8
     ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
+    "line C": [
+     "#66faff",
+     0.8
     ],
-    "line L": [
-     "#ff9180",
-     0.7
-    ],
-    "line R": [
-     "#ff9180",
-     0.7
+    "line D": [
+     "#66faff",
+     0.8
     ],
     "road": [
      "#a5ff0f",
@@ -3166,6 +2906,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "dj back": [
+     "#66faff",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
     ]
    },
    "motion": {
@@ -3197,6 +2949,7 @@
    "notes": "",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "Green lasers, cold white walls and the truss full cold white up and down, petrol rays and petrol behind the DJ; the walls flip and trace an X; a warm kicker holds the DJ.",
    "laser_parked": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -3230,52 +2983,8 @@
    "id": "matrix",
    "title": "The matrix",
    "act": 3,
-   "intent": "Rose-copper rays breathe under a lavender plane that circles slowly; the walls in amber as a still fan; the truss rose-copper up.",
+   "intent": "Plane light blue; rays rose-copper; truss rose-copper down; lavender behind the DJ; warm white on the DJ; floor rose-copper. Beams: a bow-tie turn, in a ripple. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#ff2fc8",
-     0.8
-    ],
-    "side line left": [
-     "#ffb000",
-     0.7
-    ],
-    "side line right": [
-     "#ffb000",
-     0.7
-    ],
-    "line A": [
-     "#ff9180",
-     0.8
-    ],
-    "line B": [
-     "#ff9180",
-     0.8
-    ],
-    "line C": [
-     "#ff9180",
-     0.8
-    ],
-    "line D": [
-     "#ff9180",
-     0.8
-    ],
-    "cut up": [
-     "#ff9180",
-     0.8
-    ],
-    "cut down": [
-     "#ff9180",
-     0.5
-    ],
-    "dj back": [
-     "#b699ff",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#ff9180",
      0.4
@@ -3284,6 +2993,26 @@
      "#ff9180",
      0.4
     ],
+    "line A": [
+     "#ff9180",
+     0.5
+    ],
+    "line B": [
+     "#ff9180",
+     0.5
+    ],
+    "line C": [
+     "#ff9180",
+     0.5
+    ],
+    "line D": [
+     "#ff9180",
+     0.5
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     0.7
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -3291,6 +3020,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#ff9180",
+     0.3
+    ],
+    "dj back": [
+     "#b699ff",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -3321,6 +3062,7 @@
    "notes": "",
    "energy": 0.7,
    "energy_tier": "mid",
+   "intent_v3": "The laser comb at its cap over rose-copper rays, breathing; the lavender plane ripples; the truss holds a rose-copper top light, lavender behind, a warm key on the DJ.",
    "laser_parked": {
     "pattern": "comb",
     "cubes": "all",
@@ -3353,8 +3095,16 @@
    "id": "pump-white",
    "title": "Pump white",
    "act": 3,
-   "intent": "All eighteen beams and the truss hit on the beat in open white; the beams turn a mirrored bow-tie; the rays ice.",
+   "intent": "Plane open white, walls open white; truss cold white up, cold white down; warm white on the DJ; floor rose-copper. Beams: a bow-tie turn, mirrored. Washes pump on the beat.",
    "parts": {
+    "line L": [
+     "#ff9180",
+     0.7
+    ],
+    "line R": [
+     "#ff9180",
+     0.7
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -3367,50 +3117,6 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#d1eeff",
-     0.9
-    ],
-    "line B": [
-     "#d1eeff",
-     0.9
-    ],
-    "line C": [
-     "#d1eeff",
-     0.9
-    ],
-    "line D": [
-     "#d1eeff",
-     0.9
-    ],
-    "cut up": [
-     "#eefdfd",
-     1.0
-    ],
-    "cut down": [
-     "#eefdfd",
-     1.0
-    ],
-    "dj back": [
-     "#d1eeff",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#ff9180",
-     0.7
-    ],
-    "line R": [
-     "#ff9180",
-     0.7
-    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -3418,6 +3124,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.8
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.8
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -3449,25 +3171,22 @@
    "notes": "",
    "energy": 0.95,
    "energy_tier": "full",
+   "intent_v3": "All eighteen beams and the truss over the DJ in cold white hit on the beat, the beams turning mirrored bow-ties; a warm key and kicker hold the DJ.",
    "laser_parked": null
   },
   {
    "id": "radar",
    "title": "Radar",
    "act": 3,
-   "intent": "A lavender radar line sweeps round the rays and the truss; the beams in light blue circle in a ripple, the walls sweep down the hall.",
+   "intent": "Plane warm white, walls warm white; rays lavender; truss lavender up; warm white on the DJ; floor rose-copper. Beams: a bow-tie turn, in a ripple. Washes sweep a radar line.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     1.0
+    "line L": [
+     "#ff9180",
+     0.7
     ],
-    "side line left": [
-     "#a8d8ff",
-     1.0
-    ],
-    "side line right": [
-     "#a8d8ff",
-     1.0
+    "line R": [
+     "#ff9180",
+     0.7
     ],
     "line A": [
      "#b699ff",
@@ -3485,29 +3204,9 @@
      "#b699ff",
      0.9
     ],
-    "cut up": [
-     "#b699ff",
-     0.9
-    ],
-    "cut down": [
-     "#b699ff",
-     0.7
-    ],
-    "dj back": [
-     "#b699ff",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#ff9180",
-     0.7
-    ],
-    "line R": [
-     "#ff9180",
-     0.7
+    "plane 1": [
+     "#fff0c0",
+     1.0
     ],
     "road": [
      "#a5ff0f",
@@ -3516,6 +3215,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "side line left": [
+     "#fff0c0",
+     1.0
+    ],
+    "side line right": [
+     "#fff0c0",
+     1.0
+    ],
+    "cut up": [
+     "#b699ff",
+     0.8
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -3529,10 +3244,10 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "sweep",
-    "period_s": 7.27,
-    "pan_deg": 45,
-    "tilt_deg": 0,
+    "pattern": "circle",
+    "period_s": 14.55,
+    "pan_deg": 90,
+    "tilt_deg": 20,
     "spatial": "ripple",
     "kinds": [
      "up-b380f"
@@ -3546,6 +3261,7 @@
    "notes": "",
    "energy": 0.85,
    "energy_tier": "full",
+   "intent_v3": "A lavender radar line sweeps round the rays and the truss up-washes, a lavender laser scan follows it; the rose-copper beams circle in a ripple; a warm kicker on the DJ.",
    "laser_parked": {
     "pattern": "single-scan",
     "cubes": "all",
@@ -3574,56 +3290,8 @@
    "id": "blinders",
    "title": "Blinders",
    "act": 3,
-   "intent": "The blinder moment: the cut, the kicker, the key and the rays hit full ash on every beat; the beams warm white, a wide still fan.",
+   "intent": "Plane open white, walls open white; rays ash; truss ash up, ash down; ash behind the DJ; ash on the DJ; floor rose-copper. Washes pump on the beat.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     1.0
-    ],
-    "side line left": [
-     "#fff0c0",
-     1.0
-    ],
-    "side line right": [
-     "#fff0c0",
-     1.0
-    ],
-    "line A": [
-     "#e8e4dc",
-     1.0
-    ],
-    "line B": [
-     "#e8e4dc",
-     1.0
-    ],
-    "line C": [
-     "#e8e4dc",
-     1.0
-    ],
-    "line D": [
-     "#e8e4dc",
-     1.0
-    ],
-    "cut up": [
-     "#e8e4dc",
-     1.0
-    ],
-    "cut down": [
-     "#e8e4dc",
-     1.0
-    ],
-    "dj back": [
-     "#e8e4dc",
-     0.9
-    ],
-    "stage key": [
-     "#e8e4dc",
-     1.0
-    ],
-    "dj kicker": [
-     "#e8e4dc",
-     1.0
-    ],
     "line L": [
      "#ff9180",
      0.7
@@ -3631,6 +3299,54 @@
     "line R": [
      "#ff9180",
      0.7
+    ],
+    "cut up": [
+     "#e8e4dc",
+     1
+    ],
+    "cut down": [
+     "#e8e4dc",
+     1
+    ],
+    "dj kicker": [
+     "#e8e4dc",
+     1
+    ],
+    "dj back": [
+     "#e8e4dc",
+     1
+    ],
+    "stage key": [
+     "#e8e4dc",
+     1
+    ],
+    "line A": [
+     "#e8e4dc",
+     1
+    ],
+    "line B": [
+     "#e8e4dc",
+     1
+    ],
+    "line C": [
+     "#e8e4dc",
+     1
+    ],
+    "line D": [
+     "#e8e4dc",
+     1
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "side line left": [
+     "#ffffff",
+     1.0
+    ],
+    "side line right": [
+     "#ffffff",
+     1.0
     ],
     "road": [
      "#a5ff0f",
@@ -3651,16 +3367,7 @@
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 50,
-    "tilt_deg": 0,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 0,
@@ -3669,62 +3376,15 @@
    "notes": "no blinder fixtures in the kit: the truss washes stand in; ash (the warm white) is closest to a tungsten blinder (taste)",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "The cut, the kicker, the key and the rays hit full ash on every beat: the blinder moment.",
    "laser_parked": null
   },
   {
    "id": "copper-scissors",
    "title": "Copper scissors",
    "act": 3,
-   "intent": "Rose-copper walls and an amber plane flip on the half beat; the beams cross fast in mirrored scissors; the truss rose-copper.",
+   "intent": "Plane light blue, walls warm white; truss rose-copper up; lavender behind the DJ; warm white on the DJ; floor rose-copper. Beams: lean toward the floor and back, neighbours opposite. Washes flip in bars.",
    "parts": {
-    "plane 1": [
-     "#ffb000",
-     1.0
-    ],
-    "side line left": [
-     "#ff7a00",
-     1.0
-    ],
-    "side line right": [
-     "#ff7a00",
-     1.0
-    ],
-    "line A": [
-     "#ff9180",
-     0.9
-    ],
-    "line B": [
-     "#ff9180",
-     0.9
-    ],
-    "line C": [
-     "#ff9180",
-     0.9
-    ],
-    "line D": [
-     "#ff9180",
-     0.9
-    ],
-    "cut up": [
-     "#ff9180",
-     0.9
-    ],
-    "cut down": [
-     "#ff9180",
-     0.7
-    ],
-    "dj back": [
-     "#ff9180",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#ff9180",
      0.7
@@ -3733,6 +3393,18 @@
      "#ff9180",
      0.7
     ],
+    "side line left": [
+     "#fff0c0",
+     1.0
+    ],
+    "side line right": [
+     "#fff0c0",
+     1.0
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     1.0
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -3740,6 +3412,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#ff9180",
+     0.5
+    ],
+    "dj back": [
+     "#b699ff",
+     0.4
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -3753,11 +3437,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
+    "pattern": "nod",
     "period_s": 3.64,
-    "pan_deg": 35,
-    "tilt_deg": 0,
-    "spatial": "left-right",
+    "pan_deg": 0,
+    "tilt_deg": 25,
+    "spatial": "alternate",
     "kinds": [
      "up-b380f"
     ]
@@ -3770,58 +3454,15 @@
    "notes": "v2 id red-scissors: ember walls became rose-copper (the beams show the wheel's Pink)",
    "energy": 0.95,
    "energy_tier": "full",
+   "intent_v3": "Rose-copper walls and a lavender plane flip on the half beat and cross fast; the truss holds rose-copper up into the haze, lavender behind the DJ, a warm key on him.",
    "laser_parked": null
   },
   {
    "id": "sparkle-peak",
    "title": "Sparkle peak",
    "act": 3,
-   "intent": "Lavender walls and an open-white plane sparkle, each on its own count; the plane draws a slow wave; the truss lavender up, cold white down.",
+   "intent": "Plane open white, walls light blue; truss rose-copper up, rose-copper down; warm white on the DJ; floor rose-copper. Beams: a lean wave, in a ripple. Washes sparkle.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
-    ],
-    "side line left": [
-     "#ff2fc8",
-     1.0
-    ],
-    "side line right": [
-     "#ff2fc8",
-     1.0
-    ],
-    "line A": [
-     "#b699ff",
-     0.9
-    ],
-    "line B": [
-     "#b699ff",
-     0.9
-    ],
-    "line C": [
-     "#b699ff",
-     0.9
-    ],
-    "line D": [
-     "#b699ff",
-     0.9
-    ],
-    "cut up": [
-     "#b699ff",
-     0.9
-    ],
-    "cut down": [
-     "#b699ff",
-     0.8
-    ],
-    "dj back": [
-     "#b699ff",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#ff9180",
      0.7
@@ -3830,6 +3471,22 @@
      "#ff9180",
      0.7
     ],
+    "side line left": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line right": [
+     "#a8d8ff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "cut up": [
+     "#ff9180",
+     0.8
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -3837,15 +3494,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#ff9180",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
     "mode": "sparkle",
-    "bpm": 33,
-    "depth": 230,
+    "bpm": 20,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-pl5403",
      "up-b380f"
     ],
     "still": 0.3
@@ -3868,6 +3532,7 @@
    "notes": "",
    "energy": 0.95,
    "energy_tier": "full",
+   "intent_v3": "Lavender walls and a cold white plane sparkle, each on its own count, under a lavender laser tunnel; the truss holds a rose-copper glow up and a soft top light down, a warm kicker on the DJ.",
    "laser_parked": {
     "pattern": "tunnel",
     "cubes": "all",
@@ -3897,16 +3562,8 @@
    "id": "drop-away",
    "title": "Drop away",
    "act": 4,
-   "intent": "Almost dark: the plane in deep sea, one slow lean; the floor petrol. The truss: only a deep-sea back light.",
+   "intent": "Plane light blue; truss petrol down; deep sea behind the DJ; warm white on the DJ; floor petrol. Beams: lean toward the floor and back, together. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     0.35
-    ],
-    "dj back": [
-     "#26bcff",
-     0.3
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -3914,6 +3571,22 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     0.4
+    ],
+    "cut down": [
+     "#66faff",
+     0.25
+    ],
+    "dj back": [
+     "#26bcff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.15
     ],
     "road": [
      "#a5ff0f",
@@ -3952,26 +3625,15 @@
    "notes": "",
    "energy": 0.3,
    "energy_tier": "low",
+   "intent_v3": "Almost dark: the plane in deep sea (the beam wheel's cyan), one slow lean, the floor glowing petrol. The truss: a petrol pool from above and a deep-sea back light hold the DJ as a dim silhouette.",
    "laser_parked": null
   },
   {
    "id": "one-beam-back",
    "title": "One beam back",
    "act": 4,
-   "intent": "The plane returns in warm white, low, a lean travelling across it; warm white on the DJ; the truss finds him.",
+   "intent": "Plane open white; deep sea behind the DJ; ash on the DJ; floor petrol. Beams: a lean wave, together.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.4
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.4
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.2
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -3979,6 +3641,22 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "plane 1": [
+     "#ffffff",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
+    ],
+    "dj back": [
+     "#26bcff",
+     0.2
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -4017,50 +3695,15 @@
    "notes": "",
    "energy": 0.25,
    "energy_tier": "low",
+   "intent_v3": "The plane returns in cold white, low, a lean travels across it; warm white on the DJ. The truss: the key finds the DJ again in ash, a faint deep-sea back light behind.",
    "laser_parked": null
   },
   {
    "id": "blue-wave",
    "title": "Blue wave",
    "act": 4,
-   "intent": "A deep-sea wave rolls along the rays toward the DJ; the plane in magenta, the first rare colour, in a slow circle; the cut lavender.",
+   "intent": "Plane light blue; rays deep sea; truss deep sea up, lavender down; petrol behind the DJ; floor petrol. Beams: a bow-tie turn, in a ripple. Washes roll in a wave.",
    "parts": {
-    "plane 1": [
-     "#ff2fc8",
-     0.6
-    ],
-    "line A": [
-     "#26bcff",
-     0.7
-    ],
-    "line B": [
-     "#26bcff",
-     0.7
-    ],
-    "line C": [
-     "#26bcff",
-     0.7
-    ],
-    "line D": [
-     "#26bcff",
-     0.7
-    ],
-    "cut up": [
-     "#b699ff",
-     0.5
-    ],
-    "cut down": [
-     "#b699ff",
-     0.5
-    ],
-    "dj back": [
-     "#26bcff",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#66faff",
      0.9
@@ -4068,6 +3711,38 @@
     "line R": [
      "#66faff",
      0.9
+    ],
+    "line A": [
+     "#26bcff",
+     0.9
+    ],
+    "line B": [
+     "#26bcff",
+     0.9
+    ],
+    "line C": [
+     "#26bcff",
+     0.9
+    ],
+    "line D": [
+     "#26bcff",
+     0.9
+    ],
+    "cut down": [
+     "#b699ff",
+     0.5
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     0.5
+    ],
+    "cut up": [
+     "#26bcff",
+     0.5
+    ],
+    "dj back": [
+     "#66faff",
+     0.3
     ],
     "road": [
      "#a5ff0f",
@@ -4106,6 +3781,7 @@
    "notes": "floor here = cut down at 0.3 (still), the strips join the wave in petrol (not pure blue: the eye cannot focus it on the floor)",
    "energy": 0.5,
    "energy_tier": "mid",
+   "intent_v3": "A deep sea wave rolls along the rays and petrol floor strips toward the DJ; the cut holds the floor in lavender. The truss: cut up waves deep sea into the roof with the rays, petrol behind the DJ; the sky sheet above.",
    "laser_parked": {
     "pattern": "sky",
     "cubes": "all",
@@ -4135,44 +3811,8 @@
    "id": "ice-mist",
    "title": "Ice mist",
    "act": 4,
-   "intent": "The walls in low light blue and the cut in cold white breathe together; the beams barely cross; the plane dark; ice mist from the truss.",
+   "intent": "Walls open white; truss cold white up, ice down; warm white on the DJ; floor petrol. Beams: lean toward the floor and back, neighbours opposite. Washes breathe.",
    "parts": {
-    "side line left": [
-     "#a8d8ff",
-     0.45
-    ],
-    "side line right": [
-     "#a8d8ff",
-     0.45
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.5
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.3
-    ],
-    "line A": [
-     "#d1eeff",
-     0.4
-    ],
-    "line B": [
-     "#d1eeff",
-     0.4
-    ],
-    "line C": [
-     "#d1eeff",
-     0.4
-    ],
-    "line D": [
-     "#d1eeff",
-     0.4
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.3
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -4180,6 +3820,26 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "side line left": [
+     "#ffffff",
+     0.5
+    ],
+    "side line right": [
+     "#ffffff",
+     0.5
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.4
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -4201,10 +3861,10 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
+    "pattern": "nod",
     "period_s": 29.09,
-    "pan_deg": 15,
-    "tilt_deg": 0,
+    "pan_deg": 0,
+    "tilt_deg": 10,
     "spatial": "alternate",
     "kinds": [
      "up-b380f"
@@ -4218,30 +3878,15 @@
    "notes": "",
    "energy": 0.4,
    "energy_tier": "low",
+   "intent_v3": "The walls in low ice and the cut in cold white breathe together; the beams barely cross. The truss: ice mist from cut down onto the DJ, a warm kicker on the face.",
    "laser_parked": null
   },
   {
    "id": "slow-eight",
    "title": "Slow eight",
    "act": 4,
-   "intent": "Only the plane, in magenta, drawing one slow mirrored figure-eight every sixteen bars; lavender up into the haze.",
+   "intent": "Plane light blue; truss lavender up, petrol down; warm white on the DJ; floor petrol. Beams: an X, mirrored.",
    "parts": {
-    "plane 1": [
-     "#ff2fc8",
-     0.6
-    ],
-    "cut up": [
-     "#b699ff",
-     0.4
-    ],
-    "cut down": [
-     "#b699ff",
-     0.0
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.3
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -4249,6 +3894,22 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     0.8
+    ],
+    "cut up": [
+     "#b699ff",
+     0.35
+    ],
+    "cut down": [
+     "#66faff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -4287,21 +3948,22 @@
    "notes": "",
    "energy": 0.45,
    "energy_tier": "low",
+   "intent_v3": "Only the plane, in lavender, drawing one slow mirrored X every 29 s. The truss: lavender up into the haze under the figure eights, a petrol pool and a warm kicker on the DJ.",
    "laser_parked": null
   },
   {
    "id": "sea-steel",
    "title": "Sea steel",
    "act": 4,
-   "intent": "Outside, the road and the entrance spark; inside the rays glow deep sea and the walls stand in amber as a slow sweep; the cut steel.",
+   "intent": "Plane light blue; rays deep sea; truss deep sea down; petrol behind the DJ; ash on the DJ; floor petrol. Washes sparkle.",
    "parts": {
-    "side line left": [
-     "#ffb000",
-     0.5
+    "line L": [
+     "#66faff",
+     0.4
     ],
-    "side line right": [
-     "#ffb000",
-     0.5
+    "line R": [
+     "#66faff",
+     0.4
     ],
     "line A": [
      "#26bcff",
@@ -4319,25 +3981,21 @@
      "#26bcff",
      0.6
     ],
-    "cut up": [
-     "#73bdff",
+    "plane 1": [
+     "#a8d8ff",
      0.5
     ],
     "cut down": [
-     "#73bdff",
-     0.5
+     "#26bcff",
+     0.4
+    ],
+    "dj back": [
+     "#66faff",
+     0.3
     ],
     "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
-    "line L": [
-     "#66faff",
-     0.4
-    ],
-    "line R": [
-     "#66faff",
-     0.4
+     "#e8e4dc",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -4350,24 +4008,15 @@
    },
    "motion": {
     "mode": "sparkle",
-    "bpm": 33,
-    "depth": 200,
+    "bpm": 20,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
      "up-pl5403"
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "sweep",
-    "period_s": 29.09,
-    "pan_deg": 35,
-    "tilt_deg": 0,
-    "spatial": "ripple",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 5,
@@ -4376,58 +4025,15 @@
    "notes": "v2 id uv-steel: the UV went with the outside rule; the rays are deep sea now",
    "energy": 0.5,
    "energy_tier": "mid",
+   "intent_v3": "Outside, the road and the entrance spark in their own colours; inside, the rays glow deep sea. The truss: cut down sparkles deep sea with the rays; petrol behind, the key on the DJ.",
    "laser_parked": null
   },
   {
    "id": "deep-tent",
    "title": "Deep tent",
    "act": 4,
-   "intent": "A tent: rays deep sea, the plane magenta, the walls amber, all swelling slowly; the beams meet in a wide fan over the floor; the truss lavender up.",
+   "intent": "Plane light blue, walls light blue; rays deep sea; truss petrol up, deep sea down; lavender behind the DJ; floor petrol. Beams: a lean wave, in a ripple. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#ff2fc8",
-     0.7
-    ],
-    "side line left": [
-     "#ffb000",
-     0.6
-    ],
-    "side line right": [
-     "#ffb000",
-     0.6
-    ],
-    "line A": [
-     "#26bcff",
-     0.7
-    ],
-    "line B": [
-     "#26bcff",
-     0.7
-    ],
-    "line C": [
-     "#26bcff",
-     0.7
-    ],
-    "line D": [
-     "#26bcff",
-     0.7
-    ],
-    "cut up": [
-     "#b699ff",
-     0.7
-    ],
-    "cut down": [
-     "#b699ff",
-     0.5
-    ],
-    "dj back": [
-     "#26bcff",
-     0.6
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -4435,6 +4041,46 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "line A": [
+     "#26bcff",
+     0.5
+    ],
+    "line B": [
+     "#26bcff",
+     0.5
+    ],
+    "line C": [
+     "#26bcff",
+     0.5
+    ],
+    "line D": [
+     "#26bcff",
+     0.5
+    ],
+    "side line left": [
+     "#a8d8ff",
+     0.6
+    ],
+    "side line right": [
+     "#a8d8ff",
+     0.6
+    ],
+    "plane 1": [
+     "#a8d8ff",
+     0.6
+    ],
+    "cut up": [
+     "#66faff",
+     0.5
+    ],
+    "cut down": [
+     "#26bcff",
+     0.4
+    ],
+    "dj back": [
+     "#b699ff",
+     0.3
     ],
     "road": [
      "#a5ff0f",
@@ -4456,11 +4102,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 45,
-    "tilt_deg": 0,
-    "spatial": "all",
+    "pattern": "wave",
+    "period_s": 29.09,
+    "pan_deg": 0,
+    "tilt_deg": 12,
+    "spatial": "ripple",
     "kinds": [
      "up-b380f"
     ]
@@ -4473,6 +4119,7 @@
    "notes": "",
    "energy": 0.6,
    "energy_tier": "mid",
+   "intent_v3": "Rays deep sea, the plane petrol, the walls lavender, all swelling slowly, a lean ripples through. The truss: the tent goes on up, petrol into the roof, deep sea down, lavender behind the DJ; petrol vaults above.",
    "laser_parked": {
     "pattern": "tunnel",
     "cubes": "all",
@@ -4502,16 +4149,8 @@
    "id": "green-breath",
    "title": "Green breath",
    "act": 4,
-   "intent": "The hall breathes very slowly in green: the plane in green as a still fan, low; the floor petrol; only a deep-sea back light.",
+   "intent": "Deep sea behind the DJ; ash on the DJ; floor petrol. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#00d12a",
-     0.35
-    ],
-    "dj back": [
-     "#26bcff",
-     0.3
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -4519,6 +4158,14 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "dj back": [
+     "#26bcff",
+     0.25
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.15
     ],
     "road": [
      "#a5ff0f",
@@ -4539,16 +4186,7 @@
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 30,
-    "tilt_deg": 0,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 6,
@@ -4557,6 +4195,7 @@
    "notes": "",
    "energy": 0.3,
    "energy_tier": "low",
+   "intent_v3": "The laser net alone breathes very slowly in green over the petrol floor. The truss: only a deep-sea back light and a low key: the DJ under the net.",
    "laser_parked": {
     "pattern": "net",
     "cubes": "all",
@@ -4586,52 +4225,8 @@
    "id": "cold-rise",
    "title": "Cold rise",
    "act": 4,
-   "intent": "The build back: a cold white comet climbs the walls toward the entrance over deep-sea rays; the walls light blue in a nod ripple; the plane open white.",
+   "intent": "Walls open white; rays deep sea; truss cold white up, ice down; warm white on the DJ; floor petrol. Beams: lean toward the floor and back, in a ripple. Washes run a comet.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
-    ],
-    "side line left": [
-     "#a8d8ff",
-     1.0
-    ],
-    "side line right": [
-     "#a8d8ff",
-     1.0
-    ],
-    "line A": [
-     "#26bcff",
-     0.7
-    ],
-    "line B": [
-     "#26bcff",
-     0.7
-    ],
-    "line C": [
-     "#26bcff",
-     0.7
-    ],
-    "line D": [
-     "#26bcff",
-     0.7
-    ],
-    "cut up": [
-     "#eefdfd",
-     0.8
-    ],
-    "cut down": [
-     "#eefdfd",
-     0.5
-    ],
-    "dj back": [
-     "#26bcff",
-     0.6
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#66faff",
      0.4
@@ -4639,6 +4234,42 @@
     "line R": [
      "#66faff",
      0.4
+    ],
+    "side line left": [
+     "#ffffff",
+     0.7
+    ],
+    "side line right": [
+     "#ffffff",
+     0.7
+    ],
+    "line A": [
+     "#26bcff",
+     0.5
+    ],
+    "line B": [
+     "#26bcff",
+     0.5
+    ],
+    "line C": [
+     "#26bcff",
+     0.5
+    ],
+    "line D": [
+     "#26bcff",
+     0.5
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.5
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ],
     "road": [
      "#a5ff0f",
@@ -4677,62 +4308,15 @@
    "notes": "",
    "energy": 0.7,
    "energy_tier": "mid",
+   "intent_v3": "The build back: a cold white comet climbs the walls toward the entrance over deep sea rays. The truss: cold white up into the haze, ice down, a warm kicker as the comet rises.",
    "laser_parked": null
   },
   {
    "id": "riser-two",
    "title": "Riser two",
    "act": 4,
-   "intent": "The second riser: magenta walls, open-white plane, rose-copper rays and cut pulse on the beat; the beams circle fast, mirrored.",
+   "intent": "Plane open white, walls light blue; rays rose-copper; truss rose-copper up, rose-copper down; cold white behind the DJ; ash on the DJ; floor petrol. Beams: a bow-tie turn, mirrored. Washes pulse.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
-    ],
-    "side line left": [
-     "#ff2fc8",
-     1.0
-    ],
-    "side line right": [
-     "#ff2fc8",
-     1.0
-    ],
-    "line A": [
-     "#ff9180",
-     0.9
-    ],
-    "line B": [
-     "#ff9180",
-     0.9
-    ],
-    "line C": [
-     "#ff9180",
-     0.9
-    ],
-    "line D": [
-     "#ff9180",
-     0.9
-    ],
-    "cut up": [
-     "#ff9180",
-     1.0
-    ],
-    "cut down": [
-     "#ff9180",
-     0.8
-    ],
-    "dj back": [
-     "#b699ff",
-     0.8
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#66faff",
      0.7
@@ -4740,6 +4324,54 @@
     "line R": [
      "#66faff",
      0.7
+    ],
+    "side line left": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line right": [
+     "#a8d8ff",
+     1.0
+    ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
+    "line A": [
+     "#ff9180",
+     0.8
+    ],
+    "line B": [
+     "#ff9180",
+     0.8
+    ],
+    "line C": [
+     "#ff9180",
+     0.8
+    ],
+    "line D": [
+     "#ff9180",
+     0.8
+    ],
+    "cut up": [
+     "#ff9180",
+     0.7
+    ],
+    "cut down": [
+     "#ff9180",
+     0.6
+    ],
+    "dj back": [
+     "#eefdfd",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.3
     ],
     "road": [
      "#a5ff0f",
@@ -4779,6 +4411,7 @@
    "notes": "",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "Lavender walls, white plane, rose-copper rays and cut pulse on the beat, the beams lean fast: the second drop is coming. The truss: rose-copper up and down pulse on the beat, a cold back light, key and kicker hold the DJ.",
    "laser_parked": {
     "pattern": "comb",
     "cubes": "all",
@@ -4811,8 +4444,16 @@
    "id": "second-drop",
    "title": "Second drop",
    "act": 5,
-   "intent": "White-out: all eighteen beams open white in a fast mirrored figure-eight; the rays pump ice; the truss full cold white.",
+   "intent": "Plane open white, walls open white; rays cold white; truss cold white up, cold white down; cold white behind the DJ; ash on the DJ; floor lavender. Beams: an X, mirrored. Washes pump on the beat.",
    "parts": {
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -4825,49 +4466,41 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#d1eeff",
-     0.9
-    ],
-    "line B": [
-     "#d1eeff",
-     0.9
-    ],
-    "line C": [
-     "#d1eeff",
-     0.9
-    ],
-    "line D": [
-     "#d1eeff",
-     0.9
-    ],
     "cut up": [
      "#eefdfd",
-     1.0
+     1
+    ],
+    "line A": [
+     "#eefdfd",
+     1
+    ],
+    "line B": [
+     "#eefdfd",
+     1
+    ],
+    "line C": [
+     "#eefdfd",
+     1
+    ],
+    "line D": [
+     "#eefdfd",
+     1
     ],
     "cut down": [
      "#eefdfd",
-     1.0
+     1
     ],
     "dj back": [
      "#eefdfd",
      0.8
     ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
     "dj kicker": [
      "#ffbe7a",
-     0.7
+     0.3
     ],
-    "line L": [
-     "#b699ff",
-     0.7
-    ],
-    "line R": [
-     "#b699ff",
-     0.7
+    "stage key": [
+     "#e8e4dc",
+     0.3
     ],
     "road": [
      "#a5ff0f",
@@ -4907,6 +4540,7 @@
    "notes": "",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "White-out: cold white lasers and every beam; the rays pump, the walls turn mirrored bow-ties. The truss: white-out, cut up and down pump cold white, the back light floods, key and kicker hold the DJ.",
    "laser_parked": {
     "pattern": "fan",
     "cubes": "all",
@@ -4939,11 +4573,15 @@
    "id": "ice-strobe",
    "title": "Ice strobe",
    "act": 5,
-   "intent": "The whole hall strobes ice for 6 s: the hit of the second peak; the beams open white, a wide still fan.",
+   "intent": "Plane open white, walls open white; rays ice; truss ice up, ice down; ice behind the DJ; ash on the DJ; floor lavender. Washes strobe (under 3 a second).",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     1.0
+    "line L": [
+     "#b699ff",
+     0.3
+    ],
+    "line R": [
+     "#b699ff",
+     0.3
     ],
     "side line left": [
      "#ffffff",
@@ -4953,49 +4591,41 @@
      "#ffffff",
      1.0
     ],
+    "plane 1": [
+     "#ffffff",
+     1.0
+    ],
     "line A": [
      "#d1eeff",
-     1.0
+     1
     ],
     "line B": [
      "#d1eeff",
-     1.0
+     1
     ],
     "line C": [
      "#d1eeff",
-     1.0
+     1
     ],
     "line D": [
      "#d1eeff",
-     1.0
+     1
     ],
     "cut up": [
      "#d1eeff",
-     1.0
+     1
     ],
     "cut down": [
      "#d1eeff",
-     1.0
+     1
     ],
     "dj back": [
      "#d1eeff",
-     0.8
-    ],
-    "stage key": [
-     "#e8e4dc",
-     0.7
+     1
     ],
     "dj kicker": [
      "#e8e4dc",
-     0.7
-    ],
-    "line L": [
-     "#b699ff",
-     0.7
-    ],
-    "line R": [
-     "#b699ff",
-     0.7
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -5017,16 +4647,7 @@
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 45,
-    "tilt_deg": 0,
-    "spatial": "all",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 0,
@@ -5035,14 +4656,23 @@
    "notes": "v2 id red-strobe: no strobe in a saturated colour (WCAG 2.2 2.3.1 red flash; Harding et al. 2005), so ice",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "The whole hall strobes ice for 6 s: the hit of the second peak. The truss: cut up, cut down and the back light strobe ice; a still warm kicker keeps the DJ.",
    "laser_parked": null
   },
   {
    "id": "cathedral-turns",
    "title": "The cathedral turns",
    "act": 5,
-   "intent": "All the beams in open white circle in a ripple, the cathedral turning; the cut breathes steel blue; cold white rays.",
+   "intent": "Plane open white, walls open white; truss steel blue up, cold white down; lavender behind the DJ; ash on the DJ; floor lavender. Beams: a bow-tie turn, in a ripple. Washes breathe.",
    "parts": {
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -5055,45 +4685,21 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#eefdfd",
-     0.8
-    ],
-    "line B": [
-     "#eefdfd",
-     0.8
-    ],
-    "line C": [
-     "#eefdfd",
-     0.8
-    ],
-    "line D": [
-     "#eefdfd",
-     0.8
-    ],
     "cut up": [
      "#73bdff",
-     0.9
+     0.8
     ],
     "cut down": [
-     "#73bdff",
-     0.7
+     "#eefdfd",
+     0.6
     ],
     "dj back": [
-     "#73bdff",
-     0.7
+     "#b699ff",
+     0.5
     ],
     "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#b699ff",
-     0.7
-    ],
-    "line R": [
-     "#b699ff",
-     0.7
+     "#e8e4dc",
+     0.25
     ],
     "road": [
      "#a5ff0f",
@@ -5132,6 +4738,7 @@
    "notes": "",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "All the beams in cold white circle in a ripple, the cut breathes steel blue. The truss: steel blue up, cold white down, lavender behind the DJ, the key on the DJ in ash; white fans turn above.",
    "laser_parked": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -5161,11 +4768,15 @@
    "id": "ice-and-fire",
    "title": "Ice and fire",
    "act": 5,
-   "intent": "Ice and fire: open-white walls, a red plane, ice rays; blocks flip across the hall; the beams trace a mirrored X.",
+   "intent": "Plane red, walls open white; rays ice; truss ice up, ice down; warm white on the DJ; floor lavender. Beams: an X, mirrored. Washes flip in blocks.",
    "parts": {
-    "plane 1": [
-     "#ff2a0a",
-     1.0
+    "line L": [
+     "#b699ff",
+     0.7
+    ],
+    "line R": [
+     "#b699ff",
+     0.7
     ],
     "side line left": [
      "#ffffff",
@@ -5173,6 +4784,10 @@
     ],
     "side line right": [
      "#ffffff",
+     1.0
+    ],
+    "plane 1": [
+     "#ff2a0a",
      1.0
     ],
     "line A": [
@@ -5193,31 +4808,15 @@
     ],
     "cut up": [
      "#d1eeff",
-     1.0
+     0.8
     ],
     "cut down": [
      "#d1eeff",
-     0.8
-    ],
-    "dj back": [
-     "#ff3a12",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
      0.7
     ],
     "dj kicker": [
      "#ffbe7a",
-     0.7
-    ],
-    "line L": [
-     "#b699ff",
-     0.7
-    ],
-    "line R": [
-     "#b699ff",
-     0.7
+     0.3
     ],
     "road": [
      "#a5ff0f",
@@ -5239,10 +4838,10 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "cross",
+    "pattern": "figure8",
     "period_s": 7.27,
     "pan_deg": 45,
-    "tilt_deg": 0,
+    "tilt_deg": 20,
     "spatial": "left-right",
     "kinds": [
      "up-b380f"
@@ -5256,62 +4855,15 @@
    "notes": "red accent: the ember plane holds (beams are not in the flip), the flipping rays are ice",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "Cold white walls, an ember plane, ice rays; blocks flip, the beams trace an X. The truss: ice blocks up and down against the ember plane; a warm kicker on the DJ.",
    "laser_parked": null
   },
   {
    "id": "red-fans",
    "title": "Red fans",
    "act": 5,
-   "intent": "Red fans: the walls in red as wide fans, the plane warm white, the rays ember in bars; the truss rose-copper up and ember down.",
+   "intent": "Plane warm white, walls light blue; truss lavender up, lavender down; rose-copper behind the DJ; warm white on the DJ; floor lavender. Beams: lean toward the floor and back, neighbours opposite. Washes flip in bars.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     1.0
-    ],
-    "side line left": [
-     "#ff2a0a",
-     1.0
-    ],
-    "side line right": [
-     "#ff2a0a",
-     1.0
-    ],
-    "line A": [
-     "#ff3a12",
-     0.9
-    ],
-    "line B": [
-     "#ff3a12",
-     0.9
-    ],
-    "line C": [
-     "#ff3a12",
-     0.9
-    ],
-    "line D": [
-     "#ff3a12",
-     0.9
-    ],
-    "cut up": [
-     "#ff9180",
-     0.9
-    ],
-    "cut down": [
-     "#ff9180",
-     0.8
-    ],
-    "dj back": [
-     "#a3200c",
-     0.7
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.7
-    ],
-    "dj kicker": [
-     "#ffbe7a",
-     0.7
-    ],
     "line L": [
      "#b699ff",
      0.7
@@ -5319,6 +4871,34 @@
     "line R": [
      "#b699ff",
      0.7
+    ],
+    "side line left": [
+     "#a8d8ff",
+     1.0
+    ],
+    "side line right": [
+     "#a8d8ff",
+     1.0
+    ],
+    "plane 1": [
+     "#fff0c0",
+     1.0
+    ],
+    "cut up": [
+     "#b699ff",
+     0.4
+    ],
+    "cut down": [
+     "#b699ff",
+     0.5
+    ],
+    "dj back": [
+     "#ff9180",
+     0.4
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ],
     "road": [
      "#a5ff0f",
@@ -5340,11 +4920,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "fan",
-    "period_s": 14.55,
-    "pan_deg": 50,
-    "tilt_deg": 0,
-    "spatial": "all",
+    "pattern": "nod",
+    "period_s": 7.27,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "alternate",
     "kinds": [
      "up-b380f"
     ]
@@ -5357,6 +4937,7 @@
    "notes": "red accent, lasers only: t4 as measured, red fans with pale violet round them (#9982d4)",
    "energy": 0.9,
    "energy_tier": "full",
+   "intent_v3": "Ember lasers (the red fans of teaser t4) over lavender walls flipping, the rose-copper plane crossing. The truss: lavender up and down round the red fans, rose-copper behind the DJ, a warm kicker.",
    "laser_parked": {
     "pattern": "fan-sweep",
     "cubes": "all",
@@ -5389,8 +4970,16 @@
    "id": "last-strobe",
    "title": "Last strobe",
    "act": 5,
-   "intent": "The final hit: everything strobes for 8 s, open-white beams in a fast mirrored sweep, warm ash washes.",
+   "intent": "Plane open white, walls open white; rays ash; truss ash up, ash down; ash behind the DJ; ash on the DJ; floor lavender. Washes strobe (under 3 a second).",
    "parts": {
+    "line L": [
+     "#b699ff",
+     0.3
+    ],
+    "line R": [
+     "#b699ff",
+     0.3
+    ],
     "plane 1": [
      "#ffffff",
      1.0
@@ -5403,49 +4992,41 @@
      "#ffffff",
      1.0
     ],
-    "line A": [
-     "#e8e4dc",
-     1.0
-    ],
-    "line B": [
-     "#e8e4dc",
-     1.0
-    ],
-    "line C": [
-     "#e8e4dc",
-     1.0
-    ],
-    "line D": [
-     "#e8e4dc",
-     1.0
-    ],
     "cut up": [
      "#e8e4dc",
-     1.0
+     1
     ],
     "cut down": [
      "#e8e4dc",
-     1.0
+     1
     ],
-    "dj back": [
+    "line A": [
      "#e8e4dc",
-     0.9
+     1
     ],
-    "stage key": [
+    "line B": [
      "#e8e4dc",
-     1.0
+     1
+    ],
+    "line C": [
+     "#e8e4dc",
+     1
+    ],
+    "line D": [
+     "#e8e4dc",
+     1
     ],
     "dj kicker": [
      "#e8e4dc",
-     1.0
+     1
     ],
-    "line L": [
-     "#b699ff",
-     0.7
+    "stage key": [
+     "#e8e4dc",
+     1
     ],
-    "line R": [
-     "#b699ff",
-     0.7
+    "dj back": [
+     "#e8e4dc",
+     1
     ],
     "road": [
      "#a5ff0f",
@@ -5467,16 +5048,7 @@
     ],
     "still": 0.3
    },
-   "heads": {
-    "pattern": "sweep",
-    "period_s": 3.64,
-    "pan_deg": 35,
-    "tilt_deg": 0,
-    "spatial": "left-right",
-    "kinds": [
-     "up-b380f"
-    ]
-   },
+   "heads": null,
    "laser_colour": null,
    "cue": {
     "fade_s": 0,
@@ -5485,25 +5057,22 @@
    "notes": "",
    "energy": 1.0,
    "energy_tier": "full",
+   "intent_v3": "The final hit: everything strobes for 8 s, cold white beams, warm ash washes. The truss: all of it strobes in ash, the back light too; the key and kicker flash the DJ white.",
    "laser_parked": null
   },
   {
    "id": "afterglow",
    "title": "Afterglow",
    "act": 5,
-   "intent": "Afterglow: rose-copper rays and a warm white plane breathe down; the walls in amber, a slow ripple of lean; a warm pool on the DJ.",
+   "intent": "Plane warm white; rays rose-copper; truss warm white down; rose-copper behind the DJ; warm white on the DJ; floor lavender. Beams: a lean wave, in a ripple. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#fff0c0",
-     0.6
+    "line L": [
+     "#b699ff",
+     0.4
     ],
-    "side line left": [
-     "#ffb000",
-     0.6
-    ],
-    "side line right": [
-     "#ffb000",
-     0.6
+    "line R": [
+     "#b699ff",
+     0.4
     ],
     "line A": [
      "#ff9180",
@@ -5521,33 +5090,21 @@
      "#ff9180",
      0.6
     ],
-    "cut up": [
-     "#ffbe7a",
-     0.5
+    "plane 1": [
+     "#fff0c0",
+     0.6
     ],
     "cut down": [
      "#ffbe7a",
-     0.6
+     0.3
     ],
     "dj back": [
      "#ff9180",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
+     0.3
     ],
     "dj kicker": [
      "#ffbe7a",
-     0.5
-    ],
-    "line L": [
-     "#b699ff",
-     0.4
-    ],
-    "line R": [
-     "#b699ff",
-     0.4
+     0.25
     ],
     "road": [
      "#a5ff0f",
@@ -5586,6 +5143,7 @@
    "notes": "warmth after the peak without red or amber: rose-copper + 3200 K",
    "energy": 0.6,
    "energy_tier": "mid",
+   "intent_v3": "Rose-copper rays and a warm white plane breathe down; a slow ripple of lean. The truss: a warm-white pool, rose-copper behind and a warm kicker: the DJ glows after the peak.",
    "laser_parked": {
     "pattern": "sky",
     "cubes": "all",
@@ -5615,52 +5173,8 @@
    "id": "the-last-run",
    "title": "The last run",
    "act": 5,
-   "intent": "The way out: steel blue runs up the walls toward the entrance, the walls in light blue sweep the same way; ice behind the DJ.",
+   "intent": "Walls light blue; truss steel blue up; ice behind the DJ; ash on the DJ; floor ice. Beams: lean toward the floor and back, together. Washes chase.",
    "parts": {
-    "plane 1": [
-     "#ffffff",
-     0.8
-    ],
-    "side line left": [
-     "#a8d8ff",
-     0.8
-    ],
-    "side line right": [
-     "#a8d8ff",
-     0.8
-    ],
-    "line A": [
-     "#73bdff",
-     0.7
-    ],
-    "line B": [
-     "#73bdff",
-     0.7
-    ],
-    "line C": [
-     "#73bdff",
-     0.7
-    ],
-    "line D": [
-     "#73bdff",
-     0.7
-    ],
-    "cut up": [
-     "#73bdff",
-     0.8
-    ],
-    "cut down": [
-     "#73bdff",
-     0.5
-    ],
-    "dj back": [
-     "#d1eeff",
-     0.6
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.5
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -5668,6 +5182,26 @@
     "line R": [
      "#d1eeff",
      0.4
+    ],
+    "side line left": [
+     "#a8d8ff",
+     0.7
+    ],
+    "side line right": [
+     "#a8d8ff",
+     0.7
+    ],
+    "cut up": [
+     "#73bdff",
+     0.4
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.3
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -5689,11 +5223,11 @@
     "still": 0.3
    },
    "heads": {
-    "pattern": "sweep",
-    "period_s": 7.27,
-    "pan_deg": 40,
-    "tilt_deg": 0,
-    "spatial": "ripple",
+    "pattern": "nod",
+    "period_s": 14.55,
+    "pan_deg": 0,
+    "tilt_deg": 10,
+    "spatial": "all",
     "kinds": [
      "up-b380f"
     ]
@@ -5706,38 +5240,15 @@
    "notes": "",
    "energy": 0.7,
    "energy_tier": "mid",
+   "intent_v3": "Steel blue runs up the walls toward the entrance: the way out. The truss: steel blue up into the haze, ice behind the DJ, the key on the DJ for the last run.",
    "laser_parked": null
   },
   {
    "id": "embers-out",
    "title": "Embers out",
    "act": 5,
-   "intent": "The last embers: outside the road and the entrance spark; inside only deep-ember rays and the plane in orange, low, a slow nod.",
+   "intent": "Rays deep ember; truss ice down; warm white on the DJ; floor ice. Beams: lean toward the floor and back, together. Washes sparkle.",
    "parts": {
-    "plane 1": [
-     "#ff7a00",
-     0.35
-    ],
-    "line A": [
-     "#a3200c",
-     0.5
-    ],
-    "line B": [
-     "#a3200c",
-     0.5
-    ],
-    "line C": [
-     "#a3200c",
-     0.5
-    ],
-    "line D": [
-     "#a3200c",
-     0.5
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.25
-    ],
     "line L": [
      "#d1eeff",
      0.4
@@ -5745,6 +5256,30 @@
     "line R": [
      "#d1eeff",
      0.4
+    ],
+    "line A": [
+     "#a3200c",
+     0.4
+    ],
+    "line B": [
+     "#a3200c",
+     0.4
+    ],
+    "line C": [
+     "#a3200c",
+     0.4
+    ],
+    "line D": [
+     "#a3200c",
+     0.4
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -5757,8 +5292,8 @@
    },
    "motion": {
     "mode": "sparkle",
-    "bpm": 33,
-    "depth": 160,
+    "bpm": 20,
+    "depth": 255,
     "spatial": "patch",
     "kinds": [
      "up-pl5403"
@@ -5783,28 +5318,25 @@
    "notes": "red accent: deep ember at 0.4, sparkle 20 bpm (3 flashes/s max), over an ice floor",
    "energy": 0.35,
    "energy_tier": "low",
+   "intent_v3": "Outside, the road and entrance spark again; inside only deep ember rays: the last embers. The truss: a faint ice pool and the last warm kicker on the DJ among the embers.",
    "laser_parked": null
   },
   {
    "id": "one-beam-loop",
    "title": "One beam (loop)",
    "act": 5,
-   "intent": "Back to the start: the plane alone in low light blue, one slow lean; the loop begins again. The truss dark.",
+   "intent": "Plane open white; floor ice. Beams: lean toward the floor and back, together. Washes breathe.",
    "parts": {
-    "plane 1": [
-     "#a8d8ff",
-     0.4
-    ],
-    "stage key": [
-     "#ffbe7a",
-     0.2
-    ],
     "line L": [
      "#d1eeff",
      0.4
     ],
     "line R": [
      "#d1eeff",
+     0.4
+    ],
+    "plane 1": [
+     "#ffffff",
      0.4
     ],
     "road": [
@@ -5844,6 +5376,7 @@
    "notes": "",
    "energy": 0.25,
    "energy_tier": "low",
+   "intent_v3": "Back to the start: the plane alone in low cold white, one slow lean; the loop begins again. The truss stays dark: one beam and one laser line, as at the start.",
    "laser_parked": {
     "pattern": "single-scan",
     "cubes": "inner",
@@ -5870,5 +5403,55 @@
   }
  ],
  "laser_schema": "di.iiii scripts/place/laser_frames.py (validate_laser); design: scenes-tools/laser_design.py 2026-10-15",
- "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)"
+ "laser_lines_schema": "di.iiii scripts/place/laser_frames.py (validate_line); the 40 W lines' part, 2026-10-15 laser-40w (N852)",
+ "beam_wheel_seen": {
+  "#eefdfd": {
+   "slot": "open white",
+   "hex": "#ffffff"
+  },
+  "#f4fcf4": {
+   "slot": "open white",
+   "hex": "#ffffff"
+  },
+  "#e8e4dc": {
+   "slot": "open white",
+   "hex": "#ffffff"
+  },
+  "#d1eeff": {
+   "slot": "open white",
+   "hex": "#ffffff"
+  },
+  "#73bdff": {
+   "slot": "light blue",
+   "hex": "#a8d8ff"
+  },
+  "#66faff": {
+   "slot": "light blue",
+   "hex": "#a8d8ff"
+  },
+  "#26bcff": {
+   "slot": "light blue",
+   "hex": "#a8d8ff"
+  },
+  "#8f73ad": {
+   "slot": "light blue",
+   "hex": "#a8d8ff"
+  },
+  "#33ff47": {
+   "slot": "green",
+   "hex": "#00d12a"
+  },
+  "#ff9180": {
+   "slot": "warm white",
+   "hex": "#fff0c0"
+  },
+  "#ffbe7a": {
+   "slot": "warm white",
+   "hex": "#fff0c0"
+  },
+  "#ff3a12": {
+   "slot": "red",
+   "hex": "#ff2a0a"
+  }
+ }
 }

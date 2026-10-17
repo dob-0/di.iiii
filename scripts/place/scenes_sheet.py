@@ -10,9 +10,11 @@ Nothing here names a production: the title and the act names come from META.json
 import argparse, html, json, os
 e = html.escape
 SPN = {'all': 'together', 'alternate': 'neighbours opposite', 'left-right': 'mirrored left/right', 'ripple': 'a ripple across'}
-PAT = {'nod': 'lean toward the floor and back', 'wave': 'a lean wave', 'circle': 'a bow-tie turn', 'figure8': 'an X (four petals)'}
+PAT = {'nod': 'lean toward the floor and back', 'wave': 'a lean wave', 'circle': 'a bow-tie turn', 'figure8': 'an X (four petals)',
+       'sweep': 'a sweep side to side', 'cross': 'scissors (neighbours sweep against each other)', 'fan': 'a still fan, spread out'}  # headMotion.js HEAD_PATTERNS
 FX = {'breathe': 'breathes', 'pulse': 'pulses', 'sine': 'a wave', 'chase': 'a chase', 'comet': 'a comet', 'sparkle': 'sparkles', 'bars': 'bars flip',
-      'blocks': 'blocks flip', 'pingpong': 'ping-pong', 'radar': 'a radar line', 'pump': 'pumps on the beat', 'strobe': 'strobe (under 3 a second)'}
+      'blocks': 'blocks flip', 'pingpong': 'ping-pong', 'radar': 'a radar line', 'pump': 'pumps on the beat', 'strobe': 'strobe (under 3 a second)',
+      'glitch': 'glitches', 'none': 'held still'}  # fx.js FX_MODES
 KIND = {'up-pl5403': 'washes', 'up-b380f': 'beams', 'ext-lc-ultra-mk2': 'lasers', 'up-la40wf': 'lasers'}
 BEAMS = {'plane 1 (behind the DJ)', 'side line left', 'side line right'}
 def sw(c, small=False): return f'<i class="{"s" if small else ""}" style="background:{c}"></i>'
@@ -21,8 +23,15 @@ def moves(s):
     if m:
         k = sorted({KIND[x] for x in m['kinds']})
         dirn = {'x': ', left to right', 'x-': ', right to left', 'y': ', toward the entrance', 'y-': ', toward the DJ', 'radial': ', out from the DJ'}.get(m['spatial'], '')
-        bits.append(f"{' + '.join(k)}: {FX[m['mode']]} at {m['bpm']} bpm{dirn}")
-    if h: bits.append(f"beams: {PAT[h['pattern']]}, {SPN[h['spatial']]}, every {h['period_s']:g} s, up to {h['tilt_deg']}&deg; off vertical")
+        mode = m.get('mode') or 'none'
+        bits.append(f"{' + '.join(k)}: {FX.get(mode, mode)}" + ('' if mode == 'none' else f" at {m['bpm']} bpm{dirn}"))
+    if h:
+        p = h['pattern']; size = []                        # headMotion.js: pan for sweep/cross/fan/circle/figure8, tilt for nod/wave/circle/figure8
+        if p == 'fan' and h.get('pan_deg'): size.append(f"spread &plusmn;{h['pan_deg']}&deg;")
+        elif p in ('sweep', 'cross', 'circle', 'figure8') and h.get('pan_deg'): size.append(f"{h['pan_deg']}&deg; to each side")
+        if p in ('nod', 'wave', 'circle', 'figure8') and h.get('tilt_deg'): size.append(f"up to {h['tilt_deg']}&deg; off vertical")
+        every = '' if p == 'fan' else f", every {h['period_s']:g} s"
+        bits.append(f"beams: {PAT.get(p, p)}, {SPN.get(h.get('spatial'), h.get('spatial') or 'together')}{every}" + (', ' + ' and '.join(size) if size else ''))
     return '<br>'.join(bits)
 
 
