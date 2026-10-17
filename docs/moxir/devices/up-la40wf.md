@@ -105,3 +105,6 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
 - Fix in use: `la40-player.mjs --rgb --trim 137:g=100` — colour by the diodes (ch5 white + ch16-18 modulation, 0 = full, 255 = off:
   red = 0/255/255, green = 255/0/255, white = 0/0/0) so both units show the same colour; white on 137 gets green modulation 100 (owner: "now it's ok").
 - Never pick a colour by ch5's table alone when both units must match.
+- 2026-10-18 02:5x (owner's eye): laser 169 shows WHITE at colour 25 with graphic 2 and with the moving pictures, RED with the plain line
+  (graphic 1) at 18 / 22 / 28 / 32. Its 40-120 values follow the chart (green, blue, magenta, segments). In use: every red scene = colour 28 + graphic 1
+  on both graphics (motion kept). Owed: a walk of all graphics on 169 at colour 28 to know which other pictures stay red.
