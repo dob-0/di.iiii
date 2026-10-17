@@ -98,3 +98,15 @@ describe('typesFromManifest', () => {
         expect(typeIdOf(' UP-B380F ')).toBe('up-b380f')
     })
 })
+
+import { TESTED_CHANNEL_LISTS as LISTS_FOR_REST } from './fixtureTypes.js'
+describe('a DMX laser rests dark (MOXIR 2026-10-17)', () => {
+    it('declares 0 as the resting value of its output channel in every mode', () => {
+        const modes = LISTS_FOR_REST['UP-LA40WF'].modes
+        for (const [name, channels] of Object.entries(modes)) {
+            const out = channels.find((c) => c.role === 'dimmer')
+            expect(out, `mode ${name} has an output channel`).toBeTruthy()
+            expect(out.default, `mode ${name}: a cleared desk must leave the laser dark`).toBe(0)
+        }
+    })
+})
