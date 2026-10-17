@@ -21,3 +21,4 @@
 06:13 beam sync step by step (owner): truss beam 1 U1.001 at raw pan 0 / tilt 255 → 'straight up to the audience' (forward and up). di assumed pan 0 % = 270° to the side → beam 1's pan zero differs by −270° (= +90°). Check 2: pan 0 / tilt 0 → expect up and BACK (away from the audience) if tilt runs the way di thinks
 06:18 truss beam 1 at pan 0 / tilt 0 → straight back and up to the backstage (owner). With pan 0 / tilt 255 = forward and up: pan 0 % faces the front-back plane, tilt runs the way di thinks → beam 1 panOffsetDeg −270 (= +90)
 06:20 beam 1: pan 43 / tilt 0 → parallel to the truss (owner: yes it right); now pan 85 / tilt 0 (+180° from pan 0) → expect toward the DJ / front
+06:22 beam 1: pan 85 / tilt 0 → toward the DJ / front (owner: yes); now pan 128 / tilt 0 (+270°) → expect parallel to the truss, the other side
