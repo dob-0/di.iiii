@@ -69,12 +69,22 @@ must end on the roof deck, an end wall at >= 9.0 m, or a side wall — never the
 columns, the crane or the floor; flashes <= 3 per second (WCAG 2.x); the room's frame caps; the real cube's point budget
 (ASSUMED 30 kpps at >= 30 Hz refresh = 1000 points a frame; dwell 12 + blank 6 points a beam, 4 points a degree of path).
 """
-import argparse, importlib.util, json, math, os, sys
+import argparse, datetime, importlib.util, json, math, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CUBE_TYPE = 'ext-lc-ultra-mk2'
 FIELD_HALF_DEG = 18.5            # fixtures.json lasercube.scan_field_half_deg (ASSUMED: the maker's ">37 deg" read as ±18.5)
-LEVEL_CAP = 0.16                 # the show desk's laser fader cap, measured 2026-10-09
+LEVEL_CAP = 0.16                 # the show desk's laser fader cap, measured 2026-10-09; --level-cap lifts it (≤ 1.0) on the officer's word
+# THE OFFICER'S SWITCH (owner, 2026-10-17 08:0x, at the wall: "all is checked and safe — remove all things"): with
+# --officer-checked "<sign-off>" the HALL rules below stop failing a scene and are written down as waivers instead, in the
+# plan, the summary and the rig (who signed, which rule, how often). What stays a failure whatever is signed: the cube's
+# own field (±FIELD_HALF_DEG, hardware), a ray behind its line, the flash rate (WCAG) and the point budget (the buffer).
+HALL_RULES = ('below the horizontal', 'floor', 'column line (bay edge)', 'lantern glazing', 'entry wall', 'near crane crossing')
+OFFICER = {'signoff': None, 'waived': {}}
+
+
+def waivable(why):
+    return any(why.startswith(rule) for rule in HALL_RULES)
 MAX_FRAMES, MAX_POINTS = 256, 20000   # laserLine.js MAX_FRAMES, MAX_FRAME_POINTS_TOTAL
 MAX_FLASH_HZ = 3.0
 CUBE_PPS, MIN_REFRESH_HZ = 30000, 30  # ASSUMED (laserEngine.js dacRate example; flicker-free scanned figure)
@@ -447,6 +457,7 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
     group = kind['groups'][laser[kind['group_key']]]
     rays_at = kind['rays']
     fails, ends, rays_out, max_field, max_line_field = [], {}, [], 0.0, 0.0
+    waived = {}                                             # hall rules waived under the officer's sign-off: rule → rays
     budget = {}
     for cube in cubes:
         if cube['n'] not in group:
@@ -469,7 +480,11 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
                     cok, ch = crane_ok(cube['p'], dd, t, crane_z)
                     if not cok:
                         ok, why = False, f'near crane crossing at {ch:.2f} m < {CRANE_CLEAR_M}'
-                    if not ok:
+                    if not ok and OFFICER['signoff'] and waivable(why):
+                        rule = next(r for r in HALL_RULES if why.startswith(r))
+                        waived[rule] = waived.get(rule, 0) + 1
+                        OFFICER['waived'][rule] = OFFICER['waived'].get(rule, 0) + 1
+                    elif not ok:
                         fails.append(f"{cube['id']} line {beam['id']} u={u:.2f}: {why}")
                     ends.setdefault(label, []).append(end[1])
                     if k % 2 == 0 or laser['pattern'] in ('comb', 'net', 'fan', 'still'):
@@ -504,7 +519,8 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
             'ends': {k: {'rays': len(v), 'height_m': [round(min(v), 2), round(max(v), 2)]} for k, v in ends.items()},
             'max_field_deg': round(max_field, 2), 'max_line_field': round(max_line_field, 3), 'flash_hz': round(flash, 2),
             'points_per_cube_frame': worst, 'points_cap': cap, 'lowest_m': round(min(c['p'][1] for c in cubes), 2),
-            'fails': sorted(set(fails))[:12], 'fail_count': len(fails), 'rays': rays_out[:600]}
+            'fails': sorted(set(fails))[:12], 'fail_count': len(fails), 'waived': waived, 'waived_count': sum(waived.values()),
+            'rays': rays_out[:600]}
 
 
 # ---- the room's frames ----------------------------------------------------------------------------------------------------
@@ -616,6 +632,7 @@ def desk_values(line, rays, units):
 
 
 def main(argv=None):
+    global LEVEL_CAP
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--scenes', required=True)
     ap.add_argument('--rig', required=True)
@@ -628,7 +645,15 @@ def main(argv=None):
                     help='clock: a cue lasts its hold (showClock.js); fade+hold: fade then hold')
     ap.add_argument('--check', action='store_true', help='check only, write nothing but --plan-out')
     ap.add_argument('--keyframes', action='store_true', help='one pose per frame and frames.tween true: a player blends pose to pose')
+    ap.add_argument('--officer-checked', default=None, metavar='SIGNOFF',
+                    help='the laser safety officer signs the hall off: the hall rules (lantern, column line, entry minimum, floor, '
+                         'below the horizontal, crane) are waived and written down, not failed; the field, flash and budget stay')
+    ap.add_argument('--level-cap', type=float, default=None, help=f'the brightness ceiling a scene may ask (default {LEVEL_CAP}, at most 1.0)')
     a = ap.parse_args(argv)
+    if a.officer_checked:
+        OFFICER['signoff'] = a.officer_checked.strip() or None
+    if a.level_cap is not None:
+        LEVEL_CAP = max(0.01, min(1.0, float(a.level_cap)))
     S = json.load(open(a.scenes)); rig = json.load(open(a.rig)); dims = json.load(open(a.hall))['dims']
     scenes = S['scenes'] if isinstance(S, dict) else S
     errors = [m for s in scenes for m in validate_laser(s.get('laser'), s.get('id', '?'))]
@@ -653,7 +678,8 @@ def main(argv=None):
         total.update(line_total)
     fails = [(p['id'], p['fails']) for p in plans if p.get('fail_count')]
     fails += [(p['id'] + ' (lines)', p['fails']) for p in line_plans if p.get('fail_count')]
-    summary = {'ok': not fails and not frame_fails, 'cubes': [c['id'] for c in cubes], 'lines': sum(len(c['beams']) for c in cubes),
+    officer = {'signoff': OFFICER['signoff'], 'waived': dict(OFFICER['waived']), 'level_cap': LEVEL_CAP} if OFFICER['signoff'] or a.level_cap is not None else None
+    summary = {'ok': not fails and not frame_fails, 'officer_checked': officer, 'cubes': [c['id'] for c in cubes], 'lines': sum(len(c['beams']) for c in cubes),
                'scenes': len(scenes), 'scenes_lit': sum(1 for p in plans if p.get('laser')), 'loop_s': round(loop, 2),
                'timing': a.timing, 'frames': MAX_FRAMES, 'step_s': round(step, 3), 'max_points_a_line': max(total.values()),
                'show_epoch_ms': a.show_epoch_ms, 'fails': fails[:20], 'frame_fails': frame_fails,
@@ -684,6 +710,8 @@ def main(argv=None):
                     b['fieldHalfDeg'] = FIELD_HALF_DEG
             f['laser']['frames_source'] = (f'scripts/place/laser_frames.py from {os.path.basename(a.scenes)} `laser_lines`; '
                                            f'{MAX_FRAMES} frames x {step:.3f} s, timing {a.timing}, epoch {a.show_epoch_ms:.0f} ms')
+        if officer:
+            rig['officer_checked'] = {**officer, 'at': datetime.datetime.now().isoformat(timespec='minutes'), 'scenes': os.path.basename(a.scenes)}
         json.dump(rig, open(a.out, 'w'), indent=1, ensure_ascii=False)
         summary['written'] = a.out
     print(json.dumps(summary, indent=1))

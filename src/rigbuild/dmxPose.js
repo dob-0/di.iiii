@@ -16,6 +16,10 @@
 // fixture is the same machine turned half a turn about X, its base's front (+Z) toward
 // the room's +Z — the default face mountMatrix gives when none is recorded (the rig
 // records none; §18.3 says so).
+//
+// NOT THE DESK'S (MOXIR 2026-10-17). With a desk live, a lamp it does not drive (no desk row) is drawn dark, as it is
+// on the rig. A network laser (a LaserCube line, `fixture.dmx === false`) is never the desk's: it follows the laser
+// server (laserShowState.js) — drawn while the show plays on its armed cube, else dark. §18.4.
 
 import { capStrobeHz } from './strobeCap.js'
 import { spotAimDirection, rotationFromPanTilt } from '../project/viewport/spotLightAim.js'
@@ -24,6 +28,7 @@ import { lensFromMount, mountFromLens } from './lampGeometry.js'
 import { modeOf, typeById } from './fixtureTypes.js'
 import { decodeDmx } from './dmxDecode.js'
 import { flashKindOf } from './looks.js'
+import { isNetworkLaser, laserLineLit } from './laserShowState.js'
 
 const DEG = Math.PI / 180
 const HAZE_DEFAULT = 0.4 // spotBeam.js DEFAULT_HAZE
@@ -56,15 +61,22 @@ export const beamOfPanTilt = (pan, tilt, hung = false) => {
 
 const round3 = (v) => Math.round(v * 1000) / 1000
 
+/** A lamp drawn dark because nothing drives it: no light, no beam, no haze, and a note for the readout. Pure. */
+const restingDark = (e) => {
+    const beam = e.components.beam ? { ...e.components.beam, visible: false, haze: 0 } : undefined
+    return { ...e, components: { ...e.components, light: { ...(e.components.light || {}), intensity: 0 }, ...(beam ? { beam } : {}), rigShown: { level: 0, undriven: true } } }
+}
+
 /**
  * The entities with every desk-driven lamp drawn from its DMX.
  * @param {object[]} shown     the entities as the room would draw them (look-posed)
  * @param {object[]} document  the document's own entities (the lamps' true mounts)
  * @param {object[]} fixtures  the mirror's fixtures: { index, profile, values, … }
  * @param {object} library     type library
+ * @param {object} [laserShow] what the laser server plays (laserShowState.js laserShowOf): a network laser is drawn only while it lights it
  * @returns {{ entities: object[], driven: Map<string, object> }}  driven: id → decoded
  */
-export const dmxEntities = ({ shown, document, fixtures, library }) => {
+export const dmxEntities = ({ shown, document, fixtures, library, laserShow = null }) => {
     const driven = new Map()
     if (!Array.isArray(fixtures) || !fixtures.length || !Array.isArray(shown)) return { entities: shown, driven }
     const byIndex = new Map()
@@ -74,14 +86,21 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
     const out = shown.map((e) => {
         const fx = e?.components?.fixture
         if (e?.type !== 'spotLight' || !fx?.type) return e
+        if (isNetworkLaser(e)) {
+            // A network laser (a LaserCube line, off DMX) is never the desk's: it follows the laser server — drawn as the
+            // design holds it while the show plays on its armed cube (laserShowState.js), else dark: a laser rests dark.
+            // (MOXIR 2026-10-17: the rule below darkened all 36 cube lines while the wall played them.)
+            if (laserLineLit(laserShow, e.id)) return e
+            changed = true
+            return restingDark(e)
+        }
         const desk = byIndex.get(Number(fx.index))
         if (!desk || !Array.isArray(desk.values)) {
-            // With a desk connected, a lamp the desk does not drive is dark on the rig — so it is dark in the room too:
-            // an unpatched wash, or a LaserCube line the laser server is not playing (MOXIR 2026-10-17: the room kept
-            // drawing those from the design and flooded the view while the rig showed one beam).
+            // With a desk connected, a lamp the desk does not drive is dark on the rig — so it is dark in the room too
+            // (an unpatched wash, a DMX laser nothing drives): MOXIR 2026-10-17, the room kept drawing those from the
+            // design and flooded the view while the rig showed one beam.
             changed = true
-            const beam = e.components.beam ? { ...e.components.beam, visible: false, haze: 0 } : undefined
-            return { ...e, components: { ...e.components, light: { ...(e.components.light || {}), intensity: 0 }, ...(beam ? { beam } : {}), rigShown: { level: 0, undriven: true } } }
+            return restingDark(e)
         }
         const type = typeById(library, fx.type)
         const mode = runningMode(type, fx.mode, desk.profile)
