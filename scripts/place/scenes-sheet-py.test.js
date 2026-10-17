@@ -65,6 +65,37 @@ describe.skipIf(!hasPython)('scenes_sheet.py', () => {
         expect(h).toContain('Colour: cold')
         expect(h.indexOf('FRONT')).toBeLessThan(h.indexOf('The 2 scenes'))
     })
+    it('says every head move of headMotion.js and a scene held still (2026-10-17: fan, sweep and cross were missing)', () => {
+        const dir = tmp(); const out = path.join(dir, 'o.html')
+        const h3 = (pattern, extra = {}) => ({ pattern, period_s: 7.27, pan_deg: 40, tilt_deg: 20, spatial: 'left-right', kinds: ['up-b380f'], ...extra })
+        const row = (id, heads, motion = null) => ({ id, title: id, act: 1, intent: '', parts: {}, motion, heads, cue: { fade_s: 1, hold_s: 9 }, notes: '' })
+        const s = { loop_s: 30, palette: [], beam_wheel: {}, scenes: [row('fan', h3('fan')), row('sweep', h3('sweep', { spatial: 'ripple' })),
+            row('cross', h3('cross'), { kinds: ['up-pl5403'], mode: 'none', bpm: 132, spatial: 'patch' })] }
+        const r = py('scenes_sheet.py', [put(dir, 's.json', s), out])
+        const h = fs.readFileSync(out, 'utf8'); fs.rmSync(dir, { recursive: true, force: true })
+        expect(r.status).toBe(0)
+        expect(h).toContain('beams: a still fan, spread out, mirrored left/right, spread &plusmn;40&deg;')
+        expect(h).toContain('beams: a sweep side to side, a ripple across, every 7.27 s, 40&deg; to each side')
+        expect(h).toContain('beams: scissors (neighbours sweep against each other), mirrored left/right, every 7.27 s, 40&deg; to each side')
+        expect(h).toContain('washes: held still')
+        expect(h).not.toContain('held still at 132 bpm')
+    })
+    it("puts each scene's picture from a shots.json in its card, matched by number, with a path relative to the page", () => {
+        const dir = tmp(); const out = path.join(dir, 'o.html'); fs.mkdirSync(path.join(dir, 'shots'))
+        const shots = { shots: [{ n: 1, scene: '01 First one', file: '01-x-01 First one.png' }, { n: 2, scene: '02 Second one', error: 'refused: package 90 C' }] }
+        const r = py('scenes_sheet.py', [put(dir, 's.json', scenes), out, '--pictures', put(path.join(dir, 'shots'), 'shots.json', shots)])
+        const h = fs.readFileSync(out, 'utf8'); fs.rmSync(dir, { recursive: true, force: true })
+        expect(r.status).toBe(0)
+        expect(h).toContain('<img src="shots/01-x-01 First one.png" alt="First one"')
+        expect((h.match(/<img /g) || []).length).toBe(1)
+    })
+    it('builds the v6 MOXIR sheet (50 scenes, washes and beams, every head move)', () => {
+        const dir = tmp(); const out = path.join(dir, 'o.html')
+        const r = py('scenes_sheet.py', [path.join(here, 'rigs', 'moxir-scenes-50-v6-2026-10-17.json'), out])
+        const h = fs.readFileSync(out, 'utf8'); fs.rmSync(dir, { recursive: true, force: true })
+        expect(r.status).toBe(0)
+        expect((h.match(/<article>/g) || []).length).toBe(50)
+    })
     it('builds the MOXIR sheet from the fixture on dev (50 scenes, five acts)', () => {
         const rigs = path.join(here, 'rigs'); const dir = tmp(); const out = path.join(dir, 'o.html')
         const r = py('scenes_sheet.py', [path.join(rigs, 'moxir-scenes-50-2026-10-15.json'), out, '--meta', path.join(rigs, 'moxir-scenes-50-sheet-meta-2026-10-15.json'),
