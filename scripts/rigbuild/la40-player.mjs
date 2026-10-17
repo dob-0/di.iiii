@@ -59,8 +59,11 @@ const frame = (on, g, c) => units.flatMap((base) => (on ? [255, 250, g, 0, c, 64
 let state = ''
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
-    const i = st?.cues?.index
-    const cue = Number.isInteger(i) ? i + 1 : null
+    // The scene that is ON (the 'cue' layer's look), fired by the runner or by hand, mapped to its cue number; else the runner's index.
+    const onLook = (st?.layers || []).find((l) => l.id === 'cue' && l.on !== false)?.lookId
+    const byLook = onLook ? (st?.cues?.list || []).findIndex((c) => c.lookId === onLook) : -1
+    const i = byLook >= 0 ? byLook : st?.cues?.index
+    const cue = Number.isInteger(i) && i >= 0 ? i + 1 : null
     const on = Date.now() < previewUntil || (cue !== null && cues.has(cue))
     const q = playOf(cue)
     const g = q.list[Math.floor(Date.now() / q.every) % q.list.length]
