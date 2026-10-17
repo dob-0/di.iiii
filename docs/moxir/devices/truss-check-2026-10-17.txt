@@ -25,3 +25,5 @@
 06:24 beam 1: pan 128 / tilt 0 → hall and 3D the same (owner: right both). With the head now hanging straight in the 3D, no pan correction is needed — the earlier mismatch was the crooked rotation (fixed 06:2x). Correction file emptied.
 06:26 truss beam 2 U1.097: pan 0 / tilt 0 → 'side to backstage' (owner) — beam 1 at the same values pointed straight back → beam 2 hangs turned vs beam 1; now pan 43 / tilt 0
 06:27 truss beam 2 U1.097: pan 43 / tilt 0 → real along the truss, 3D toward the audience. di's model (hung, tilt 0): pan 0 +x, 43 +z (front), 85 −x, 128 −z (back). Real = di a quarter turn on → beam 2 panOffsetDeg +90 (kept in the correction file until the server keeps the field: PR #1012)
+06:30 truss beam 2: pan 43 / tilt 0 → to the RIGHT seen from the audience (+x, the high end); di drew +z → offset +90 confirmed in sign. Check: pan 85 → expect toward the audience
+06:31 truss beam 2: pan 85 / tilt 0 → toward the audience (owner: to me) → +90 confirmed, no reversal. Both truss beams done: beam 1 no correction, beam 2 +90
