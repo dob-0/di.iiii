@@ -686,18 +686,19 @@
    "len": 96.0
   },
   "v7-170": {
-   "start": 96.0,
-   "len": 8.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-171": {
-   "start": 96.0,
-   "len": 8.0
+   "start": 0.0,
+   "len": 96.0
   },
   "v7-172": {
-   "start": 96.0,
-   "len": 8.0
+   "start": 0.0,
+   "len": 96.0
   }
  },
  "why_all": "owner 02:2x: \"add laser cube on all the scenes\" \u2014 every scene, every desk-only look, and anything unknown plays the loop",
- "why_on": "owner 03:2x: \"turn on\" \u2014 cubes in every scene, the \"no laser\" ones too"
+ "why_on": "owner 03:2x: \"turn on\" \u2014 cubes in every scene, the \"no laser\" ones too",
+ "why_white": "owner 03:3x: \"laser cube only white\" \u2014 every scene plays the white loop"
 }
