@@ -48,7 +48,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 Cold iron: every allowed value, its own start (37), slow turn + small wave"
   },
@@ -181,7 +182,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 Ash gate: every allowed value, its own start (152), jump + zoom loop"
   },
@@ -315,7 +317,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 White tide: every allowed value, its own start (17), sideways sweep + line drawing"
   },
@@ -449,7 +452,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 Ghost floor: every allowed value, its own start (132), slow turn + small wave"
   },
@@ -583,7 +587,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 White scaffold: every allowed value, its own start (245), jump + zoom loop"
   },
@@ -717,7 +722,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 Bone light: every allowed value, its own start (112), sideways sweep + line drawing"
   },
@@ -850,7 +856,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Cloistral \u00b7 White sweep: every allowed value, its own start (225), sweep + zoom loop"
   },
@@ -984,7 +991,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 White rush: every allowed value, its own start (92), sweep + zoom loop"
   },
@@ -1118,7 +1126,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 White grid: every allowed value, its own start (205), jump + zoom loop"
   },
@@ -1251,7 +1260,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 White engine: every allowed value, its own start (68), jump + zoom loop"
   },
@@ -1385,7 +1395,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 Flash pan: every allowed value, its own start (185), jump + zoom loop"
   },
@@ -1519,7 +1530,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 White comb: every allowed value, its own start (48), sideways sweep + line drawing"
   },
@@ -1653,7 +1665,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 White pistons: every allowed value, its own start (163), sweep + zoom loop"
   },
@@ -1787,7 +1800,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Innersha \u00b7 Full ignition: every allowed value, its own start (28), sweep + zoom loop"
   },
@@ -1836,7 +1850,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 Shock white: every allowed value, its own start (65), jump + zoom loop"
   },
@@ -1969,7 +1984,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 White block hit: every allowed value, its own start (182), jump + zoom loop"
   },
@@ -2103,7 +2119,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 Blind spot: every allowed value, its own start (45), sweep + zoom loop"
   },
@@ -2237,7 +2254,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 White hammer: every allowed value, its own start (160), jump + zoom loop"
   },
@@ -2371,7 +2389,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 Strobe wall: every allowed value, its own start (25), sideways sweep + line drawing"
   },
@@ -2505,7 +2524,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 White radar storm: every allowed value, its own start (140), sweep + zoom loop"
   },
@@ -2638,7 +2658,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Kerrie \u00b7 White static: every allowed value, its own start (5), spin"
   },
@@ -2776,7 +2797,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash drift: every allowed value, its own start (120), sideways sweep + line drawing"
   },
@@ -2911,7 +2933,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Pale orbit: every allowed value, its own start (233), sweep + zoom loop"
   },
@@ -3044,7 +3067,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash wave: every allowed value, its own start (100), spin"
   },
@@ -3179,7 +3203,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White hollow: every allowed value, its own start (213), slow turn + small wave"
   },
@@ -3312,7 +3337,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash break: every allowed value, its own start (80), jump + zoom loop"
   },
@@ -3446,7 +3472,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Bone rise: every allowed value, its own start (193), sweep + zoom loop"
   },
@@ -3579,7 +3606,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Second rise: every allowed value, its own start (56), jump + zoom loop"
   },
@@ -3712,7 +3740,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 White frenzy: every allowed value, its own start (173), sideways sweep + line drawing"
   },
@@ -3846,7 +3875,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 White sprint: every allowed value, its own start (36), sweep + zoom loop"
   },
@@ -3980,7 +4010,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 White vortex: every allowed value, its own start (151), spin"
   },
@@ -4113,7 +4144,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Last flash: every allowed value, its own start (16), jump + zoom loop"
   },
@@ -4247,7 +4279,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 White all in: every allowed value, its own start (131), spin"
   },
@@ -4381,7 +4414,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ash settle: every allowed value, its own start (244), slow turn + small wave"
   },
@@ -4474,7 +4508,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Return (loop): every allowed value, its own start (70), slow turn + small wave"
   },
@@ -5017,7 +5052,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "red beams set v7-125: smooth"
   },
@@ -5199,7 +5235,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "White beams \u00b7 amber washes \u00b7 white laser"
   },
@@ -5427,7 +5464,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "White beams \u00b7 amber truss \u00b7 white walls \u00b7 white laser"
   },
@@ -5564,7 +5602,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "White beams only \u00b7 amber truss \u00b7 white laser"
   },
@@ -5657,7 +5696,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Amber beams \u00b7 white washes \u00b7 white laser"
   },
@@ -5795,7 +5835,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Amber beams \u00b7 amber washes \u00b7 white laser"
   },
@@ -5933,7 +5974,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Amber beams \u00b7 white truss \u00b7 amber walls \u00b7 white laser"
   },
@@ -6111,7 +6153,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Lime beams \u00b7 white washes \u00b7 white laser"
   },
@@ -6200,7 +6243,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Lime beams \u00b7 lime washes \u00b7 white laser"
   },
@@ -6288,7 +6332,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "White beams \u00b7 white washes \u00b7 white laser"
   },
@@ -6377,7 +6422,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "White beams \u00b7 lime washes \u00b7 white laser"
   },
@@ -6507,7 +6553,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Lime beams only \u00b7 white laser"
   },
@@ -6635,7 +6682,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "White beams \u00b7 lime washes strobe \u00b7 white laser"
   },
@@ -6684,7 +6732,8 @@
       "hi": 255,
       "period_s": 3
      }
-    ]
+    ],
+    "display": 220
    },
    "note": "Lime beams \u00b7 white washes chase \u00b7 white laser"
   },
