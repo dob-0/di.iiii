@@ -108,3 +108,4 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
 - 2026-10-18 02:5x (owner's eye): laser 169 shows WHITE at colour 25 with graphic 2 and with the moving pictures, RED with the plain line
   (graphic 1) at 18 / 22 / 28 / 32. Its 40-120 values follow the chart (green, blue, magenta, segments). In use: every red scene = colour 28 + graphic 1
   on both graphics (motion kept). Owed: a walk of all graphics on 169 at colour 28 to know which other pictures stay red.
+- 2026-10-18 05:1x: shape 7 at colour 28 also shows WHITE (owner). Red proven only with shape 1.
