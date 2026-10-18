@@ -57,6 +57,7 @@ const raw = async (channels) => {
 }
 // anim (plan, optional): ch6 X move, ch8 zoom, ch11 centre rotation, ch12 gradual painting, ch13 X wave; ch7 Y is always 64 (no up-down sweep).
 const SPAN = 32
+const DIMMER = Math.max(0, Math.min(255, Number(args.dimmer ?? 255)))   // --dimmer 0-255: ch1 of both units when on (owner 05:1x: "dimmers 70" = 70 % = 179)
 // --rgb (owner 2026-10-18 02:3x: "both 40 W the same colour in every scene"): the units' own colour tables differ (unit 137 mixes white
 // greenish, same DMX tested), so colour is set by the diodes instead: ch5 white (8) and ch16-18 modulation (0 = full, 255 = off).
 // 25 red -> red diode only; 42 green -> green only; 8 white -> all three (+ --trim). Both units get the same diode set.
@@ -70,7 +71,7 @@ const TRIM = new Map(String(args.trim || '').split(',').filter(Boolean).map((t) 
 // Never set: Y move / Y wave (ch7, ch14, ch24, ch31 stay 64 / 0: no up-down sweep), strobe ch15 (flash rule), colour modulation ch16-18 (0 = full).
 const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     const off = [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
-    const v = !on ? off : [255, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
+    const v = !on ? off : [DIMMER, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
         g2 ?? 0, 0, c, a.x2 ?? 64, 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
     if (on && RGB_MODE && DIODES[c]) { v[4] = 8; v[21] = 8; [v[15], v[16], v[17]] = DIODES[c] }
     const t = on && (!RGB_MODE || c === 8) ? TRIM.get(base) : null
