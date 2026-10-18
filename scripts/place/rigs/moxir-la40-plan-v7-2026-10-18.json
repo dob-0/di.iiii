@@ -3864,8 +3864,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 6,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "sweep+turn",
     "x": 145,
@@ -3882,7 +3882,11 @@
      7
     ]
    },
-   "note": "white beams amber washes: white-red gradient (colour 120 = segments, seen as red-white on 169, 02:52)"
+   "note": "white beams amber washes: white-red gradient (colour 120 = segments, seen as red-white on 169, 02:52)",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-130": {
    "graphics": [
@@ -3946,8 +3950,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 5,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "zoom",
     "x": 150,
@@ -3962,7 +3966,11 @@
      7
     ]
    },
-   "note": "White beams \u00b7 amber washes \u00b7 gradient laser"
+   "note": "White beams \u00b7 amber washes \u00b7 gradient laser",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-133": {
    "graphics": [
@@ -3972,8 +3980,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 5,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "spin",
     "x": 64,
@@ -3989,7 +3997,11 @@
      7
     ]
    },
-   "note": "White beams \u00b7 white washes \u00b7 gradient laser"
+   "note": "White beams \u00b7 white washes \u00b7 gradient laser",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-134": {
    "graphics": [
@@ -4080,8 +4092,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 5,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "draw",
     "x": 140,
@@ -4097,7 +4109,11 @@
      7
     ]
    },
-   "note": "White beams \u00b7 amber washes chase \u00b7 gradient laser"
+   "note": "White beams \u00b7 amber washes chase \u00b7 gradient laser",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-138": {
    "graphics": [
@@ -4215,8 +4231,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 5,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "draw",
     "x": 140,
@@ -4232,7 +4248,11 @@
      7
     ]
    },
-   "note": "Amber beams \u00b7 amber washes \u00b7 gradient laser"
+   "note": "Amber beams \u00b7 amber washes \u00b7 gradient laser",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-143": {
    "graphics": [
@@ -4296,8 +4316,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 5,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "zoom+spin",
     "x": 150,
@@ -4313,7 +4333,11 @@
      7
     ]
    },
-   "note": "Amber beams \u00b7 red washes \u00b7 gradient laser"
+   "note": "Amber beams \u00b7 red washes \u00b7 gradient laser",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-146": {
    "graphics": [
@@ -4376,8 +4400,8 @@
     6,
     7
    ],
-   "colour": 120,
-   "every": 5,
+   "colour": 28,
+   "every": 1.5,
    "anim": {
     "kind": "jump+spin",
     "x": 210,
@@ -4393,7 +4417,11 @@
      7
     ]
    },
-   "note": "Amber beams \u00b7 white washes strobe \u00b7 gradient laser"
+   "note": "Amber beams \u00b7 white washes strobe \u00b7 gradient laser",
+   "colours": [
+    8,
+    28
+   ]
   },
   "look:rig-v7-150": {
    "graphics": [
