@@ -75,7 +75,7 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     // Dark = dimmer 0 BUT mode 250 (built-in graphics) and colour red: ch2 0-49 is the unit's own AUTO program, which ignores the
     // dimmer and flashed white between scenes (owner 2026-10-18 05:2x).
     const off = [0, 250, 1, 0, 28, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 28, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
-    const v = !on ? off : [DIMMER, 250, g, a.display ?? 0, c, a.x ?? 64, a.y ?? 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
+    const v = !on ? off : [a.dimNow ?? DIMMER, 250, g, a.display ?? 0, c, a.x ?? 64, a.y ?? 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
         g2 ?? 0, a.display2 ?? a.display ?? 0, c, a.x2 ?? 64, a.y2 ?? 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
     if (on && RGB_MODE && DIODES[c]) { v[4] = 8; v[21] = 8; [v[15], v[16], v[17]] = DIODES[c] }
     const t = on && c === 8 ? TRIM.get(base) : null   // the trim fixes a unit's WHITE only; in red/green both units get identical values (owner 06:1x)
@@ -124,6 +124,7 @@ const tick = async () => {
     if (swept.has(7)) { a2.y = undefined; a2.y2 = undefined }
     if (swept.has(10)) { a2.yrot = undefined; a2.yrot2 = undefined }
     if (swept.has(12)) { a2.paint = undefined; a2.paint2 = undefined }
+    const ds = (sweeps || []).find((w) => w.ch === 1); if (ds) a2.dimNow = Math.min(DIMMER, sweepVal(ds))   // an LFO on the dimmer
     const gs = (sweeps || []).find((w) => w.ch === 3)   // an LFO on the shape channel: the 1-s frame writes the LFO's value too, so nothing jumps
     await raw(frame(on, gs ? sweepVal(gs) : g, c, a2, gs ? sweepVal(gs) : g2))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
