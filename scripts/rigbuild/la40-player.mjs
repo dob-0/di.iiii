@@ -83,6 +83,14 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
 })
 let state = ''
 let thenState = { key: null, at: 0, done: false }
+// anim.ySweep {period_s}: the player swings Y rotation by hand (ch10 / ch27, manual 1-128) ten times a second — the unit's own
+// auto rotation (129-255) did not read as movement (owner 2026-10-18 06:0x: "also animate y rotation")
+let sweepAnim = null
+setInterval(async () => {
+    if (!sweepAnim) return
+    const v = Math.round(1 + 127 * (0.5 + 0.5 * Math.sin(2 * Math.PI * Date.now() / 1000 / (sweepAnim.period_s || 4))))
+    try { await raw(units.flatMap((base) => [{ universe, channel: base + 9, value: v }, { universe, channel: base + 26, value: v }])) } catch {}
+}, 100)
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
     // The scene that is ON (the 'cue' layer's look), fired by the runner or by hand, mapped to its cue number; else the runner's index.
@@ -106,7 +114,8 @@ const tick = async () => {
     }
     const L2 = q.anim.g2 || null
     const g2 = L2 && L2.length ? L2[(Math.floor(Date.now() / q.every) + Math.floor(L2.length / 2)) % L2.length] : null
-    await raw(frame(on, g, c, q.anim, g2))
+    sweepAnim = on && q.anim.ySweep ? q.anim.ySweep : null
+    await raw(frame(on, g, c, sweepAnim ? { ...q.anim, yrot: undefined, yrot2: undefined } : q.anim, g2))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
 }
