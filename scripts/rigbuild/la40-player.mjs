@@ -88,7 +88,13 @@ let thenState = { key: null, at: 0, done: false }
 // on both graphics (ch n and n+17) — the units' own auto modes run on their own clocks and drift apart (owner 2026-10-18 06:2x:
 // "shape and movement" differ between 137 and 169). anim.ySweep {period_s} is the old form of [{ch: 10, lo: 1, hi: 128}].
 let sweeps = null
-const sweepVal = (w, t = Date.now() / 1000) => Math.round(w.lo + (w.hi - w.lo) * (0.5 + 0.5 * Math.sin(2 * Math.PI * (t / (w.period_s || 4) + (w.phase || 0)))))
+// a sweep with `beats` follows the desk's tempo (fx.bpm, tap) and its beat anchor (fx.epoch): one cycle = beats x 60 / bpm (owner 06:4x: "sync bpm")
+let clock = { bpm: 120, epoch: 0 }
+const sweepVal = (w, t = Date.now() / 1000) => {
+    const period = w.beats ? w.beats * 60 / Math.max(20, clock.bpm) : (w.period_s || 4)
+    const tt = w.beats ? t - clock.epoch / 1000 : t
+    return Math.round(w.lo + (w.hi - w.lo) * (0.5 + 0.5 * Math.sin(2 * Math.PI * (tt / period + (w.phase || 0)))))
+}
 setInterval(async () => {
     if (!sweeps || !sweeps.length) return
     const t = Date.now() / 1000
@@ -97,6 +103,7 @@ setInterval(async () => {
 }, 100)
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
+    if (st?.fx?.bpm) clock = { bpm: Number(st.fx.bpm), epoch: Number(st.fx.epoch) || 0 }
     // The scene that is ON (the 'cue' layer's look), fired by the runner or by hand, mapped to its cue number; else the runner's index.
     const onLook = (st?.layers || []).find((l) => l.id === 'cue' && l.on !== false)?.lookId
     const byLook = onLook ? (st?.cues?.list || []).findIndex((c) => c.lookId === onLook) : -1
