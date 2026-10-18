@@ -32,12 +32,12 @@ KEYS = [(0,      0.0,   0.0,   0.0,   0.0,  0.0,   0.0),   # a point
         (2 * P,  0.0,   0.0,   0.0,   0.0,  0.0,   0.0)]   # shrunk back into the point (2 pi = 0: the loop closes seamlessly)
 ease = lambda u: (1 - math.cos(P * u)) / 2
 LOOP = STEP * (len(KEYS) - 1)
-def state(tt):
+def state(tt):   # crosses only with ONE line: six lines with crosses broke the cube's 2000-point frame (frames 48 / 176, 06:28)
     i = min(int(tt // STEP), len(KEYS) - 2); u = ease((tt - i * STEP) / STEP)
     return [a + (b - a) * u for a, b in zip(KEYS[i], KEYS[i + 1])]
 clip = lambda v: max(-F, min(F, v))
 def lines(st, m, k):
-    th, sp, ln, off, red, cross, spark = st; dx, dy = math.cos(th) * m, math.sin(th); nx, ny = -dy, dx
+    th, sp, ln, off, red, cross, spark = st; cross = cross * max(0.0, 1 - sp / 0.05); dx, dy = math.cos(th) * m, math.sin(th); nx, ny = -dy, dx
     out = []
     for j in range(6):
         c = off + (j - 2.5) * sp; cx, cy = nx * c, ny * c
