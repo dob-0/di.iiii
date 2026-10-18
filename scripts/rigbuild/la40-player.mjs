@@ -78,7 +78,7 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     const v = !on ? off : [DIMMER, 250, g, a.display ?? 0, c, a.x ?? 64, a.y ?? 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
         g2 ?? 0, a.display2 ?? a.display ?? 0, c, a.x2 ?? 64, a.y2 ?? 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
     if (on && RGB_MODE && DIODES[c]) { v[4] = 8; v[21] = 8; [v[15], v[16], v[17]] = DIODES[c] }
-    const t = on && (!RGB_MODE || c === 8) ? TRIM.get(base) : null
+    const t = on && c === 8 ? TRIM.get(base) : null   // the trim fixes a unit's WHITE only; in red/green both units get identical values (owner 06:1x)
     if (t) { if (t.r != null) v[15] = t.r; if (t.g != null) v[16] = t.g; if (t.b != null) v[17] = t.b }
     return v.map((value, i) => ({ universe, channel: base + i, value }))
 })
