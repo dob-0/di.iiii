@@ -6917,6 +6917,51 @@
     ]
    },
    "note": "Morning sun \u00b7 white, red-scene setup"
+  },
+  "look:rig-v7-175": {
+   "graphics": [
+    30
+   ],
+   "colour": 28,
+   "every": 4,
+   "anim": {
+    "kind": "hand-driven: up-down, Y rotation, painting",
+    "x": 64,
+    "rot": 0,
+    "zoom": 0,
+    "g2": [
+     30
+    ],
+    "x2": 64,
+    "display": 220,
+    "sweeps": [
+     {
+      "ch": 1,
+      "lo": 0,
+      "hi": 255,
+      "beats": 2
+     },
+     {
+      "ch": 7,
+      "lo": 0,
+      "hi": 125,
+      "beats": 8
+     },
+     {
+      "ch": 10,
+      "lo": 1,
+      "hi": 128,
+      "beats": 4
+     },
+     {
+      "ch": 12,
+      "lo": 10,
+      "hi": 74,
+      "beats": 4
+     }
+    ]
+   },
+   "note": "Sun truss washes \u00b7 red laser"
   }
  },
  "allowStatic": true,
