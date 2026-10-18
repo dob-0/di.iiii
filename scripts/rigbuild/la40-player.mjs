@@ -84,13 +84,15 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
 })
 let state = ''
 let thenState = { key: null, at: 0, done: false }
-// anim.ySweep {period_s}: the player swings Y rotation by hand (ch10 / ch27, manual 1-128) ten times a second — the unit's own
-// auto rotation (129-255) did not read as movement (owner 2026-10-18 06:0x: "also animate y rotation")
-let sweepAnim = null
+// anim.sweeps [{ch, lo, hi, period_s, phase}]: channels the PLAYER moves by hand ten times a second, the same value on both units and
+// on both graphics (ch n and n+17) — the units' own auto modes run on their own clocks and drift apart (owner 2026-10-18 06:2x:
+// "shape and movement" differ between 137 and 169). anim.ySweep {period_s} is the old form of [{ch: 10, lo: 1, hi: 128}].
+let sweeps = null
 setInterval(async () => {
-    if (!sweepAnim) return
-    const v = Math.round(1 + 127 * (0.5 + 0.5 * Math.sin(2 * Math.PI * Date.now() / 1000 / (sweepAnim.period_s || 4))))
-    try { await raw(units.flatMap((base) => [{ universe, channel: base + 9, value: v }, { universe, channel: base + 26, value: v }])) } catch {}
+    if (!sweeps || !sweeps.length) return
+    const t = Date.now() / 1000
+    const vals = sweeps.map((w) => [w.ch, Math.round(w.lo + (w.hi - w.lo) * (0.5 + 0.5 * Math.sin(2 * Math.PI * (t / (w.period_s || 4) + (w.phase || 0)))))])
+    try { await raw(units.flatMap((base) => vals.flatMap(([ch, v]) => [{ universe, channel: base + ch - 1, value: v }].concat(ch >= 3 && ch <= 15 ? [{ universe, channel: base + ch + 16, value: v }] : [])))) } catch {}
 }, 100)
 const tick = async () => {
     const st = await (await fetch(`${desk}/api/state`)).json()
@@ -115,8 +117,13 @@ const tick = async () => {
     }
     const L2 = q.anim.g2 || null
     const g2 = L2 && L2.length ? L2[(Math.floor(Date.now() / q.every) + Math.floor(L2.length / 2)) % L2.length] : null
-    sweepAnim = on && q.anim.ySweep ? q.anim.ySweep : null
-    await raw(frame(on, g, c, sweepAnim ? { ...q.anim, yrot: undefined, yrot2: undefined } : q.anim, g2))
+    sweeps = on ? (q.anim.sweeps || (q.anim.ySweep ? [{ ch: 10, lo: 1, hi: 128, period_s: q.anim.ySweep.period_s }] : null)) : null
+    const swept = new Set((sweeps || []).map((w) => w.ch))
+    const a2 = { ...q.anim }
+    if (swept.has(7)) { a2.y = undefined; a2.y2 = undefined }
+    if (swept.has(10)) { a2.yrot = undefined; a2.yrot2 = undefined }
+    if (swept.has(12)) { a2.paint = undefined; a2.paint2 = undefined }
+    await raw(frame(on, g, c, a2, g2))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
 }
