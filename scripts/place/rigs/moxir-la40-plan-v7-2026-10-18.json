@@ -6872,50 +6872,27 @@
   },
   "look:rig-v7-173": {
    "graphics": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12
+    1
    ],
    "colour": 8,
    "every": 4,
    "anim": {
-    "kind": "slow turn",
+    "kind": "up-down",
     "x": 64,
-    "rot": 140,
-    "display": 220,
+    "display": 0,
     "g2": [
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12
+     1
     ],
     "sweeps": [
      {
-      "ch": 1,
+      "ch": 7,
       "lo": 0,
-      "hi": 255,
-      "period_s": 3
+      "hi": 125,
+      "beats": 8
      }
     ]
    },
-   "note": "White truss washes \u00b7 white laser"
+   "note": "White truss washes \u00b7 white laser: shape 1, up-down"
   },
   "look:rig-v7-174": {
    "graphics": [
