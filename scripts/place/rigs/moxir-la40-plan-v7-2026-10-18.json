@@ -40,10 +40,17 @@
   "2": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -63,10 +70,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 Rust drift: every allowed value, its own start (76), sideways sweep + line drawing"
@@ -142,10 +156,17 @@
   "5": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -165,10 +186,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 Ember lattice: every allowed value, its own start (191), slow turn + small wave"
@@ -244,10 +272,17 @@
   "8": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -267,10 +302,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 Ember hook: every allowed value, its own start (54), jump + zoom loop"
@@ -346,10 +388,17 @@
   "11": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -369,10 +418,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 Rust orbit: every allowed value, its own start (171), spin"
@@ -448,10 +504,17 @@
   "14": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -471,10 +534,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 Ember breath: every allowed value, its own start (34), slow turn + small wave"
@@ -550,10 +620,17 @@
   "17": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -573,10 +650,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 Ember tunnel: every allowed value, its own start (149), spin"
@@ -652,10 +736,17 @@
   "20": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -675,10 +766,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Cloistral \u00b7 First furnace: every allowed value, its own start (14), jump + zoom loop"
@@ -754,10 +852,17 @@
   "23": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -777,10 +882,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Innersha \u00b7 Ember shutter: every allowed value, its own start (129), jump + zoom loop"
@@ -856,10 +968,17 @@
   "26": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -879,10 +998,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Innersha \u00b7 Rust run: every allowed value, its own start (242), sideways sweep + line drawing"
@@ -958,10 +1084,17 @@
   "29": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -981,10 +1114,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Innersha \u00b7 Ember spokes: every allowed value, its own start (109), spin"
@@ -1060,10 +1200,17 @@
   "32": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1083,10 +1230,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Innersha \u00b7 Rust pendulum: every allowed value, its own start (222), slow turn + small wave"
@@ -1162,10 +1316,17 @@
   "35": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1185,10 +1346,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Innersha \u00b7 Ember gearbox: every allowed value, its own start (89), jump + zoom loop"
@@ -1264,10 +1432,17 @@
   "38": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1287,10 +1462,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Innersha \u00b7 Ember wake: every allowed value, its own start (202), sideways sweep + line drawing"
@@ -1400,10 +1582,17 @@
   "42": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1423,10 +1612,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Ember stamp: every allowed value, its own start (106), sweep + zoom loop"
@@ -1502,10 +1698,17 @@
   "45": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1525,10 +1728,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Rust hammer: every allowed value, its own start (219), sideways sweep + line drawing"
@@ -1604,10 +1814,17 @@
   "48": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1627,10 +1844,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Ember scatter: every allowed value, its own start (86), spin"
@@ -1706,10 +1930,17 @@
   "51": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1729,10 +1960,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Ember chop: every allowed value, its own start (199), sweep + zoom loop"
@@ -1808,10 +2046,17 @@
   "54": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1831,10 +2076,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Ember crossfire: every allowed value, its own start (62), spin"
@@ -1910,10 +2162,17 @@
   "57": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -1933,10 +2192,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Ember breaker: every allowed value, its own start (179), jump + zoom loop"
@@ -2012,10 +2278,17 @@
   "60": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2035,10 +2308,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Kerrie \u00b7 Kerrie peak: every allowed value, its own start (42), jump + zoom loop"
@@ -2046,10 +2326,17 @@
   "61": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2069,10 +2356,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Undertow: every allowed value, its own start (83), slow turn + small wave"
@@ -2148,10 +2442,17 @@
   "64": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2171,10 +2472,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow wall: every allowed value, its own start (196), slow turn + small wave"
@@ -2250,10 +2558,17 @@
   "67": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2273,10 +2588,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow ride: every allowed value, its own start (59), slow turn + small wave"
@@ -2352,10 +2674,17 @@
   "70": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2375,10 +2704,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Rust slow cut: every allowed value, its own start (176), sideways sweep + line drawing"
@@ -2454,10 +2790,17 @@
   "73": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2477,10 +2820,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember current: every allowed value, its own start (39), sweep + zoom loop"
@@ -2556,10 +2906,17 @@
   "76": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2579,10 +2936,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember pull: every allowed value, its own start (154), sideways sweep + line drawing"
@@ -2658,10 +3022,17 @@
   "79": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2681,10 +3052,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember climb: every allowed value, its own start (19), spin"
@@ -2726,10 +3104,17 @@
   "81": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2749,10 +3134,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Furnace door: every allowed value, its own start (97), jump + zoom loop"
@@ -2828,10 +3220,17 @@
   "84": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2851,10 +3250,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Ember spin: every allowed value, its own start (210), spin"
@@ -2930,10 +3336,17 @@
   "87": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -2953,10 +3366,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Ember lash: every allowed value, its own start (73), sideways sweep + line drawing"
@@ -3032,10 +3452,17 @@
   "90": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3055,10 +3482,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Ember sirens: every allowed value, its own start (190), sweep + zoom loop"
@@ -3134,10 +3568,17 @@
   "93": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3157,10 +3598,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Ember collapse: every allowed value, its own start (53), sweep + zoom loop"
@@ -3236,10 +3684,17 @@
   "96": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3259,10 +3714,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Ember cooling: every allowed value, its own start (170), slow turn + small wave"
@@ -3338,10 +3800,17 @@
   "99": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3361,10 +3830,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Mixtinct \u00b7 Ember last ride: every allowed value, its own start (33), sweep + zoom loop"
@@ -3406,10 +3882,17 @@
   "104": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3429,10 +3912,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red beams \u00b7 amber washes \u00b7 laser dots: animation of v6 cue 1, red only"
@@ -3440,10 +3930,17 @@
   "106": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3463,10 +3960,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red beams \u00b7 white washes \u00b7 laser dots: animation of v6 cue 14, red only"
@@ -3474,10 +3978,17 @@
   "108": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3497,10 +4008,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "White beams \u00b7 amber washes \u00b7 laser dots: animation of v6 cue 27, red only"
@@ -3508,10 +4026,17 @@
   "110": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3531,10 +4056,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red beams only \u00b7 sweep \u00b7 laser dots: animation of v6 cue 40, red only"
@@ -3542,10 +4074,17 @@
   "112": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3565,10 +4104,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Amber washes only \u00b7 laser dots: animation of v6 cue 53, red only"
@@ -3576,10 +4122,17 @@
   "116": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3599,10 +4152,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red beams \u00b7 amber truss \u00b7 fan \u00b7 laser dots: animation of v6 cue 66, red only"
@@ -3610,10 +4170,17 @@
   "118": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3633,10 +4200,17 @@
     "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Everything red and amber \u00b7 full \u00b7 laser dots: animation of v6 cue 79, red only"
@@ -3644,10 +4218,17 @@
   "120": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3667,10 +4248,17 @@
     "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red beams \u00b7 amber washes \u00b7 strobe \u00b7 laser dots: animation of v6 cue 92, red only"
@@ -3678,10 +4266,17 @@
   "look:rig-v7-121": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3701,10 +4296,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red white cool (red laser)"
@@ -3712,10 +4314,17 @@
   "look:rig-v7-122": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -3735,10 +4344,17 @@
     "yrot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Red white cool 2 (red laser, owner 02:3x)"
@@ -3746,10 +4362,17 @@
   "look:rig-v7-124": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 4,
@@ -3764,10 +4387,17 @@
     "rot2": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "red beams set v7-124: smooth"
@@ -3802,7 +4432,18 @@
   },
   "look:rig-v7-127": {
    "graphics": [
-    1
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 4,
@@ -3815,14 +4456,36 @@
     "x2": 160,
     "zoom2": 220,
     "g2": [
-     1
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "red beams set v7-127: smooth"
   },
   "look:rig-v7-128": {
    "graphics": [
-    1
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 4,
@@ -3835,7 +4498,18 @@
     "x2": 200,
     "rot2": 230,
     "g2": [
-     1
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "red beams set v7-128: smooth"
@@ -3902,10 +4576,17 @@
   "look:rig-v7-131": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -3918,10 +4599,17 @@
     "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "White beams \u00b7 amber washes \u00b7 red laser"
@@ -3990,10 +4678,17 @@
   "look:rig-v7-134": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -4006,10 +4701,17 @@
     "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "White beams \u00b7 white washes \u00b7 red laser"
@@ -4044,10 +4746,17 @@
   "look:rig-v7-136": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -4060,10 +4769,17 @@
     "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "White beams \u00b7 amber walls \u00b7 white truss \u00b7 red laser"
@@ -4129,10 +4845,17 @@
   "look:rig-v7-139": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -4145,10 +4868,17 @@
     "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "White beams \u00b7 amber washes strobe \u00b7 red laser"
@@ -4183,10 +4913,17 @@
   "look:rig-v7-141": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -4199,10 +4936,17 @@
     "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Amber beams \u00b7 white washes \u00b7 red laser"
@@ -4267,7 +5011,18 @@
   },
   "look:rig-v7-144": {
    "graphics": [
-    1
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -4279,14 +5034,36 @@
     "x2": 160,
     "rot2": 210,
     "g2": [
-     1
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Amber beams \u00b7 red washes \u00b7 red laser"
   },
   "look:rig-v7-145": {
    "graphics": [
-    1
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -4298,7 +5075,18 @@
     "x2": 160,
     "rot2": 210,
     "g2": [
-     1
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Amber beams \u00b7 red washes \u00b7 gradient laser"
@@ -4333,10 +5121,17 @@
   "look:rig-v7-147": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 5,
@@ -4348,10 +5143,17 @@
     "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
     ]
    },
    "note": "Amber beams only \u00b7 red laser"
@@ -4888,5 +5690,6 @@
  "crazy_why": "owner 01:5x: lasers crazier \u2014 every 1.5 s a new picture, the strongest auto motion on both graphics; Y move / Y wave / strobe still never set",
  "red_setup": "owner 02:5x: laser 169 is red only with the plain line (graphic 1) in the red band (tested 18-32); every red cue: colour 28, graphics [1] on both graphics; motion kept",
  "lines10": "owner 05:0x: only shape values 1-10 (the line shapes of the walk chart), both graphics; motion and colour per scene kept",
- "colour_by_scene": "owner 05:1x: red scenes red, green scenes green (white stays white); shapes 1,3,5,6,7"
+ "colour_by_scene": "owner 05:1x: red scenes red, green scenes green (white stays white); shapes 1,3,5,6,7",
+ "red_shapes": "owner 05:1x after the shape walk 05:18 (both units, colour 28, shapes 1-12): \"lines its ok\""
 }
