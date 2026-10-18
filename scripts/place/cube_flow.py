@@ -8,16 +8,16 @@ a point grows into a line, opens into six, turns, closes, scans, opens again, tu
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
 arg = lambda k, d: float(sys.argv[sys.argv.index(k) + 1]) if k in sys.argv else d
-STEP, F, PTS, N, DARK = arg('--step', 3.0), arg('--field', 1.0), 24, 256, 2.0
-NSPARK = 3   # sparkle dots per line (owner 05:5x: "more lines and dots like sparkles")
+STEP, F, PTS, N, DARK = arg("--step", 3.0), arg("--field", 1.0), 16, 256, 2.0
+NSPARK = 2   # sparkle dots per line (owner 05:5x: "more lines and dots like sparkles")
 P = math.pi
 #        angle  spacing length offset  red   (each row = where one move ends; the first = where the loop starts)
 #        angle  spacing length offset  red   cross  spark   (cross = a second line across each line, its share of the length)
 KEYS = [(0,      0.0,   0.0,   0.0,   0.0,  0.0,   0.0),   # a point
         (0,      0.0,   F,     0.0,   0.0,  0.0,   0.6),   # one line across, sparkles come
         (0,      0.34,  F,     0.0,   0.0,  0.0,   0.6),   # six lines open
-        (0,      0.34,  F,     0.0,   0.0,  0.5,   0.3),   # each grows a cross: twelve lines
-        (P / 2,  0.34,  F,     0.0,   0.3,  0.5,   0.0),   # the net turns
+        (0,      0.34,  F,     0.0,   0.0,  0.3,   0.3),   # each grows a cross: twelve lines
+        (P / 2,  0.34,  F,     0.0,   0.3,  0.3,   0.0),   # the net turns
         (P / 2,  0.34,  F,     0.0,   0.3,  0.0,   0.0),   # crosses fold away
         (P / 2,  0.0,   F,     0.0,   0.3,  0.0,   0.8),   # closed into one, sparkles
         (P / 2,  0.0,   F,     0.85,  0.6,  0.0,   0.8),   # scanned to one side
@@ -27,7 +27,7 @@ KEYS = [(0,      0.0,   0.0,   0.0,   0.0,  0.0,   0.0),   # a point
         (P,      0.18,  F,     0.45,  0.0,  0.3,   0.5),   # six lines up, short crosses, sparkles
         (P,      0.18,  F,    -0.45,  0.5,  0.3,   0.5),   # and down
         (P,      0.34,  F,     0.0,   0.5,  0.0,   0.0),   # wide open in the middle
-        (5 * P / 4, 0.25, F,   0.0,   1.0,  0.6,   0.3),   # turned diagonal with crosses, red
+        (5 * P / 4, 0.25, F,   0.0,   1.0,  0.3,   0.3),   # turned diagonal with crosses, red
         (5 * P / 4, 0.0,  F,   0.0,   0.5,  0.0,   0.9),   # closed into one diagonal, a sky of sparkles
         (2 * P,  0.0,   0.0,   0.0,   0.0,  0.0,   0.0)]   # shrunk back into the point (2 pi = 0: the loop closes seamlessly)
 ease = lambda u: (1 - math.cos(P * u)) / 2
@@ -54,7 +54,7 @@ def lines(st, m, k):
             sx = math.sin(j * 7.13 + q * 3.7 + k * 0.004) * 0.9; sy = math.sin(j * 4.91 + q * 5.3 + k * 0.003) * 0.9
             tw = spark * (0.5 + 0.5 * math.sin(k * 0.9 + j * 2.1 + q * 4.7)) ** 3
             pts.append([round(sx, 4), round(sy, 4), 0, 0, 0])
-            pts += [[round(sx, 4), round(sy, 4), round(tw, 3), round(tw, 3), round(tw, 3)] for _ in range(3)]
+            pts += [[round(sx, 4), round(sy, 4), round(tw, 3), round(tw, 3), round(tw, 3)] for _ in range(2)]
         out.append(pts)
     return out
 d = json.load(open(doc_f)); doc = d.get('document', d)
