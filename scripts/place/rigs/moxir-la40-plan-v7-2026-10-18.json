@@ -146,18 +146,18 @@
   },
   "5": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -348,18 +348,18 @@
   },
   "11": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -550,18 +550,18 @@
   },
   "17": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -751,18 +751,18 @@
   },
   "23": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -952,18 +952,18 @@
   },
   "29": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -1154,18 +1154,18 @@
   },
   "35": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -1397,18 +1397,18 @@
   },
   "42": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -1598,18 +1598,18 @@
   },
   "48": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -1800,18 +1800,18 @@
   },
   "54": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -2001,18 +2001,18 @@
   },
   "60": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -2122,18 +2122,18 @@
   },
   "64": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -2324,18 +2324,18 @@
   },
   "70": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -2525,18 +2525,18 @@
   },
   "76": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -2686,18 +2686,18 @@
   },
   "81": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -2887,18 +2887,18 @@
   },
   "87": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3088,18 +3088,18 @@
   },
   "93": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3290,18 +3290,18 @@
   },
   "99": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3370,18 +3370,18 @@
   },
   "106": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3410,18 +3410,18 @@
   },
   "110": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3450,18 +3450,18 @@
   },
   "116": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3490,18 +3490,18 @@
   },
   "120": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3530,18 +3530,18 @@
   },
   "look:rig-v7-122": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3610,18 +3610,18 @@
   },
   "look:rig-v7-127": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3734,18 +3734,18 @@
   },
   "look:rig-v7-131": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -3904,18 +3904,18 @@
   },
   "look:rig-v7-136": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -4068,18 +4068,18 @@
   },
   "look:rig-v7-141": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
@@ -4193,18 +4193,18 @@
   },
   "look:rig-v7-145": {
    "graphics": [
-    1
+    12
    ],
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "up-down loop",
+    "kind": "up-down loop, standing line",
     "x": 64,
     "y": 150,
     "rot": 0,
     "zoom": 0,
     "g2": [
-     1
+     12
     ],
     "x2": 64,
     "y2": 150
