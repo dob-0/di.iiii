@@ -6869,6 +6869,53 @@
     "rot2": 0
    },
    "note": "White washes \u00b7 lime beams \u00b7 white-green laser"
+  },
+  "look:rig-v7-173": {
+   "graphics": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ],
+   "colour": 8,
+   "every": 4,
+   "anim": {
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
+    "display": 220,
+    "g2": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "sweeps": [
+     {
+      "ch": 1,
+      "lo": 0,
+      "hi": 255,
+      "period_s": 3
+     }
+    ]
+   },
+   "note": "White truss washes \u00b7 white laser"
   }
  },
  "allowStatic": true,
