@@ -299,35 +299,35 @@
    "parts": {
     "line L": [
      "#ff3a12",
-     1.0
+     0.3
     ],
     "line R": [
      "#ff3a12",
-     1.0
+     0.3
     ],
     "line A": [
      "#ff3a12",
-     1.0
+     0.3
     ],
     "line B": [
      "#ff3a12",
-     1.0
+     0.3
     ],
     "dj back": [
      "#ff3a12",
-     1.0
+     0.3
     ],
     "cut up": [
      "#ffa000",
-     1.0
+     0.3
     ],
     "cut down": [
      "#ffa000",
-     1.0
+     0.3
     ],
     "dj kicker": [
      "#ffa000",
-     1.0
+     0.3
     ],
     "side line left": [
      "#9ec233",
@@ -377,7 +377,7 @@
     "fade_s": 4,
     "hold_s": 30
    },
-   "notes": "owner 07:4x morning sun; beams lime; laser red",
+   "notes": "owner 07:4x morning sun; beams lime; laser red; washes 30 %, laser white like the red scenes (owner 07:5x)",
    "laser": {
     "pattern": "net",
     "cubes": "all",

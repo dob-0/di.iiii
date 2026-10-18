@@ -6921,7 +6921,7 @@
    "graphics": [
     30
    ],
-   "colour": 28,
+   "colour": 8,
    "every": 4,
    "anim": {
     "kind": "hand-driven: up-down, Y rotation, painting",
@@ -6960,7 +6960,7 @@
      }
     ]
    },
-   "note": "Morning sun \u00b7 red laser"
+   "note": "Morning sun \u00b7 white, red-scene setup"
   }
  },
  "allowStatic": true,
