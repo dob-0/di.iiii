@@ -111,3 +111,4 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
 - 2026-10-18 05:1x: shape 7 at colour 28 also shows WHITE (owner). Red proven only with shape 1.
 - 2026-10-18 05:18 walk, both units at 28, shapes 1-12 still, no motion: owner "lines its ok". With motion shape 7 looked white (05:1x) — watch.
 - 2026-10-18 06:2x owner: both units EXACTLY the same parameters in every scene — no per-unit trim (player runs without --trim).
+- 2026-10-18 06:5x: the desk MASTER scales every channel of the raw holds (mode 250 -> 133, colour 28 -> 15 at master 136). With master below full the 40 W change mode/colour (white, other shapes). Keep master 255 while the 40 W play until the desk scales intensity only (ledger).
