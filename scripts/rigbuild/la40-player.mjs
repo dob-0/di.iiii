@@ -88,10 +88,11 @@ let thenState = { key: null, at: 0, done: false }
 // on both graphics (ch n and n+17) — the units' own auto modes run on their own clocks and drift apart (owner 2026-10-18 06:2x:
 // "shape and movement" differ between 137 and 169). anim.ySweep {period_s} is the old form of [{ch: 10, lo: 1, hi: 128}].
 let sweeps = null
+const sweepVal = (w, t = Date.now() / 1000) => Math.round(w.lo + (w.hi - w.lo) * (0.5 + 0.5 * Math.sin(2 * Math.PI * (t / (w.period_s || 4) + (w.phase || 0)))))
 setInterval(async () => {
     if (!sweeps || !sweeps.length) return
     const t = Date.now() / 1000
-    const vals = sweeps.map((w) => [w.ch, Math.round(w.lo + (w.hi - w.lo) * (0.5 + 0.5 * Math.sin(2 * Math.PI * (t / (w.period_s || 4) + (w.phase || 0)))))])
+    const vals = sweeps.map((w) => [w.ch, sweepVal(w, t)])
     try { await raw(units.flatMap((base) => vals.flatMap(([ch, v]) => [{ universe, channel: base + ch - 1, value: v }].concat(ch >= 3 && ch <= 15 ? [{ universe, channel: base + ch + 16, value: v }] : [])))) } catch {}
 }, 100)
 const tick = async () => {
@@ -123,7 +124,8 @@ const tick = async () => {
     if (swept.has(7)) { a2.y = undefined; a2.y2 = undefined }
     if (swept.has(10)) { a2.yrot = undefined; a2.yrot2 = undefined }
     if (swept.has(12)) { a2.paint = undefined; a2.paint2 = undefined }
-    await raw(frame(on, g, c, a2, g2))
+    const gs = (sweeps || []).find((w) => w.ch === 3)   // an LFO on the shape channel: the 1-s frame writes the LFO's value too, so nothing jumps
+    await raw(frame(on, gs ? sweepVal(gs) : g, c, a2, gs ? sweepVal(gs) : g2))
     const now = on ? `ON graphic ${g} colour ${c} (cue ${cue}${Date.now() < previewUntil ? ', preview' : ''})` : `dark (cue ${cue})`
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
 }
