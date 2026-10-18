@@ -19,6 +19,9 @@ KEYS = [(0,      0.0,   0.0,   0.0,   0.0,  0.0,   0.0),   # a point
         (0,      0.34,  F,     0.0,   0.0,  0.3,   0.3),   # each grows a cross: twelve lines
         (P / 2,  0.34,  F,     0.0,   0.3,  0.3,   0.0),   # the net turns
         (P / 2,  0.34,  F,     0.0,   0.3,  0.0,   0.0),   # crosses fold away
+        (P / 2,  0.18,  F,     0.55,  0.3,  0.0,   0.3),   # six standing lines slide RIGHT together (owner 06:5x: "add right left")
+        (P / 2,  0.18,  F,    -0.55,  0.3,  0.0,   0.3),   # and LEFT
+        (P / 2,  0.18,  F,     0.0,   0.3,  0.0,   0.0),   # back to the middle
         (P / 2,  0.0,   F,     0.0,   0.3,  0.0,   0.8),   # closed into one, sparkles
         (P / 2,  0.0,   F,     0.85,  0.6,  0.0,   0.8),   # scanned to one side
         (P / 2,  0.0,   F,    -0.85,  0.6,  0.0,   0.4),   # and across to the other
