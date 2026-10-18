@@ -299,15 +299,15 @@
    "parts": {
     "cut up": [
      "#ffffff",
-     0.2
+     0.1
     ],
     "cut down": [
      "#ffffff",
-     0.2
+     0.1
     ],
     "dj kicker": [
      "#ffffff",
-     0.2
+     0.1
     ],
     "laser": [
      "#eefdfd",
@@ -345,7 +345,7 @@
     "fade_s": 3,
     "hold_s": 24
    },
-   "notes": "owner 07:1x; laser white; truss washes 20 % (owner 07:3x)",
+   "notes": "owner 07:1x; laser white; truss washes 20 % (owner 07:3x); 10 % (owner 07:3x)",
    "laser": {
     "pattern": "net",
     "cubes": "all",
