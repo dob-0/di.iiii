@@ -6,34 +6,41 @@
   "1": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Cold iron: every allowed value, its own start (37), slow turn + small wave"
   },
@@ -53,21 +60,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -81,75 +78,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Cloistral \u00b7 Rust drift: every allowed value, its own start (76), sideways sweep + line drawing"
   },
   "3": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Cloistral \u00b7 Lime vein: every allowed value, its own start (115), sweep + zoom loop"
   },
   "4": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Ash gate: every allowed value, its own start (152), jump + zoom loop"
   },
@@ -169,21 +180,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -197,75 +199,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Ember lattice: every allowed value, its own start (191), slow turn + small wave"
   },
   "6": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Lime fog cut: every allowed value, its own start (228), spin"
   },
   "7": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Cloistral \u00b7 White tide: every allowed value, its own start (17), sideways sweep + line drawing"
   },
@@ -285,21 +302,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
     "g2": [
      1,
      2,
@@ -313,75 +320,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Ember hook: every allowed value, its own start (54), jump + zoom loop"
   },
   "9": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
     "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Lime crossfire: every allowed value, its own start (95), sweep + zoom loop"
   },
   "10": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Cloistral \u00b7 Ghost floor: every allowed value, its own start (132), slow turn + small wave"
   },
@@ -401,21 +423,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -429,75 +441,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Cloistral \u00b7 Rust orbit: every allowed value, its own start (171), spin"
   },
   "12": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Lime rain: every allowed value, its own start (208), sideways sweep + line drawing"
   },
   "13": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 White scaffold: every allowed value, its own start (245), jump + zoom loop"
   },
@@ -517,21 +544,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
+    "kind": "sweep+zoom",
     "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -545,75 +562,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Ember breath: every allowed value, its own start (34), slow turn + small wave"
   },
   "15": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Cloistral \u00b7 Lime switch: every allowed value, its own start (71), sweep + zoom loop"
   },
   "16": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Bone light: every allowed value, its own start (112), sideways sweep + line drawing"
   },
@@ -633,21 +665,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
      2,
@@ -661,75 +684,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 Ember tunnel: every allowed value, its own start (149), spin"
   },
   "18": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Cloistral \u00b7 Lime pressure: every allowed value, its own start (188), jump + zoom loop"
   },
   "19": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Cloistral \u00b7 White sweep: every allowed value, its own start (225), sweep + zoom loop"
   },
@@ -749,21 +786,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -777,75 +804,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Cloistral \u00b7 First furnace: every allowed value, its own start (14), jump + zoom loop"
   },
   "21": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Spark line: every allowed value, its own start (51), sideways sweep + line drawing"
   },
   "22": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 White rush: every allowed value, its own start (92), sweep + zoom loop"
   },
@@ -865,21 +907,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
      2,
@@ -893,75 +926,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Innersha \u00b7 Ember shutter: every allowed value, its own start (129), jump + zoom loop"
   },
   "24": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Lime spiral: every allowed value, its own start (168), spin"
   },
   "25": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 White grid: every allowed value, its own start (205), jump + zoom loop"
   },
@@ -981,21 +1029,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -1009,75 +1047,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Innersha \u00b7 Rust run: every allowed value, its own start (242), sideways sweep + line drawing"
   },
   "27": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Innersha \u00b7 Lime ladder: every allowed value, its own start (31), sweep + zoom loop"
   },
   "28": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 White engine: every allowed value, its own start (68), jump + zoom loop"
   },
@@ -1097,21 +1149,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -1125,75 +1168,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Ember spokes: every allowed value, its own start (109), spin"
   },
   "30": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Lime blades: every allowed value, its own start (146), sideways sweep + line drawing"
   },
   "31": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Innersha \u00b7 Flash pan: every allowed value, its own start (185), jump + zoom loop"
   },
@@ -1213,21 +1271,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
     "g2": [
      1,
      2,
@@ -1241,75 +1289,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Rust pendulum: every allowed value, its own start (222), slow turn + small wave"
   },
   "33": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
     "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Lime surge: every allowed value, its own start (11), sweep + zoom loop"
   },
   "34": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Innersha \u00b7 White comb: every allowed value, its own start (48), sideways sweep + line drawing"
   },
@@ -1329,21 +1392,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -1357,75 +1410,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Innersha \u00b7 Ember gearbox: every allowed value, its own start (89), jump + zoom loop"
   },
   "36": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Lime sonar: every allowed value, its own start (126), spin"
   },
   "37": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 White pistons: every allowed value, its own start (163), sweep + zoom loop"
   },
@@ -1445,21 +1513,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
+    "kind": "sweep+zoom",
     "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -1473,109 +1531,131 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Ember wake: every allowed value, its own start (202), sideways sweep + line drawing"
   },
   "39": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Innersha \u00b7 Lime throttle: every allowed value, its own start (239), jump + zoom loop"
   },
   "40": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Innersha \u00b7 Full ignition: every allowed value, its own start (28), sweep + zoom loop"
   },
   "41": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Shock white: every allowed value, its own start (65), jump + zoom loop"
   },
@@ -1595,21 +1675,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -1623,75 +1693,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Kerrie \u00b7 Ember stamp: every allowed value, its own start (106), sweep + zoom loop"
   },
   "43": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Kerrie \u00b7 Lime shrapnel: every allowed value, its own start (143), spin"
   },
   "44": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 White block hit: every allowed value, its own start (182), jump + zoom loop"
   },
@@ -1711,21 +1795,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -1739,75 +1814,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Rust hammer: every allowed value, its own start (219), sideways sweep + line drawing"
   },
   "46": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Lime stutter: every allowed value, its own start (8), jump + zoom loop"
   },
   "47": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Kerrie \u00b7 Blind spot: every allowed value, its own start (45), sweep + zoom loop"
   },
@@ -1827,21 +1917,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
      2,
@@ -1855,75 +1935,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Ember scatter: every allowed value, its own start (86), spin"
   },
   "49": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Lime gates: every allowed value, its own start (123), sideways sweep + line drawing"
   },
   "50": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Kerrie \u00b7 White hammer: every allowed value, its own start (160), jump + zoom loop"
   },
@@ -1943,21 +2038,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -1971,75 +2056,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Kerrie \u00b7 Ember chop: every allowed value, its own start (199), sweep + zoom loop"
   },
   "52": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Lime cage: every allowed value, its own start (236), jump + zoom loop"
   },
   "53": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Strobe wall: every allowed value, its own start (25), sideways sweep + line drawing"
   },
@@ -2059,21 +2159,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -2087,75 +2177,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Ember crossfire: every allowed value, its own start (62), spin"
   },
   "55": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Kerrie \u00b7 Lime punch: every allowed value, its own start (103), jump + zoom loop"
   },
   "56": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 White radar storm: every allowed value, its own start (140), sweep + zoom loop"
   },
@@ -2175,21 +2280,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
     "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
      2,
@@ -2203,75 +2299,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Ember breaker: every allowed value, its own start (179), jump + zoom loop"
   },
   "58": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Kerrie \u00b7 Lime fracture: every allowed value, its own start (216), sideways sweep + line drawing"
   },
   "59": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Kerrie \u00b7 White static: every allowed value, its own start (5), spin"
   },
@@ -2291,21 +2401,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -2319,7 +2419,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Kerrie \u00b7 Kerrie peak: every allowed value, its own start (42), jump + zoom loop"
   },
@@ -2339,21 +2441,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -2367,75 +2460,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Undertow: every allowed value, its own start (83), slow turn + small wave"
   },
   "62": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
+    "kind": "sweep+zoom",
     "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash drift: every allowed value, its own start (120), sideways sweep + line drawing"
   },
   "63": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime deep: every allowed value, its own start (157), spin"
   },
@@ -2455,21 +2563,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
      2,
@@ -2483,75 +2581,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow wall: every allowed value, its own start (196), slow turn + small wave"
   },
   "65": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Pale orbit: every allowed value, its own start (233), sweep + zoom loop"
   },
   "66": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime tow: every allowed value, its own start (22), sideways sweep + line drawing"
   },
@@ -2571,21 +2684,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -2599,75 +2702,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow ride: every allowed value, its own start (59), slow turn + small wave"
   },
   "68": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash wave: every allowed value, its own start (100), spin"
   },
   "69": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime hollow: every allowed value, its own start (137), sweep + zoom loop"
   },
@@ -2687,21 +2805,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -2715,75 +2823,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Rust slow cut: every allowed value, its own start (176), sideways sweep + line drawing"
   },
   "71": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 White hollow: every allowed value, its own start (213), slow turn + small wave"
   },
   "72": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime long ride: every allowed value, its own start (2), spin"
   },
@@ -2803,21 +2926,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
      2,
@@ -2831,75 +2945,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember current: every allowed value, its own start (39), sweep + zoom loop"
   },
   "74": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ash break: every allowed value, its own start (80), jump + zoom loop"
   },
   "75": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime sink: every allowed value, its own start (117), slow turn + small wave"
   },
@@ -2919,21 +3047,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -2947,75 +3065,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember pull: every allowed value, its own start (154), sideways sweep + line drawing"
   },
   "77": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Bone rise: every allowed value, its own start (193), sweep + zoom loop"
   },
   "78": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Lime climb: every allowed value, its own start (230), jump + zoom loop"
   },
@@ -3035,21 +3168,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
      2,
@@ -3063,41 +3187,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember climb: every allowed value, its own start (19), spin"
   },
   "80": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Second rise: every allowed value, its own start (56), jump + zoom loop"
   },
@@ -3117,21 +3249,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
     "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
      2,
@@ -3145,75 +3268,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Furnace door: every allowed value, its own start (97), jump + zoom loop"
   },
   "82": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Mixtinct \u00b7 Lime engine: every allowed value, its own start (134), sweep + zoom loop"
   },
   "83": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Mixtinct \u00b7 White frenzy: every allowed value, its own start (173), sideways sweep + line drawing"
   },
@@ -3233,21 +3370,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -3261,75 +3388,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Ember spin: every allowed value, its own start (210), spin"
   },
   "85": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Lime gridlock: every allowed value, its own start (255), jump + zoom loop"
   },
   "86": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
+    "kind": "sweep+zoom",
     "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 White sprint: every allowed value, its own start (36), sweep + zoom loop"
   },
@@ -3349,21 +3491,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
      2,
@@ -3377,75 +3510,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Mixtinct \u00b7 Ember lash: every allowed value, its own start (73), sideways sweep + line drawing"
   },
   "88": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Lime thunder: every allowed value, its own start (114), jump + zoom loop"
   },
   "89": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 White vortex: every allowed value, its own start (151), spin"
   },
@@ -3465,21 +3613,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -3493,75 +3631,89 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Mixtinct \u00b7 Ember sirens: every allowed value, its own start (190), sweep + zoom loop"
   },
   "91": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Mixtinct \u00b7 Lime overload: every allowed value, its own start (227), sideways sweep + line drawing"
   },
   "92": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Last flash: every allowed value, its own start (16), jump + zoom loop"
   },
@@ -3581,21 +3733,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -3609,75 +3752,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Ember collapse: every allowed value, its own start (53), sweep + zoom loop"
   },
   "94": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Lime final word: every allowed value, its own start (94), jump + zoom loop"
   },
   "95": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Mixtinct \u00b7 White all in: every allowed value, its own start (131), spin"
   },
@@ -3697,21 +3855,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
      2,
@@ -3725,75 +3873,90 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Ember cooling: every allowed value, its own start (170), slow turn + small wave"
   },
   "97": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Lime cinders: every allowed value, its own start (207), sideways sweep + line drawing"
   },
   "98": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Mixtinct \u00b7 Ash settle: every allowed value, its own start (244), slow turn + small wave"
   },
@@ -3813,21 +3976,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -3841,41 +3994,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Mixtinct \u00b7 Ember last ride: every allowed value, its own start (33), sweep + zoom loop"
   },
   "100": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Mixtinct \u00b7 Return (loop): every allowed value, its own start (70), slow turn + small wave"
   },
@@ -3895,21 +4056,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -3923,7 +4075,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Red beams \u00b7 amber washes \u00b7 laser dots: animation of v6 cue 1, red only"
   },
@@ -3943,21 +4097,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -3971,7 +4115,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Red beams \u00b7 white washes \u00b7 laser dots: animation of v6 cue 14, red only"
   },
@@ -3991,21 +4137,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
      2,
@@ -4019,7 +4156,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "White beams \u00b7 amber washes \u00b7 laser dots: animation of v6 cue 27, red only"
   },
@@ -4039,21 +4178,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
+    "kind": "draw",
+    "x": 140,
     "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
     "g2": [
      1,
      2,
@@ -4067,7 +4196,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Red beams only \u00b7 sweep \u00b7 laser dots: animation of v6 cue 40, red only"
   },
@@ -4087,21 +4218,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
     "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
     "g2": [
      1,
      2,
@@ -4115,7 +4237,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Amber washes only \u00b7 laser dots: animation of v6 cue 53, red only"
   },
@@ -4135,21 +4259,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -4163,7 +4277,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Red beams \u00b7 amber truss \u00b7 fan \u00b7 laser dots: animation of v6 cue 66, red only"
   },
@@ -4183,21 +4299,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 180,
-    "xrot": 150,
-    "yrot": 150,
-    "paint": 200,
-    "xwave": 0,
-    "x2": 200,
-    "zoom2": 220,
-    "rot2": 230,
-    "xrot2": 200,
-    "yrot2": 0,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -4211,7 +4317,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Everything red and amber \u00b7 full \u00b7 laser dots: animation of v6 cue 79, red only"
   },
@@ -4231,21 +4339,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy draw",
-    "x": 230,
-    "zoom": 0,
-    "rot": 230,
-    "xrot": 0,
-    "yrot": 200,
-    "paint": 200,
-    "xwave": 150,
-    "x2": 150,
-    "zoom2": 230,
-    "rot2": 140,
-    "paint2": 200,
-    "xwave2": 150,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -4259,7 +4357,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Red beams \u00b7 amber washes \u00b7 strobe \u00b7 laser dots: animation of v6 cue 92, red only"
   },
@@ -4279,21 +4379,12 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -4307,7 +4398,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Red white cool (red laser)"
   },
@@ -4327,21 +4420,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "crazy jump",
-    "x": 210,
-    "zoom": 230,
-    "rot": 220,
-    "xrot": 200,
-    "yrot": 0,
-    "paint": 0,
-    "xwave": 0,
-    "x2": 230,
-    "zoom2": 240,
-    "rot2": 160,
-    "xrot2": 0,
-    "yrot2": 200,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
      2,
@@ -4355,7 +4438,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Red white cool 2 (red laser, owner 02:3x)"
   },
@@ -4377,14 +4462,10 @@
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "sweep+draw+turn",
-    "x": 150,
-    "paint": 200,
-    "rot": 160,
-    "xrot": 150,
-    "zoom": 0,
-    "x2": 160,
-    "rot2": 200,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
      2,
@@ -4398,35 +4479,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "red beams set v7-124: smooth"
   },
   "look:rig-v7-125": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
    "every": 4,
    "anim": {
-    "kind": "turn+wave+sweep",
-    "x": 145,
-    "rot": 150,
-    "xwave": 90,
-    "yrot": 150,
-    "x2": 150,
-    "rot2": 210,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "red beams set v7-125: smooth"
   },
@@ -4448,13 +4543,10 @@
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "zoom+sweep+spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 170,
-    "xrot": 150,
-    "x2": 160,
-    "zoom2": 220,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
      2,
@@ -4468,7 +4560,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "red beams set v7-127: smooth"
   },
@@ -4490,13 +4584,9 @@
    "colour": 28,
    "every": 4,
    "anim": {
-    "kind": "spin+jump+zoom",
-    "x": 190,
-    "rot": 180,
-    "yrot": 160,
-    "zoom": 205,
-    "x2": 200,
-    "rot2": 230,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -4510,17 +4600,26 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "red beams set v7-128: smooth"
   },
   "look:rig-v7-129": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -4528,17 +4627,22 @@
     "kind": "sweep+turn",
     "x": 145,
     "rot": 150,
-    "xrot": 150,
-    "zoom": 0,
-    "x2": 155,
-    "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "white beams amber washes: white-red gradient (colour 120 = segments, seen as red-white on 169, 02:52)",
    "colours": [
@@ -4549,27 +4653,40 @@
   "look:rig-v7-130": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "sweep",
-    "x": 140,
-    "rot": 0,
-    "paint": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams \u00b7 amber washes \u00b7 white laser"
   },
@@ -4589,14 +4706,12 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "turn",
+    "kind": "wave",
     "x": 64,
-    "rot": 150,
     "xwave": 60,
-    "x2": 160,
-    "rot2": 210,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -4610,33 +4725,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams \u00b7 amber washes \u00b7 red laser"
   },
   "look:rig-v7-132": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
    "anim": {
-    "kind": "zoom",
+    "kind": "sweep+zoom",
     "x": 150,
-    "zoom": 210,
-    "x2": 160,
-    "rot2": 210,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "White beams \u00b7 amber washes \u00b7 gradient laser",
    "colours": [
@@ -4647,27 +4778,41 @@
   "look:rig-v7-133": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
    "anim": {
-    "kind": "spin",
+    "kind": "turn+wave",
     "x": 64,
-    "rot": 170,
-    "yrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "White beams \u00b7 white washes \u00b7 gradient laser",
    "colours": [
@@ -4691,14 +4836,11 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "jump",
-    "x": 190,
-    "zoom": 220,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
      2,
@@ -4712,34 +4854,50 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "White beams \u00b7 white washes \u00b7 red laser"
   },
   "look:rig-v7-135": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "sweep+turn",
-    "x": 145,
-    "rot": 150,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "White beams \u00b7 amber truss \u00b7 white walls \u00b7 white laser"
   },
@@ -4759,14 +4917,11 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "wave",
-    "x": 150,
-    "xwave": 120,
+    "kind": "slow turn",
+    "x": 64,
     "rot": 140,
-    "x2": 160,
-    "rot2": 210,
     "g2": [
      1,
      2,
@@ -4780,34 +4935,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "White beams \u00b7 amber walls \u00b7 white truss \u00b7 red laser"
   },
   "look:rig-v7-137": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
    "anim": {
-    "kind": "draw",
-    "x": 140,
-    "paint": 200,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "White beams \u00b7 amber washes chase \u00b7 gradient laser",
    "colours": [
@@ -4818,27 +4988,40 @@
   "look:rig-v7-138": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "slow spin",
+    "kind": "slow zoom",
     "x": 64,
-    "rot": 140,
-    "yrot": 140,
-    "x2": 160,
-    "rot2": 210,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams only \u00b7 amber truss \u00b7 white laser"
   },
@@ -4858,14 +5041,12 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "jump+spin",
-    "x": 200,
-    "rot": 220,
-    "xrot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -4879,34 +5060,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams \u00b7 amber washes strobe \u00b7 red laser"
   },
   "look:rig-v7-140": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "turn+sweep",
+    "kind": "sweep+zoom",
     "x": 150,
-    "rot": 160,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Amber beams \u00b7 white washes \u00b7 white laser"
   },
@@ -4926,14 +5122,12 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "jump+zoom",
-    "x": 200,
-    "zoom": 220,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
      2,
@@ -4947,17 +5141,26 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Amber beams \u00b7 white washes \u00b7 red laser"
   },
   "look:rig-v7-142": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
@@ -4965,16 +5168,22 @@
     "kind": "draw",
     "x": 140,
     "paint": 200,
-    "rot": 180,
-    "x2": 160,
-    "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Amber beams \u00b7 amber washes \u00b7 gradient laser",
    "colours": [
@@ -4985,27 +5194,41 @@
   "look:rig-v7-143": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "spin",
-    "x": 64,
-    "rot": 180,
-    "yrot": 160,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Amber beams \u00b7 amber washes \u00b7 white laser"
   },
@@ -5025,14 +5248,11 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "wave",
-    "x": 150,
-    "xwave": 120,
-    "rot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
      2,
@@ -5046,7 +5266,9 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Amber beams \u00b7 red washes \u00b7 red laser"
   },
@@ -5066,14 +5288,11 @@
     12
    ],
    "colour": 28,
-   "every": 1.5,
+   "every": 4,
    "anim": {
-    "kind": "zoom+spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
      2,
@@ -5087,34 +5306,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Amber beams \u00b7 red washes \u00b7 gradient laser"
   },
   "look:rig-v7-146": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "sweep",
-    "x": 145,
-    "paint": 0,
-    "rot": 0,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Amber beams \u00b7 white truss \u00b7 amber walls \u00b7 white laser"
   },
@@ -5134,13 +5368,12 @@
     12
    ],
    "colour": 28,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "slow spin",
+    "kind": "wave",
     "x": 64,
-    "rot": 140,
-    "x2": 160,
-    "rot2": 210,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
      2,
@@ -5154,34 +5387,49 @@
      10,
      11,
      12
-    ]
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Amber beams only \u00b7 red laser"
   },
   "look:rig-v7-149": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 28,
    "every": 1.5,
    "anim": {
-    "kind": "jump+spin",
-    "x": 210,
-    "rot": 220,
-    "xrot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "Amber beams \u00b7 white washes strobe \u00b7 gradient laser",
    "colours": [
@@ -5192,457 +5440,691 @@
   "look:rig-v7-150": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "turn+sweep",
-    "x": 150,
-    "rot": 160,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Lime beams \u00b7 white washes \u00b7 green laser"
   },
   "look:rig-v7-151": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "jump+zoom",
-    "x": 200,
-    "zoom": 220,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Lime beams \u00b7 white washes \u00b7 white laser"
   },
   "look:rig-v7-153": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "spin",
-    "x": 64,
-    "rot": 180,
-    "yrot": 160,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Lime beams \u00b7 lime washes \u00b7 green laser"
   },
   "look:rig-v7-154": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "wave",
-    "x": 150,
-    "xwave": 120,
-    "rot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow turn",
+    "x": 64,
+    "rot": 140,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Lime beams \u00b7 lime washes \u00b7 white laser"
   },
   "look:rig-v7-156": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "sweep",
+    "kind": "sweep+turn",
     "x": 145,
-    "x2": 160,
-    "rot2": 210,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "White beams \u00b7 white washes \u00b7 green laser"
   },
   "look:rig-v7-157": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "slow spin",
+    "kind": "slow zoom",
     "x": 64,
-    "rot": 140,
-    "x2": 160,
-    "rot2": 210,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams \u00b7 white washes \u00b7 white laser"
   },
   "look:rig-v7-159": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "jump+zoom",
-    "x": 200,
-    "zoom": 220,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams \u00b7 lime washes \u00b7 green laser"
   },
   "look:rig-v7-160": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "draw",
-    "x": 140,
-    "paint": 200,
-    "rot": 180,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "sweep+zoom",
+    "x": 150,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "White beams \u00b7 lime washes \u00b7 white laser"
   },
   "look:rig-v7-162": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "wave",
-    "x": 150,
-    "xwave": 120,
-    "rot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "note": "Lime beams \u00b7 lime truss \u00b7 white walls \u00b7 green laser"
   },
   "look:rig-v7-163": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "zoom+spin",
-    "x": 150,
-    "zoom": 210,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "White beams \u00b7 lime walls \u00b7 white truss \u00b7 green laser"
   },
   "look:rig-v7-164": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "sweep",
-    "x": 145,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow sweep",
+    "x": 140,
+    "rot": 0,
+    "zoom": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "Lime beams only \u00b7 white laser"
   },
   "look:rig-v7-165": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "slow spin",
+    "kind": "slow turn",
     "x": 64,
     "rot": 140,
-    "x2": 160,
-    "rot2": 210,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 140
    },
    "note": "Lime washes only \u00b7 green laser"
   },
   "look:rig-v7-166": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "turn+sweep",
-    "x": 150,
-    "rot": 160,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "sweep+turn",
+    "x": 145,
+    "rot": 150,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 145,
+    "rot2": 150
    },
    "note": "Lime beams \u00b7 lime washes chase \u00b7 green laser"
   },
   "look:rig-v7-167": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "jump+zoom",
-    "x": 200,
-    "zoom": 220,
-    "rot": 200,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "slow zoom",
+    "x": 64,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "White beams \u00b7 lime washes strobe \u00b7 white laser"
   },
   "look:rig-v7-168": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
-   "every": 5,
+   "every": 4,
    "anim": {
-    "kind": "draw",
-    "x": 140,
-    "paint": 200,
-    "rot": 180,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "wave",
+    "x": 64,
+    "xwave": 60,
+    "rot": 0,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 0
    },
    "note": "Lime beams \u00b7 white washes chase \u00b7 white laser"
   },
   "look:rig-v7-170": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 42,
    "every": 4,
    "anim": {
-    "kind": "sweep+spin",
+    "kind": "sweep+zoom",
     "x": 150,
-    "rot": 180,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "zoom": 205,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 150,
+    "rot2": 0
    },
    "note": "White walls \u00b7 green-white laser"
   },
   "look:rig-v7-171": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
    "colours": [
     8,
     42
    ],
-   "every": 2,
+   "every": 1.5,
    "anim": {
-    "kind": "sweep+spin",
-    "x": 150,
-    "rot": 170,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "turn+wave",
+    "x": 64,
+    "rot": 145,
+    "xwave": 40,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 64,
+    "rot2": 145
    },
    "then": {
     "after_s": 10,
@@ -5653,31 +6135,44 @@
   "look:rig-v7-172": {
    "graphics": [
     1,
+    2,
     3,
+    4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
    ],
    "colour": 8,
    "colours": [
     8,
     42
    ],
-   "every": 2,
+   "every": 1.5,
    "anim": {
-    "kind": "sweep+spin",
-    "x": 150,
-    "rot": 170,
-    "xrot": 150,
-    "x2": 160,
-    "rot2": 210,
+    "kind": "draw",
+    "x": 140,
+    "paint": 200,
     "g2": [
      1,
+     2,
      3,
+     4,
      5,
      6,
-     7
-    ]
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "x2": 140,
+    "rot2": 0
    },
    "note": "White washes \u00b7 lime beams \u00b7 white-green laser"
   }
@@ -5691,5 +6186,6 @@
  "red_setup": "owner 02:5x: laser 169 is red only with the plain line (graphic 1) in the red band (tested 18-32); every red cue: colour 28, graphics [1] on both graphics; motion kept",
  "lines10": "owner 05:0x: only shape values 1-10 (the line shapes of the walk chart), both graphics; motion and colour per scene kept",
  "colour_by_scene": "owner 05:1x: red scenes red, green scenes green (white stays white); shapes 1,3,5,6,7",
- "red_shapes": "owner 05:1x after the shape walk 05:18 (both units, colour 28, shapes 1-12): \"lines its ok\""
+ "red_shapes": "owner 05:1x after the shape walk 05:18 (both units, colour 28, shapes 1-12): \"lines its ok\"",
+ "agreed": "owner 05:2x \"for each scene update laser animation as we talked\": lines 1-12, colour by scene (28/42/8, gradient [8,28]), dimmer 255, a smooth motion per scene (8 kinds, neighbours differ), Y never moved"
 }
