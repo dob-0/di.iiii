@@ -4283,10 +4283,6 @@
   },
   "look:rig-v7-144": {
    "graphics": [
-    1,
-    3,
-    5,
-    6,
     7
    ],
    "colour": 28,
@@ -4299,10 +4295,6 @@
     "x2": 160,
     "rot2": 210,
     "g2": [
-     1,
-     3,
-     5,
-     6,
      7
     ]
    },
@@ -4310,10 +4302,6 @@
   },
   "look:rig-v7-145": {
    "graphics": [
-    1,
-    3,
-    5,
-    6,
     7
    ],
    "colour": 28,
@@ -4326,18 +4314,10 @@
     "x2": 160,
     "rot2": 210,
     "g2": [
-     1,
-     3,
-     5,
-     6,
      7
     ]
    },
-   "note": "Amber beams \u00b7 red washes \u00b7 gradient laser",
-   "colours": [
-    8,
-    28
-   ]
+   "note": "Amber beams \u00b7 red washes \u00b7 gradient laser"
   },
   "look:rig-v7-146": {
    "graphics": [
