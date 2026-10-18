@@ -3,7 +3,7 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots|smooth] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots|smooth|burst] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
@@ -110,6 +110,15 @@ def many(k, t, m):                     # --set smooth (owner 03:4x: "more lines,
         a = w / 4 * m; c, sn = math.cos(a), math.sin(a)
         return [seg((clip(-F * c - (j - 2.5) * 0.3 * sn), clip(-F * sn + (j - 2.5) * 0.3 * c)), (clip(F * c - (j - 2.5) * 0.3 * sn), clip(F * sn + (j - 2.5) * 0.3 * c))) for j in range(6)]   # six parallel lines turning together
     return [seg((clip(-F + j * 0.38 + 0.25 * math.sin(w + j * 0.8) * m), -F), (clip(-F + j * 0.38 + 0.25 * math.sin(w + j * 0.8) * m), F)) for j in range(6)]   # 9: a wave running through six lines
+def burst(k, t, m):                    # --set burst (owner 04:2x): lines born at one point, opening to the field's maximum, then back
+    g = math.sin(math.pi * t) ** 0.7 * F; e = 0.001
+    def from_c(x, y): return seg((0, 0), (x or e, y or e))          # drawn from the centre outward, so a gradient runs centre -> edge
+    if k == 0: return [from_c(-g, 0), from_c(g, 0)]                                                     # a line growing across from the point
+    if k == 1: return [from_c(0, -g), from_c(0, g)]                                                     # a line growing up and down
+    if k == 2: return [seg((-g, (j - 2.5) * g / 2.6), (g, (j - 2.5) * g / 2.6)) for j in range(6)]       # six lines born at the point, spreading and growing
+    if k == 3: return [seg(((j - 2.5) * g / 2.6 * m, -g), ((j - 2.5) * g / 2.6 * m, g)) for j in range(6)]   # the same, standing
+    if k == 4: return [from_c(-g, 0), from_c(g, 0), from_c(0, -g), from_c(0, g)]                        # a cross growing from the point
+    return [from_c(-g, -g), from_c(g, g), from_c(-g, g), from_c(g, -g)]                                # 5: diagonals bursting out
 SET = arg('--set', 'crazy')
 # --set mix (owner 02:1x: "more animations, red and white but more white"): the 5 scans and the 8 crazy patterns interleaved;
 # --red-every N: every Nth pattern red, the rest white.
@@ -121,6 +130,7 @@ MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2)
        (scan, 4), (scan, 9), (pat, 4), (scan, 10), (pat, 5), (pat, 6), (pat, 7)]
 RED_EVERY = int(arg('--red-every', 0))
 if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
+if SET == 'burst': MIX = [(burst, 0), (many, 0), (scan, 11), (burst, 2), (many, 3), (scan, 19), (burst, 4), (many, 4), (scan, 20), (burst, 1), (many, 1), (scan, 12), (burst, 3), (many, 5), (scan, 21), (burst, 5), (many, 6), (many, 8), (many, 9)]; SET = 'mix'
 if SET == 'smooth': MIX = [(many, 0), (scan, 11), (many, 1), (scan, 12), (many, 2), (scan, 19), (many, 3), (many, 4), (scan, 20), (many, 5), (many, 6), (scan, 21), (many, 7), (many, 8), (scan, 23), (many, 9)]; SET = 'mix'
 NPAT = {'scan': 25, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
