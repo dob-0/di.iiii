@@ -6919,44 +6919,23 @@
   },
   "look:rig-v7-174": {
    "graphics": [
-    30
+    1
    ],
    "colour": 8,
    "every": 4,
    "anim": {
-    "kind": "hand-driven: up-down, Y rotation, painting",
+    "kind": "up-down",
     "x": 64,
-    "rot": 0,
-    "zoom": 0,
+    "display": 0,
     "g2": [
-     30
+     1
     ],
-    "x2": 64,
-    "display": 220,
     "sweeps": [
-     {
-      "ch": 1,
-      "lo": 0,
-      "hi": 255,
-      "beats": 2
-     },
      {
       "ch": 7,
       "lo": 0,
       "hi": 125,
       "beats": 8
-     },
-     {
-      "ch": 10,
-      "lo": 1,
-      "hi": 128,
-      "beats": 4
-     },
-     {
-      "ch": 12,
-      "lo": 10,
-      "hi": 74,
-      "beats": 4
      }
     ]
    },
