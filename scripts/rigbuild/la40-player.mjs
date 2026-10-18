@@ -67,6 +67,7 @@ const DIODES = { 25: [0, 255, 255], 42: [255, 0, 255], 8: [0, 0, 0], 76: [0, 90,
 // unit whose diodes mix differently (2026-10-18: unit 137's white had a green cast, unit 169's was clean; same DMX on both, tested).
 const TRIM = new Map(String(args.trim || '').split(',').filter(Boolean).map((t) => { const [u, kv] = t.split(':'); return [Number(u), Object.fromEntries(kv.split('+').map((x) => x.split('=')).map(([k, v]) => [k, Number(v)]))] }))
 // The full 32-ch mode (up-la40wf.json mode 32, APPROVED): ch1-19 the first graphic, ch20-32 a SECOND graphic drawn at the same time.
+// anim.display / display2: ch4 / ch21 display mode (0 normal, 64 highlight, 128 segmented, 192-255 point display = dots)
 // anim keys: x zoom xrot yrot rot paint xwave (1st) · g2 (graphic list for the 2nd, else none) x2 zoom2 xrot2 yrot2 rot2 paint2 xwave2.
 // anim.y / y2 (ch7 / ch24): only where the plan says so — owner 2026-10-18 05:4x: "everything is up, use laser maximum" (both 40 W
 // point above the crowd at every Y). Otherwise never set: Y move / Y wave (ch7, ch14, ch24, ch31 stay 64 / 0: no up-down sweep), strobe ch15 (flash rule), colour modulation ch16-18 (0 = full).
@@ -74,8 +75,8 @@ const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
     // Dark = dimmer 0 BUT mode 250 (built-in graphics) and colour red: ch2 0-49 is the unit's own AUTO program, which ignores the
     // dimmer and flashed white between scenes (owner 2026-10-18 05:2x).
     const off = [0, 250, 1, 0, 28, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 28, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
-    const v = !on ? off : [DIMMER, 250, g, 0, c, a.x ?? 64, a.y ?? 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
-        g2 ?? 0, 0, c, a.x2 ?? 64, a.y2 ?? 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
+    const v = !on ? off : [DIMMER, 250, g, a.display ?? 0, c, a.x ?? 64, a.y ?? 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
+        g2 ?? 0, a.display2 ?? a.display ?? 0, c, a.x2 ?? 64, a.y2 ?? 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
     if (on && RGB_MODE && DIODES[c]) { v[4] = 8; v[21] = 8; [v[15], v[16], v[17]] = DIODES[c] }
     const t = on && (!RGB_MODE || c === 8) ? TRIM.get(base) : null
     if (t) { if (t.r != null) v[15] = t.r; if (t.g != null) v[16] = t.g; if (t.b != null) v[17] = t.b }

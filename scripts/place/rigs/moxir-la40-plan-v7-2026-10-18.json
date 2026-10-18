@@ -65,7 +65,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 Rust drift: every allowed value, its own start (76), sideways sweep + line drawing"
   },
@@ -170,7 +171,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 Ember lattice: every allowed value, its own start (191), slow turn + small wave"
   },
@@ -276,7 +278,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 Ember hook: every allowed value, its own start (54), jump + zoom loop"
   },
@@ -382,7 +385,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 Rust orbit: every allowed value, its own start (171), spin"
   },
@@ -488,7 +492,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 Ember breath: every allowed value, its own start (34), slow turn + small wave"
   },
@@ -594,7 +599,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 Ember tunnel: every allowed value, its own start (149), spin"
   },
@@ -699,7 +705,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Cloistral \u00b7 First furnace: every allowed value, its own start (14), jump + zoom loop"
   },
@@ -805,7 +812,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Innersha \u00b7 Ember shutter: every allowed value, its own start (129), jump + zoom loop"
   },
@@ -911,7 +919,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Innersha \u00b7 Rust run: every allowed value, its own start (242), sideways sweep + line drawing"
   },
@@ -1016,7 +1025,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Innersha \u00b7 Ember spokes: every allowed value, its own start (109), spin"
   },
@@ -1122,7 +1132,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Innersha \u00b7 Rust pendulum: every allowed value, its own start (222), slow turn + small wave"
   },
@@ -1228,7 +1239,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Innersha \u00b7 Ember gearbox: every allowed value, its own start (89), jump + zoom loop"
   },
@@ -1334,7 +1346,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Innersha \u00b7 Ember wake: every allowed value, its own start (202), sideways sweep + line drawing"
   },
@@ -1481,7 +1494,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Ember stamp: every allowed value, its own start (106), sweep + zoom loop"
   },
@@ -1586,7 +1600,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Rust hammer: every allowed value, its own start (219), sideways sweep + line drawing"
   },
@@ -1692,7 +1707,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Ember scatter: every allowed value, its own start (86), spin"
   },
@@ -1798,7 +1814,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Ember chop: every allowed value, its own start (199), sweep + zoom loop"
   },
@@ -1904,7 +1921,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Ember crossfire: every allowed value, its own start (62), spin"
   },
@@ -2010,7 +2028,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Ember breaker: every allowed value, its own start (179), jump + zoom loop"
   },
@@ -2115,7 +2134,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Kerrie \u00b7 Kerrie peak: every allowed value, its own start (42), jump + zoom loop"
   },
@@ -2140,7 +2160,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Undertow: every allowed value, its own start (83), slow turn + small wave"
   },
@@ -2246,7 +2267,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow wall: every allowed value, its own start (196), slow turn + small wave"
   },
@@ -2352,7 +2374,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember slow ride: every allowed value, its own start (59), slow turn + small wave"
   },
@@ -2458,7 +2481,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Rust slow cut: every allowed value, its own start (176), sideways sweep + line drawing"
   },
@@ -2564,7 +2588,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember current: every allowed value, its own start (39), sweep + zoom loop"
   },
@@ -2669,7 +2694,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember pull: every allowed value, its own start (154), sideways sweep + line drawing"
   },
@@ -2775,7 +2801,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "\u00c9l\u00e9ktra b2b Kogeno \u00b7 Ember climb: every allowed value, its own start (19), spin"
   },
@@ -2840,7 +2867,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Furnace door: every allowed value, its own start (97), jump + zoom loop"
   },
@@ -2945,7 +2973,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ember spin: every allowed value, its own start (210), spin"
   },
@@ -3051,7 +3080,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ember lash: every allowed value, its own start (73), sideways sweep + line drawing"
   },
@@ -3157,7 +3187,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ember sirens: every allowed value, its own start (190), sweep + zoom loop"
   },
@@ -3262,7 +3293,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ember collapse: every allowed value, its own start (53), sweep + zoom loop"
   },
@@ -3368,7 +3400,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ember cooling: every allowed value, its own start (170), slow turn + small wave"
   },
@@ -3474,7 +3507,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Mixtinct \u00b7 Ember last ride: every allowed value, its own start (33), sweep + zoom loop"
   },
@@ -3539,7 +3573,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red beams \u00b7 amber washes \u00b7 laser dots: animation of v6 cue 1, red only"
   },
@@ -3564,7 +3599,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red beams \u00b7 white washes \u00b7 laser dots: animation of v6 cue 14, red only"
   },
@@ -3589,7 +3625,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "White beams \u00b7 amber washes \u00b7 laser dots: animation of v6 cue 27, red only"
   },
@@ -3614,7 +3651,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red beams only \u00b7 sweep \u00b7 laser dots: animation of v6 cue 40, red only"
   },
@@ -3639,7 +3677,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Amber washes only \u00b7 laser dots: animation of v6 cue 53, red only"
   },
@@ -3664,7 +3703,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red beams \u00b7 amber truss \u00b7 fan \u00b7 laser dots: animation of v6 cue 66, red only"
   },
@@ -3689,7 +3729,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Everything red and amber \u00b7 full \u00b7 laser dots: animation of v6 cue 79, red only"
   },
@@ -3714,7 +3755,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red beams \u00b7 amber washes \u00b7 strobe \u00b7 laser dots: animation of v6 cue 92, red only"
   },
@@ -3739,7 +3781,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red white cool (red laser)"
   },
@@ -3764,7 +3807,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Red white cool 2 (red laser, owner 02:3x)"
   },
@@ -3789,7 +3833,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "red beams set v7-124: smooth"
   },
@@ -3854,7 +3899,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "red beams set v7-127: smooth"
   },
@@ -3879,7 +3925,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "red beams set v7-128: smooth"
   },
@@ -3988,7 +4035,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "White beams \u00b7 amber washes \u00b7 red laser"
   },
@@ -4102,7 +4150,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "White beams \u00b7 white washes \u00b7 red laser"
   },
@@ -4168,7 +4217,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "White beams \u00b7 amber walls \u00b7 white truss \u00b7 red laser"
   },
@@ -4277,7 +4327,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "White beams \u00b7 amber washes strobe \u00b7 red laser"
   },
@@ -4342,7 +4393,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Amber beams \u00b7 white washes \u00b7 red laser"
   },
@@ -4452,7 +4504,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Amber beams \u00b7 red washes \u00b7 red laser"
   },
@@ -4477,7 +4530,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Amber beams \u00b7 red washes \u00b7 gradient laser"
   },
@@ -4542,7 +4596,8 @@
      "period_s": 4
     },
     "paint": 200,
-    "paint2": 200
+    "paint2": 200,
+    "display": 220
    },
    "note": "Amber beams only \u00b7 red laser"
   },
