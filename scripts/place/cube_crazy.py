@@ -3,7 +3,7 @@ line animations"). The room plays at most 256 frames a line (laserLine.js): one 
 ~0.24 s (tweened), instead of 2-3 poses per scene when every scene has its own block. Eight patterns, ~8 s each, whole field
 (-0.95..0.95), cubes 4-6 mirror 1-3, max 6 strokes a cube a frame; a short dark tail for the scenes without lasers.
 Writes the ops for the project's cube lines and a blocks map for cube-scene-player.mjs (every laser scene -> the loop, else dark).
-  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots|smooth|burst] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
+  python3 -I scripts/place/cube_crazy.py <document.json> <scenes.json> <ops-out.json> <blocks-out.json> [--seconds 62] [--pattern-s 8] [--speed 1] [--set crazy|scan|mix|dots|smooth|burst|calm] [--red-every N] [--gradient-every N] [--rgb 1,1,1]
 """
 import json, math, re, sys, time
 doc_f, scenes_f, ops_f, blocks_f = sys.argv[1:5]
@@ -131,6 +131,7 @@ MIX = [(scan, 0), (scan, 5), (pat, 0), (scan, 1), (scan, 6), (pat, 1), (scan, 2)
 RED_EVERY = int(arg('--red-every', 0))
 if SET == 'dots': MIX = MIX_DOTS; SET = 'mix'
 if SET == 'burst': MIX = [(burst, 0), (many, 0), (scan, 11), (burst, 2), (many, 3), (scan, 19), (burst, 4), (many, 4), (scan, 20), (burst, 1), (many, 1), (scan, 12), (burst, 3), (many, 5), (scan, 21), (burst, 5), (many, 6), (many, 8), (many, 9)]; SET = 'mix'
+if SET == 'calm': MIX = [(burst, 0), (many, 4), (scan, 11), (burst, 2), (many, 6), (scan, 12), (burst, 4), (many, 5), (scan, 21), (burst, 3), (many, 9), (burst, 1)]; SET = 'mix'   # owner 04:5x: smoother, more static
 if SET == 'smooth': MIX = [(many, 0), (scan, 11), (many, 1), (scan, 12), (many, 2), (scan, 19), (many, 3), (many, 4), (scan, 20), (many, 5), (many, 6), (scan, 21), (many, 7), (many, 8), (scan, 23), (many, 9)]; SET = 'mix'
 NPAT = {'scan': 25, 'mix': len(MIX)}.get(SET, 8)
 def PICK(k, t, m):
