@@ -70,7 +70,9 @@ const TRIM = new Map(String(args.trim || '').split(',').filter(Boolean).map((t) 
 // anim keys: x zoom xrot yrot rot paint xwave (1st) · g2 (graphic list for the 2nd, else none) x2 zoom2 xrot2 yrot2 rot2 paint2 xwave2.
 // Never set: Y move / Y wave (ch7, ch14, ch24, ch31 stay 64 / 0: no up-down sweep), strobe ch15 (flash rule), colour modulation ch16-18 (0 = full).
 const frame = (on, g, c, a = {}, g2 = null) => units.flatMap((base) => {
-    const off = [0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
+    // Dark = dimmer 0 BUT mode 250 (built-in graphics) and colour red: ch2 0-49 is the unit's own AUTO program, which ignores the
+    // dimmer and flashed white between scenes (owner 2026-10-18 05:2x).
+    const off = [0, 250, 1, 0, 28, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 28, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0]
     const v = !on ? off : [DIMMER, 250, g, 0, c, a.x ?? 64, 64, a.zoom ?? 0, a.xrot ?? 0, a.yrot ?? 0, a.rot ?? 0, a.paint ?? 0, a.xwave ?? 0, 0, 0, 0, 0, 0, 0,
         g2 ?? 0, 0, c, a.x2 ?? 64, 64, a.zoom2 ?? 0, a.xrot2 ?? 0, a.yrot2 ?? 0, a.rot2 ?? 0, a.paint2 ?? 0, a.xwave2 ?? 0, 0, 0]
     if (on && RGB_MODE && DIODES[c]) { v[4] = 8; v[21] = 8; [v[15], v[16], v[17]] = DIODES[c] }
@@ -108,7 +110,7 @@ const tick = async () => {
     if (now !== state) { console.log(`${new Date().toISOString().slice(11, 19)} ${now}`); state = now }
 }
 const release = async () => {
-    try { await raw(units.flatMap((base) => Array.from({ length: SPAN }, (_, i) => ({ universe, channel: base + i, value: -1 })))); console.log('released') } catch (e) { console.log('release failed', e.message) }
+    try { await raw(frame(false, 1, 28)); console.log('held dark (mode 250, dimmer 0), not released: the desk default ch2 = 0 is the AUTO program') } catch (e) { console.log('release failed', e.message) }
     process.exit(0)
 }
 process.on('SIGINT', release); process.on('SIGTERM', release)
