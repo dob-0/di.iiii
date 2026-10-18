@@ -110,3 +110,4 @@ From 08:34 the owner stepped by three values, so about one graphic in three has 
   on both graphics (motion kept). Owed: a walk of all graphics on 169 at colour 28 to know which other pictures stay red.
 - 2026-10-18 05:1x: shape 7 at colour 28 also shows WHITE (owner). Red proven only with shape 1.
 - 2026-10-18 05:18 walk, both units at 28, shapes 1-12 still, no motion: owner "lines its ok". With motion shape 7 looked white (05:1x) — watch.
+- 2026-10-18 06:2x owner: both units EXACTLY the same parameters in every scene — no per-unit trim (player runs without --trim).
