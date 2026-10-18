@@ -25423,15 +25423,15 @@
    "parts": {
     "cut up": [
      "#ffffff",
-     1.0
+     0.2
     ],
     "cut down": [
      "#ffffff",
-     1.0
+     0.2
     ],
     "dj kicker": [
      "#ffffff",
-     1.0
+     0.2
     ],
     "laser": [
      "#eefdfd",
@@ -25465,7 +25465,7 @@
      "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
     }
    },
-   "notes": "owner 07:1x; laser white"
+   "notes": "owner 07:1x; laser white; truss washes 20 % (owner 07:3x)"
   }
  ],
  "cues": [
