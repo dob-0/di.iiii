@@ -13,13 +13,12 @@
 import { rotationFromPanTilt } from '../../src/project/viewport/spotLightAim.js'
 import { aimFixture } from './fixture-lib.mjs'
 import { DEFAULT_HAZE } from '../../src/objectComponents/spotBeam.js'
+import { LASER_FIXTURES, checkLaser, isLaserGroup } from './laser-distance.mjs'
 
 export const RIG_PREFIX = 'rig-'
-// A lamp whose laser path dips under this, anywhere over the floor, is refused.
-// 3 m is the vertical separation commonly required between an audience and a
-// show laser's beams (e.g. the US FDA laser-light-show variance conditions);
-// it is a floor for the picture, NOT a safety assessment.
-export const LASER_MIN_HEIGHT_M = 3
+// The laser audience-distance rules (>= 3 m up, never aimed down) live in laser-distance.mjs, the one
+// module the build and the tests share; re-exported here for the callers that import them from rig-lib.
+export { LASER_FIXTURES, LASER_MIN_HEIGHT_M, checkLaser } from './laser-distance.mjs'
 
 const round = (n, places = 3) => Math.round(n * 10 ** places) / 10 ** places
 const DEG = Math.PI / 180
@@ -745,22 +744,6 @@ export const surfaceHit = (from, dir, hall, maxReach = 80) => {
 }
 
 /**
- * Refuse a laser aim that could cross the audience plane: it must rise (or
- * stay level) from where it is hung, and be hung at least LASER_MIN_HEIGHT_M
- * up — so every point of its path over the floor is at least that high.
- */
-// Every laser model, not only the rental `laser`: the LaserCube (2026-10-04) got its own model kind,
-// and the laser rules — no beam downward, none under the minimum height, none into crane steel —
-// silently stopped applying to it (audit follow-up, 2026-10-05).
-export const LASER_FIXTURES = new Set(['laser', 'lasercube'])
-
-export const checkLaser = (from, to) => {
-    if (from[1] < LASER_MIN_HEIGHT_M) return `hung at ${from[1].toFixed(2)} m, under ${LASER_MIN_HEIGHT_M} m`
-    if (to[1] < from[1]) return `aimed downward (${from[1].toFixed(2)} m -> ${to[1].toFixed(2)} m)`
-    return null
-}
-
-/**
  * Does a lamp's beam run into a crane bridge? Samples the beam's axis every
  * 0.25 m out to its reach and tests it against each bridge's girders (a box:
  * rail to rail across, 2.9 m along the hall, girder bottom to top). A real beam
@@ -1241,7 +1224,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const to = from.map((v, k) => v + dir[k] * reach)
             const label = `${group.id} #${i + 1}`
             if (!posed.reachable) summary.unreachable.push(`${label}: tilt ${posed.tilt} deg is past the head's travel`)
-            if (group.class === 'laser' || LASER_FIXTURES.has(cls.fixture)) {
+            if (isLaserGroup(group, cls)) {
                 const why = checkLaser(from, to)
                 if (why) {
                     summary.refused.push(`${label}: ${why}`)
