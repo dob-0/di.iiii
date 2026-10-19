@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     CMF_1931, KM, beamWidth, driveOfHex, fieldDirection, gamutMapConstantY, hgPhase, laserColourFlux, laserFlux, laserOf,
-    lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, scanLinesAt,
+    lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, poseAt, scanLinesAt,
     MIN_CORE_PX, coreHalo, coreWidth, haloRadius, haloRadiusCapped, haloShare,
     LONE_LINE_SPACING_RAD, SCAN_STEP_DEG, SPOT_ALBEDO, laserSpot, lineSpacings, toneMapAces, whiteness
 } from './laserLine.js'
@@ -141,6 +141,40 @@ describe('laserLine: frames in time', () => {
 
 // 2026-10-13: with frames the look's colour never reached the lines (they kept the frame's own colour, so 'the net'
 // in green drew white). The lamp's drive now scales the frame per diode, as a projector's DMX colour channels do.
+describe('laserLine: keyframes that tween (2026-10-17, the room shows what the cubes show)', () => {
+    const a = [[-1, 0, 1, 1, 1], [0, 0, 0, 0, 0]]
+    const b = [[1, 0, 1, 1, 1], [0, 0.5, 0, 0, 0]]
+    const other = [[0, 0, 1, 1, 1]]
+
+    it('framesOf keeps tween: true and drops anything else', () => {
+        expect(framesOf({ period: 4, list: [a, b], tween: true })).toEqual({ period: 4, list: [a, b], tween: true })
+        expect(framesOf({ period: 4, list: [a, b], tween: 'yes' })).toEqual({ period: 4, list: [a, b] })
+    })
+
+    it('poseAt blends point by point by how far t is through the step, and wraps into the first frame', () => {
+        const frames = { period: 4, list: [a, b], tween: true }
+        expect(poseAt(frames, 0)).toEqual(a)
+        expect(poseAt(frames, 1)[0][0]).toBeCloseTo(0, 9)
+        expect(poseAt(frames, 1)[1][1]).toBeCloseTo(0.25, 9)
+        expect(poseAt(frames, 3)[0][0]).toBeCloseTo(0, 9)
+        expect(poseAt(frames, 2)).toEqual(b)
+        expect(poseAt(null, 1)).toBe(null)
+    })
+
+    it('holds the frame when the pair does not match, and without the flag unless asked', () => {
+        expect(poseAt({ period: 4, list: [a, other], tween: true }, 1)).toEqual(a)
+        expect(poseAt({ period: 4, list: [a, b] }, 1)).toEqual(a)
+        expect(poseAt({ period: 4, list: [a, b] }, 1, true)[0][0]).toBeCloseTo(0, 9)
+    })
+
+    it('laserFrameAt draws the blended pose when the frames tween', () => {
+        const laser = laserOf({ laser: { mW: SIX_W, nm: [455, 525, 638], frames: { period: 4, list: [a, b], tween: true } } })
+        expect(laser.frames.tween).toBe(true)
+        expect(laserFrameAt(laser, 1)[0][0]).toBeCloseTo(0, 9)
+        expect(laserFrameAt(laser, 0)).toEqual(a)
+    })
+})
+
 describe('a frame is scaled by the lamp\'s colour', () => {
     const frame = [[-0.5, 0, 0, 0, 0], [-0.5, 0, 1, 1, 1], [0.5, 0, 0, 0, 0], [0.5, 0, 1, 1, 1]]
     it('white lit points under a green look draw green lines', () => {

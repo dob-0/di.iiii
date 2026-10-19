@@ -13,6 +13,13 @@
  *       # the desk at all (a comparison version the desk does not carry, RIG_BUILD.md §15.8).
  *       # Start its clock with show-clock.mjs --epoch now.
  *   node scripts/rigbuild/show-loop.mjs … --show <file> --doc-only   # step 1 only: the document's cue list
+ *   node scripts/rigbuild/show-loop.mjs --api … --project <id> --token-file …
+ *       # no --show, no --rig (2026-10-15): the DOCUMENT's own cue list (mappingState.cues, the
+ *       # Studio's scene editor) is the show. Nothing is written into the document — its cues keep
+ *       # their ids — only the desk is loaded: the looks, the runner's list, cue 1. Before this the
+ *       # default was a hard-coded September show (MOXIR_MINIMAL_SHOW) that deleted and re-made the
+ *       # document's cues under new ids — a production default in a platform script (owner 22:29:
+ *       # "why scenes not here": his desk ran that 5-look show while v2.11 has 50).
  *                                                    # and loop, the desk never asked — a project whose show
  *                                                    # plays by the document's clock (RIG_BUILD §16)
  *
@@ -38,10 +45,11 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
-import { deskLookId, rigLooksOf, staleDeskLooks } from '../../src/rigbuild/looks.js'
+import { deskLookId, lookIdOfDesk, rigLooksOf, staleDeskLooks } from '../../src/rigbuild/looks.js'
 import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
+import { withFixtureOverlay } from './fixture-overlay.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
@@ -62,6 +70,18 @@ export const MOXIR_MINIMAL_SHOW = {
     ]
 }
 
+/**
+ * The document's OWN cue list as a show (no --show/--rig): look ids back from the desk's `rig-…`
+ * ids, the cues' ids kept so nothing else that names a cue (frames, sheets, the room) moves. Pure.
+ */
+export const showOfDocument = (document, project) => {
+    const m = document?.mappingState || {}
+    if (!Array.isArray(m.cues) || !m.cues.length) throw new Error(`${project} has no cue list (mappingState.cues) — make scenes in the Studio or give --show/--rig`)
+    return { project, loop: m.loop !== false, source: m.showSource, fromDocument: true, cues: m.cues.map((c) => ({ id: c.id, look: lookIdOfDesk(c.lightLook) ?? c.lightLook, name: c.name, fade: c.fade, hold: c.hold })) }
+}
+/** The document's cues as they are (ids kept) for the desk's runner. Pure. */
+export const documentCues = (document) => (document?.mappingState?.cues || []).map((c) => ({ id: c.id, name: c.name, fade: c.fade, hold: c.hold, lightLook: c.lightLook }))
+
 /** The show as document cues and as the desk runner's list. Pure. */
 export const showCues = (show) => show.cues.map((c, i) => ({
     id: `show-${String(i + 1).padStart(2, '0')}-${c.look}`.slice(0, 60),
@@ -70,6 +90,10 @@ export const showCues = (show) => show.cues.map((c, i) => ({
     hold: c.hold,
     lightLook: deskLookId(c.look)
 }))
+/** Starting the show on the desk: cue 1, then "play in order". A GO on a named cue turns play-in-order OFF on the desk
+ *  (cuerun.js, owner 2026-10-09: "you press, the scene changes, and auto play stops"), so without the second call the
+ *  show sat on cue 1 (seen 2026-10-17 10:38: index 0, autoplay false, nextInMs null, six minutes after the start). Pure. */
+export const startCalls = () => [['/api/cues/go', { index: 0 }], ['/api/cues/autoplay', { autoplay: true }]]
 export const runnerList = (cues) => cues.map((c) => ({ id: c.id, name: c.name, lookId: c.lightLook, hold: c.hold, fade: c.fade }))
 
 /** Ops that replace a document's cue list with `cues` and set the loop. Pure. */
@@ -79,6 +103,14 @@ export const cueOps = (document, cues, loop, { source } = {}) => [
     { type: 'setMappingState', payload: { patch: { loop: Boolean(loop), ...(source === 'clock' ? { showSource: 'clock' } : {}) } } }
 ]
 
+/**
+ * The op that takes `showSource: 'clock'` off a document whose show a DESK is about to play, or none. With 'clock' the
+ * room plays its own clock and ignores the desk (showClock.js showDriver), so the hall and the 3D part ways (MOXIR
+ * 2026-10-17: the 3D strobed while the rig stood still). Pure.
+ */
+export const clockOffOps = (document) => (document?.mappingState?.showSource === 'clock'
+    ? [{ type: 'setMappingState', payload: { patch: { showSource: 'desk' } } }]
+    : [])
 /** A rig file's own show (`rig.show`, versions.mjs) in this script's show shape. Pure. */
 export const showOfRig = (rig, project) => {
     if (!rig?.show?.cues?.length) throw new Error('the rig file carries no show (rig.show.cues)')
@@ -96,10 +128,10 @@ const main = async () => {
     const token = readTokenFile(path.resolve(String(args['token-file'] || die('needs --token-file')))) || die('no ADMIN_API_TOKEN in the token file')
     const client = makeClient(api, token)
     const desk = makeClient(light, null)
-    const show = args.rig
+    let show = args.rig
         ? showOfRig(readJson(path.resolve(String(args.rig))), String(args.project || die('--rig needs --project')))
-        : args.show ? readJson(path.resolve(String(args.show))) : MOXIR_MINIMAL_SHOW
-    const project = String(args.project || show.project)
+        : args.show ? readJson(path.resolve(String(args.show))) : null
+    const project = String(args.project || show?.project || die('needs --project <id> (no --show/--rig: the document\'s own cue list is the show)'))
     const documentOnly = Boolean(args['document-only'])
     const dry = Boolean(args['dry-run'])
 
@@ -115,6 +147,7 @@ const main = async () => {
     const document = doc.body.document
     const looks = rigLooksOf(document.entities)
     if (!looks) die(`${project} has no designed looks (components.rigLooks) — run looks.mjs / load-version.mjs first`)
+    if (!show) { try { show = showOfDocument(document, project) } catch (e) { die(e.message) } }
     const missing = show.cues.filter((c) => !looks.looks.some((l) => l.id === c.look)).map((c) => c.look)
     if (missing.length) die(`${project} has no look ${missing.join(', ')}`)
 
@@ -132,23 +165,41 @@ const main = async () => {
         if (space && where.body.space !== space) die(`the desk is running ${where.body.space || "this machine's own"} show, not ${space}'s — open ${space}'s show on the desk first`)
     }
 
-    const cues = showCues(show)
-    const ops = cueOps(document, cues, show.loop !== false, { source: show.source })
+    const cues = show.fromDocument ? documentCues(document) : showCues(show)
     say(`${project}: ${cues.length} cues, loop ${show.loop !== false ? 'on' : 'off'} — ${cues.map((c) => `${c.name} (fade ${c.fade} s, hold ${c.hold} s)`).join(' → ')}`)
     const loopSeconds = cues.reduce((s, c) => s + c.hold, 0)
     say(`one loop = ${loopSeconds} s`)
-    if (dry) { say('dry run: nothing written'); return }
+    if (dry) { say(`dry run: nothing written${show.fromDocument ? ' (the document\'s own cues; the document would not be touched)' : ''}`); return }
 
-    const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: doc.body.version, ops: ops.map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-${i}`, clientId: 'show-loop' })) })
-    if (!wrote.ok) die(`writing the cue list: ${wrote.status} ${wrote.text.slice(0, 300)}`)
-    say(`document: cue list + loop${show.source === 'clock' ? ' + showSource clock' : ''} written (version ${wrote.body.newVersion})`)
-    if (documentOnly) { say('--document-only: the desk was not asked anything'); return }
+    if (show.fromDocument) {
+        say(`document: its own ${cues.length} cues are the show — nothing written, ids kept`)
+        if (documentOnly) { say('--document-only with no --show/--rig: nothing to do'); return }
+    } else {
+        const ops = cueOps(document, cues, show.loop !== false, { source: show.source })
+        const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: doc.body.version, ops: ops.map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-${i}`, clientId: 'show-loop' })) })
+        if (!wrote.ok) die(`writing the cue list: ${wrote.status} ${wrote.text.slice(0, 300)}`)
+        say(`document: cue list + loop${show.source === 'clock' ? ' + showSource clock' : ''} written (version ${wrote.body.newVersion})`)
+        if (documentOnly) { say('--document-only: the desk was not asked anything'); return }
+    }
+    // The desk plays this show, so the room must follow the desk, not a clock (clockOffOps).
+    {
+        const now = await client.get(`/api/projects/${project}/document`)
+        const off = now.ok ? clockOffOps(now.body.document) : []
+        if (off.length) {
+            const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: now.body.version, ops: off.map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-clock-${i}`, clientId: 'show-loop' })) })
+            if (!wrote.ok) die(`taking showSource clock off: ${wrote.status} ${wrote.text.slice(0, 200)}`)
+            say(`document: showSource clock taken off (version ${wrote.body.newVersion}) — the room follows this desk`)
+        }
+    }
 
-    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
-    if (!rig.ok) die(`the desk's rig for ${project}: ${rig.status}`)
+    // --rig-project <id>: a COPY project (a scenes draft) has no patch of its own on the desk; its lamps are the
+    // show's lamps (same entity ids), so its looks are valued over the show's patch (2026-10-17, v2 draft on the desk).
+    const rigProject = args['rig-project'] ? String(args['rig-project']) : project
+    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(rigProject)}`)
+    if (!rig.ok) die(`the desk's rig for ${rigProject}: ${rig.status}`)
     const fixtures = rig.body.fixtures || []
     const library = libraryWithShow(loadLibrary(), document.entities)
-    const deskSet = deskLooksWithValues(looks, fixtures, { entities: document.entities, library })
+    const deskSet = deskLooksWithValues(looks, fixtures, { entities: withFixtureOverlay(document.entities, args['fixture-overlay'] ? String(args['fixture-overlay']) : null), library })
     for (const look of deskSet) {
         const put = await desk.post('/api/looks/add', { look })
         if (!put.ok) die(`the desk did not take ${look.id}: ${put.status} ${put.text.slice(0, 200)}`)
@@ -169,8 +220,11 @@ const main = async () => {
     const loaded = await desk.post('/api/cues/load', { project, list: runnerList(cues), loop: show.loop !== false })
     if (!loaded.ok) die(`loading the runner: ${loaded.status} ${loaded.text.slice(0, 200)}`)
     if (!args['no-start']) {
-        const go = await desk.post('/api/cues/go', { index: 0 })
+        const [[goPath, goBody], [playPath, playBody]] = startCalls()
+        const go = await desk.post(goPath, goBody)
         if (!go.ok) die(`GO: ${go.status} ${go.text.slice(0, 200)}`)
+        const play = await desk.post(playPath, playBody)
+        if (!play.ok) die(`play in order: ${play.status} ${play.text.slice(0, 200)}`)
         say(`desk: running — ${go.body.cues.index + 1}/${go.body.cues.n} ${go.body.cues.name}, loop ${go.body.cues.loop ? 'on' : 'off'}${go.body.cues.missing?.length ? `, MISSING looks: ${go.body.cues.missing.join(', ')}` : ''}`)
     }
     const summary = await desk.get('/api/summary')

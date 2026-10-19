@@ -69,7 +69,7 @@ const attributesOfMode = (mode) => {
 export const gdtfDescription = (type) => {
     // Never an ASSUMED test mode (assumedProfiles.js): a GDTF file goes to a crew's console
     // as THE fixture, and a stand-in's chart must never be taken for the maker's.
-    const modes = (type.modes || []).filter((m) => !isAssumedMode(m))
+    const modes = (type.modes || []).filter((m) => !isAssumedMode(m) && !m.archived)
     const attributes = new Map()
     for (const mode of modes) for (const a of attributesOfMode(mode)) if (!attributes.has(a.name)) attributes.set(a.name, a)
     const size = type.model3d?.sizeAtHome_mm || null

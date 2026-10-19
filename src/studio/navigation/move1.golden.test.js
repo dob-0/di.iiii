@@ -1,5 +1,7 @@
 // Move 1 FROZEN. The numbers below were produced by running the code once on 2026-10-14 (the standard move, PR #919, dev 38d22dcf)
 // and written down as literals. If one fails you changed Move 1: put it back, and add Move 2 in moves.js instead.
+// Changed ONLY by the owner's word: 2026-10-16 17:3x "make everywhere move everywhere in di where you stand mode by def" —
+// the default turn is 'place' (where you stand), and junk falls back to it. Every number of the move itself is unchanged.
 import { describe, expect, it } from 'vitest'
 import {
     AUTO_SPEED_DIVISOR, FALLBACK_SPEED, IN_PLACE_DISTANCE, MAX_SPEED, MIN_SPEED, MOVE_1_CAMERA, SPEED_FACTOR, TURN_DISTANCE_STEPS,
@@ -23,10 +25,10 @@ describe("Move 1 golden: the owner's movement, frozen", () => {
         is(MOVE_STORAGE_KEY, 'di.studio.navigation.move')
     })
 
-    it('defaults: preset studio, speed auto, turn point, move 1', () => {
+    it('defaults: preset studio, speed auto, turn place (where you stand, owner 2026-10-16), move 1', () => {
         resetNavigationPreferenceMemory()
         try { window.localStorage.clear() } catch { /* no storage */ }
-        is(DEFAULT_NAVIGATION_PRESET, 'studio'); is(getSpeedPreference(), 'auto'); is(getTurnPreference(), 'point'); is(getMovePreference(), 'move-1')
+        is(DEFAULT_NAVIGATION_PRESET, 'studio'); is(getSpeedPreference(), 'auto'); is(getTurnPreference(), 'place'); is(getMovePreference(), 'move-1')
     })
 
     it('constants', () => {
@@ -41,7 +43,7 @@ describe("Move 1 golden: the owner's movement, frozen", () => {
         is(autoSpeed(0), null); is(autoSpeed(NaN), null)
         is(resolveSpeed('auto', null), 1); is(resolveSpeed('auto', 2.5), 2.5); is(resolveSpeed(0.4, 2.5), 0.4)
         is(normalizeSpeedSetting(0.0001), 0.001); is(normalizeSpeedSetting(1e9), 10000); is(normalizeSpeedSetting('x'), 'auto')
-        is(normalizeTurnSetting('orbit'), 'point'); is(normalizeTurnSetting('place'), 'place')
+        is(normalizeTurnSetting('orbit'), 'place'); is(normalizeTurnSetting('place'), 'place')
     })
 
     it('Alt/Shift factors', () => {

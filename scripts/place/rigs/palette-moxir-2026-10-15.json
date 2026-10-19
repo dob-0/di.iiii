@@ -1,0 +1,270 @@
+{
+ "_source": "palette.py of the MOXIR scenes-50 job, 2026-10-15; hexes sampled from the teasers in palette-teasers-moxir-2026-10-15.json; saturation S in the rule is taste, UNVALIDATED",
+ "palette": [
+  {
+   "key": "A",
+   "name": "ash",
+   "lamp": "#e8e4dc",
+   "sampled": null,
+   "rule": "ours",
+   "measured": "di.iiii work-light layer (moxir_worklight.py)",
+   "practice": "the owner: 'cold white / deep red'",
+   "role": "the warm white: blinders, the key on the DJ"
+  },
+  {
+   "key": "E",
+   "name": "ember",
+   "lamp": "#ff3a12",
+   "sampled": "#dd0001",
+   "rule": "ours",
+   "measured": "ours; t4 laser fans: 66 % of saturated glow is red (sampled #dd0001)",
+   "practice": "the owner: 'deep red'",
+   "role": "the red peak only: act 3, the risers, act 5 hits"
+  },
+  {
+   "key": "D",
+   "name": "deep ember",
+   "lamp": "#a3200c",
+   "sampled": null,
+   "rule": "ours",
+   "measured": "di.iiii work-light layer (moxir_worklight.py)",
+   "practice": "monochrome red as a tool (Moody & Dexter)",
+   "role": "the act 3 floor, rust moments"
+  },
+  {
+   "key": "CW",
+   "name": "cold white",
+   "lamp": "#eefdfd",
+   "sampled": "#eefdfd",
+   "rule": "as sampled",
+   "measured": "t8 hangar: 22 % of the glow clusters (sampled #eefdfd)",
+   "practice": "Berlin techno's white beam/strobe room (Denk & von Thülen 2012)",
+   "role": "act 1 and the act 5 white-out, strobes"
+  },
+  {
+   "key": "SB",
+   "name": "steel blue",
+   "lamp": "#73bdff",
+   "sampled": "#7490a9",
+   "rule": "hue of the sample, S 0.55",
+   "measured": "t8 hangar: 18 % of glow (#7490a9), 26 % (#b4c8d4)",
+   "practice": "Purkinje shift: blue-green reads brighter in the dark (CIE 1951 scotopic V'(λ), peak 507 nm)",
+   "role": "act 1 walls and floor, the way out"
+  },
+  {
+   "key": "PG",
+   "name": "poster green",
+   "lamp": "#33ff47",
+   "sampled": "#37743d",
+   "rule": "hue of the sample, S 0.80",
+   "measured": "t1/t2 poster: 20 % of lit pixels (#37743d); saturated glow is 100 % green (median #74a97b)",
+   "practice": "MOXIR's own poster",
+   "role": "act 2: the hall turns the poster"
+  },
+  {
+   "key": "GL",
+   "name": "poster glow",
+   "lamp": "#f4fcf4",
+   "sampled": "#f4fcf4",
+   "rule": "as sampled",
+   "measured": "t1/t2 poster: 33 % of the glow clusters (sampled #f4fcf4), the light column",
+   "practice": "MOXIR's own poster",
+   "role": "act 2: the green-tinted white"
+  },
+  {
+   "key": "G",
+   "name": "laser green",
+   "lamp": "#00ff00",
+   "sampled": "#6fa98d",
+   "rule": "diode green (532 nm DPSS / 520 nm diode), lasers only",
+   "measured": "t5 rave: 29 % green + 52 % cyan of saturated glow (laser lines through haze, #6fa98d)",
+   "practice": "acid house green (M. Collin, Altered State, 1997)",
+   "role": "lasers only, act 1 to act 4"
+  },
+  {
+   "key": "BL",
+   "name": "deep blue",
+   "lamp": "#2631ff",
+   "sampled": "#3f45bc",
+   "rule": "hue of the sample, S 0.85",
+   "measured": "t4 laser reference: 15 % of glow (#3f45bc), 22 % of saturated glow is blue",
+   "practice": "the breakdown cool-down (Butler 2006: breakdown as release)",
+   "role": "act 4 breakdown"
+  },
+  {
+   "key": "UV",
+   "name": "UV violet",
+   "lamp": "#7419ff",
+   "sampled": "#6228bb",
+   "rule": "hue of the sample, S 0.90",
+   "measured": "t7: 28 % of saturated glow violet (#6228bb); t4: 6 % (#9662c8)",
+   "practice": "black light in rave culture (S. Reynolds, Energy Flash, 1998)",
+   "role": "act 3 with red, act 4 with blue"
+  },
+  {
+   "key": "AM",
+   "name": "amber",
+   "lamp": "#ffad4d",
+   "sampled": "#c9a57b",
+   "rule": "hue of the sample, S 0.70",
+   "measured": "t8: 13 % of saturated glow amber (#c9a57b); t6: 13 % (#b69656)",
+   "practice": "sodium street light outside a factory (589 nm); amber only as warmth",
+   "role": "warmth only: the road at doors and at the end"
+  },
+  {
+   "key": "PT",
+   "name": "petrol",
+   "lamp": "#66faff",
+   "sampled": "#6ea9ab",
+   "rule": "hue of the sample, S 0.60",
+   "measured": "t5 rave: cyan is 52 % of the saturated glow (median #6ea9ab), the laser lines through haze",
+   "practice": "teal / blue-green gels (LEE 116 Medium Blue-Green, Rosco R95 Medium Blue Green); blue-green sits by the 507 nm peak of night vision, so it reads brightest in the dark (CIE 1951 V'(λ); mesopic photometry CIE 191:2010)",
+   "role": "the act 4 floor; teal accents in acts 1-3"
+  },
+  {
+   "key": "IC",
+   "name": "ice",
+   "lamp": "#d1eeff",
+   "sampled": "#b4c8d4",
+   "rule": "hue of the sample, S 0.18",
+   "measured": "t8 hangar: 26 % of the glow (#b4c8d4), the cold beam columns",
+   "practice": "cold-tinted white: LEE 218 Eighth CTB / LEE 203 Quarter CTB; the white rooms of Berlin techno (Denk & von Thülen 2012)",
+   "role": "the act 1 floor and the end of act 5; ice rays; the act 5 strobe"
+  },
+  {
+   "key": "LV",
+   "name": "lavender",
+   "lamp": "#b699ff",
+   "sampled": "#9982d4",
+   "rule": "hue of the sample, S 0.40",
+   "measured": "t4 laser reference: 13.3 % of the glow (#9982d4), the pale violet round the red fans",
+   "practice": "LEE 136 Pale Lavender / LEE 170 Deep Lavender; replaces saturated UV on the lamps (the beams' wheel already showed Lavender for UV)",
+   "role": "the peaks' violet (acts 3 and 5), the act 5 floor"
+  },
+  {
+   "key": "MI",
+   "name": "mint",
+   "lamp": "#99ffce",
+   "sampled": "#6fa98d",
+   "rule": "hue of the sample, S 0.40",
+   "measured": "t5 rave: green is 28.6 % of the saturated glow (median #6fa98d); the poster's pale glow #cfe5d0 (t1/t2, 12.4 %) is the same family",
+   "practice": "the poster's green made soft; no single gel matches (taste)",
+   "role": "the act 2 floor, soft green"
+  },
+  {
+   "key": "RC",
+   "name": "rose-copper",
+   "lamp": "#ff9180",
+   "sampled": "#ad756c",
+   "rule": "hue of the sample, S 0.50",
+   "measured": "t5 rave: 2.3 % of the glow (#ad756c), warm haze; the hall's own rust (t3 #a08c81) returns warm light best (measured)",
+   "practice": "a warm that is not red: copper/rose tints instead of ember (taste); WCAG 2.2: not a saturated red (R share < 0.8)",
+   "role": "the act 3 floor; the warm accent where v2 had red"
+  },
+  {
+   "key": "DS",
+   "name": "deep sea",
+   "lamp": "#26bcff",
+   "sampled": "#73a0b4",
+   "rule": "hue of the sample, S 0.85",
+   "measured": "t5 rave: blue median of the saturated glow #73a0b4; t8: 84 % of the saturated glow is blue (#7492af)",
+   "practice": "a cyan-blue (~480 nm dominant), not the 450 nm end of pure blue the eye cannot bring into focus (Thibos et al. 1992)",
+   "role": "act 4 rays and plane: the blue that is not pure blue"
+  },
+  {
+   "key": "WW",
+   "name": "warm white",
+   "lamp": "#ffbe7a",
+   "sampled": "#dbd9cf",
+   "rule": "Planckian 3200 K (Kim et al. 2002 spline, IEC 61966-2-1 sRGB)",
+   "measured": "t5 rave: 25.6 % of the glow is warm white (#dbd9cf)",
+   "practice": "tungsten 3200 K: LEE 204 Full CTO turns daylight into it; the classic stage key",
+   "role": "the key and kicker on the DJ, the afterglow"
+  },
+  {
+   "key": "LVB",
+   "name": "lavender (beams)",
+   "lamp": "#8f73ad",
+   "sampled": "#8f73ad",
+   "rule": "the wheel slot's own hex (Lavender, assumed Sharpy order, di.iiii assumedProfiles.js)",
+   "measured": "same hue family as lavender (t4 #9982d4); the washes' lavender #b699ff would snap to CTB 8000 (greenish) on the wheel, so the beams carry the slot's hex",
+   "practice": "LEE 136 / 170 lavender family",
+   "role": "lavender on the 18 beams"
+  }
+ ],
+ "surfaces": [
+  {
+   "name": "concrete",
+   "hex": "#b4afb3",
+   "source": "t3 glow cluster 51 %"
+  },
+  {
+   "name": "rust",
+   "hex": "#a08c81",
+   "source": "t3 glow cluster 9 %"
+  },
+  {
+   "name": "dark steel",
+   "hex": "#2a2a2d",
+   "source": "t3 lit cluster 47 %"
+  }
+ ],
+ "wheel": [
+  {
+   "name": "Open (white)",
+   "hex": "#ffffff"
+  },
+  {
+   "name": "Red",
+   "hex": "#c41c1a"
+  },
+  {
+   "name": "Orange",
+   "hex": "#ed8229"
+  },
+  {
+   "name": "Aquamarine",
+   "hex": "#7abd82"
+  },
+  {
+   "name": "Green",
+   "hex": "#05822b"
+  },
+  {
+   "name": "Light Green",
+   "hex": "#9ec233"
+  },
+  {
+   "name": "Lavender",
+   "hex": "#8f73ad"
+  },
+  {
+   "name": "Pink",
+   "hex": "#ed8080"
+  },
+  {
+   "name": "Yellow",
+   "hex": "#ffed00"
+  },
+  {
+   "name": "Magenta",
+   "hex": "#e30082"
+  },
+  {
+   "name": "Cyan",
+   "hex": "#00a6eb"
+  },
+  {
+   "name": "CTO 260",
+   "hex": "#f5c745"
+  },
+  {
+   "name": "CTO 190",
+   "hex": "#f5d985"
+  },
+  {
+   "name": "CTB 8000",
+   "hex": "#96c7b8"
+  }
+ ]
+}

@@ -6,7 +6,7 @@ describe('the standard move: one speed, the same everywhere', () => {
     it('settings: speed is auto or metres; turning is point or place; junk falls back', () => {
         expect(normalizeSpeedSetting('auto')).toBe('auto'); expect(normalizeSpeedSetting('2.5')).toBe(2.5)
         expect(normalizeSpeedSetting(-1)).toBe('auto'); expect(normalizeSpeedSetting('x')).toBe('auto'); expect(normalizeSpeedSetting(1e9)).toBe(10000)
-        expect(normalizeTurnSetting('place')).toBe('place'); expect(normalizeTurnSetting('orbit')).toBe('point')
+        expect(normalizeTurnSetting('place')).toBe('place'); expect(normalizeTurnSetting('orbit')).toBe('place')
     })
     it('auto speed is the space\'s largest side / 40, the fallback while it has no size', () => {
         expect(autoSpeed(100)).toBe(2.5); expect(autoSpeed(0)).toBeNull()

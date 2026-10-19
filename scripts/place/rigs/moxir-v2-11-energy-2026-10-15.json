@@ -6429,6 +6429,15 @@
       "checks": "static line, no scan; from 7.0 m at the door up to the roof chords; DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ]
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 401,
+    "footprint": 32,
+    "fixture": 131,
+    "mode": "32ch",
+    "port": "A",
+    "from": "the v2 patch plan (moxir-v2-patch-v2-1-2026-10-10.json, owner N460.2, UP-LA40WF block: 401 and 433, 32 ch); mode from the maker chart scripts/place/fixtures/charts/up-la40wf.json (APPROVED 2026-10-15), added 2026-10-15 laser-40w (N852)"
    }
   },
   {
@@ -6477,6 +6486,15 @@
       "checks": "static line, no scan; from 7.0 m at the door up to the roof chords; DJ crane crossing >= 9.2 m; lamp/crane strikes UNVALIDATED"
      }
     ]
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 433,
+    "footprint": 32,
+    "fixture": 132,
+    "mode": "32ch",
+    "port": "A",
+    "from": "the v2 patch plan (moxir-v2-patch-v2-1-2026-10-10.json, owner N460.2, UP-LA40WF block: 401 and 433, 32 ch); mode from the maker chart scripts/place/fixtures/charts/up-la40wf.json (APPROVED 2026-10-15), added 2026-10-15 laser-40w (N852)"
    }
   }
  ],
@@ -6607,7 +6625,7 @@
    "id": "the-road-in",
    "title": "The road in",
    "act": 1,
-   "intent": "Doors: outside, the road glows toxic green and the entrance dark amber; inside, the plane in low steel blue.",
+   "intent": "Doors: outside, the road glows toxic green and the entrance dark amber; inside, the plane in low steel blue and the truss over the DJ a faint ice glow up into the haze.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6628,6 +6646,10 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#d1eeff",
+     0.15
     ]
    },
    "motion": {
@@ -6656,7 +6678,7 @@
    "id": "first-light",
    "title": "First light",
    "act": 1,
-   "intent": "Blackout and the plane behind the DJ alone in cold white, leaning very slowly.",
+   "intent": "Blackout and the plane behind the DJ alone in cold white, leaning very slowly; one cold laser line wakes each side of the DJ; the truss stays dark.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6677,6 +6699,10 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.2
     ]
    },
    "motion": {
@@ -6699,13 +6725,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": "the owner's 'blackout + one beam': a part is 6 beams, the closest the data can say"
   },
   {
    "id": "slow-sweep",
    "title": "Slow sweep",
    "act": 1,
-   "intent": "The six cold white beams lean toward the floor and back, one slow sweep every 22 s; the DJ back in ice.",
+   "intent": "The six cold white beams lean toward the floor and back, one slow sweep every 22 s; the truss glows cold up into the haze, a thin ice top light and a warm kicker find the DJ.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6730,6 +6763,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.2
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.15
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -6758,7 +6803,7 @@
    "id": "steel-breath",
    "title": "Steel breath",
    "act": 1,
-   "intent": "The DJ plane turns steel blue and breathes; a ripple of lean runs across it; petrol behind the DJ.",
+   "intent": "The DJ plane turns steel blue and breathes; a ripple of lean runs across it; on the truss petrol behind the DJ, a steel blue top light, a cold key and a warm kicker hold him still.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6787,6 +6832,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#73bdff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -6815,7 +6868,7 @@
    "id": "dj-alone",
    "title": "The DJ alone",
    "act": 1,
-   "intent": "Steel blue plane, a warm white (3200 K) kicker on the DJ, a soft pulse on the beams only.",
+   "intent": "Steel blue plane, a soft pulse on the beams only; the whole truss holds the DJ: warm white (3200 K) kicker, key and top light, steel blue behind and above.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6848,6 +6901,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#73bdff",
+     0.2
+    ],
+    "cut down": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -6876,7 +6937,7 @@
    "id": "ice-rays",
    "title": "Ice rays",
    "act": 1,
-   "intent": "The four rays behind the DJ rise in ice, a slow wave rolling toward him.",
+   "intent": "The four rays behind the DJ rise in ice, a slow wave rolling toward him; the wave ends on the truss, its up-washes breathing ice into the haze, ice held behind the DJ.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6913,6 +6974,14 @@
     "plane 1": [
      "#d1eeff",
      0.55
+    ],
+    "cut up": [
+     "#d1eeff",
+     0.5
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.25
     ]
    },
    "motion": {
@@ -6931,7 +7000,7 @@
    "id": "the-wall-wakes",
    "title": "The wall wakes",
    "act": 1,
-   "intent": "The twelve side beams in petrol; a comet walks down the walls to the DJ.",
+   "intent": "The twelve side beams in petrol; a comet walks down the walls to the DJ, where the truss holds a petrol top light, a cold key and a warm kicker.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -6960,6 +7029,18 @@
     "plane 1": [
      "#66faff",
      1.0
+    ],
+    "cut down": [
+     "#66faff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
+    ],
+    "stage key": [
+     "#eefdfd",
+     0.2
     ]
    },
    "motion": {
@@ -6988,7 +7069,7 @@
    "id": "cold-columns",
    "title": "Cold columns",
    "act": 1,
-   "intent": "The side beams in cold white, straight columns in the haze, crossing gently.",
+   "intent": "The side beams in cold white, straight columns in the haze, crossing gently; two cold laser lines answer from the outer cubes; the truss glows cold upward, ice behind the DJ.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -7013,6 +7094,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.3
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.25
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.2
     ]
    },
    "motion": {
@@ -7035,13 +7128,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "rust-low",
    "title": "Rust, low",
    "act": 1,
-   "intent": "The rays in rose-copper and the cut in warm white, each lamp sparking on its own count: the rust of the hall.",
+   "intent": "The rays in rose-copper and the cut down in warm white, each lamp sparking on its own count: the rust of the hall; the truss up-washes hold rose-copper, a warm key and kicker on the DJ.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -7082,6 +7182,18 @@
     "plane 1": [
      "#ff9180",
      0.55
+    ],
+    "cut up": [
+     "#ff9180",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -7100,7 +7212,7 @@
    "id": "first-net",
    "title": "First net",
    "act": 1,
-   "intent": "The green laser net appears over the floor, breathing, the DJ plane low in poster green.",
+   "intent": "The green laser net appears over the floor, breathing, the DJ plane in poster green; the truss glows mint upward and a warm key keeps the DJ readable.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -7125,6 +7237,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#99ffce",
+     0.2
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.15
     ]
    },
    "motion": {
@@ -7161,7 +7281,7 @@
    "id": "green-chase",
    "title": "Green chase",
    "act": 2,
-   "intent": "The side beams in poster green chase down the walls, a lean ripples along them.",
+   "intent": "The side beams in poster green chase down the walls, a lean ripples along them; the chase lands on the truss: a mint top light, petrol behind, a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7190,6 +7310,18 @@
     "plane 1": [
      "#33ff47",
      1.0
+    ],
+    "cut down": [
+     "#99ffce",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "dj back": [
+     "#66faff",
+     0.3
     ]
    },
    "motion": {
@@ -7218,7 +7350,7 @@
    "id": "run-to-the-dj",
    "title": "Run to the DJ",
    "act": 2,
-   "intent": "The poster glow runs down both walls to the DJ on every half beat; the plane glows green.",
+   "intent": "The poster glow runs down both walls to the DJ on every half beat; the plane glows green and the truss over him holds the glow, up into the haze and down on him, with a warm kicker.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7247,6 +7379,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.5
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
     ]
    },
    "motion": {
@@ -7275,7 +7419,7 @@
    "id": "rays-pulse",
    "title": "Rays pulse",
    "act": 2,
-   "intent": "The rays pulse mint at half time; the plane behind leans in a wave of poster glow.",
+   "intent": "The rays and the truss top light pulse mint at half time; the plane behind leans in a wave of poster glow; a warm key holds the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7320,6 +7464,14 @@
     "side line right": [
      "#f4fcf4",
      1.0
+    ],
+    "cut down": [
+     "#99ffce",
+     0.7
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -7348,7 +7500,7 @@
    "id": "the-cut",
    "title": "The cut",
    "act": 2,
-   "intent": "The truss over the DJ in poster glow, blocks flipping; the walls low and steady in green, mint behind the DJ.",
+   "intent": "The truss over the DJ in poster glow, blocks flipping, mint behind the DJ, a warm key and kicker held on him; the walls steady in green.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7389,6 +7541,14 @@
     "plane 1": [
      "#33ff47",
      1.0
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -7417,7 +7577,7 @@
    "id": "left-right",
    "title": "Left, right",
    "act": 2,
-   "intent": "The two walls answer each other in cold white; the beams trace a mirrored X over a petrol plane.",
+   "intent": "The two walls answer each other in cold white, and two cold laser lines from the outer cubes; the beams trace a mirrored X over a petrol plane; the truss glows petrol up and behind the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7446,6 +7606,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.4
+    ],
+    "cut up": [
+     "#66faff",
+     0.25
+    ],
+    "dj back": [
+     "#66faff",
+     0.25
     ]
    },
    "motion": {
@@ -7468,13 +7640,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "glow-comet",
    "title": "Glow comet",
    "act": 2,
-   "intent": "One comet of poster glow runs through the rays out toward the entrance over a mint cut.",
+   "intent": "One comet of poster glow leaves the truss up-washes over the DJ and runs through the rays out toward the entrance over a mint cut down; a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7515,6 +7694,14 @@
     "plane 1": [
      "#f4fcf4",
      0.6
+    ],
+    "cut up": [
+     "#f4fcf4",
+     0.6
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -7533,7 +7720,7 @@
    "id": "scissors",
    "title": "Scissors",
    "act": 2,
-   "intent": "The six beams behind the DJ in poster glow lean against each other like scissors (the teasers' crossing beams).",
+   "intent": "The six beams behind the DJ in poster glow lean against each other like scissors, the cold laser fans open and close with them; the truss holds a glow top light, mint behind the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7562,6 +7749,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.4
+    ],
+    "cut down": [
+     "#f4fcf4",
+     0.25
+    ],
+    "dj back": [
+     "#99ffce",
+     0.3
     ]
    },
    "motion": {
@@ -7584,13 +7783,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "green-comb",
    "title": "Green comb",
    "act": 2,
-   "intent": "The laser comb pulses green at half time over a cold white plane (t5: white beams, green lasers, haze).",
+   "intent": "The laser comb pulses green at half time over a cold white plane; the truss glows cold upward, a mint top light and a warm key on the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7615,6 +7821,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.25
+    ],
+    "cut down": [
+     "#99ffce",
+     0.2
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.2
     ]
    },
    "motion": {
@@ -7651,7 +7869,7 @@
    "id": "pingpong-rays",
    "title": "Ping-pong rays",
    "act": 2,
-   "intent": "A petrol head bounces across the rays, left to right and back, under a cold white plane.",
+   "intent": "A petrol head bounces across the rays, left to right and back, under a cold white plane; the truss dark but a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7696,6 +7914,10 @@
     "side line right": [
      "#eefdfd",
      1.0
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -7724,7 +7946,7 @@
    "id": "riser",
    "title": "Riser",
    "act": 2,
-   "intent": "Before the drop: white walls and plane, mint rays, the cut turns lavender; all pulse on the beat.",
+   "intent": "Before the drop: white walls and plane, mint rays, the white laser comb hits; the whole truss turns lavender, up, down and behind, pulsing on the beat; a warm key and kicker on the DJ.",
    "parts": {
     "line L": [
      "#99ffce",
@@ -7773,6 +7995,26 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     0.5
+    ],
+    "cut down": [
+     "#b699ff",
+     0.7
+    ],
+    "dj back": [
+     "#b699ff",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -7796,13 +8038,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": "lavender enters on the cut: the colour of the peak to come"
   },
   {
    "id": "white-cathedral",
    "title": "White cathedral",
    "act": 3,
-   "intent": "The drop: every beam in cold white over lavender rays; the walls turn a mirrored bow-tie, the rays pump.",
+   "intent": "The drop: every beam and the laser fans in cold white over lavender rays; the walls turn a mirrored bow-tie; the truss pumps cold white up and down with the rays, lavender behind the DJ, a warm key held on him.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -7851,6 +8100,26 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#eefdfd",
+     1
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.8
+    ],
+    "dj back": [
+     "#b699ff",
+     0.6
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -7873,13 +8142,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "strobe-hit",
    "title": "Strobe hit",
    "act": 3,
-   "intent": "The whole hall strobes cold white for 6 s (engine cap: under 3 flashes a second).",
+   "intent": "The whole hall strobes cold white for 6 s, the truss with it (engine cap: under 3 flashes a second); only a warm key holds the DJ still.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -7936,6 +8212,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "dj back": [
+     "#eefdfd",
+     1
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -7955,7 +8239,7 @@
    "id": "red-room",
    "title": "Red room",
    "act": 3,
-   "intent": "Everything in ember, pumping on the beat; a lean ripples across all beams. The one red scene of the first peak.",
+   "intent": "Everything in ember pumping on the beat, the truss too, the red laser fans opening; a lean ripples across all beams; only a warm kicker keeps the DJ's face. The one red scene of the first peak.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8012,6 +8296,14 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#ff3a12",
+     0.8
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -8034,13 +8326,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#ff3a12",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": "the owner's 'red room' (09-28 loop): red as an accent, 20 s; the floor stays rose-copper; pump = 3 flashes/s max (WCAG 2.3.1 red-flash limit met)"
   },
   {
    "id": "the-storm",
    "title": "The storm",
    "act": 3,
-   "intent": "Green lasers, cold white walls and cut, petrol rays; the walls flip and trace an X.",
+   "intent": "Green lasers, cold white walls and the truss full cold white up and down, petrol rays and petrol behind the DJ; the walls flip and trace an X; a warm kicker holds the DJ.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8097,6 +8396,14 @@
     "plane 1": [
      "#eefdfd",
      1.0
+    ],
+    "dj back": [
+     "#66faff",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
     ]
    },
    "motion": {
@@ -8132,7 +8439,7 @@
    "id": "matrix",
    "title": "The matrix",
    "act": 3,
-   "intent": "The laser comb at its cap over rose-copper rays, breathing; the lavender plane ripples.",
+   "intent": "The laser comb at its cap over rose-copper rays, breathing; the lavender plane ripples; the truss holds a rose-copper top light, lavender behind, a warm key on the DJ.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8173,6 +8480,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut down": [
+     "#ff9180",
+     0.3
+    ],
+    "dj back": [
+     "#b699ff",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -8209,7 +8528,7 @@
    "id": "pump-white",
    "title": "Pump white",
    "act": 3,
-   "intent": "All eighteen beams in cold white hit on the beat and turn mirrored bow-ties.",
+   "intent": "All eighteen beams and the truss over the DJ in cold white hit on the beat, the beams turning mirrored bow-ties; a warm key and kicker hold the DJ.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8238,6 +8557,22 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.8
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.8
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -8246,7 +8581,8 @@
     "depth": 255,
     "spatial": "patch",
     "kinds": [
-     "up-b380f"
+     "up-b380f",
+     "up-pl5403"
     ],
     "still": 0.3
    },
@@ -8266,7 +8602,7 @@
    "id": "radar",
    "title": "Radar",
    "act": 3,
-   "intent": "A lavender radar line sweeps round the rays; the rose-copper plane beams circle in a ripple.",
+   "intent": "A lavender radar line sweeps round the rays and the truss up-washes, a lavender laser scan follows it; the rose-copper beams circle in a ripple; a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8311,6 +8647,18 @@
     "side line right": [
      "#ff9180",
      1.0
+    ],
+    "laser": [
+     "#b699ff",
+     0.6
+    ],
+    "cut up": [
+     "#b699ff",
+     0.8
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -8332,6 +8680,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#b699ff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   },
@@ -8423,7 +8778,7 @@
    "id": "copper-scissors",
    "title": "Copper scissors",
    "act": 3,
-   "intent": "Rose-copper walls and a lavender plane flip on the half beat and cross fast.",
+   "intent": "Rose-copper walls and a lavender plane flip on the half beat and cross fast; the truss holds rose-copper up into the haze, lavender behind the DJ, a warm key on him.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8452,6 +8807,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "cut up": [
+     "#ff9180",
+     0.5
+    ],
+    "dj back": [
+     "#b699ff",
+     0.4
+    ],
+    "stage key": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -8480,7 +8847,7 @@
    "id": "sparkle-peak",
    "title": "Sparkle peak",
    "act": 3,
-   "intent": "Lavender walls and a cold white plane sparkle, each on its own count, over a rose-copper cut.",
+   "intent": "Lavender walls and a cold white plane sparkle, each on its own count, under a lavender laser tunnel; the truss holds a rose-copper glow up and a soft top light down, a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#ff9180",
@@ -8513,6 +8880,18 @@
     "entrance": [
      "#e04e00",
      0.6
+    ],
+    "laser": [
+     "#b699ff",
+     0.5
+    ],
+    "cut down": [
+     "#ff9180",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ]
    },
    "motion": {
@@ -8535,13 +8914,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#b699ff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "drop-away",
    "title": "Drop away",
    "act": 4,
-   "intent": "Almost dark: the plane in deep sea (the beam wheel's cyan), one slow lean, the floor glowing petrol.",
+   "intent": "Almost dark: the plane in deep sea (the beam wheel's cyan), one slow lean, the floor glowing petrol. The truss: a petrol pool from above and a deep-sea back light hold the DJ as a dim silhouette.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8554,6 +8940,18 @@
     "plane 1": [
      "#26bcff",
      0.4
+    ],
+    "cut down": [
+     "#66faff",
+     0.25
+    ],
+    "dj back": [
+     "#26bcff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.15
     ],
     "road": [
      "#a5ff0f",
@@ -8590,7 +8988,7 @@
    "id": "one-beam-back",
    "title": "One beam back",
    "act": 4,
-   "intent": "The plane returns in cold white, low, a lean travels across it; warm white on the DJ.",
+   "intent": "The plane returns in cold white, low, a lean travels across it; warm white on the DJ. The truss: the key finds the DJ again in ash, a faint deep-sea back light behind.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8606,6 +9004,14 @@
     ],
     "dj kicker": [
      "#ffbe7a",
+     0.2
+    ],
+    "dj back": [
+     "#26bcff",
+     0.2
+    ],
+    "stage key": [
+     "#e8e4dc",
      0.2
     ],
     "road": [
@@ -8633,7 +9039,7 @@
    "id": "blue-wave",
    "title": "Blue wave",
    "act": 4,
-   "intent": "A deep sea wave rolls along the rays and petrol floor strips toward the DJ; the cut holds the floor in lavender.",
+   "intent": "A deep sea wave rolls along the rays and petrol floor strips toward the DJ; the cut holds the floor in lavender. The truss: cut up waves deep sea into the roof with the rays, petrol behind the DJ; the sky sheet above.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8663,6 +9069,22 @@
      "#b699ff",
      0.5
     ],
+    "plane 1": [
+     "#26bcff",
+     0.5
+    ],
+    "cut up": [
+     "#26bcff",
+     0.5
+    ],
+    "dj back": [
+     "#66faff",
+     0.3
+    ],
+    "laser": [
+     "#26bcff",
+     0.4
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -8670,10 +9092,6 @@
     "entrance": [
      "#e04e00",
      0.6
-    ],
-    "plane 1": [
-     "#26bcff",
-     0.5
     ]
    },
    "motion": {
@@ -8686,13 +9104,20 @@
     ],
     "still": 0.3
    },
+   "laser_colour": "#26bcff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": "floor here = cut down at 0.3 (still), the strips join the wave in petrol (not pure blue: the eye cannot focus it on the floor)"
   },
   {
    "id": "ice-mist",
    "title": "Ice mist",
    "act": 4,
-   "intent": "The walls in low ice and the cut in cold white breathe together; the beams barely cross.",
+   "intent": "The walls in low ice and the cut in cold white breathe together; the beams barely cross. The truss: ice mist from cut down onto the DJ, a warm kicker on the face.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8713,6 +9138,14 @@
     "cut up": [
      "#eefdfd",
      0.4
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -8750,7 +9183,7 @@
    "id": "slow-eight",
    "title": "Slow eight",
    "act": 4,
-   "intent": "Only the plane, in lavender, drawing one slow mirrored X every 29 s.",
+   "intent": "Only the plane, in lavender, drawing one slow mirrored X every 29 s. The truss: lavender up into the haze under the figure eights, a petrol pool and a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8763,6 +9196,18 @@
     "plane 1": [
      "#8f73ad",
      0.8
+    ],
+    "cut up": [
+     "#b699ff",
+     0.35
+    ],
+    "cut down": [
+     "#66faff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -8789,7 +9234,7 @@
    "id": "sea-steel",
    "title": "Sea steel",
    "act": 4,
-   "intent": "Outside, the road and the entrance spark in their own colours; inside, the rays glow deep sea.",
+   "intent": "Outside, the road and the entrance spark in their own colours; inside, the rays glow deep sea. The truss: cut down sparkles deep sea with the rays; petrol behind, the key on the DJ.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8815,6 +9260,22 @@
      "#26bcff",
      0.6
     ],
+    "plane 1": [
+     "#26bcff",
+     0.5
+    ],
+    "cut down": [
+     "#26bcff",
+     0.4
+    ],
+    "dj back": [
+     "#66faff",
+     0.3
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.2
+    ],
     "road": [
      "#a5ff0f",
      0.8
@@ -8822,10 +9283,6 @@
     "entrance": [
      "#e04e00",
      0.8
-    ],
-    "plane 1": [
-     "#26bcff",
-     0.5
     ]
    },
    "motion": {
@@ -8844,7 +9301,7 @@
    "id": "deep-tent",
    "title": "Deep tent",
    "act": 4,
-   "intent": "Rays deep sea, the plane petrol, the walls lavender, all swelling slowly, a lean ripples through.",
+   "intent": "Rays deep sea, the plane petrol, the walls lavender, all swelling slowly, a lean ripples through. The truss: the tent goes on up, petrol into the roof, deep sea down, lavender behind the DJ; petrol vaults above.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8882,6 +9339,22 @@
      "#66faff",
      0.6
     ],
+    "cut up": [
+     "#66faff",
+     0.5
+    ],
+    "cut down": [
+     "#26bcff",
+     0.4
+    ],
+    "dj back": [
+     "#b699ff",
+     0.3
+    ],
+    "laser": [
+     "#66faff",
+     0.4
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -8912,13 +9385,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#66faff",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "green-breath",
    "title": "Green breath",
    "act": 4,
-   "intent": "The laser net alone breathes very slowly in green over the petrol floor.",
+   "intent": "The laser net alone breathes very slowly in green over the petrol floor. The truss: only a deep-sea back light and a low key: the DJ under the net.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8931,6 +9411,14 @@
     "laser": [
      "#00ff00",
      0.4
+    ],
+    "dj back": [
+     "#26bcff",
+     0.25
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.15
     ],
     "road": [
      "#a5ff0f",
@@ -8965,7 +9453,7 @@
    "id": "cold-rise",
    "title": "Cold rise",
    "act": 4,
-   "intent": "The build back: a cold white comet climbs the walls toward the entrance over deep sea rays.",
+   "intent": "The build back: a cold white comet climbs the walls toward the entrance over deep sea rays. The truss: cold white up into the haze, ice down, a warm kicker as the comet rises.",
    "parts": {
     "line L": [
      "#66faff",
@@ -8998,6 +9486,18 @@
     "line D": [
      "#26bcff",
      0.5
+    ],
+    "cut up": [
+     "#eefdfd",
+     0.5
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ],
     "road": [
      "#a5ff0f",
@@ -9034,7 +9534,7 @@
    "id": "riser-two",
    "title": "Riser two",
    "act": 4,
-   "intent": "Lavender walls, white plane, rose-copper rays and cut pulse on the beat, the beams lean fast: the second drop is coming.",
+   "intent": "Lavender walls, white plane, rose-copper rays and cut pulse on the beat, the beams lean fast: the second drop is coming. The truss: rose-copper up and down pulse on the beat, a cold back light, key and kicker hold the DJ.",
    "parts": {
     "line L": [
      "#66faff",
@@ -9076,6 +9576,26 @@
      "#ff9180",
      0.7
     ],
+    "cut down": [
+     "#ff9180",
+     0.6
+    ],
+    "dj back": [
+     "#eefdfd",
+     0.5
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.3
+    ],
+    "laser": [
+     "#eefdfd",
+     0.8
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -9106,13 +9626,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "second-drop",
    "title": "Second drop",
    "act": 5,
-   "intent": "White-out: cold white lasers and every beam; the rays pump, the walls turn mirrored bow-ties.",
+   "intent": "White-out: cold white lasers and every beam; the rays pump, the walls turn mirrored bow-ties. The truss: white-out, cut up and down pump cold white, the back light floods, key and kicker hold the DJ.",
    "parts": {
     "line L": [
      "#b699ff",
@@ -9157,6 +9684,22 @@
     "line D": [
      "#eefdfd",
      1
+    ],
+    "cut down": [
+     "#eefdfd",
+     1
+    ],
+    "dj back": [
+     "#eefdfd",
+     0.8
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.3
     ],
     "road": [
      "#a5ff0f",
@@ -9200,15 +9743,15 @@
    "id": "ice-strobe",
    "title": "Ice strobe",
    "act": 5,
-   "intent": "The whole hall strobes ice for 6 s: the hit of the second peak.",
+   "intent": "The whole hall strobes ice for 6 s: the hit of the second peak. The truss: cut up, cut down and the back light strobe ice; a still warm kicker keeps the DJ.",
    "parts": {
     "line L": [
      "#b699ff",
-     0.7
+     0.3
     ],
     "line R": [
      "#b699ff",
-     0.7
+     0.3
     ],
     "side line left": [
      "#d1eeff",
@@ -9246,6 +9789,14 @@
      "#d1eeff",
      1
     ],
+    "dj back": [
+     "#d1eeff",
+     1
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -9272,7 +9823,7 @@
    "id": "cathedral-turns",
    "title": "The cathedral turns",
    "act": 5,
-   "intent": "All the beams in cold white circle in a ripple, the cut breathes steel blue.",
+   "intent": "All the beams in cold white circle in a ripple, the cut breathes steel blue. The truss: steel blue up, cold white down, lavender behind the DJ, the key on the DJ in ash; white fans turn above.",
    "parts": {
     "line L": [
      "#b699ff",
@@ -9296,6 +9847,22 @@
     ],
     "cut up": [
      "#73bdff",
+     0.8
+    ],
+    "cut down": [
+     "#eefdfd",
+     0.6
+    ],
+    "dj back": [
+     "#b699ff",
+     0.5
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.25
+    ],
+    "laser": [
+     "#eefdfd",
      0.8
     ],
     "road": [
@@ -9327,13 +9894,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": ""
   },
   {
    "id": "ice-and-fire",
    "title": "Ice and fire",
    "act": 5,
-   "intent": "Cold white walls, an ember plane, ice rays; blocks flip, the beams trace an X.",
+   "intent": "Cold white walls, an ember plane, ice rays; blocks flip, the beams trace an X. The truss: ice blocks up and down against the ember plane; a warm kicker on the DJ.",
    "parts": {
     "line L": [
      "#b699ff",
@@ -9371,6 +9945,18 @@
      "#d1eeff",
      0.9
     ],
+    "cut up": [
+     "#d1eeff",
+     0.8
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.7
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.3
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -9406,7 +9992,7 @@
    "id": "red-fans",
    "title": "Red fans",
    "act": 5,
-   "intent": "Ember lasers (the red fans of teaser t4) over lavender walls flipping, the rose-copper plane crossing.",
+   "intent": "Ember lasers (the red fans of teaser t4) over lavender walls flipping, the rose-copper plane crossing. The truss: lavender up and down round the red fans, rose-copper behind the DJ, a warm kicker.",
    "parts": {
     "line L": [
      "#b699ff",
@@ -9431,6 +10017,22 @@
     "plane 1": [
      "#ff9180",
      1.0
+    ],
+    "cut up": [
+     "#b699ff",
+     0.4
+    ],
+    "cut down": [
+     "#b699ff",
+     0.5
+    ],
+    "dj back": [
+     "#ff9180",
+     0.4
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
     ],
     "road": [
      "#a5ff0f",
@@ -9474,15 +10076,15 @@
    "id": "last-strobe",
    "title": "Last strobe",
    "act": 5,
-   "intent": "The final hit: everything strobes for 8 s, cold white beams, warm ash washes.",
+   "intent": "The final hit: everything strobes for 8 s, cold white beams, warm ash washes. The truss: all of it strobes in ash, the back light too; the key and kicker flash the DJ white.",
    "parts": {
     "line L": [
      "#b699ff",
-     0.7
+     0.3
     ],
     "line R": [
      "#b699ff",
-     0.7
+     0.3
     ],
     "plane 1": [
      "#eefdfd",
@@ -9528,6 +10130,10 @@
      "#e8e4dc",
      1
     ],
+    "dj back": [
+     "#e8e4dc",
+     1
+    ],
     "road": [
      "#a5ff0f",
      0.5
@@ -9554,7 +10160,7 @@
    "id": "afterglow",
    "title": "Afterglow",
    "act": 5,
-   "intent": "Rose-copper rays and a warm white plane breathe down; a slow ripple of lean.",
+   "intent": "Rose-copper rays and a warm white plane breathe down; a slow ripple of lean. The truss: a warm-white pool, rose-copper behind and a warm kicker: the DJ glows after the peak.",
    "parts": {
     "line L": [
      "#b699ff",
@@ -9583,6 +10189,22 @@
     "plane 1": [
      "#ffbe7a",
      0.6
+    ],
+    "cut down": [
+     "#ffbe7a",
+     0.3
+    ],
+    "dj back": [
+     "#ff9180",
+     0.3
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.25
+    ],
+    "laser": [
+     "#ff9180",
+     0.4
     ],
     "road": [
      "#a5ff0f",
@@ -9614,13 +10236,20 @@
      "up-b380f"
     ]
    },
+   "laser_colour": "#ff9180",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
+   },
    "notes": "warmth after the peak without red or amber: rose-copper + 3200 K"
   },
   {
    "id": "the-last-run",
    "title": "The last run",
    "act": 5,
-   "intent": "Steel blue runs up the walls toward the entrance: the way out.",
+   "intent": "Steel blue runs up the walls toward the entrance: the way out. The truss: steel blue up into the haze, ice behind the DJ, the key on the DJ for the last run.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -9637,6 +10266,18 @@
     "side line right": [
      "#73bdff",
      0.7
+    ],
+    "cut up": [
+     "#73bdff",
+     0.4
+    ],
+    "dj back": [
+     "#d1eeff",
+     0.3
+    ],
+    "stage key": [
+     "#e8e4dc",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -9673,7 +10314,7 @@
    "id": "embers-out",
    "title": "Embers out",
    "act": 5,
-   "intent": "Outside, the road and entrance spark again; inside only deep ember rays: the last embers.",
+   "intent": "Outside, the road and entrance spark again; inside only deep ember rays: the last embers. The truss: a faint ice pool and the last warm kicker on the DJ among the embers.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -9698,6 +10339,14 @@
     "line D": [
      "#a3200c",
      0.4
+    ],
+    "cut down": [
+     "#d1eeff",
+     0.2
+    ],
+    "dj kicker": [
+     "#ffbe7a",
+     0.2
     ],
     "road": [
      "#a5ff0f",
@@ -9724,7 +10373,7 @@
    "id": "one-beam-loop",
    "title": "One beam (loop)",
    "act": 5,
-   "intent": "Back to the start: the plane alone in low cold white, one slow lean; the loop begins again.",
+   "intent": "Back to the start: the plane alone in low cold white, one slow lean; the loop begins again. The truss stays dark: one beam and one laser line, as at the start.",
    "parts": {
     "line L": [
      "#d1eeff",
@@ -9735,6 +10384,10 @@
      0.4
     ],
     "plane 1": [
+     "#eefdfd",
+     0.4
+    ],
+    "laser": [
      "#eefdfd",
      0.4
     ],
@@ -9766,6 +10419,13 @@
     "kinds": [
      "up-b380f"
     ]
+   },
+   "laser_colour": "#eefdfd",
+   "desk_caps": {
+    "laser": {
+     "fader": 0.16,
+     "note": "show desk cap measured 2026-10-09 (peak.desk_caps); the 'lasers' look's 1.0 is a PREVIS override only"
+    }
    },
    "notes": ""
   }
@@ -33596,5 +34256,6 @@
    "fade": 6,
    "hold": 26
   }
- ]
+ ],
+ "regenerated": "2026-10-16: fixtures + looks rewritten by scripts/place/rig_generate.py build from moxir-hang-v2-11-2026-10-15.json (the two 40 W lines' DMX, #981) + moxir-scenes-50-2026-10-15.json (the show's scenes: laser and truss parts, 40 W lines); energy levels unchanged (each scene's energy is the scenes file's)"
 }

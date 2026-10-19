@@ -29,13 +29,13 @@ describe('the viewer\'s Move control', () => {
         expect(screen.getByRole('group', { name: 'Move' })).toBeTruthy()
     })
 
-    it('starts on Auto and turning around a point ahead', () => {
+    it('starts on Auto and turning where you stand (the default since 2026-10-16)', () => {
         render(<MoveControl />)
         open()
         expect(speedField().value).toBe('')
         expect(autoButton().getAttribute('aria-pressed')).toBe('true')
-        expect(turnButton('Around a point ahead').getAttribute('aria-pressed')).toBe('true')
-        expect(turnButton('Where you stand').getAttribute('aria-pressed')).toBe('false')
+        expect(turnButton('Where you stand').getAttribute('aria-pressed')).toBe('true')
+        expect(turnButton('Around a point ahead').getAttribute('aria-pressed')).toBe('false')
     })
 
     it('writes a typed speed to the preference, and Auto takes it back', () => {

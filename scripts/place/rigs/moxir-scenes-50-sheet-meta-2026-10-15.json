@@ -1,0 +1,40 @@
+{
+ "title": "MOXIR · 50 scenes",
+ "source": "agent-reports-2026-10-15/moxir-50 (scenes designer, lead 0142g6MW)",
+ "date": "2026-10-15",
+ "licence": "own work; quoted owner words and teaser descriptions are internal",
+ "subtitle_html": "For 17 October 2026 &middot; project moxir-v2-10 (rig v2.10) &middot; written 2026-10-15 by the scenes designer, re-coloured 03:15 (v2) and 06:0x (v3, Palette 3) after the owner's verdicts &middot; data: moxir-scenes-50-2026-10-15.json",
+ "footer_html": "Data: scripts/place/rigs/moxir-scenes-50-2026-10-15.json &middot; front matter: moxir-scenes-50-sheet-front-2026-10-15.html",
+ "acts": {
+  "1": {
+   "name": "Arrive in the dark",
+   "colour": "ice, steel blue and petrol (t8 hangar, t5 haze); warm white only on the DJ; the floor ice"
+  },
+  "2": {
+   "name": "Build",
+   "colour": "the poster's green made soft: poster green and glow on the beams, mint and petrol on the washes; the floor mint"
+  },
+  "3": {
+   "name": "First peak",
+   "colour": "cold white hits, lavender and petrol, rose-copper warmth; red only in the red room; the floor rose-copper"
+  },
+  "4": {
+   "name": "Breakdown",
+   "colour": "petrol and deep sea (blue-green reads brightest in the dark), ice, lavender; one green laser breath; the floor petrol"
+  },
+  "5": {
+   "name": "Second peak, then out",
+   "colour": "white-out, an ice strobe, lavender; fire only as accents (the ember plane, the red laser fans, the last embers); warm white, then ice and the cold beam of act 1; the floor lavender, then ice"
+  }
+ },
+ "nav": [
+  [
+   "#palette3",
+   "Palette 3"
+  ],
+  [
+   "#palette",
+   "Palette 2"
+  ]
+ ]
+}

@@ -1,0 +1,46 @@
+{
+  "patch": "moxir-v2-11-by-kind",
+  "title": "MOXIR v2.11 — the patch by kind: U1 the beams, U2 the washes, the two 40 W lasers and the haze",
+  "project": "moxir-v2-11",
+  "writtenAt": "2026-10-15",
+  "howToRead": "docs/architecture/RIG_BUILD.md §19. Owner 2026-10-15 22:2x: 'with the patching let's in one universe make the beam, the other the washes and the lasers.' Apply: patch-plan.mjs --plan <this> --keep-circuits; then patch.mjs --project moxir-v2-11 --exact; then patch-sheet.mjs. Never edit addresses by hand.",
+  "method": [
+    "One universe per KIND of lamp, not per cable run: U1 = the 18 UP-B380F beams; U2 = the 40 UP-PL5403 washes, the two UP-LA40WF 40 W lasers and the UP-YZ31P haze (the owner's word, 2026-10-15). Placement is the owner's and does not change an address: a lamp keeps its address when it is moved.",
+    "Blocks start on round numbers (001, 401, 501) and the fixture number says the universe and the block (hundreds = universe, tens = block).",
+    "Within a block lamps go by their unit id (id-asc): rig-beam-planes-01 first. An address stays with its unit when the unit is moved.",
+    "Fit: U1 18 x 16 = 288 of 512; U2 40 x 8 = 320 (001-320) + 2 x 32 (401-464) + 1 (501) = 353 of 512.",
+    "The 36 LaserCube lines run over the LAN (fixture.dmx false) and take no address."
+  ],
+  "node": {
+    "what": "one Art-Net node at the booth; U1 on port A, U2 on port B",
+    "numbering": "desk universe U1 = Art-Net Port-Address 0 = sACN universe 1; U2 = Port-Address 1 = sACN 2"
+  },
+  "modes": {
+    "up-b380f": { "crew": "16ch", "why": "the maker's one mode (16 channels); channel order ASSUMED (RIG_BUILD §18.1)" },
+    "up-pl5403": { "crew": "8ch", "why": "the maker's one mode (8 channels); channel order ASSUMED until the rental unit's chart is read" },
+    "up-la40wf": { "crew": "32ch", "why": "the chart scripts/place/fixtures/charts/up-la40wf.json (32 channels), as patched 2026-10-15 (U1.401 / U1.433 before this plan)" },
+    "up-yz31p": { "crew": "1ch", "why": "one channel, ASSUMED (maybe 2) — as patched before this plan" }
+  },
+  "universes": [
+    {
+      "universe": 1,
+      "port": "A",
+      "label": "The beams",
+      "run": "node port A → the 18 UP-B380F (plane 1 behind the DJ, the two side lines)",
+      "blocks": [
+        { "select": { "type": "up-b380f" }, "start": 1, "fixture": 101, "order": "id-asc", "units": 18, "what": "the 18 UP-B380F beams, by unit id" }
+      ]
+    },
+    {
+      "universe": 2,
+      "port": "B",
+      "label": "The washes, the lasers and the haze",
+      "run": "node port B → the 40 UP-PL5403, the two UP-LA40WF on the entry wall, the haze behind the booth",
+      "blocks": [
+        { "select": { "type": "up-pl5403" }, "start": 1, "fixture": 201, "order": "id-asc", "units": 40, "what": "the 40 UP-PL5403 washes (the cut, the pars, the lines, the road), by unit id" },
+        { "select": { "type": "up-la40wf" }, "start": 401, "fixture": 251, "order": "id-asc", "units": 2, "what": "the two UP-LA40WF 40 W lasers" },
+        { "select": { "type": "up-yz31p" }, "start": 501, "fixture": 261, "order": "id-asc", "units": 1, "what": "the UP-YZ31P haze" }
+      ]
+    }
+  ]
+}
