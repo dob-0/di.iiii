@@ -993,6 +993,9 @@ const normalizeFixture = (fixture) => {
   const panOffsetDeg = Number(fixture.panOffsetDeg)
   if (Number.isFinite(panOffsetDeg) && panOffsetDeg !== 0) out.panOffsetDeg = Math.max(-360, Math.min(360, Math.round(panOffsetDeg * 100) / 100))
   if (fixture.panInvert === true) out.panInvert = true
+  if (fixture.aimSwap === true) out.aimSwap = true
+  if (fixture.aimInvertX === true) out.aimInvertX = true
+  if (fixture.aimInvertY === true) out.aimInvertY = true
   // Kept off DMX by the owner (run by hand: hazers, smoke): never patched (rigbuild/autoPatch.js).
   if (fixture.dmx === false) out.dmx = false
   return out
@@ -1369,7 +1372,8 @@ const normalizeBeamLaser = (laser) => {
       total += pts.length
       list.push(pts)
     }
-    if (list.length) out.frames = { period: Math.min(3600, Math.max(0.05, ensureNumber(laser.frames.period, 0))), list }
+    // `tween: true` (2026-10-17): the frames are keyframes; the room and the cubes' player blend between them.
+    if (list.length) out.frames = { period: Math.min(3600, Math.max(0.05, ensureNumber(laser.frames.period, 0))), list, ...(laser.frames.tween === true ? { tween: true } : {}) }
   }
   if (typeof laser.source === 'string') out.source = laser.source.slice(0, 500)
   return out

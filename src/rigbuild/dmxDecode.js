@@ -175,11 +175,24 @@ export const decodeDmx = (channels, values, type = null) => {
         rgb = top > 0 ? mix(WARM_3200K, COOL_5600K, c / (w + c)).map((v) => (v * top) / 255) : [0, 0, 0]
     }
     const wheel = Object.values(spec).find((c) => c.cap?.wheel)
+    // A wheel slot or a laser's colour slot IS the light's colour, darkness included (a filter passes less than open):
+    // it is drawn as it is, never stretched to full like an emitter mix (MOXIR 2026-10-17: the B380F green #00d12a was
+    // drawn as #00ff33, brighter than the real beam).
+    let slotColour = false
     if (!rgb && wheel) {
         const w = wheelAt(wheel.cap.wheel, at[wheel.role])
         if (w?.spin) { out.wheelSpin = w.spin; out.notes.push(`colour wheel spinning (${w.spin}) — drawn open`) }
         rgb = hexRgb(w?.colour) || [255, 255, 255]
         rgb = rgb.slice()
+        slotColour = true
+    }
+    // A laser's own colour slots (UP-LA40WF ch 5, cap.laserColour): the room draws the colour the desk picked, so a red
+    // laser on the rig is a red line in the room (MOXIR 2026-10-17: the room kept the design's white while the rig was red).
+    const laserColour = Object.values(spec).find((c) => c.cap?.laserColour)
+    if (!rgb && laserColour) {
+        const w = wheelAt(laserColour.cap.laserColour, at[laserColour.role])
+        rgb = (hexRgb(w?.colour) || [255, 255, 255]).slice()
+        slotColour = true
     }
     // A laser's own colour slots (UP-LA40WF ch 5, cap.laserColour): the room draws the colour the desk picked, so a red
     // laser on the rig is a red line in the room (MOXIR 2026-10-17: the room kept the design's white while the rig was red).
@@ -196,7 +209,7 @@ export const decodeDmx = (channels, values, type = null) => {
         rgb = mix(rgb, warm.map((v) => v * peak / 255), at[cto.role] / 255)
     }
     const peak = rgb ? Math.max(...rgb) : 0
-    if (rgb) out.colour = peak > 0 ? (emitterDrive ? emitterHex(rgb) : rgbHex(rgb.map((v) => (v / peak) * 255))) : null
+    if (rgb) out.colour = peak > 0 ? (emitterDrive ? emitterHex(rgb) : rgbHex(slotColour ? rgb : rgb.map((v) => (v / peak) * 255))) : null
 
     // Level: the dimmer (16-bit with its fine), times the emitters where there is no wheel.
     const dim = has('dimmer') ? sixteen(at.dimmer, has('dimmerFine') ? at.dimmerFine : null) : 1
@@ -232,6 +245,20 @@ export const decodeDmx = (channels, values, type = null) => {
     const [panRange, tiltRange] = Array.isArray(type?.pan_tilt_deg?.value) ? type.pan_tilt_deg.value : [540, 270]
     if (has('pan')) out.pan = Math.round(degFromHome(sixteen(at.pan, has('panFine') ? at.panFine : null), panRange) * 100) / 100
     if (has('tilt')) out.tilt = Math.round(degFromHome(sixteen(at.tilt, has('tiltFine') ? at.tiltFine : null), tiltRange) * 100) / 100
+    // A scanning laser's X/Y position (UP-LA40WF ch 6/7, cap.aim: 0-125 by hand, 64 = centre) read back as degrees on the
+    // unit's own scan axes — the exact inverse of encodeDmx below — so the room moves the laser's picture where the desk
+    // moves the unit (owner 2026-10-17: "add movement in 3d that i can sync that"). A byte above the by-hand range is the
+    // unit's own auto motion (circle, jump): drawn at centre and said in the notes.
+    for (const c of Object.values(spec)) {
+        const a = c.cap?.aim
+        if (!a || (a.axis !== 'x' && a.axis !== 'y')) continue
+        const v = at[c.role]
+        let deg = 0
+        if (v > a.to) out.notes.push(`laser ${a.axis.toUpperCase()} auto motion (${v}) — drawn at centre`)
+        else if (v >= a.centre) deg = a.to > a.centre ? ((v - a.centre) / (a.to - a.centre)) * a.halfDeg : 0
+        else deg = a.centre > a.from ? ((v - a.centre) / (a.centre - a.from)) * a.halfDeg : 0
+        out.aim = { x: 0, y: 0, ...(out.aim || {}), [a.axis]: Math.round(deg * 100) / 100 }
+    }
 
     // Beam.
     const zoom = Object.values(spec).find((c) => c.cap?.zoom)
@@ -354,11 +381,16 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     const rgb = hexRgb(want.colour)
     const wheel = Object.values(spec).find((c) => c.cap?.wheel)
     const emitters = has('r') || has('g') || has('b')
+    // A colour carries its own brightness: '#a3200c' is a DARK red, and light = level × colour. The emitters (or the
+    // wheel slot) give the hue at full; what the colour lacks of full goes to the dimmer, in linear light — else a
+    // darkened colour leaves the lamp at full (MOXIR 2026-10-17: 62 lamp-looks lit brighter than the 3D drew them).
+    let colourGain = 1
     if (rgb && emitters) {
         // the look's colour code → linear light → emitter drive (decode's emitterHex, inverted)
         const lin = rgb.map(toLinear)
         const peak = Math.max(...lin) || 1
-        const scale = has('dimmer') || level == null ? 1 : level
+        colourGain = Math.max(...lin)
+        const scale = has('dimmer') || level == null ? 1 : level * colourGain
         // An exactly neutral colour on a lamp with a white emitter is that emitter alone
         // (cleaner than R+G+B at full); any tint keeps the RGB mix and W 0.
         if (has('w') && rgb[0] === rgb[1] && rgb[1] === rgb[2] && rgb[0] > 0) {
@@ -376,8 +408,15 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         // A colour-only mode (RGBW, no dimmer) has no other way to say OUT.
         for (const role of ['r', 'g', 'b', 'w']) if (has(role)) out[role] = 0
     } else if (rgb && wheel) {
-        const v = nearestSlot(wheel.cap.wheel, rgb)
-        if (v != null) out[wheel.role] = v
+        // the slot is picked by HUE (the wanted colour and every slot taken at full), the slot's own darkness is its
+        // filter's, and only what the wanted colour has less than that slot goes to the dimmer
+        const full = (c) => { const p = Math.max(...c) || 1; return c.map((x) => (x * 255) / p) }
+        const v = nearestSlot(wheel.cap.wheel.map((r) => (r.colour ? { ...r, colour: rgbHex(full(hexRgb(r.colour))) } : r)), full(rgb))
+        if (v != null) {
+            out[wheel.role] = v
+            const slot = hexRgb(wheelAt(wheel.cap.wheel, v)?.colour)
+            if (slot) colourGain = Math.min(1, Math.max(...rgb.map(toLinear)) / (Math.max(...slot.map(toLinear)) || 1))
+        }
     } else if (rgb && (has('warm') || has('cool'))) {
         const f = coolShareOf(rgb)
         const top = Math.max(f, 1 - f)
@@ -402,7 +441,8 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (cto && rgb) out[cto.role] = 0
     if (level != null && has('dimmer')) {
-        if (has('dimmerFine')) { const [c, f] = toSixteen(level); out.dimmer = c; out.dimmerFine = f } else out.dimmer = Math.round(level * 255)
+        const lit = clamp01(level * colourGain)
+        if (has('dimmerFine')) { const [c, f] = toSixteen(lit); out.dimmer = c; out.dimmerFine = f } else out.dimmer = Math.round(lit * 255)
     }
     const shutter = Object.values(spec).find((c) => c.cap?.shutter)
     const rate = Object.values(spec).find((c) => c.cap?.rate)

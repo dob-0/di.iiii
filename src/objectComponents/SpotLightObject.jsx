@@ -9,7 +9,7 @@ import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAir
 import { registerBeamMesh, registerGlareMesh, useAtmosphere, useSchematic } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
-import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, lineSpacings, nextFrameIn, scanLines } from './laserLine.js'
+import { driveOfHex, frameIndexAt, laserColourFlux, laserOf, lineSpacings, nextFrameIn, poseAt, scanLines, TWEEN_TICK_MS } from './laserLine.js'
 import { getServerOffset } from '../rigbuild/serverClock.js'
 import { createLaserLineMaterial, createLaserSpotMaterial, laserLineBeforeRender, laserLineGeometry, laserSpotGeometry } from './laserLineMaterial.js'
 import { registerLaserMesh } from '../project/viewport/laserOverBloom.js'
@@ -317,11 +317,15 @@ function BeamAirStrobe({ material, values }) {
 // the same BeamReachProbe as LaserLines), the frame on at the show's time. No haze law, no halo, no end spot.
 const SCHEMATIC_CONE_OPACITY = 0.28
 function SchematicLaserLines({ store, laser, color, length }) {
-    const index = useLaserFrameIndex(store, laser.frames)
-    const points = index >= 0 && index < laser.frames.list.length ? laser.frames.list[index] : laser.frame
-    const scanKey = JSON.stringify([points, laser.fieldHalfDeg, color])
+    const { points, pose } = useLaserFramePose(store, laser)
+    // Drawn from the pose (blended between keyframes when the frames tween); the reach probe casts the keyframe on
+    // now, once a step: between two keyframes the ends barely move, and 20 casts a second per laser would not pay.
+    const scanKey = JSON.stringify([pose, laser.fieldHalfDeg, color])
+    const probeKey = JSON.stringify([points, laser.fieldHalfDeg, color])
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
-    const dirs = useMemo(() => scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => l.dir), [scanKey])
+    const dirs = useMemo(() => scanLines(pose, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => l.dir), [scanKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
+    const probeDirs = useMemo(() => (pose === points ? dirs : scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => l.dir)), [probeKey, dirs])
     const [reach, setReach] = useState(null)
     const fallback = Math.max(Number(length) || 20, 0.5)
     const measured = Boolean(reach && reach.hits.length === dirs.length)
@@ -337,7 +341,7 @@ function SchematicLaserLines({ store, laser, color, length }) {
     useEffect(() => () => geometry.dispose(), [geometry])
     return (
         <>
-            {store?.getState?.().scene ? <BeamReachProbe dirs={dirs} onReach={setReach} /> : null}
+            {store?.getState?.().scene ? <BeamReachProbe dirs={probeDirs} onReach={setReach} /> : null}
             <lineSegments geometry={geometry} frustumCulled={false} userData={{ noBounds: true, beamPick: true }}>
                 <lineBasicMaterial color={color} toneMapped={false} fog={false} />
             </lineSegments>
@@ -346,12 +350,16 @@ function SchematicLaserLines({ store, laser, color, length }) {
 }
 
 function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) {
-    const index = useLaserFrameIndex(store, laser.frames)
-    const points = index >= 0 && index < laser.frames.list.length ? laser.frames.list[index] : laser.frame
-    const scanKey = JSON.stringify([points, laser.fieldHalfDeg, color])
+    const { index, points, pose } = useLaserFramePose(store, laser)
+    // Drawn from the pose (blended between keyframes when the frames tween); the reach probe casts the keyframe on
+    // now, once a step (see useLaserFramePose).
+    const scanKey = JSON.stringify([pose, laser.fieldHalfDeg, color])
+    const probeKey = JSON.stringify([points, laser.fieldHalfDeg, color])
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
-    const scan = useMemo(() => scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }), [scanKey])
+    const scan = useMemo(() => scanLines(pose, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }), [scanKey])
     const dirs = useMemo(() => scan.map((l) => l.dir), [scan])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value
+    const probeDirs = useMemo(() => (pose === points ? dirs : scanLines(points, { fieldHalfDeg: laser.fieldHalfDeg, drive: driveOfHex(color) }).map((l) => l.dir)), [probeKey, dirs])
     // each line's gap to its nearest neighbour in this fan caps its halo (laserLine.js 7.)
     const spacings = useMemo(() => lineSpacings(dirs), [dirs])
     const [reach, setReach] = useState(null)
@@ -360,7 +368,7 @@ function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) 
     const lengths = scan.map((_, i) => (measured ? reachFrom(reach.hits[i]?.t, fallback) : fallback))
     // a line that met a surface lights a dot there (laserLine.js 8.); a miss has no surface to light
     const spots = scan.map((_, i) => measured && Number.isFinite(reach.hits[i]?.t) && reach.hits[i].t > 0)
-    const key = JSON.stringify([laser, color, level, lengths, spots, index])
+    const key = JSON.stringify([laser, color, level, lengths, spots, index, scanKey])
     const lines = useMemo(() => {
         const lvl = Math.min(1, Math.max(0, Number(level ?? 1)))
         return scan.map((l, i) => {
@@ -390,22 +398,30 @@ function LaserLines({ gl, store, laser, color, level = 1, length, anisotropy }) 
     material.uniforms.uG.value = Number.isFinite(Number(anisotropy)) ? Number(anisotropy) : 0.74
     return (
         <>
-            {store?.getState?.().scene ? <BeamReachProbe dirs={dirs} onReach={setReach} /> : null}
+            {store?.getState?.().scene ? <BeamReachProbe dirs={probeDirs} onReach={setReach} /> : null}
             <mesh ref={lineRef} geometry={geometry} material={material} frustumCulled={false} userData={{ noBounds: true, beamPick: true }} onBeforeRender={beforeLaserRender} />
             {hasSpots ? <mesh ref={spotRef} geometry={spotGeometry} material={spotMaterial} frustumCulled={false} userData={{ noBounds: true }} onBeforeRender={beforeLaserRender} /> : null}
         </>
     )
 }
 
-// THE FRAME ON NOW (laserLine.js frameIndexAt): the show's time is the SERVER's (serverClock.js, measured once for the
-// page), so every viewer draws the same frame. One timer, set to the next frame change: nothing runs per frame, and a
-// laser without frames runs nothing at all.
-function useLaserFrameIndex(store, frames) {
+// THE FRAME ON NOW (laserLine.js frameIndexAt / poseAt): the show's time is the SERVER's (serverClock.js, measured once
+// for the page), so every viewer draws the same frame. One timer, set to the next frame change: nothing runs per frame,
+// and a laser without frames runs nothing at all. Keyframes that tween (frames.tween, 2026-10-17) tick at TWEEN_TICK_MS
+// instead, and the pose glides between two frames exactly as the cubes' player glides — the room shows what the wall
+// shows. `points` is the keyframe on now (what the reach probe casts, once a step); `pose` is what is drawn.
+function useLaserFramePose(store, laser) {
+    const frames = laser?.frames || null
     const framesKey = frames ? JSON.stringify(frames) : ''
-    const [index, setIndex] = useState(() => (frames ? frameIndexAt(frames, Date.now() / 1000) : -1))
+    const at = (t) => {
+        const index = frames ? frameIndexAt(frames, t) : -1
+        const points = index >= 0 ? frames.list[index] : laser?.frame || null
+        return { index, points, pose: frames ? poseAt(frames, t) || points : points }
+    }
+    const [now, setNow] = useState(() => at(Date.now() / 1000))
     useEffect(() => {
         if (!frames) {
-            setIndex(-1)
+            setNow(at(0))
             return undefined
         }
         let alive = true
@@ -415,9 +431,9 @@ function useLaserFrameIndex(store, frames) {
             if (!alive) return
             clearTimeout(timer)
             const t = (Date.now() + offset) / 1000
-            setIndex(frameIndexAt(frames, t))
+            setNow(at(t))
             store?.getState?.().invalidate?.() // an on-demand loop draws the new frame
-            timer = setTimeout(tick, Math.max(16, nextFrameIn(frames, t) * 1000 + 1))
+            timer = setTimeout(tick, frames.tween === true ? TWEEN_TICK_MS : Math.max(16, nextFrameIn(frames, t) * 1000 + 1))
         }
         tick()
         Promise.resolve(getServerOffset()).then((o) => { offset = Number(o?.offset) || 0; tick() }, () => {})
@@ -427,7 +443,7 @@ function useLaserFrameIndex(store, frames) {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: laserOf makes a new object each render
     }, [framesKey, store])
-    return frames ? index : -1
+    return frames ? now : { index: -1, points: laser?.frame || null, pose: laser?.frame || null }
 }
 
 function beforeLaserRender(renderer, scene, camera) {

@@ -1959,11 +1959,22 @@ lamp carries a view-only `rigDmx` note (never written). The Studio's `liveLight`
 
 **While the desk is live and a lamp has a patched profile with a channel list, DMX wins** — attribute by
 attribute, for what the list controls; what it does not (a PAR's aim, set by hand on its clamp) keeps the
-look's pose. A lamp with no list, or not on the desk, is drawn as before. Overall: a page's own GO
+look's pose. A lamp with no list is drawn as before; one not on the desk is dark (below). Overall: a page's own GO
 (`explicit`) > DMX > the desk's look (by rule) > the show's clock (only where no desk answers, §16) > the
 document. So a look must reach the room as DMX: `deskLookValues.js` writes each designed look as values
 through each fixture's list (a lamp the look does not name is at 0), and `show-loop.mjs` puts those on the
 desk — the looping show plays through DMX and the room shows exactly what the desk sends.
+
+**Not the desk's (MOXIR 2026-10-17).** While the desk is live, a lamp it does not drive (no row on the desk) is
+drawn dark, as it is on the rig. A network laser — a LaserCube line: `fixture.dmx === false`, its picture in
+`beam.laser` — is never the desk's: it follows the laser server (`src/rigbuild/laserShowState.js`). It is drawn as
+the design holds it while `GET /laser/api/state` says the show plays and the cube that plays its group is armed
+(the player's own `show.cubes` map, a group being the line's id without its letters: rig-laser-1a…1f →
+rig-laser-1; the engine's `cubes[].armed`), else dark — a laser rests dark. One poll per page, every 2 s, only
+while the room follows a desk and holds a network laser; a failed, refused or slow (4 s) read reads dark.
+Limits: the room draws its own project's frames for every group the player maps to an armed cube (another
+project with the same line names would show this one's pictures), and the run's `tween` switch is not carried
+(the room blends only where the document's `frames.tween` says so).
 
 ### 18.5 The stream (`serverXR/src/lighting/dmxstream.js`, LIGHTING_DESK.md "The pushed frame")
 

@@ -99,17 +99,12 @@ export const namedPositionKey = (fixture) => {
     return /^(halo|named) /.test(p) ? p.replace(/\s+/g, '-') : null
 }
 
-export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) => {
-    const looks = rigLooks || rigLooksOf(entities)
-    const look = looks?.looks?.find((l) => l.id === lookId)
-    const ctx = lookFrame(entities)
-    const out = new Map()
-    if (!look || !ctx) return out
+/** The rig's lamp groups, keyed as the looks key them (`<position>/<type>`): key -> [{ id, slot }]. Also the plot's lamps. */
+export const lampGroups = ({ entities = [], library }) => {
     const lamps = plotData({ entities, library }).lamps
     const positions = positionsOf(entities, lamps)
     const fill = fillOf(positions, lamps)
     const byEntity = new Map(entities.map((e) => [e.id, e]))
-    const lampById = new Map(lamps.map((l) => [l.id, l]))
     const groups = new Map()
     // A lamp the rig NAMED a position for (`fixture.position` "halo <group>", RIG_BUILD.md §15.8:
     // the halo's corners and sides are no derived slot) is grouped by that name, wherever the
@@ -149,6 +144,18 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
         if (!groups.has(key)) groups.set(key, [])
         groups.get(key).push({ id: l.id, slot: { pos: l.mount } })
     }
+    return { groups, lamps }
+}
+
+export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) => {
+    const looks = rigLooks || rigLooksOf(entities)
+    const look = looks?.looks?.find((l) => l.id === lookId)
+    const ctx = lookFrame(entities)
+    const out = new Map()
+    if (!look || !ctx) return out
+    const { groups, lamps } = lampGroups({ entities, library })
+    const byEntity = new Map(entities.map((e) => [e.id, e]))
+    const lampById = new Map(lamps.map((l) => [l.id, l]))
     for (const [key, members] of groups) {
         const aim = look.aims?.[key]
         const rule = aim && AIM_RULES[aim.rule]
@@ -212,12 +219,18 @@ const atLevel = (components, level) => {
     return out
 }
 
-/** The entities as the room should draw them in a look (the document is not touched). */
+/**
+ * The entities as the room should draw them in a look (the document is not touched). A rig lamp (it carries a
+ * fixture) that the playing look gives no pose is drawn at level 0 — what the desk writes for it (deskLookValues),
+ * so the room and the hall agree with or without a desk; it keeps its place and aim. A spotLight with no fixture
+ * is no rig lamp and is left as saved.
+ */
 export const posedEntities = (entities, poses) => {
     if (!poses?.size) return entities
     return entities.map((e) => {
+        if (e.type !== 'spotLight') return e
         const p = poses.get(e.id)
-        if (!p || e.type !== 'spotLight') return e
+        if (!p) return e.components?.fixture ? { ...e, components: { ...e.components, ...atLevel(e.components, 0), rigShown: { level: 0 } } } : e
         const t = e.components.transform || {}
         const lit = p.color && e.components.light ? { ...e.components, light: { ...e.components.light, color: p.color } } : e.components
         return {

@@ -16,6 +16,10 @@
 // fixture is the same machine turned half a turn about X, its base's front (+Z) toward
 // the room's +Z — the default face mountMatrix gives when none is recorded (the rig
 // records none; §18.3 says so).
+//
+// NOT THE DESK'S (MOXIR 2026-10-17). With a desk live, a lamp it does not drive (no desk row) is drawn dark, as it is
+// on the rig. A network laser (a LaserCube line, `fixture.dmx === false`) is never the desk's: it follows the laser
+// server (laserShowState.js) — drawn while the show plays on its armed cube, else dark. §18.4.
 
 import { capStrobeHz } from './strobeCap.js'
 import { spotAimDirection, rotationFromPanTilt } from '../project/viewport/spotLightAim.js'
@@ -24,6 +28,7 @@ import { lensFromMount, mountFromLens } from './lampGeometry.js'
 import { modeOf, typeById } from './fixtureTypes.js'
 import { decodeDmx } from './dmxDecode.js'
 import { flashKindOf } from './looks.js'
+import { isNetworkLaser, laserLineLit } from './laserShowState.js'
 
 const DEG = Math.PI / 180
 const HAZE_DEFAULT = 0.4 // spotBeam.js DEFAULT_HAZE
@@ -56,15 +61,22 @@ export const beamOfPanTilt = (pan, tilt, hung = false) => {
 
 const round3 = (v) => Math.round(v * 1000) / 1000
 
+/** A lamp drawn dark because nothing drives it: no light, no beam, no haze, and a note for the readout. Pure. */
+const restingDark = (e) => {
+    const beam = e.components.beam ? { ...e.components.beam, visible: false, haze: 0 } : undefined
+    return { ...e, components: { ...e.components, light: { ...(e.components.light || {}), intensity: 0 }, ...(beam ? { beam } : {}), rigShown: { level: 0, undriven: true } } }
+}
+
 /**
  * The entities with every desk-driven lamp drawn from its DMX.
  * @param {object[]} shown     the entities as the room would draw them (look-posed)
  * @param {object[]} document  the document's own entities (the lamps' true mounts)
  * @param {object[]} fixtures  the mirror's fixtures: { index, profile, values, … }
  * @param {object} library     type library
+ * @param {object} [laserShow] what the laser server plays (laserShowState.js laserShowOf): a network laser is drawn only while it lights it
  * @returns {{ entities: object[], driven: Map<string, object> }}  driven: id → decoded
  */
-export const dmxEntities = ({ shown, document, fixtures, library }) => {
+export const dmxEntities = ({ shown, document, fixtures, library, laserShow = null }) => {
     const driven = new Map()
     if (!Array.isArray(fixtures) || !fixtures.length || !Array.isArray(shown)) return { entities: shown, driven }
     const byIndex = new Map()
@@ -74,14 +86,21 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
     const out = shown.map((e) => {
         const fx = e?.components?.fixture
         if (e?.type !== 'spotLight' || !fx?.type) return e
+        if (isNetworkLaser(e)) {
+            // A network laser (a LaserCube line, off DMX) is never the desk's: it follows the laser server — drawn as the
+            // design holds it while the show plays on its armed cube (laserShowState.js), else dark: a laser rests dark.
+            // (MOXIR 2026-10-17: the rule below darkened all 36 cube lines while the wall played them.)
+            if (laserLineLit(laserShow, e.id)) return e
+            changed = true
+            return restingDark(e)
+        }
         const desk = byIndex.get(Number(fx.index))
         if (!desk || !Array.isArray(desk.values)) {
-            // With a desk connected, a lamp the desk does not drive is dark on the rig — so it is dark in the room too:
-            // an unpatched wash, or a LaserCube line the laser server is not playing (MOXIR 2026-10-17: the room kept
-            // drawing those from the design and flooded the view while the rig showed one beam).
+            // With a desk connected, a lamp the desk does not drive is dark on the rig — so it is dark in the room too
+            // (an unpatched wash, a DMX laser nothing drives): MOXIR 2026-10-17, the room kept drawing those from the
+            // design and flooded the view while the rig showed one beam.
             changed = true
-            const beam = e.components.beam ? { ...e.components.beam, visible: false, haze: 0 } : undefined
-            return { ...e, components: { ...e.components, light: { ...(e.components.light || {}), intensity: 0 }, ...(beam ? { beam } : {}), rigShown: { level: 0, undriven: true } } }
+            return restingDark(e)
         }
         const type = typeById(library, fx.type)
         const mode = runningMode(type, fx.mode, desk.profile)
@@ -93,7 +112,7 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
         const baseLight = base.components?.light || {}
         // A view-only note of what the desk says, for the visualiser's readout and its
         // latency probe (never written to the document).
-        const components = { ...e.components, rigDmx: { level: d.level, colour: d.colour, shutter: d.shutter, strobeHz: d.strobeHz, pan: d.pan, tilt: d.tilt, zoomDeg: d.zoomDeg, mode: mode.name, assumed: Boolean(mode.assumed) } }
+        const components = { ...e.components, rigDmx: { level: d.level, colour: d.colour, shutter: d.shutter, strobeHz: d.strobeHz, pan: d.pan, tilt: d.tilt, aim: d.aim || null, zoomDeg: d.zoomDeg, mode: mode.name, assumed: Boolean(mode.assumed) } }
 
         // Aim: a head the channels move.
         const moving = d.pan != null || d.tilt != null
@@ -148,10 +167,20 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
             // A DMX laser (UP-LA40WF) draws its own picture (beam.laser.frame, points [x, y, r, g, b]): its lit points take
             // the colour and output the desk sends, so the room shows the laser the rig shows (MOXIR 2026-10-17: the
             // room kept the design's white grid while the rig played red). Blank moves (r = g = b = 0) stay blank.
-            if (beam.laser && Array.isArray(beam.laser.frame) && d.colour) {
-                const hex = String(d.colour).replace('#', '')
-                const [r, g, b] = [0, 2, 4].map((i) => (parseInt(hex.slice(i, i + 2), 16) || 0) / 255 * d.level)
-                beam.laser = { ...beam.laser, frame: beam.laser.frame.map((p) => (Array.isArray(p) && (p[2] || p[3] || p[4]) ? [p[0], p[1], r, g, b] : p)) }
+            // Its X/Y (dmxDecode d.aim) moves the whole picture in the field, as the unit's position channels do; the room
+            // then measures each ray to its first surface again (SpotLightObject BeamReachProbe), so nothing stored is reused.
+            if (beam.laser && Array.isArray(beam.laser.frame) && (d.colour || d.aim)) {
+                const hex = d.colour ? String(d.colour).replace('#', '') : null
+                const [r, g, b] = hex ? [0, 2, 4].map((i) => (parseInt(hex.slice(i, i + 2), 16) || 0) / 255 * d.level) : [null, null, null]
+                const [dx, dy] = laserAimShift(d.aim, fx, beam.laser.fieldHalfDeg)
+                beam.laser = {
+                    ...beam.laser,
+                    frame: beam.laser.frame.map((p) => {
+                        if (!Array.isArray(p)) return p
+                        const lit = p[2] || p[3] || p[4]
+                        return hex && lit ? [p[0] + dx, p[1] + dy, r, g, b] : [p[0] + dx, p[1] + dy, ...p.slice(2)]
+                    })
+                }
             }
             components.beam = beam
         }
@@ -171,6 +200,24 @@ const wrapPan = (p) => (p > 270 ? p - 360 : p < -270 ? p + 360 : p)
 export const fixturePanOf = (roomPan, fx = null) => wrapPan((fx?.panInvert === true ? -roomPan : roomPan) + (Number(fx?.panOffsetDeg) || 0))
 export const roomPanOf = (fixturePan, fx = null) => { const p = (Number(fixturePan) || 0) - (Number(fx?.panOffsetDeg) || 0); return wrapPan(fx?.panInvert === true ? -p : p) }
 
+/**
+ * Where a DMX laser's picture moves in its own field (frame units, 1 = fieldHalfDeg) when the desk moves the unit:
+ * `aim` is dmxDecode's read-back in degrees on the UNIT's scan axes; the document says how the unit hangs, per lamp,
+ * like panInvert for heads — fixture.aimSwap (the unit's X moves the picture up-down, its Y side to side; applied
+ * first), fixture.aimInvertX / fixture.aimInvertY (that picture axis runs the other way). Measured with the owner at
+ * the wall (MOXIR 2026-10-17), never guessed: with no field set the unit's X is the picture's x.
+ */
+export const laserAimShift = (aim, fx = null, fieldHalfDeg = 18.5) => {
+    if (!aim) return [0, 0]
+    let x = Number(aim.x) || 0
+    let y = Number(aim.y) || 0
+    if (fx?.aimSwap === true) [x, y] = [y, x]
+    if (fx?.aimInvertX === true) x = -x
+    if (fx?.aimInvertY === true) y = -y
+    const half = Number(fieldHalfDeg) > 0 ? Number(fieldHalfDeg) : 18.5
+    const unit = (v) => Math.round((v / half) * 10000) / 10000 || 0
+    return [unit(x), unit(y)]
+}
 /** The fixture pan/tilt (degrees from home) that sends a lamp's beam along a room direction. */
 export const panTiltOfBeam = (dir, hung = false) => {
     const [x, y, z] = hung ? [-dir[0], -dir[1], dir[2]] : dir

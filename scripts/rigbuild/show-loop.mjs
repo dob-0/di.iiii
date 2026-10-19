@@ -90,6 +90,10 @@ export const showCues = (show) => show.cues.map((c, i) => ({
     hold: c.hold,
     lightLook: deskLookId(c.look)
 }))
+/** Starting the show on the desk: cue 1, then "play in order". A GO on a named cue turns play-in-order OFF on the desk
+ *  (cuerun.js, owner 2026-10-09: "you press, the scene changes, and auto play stops"), so without the second call the
+ *  show sat on cue 1 (seen 2026-10-17 10:38: index 0, autoplay false, nextInMs null, six minutes after the start). Pure. */
+export const startCalls = () => [['/api/cues/go', { index: 0 }], ['/api/cues/autoplay', { autoplay: true }]]
 export const runnerList = (cues) => cues.map((c) => ({ id: c.id, name: c.name, lookId: c.lightLook, hold: c.hold, fade: c.fade }))
 
 /** Ops that replace a document's cue list with `cues` and set the loop. Pure. */
@@ -99,6 +103,14 @@ export const cueOps = (document, cues, loop, { source } = {}) => [
     { type: 'setMappingState', payload: { patch: { loop: Boolean(loop), ...(source === 'clock' ? { showSource: 'clock' } : {}) } } }
 ]
 
+/**
+ * The op that takes `showSource: 'clock'` off a document whose show a DESK is about to play, or none. With 'clock' the
+ * room plays its own clock and ignores the desk (showClock.js showDriver), so the hall and the 3D part ways (MOXIR
+ * 2026-10-17: the 3D strobed while the rig stood still). Pure.
+ */
+export const clockOffOps = (document) => (document?.mappingState?.showSource === 'clock'
+    ? [{ type: 'setMappingState', payload: { patch: { showSource: 'desk' } } }]
+    : [])
 /** A rig file's own show (`rig.show`, versions.mjs) in this script's show shape. Pure. */
 export const showOfRig = (rig, project) => {
     if (!rig?.show?.cues?.length) throw new Error('the rig file carries no show (rig.show.cues)')
@@ -169,9 +181,22 @@ const main = async () => {
         say(`document: cue list + loop${show.source === 'clock' ? ' + showSource clock' : ''} written (version ${wrote.body.newVersion})`)
         if (documentOnly) { say('--document-only: the desk was not asked anything'); return }
     }
+    // The desk plays this show, so the room must follow the desk, not a clock (clockOffOps).
+    {
+        const now = await client.get(`/api/projects/${project}/document`)
+        const off = now.ok ? clockOffOps(now.body.document) : []
+        if (off.length) {
+            const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: now.body.version, ops: off.map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-clock-${i}`, clientId: 'show-loop' })) })
+            if (!wrote.ok) die(`taking showSource clock off: ${wrote.status} ${wrote.text.slice(0, 200)}`)
+            say(`document: showSource clock taken off (version ${wrote.body.newVersion}) — the room follows this desk`)
+        }
+    }
 
-    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
-    if (!rig.ok) die(`the desk's rig for ${project}: ${rig.status}`)
+    // --rig-project <id>: a COPY project (a scenes draft) has no patch of its own on the desk; its lamps are the
+    // show's lamps (same entity ids), so its looks are valued over the show's patch (2026-10-17, v2 draft on the desk).
+    const rigProject = args['rig-project'] ? String(args['rig-project']) : project
+    const rig = await desk.get(`/api/rig?project=${encodeURIComponent(rigProject)}`)
+    if (!rig.ok) die(`the desk's rig for ${rigProject}: ${rig.status}`)
     const fixtures = rig.body.fixtures || []
     const library = libraryWithShow(loadLibrary(), document.entities)
     const deskSet = deskLooksWithValues(looks, fixtures, { entities: withFixtureOverlay(document.entities, args['fixture-overlay'] ? String(args['fixture-overlay']) : null), library })
@@ -195,8 +220,11 @@ const main = async () => {
     const loaded = await desk.post('/api/cues/load', { project, list: runnerList(cues), loop: show.loop !== false })
     if (!loaded.ok) die(`loading the runner: ${loaded.status} ${loaded.text.slice(0, 200)}`)
     if (!args['no-start']) {
-        const go = await desk.post('/api/cues/go', { index: 0 })
+        const [[goPath, goBody], [playPath, playBody]] = startCalls()
+        const go = await desk.post(goPath, goBody)
         if (!go.ok) die(`GO: ${go.status} ${go.text.slice(0, 200)}`)
+        const play = await desk.post(playPath, playBody)
+        if (!play.ok) die(`play in order: ${play.status} ${play.text.slice(0, 200)}`)
         say(`desk: running — ${go.body.cues.index + 1}/${go.body.cues.n} ${go.body.cues.name}, loop ${go.body.cues.loop ? 'on' : 'off'}${go.body.cues.missing?.length ? `, MISSING looks: ${go.body.cues.missing.join(', ')}` : ''}`)
     }
     const summary = await desk.get('/api/summary')

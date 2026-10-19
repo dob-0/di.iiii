@@ -5,6 +5,10 @@ const { fxActive, fxOrder, fxLevel, beatGrid } = require('./fx');
 const { lfoApply, isGenericChannels } = require('./lfo');
 const { layerValues, kindAllows } = require('./looks');
 const { headsFrame, headsPose } = require('./headMotion');
+const { motionFrame } = require('./lookMotion');
+
+// Roles that step, never fade (snapMask).
+const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
 
 // Roles that step, never fade (snapMask).
 const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
@@ -297,6 +301,9 @@ class Engine {
     // HEAD MOTION (headMotion.js): the live layers' looks that move their heads. Offsets sit on the REST pan/tilt read
     // below through `val`, so a layer, an LFO or the stored value is still where the head rests. Null when nobody moves.
     const heads = headsFrame(state, now, kindAllows);
+    // LOOK MOTION (lookMotion.js): the live layers' looks that move their LEVELS (a breathe, a chase, a strobe...). One
+    // multiplier per fixture, 0..255, applied below where the master and the global FX are. Null when no look moves.
+    const motion = motionFrame(state, now, kindAllows);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
     // IDENTIFY — "which lamp in this room is fixture 7?". It beats the stack, the LFOs
@@ -337,7 +344,12 @@ class Engine {
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
       let lvl = master;
-      if (fxOn && !noScale) {
+      // The look's own motion first (lookMotion.js), then the desk's global FX on top, as before; a generic-channel or an
+      // excluded profile sits out both. Two STROBES never stack on one lamp: a look that strobes is the one flashing
+      // source for its lamps and the global strobe sits out for them, so no lamp flashes faster than fx.js's cap.
+      const lm = motion && !noScale ? motion.get(f.id) : null;
+      if (lm) lvl *= lm.level / 255;
+      if (fxOn && !noScale && !(lm && lm.strobe && state.fx.mode === 'strobe')) {
         lvl *= fxLevel(state.fx, f, order.get(f.id) ?? 0, state.fixtures.length, now) / 255;
       }
       if (audioOn && !noScale) lvl *= this.audioMult(state, f, profile, now) / 255;

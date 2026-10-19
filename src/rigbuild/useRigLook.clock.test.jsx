@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import { act, render, renderHook, waitFor } from '@testing-library/react'
 import { useRigLookEntities } from './useRigLook.js'
 import RoomLookFollower from './RoomLookFollower.jsx'
+import { NOT_PLAYING } from './laserShowState.js'
 
 // Hosted playback (RIG_BUILD.md §16): who drives the room, tested through the real hook
 // with a stand-in desk store.
@@ -115,5 +116,51 @@ describe('preview a look (owner 2026-10-12: pick a scene in view mode, for you o
         await act(async () => { getByRole('button', { name: 'Follow the show' }).click() })
         expect(chip.dataset.preview).toBeUndefined()
         expect(chip.dataset.look).toBe('red-room')
+    })
+})
+
+describe('the LaserCubes follow the laser server while a desk is live (MOXIR 2026-10-17)', () => {
+    // One lamp on the patch (index 1) the desk does not drive (its only row is index 2): the desk is live and followed.
+    const lamp = { id: 'L1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ffffff', intensity: 5, angle: 0.3 }, beam: { visible: true }, fixture: { type: 'up-b380f', index: 1 } } }
+    const line = { id: 'rig-laser-1a', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#00ff00', intensity: 3, angle: 0.1 }, beam: { visible: true, laser: { frames: { period: 8, list: [[[0, 0, 0, 1, 0]]] } } }, fixture: { type: 'ext-lc-ultra-mk2', dmx: false } } }
+    const room = (list) => ({ entities: list, mappingState: { cues: [] } })
+    const deskLive = () => {
+        const snapshot = { present: true, fixtures: [{ index: 2, profile: 'none', values: [0] }], looks: [], lookFade: null }
+        return { getSnapshot: () => snapshot, subscribe: () => () => {}, probe: () => Promise.resolve(true), watch: () => () => {} }
+    }
+    const lasers = (snapshot) => {
+        const s = { listening: 0, getSnapshot: () => snapshot, subscribe: () => { s.listening += 1; return () => { s.listening -= 1 } } }
+        return s
+    }
+    const lineIn = (result) => result.current.entities.find((e) => e.id === line.id)
+
+    it('draws a cube\'s line while the laser server plays it on its armed cube, and rests it dark when it does not', async () => {
+        // the document and the desk are made once: a new desk snapshot on every render would never settle
+        const doc = room([lamp, line])
+        const desk = deskLive()
+        const playing = lasers({ playing: true, groups: ['rig-laser-1'] })
+        const { result } = renderHook(() => useRigLookEntities(doc, { mirror: desk, laserShowStore: playing }))
+        await waitFor(() => expect(playing.listening).toBe(1))
+        expect(lineIn(result).components.beam.visible).toBe(true)
+        expect(lineIn(result).components.rigShown).toBeUndefined()
+        expect(result.current.entities.find((e) => e.id === 'L1').components.rigShown).toMatchObject({ undriven: true })
+        const silent = lasers(NOT_PLAYING)
+        const { result: dark } = renderHook(() => useRigLookEntities(doc, { mirror: desk, laserShowStore: silent }))
+        await waitFor(() => expect(lineIn(dark).components.rigShown).toMatchObject({ level: 0, undriven: true }))
+        expect(lineIn(dark).components.beam.visible).toBe(false)
+    })
+
+    it('polls only while a desk is live and the room holds a network laser; with no desk the design is drawn', async () => {
+        const store = lasers({ playing: true, groups: ['rig-laser-1'] })
+        const lampOnly = room([lamp])
+        const desk = deskLive()
+        renderHook(() => useRigLookEntities(lampOnly, { mirror: desk, laserShowStore: store }))
+        const doc = room([lamp, line])
+        const noDesk = fakeDesk({ present: false })
+        const { result } = renderHook(() => useRigLookEntities(doc, { mirror: noDesk, laserShowStore: store }))
+        await waitFor(() => expect(result.current.driver).toBeDefined())
+        expect(store.listening).toBe(0)
+        expect(lineIn(result).components.beam.visible).toBe(true)
+        expect(lineIn(result).components.rigShown).toBeUndefined()
     })
 })
