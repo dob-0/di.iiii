@@ -378,7 +378,9 @@ export const framesOf = (frames) => {
         total += pts.length
         list.push(pts)
     }
-    return list.length ? { period: clamp(period, MIN_PERIOD_S, MAX_PERIOD_S), list } : null
+    // `tween` (2026-10-17): the frames are keyframes; between two the pose glides (poseAt), as the cubes' player does
+    // (serverXR/src/laser/laserShow.js poseAt, the same arithmetic) — so the room shows what the wall shows.
+    return list.length ? { period: clamp(period, MIN_PERIOD_S, MAX_PERIOD_S), list, ...(frames.tween === true ? { tween: true } : {}) } : null
 }
 
 /** Which of `frames.list` is on at show time `t` (seconds): an index, or -1 when there are no frames. */
@@ -389,10 +391,33 @@ export const frameIndexAt = (frames, t) => {
     return Math.min(n - 1, Math.floor((phase / frames.period) * n))
 }
 
-/** The points a laser (laserOf's reading) draws at show time `t`: its frame in time, else its static frame. */
+/** How often a blending laser is redrawn (the player's TWEEN_KEY_HZ 20). */
+export const TWEEN_TICK_MS = 50
+
+const isLitPoint = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
+
+/**
+ * The pose at show time `t`: the frame on now, or — when the frames are keyframes (`frames.tween`, or `tween` asked) —
+ * the straight blend into the next frame, point by point, by how far `t` is through the step. A pair that does not
+ * match (point count, which points are lit) is not blended: the frame holds, exactly as the player holds it.
+ */
+export const poseAt = (frames, t, tween = false) => {
+    const i = frameIndexAt(frames, t)
+    if (i < 0) return null
+    const a = frames.list[i]
+    if (!tween && frames.tween !== true) return a
+    const n = frames.list.length
+    const b = frames.list[(i + 1) % n]
+    if (!b || b.length !== a.length || a.some((p, k) => isLitPoint(p) !== isLitPoint(b[k]))) return a
+    const phase = ((num(t) % frames.period) + frames.period) % frames.period
+    const f = Math.min(1, Math.max(0, (phase / frames.period) * n - i))
+    return a.map((p, k) => p.map((v, c) => v + (b[k][c] - v) * f))
+}
+
+/** The points a laser (laserOf's reading) draws at show time `t`: its frame in time (blended when it tweens), else its static frame. */
 export const laserFrameAt = (laser, t) => {
-    const i = frameIndexAt(laser?.frames, t)
-    return i >= 0 ? laser.frames.list[i] : laser?.frame || null
+    const pose = poseAt(laser?.frames, t)
+    return pose || laser?.frame || null
 }
 
 /** scanLines of what a laser draws at show time `t` (its own field half-angle). */

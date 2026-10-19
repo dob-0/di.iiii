@@ -648,7 +648,7 @@ known-fixes row and `useLightingMirror.test.jsx`.
 `serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port
 `src/rigbuild/headMotion.js` drives the room, both from the server's clock and the look's fire time, so desk and room agree
 (pinned to 0.01 degree by `headMotion.test.js`). Offsets sit on the look's rest aim. From a vertical rest only the tilt
-patterns (nod, wave, circle, figure8) show. Session note: `docs/ai/sessions/feat-looks-heads-motion-2026-10-15.md`.
+patterns (nod, wave, circle, figure8) show. Session note: `PROGRESS.md`, 2026-10-15 "Looks move the moving heads" (folded from the branch's note).
 
 ### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
 
@@ -1959,11 +1959,22 @@ lamp carries a view-only `rigDmx` note (never written). The Studio's `liveLight`
 
 **While the desk is live and a lamp has a patched profile with a channel list, DMX wins** — attribute by
 attribute, for what the list controls; what it does not (a PAR's aim, set by hand on its clamp) keeps the
-look's pose. A lamp with no list, or not on the desk, is drawn as before. Overall: a page's own GO
+look's pose. A lamp with no list is drawn as before; one not on the desk is dark (below). Overall: a page's own GO
 (`explicit`) > DMX > the desk's look (by rule) > the show's clock (only where no desk answers, §16) > the
 document. So a look must reach the room as DMX: `deskLookValues.js` writes each designed look as values
 through each fixture's list (a lamp the look does not name is at 0), and `show-loop.mjs` puts those on the
 desk — the looping show plays through DMX and the room shows exactly what the desk sends.
+
+**Not the desk's (MOXIR 2026-10-17).** While the desk is live, a lamp it does not drive (no row on the desk) is
+drawn dark, as it is on the rig. A network laser — a LaserCube line: `fixture.dmx === false`, its picture in
+`beam.laser` — is never the desk's: it follows the laser server (`src/rigbuild/laserShowState.js`). It is drawn as
+the design holds it while `GET /laser/api/state` says the show plays and the cube that plays its group is armed
+(the player's own `show.cubes` map, a group being the line's id without its letters: rig-laser-1a…1f →
+rig-laser-1; the engine's `cubes[].armed`), else dark — a laser rests dark. One poll per page, every 2 s, only
+while the room follows a desk and holds a network laser; a failed, refused or slow (4 s) read reads dark.
+Limits: the room draws its own project's frames for every group the player maps to an armed cube (another
+project with the same line names would show this one's pictures), and the run's `tween` switch is not carried
+(the room blends only where the document's `frames.tween` says so).
 
 ### 18.5 The stream (`serverXR/src/lighting/dmxstream.js`, LIGHTING_DESK.md "The pushed frame")
 
@@ -2156,6 +2167,8 @@ Four additions to the planner, each with a test in `src/rigbuild/patchPlan.test.
 
 Also fixed on the way: a lamp with no position name never converged (the planner wanted `position: ""`, the schema stores none), so a re-run wrote it again.
 
+**One command for a version onto the desk (2026-10-15, ledger N877):** `node scripts/rigbuild/version-to-desk.mjs --project <id> --api <base>/serverXR --token-file <f> --plan <plan.patch.json> [--dry-run] [--keep-others] [--no-start]` runs, in order, `patch-plan.mjs --keep-circuits`, `patch.mjs --unpatch` for every other project on the desk, `patch.mjs --exact`, `show-loop.mjs` (the document's own cues), then prints the desk per project, U1/U2 and the runner, and exits 1 if a step failed or another project is still on the desk. `--dry-run` writes nothing.
+
 Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 353 / 400, no LaserCube on any universe, the controls that make it fail on a wrong plan; `MOXIR_PATCH_FILE=` points it at any candidate). The crew's short table is `node scripts/rigbuild/patch-table.mjs --plan <plan> --out <dir> --pdf` (universe, start address, fixture, mode; Markdown, a page, CSV, a PDF through LibreOffice). The B380F's 16-channel map against the equivalent chart, and what is walked on the unit: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
 
 Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
@@ -2337,7 +2350,7 @@ lines and their end spots are left out of the bloom input and drawn over the pic
 line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
 Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
 between two lines 0.03 of the peak (Rayleigh < 0.735). OWED: GPU before/after renders (held by the heat guard, 93–98 °C) —
-hand-over in `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md`.
+hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (folded from the branch's note).
 
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
