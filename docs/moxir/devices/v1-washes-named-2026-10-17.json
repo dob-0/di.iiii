@@ -1,0 +1,125 @@
+{
+ "what": "MOXIR v1 scenes: seven washes the scenes were written to light (entrance planes-29/02 in 50 looks; line C planes-10/20 and line D planes-18/22/16 in 24 looks each) were dark because their fixture.position held note text instead of the place name the looks key on. Each gets the named position its look group uses; the old text is kept here in \"was\".",
+ "source": "deep audit agent A, 2026-10-17 10:58 (/home/dob/work/agent-reports-2026-10-17/deep-audit-A-washes.md, VERIFIED with lookPoses on the live document); owner 10:5x: \"use all fixed devices now we have all all\"",
+ "moves": [
+  {
+   "id": "rig-par-planes-29",
+   "position": [
+    -39.573,
+    0.322,
+    -42.089
+   ],
+   "rotation": [
+    2.877646703,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 rig-par-planes-29"
+   },
+   "was": "this fix color"
+  },
+  {
+   "id": "rig-par-planes-02",
+   "position": [
+    -39.573,
+    0.322,
+    -55.089
+   ],
+   "rotation": [
+    2.877646703,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 rig-par-planes-02"
+   },
+   "was": "this fix color"
+  },
+  {
+   "id": "rig-par-planes-10",
+   "position": [
+    2.07,
+    0.322,
+    -28.98
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 line-C-in0"
+   },
+   "was": "this still not has address"
+  },
+  {
+   "id": "rig-par-planes-20",
+   "position": [
+    -10.36,
+    0.322,
+    -17.1
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 line-C-in0"
+   },
+   "was": "this still not has address"
+  },
+  {
+   "id": "rig-par-planes-18",
+   "position": [
+    -2.07,
+    0.322,
+    -28.98
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 line-D-in0"
+   },
+   "was": "this still not has address"
+  },
+  {
+   "id": "rig-par-planes-22",
+   "position": [
+    -6.22,
+    0.322,
+    -28.98
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 line-D-in0"
+   },
+   "was": "this still not has address"
+  },
+  {
+   "id": "rig-par-planes-16",
+   "position": [
+    10.36,
+    0.322,
+    -28.98
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "fixture": {
+    "position": "named v1 line-D-in0"
+   },
+   "was": "this still not has address"
+  }
+ ]
+}

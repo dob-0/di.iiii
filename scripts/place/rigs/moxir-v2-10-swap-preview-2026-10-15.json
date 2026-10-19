@@ -1,0 +1,102 @@
+{
+ "what": "MOXIR v2.10 SWAP preview (owner 01:56, GIMP Screenshot_20261015_015603.png: 'change this beams and washes with places, it'll be more cool?'): the 6 UP-B380F beams take the washes' front row (z -5.21, x \u00b12.07/\u00b16.22/\u00b110.36); the 6 front-row washes go to the beams' line, which is the third rung of the wash columns (z -28.98): with the two column lamps there they make one crossbar of 8 at 4.14 m (x \u00b12.07/\u00b16.22/\u00b110.36/\u00b114.5). Nothing else moves. Built on the scratch copy moxir-v2-10-swap for his decision; v2-10 untouched.",
+ "source": "owner sketch 01:56; grid from moxir-v2-10-owner-arrangement-2026-10-15.json",
+ "moves": [
+  {
+   "id": "rig-beam-planes-01",
+   "position": [
+    -10.36,
+    0.7,
+    -5.21
+   ]
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "position": [
+    -6.22,
+    0.7,
+    -5.21
+   ]
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "position": [
+    -2.07,
+    0.7,
+    -5.21
+   ]
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "position": [
+    2.07,
+    0.7,
+    -5.21
+   ]
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "position": [
+    6.22,
+    0.7,
+    -5.21
+   ]
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "position": [
+    10.36,
+    0.7,
+    -5.21
+   ]
+  },
+  {
+   "id": "rig-par-planes-19",
+   "position": [
+    -14.5,
+    0.322,
+    -28.98
+   ]
+  },
+  {
+   "id": "rig-par-planes-22",
+   "position": [
+    -6.22,
+    0.322,
+    -28.98
+   ]
+  },
+  {
+   "id": "rig-par-planes-18",
+   "position": [
+    -2.07,
+    0.322,
+    -28.98
+   ]
+  },
+  {
+   "id": "rig-par-planes-10",
+   "position": [
+    2.07,
+    0.322,
+    -28.98
+   ]
+  },
+  {
+   "id": "rig-par-planes-14",
+   "position": [
+    6.22,
+    0.322,
+    -28.98
+   ]
+  },
+  {
+   "id": "rig-par-planes-13",
+   "position": [
+    14.5,
+    0.322,
+    -28.98
+   ]
+  }
+ ]
+}

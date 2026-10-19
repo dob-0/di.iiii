@@ -841,8 +841,13 @@ export const NODE_TYPES = {
             // The frame from a Laser node (or anything that makes the same
             // shape of object); the panel draws it and sends it on change.
             { id: 'frame',    type: 'any',    label: 'Frame' },
-            // 'all' or one cube's id, as the server names them.
+            // 'all' or one cube's id, as the server names them. Used only
+            // while IP is empty (the old way, one setup for all cubes).
             { id: 'cube',     type: 'string', label: 'Cube', default: 'all' },
+            // The TouchDesigner way (2026-10-14): this Out's own cube, by
+            // its address. Find cubes fills it (and values.serial, the box
+            // it expects); typing it by hand works the same.
+            { id: 'ip',       type: 'string', label: 'IP',   default: '' },
             // `any`, the DMX Out idiom: a Button, a Compare, a Toggle.
             { id: 'blackout', type: 'any',    label: 'Blackout' },
         ],
@@ -2135,9 +2140,10 @@ export const NODE_TYPES = {
         category: 'geometry',
         runtime: 'any',
         singleton: false,
-        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'beam', 'draw', 'frame', 'lasercube'],
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
         inputs: [
-            // One of: circle, line, square, triangle, star, wave, fan, spiral.
+            // One of: circle, line, square, triangle, star, wave, fan, spiral, galaxy, sunflower, noisy, grid —
+            // or a comma list of them that plays in turn every `cycle` seconds (laserShapes.js).
             { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
             { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
             // Where the shape sits up the cube's field, -1..1. 0.5 keeps a size-0.5 shape wholly in
@@ -2151,6 +2157,12 @@ export const NODE_TYPES = {
             // Brightness 0..1 — Sound's volume wired here makes the shape breathe.
             { id: 'level',    type: 'number', label: 'Level',    default: 1 },
             { id: 'points',   type: 'number', label: 'Points',   default: 120 },
+            // Galaxy's spirals or noisy's rings; 0 is the shape's own number (6, 3).
+            { id: 'copies',   type: 'number', label: 'Copies',   default: 0 },
+            // The hue runs along the path and drifts with time (TouchDesigner's COLORS ramp).
+            { id: 'rainbow',  type: 'boolean', label: 'Rainbow', default: false },
+            // Seconds each shape of a comma list plays; 0 plays the first only.
+            { id: 'cycle',    type: 'number', label: 'Cycle',    default: 0 },
         ],
         outputs: [
             { id: 'frame', type: 'any', label: 'Frame' },

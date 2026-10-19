@@ -199,6 +199,23 @@ describe('SpaceHub', () => {
         expect(screen.getByText('On this machine')).toBeTruthy()
     })
 
+    // P1 (2026-10-13): a work compiled into di.iiii's code has no project row,
+    // and its space card said "No projects yet" beside a finished work.
+    it('a space that holds a work compiled into di.iiii does not say "No projects yet"', async () => {
+        const compiledId = WORKS.find((work) => work.codeSpace).id
+        listServerSpaces.mockResolvedValue([
+            { id: compiledId, label: compiledId, isOwner: true, projectCount: 0, publishedCount: 0 },
+            { id: 'plain-space', label: 'Plain space', isOwner: true, projectCount: 0, publishedCount: 0 }
+        ])
+
+        render(<SpaceHub />)
+
+        const compiled = await findCard(compiledId)
+        expect(within(compiled).getByText("a work in di.iiii's code")).toBeTruthy()
+        expect(within(compiled).queryByText('No projects yet')).toBeNull()
+        expect(within(await findCard('plain-space')).getByText('No projects yet')).toBeTruthy()
+    })
+
     it('says nothing about lights on a tier with no desk', async () => {
         listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Group, PerspectiveCamera, Scene } from 'three'
 import { Vector3 } from 'three'
-import { MAX_UPDATE_DT, WHEEL_STEP_FACTOR, wheelZoomPlan, applyPivot, axisPointAtDepth, clampUpdateDt, clampUpdates, entityRoots, settleForGesture, zoomsIn } from './useCameraNavigation.js'
+import { MAX_UPDATE_DT, applyPivot, axisPointAtDepth, clampUpdateDt, clampUpdates, entityRoots, settleForGesture, standardWheelNotches } from './useCameraNavigation.js'
 
 describe('adapter helpers', () => {
     it('applyPivot never moves the orbit point while camera-controls is animating', () => {
@@ -49,23 +49,24 @@ describe('applyPivot force (a gesture that just stopped the easing)', () => {
 })
 
 describe('settleForGesture', () => {
-    it('stops an easing camera so the gesture\'s pivot can be set, and leaves a still one alone', () => {
-        let stopped = 0
-        settleForGesture({ active: true, stop: () => { stopped += 1 } })
-        settleForGesture({ active: false, stop: () => { stopped += 1 } })
-        settleForGesture(null)
-        expect(stopped).toBe(1)
+    it('freezes a gliding camera where it is (never jumps to the glide\'s end), and leaves a still one alone', async () => {
+        const THREE = await import('three')
+        const { default: CameraControls } = await import('camera-controls')
+        CameraControls.install({ THREE })
+        const cam = new THREE.PerspectiveCamera(50, 16 / 9, 0.01, 5000)
+        const cc = new CameraControls(cam)
+        cc.setLookAt(0, 0, 0, 0, 0, -10, false); cc.update(0)
+        cc.setLookAt(0, 0, -20, 0, 0, -30, true)
+        for (let i = 0; i < 6; i += 1) cc.update(1 / 60)
+        const mid = cam.position.clone()
+        settleForGesture(cc); cc.update(1 / 60)
+        expect(cam.position.distanceTo(mid)).toBeLessThan(1e-6)
+        expect(cc.getPosition(new THREE.Vector3(), true).distanceTo(mid)).toBeLessThan(1e-6)
+        settleForGesture(cc); settleForGesture(null) // a still one, and none: nothing happens
+        expect(cam.position.distanceTo(mid)).toBeLessThan(1e-6)
     })
 })
 
-describe('zoomsIn: infinityDolly only for a notch that zooms in', () => {
-    it('negative deltaY zooms in; positive, zero and junk do not', () => {
-        expect(zoomsIn({ deltaY: -100 })).toBe(true)
-        expect(zoomsIn({ deltaY: 100 })).toBe(false)
-        expect(zoomsIn({ deltaY: 0 })).toBe(false)
-        expect(zoomsIn(null)).toBe(false)
-    })
-})
 
 describe('clampUpdates: the first frame after a pause never carries the pause', () => {
     it('clamps the delta to MAX_UPDATE_DT and drops junk', () => {
@@ -82,22 +83,11 @@ describe('clampUpdates: the first frame after a pause never carries the pause', 
     })
 })
 
-describe('wheelZoomPlan: Blender\'s 1.2x step of the orbit distance (measured on the owner\'s Blender 5.2.2, 2026-10-13)', () => {
-    it('one notch in moves 1 - 1/1.2 of the distance; one out moves 0.2 of it; 20 in = 1.2^20', () => {
-        expect(WHEEL_STEP_FACTOR).toBe(1.2)
-        const a = wheelZoomPlan({ distance: 24, notches: 1 }); expect(a.step).toBeCloseTo(24 - 20, 6); expect(a.newDistance).toBeCloseTo(20, 6)
-        const b = wheelZoomPlan({ distance: 20, notches: -1 }); expect(b.step).toBeCloseTo(-4, 6); expect(b.newDistance).toBeCloseTo(24, 6)
-        expect(wheelZoomPlan({ distance: 18.388, notches: 20 }).newDistance).toBeCloseTo(18.388 / 38.338, 2) // blender-wheel-probe: 18.388 -> 0.4796
-        expect(wheelZoomPlan({ distance: 0, notches: 1 })).toBeNull(); expect(wheelZoomPlan({ distance: 10, notches: 0 })).toBeNull()
-    })
-    it('Blender\'s soft range: no step from outside it in the same direction, never a clamp, always a way back', () => {
-        expect(wheelZoomPlan({ distance: 10000, notches: -1, maxDistance: 10000 })).toBeNull()
-        expect(wheelZoomPlan({ distance: 9000, notches: -1, maxDistance: 10000 }).newDistance).toBeCloseTo(10800, 6) // one step past, as Blender (probe: 10861 m)
-        expect(wheelZoomPlan({ distance: 10800, notches: 1, maxDistance: 10000 }).newDistance).toBeCloseTo(9000, 6)
-        expect(wheelZoomPlan({ distance: 0.01, notches: 1, minDistance: 0.015 })).toBeNull()
-        expect(wheelZoomPlan({ distance: 0.01, notches: -1, minDistance: 0.015 }).newDistance).toBeCloseTo(0.012, 6)
-    })
-    it('a trackpad\'s fractional notch is a fractional step', () => {
-        expect(wheelZoomPlan({ distance: 24, notches: 0.5 }).newDistance).toBeCloseTo(24 / Math.sqrt(1.2), 6)
+describe('standardWheelNotches: the wheel, and Shift+wheel that Chrome on Linux sends sideways', () => {
+    it('a notch up is +1; Shift turns a sideways scroll into the wheel; nothing else counts sideways', () => {
+        expect(standardWheelNotches({ deltaY: -100, deltaMode: 0 })).toBe(1)
+        expect(standardWheelNotches({ deltaY: 0, deltaX: -100, shiftKey: true, deltaMode: 0 })).toBe(1)
+        expect(standardWheelNotches({ deltaY: 0, deltaX: -100, shiftKey: false, deltaMode: 0 })).toBe(0)
+        expect(standardWheelNotches({ deltaY: 0, deltaX: 3, shiftKey: true, deltaMode: 1 })).toBeCloseTo(-0.48, 6)
     })
 })
