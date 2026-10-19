@@ -57,4 +57,11 @@ describe('LoadingScreen', () => {
         expect(container.querySelector('.loading-screen--cover')).not.toBeNull()
         expect(container.querySelector('.loading-screen--inline')).not.toBeNull()
     })
+
+    it('shows slowText instead of the generic 8 s line when the cause is known', () => {
+        vi.useFakeTimers()
+        const { container } = render(<LoadingScreen slowText="too many tabs of this site are open — close one" />)
+        act(() => { vi.advanceTimersByTime(LOADING_SLOW_AFTER_MS) })
+        expect(container.querySelector('.loading-screen-slow')).toHaveTextContent('too many tabs of this site are open — close one')
+    })
 })

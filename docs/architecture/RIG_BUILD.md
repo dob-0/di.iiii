@@ -2349,8 +2349,13 @@ lines and their end spots are left out of the bloom input and drawn over the pic
 (`src/project/viewport/laserOverBloom.js`, three's selective-bloom pattern as an over-pass; lamps' bloom unchanged). Where a
 line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
 Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
-between two lines 0.03 of the peak (Rayleigh < 0.735). OWED: GPU before/after renders (held by the heat guard, 93–98 °C) —
-hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (folded from the branch's note).
+between two lines 0.03 of the peak (Rayleigh < 0.735). The owner confirmed the look on 2026-10-15 15:5x ("white core with
+colour halo"); it is tested (`laserLine.js` 9., `toneMapAces` = the room's ACESFilmic): the ACES shoulder whitens a green core
+gradually (whiteness 0.44 at 1 × white, 0.83 at 4 ×, 0.92 at 8 ×, 0.99 at 30 ×), the halo keeps the colour. From the floor
+(fov 60, exposure 1.5) a cube line seen along its fan is 80 / 30 / 8 × white at 5 / 10 / 20 m — a white 1-px core with a green
+halo; the 40 W heads seen side-on are 11 / 4 / 1.2 × — white near, pale green far. The room page and the Studio draw lasers
+through the same path since #972. OWED: the room page floor shots before/after and the lamp diff (held by heat, 88–100 °C) —
+`scripts/measure/laser-look-gpu-chain.sh`, hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (Job 3 of the branch note).
 
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
