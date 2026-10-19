@@ -10,9 +10,6 @@ const { motionFrame } = require('./lookMotion');
 // Roles that step, never fade (snapMask).
 const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
 
-// Roles that step, never fade (snapMask).
-const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
-
 // Generic profile library, named the way desks like Daslight name them:
 // the letters are the channel order.
 // Every profile here is a channel ORDER, not a particular product: pick the one whose
