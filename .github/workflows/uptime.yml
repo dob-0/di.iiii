@@ -109,12 +109,18 @@ jobs:
           title="uptime: site down"
           num=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "in:title $title" \
                   --json number,title -q ".[] | select(.title == \"$title\") | .number" | head -n1)
-          body="Down from GitHub's runners at $(date -u '+%Y-%m-%d %H:%M UTC'): $DOWN"
+          # Sites only (no status codes): a 503 turning into a timeout is not a new site.
+          sites=$(sed -E 's/ \([^)]*\)//g' <<<"$DOWN")
+          body="Down from GitHub's runners at $(date -u '+%Y-%m-%d %H:%M UTC'): $DOWN
+          <!-- sites: $sites -->"
           if [[ -n $num ]]; then
-            # One outage is one issue: comment when the state turns to down
-            # (up or unknown -> down), not on every check of the same outage.
-            # A change in WHICH sites are down during one outage is not detected.
-            if [[ $PREV != down ]]; then gh issue comment "$num" -R "$GITHUB_REPOSITORY" -b "$body"; fi
+            # One outage is one issue. Comment when the state turns to down
+            # (up or unknown -> down) or when the SET of down sites differs from
+            # the one in the newest marker (issue body or last comment).
+            last=$(gh issue view "$num" -R "$GITHUB_REPOSITORY" --json body,comments \
+                     -q '([.body] + [.comments[].body]) | map(select(test("<!-- sites: "))) | last // ""' \
+                   | sed -nE 's/.*<!-- sites: (.*) -->.*/\1/p' | head -n1)
+            if [[ $PREV != down || $last != "$sites" ]]; then gh issue comment "$num" -R "$GITHUB_REPOSITORY" -b "$body"; fi
           else
             gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"
           fi
