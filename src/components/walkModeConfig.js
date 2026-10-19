@@ -51,6 +51,12 @@ export const BROKEN_LOCK_SETTLE_MS = 200
 // after line-mode normalisation) steps half a metre.
 export const WHEEL_DOLLY_SPEED = 0.01
 
+// A touchpad pinch arrives as wheel events with ctrlKey and small deltaY (a few
+// px per event, no inertia): scaled up so a full pinch crosses a few metres.
+export const PINCH_DOLLY_SPEED = 0.05
+// Safari gesturechange: metres per unit of ln(scale) -- doubling the scale = ~3 m.
+export const GESTURE_DOLLY_PER_LOG_SCALE = 4
+
 // -- Pitch limits --
 // Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
 export const WALK_PITCH_LIMIT = 1.45

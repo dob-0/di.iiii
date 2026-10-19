@@ -29,13 +29,13 @@ describe('the viewer\'s Move control', () => {
         expect(screen.getByRole('group', { name: 'Move' })).toBeTruthy()
     })
 
-    it('starts on Auto and turning around a point ahead', () => {
+    it('starts on Auto and turning where you stand (the default since 2026-10-16)', () => {
         render(<MoveControl />)
         open()
         expect(speedField().value).toBe('')
         expect(autoButton().getAttribute('aria-pressed')).toBe('true')
-        expect(turnButton('Around a point ahead').getAttribute('aria-pressed')).toBe('true')
-        expect(turnButton('Where you stand').getAttribute('aria-pressed')).toBe('false')
+        expect(turnButton('Where you stand').getAttribute('aria-pressed')).toBe('true')
+        expect(turnButton('Around a point ahead').getAttribute('aria-pressed')).toBe('false')
     })
 
     it('writes a typed speed to the preference, and Auto takes it back', () => {
@@ -102,7 +102,7 @@ describe('the viewer\'s Move control', () => {
         expect(screen.queryByRole('group', { name: 'Move' })).toBeNull()
     })
 
-    it('takes the button\'s look and place from the viewer, so it sits with Lite / Full and in the scene bar', () => {
+    it('takes the button\'s look and place from the viewer, so it sits with Low / High and in the scene bar', () => {
         render(<MoveControl buttonStyle={{ color: 'rgb(1, 2, 3)' }} wrapStyle={{ position: 'absolute', top: '9rem', right: '1rem' }} />)
         const button = screen.getByRole('button', { name: 'Move' })
         expect(button.style.color).toBe('rgb(1, 2, 3)')

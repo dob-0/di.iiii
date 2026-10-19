@@ -10,6 +10,9 @@
     inset: 0;
     display: grid;
     place-items: center;
+    align-content: center;
+    justify-items: center;
+    gap: var(--di-space-4);
     /* Fixed and full-bleed so nothing underneath shows at the edges, and so a
        short load cannot produce a scrollbar that appears and vanishes. */
     background: var(--di-black);
@@ -58,4 +61,39 @@
     clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
+}
+
+/* Variants. "screen" is the default above. "cover" fills the nearest
+   positioned parent (a viewport, a panel that must not show half-built
+   content). "inline" is a small ring with no background, for a list or a
+   button row that is waiting. */
+.loading-screen--cover {
+    position: absolute;
+    z-index: 30;
+}
+
+.loading-screen--inline {
+    position: static;
+    inset: auto;
+    background: none;
+    z-index: auto;
+    display: inline-grid;
+    grid-auto-flow: column;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) 0;
+}
+
+/* One drawn line under the ring, and after 8 s a second one that names what
+   the wait is for. Small mono type, no box: rectangles only, no pills. */
+.loading-screen-text,
+.loading-screen-slow {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
+.loading-screen-slow {
+    color: var(--di-text-muted);
 }

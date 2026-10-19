@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ALL_CUBES, DEFAULT_BUDGET, FRAME_MAX_POINTS, MIN_BUDGET, flattenLaserPaths, normaliseLaserPaths } from '../../shared/laserFrame.js'
 import { createThrottledSender, laserApiBase } from '../utils/dmxRigClient.js'
 
@@ -269,7 +269,7 @@ const configuredNameFor = (cubes, found) => {
     return hit?.name && hit.name !== hit.id ? hit.name : ''
 }
 
-function FindCubes({ cubes, post, refresh }) {
+function FindCubes({ cubes, post, refresh, onPickForOut }) {
     const [found, setFound] = useState(null)
     const [picks, setPicks] = useState({})
     const [note, setNote] = useState(null)
@@ -324,6 +324,11 @@ function FindCubes({ cubes, post, refresh }) {
                             <div className="raw-laser-panel-cube-about">
                                 serial {c.serial} · firmware {c.firmware} · {c.temperature} °C
                             </div>
+                            {onPickForOut && (
+                                <button type="button" className="raw-laser-panel-button" onClick={() => onPickForOut(c)}>
+                                    Use for this Out
+                                </button>
+                            )}
                             <input
                                 className="raw-laser-panel-input"
                                 type="text"
@@ -342,6 +347,127 @@ function FindCubes({ cubes, post, refresh }) {
                 </button>
             )}
             {note && <div className="raw-laser-panel-note" role="status">{note}</div>}
+        </div>
+    )
+}
+
+// THE OUT'S OWN CUBE, BY IP (2026-10-14, the TouchDesigner way). The field is always there and
+// always editable; Find cubes fills it. The server checks the address (private unicast only), asks
+// it the read-only info question and gives this Out the cube — one Out per cube.
+const RESOLVE_TEXT = {
+    found: 'found by Find cubes — checking it…',
+    checking: 'checking…',
+    answering: 'answering',
+    'wrong-serial': 'wrong serial',
+    'no-answer': 'no answer',
+    refused: 'refused',
+}
+
+const resolveLine = (resolved) => {
+    if (!resolved) return null
+    const label = RESOLVE_TEXT[resolved.status] || resolved.status
+    if (resolved.status === 'answering') return `${label}: ${resolved.modelName || 'LaserCube'} · serial ${resolved.serial} · ${resolved.cube?.name || resolved.cube?.id}`
+    return resolved.error ? `${label}: ${resolved.error}` : label
+}
+
+function IpField({ ip, onCommit, resolved }) {
+    const fieldId = useId()
+    const [draft, setDraft] = useState(ip)
+    useEffect(() => { setDraft(ip) }, [ip])
+    const commit = (event) => {
+        event?.preventDefault?.()
+        const next = draft.trim()
+        if (next !== ip) onCommit(next)
+    }
+    const warn = resolved && resolved.status !== 'answering' && resolved.status !== 'checking' && resolved.status !== 'found'
+    return (
+        <form className="raw-laser-panel-ip" onSubmit={commit}>
+            <label className="raw-laser-panel-label" htmlFor={fieldId}>Cube IP</label>
+            <input
+                id={fieldId}
+                className="raw-laser-panel-input"
+                type="text"
+                inputMode="decimal"
+                placeholder="192.168.1.51"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onBlur={commit}
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Cube IP"
+            />
+            {ip && resolved && (
+                <div className={`raw-laser-panel-note${warn ? ' raw-laser-panel-cube-warn' : ''}`} role="status" data-resolve={resolved.status}>
+                    {resolveLine(resolved)}
+                </div>
+            )}
+        </form>
+    )
+}
+
+// ON / OFF ON THE CARD (2026-10-14). OFF is always one click. ON switches only this Out's cube; the
+// first ON of a run (after the server starts, or after Disarm all) takes the sign-off phrase, typed —
+// after that each Out is one click. The server decides (laserEngine.js rule 10), this only asks.
+function OnOffControl({ cubeId, cubeState, signedOff, post, refresh, outId }) {
+    const phraseId = useId()
+    const [phrase, setPhrase] = useState('')
+    const [askPhrase, setAskPhrase] = useState(false)
+    const [note, setNote] = useState(null)
+    const [busy, setBusy] = useState(false)
+    const on = Boolean(cubeState?.armed)
+    const needPhrase = !signedOff || askPhrase
+    const switchOff = async () => {
+        const out = await post('/arm', { armed: false, cube: cubeId, out: outId })
+        setNote(out.body?.ok ? null : failureText(out, 'OFF did not reach the server — turn the key switch off'))
+        refresh()
+    }
+    const switchOn = async (event) => {
+        event?.preventDefault?.()
+        if (busy) return
+        const typed = phrase.trim()
+        if (needPhrase && !typed) { setAskPhrase(true); return }
+        setBusy(true)
+        const out = await post('/arm', { armed: true, cube: cubeId, out: outId, ...(needPhrase ? { confirm: typed } : {}) })
+        setBusy(false)
+        setPhrase('')
+        if (out.body?.needsPhrase) setAskPhrase(true)
+        else if (out.body?.ok) setAskPhrase(false)
+        setNote(out.body?.ok ? null : failureText(out, 'Not on'))
+        refresh()
+    }
+    return (
+        <div className="raw-laser-panel-onoff">
+            {on ? (
+                <button type="button" className="raw-laser-panel-disarm" onClick={switchOff} aria-pressed="true">
+                    ON — click for OFF
+                </button>
+            ) : (
+                <form className="raw-laser-panel-arm-form" onSubmit={switchOn}>
+                    {needPhrase && (
+                        <>
+                            <label className="raw-laser-panel-label" htmlFor={phraseId}>
+                                First ON of this run: typing the sign-off phrase means you are the laser safety officer for it.
+                            </label>
+                            <input
+                                id={phraseId}
+                                className="raw-laser-panel-input"
+                                type="text"
+                                value={phrase}
+                                onChange={(event) => setPhrase(event.target.value)}
+                                autoComplete="off"
+                                autoCorrect="off"
+                                autoCapitalize="off"
+                                spellCheck={false}
+                                aria-label="Sign-off phrase"
+                            />
+                        </>
+                    )}
+                    <button type="submit" className="raw-laser-panel-button" disabled={busy || (needPhrase && !phrase.trim())} aria-pressed="false">
+                        OFF — click for ON
+                    </button>
+                </form>
+            )}
+            {note && <div className="raw-laser-panel-note" role="alert">{note}</div>}
         </div>
     )
 }
@@ -383,8 +509,6 @@ export default function LaserOutPanelWindow({
         }
     }, [base])
 
-    const cube = String(values?.cube ?? '').trim() || ALL_CUBES
-
     // The paths (frame v2, or a legacy frame read as paths), judged by content: the wire hands a new
     // object every evaluation.
     const raw = values?.frame
@@ -400,6 +524,31 @@ export default function LaserOutPanelWindow({
     const budgetSet = values?.budget !== undefined && values?.budget !== '' && values?.budget !== null
     const requested = Number.isFinite(asked) && budgetSet ? asked : (legacy ? null : DEFAULT_BUDGET)
     const auto = requested !== null && requested <= 0
+    // An IP makes this Out the TouchDesigner kind: its own cube, resolved by the server; without
+    // one it is the old kind (the Cube input, 'all' by default).
+    const ip = String(values?.ip ?? '').trim()
+    const expectSerial = String(values?.serial ?? '').trim().toLowerCase()
+    const [resolved, setResolved] = useState(null)
+    useEffect(() => {
+        if (!ip) { setResolved(null); return undefined }
+        let alive = true
+        setResolved((was) => (was && was.ip === ip ? was : { status: 'checking', ip }))
+        // Asked now and every POLL_MS: the check keeps this Out's hold on its cube (the server frees a
+        // cube after 10 s of silence) and notices a cube that stopped answering.
+        const check = async () => {
+            const out = await postAwait(base, '/resolve', { ip, serial: expectSerial || undefined, out: node.id, name: node.label || undefined }, fetchRef.current)
+            if (!alive) return
+            if (out.body?.status) setResolved({ ...out.body, ip })
+            else setResolved({ status: 'no-answer', ip, error: failureText(out, 'The check failed') })
+        }
+        check()
+        const timer = setInterval(check, POLL_MS)
+        return () => { alive = false; clearInterval(timer) }
+    }, [ip, expectSerial, base, node.id, node.label])
+    const ipCube = resolved?.status === 'answering' ? resolved.cube?.id ?? null : null
+    // IP mode without a cube that answered: nothing is sent (cube null).
+    const cube = ip ? ipCube : (String(values?.cube ?? '').trim() || ALL_CUBES)
+    const out = ip ? node.id : undefined
     const cap = server.status === SERVER.ANSWERING ? cubeCap(server.state, cube) : null
     // Flatten: nearest-neighbour order from where the last frame ended, then resample to the budget.
     // Recomputed only when the drawing, the budget or the cap change, so a still drawing is not re-sent.
@@ -437,16 +586,16 @@ export default function LaserOutPanelWindow({
     // Frames go out when they change, and not at all while Blackout is held.
     // When it lets go the standing frame goes out again.
     useEffect(() => {
-        if (blackout || points.length === 0) return
-        send.current.frame({ cube, points })
+        if (blackout || points.length === 0 || cube === null) return
+        send.current.frame({ cube, points, out })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pointsKey, cube, blackout, base])
 
     // The keep-alive: while a frame is held (not blacked out), say so every
     // ALIVE_MS. It carries no points; the frame itself went out on change.
     useEffect(() => {
-        if (blackout || points.length === 0) return undefined
-        const timer = setInterval(() => postJson(base, '/alive', { cube }, fetchRef.current), ALIVE_MS)
+        if (blackout || points.length === 0 || cube === null) return undefined
+        const timer = setInterval(() => postJson(base, '/alive', { cube, out }, fetchRef.current), ALIVE_MS)
         return () => clearInterval(timer)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pointsKey, cube, blackout, base])
@@ -479,8 +628,13 @@ export default function LaserOutPanelWindow({
         if (server.status === SERVER.UNREACHABLE) return 'No answer from the laser server'
         if (server.status === SERVER.CHECKING) return 'Looking for the laser server…'
         const state = server.state
+        if (ip) {
+            const mine = ipCube && state.cubes?.find?.((c) => c.id === ipCube)
+            if (!mine) return `${ip}: ${RESOLVE_TEXT[resolved?.status] || 'checking…'}`
+            return `${mine.name || mine.id} at ${ip}: ${mine.armed ? 'ON' : 'OFF'}${mine.stop?.text ? ` — ${mine.stop.text}` : ''}`
+        }
         return `${state.armed ? 'Armed' : 'Disarmed — lasers off'}: ${cubesText(state)}${state.sim ? ', simulated' : ''}`
-    }, [server])
+    }, [server, ip, ipCube, resolved])
 
     const onStatusRef = useRef(onStatus)
     useEffect(() => { onStatusRef.current = onStatus })
@@ -530,8 +684,29 @@ export default function LaserOutPanelWindow({
                     {armed ? 'ARMED' : 'DISARMED'}
                 </div>
             )}
-            <ArmControl armed={armed} post={post} refresh={refresh} />
-            {armed === false && (
+            <IpField ip={ip} resolved={resolved} onCommit={(next) => onConfigChange?.(node.id, { ip: next, serial: '' })} />
+            {ip && ipCube && server.status === SERVER.ANSWERING && (
+                <OnOffControl
+                    cubeId={ipCube}
+                    cubeState={server.state.cubes?.find?.((c) => c.id === ipCube)}
+                    signedOff={Boolean(server.state.signedOff)}
+                    post={post}
+                    refresh={refresh}
+                    outId={node.id}
+                />
+            )}
+            {ip ? (
+                <button
+                    type="button"
+                    className="raw-laser-panel-disarm"
+                    onClick={async () => { await post('/arm', { armed: false }); refresh() }}
+                >
+                    Disarm all
+                </button>
+            ) : (
+                <ArmControl armed={armed} post={post} refresh={refresh} />
+            )}
+            {!ip && armed === false && (
                 <div className="raw-dmx-panel-setup">
                     Lasers off &mdash; disarmed on the server. The preview shows the shape; nothing reaches the cubes.
                 </div>
@@ -554,7 +729,12 @@ export default function LaserOutPanelWindow({
                 </ul>
             )}
             {server.status === SERVER.ANSWERING && (
-                <FindCubes cubes={server.state.cubes} post={post} refresh={refresh} />
+                <FindCubes
+                    cubes={server.state.cubes}
+                    post={post}
+                    refresh={refresh}
+                    onPickForOut={onConfigChange ? (found) => onConfigChange(node.id, { ip: found.ip, serial: found.serial }) : null}
+                />
             )}
             {server.status === SERVER.ANSWERING && server.state.guard && server.state.guard.validated === false && (
                 <div className="raw-dmx-panel-setup">

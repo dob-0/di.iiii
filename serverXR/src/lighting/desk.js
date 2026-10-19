@@ -434,6 +434,9 @@ function createDesk(opts = {}) {
     // (sanitizeLayer drops them): a fade in progress does not survive a restart.
     const before = layer.lookId;
     layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    // The beat the replaced look keeps through the crossfade: its own firedAt (lookMotion.js motionFrame blends the two
+    // looks' level motion over fadeMs, the old on its beat, the new on this one). In memory only, like fromLookId.
+    layer.fromFiredAt = before && before !== look.id ? (Number.isFinite(layer.firedAt) ? layer.firedAt : null) : (before === look.id ? layer.fromFiredAt || null : null);
     layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
     layer.firedAt = Date.now();
     layer.lookId = look.id;
@@ -528,12 +531,14 @@ function createDesk(opts = {}) {
   // The driver for one extra send, built or rebuilt when what it points at changes.
   function extraDriver(send) {
     const held = extraDrivers.get(send.id);
-    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority].join('|');
+    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority, send.universes.join()].join('|');
     if (held && held.sig !== sig) { held.drv.close(); extraDrivers.delete(send.id); }
     const again = extraDrivers.get(send.id);
     if (again) return again.drv;
     let drv = null;
-    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline });
+    // A widget carries ONE line: the universe it was told to (sendExtras sends that one). Built without it, the
+    // widget kept its default 0 and refused every other universe as unreachable — a U2 widget sent nothing (MOXIR 2026-10-17).
+    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline, universe: send.universes.length ? send.universes[0] : 0 });
     else if (send.driver === 'sacn') drv = new SACN({ offline, targets: send.targets, priority: send.priority, sourceName: 'di.iiii lighting desk' });
     // Art-Net needs no instance: one socket carries every destination, so an extra
     // Art-Net send is a list of addresses to also send each frame to, nothing more.

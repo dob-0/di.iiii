@@ -353,3 +353,93 @@ describe('LaserOutPanelWindow arm, disarm and Find cubes', () => {
         await waitFor(() => expect(view.getByText(/EACCES/)).toBeTruthy())
     })
 })
+
+// The TouchDesigner-style Laser Out (2026-10-14): its own cube by IP, ON/OFF on the card.
+describe('LaserOutPanelWindow with an IP', () => {
+    beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: false }) })
+    afterEach(() => { vi.useRealTimers() })
+
+    const ipServer = ({ resolve = { ok: true, status: 'answering', serial: '8cbfea06ab30', modelName: 'LaserCube Ultra', cube: { id: 'cube-1', name: 'Left' } }, signedOff = false, armed = false, armAnswer } = {}) => {
+        const posts = []
+        let state = { armed, signedOff, sim: false, cubes: [{ id: 'cube-1', name: 'Left', ip: '192.168.1.51', connected: true, armed }] }
+        const fetchImpl = vi.fn(async (url, options) => {
+            if (String(url).endsWith('/state')) return json(state)
+            const body = JSON.parse(options.body)
+            posts.push({ url: String(url), body })
+            if (String(url).endsWith('/resolve')) return json(resolve)
+            if (String(url).endsWith('/arm')) {
+                const answer = armAnswer ? armAnswer(body) : { ok: true }
+                if (answer.ok && body.cube) state = { ...state, signedOff: true, cubes: [{ ...state.cubes[0], armed: body.armed }] }
+                return json(answer, answer.ok ? 200 : 403)
+            }
+            return json({ ok: true })
+        })
+        return { fetchImpl, posts }
+    }
+    const ipNode = { ...node, id: 'out-left' }
+
+    it('checks its IP with the server as this Out, and sends frames only to the cube that answered, as this Out', async () => {
+        const { fetchImpl, posts } = ipServer()
+        const view = render(<LaserOutPanelWindow node={ipNode} pageOrigin={ORIGIN} fetchImpl={fetchImpl} values={{ ip: '192.168.1.51', serial: '8cbfea06ab30', frame: frameOf(0.5) }} />)
+        await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+        const resolves = posts.filter((p) => p.url.endsWith('/resolve'))
+        expect(resolves[0].body).toMatchObject({ ip: '192.168.1.51', serial: '8cbfea06ab30', out: 'out-left' })
+        expect(view.container.querySelector('[data-resolve="answering"]').textContent).toMatch(/answering: LaserCube Ultra · serial 8cbfea06ab30/)
+        await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+        expect(frames(posts).at(-1).body).toMatchObject({ cube: 'cube-1', out: 'out-left' })
+        expect(alives(posts).at(-1).body).toEqual({ cube: 'cube-1', out: 'out-left' })
+        // The check repeats (it keeps the Out's hold on its cube).
+        await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
+        expect(posts.filter((p) => p.url.endsWith('/resolve')).length).toBeGreaterThan(1)
+    })
+
+    it('says no answer / wrong serial / refused, and sends no frame then', async () => {
+        for (const [status, error] of [['no-answer', 'no cube answered at 192.168.1.51'], ['wrong-serial', 'the cube at 192.168.1.51 is serial aa'], ['refused', 'already driven by another Laser Out — one Out per cube']]) {
+            const { fetchImpl, posts } = ipServer({ resolve: { ok: false, status, error } })
+            const view = render(<LaserOutPanelWindow node={ipNode} pageOrigin={ORIGIN} fetchImpl={fetchImpl} values={{ ip: '192.168.1.51', frame: frameOf(0.5) }} />)
+            await act(async () => { await vi.advanceTimersByTimeAsync(200) })
+            expect(view.container.querySelector(`[data-resolve="${status}"]`).textContent).toContain(error)
+            expect(frames(posts)).toHaveLength(0)
+            view.unmount()
+        }
+    })
+
+    it('the IP field is editable by hand, and Find cubes fills it with the address and serial', async () => {
+        const onConfigChange = vi.fn()
+        const { fetchImpl } = ipServer()
+        const view = render(<LaserOutPanelWindow node={ipNode} pageOrigin={ORIGIN} fetchImpl={fetchImpl} onConfigChange={onConfigChange} values={{}} />)
+        await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+        const field = view.getByLabelText('Cube IP')
+        fireEvent.change(field, { target: { value: ' 10.0.0.7 ' } })
+        fireEvent.blur(field)
+        expect(onConfigChange).toHaveBeenLastCalledWith('out-left', { ip: '10.0.0.7', serial: '' })
+    })
+
+    it('ON asks the phrase on the first ON of a run, then is one click; OFF is one click and names this cube only', async () => {
+        const armAnswer = (body) => (body.armed && !body.confirm && !signed ? { ok: false, needsPhrase: true, error: 'not on: the first ON of a run takes the sign-off phrase' } : { ok: true })
+        let signed = false
+        const { fetchImpl, posts } = ipServer({ armAnswer })
+        const view = render(<LaserOutPanelWindow node={ipNode} pageOrigin={ORIGIN} fetchImpl={fetchImpl} values={{ ip: '192.168.1.51' }} />)
+        await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+        // Not signed off: the phrase field is there and empty, ON waits for it.
+        const field = view.getByLabelText('Sign-off phrase')
+        expect(field.value).toBe('')
+        fireEvent.change(field, { target: { value: 'the words' } })
+        signed = true
+        await act(async () => { fireEvent.click(view.getByText('OFF — click for ON')) })
+        await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+        expect(posts.filter((p) => p.url.endsWith('/arm')).at(-1).body).toEqual({ armed: true, cube: 'cube-1', out: 'out-left', confirm: 'the words' })
+        // ON now: OFF is one click, for this cube.
+        await act(async () => { fireEvent.click(view.getByText('ON — click for OFF')) })
+        await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+        expect(posts.filter((p) => p.url.endsWith('/arm')).at(-1).body).toEqual({ armed: false, cube: 'cube-1', out: 'out-left' })
+        // Signed off this run: ON again is one click, no phrase field.
+        expect(view.queryByLabelText('Sign-off phrase')).toBeNull()
+        await act(async () => { fireEvent.click(view.getByText('OFF — click for ON')) })
+        await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+        expect(posts.filter((p) => p.url.endsWith('/arm')).at(-1).body).toEqual({ armed: true, cube: 'cube-1', out: 'out-left' })
+        // Disarm all is always there.
+        await act(async () => { fireEvent.click(view.getByText('Disarm all')) })
+        expect(posts.filter((p) => p.url.endsWith('/arm')).at(-1).body).toEqual({ armed: false })
+    })
+})

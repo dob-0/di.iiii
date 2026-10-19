@@ -1,0 +1,27 @@
+{
+ "kind": "smoke",
+ "code": "UP-YZ31P",
+ "maker": "U-Plus Lighting",
+ "model": null,
+ "manual": null,
+ "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
+ "modes": {
+  "1": {
+   "status": "ASSUMED",
+   "note": "no source: ch 1 = haze output (docs/moxir/devices/up-yz31p.md); Sevan's list replaces it",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Haze output",
+     "ranges": [
+      [
+       0,
+       255,
+       "ASSUMED: off to full"
+      ]
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -2,6 +2,12 @@ const { DatabaseSync } = require('node:sqlite')
 
 let _db = null
 
+// What the start-up passes did on the last initDb, for the server to say in its
+// own log (index.js). This file takes no sibling module on purpose: the image
+// layout test (scripts/space-bundle.test.js) runs it alone, as the CLI tools do.
+let _startupReport = { archivedTitlesMoved: 0 }
+const getStartupReport = () => ({ ..._startupReport })
+
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS spaces (
     id TEXT PRIMARY KEY,
@@ -571,17 +577,30 @@ function ensureColumn(db, table, column, definition) {
 // The only archive the platform had was five project titles with "[archived] "
 // typed in front of them — plain text that filtered nothing, sorted nothing and
 // hid nothing. Now that `state` exists, those titles say what they meant: the
-// state becomes 'archived' and the prefix comes off the name. Runs once.
+// state becomes 'archived' and the prefix comes off the name.
+//
+// It ran once, in September. A project followed or synced in from an older
+// tier can arrive wearing the prefix long after, so since 2026-10-13 it runs on
+// EVERY start: idempotent (a moved row no longer matches) and cheap (one scan
+// of the projects table). It returns how many rows it moved; initDb keeps the
+// count in getStartupReport() and the server says so in its log when it is not
+// zero. It reads the prefix the way the readers do
+// (projectRoutes.js isLegacyArchivedTitle: leading space, any case) and leaves
+// updated_at alone — tidying a name is not a change to the work.
+const ARCHIVED_PREFIX = /^\s*\[archived\]\s*/i
 function backfillArchivedTitles(db) {
-  const KEY = 'v3_archived_title_to_state'
-  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
-  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '[archived]%'").all()
+  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '%[archived]%'").all()
+    .filter((row) => ARCHIVED_PREFIX.test(String(row.title)))
+  if (!rows.length) return 0
   const update = db.prepare('UPDATE projects SET title = ?, state = ? WHERE id = ?')
-  for (const row of rows) {
-    const cleaned = String(row.title).replace(/^\s*\[archived\]\s*/i, '').trim() || row.title
-    update.run(cleaned, 'archived', row.id)
-  }
-  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+  db.transaction(() => {
+    for (const row of rows) {
+      // A name that was only the prefix keeps the id as its name: leaving the
+      // prefix on would match again on the next start.
+      update.run(String(row.title).replace(ARCHIVED_PREFIX, '').trim() || row.id, 'archived', row.id)
+    }
+  })()
+  return rows.length
 }
 
 // Replace the legacy "spaces = JSON 'null' means unrestricted" convention with
@@ -735,7 +754,7 @@ function initDb(dbPath) {
   db.exec('CREATE INDEX IF NOT EXISTS idx_space_ops_created ON space_ops(space_id, created_at)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_project_ops_created ON project_ops(project_id, created_at)')
   backfillUserUnrestricted(db)
-  backfillArchivedTitles(db)
+  _startupReport = { archivedTitlesMoved: backfillArchivedTitles(db) }
   backfillGlobalSpace(db)
   dedupeAndUniqueOps(db)
   // Nullable, independently-renameable public handle distinct from the
@@ -763,4 +782,4 @@ function closeDb() {
   }
 }
 
-module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, runArchiveBackfill: backfillArchivedTitles }
+module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, getStartupReport, runArchiveBackfill: backfillArchivedTitles }
