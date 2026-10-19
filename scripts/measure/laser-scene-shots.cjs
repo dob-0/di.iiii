@@ -6,9 +6,13 @@
  *
  *   node scripts/measure/laser-scene-shots.cjs --base http://<tree>.diiii.localhost --space moxir --project moxir-v2-11 \
  *       --scene "The storm:rig-the-storm:123" --scene "The matrix:rig-matrix:128" --out <dir> [--heat 85] [--wait-s 600] [--size 1280x800]
+ *       [--camera '{"position":[0,1.7,19.8],"target":[0,3,4.8],"fov":60}']
  *
  * --scene "<name>:<lookId>:<frame index>". Files: <out>/<n>-<page>-<scene>.png and shots.json. Waits while the CPU package is
  * over --heat (at most --wait-s, then stops and says so); refuses a software renderer; ends on about:blank, also on error.
+ * --camera (2026-10-15, lasers-look job): the browser's copy gets it as presentationState.fixedCamera, and after the settle the
+ * room's camera (HdrBloom's DEV handle window.__diRoom: camera, and controls.setLookAt when the page has camera-controls) is put there and read back into shots.json, so
+ * laser-lines-measure.py can project the lines with the camera the picture was really taken from.
  */
 const fs = require('node:fs')
 const path = require('node:path')
@@ -28,6 +32,7 @@ const SETTLE_MS = Number(arg('settle-ms', 20000))
 const SIZE = String(arg('size', '1600x900')).split('x').map(Number) // --size WxH (default 1600x900)
 const MODE = String(arg('frame-mode', 'as-is')) // as-is | first-point | no-frames | no-lasers (diagnosis variants of the browser's copy)
 const KINDS = String(arg('pages', 'studio,room')).split(',')
+const CAMERA = arg('camera') ? JSON.parse(arg('camera')) : null
 const SCENES = all('scene').map((s) => { const [name, lookId, frame] = s.split(':'); return { name, lookId, frame: Number(frame) } })
 if (!BASE || !SPACE || !PROJECT || !SCENES.length || SCENES.some((s) => !s.lookId || !(s.frame >= 0))) {
     console.error('usage: --base URL --space S --project P --scene "name:lookId:frame" [--scene …] --out DIR'); process.exit(2)
@@ -54,6 +59,10 @@ const cutFrame = (f) => (MODE === 'first-point' ? [f.find((p) => p[2] > 0 || p[3
 const holdScene = (doc, scene) => {
     const cue = { id: `held-${scene.lookId}`, name: `held: ${scene.name}`, key: '', fade: 0, hold: 3600, lightLook: scene.lookId, surfaces: {} }
     doc.mappingState = { ...(doc.mappingState || {}), cues: [cue], loop: true, showEpoch: Date.now() - 500, showSource: 'clock' }
+    if (CAMERA) {
+        const ps = doc.presentationState || {}
+        doc.presentationState = { ...ps, entryView: 'fixed-camera', fixedCamera: { ...(ps.fixedCamera || {}), projection: 'perspective', zoom: 1, near: 0.05, far: 400, locked: false, ...CAMERA } }
+    }
     let cut = 0
     if (MODE === 'no-lasers') { const before = doc.entities.length; doc.entities = doc.entities.filter((e) => !e?.components?.beam?.laser); return before - doc.entities.length }
     if (MODE === 'no-frames') { for (const e of doc.entities || []) if (e?.components?.beam?.laser?.frames) { delete e.components.beam.laser.frames; cut += 1 } return cut }
@@ -100,6 +109,19 @@ const main = async () => {
                 await page.goto('about:blank')
                 await page.goto(url, { waitUntil: 'load', timeout: 90000 })
                 await sleep(SETTLE_MS)
+                if (CAMERA) {
+                    r.camera = await page.evaluate(async (c) => {
+                        const cam = window.__diRoom?.camera
+                        if (!cam) return { error: 'no window.__diRoom.camera (dev build of HdrBloom.jsx needed)' }
+                        cam.fov = c.fov; cam.updateProjectionMatrix()
+                        // the page's camera controls own the camera (camera-controls setLookAt); without them, set it directly
+                        const ctl = window.__diRoom.controls
+                        if (ctl?.setLookAt) await ctl.setLookAt(...c.position, ...c.target, false)
+                        else { cam.position.set(...c.position); cam.lookAt(...c.target) }
+                        await new Promise((res) => setTimeout(res, 3000))
+                        return { position: cam.position.toArray(), target: c.target, fov: cam.fov, readBack: cam.position.toArray().map((n) => Math.round(n * 100) / 100) }
+                    }, CAMERA)
+                }
                 r.file = `${String(n).padStart(2, '0')}-${kind}-${MODE === 'as-is' ? '' : `${MODE}-`}${scene.name.replace(/\W+/g, '-').toLowerCase()}.png`
                 await page.screenshot({ path: path.join(OUT, r.file) })
                 r.tempAfter = packageTemp()
