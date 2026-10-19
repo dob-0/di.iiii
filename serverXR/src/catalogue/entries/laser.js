@@ -83,5 +83,29 @@ module.exports = [
     role: "guest",
     agent: false,
     note: `${SAME_MACHINE} ${OWN_PAGE} The engine is disarmed and closed before the new file is read; no restart.`
+  },
+  {
+    route: "POST /laser/api/show",
+    summary: "play a project's laser lines on the cubes: { project, map?: { cubeId: groupId }, scale?, reloadMs? } — each cube takes the frames of its rig line group (rig-laser-<n>*), re-aimed from the line's rotation into the cube's field; `scale` 0.1…10 zooms about the cube's axis, 'fit' fills the cube's keep-in zone with each picture; the document is re-read every reloadMs",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} Frames only: nothing lights until the laser safety officer has armed; a cube held by another Out is refused. 404 for an unknown project, 501 when this server has no document loader.`
+  },
+  {
+    route: "POST /laser/api/show/stop",
+    summary: "stop the show: every playing cube gets one blank frame; the engine's arming is untouched",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} From the LAN too when DI_LASER_REMOTE_STOP is on (the same gate as /blackout).`
+  },
+  {
+    route: "POST /laser/api/show/still",
+    summary: "the still beams a show needs, per cube, as the engine would judge them (after its keep-in zone, at the show's scale): { project, map?, scale?, confirm? } — without the officer's phrase it answers { needsPhrase, wouldApprove }; with it the dots are written into laser.json's stillBeams and the engine reloads disarmed",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} The phrase is never echoed. Dots already approved are not doubled (0.005 grid).`
   }
 ]

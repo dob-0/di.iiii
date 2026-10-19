@@ -13,6 +13,9 @@
 //   this level in the look holds still too: the look's readable floor (work-light layer) never flickers.
 //
 // Hard limits kept by construction, not by care:
+//   - THE DESK PLAYS IT TOO (2026-10-17): deskMotionOf hands the desk the look's motion with the lamps this plan moves
+//     (deskLookValues.js -> POST /api/looks); serverXR/src/lighting/lookMotion.js plays fx.js on them from the fire. Until
+//     then the wire stood still while the 3D pulsed (MOXIR, measured 2026-10-17).
 //   - LEVEL ONLY. This module returns one multiplier per lamp. It has no way to say pan, tilt or position, so a
 //     lamp on the truss cannot move (owner, 2026-10-09). Lasers are never in `kinds` of a favourite (the server
 //     refuses laser scenes as favourites, shared/laserMoments.cjs) and their envelope is not touched.
@@ -212,6 +215,31 @@ export const motionPlan = ({ entities, look, levelOf = () => 1, centre = null })
             : { id: e.id, x: world(nx(p[0])), y: world(nz(p[2])) }
     })
     return { motion, lamps: placed }
+}
+
+/** Where a look's radial motion measures from: the DJ (the booth), else null (the middle of the moving lamps). One answer for the room and the desk. */
+export const djCentre = (entities) => {
+    const dj = (entities || []).find((e) => e.id === 'rig-dj-table')
+    const p = dj?.components?.transform?.position
+    return Array.isArray(p) ? [p[0], 0, p[2]] : null
+}
+
+/**
+ * The desk look's motion (serverXR/src/lighting/lookMotion.js sanitizeMotion): the look's motion plus its UNITS, the lamps
+ * the room's plan moves, in the plan's order, each named by its desk fixture id (`idOf(entity)`, null = not on the desk)
+ * with its place in the effect. The desk plays fx.js on exactly this list, so its DMX is the room's frame (pinned by
+ * lookMotion.test.js). Null when nothing moves.
+ */
+export const deskMotionOf = ({ entities, look, levelOf, idOf = (e) => e.id, centre = null }) => {
+    const plan = motionPlan({ entities, look, levelOf, centre })
+    if (!plan) return null
+    const byId = new Map(entities.map((e) => [e.id, e]))
+    const units = []
+    for (const l of plan.lamps) {
+        const id = idOf(byId.get(l.id))
+        if (id) units.push({ id, x: l.x, y: l.y })
+    }
+    return units.length ? { ...plan.motion, units } : null
 }
 
 /** Map(lamp id -> multiplier 0..1) at server time `serverNow`; `epoch` = the server time the scene was fired (beat 0). */

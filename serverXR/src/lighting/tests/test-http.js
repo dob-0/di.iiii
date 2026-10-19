@@ -1229,6 +1229,18 @@ check('two outputs cannot be told to open the same serial port', async () => {
   await POST('/api/output/send/remove', { id: a.body.send.id });
 });
 
+check('a USB widget told to carry Universe 2 sends Universe 2 (MOXIR 2026-10-17: it sent nothing)', async () => {
+  const port = process.platform === 'win32' ? 'COM8' : '/dev/ttyUSB8';
+  const was = (await GET('/api/state')).body.output.enabled;
+  await POST('/api/output', { enabled: true });
+  const a = await POST('/api/output/send', { driver: 'enttec', serialPort: port, universes: [1], enabled: true });
+  await new Promise((r) => setTimeout(r, 400));
+  const s = (await GET('/api/state')).body.status.extra.find((x) => x.id === a.body.send.id);
+  assert.ok(s.packetsSent > 0, 'its frames go out, packetsSent ' + s.packetsSent);
+  await POST('/api/output/send/remove', { id: a.body.send.id });
+  await POST('/api/output', { enabled: was });
+});
+
 check('a hand-edited show cannot smuggle in an output the route would refuse', async () => {
   const r = await POST('/api/output/send', { driver: 'artnet', targets: ['not-an-ip', '10.0.0.4'], universes: [1, 1, 99999, -3] });
   assert.deepStrictEqual(r.body.send.targets, ['10.0.0.4'], 'a target that is not an address is dropped');
@@ -1295,6 +1307,22 @@ check('a look library round-trips, and a bad one is refused whole', async () => 
   assert.ok(read.kinds.includes('colour'), 'the page is told what kinds exist rather than keeping its own list');
   const bad = await POST('/api/looks', { looks: 'nope' });
   assert.strictEqual(bad.status, 400);
+});
+
+check('a look keeps its motion (the levels it moves, lookMotion.js); junk motion is dropped, numbers are clamped', async () => {
+  const motion = { mode: 'breathe', bpm: 66, depth: 200, spatial: 'patch', kinds: ['up-pl5403'], still: 0.3, units: [{ id: 'm1', x: 0.25, y: -0.5 }, { id: 'm2', x: 1.75, y: 0.5 }] };
+  const made = await POST('/api/looks/add', { look: { id: 'mv', name: 'Breathe', steps: [{ values: { '*': { dimmer: 200 } } }], motion } });
+  assert.strictEqual(made.status, 200, made.text);
+  assert.deepStrictEqual(made.body.look.motion, motion, 'the look comes back with its motion, the same numbers');
+  const { body: read } = await GET('/api/looks');
+  assert.deepStrictEqual(read.looks.find((l) => l.id === 'mv').motion, motion, 'GET /api/looks carries it');
+  const junk = await POST('/api/looks/add', { look: { id: 'mj', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'wobble', units: [{ id: 'm1' }] } } });
+  assert.strictEqual(junk.body.look.motion, undefined, 'an unknown mode is no motion');
+  const noUnits = await POST('/api/looks/add', { look: { id: 'mn', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'pulse' } } });
+  assert.strictEqual(noUnits.body.look.motion, undefined, 'motion with nothing to move is no motion');
+  const clamped = await POST('/api/looks/add', { look: { id: 'mc', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'strobe', bpm: 9999, depth: -4, spatial: 'sideways', units: [{ id: 'm1' }, { id: 'm1' }] } } });
+  assert.deepStrictEqual(clamped.body.look.motion, { mode: 'strobe', bpm: 300, depth: 0, spatial: 'patch', kinds: [], still: 0, units: [{ id: 'm1', x: 0, y: 0 }] });
+  for (const id of ['mv', 'mj', 'mn', 'mc']) await POST('/api/looks/remove', { id });
 });
 
 check('a layer drives the wire, and its fader is one small request', async () => {

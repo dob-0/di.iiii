@@ -176,7 +176,7 @@ describe('still beams in a frame', () => {
         expect(found[0].x).toBeCloseTo(0.1, 2)
         expect(stillBeams(dot().map(([x, y]) => [x, y, 0, 0, 0]))).toEqual([])
     })
-    it('none of the Laser node\'s eight shapes is still at size 0.05 or more; every one is at 0 (collapsed)', () => {
+    it('none of the Laser node\'s twelve shapes is still at size 0.05 or more; every one is at 0 (collapsed)', () => {
         for (const shape of LASER_SHAPES) {
             for (const points of [120, 500]) {
                 for (const size of [0.5, 0.1, 0.05]) {

@@ -245,6 +245,29 @@ check('fade interpolates between looks', () => {
   assert.ok(buf[0] > 100 && buf[0] < 155, 'halfway through the fade, got ' + buf[0]);
 });
 
+check('a colour wheel steps at the start of a fade while the dimmer fades (MOXIR 2026-10-17)', () => {
+  addProfile('test wheel 3ch', ['dimmer', 'color', 'gobo'], { replace: true });
+  const f = makeFixture({ profile: 'test wheel 3ch', address: 1, values: { dimmer: 0, color: 12, gobo: 0 } });
+  const e = new Engine(baseState([f]));
+  e.tick();
+  f.values.dimmer = 255; f.values.color = 132; f.values.gobo = 40;
+  e.startFade(1000);
+  e.fade.start = Date.now() - 500;
+  const buf = e.tick().get(0);
+  assert.ok(buf[0] > 100 && buf[0] < 155, 'the dimmer still fades, got ' + buf[0]);
+  assert.strictEqual(buf[1], 132, 'the wheel is already on the new slot, never a slot in between');
+  assert.strictEqual(buf[2], 40, 'the gobo wheel steps too');
+  removeProfile('test wheel 3ch');
+});
+
+check('a profile whose chart rests its dimmer at 0 (a DMX laser) comes up dark when patched (MOXIR 2026-10-17)', () => {
+  addProfile('test laser 3ch', ['dimmer', 'c2', 'c3'], { replace: true, defaults: { dimmer: 0, c2: 250 } });
+  const f = makeFixture({ profile: 'test laser 3ch', address: 1 });
+  assert.strictEqual(f.values.dimmer, 0, 'the laser rests dark, got ' + f.values.dimmer);
+  assert.strictEqual(makeFixture({ profile: 'dimmer', address: 1 }).values.dimmer, 255, 'a plain lamp still comes up alive');
+  removeProfile('test laser 3ch');
+});
+
 check('addresses cannot run off the end of a universe', () => {
   const f = makeFixture({ profile: 'rgbw', address: 511, values: { r: 255, g: 255, b: 255, w: 255, dimmer: 255 } });
   const buf = new Engine(baseState([f])).render().get(0);
@@ -779,6 +802,31 @@ check('a palette that names itself costs a lookup, not a frame', () => {
   const looks = sanitizeLooks([{ id: 'loop', steps: [{ values: { '*': { r: { ref: 'loop' } } } }] }]);
   const out = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
   assert.deepStrictEqual(out.get('a'), undefined, 'it resolves to nothing rather than hanging');
+});
+
+check("a look's motion moves the dimmer on the wire from the layer's firedAt; without it the frame is the old one", () => {
+  const { sanitizeLook, sanitizeLayer } = require('../looks');
+  const { motionLevels } = require('../lookMotion');
+  const desk = (motion) => {
+    const f = makeFixture({ id: 'w1', profile: 'drgb', address: 1, universe: 0, values: { dimmer: 255, r: 255, g: 255, b: 255 } });
+    const look = sanitizeLook({ id: 'L', steps: [{ values: { w1: { dimmer: 200 } } }], fixtures: ['w1'], ...(motion ? { motion } : {}) });
+    const layer = sanitizeLayer({ id: 'c', lookId: 'L', level: 1, merge: 'ltp' });
+    layer.firedAt = 1000;
+    return new Engine({ master: 255, blackout: false, fixtures: [f], raw: {}, scenes: [], activeScene: null, chase: { enabled: false, sceneIds: [], holdMs: 1000, fadeMs: 0 }, looks: [look], layers: [layer], fx: { mode: 'none', enabled: false, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0 } });
+  };
+  const motion = { mode: 'breathe', bpm: 66, depth: 200, spatial: 'patch', kinds: ['wash'], still: 0, units: [{ id: 'w1', x: 0.5, y: 0.5 }] };
+  const still = desk(null), moving = desk(motion);
+  const seen = new Set();
+  for (let ms = 0; ms <= 2000; ms += 25) {
+    const a = still.render(still.state, 1000 + ms).get(0)[0];
+    const b = moving.render(moving.state, 1000 + ms).get(0)[0];
+    assert.strictEqual(a, 200, "no motion: the look's dimmer, every frame");
+    const want = Math.round(200 * motionLevels(moving.state.looks[0].motion, 1000 + ms, 1000).get('w1') / 255);
+    assert.ok(Math.abs(b - want) <= 1, `at +${ms} ms the wire reads ${b}, fx.js says ${want}`);
+    seen.add(b);
+  }
+  assert.ok(seen.size > 10, `a breathe over 2 s passes through many levels, got ${seen.size}`);
+  assert.strictEqual(moving.render(moving.state, 1000).get(0)[0], 43, 'at the fire a breathe of depth 200 sits at its floor: 200 x 55/255');
 });
 
 check('a kind keeps a colour palette off the heads', () => {

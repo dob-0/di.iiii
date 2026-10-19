@@ -73,7 +73,7 @@ describe('the automatic speed reading', () => {
 describe('the settings hook', () => {
     it('reads the preference and writes it back', () => {
         const { result } = renderHook(() => useMoveSettings())
-        expect(result.current).toMatchObject({ speed: 'auto', turn: 'point', isAuto: true })
+        expect(result.current).toMatchObject({ speed: 'auto', turn: 'place', isAuto: true })
         act(() => { result.current.setSpeed(1) })
         expect(result.current).toMatchObject({ speed: 1, isAuto: false })
         expect(getSpeedPreference()).toBe(1)

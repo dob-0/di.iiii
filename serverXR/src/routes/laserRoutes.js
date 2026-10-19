@@ -36,6 +36,15 @@ const FIND_GAP_MS = 5000
 //                              Out. status: answering | wrong-serial | no-answer | refused
 //   POST /laser/api/arm        { armed, cube, out, confirm? } — ONE cube on or off; the phrase only
 //                              on the first ON of a run (laserEngine.js rule 10)
+//   POST /laser/api/show       { project, map?: { cubeId: groupId }, scale?, reloadMs? } — play that project's laser lines
+//                              (`scale` 0.1…10: the picture zoomed about each cube's axis, or 'fit': each picture fills the cube's keep-in zone; what leaves the field is blanked)
+//                              on the cubes by show time (laser/laserShow.js, 2026-10-17): the room's frames, the
+//                              engine's guards; restarts a running show. 404 no such project, 400 nothing to play
+//   POST /laser/api/show/stop  {} — the show player stops; its cubes go blank (a stop: STOPS_FROM_REMOTE)
+//   POST /laser/api/show/still { project, map?, confirm: '<the sign-off phrase>' } — the laser safety officer approves
+//                              the still beams that project's frames hold, per real cube: written to laser.json
+//                              (stillBeams, kept with what was approved before) and the engine reloaded, DISARMED —
+//                              arm again, then play. Without the phrase: 403 and the counts it would approve.
 //   POST /laser/api/config     { cubes: [{ serial, ip, name }, …] } — write laser.json (laserConfig.js)
 //                              and reload: the engine is disarmed and closed first, then rebuilt
 //                              from the new file on the next request. No restart.
@@ -48,7 +57,7 @@ const FIND_GAP_MS = 5000
 // How long a Laser Out's address check waits for the cube's answer.
 const PROBE_WAIT_MS = 800
 
-function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now } = {}) {
+function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now, loadDocument } = {}) {
   const laserDir = path.join(dataDir, 'laser')
   let engine = null
   const getEngine = () => {
@@ -57,6 +66,10 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     engine = createLaserEngine({ dataDir: laserDir, log, ...engineOptions })
     return engine
   }
+  // The show player (laser/laserShow.js): a project's laser lines on the cubes. It asks for the engine of the
+  // moment on every tick, so a config reload (a new engine) does not stop the show.
+  const { createShowPlayer } = require('../laser/laserShow')
+  const player = createShowPlayer({ getEngine, loadDocument, now, log })
   // Disarm, close and forget the engine; the next request builds it from laser.json again.
   const reload = async () => {
     const old = engine
@@ -80,7 +93,45 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   const router = express.Router()
   router.use((req, res, next) => (req.method === 'GET' || req.method === 'HEAD' ? next() : requireOwnPage(req, res, next)))
   router.use(express.json({ limit: '512kb' }))
-  router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().state()) })
+  router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: player.state() }) })
+  router.post('/api/show', requireSameMachine, async (req, res) => {
+    const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs, scale: req.body?.scale, tween: req.body?.tween })
+    res.status(out.ok ? 200 : out.status || 400).json({ ...out, show: player.state() })
+  })
+  router.post('/api/show/stop', stopGate, (req, res) => res.json({ ok: true, ...player.stop(), show: player.state() }))
+  router.post('/api/show/still', requireSameMachine, async (req, res) => {
+    const got = await player.resolve({ project: req.body?.project, map: req.body?.map, scale: req.body?.scale })
+    if (!got.ok) return res.status(got.status || 400).json(got)
+    const { stillBeams, ARM_PHRASE } = require('../laser/laserEngine')
+    const { stillBeamsOfGroup } = require('../laser/laserShow')
+    const perCube = got.map.map((m) => ({ cube: m.cube, group: m.group, stillBeams: stillBeamsOfGroup(m.lines, stillBeams, { scale: got.scale, zone: getEngine().state().zone, tween: req.body?.tween === true }) }))
+    const counts = Object.fromEntries(perCube.map((p) => [p.cube, p.stillBeams.length]))
+    if (req.body?.confirm !== ARM_PHRASE) {
+      return res.status(403).json({ ok: false, needsPhrase: true, error: 'not approved: the laser safety officer\'s sign-off phrase is missing or wrong', project: got.project, wouldApprove: counts })
+    }
+    const { readRaw, writeConfig } = require('../laser/laserConfig')
+    const config = readRaw(laserDir) || {}
+    // No laser.json yet (the sim's six cubes): the file starts from the cubes the engine runs, so the approval has rows.
+    if (!Array.isArray(config.cubes) || !config.cubes.length) {
+      config.cubes = getEngine().state().cubes.map((c) => ({ id: c.id, ...(c.name ? { name: c.name } : {}), ...(c.ip ? { ip: c.ip } : {}), ...(c.serial ? { serial: c.serial } : {}) }))
+    }
+    const cubes = config.cubes
+    const key = (b) => `${Math.round(b.x / 0.005)},${Math.round(b.y / 0.005)}`
+    for (const p of perCube) {
+      const c = cubes.find((x) => x && x.id === p.cube)
+      if (!c) continue
+      const kept = new Map((Array.isArray(c.stillBeams) ? c.stillBeams : []).filter((b) => Number.isFinite(Number(b?.x)) && Number.isFinite(Number(b?.y))).map((b) => [key(b), b]))
+      for (const b of p.stillBeams) if (!kept.has(key(b))) kept.set(key(b), b)
+      c.stillBeams = [...kept.values()]
+    }
+    let file
+    try { file = writeConfig(laserDir, config) } catch (error) {
+      return res.status(500).json({ ok: false, error: `laser.json could not be written: ${error.message}` })
+    }
+    const { wasArmed } = await reload()
+    log?.warn?.(`[laser] still beams of "${got.project}" approved: ${perCube.map((p) => `${p.cube} ${p.stillBeams.length}`).join(', ')}; ${wasArmed ? 'DISARMED for the reload' : 'disarmed'}`)
+    res.json({ ok: true, project: got.project, approved: counts, total: Object.fromEntries(cubes.map((c) => [c.id, (c.stillBeams || []).length])), file, disarmed: true, wasArmed, state: getEngine().state() })
+  })
   router.get('/api/frames', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().frames()) })
   router.post('/api/frame', requireSameMachine, (req, res) => {
     const out = getEngine().setFrame(req.body?.cube, req.body?.points, req.body?.out ?? null)
@@ -183,6 +234,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     // Every cube blanked and switched off, the socket closed; resolves when the messages have left.
     close: () => {
       if (!engine) return Promise.resolve()
+      player.stop()
       const going = engine.shutdown()
       engine = null
       return going

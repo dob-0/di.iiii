@@ -85,3 +85,89 @@ describe.skipIf(!hasPython)('laser_frames.py', () => {
         expect(Number(r.stdout)).toBeLessThan(1e-9)
     })
 })
+
+// The single-beam DMX lasers (2026-10-15, laser-40w N852): a scene's `laser_lines` drives the UP-LA40WF units' one beam each.
+const lineRig = {
+    fixtures: [...rig.fixtures, ...[-4, 4].map((x, i) => ({
+        id: `line-${i + 1}`, type: 'up-la40wf', p: [x, 6.4, 50],
+        laser: { beams: [{ id: `4${i + 1}`, r: [1.62, 0, x < 0 ? 0.03 : -0.03] }] }
+    }))]
+}
+const lineBase = { units: 'all', colour: '#ffffff', level: 0.1, tempo: { clock: 'master', bpm: 66, beats: 8 }, phase: 'mirror', amplitude_deg: 0, breathe: null, hits: null }
+const runLines = (lines, laser = null) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-lines-'))
+    const f = (n, o) => { const p = path.join(dir, n); fs.writeFileSync(p, JSON.stringify(o)); return p }
+    const out = path.join(dir, 'out.json')
+    const sc = { scenes: [{ id: 'a', cue: { fade_s: 2, hold_s: 30 }, laser: laser || { ...base, pattern: 'comb' }, laser_lines: lines }, { id: 'b', cue: { fade_s: 2, hold_s: 30 }, laser: null, laser_lines: null }] }
+    const r = spawnSync('python3', ['-I', path.join(here, 'laser_frames.py'), '--scenes', f('s.json', sc), '--rig', f('r.json', lineRig),
+        '--hall', f('h.json', hall), '--out', out], { encoding: 'utf8' })
+    const summary = JSON.parse(r.stdout)
+    const written = fs.existsSync(out) ? JSON.parse(fs.readFileSync(out, 'utf8')) : null
+    fs.rmSync(dir, { recursive: true, force: true })
+    return { status: r.status, summary, written }
+}
+
+describe.skipIf(!hasPython)('laser_frames.py: laser_lines (single-beam DMX lasers)', () => {
+    it('a still X and a sweep compile into 256 frames on each 40 W beam; the cubes keep theirs', () => {
+        for (const lines of [{ ...lineBase, pattern: 'still' }, { ...lineBase, pattern: 'sweep', amplitude_deg: 4, base_lift_deg: 0.5 }]) {
+            const { status, summary, written } = runLines(lines)
+            expect(summary.fails).toEqual([])
+            expect(status).toBe(0)
+            expect(summary.line_units).toEqual(['line-1', 'line-2'])
+            const beams = written.fixtures.filter((x) => x.type === 'up-la40wf').map((x) => x.laser.beams[0])
+            expect(beams.every((b) => b.frames.list.length === 256)).toBe(true)
+            expect(written.fixtures.filter((x) => x.type === 'ext-lc-ultra-mk2').every((x) => x.laser.beams.every((b) => b.frames.list.length === 256))).toBe(true)
+        }
+    })
+    it('refuses a colour the unit cannot make, a downward base and an unknown pattern', () => {
+        expect(runLines({ ...lineBase, pattern: 'still', colour: '#eefdfd' }).summary.schema_errors.join(' ')).toMatch(/not one the unit makes/)
+        expect(runLines({ ...lineBase, pattern: 'still', base_lift_deg: -1 }).summary.schema_errors.join(' ')).toMatch(/up only/)
+        expect(runLines({ ...lineBase, pattern: 'fan' }).summary.schema_errors.join(' ')).toMatch(/lines pattern/)
+    })
+    it('a swing wide enough to leave the bay fails the physics, nothing written', () => {
+        const { status, summary, written } = runLines({ ...lineBase, pattern: 'sweep', amplitude_deg: 18 })
+        expect(status).toBe(1)
+        expect(JSON.stringify(summary.fails)).toMatch(/lines/)
+        expect(written).toBe(null)
+    })
+})
+
+describe.skipIf(!hasPython)('laser_frames.py: beams, segments, keyframes (2026-10-17, the owner at the wall: "more robust scenes")', () => {
+    it('beams > the lines puts several rays on a line, each lit after a blank move to its own spot', () => {
+        const { status, summary, written } = run({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, beams: 6 })
+        expect(status).toBe(0)
+        expect(summary.ok).toBe(true)
+        const beam = written.fixtures[0].laser.beams[0]
+        const lit = beam.frames.list.filter((f) => f.some((p) => p[2] > 0))
+        expect(lit.length).toBeGreaterThan(0)
+        for (const f of lit) {
+            expect(f.filter((p) => p[2] > 0)).toHaveLength(3)                      // 6 beams on 2 lines: 3 rays a line
+            for (let k = 0; k < f.length; k += 1) {
+                if (f[k][2] <= 0) continue
+                expect(f[k - 1][2]).toBe(0)                                          // a blank move first …
+                expect(f[k - 1].slice(0, 2)).toEqual(f[k].slice(0, 2))              // … to the ray's own spot
+            }
+        }
+    })
+    it('segments makes a denser sky sheet', () => {
+        const { status, written } = run({ ...base, pattern: 'sky', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, amplitude_deg: 1, segments: 8 })
+        expect(status).toBe(0)
+        const f = written.fixtures[0].laser.beams[0].frames.list.find((fr) => fr.some((p) => p[2] > 0))
+        let longest = 0, runLen = 0
+        for (const p of f) { runLen = p[2] > 0 ? runLen + 1 : 0; longest = Math.max(longest, runLen) }
+        expect(longest).toBe(8)                                                      // one pose of the sheet: 8 lit points in a row
+    })
+    it('--keyframes writes one pose a frame and marks the frames for blending', () => {
+        const laser = { ...base, pattern: 'single-scan', pitch_deg: 4, yaw_deg: 9, amplitude_deg: 1.5 }
+        const plain = run(laser).written.fixtures[0].laser.beams[0].frames
+        const key = run(laser, ['--keyframes']).written.fixtures[0].laser.beams[0].frames
+        expect(plain.tween).toBeUndefined()
+        expect(plain.list.some((f) => f.filter((p) => p[2] > 0).length > 1)).toBe(true)   // the path within a frame
+        expect(key.tween).toBe(true)
+        expect(key.list.every((f) => f.filter((p) => p[2] > 0).length <= 1)).toBe(true)   // one pose a frame
+    })
+    it('beams and segments out of range are schema errors', () => {
+        expect(run({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, beams: 0 }).summary.schema_errors.join(' ')).toMatch(/beams/)
+        expect(run({ ...base, pattern: 'sky', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, segments: 1 }).summary.schema_errors.join(' ')).toMatch(/segments/)
+    })
+})
