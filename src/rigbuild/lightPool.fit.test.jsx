@@ -13,7 +13,7 @@ import { rigBodyLamps } from './rigBodyLamps.js'
 import { TYPE_LIBRARY } from './types/index.js'
 
 // LITE'S LIGHT IS THE POOL'S LIGHT, AND IT MUST BE THE LAMP'S LIGHT. (MOXIR lead, 2026-10-09; many-lights
-// plan §6.1.) In Lite, everyone's default since 2026-10-08, the room is lit by four light-pool slots
+// plan §6.1.) In Low, everyone's default since 2026-10-08, the room is lit by four light-pool slots
 // (outputMode.js, lightPool.js). A slot is built from the lamp it takes: place, aim, colour, intensity, angle.
 // A rig lamp's `angle` is half its BEAM angle, the datasheet's 50 % point; the renderer turns it into three's
 // cone with spotLightCone (spotBeam.js) only for an entity that says it is a rig lamp (`fitted`). The slot did
@@ -74,14 +74,14 @@ const lumens = ({ angle, penumbra, intensity }) => {
 }
 
 const opts = { slots: 4, minHoldMs: 1500, handoverMs: 400, margin: 0.15 }
-// the pool as Lite runs it, a moment after the slot took its lamp (the dip is over: envelope 1)
+// the pool as Low runs it, a moment after the slot took its lamp (the dip is over: envelope 1)
 const pooled = (entities) => {
     const state = stepLightPool(null, entities, 0, opts)
     return applyLightPool(entities, state, 1000, opts)
 }
 const slotsOf = (out) => out.filter((e) => e.id.startsWith(POOL_ID_PREFIX))
 
-describe('a light-pool slot gives three the cone of the lamp it took (Lite = Full, per lamp)', () => {
+describe('a light-pool slot gives three the cone of the lamp it took (Low = High, per lamp)', () => {
     it('a PL5403 slot has the same cone, so the same lumens, as the PL5403 in Full', () => {
         const lamp = pl5403('rig-par-01')
         const full = coneOf(lamp) // Full: the lamp itself, drawn as a real light
@@ -154,7 +154,7 @@ describe('the fit is carried without making the slot a second lamp', () => {
 })
 
 describe('both renderers read the fit the same way', () => {
-    // LiveProjectScene (the space view and walk mode, where Lite runs) cannot be mounted in a test: it is a full
+    // LiveProjectScene (the space view and walk mode, where Low runs) cannot be mounted in a test: it is a full
     // R3F tree. Its entity switch is a copy of EntityContent's (SpotLightObject.jsx header: "that duplication has
     // shipped drift twice already"), so the line that decides `fitted` is guarded as text, as
     // liveProjectSceneSeams.test.js guards the rest of that file.

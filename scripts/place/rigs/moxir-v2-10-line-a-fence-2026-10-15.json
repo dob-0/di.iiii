@@ -1,0 +1,14 @@
+{
+ "what": "MOXIR v2.10 line A last point inside the fence (lead 2026-10-15)",
+ "source": "lead decision: (-27.0,-31.5), 1 m inside fence edge x -27.7",
+ "moves": [
+  {
+   "id": "rig-par-planes-14",
+   "position": [
+    -27.073,
+    0.322,
+    -31.388
+   ]
+  }
+ ]
+}

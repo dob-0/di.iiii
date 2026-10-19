@@ -544,7 +544,12 @@ const lighting = registerLightingRoutes(app, {
 // desk's twin (built on first use, local-only, 404 hosted), and DISARMED at every start.
 const lasers = registerLaserRoutes(app, {
   dataDir: config.directories.dataDir,
-  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])]
+  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])],
+  // The show player reads a project's document the way the project API does (laser/laserShow.js).
+  loadDocument: async (projectId) => {
+    const project = await resolveProjectContext(projectId)
+    return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
+  }
 })
 
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,

@@ -1,0 +1,10 @@
+{
+  "what": "MOXIR truss washes put on the side of the truss they really hang (top = pointing up, under = pointing down)",
+  "source": "owner's truss photos via di.bo 2026-10-17 02:29-02:31 (photo-1229..1257), colour code 2: blue U1.033 and cyan U1.057 sit on top; magenta U1.049, orange U1.073, lime U1.089 hang under. Heights: the truss line through its end beams (y 2.7 at x -10.6, 5.5 at x 0), +0.03 m under / +0.75 m on top, as the lamps already placed there",
+  "moves": [
+    { "id": "rig-par-cut-06", "position": [-5.07, 4.18, 3.31], "rotation": [0, 0, 0], "fixture": { "hung": true } },
+    { "id": "rig-par-cut-03", "position": [-7.97, 3.43, 3.31], "rotation": [0, 0, 0], "fixture": { "hung": true } },
+    { "id": "rig-par-cut-01", "position": [-9.9, 2.91, 3.31], "rotation": [0, 0, 0], "fixture": { "hung": true } },
+    { "id": "rig-par-cut-05", "position": [-6.52, 4.53, 3.31], "rotation": [3.1416, 0, 0] }
+  ]
+}

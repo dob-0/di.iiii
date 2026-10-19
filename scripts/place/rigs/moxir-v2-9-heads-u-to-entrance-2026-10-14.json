@@ -1,0 +1,162 @@
+{
+ "what": "MOXIR v2.9: the U's two side lines run to the entrance (owner 2026-10-14 12:4x: \"yes run the U sides to the entrance\"), the same 6 heads a side, now 12 m apart over 60 m instead of 6 m over 30 m",
+ "source": "planned from the zones he drew (scripts/place/rigs/moxir-v2-9-zones-2026-10-14.json: dance floor to the entry wall z 53.8) and the hall record (entry wall z 53.8); x and height unchanged (left -22.011, right 22.0, 0.7 m), order along each line kept, aims are part rules ('vertical' for the side lines) so no look changes; checked with beam_clearance.mjs and physics_check.py before and after",
+ "moves": [
+  {
+   "id": "rig-beam-planes-14",
+   "position": [
+    -22.011,
+    0.7,
+    -8.173
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "position": [
+    -22.011,
+    0.7,
+    3.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "position": [
+    -22.011,
+    0.7,
+    15.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "position": [
+    -22.011,
+    0.7,
+    27.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "position": [
+    -22.011,
+    0.7,
+    39.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "position": [
+    -22.011,
+    0.7,
+    51.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "position": [
+    22.0,
+    0.7,
+    -8.173
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "position": [
+    22.0,
+    0.7,
+    3.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "position": [
+    22.0,
+    0.7,
+    15.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "position": [
+    22.0,
+    0.7,
+    27.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "position": [
+    22.0,
+    0.7,
+    39.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "position": [
+    22.0,
+    0.7,
+    51.827
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  }
+ ]
+}
