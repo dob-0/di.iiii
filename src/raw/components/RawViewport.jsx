@@ -19,6 +19,7 @@ import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, r
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { CIRCLE_SEGMENTS } from '../../objectComponents/primitiveSegments.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
@@ -280,7 +281,7 @@ function GeometryPieces({ descriptor, pruned = false }) {
             return (
                 <mesh {...place}>
                     <circleGeometry args={[
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), 48
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), CIRCLE_SEGMENTS
                     ]} />
                     <meshStandardMaterial color={asColor(descriptorLeaf.color, '#5fa8ff')} side={2} />
                 </mesh>
