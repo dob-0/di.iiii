@@ -1833,6 +1833,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'laser-trace-node',
+        category: 'Editing',
+        title: 'Laser Trace and Laser Merge — draw any shape with the LaserCubes',
+        summary: 'Laser Trace turns a shape from the scene nodes into lines the lasers draw; Laser Merge joins two drawings; Laser Out sets how many points a frame uses.',
+        body: [
+            'Wire any shape into a Laser Trace — a Cube, a Sphere, a Geo, a Merge, an Array — and its Frame into Laser Out. What the 3D view shows is what the laser draws: the same sizes, positions and turns, and each piece keeps its own colour (a red cube and a blue sphere draw red and blue). Wire a Colour into the Trace to draw everything in one colour; Level dims it from 0 to 1.',
+            'Draw picks how a shape becomes lines. Outline, the default, draws few clean lines: a box’s 12 edges, a sphere’s outline ring, a cylinder’s two rims and its two sides. Edges draws every crease sharper than Angle (30° unless you change it). Wireframe draws every edge of the mesh, like a TouchDesigner wireframe — many lines, so each is drawn less often. Points draws every corner of the mesh as a dot; the server stops any beam that stays still too long.',
+            'View Front looks straight down the scene’s depth, with Size in field units per metre (0 fits the shape into most of the field). View From a point puts the laser at Position, aiming at Aim, and draws what it would see by angle, the way the cube’s mirrors move. A line that leaves the field is cut at the edge, never squashed along it.',
+            'Laser Merge joins two drawings, from Laser Traces or Laser nodes; chain Merges for more. Laser Out puts the drawing in order (nearest line next) and spaces its points evenly along the lines. Points sets how many points a frame uses (1000 unless changed); Auto sizes it from the length of the lines. Fewer points draw the frame more often; more points give more detail and may flicker. Budget is a plain port too, so an Oscillator or a MIDI fader can drive it. It is never more than the cube can draw in 67 ms, and the line under the slider shows the number in use, the paths, and the time the trace took. Each cube line says how often the cube scans the drawing.',
+            'Animate as in TouchDesigner: wire an Oscillator into a Geo’s Rotation and the Laser Trace follows it. The flicker and the speed of the lines are still to be judged on the real cubes.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'trace', 'outline', 'wireframe', 'points', 'merge', 'budget', 'geometry', 'touchdesigner'],
+        updated: '2026-10-14'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',

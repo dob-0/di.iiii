@@ -19,6 +19,12 @@ describe('deriveNodeInspectorSections', () => {
         expect(sections[0].fields[0]).toMatchObject({ path: ['body'], type: 'textarea' })
     })
 
+    it('gives a laser-typed Frame no hand-typed field (a frame is only wired; its object must not print as [object Object])', () => {
+        const node = createNode('device.laser.out')
+        const frame = deriveNodeInspectorSections(node).flatMap((s) => s.fields).find((f) => f.label === 'Frame')
+        expect(frame).toMatchObject({ type: 'connection', portType: 'laser' })
+    })
+
     it('keeps regular node ports for standard node types', () => {
         const node = createNode('geom.cube')
         const sections = deriveNodeInspectorSections(node)

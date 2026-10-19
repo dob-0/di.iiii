@@ -2172,8 +2172,8 @@ export default function RawEditor({
                     node={node}
                     values={resolvedValues}
                     onStatus={handleMidiOutStatus}
-                    // The cube's IP (and the serial Find cubes saw) is set
-                    // in the card itself, like DMX Out's host.
+                    // The cube's IP (and the serial Find cubes saw) and the point budget
+                    // are set in the card itself, like DMX Out's host.
                     onConfigChange={(nodeId, patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
