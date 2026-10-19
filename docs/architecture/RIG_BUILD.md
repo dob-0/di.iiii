@@ -2355,7 +2355,7 @@ gradually (whiteness 0.44 at 1 × white, 0.83 at 4 ×, 0.92 at 8 ×, 0.99 at 30 
 (fov 60, exposure 1.5) a cube line seen along its fan is 80 / 30 / 8 × white at 5 / 10 / 20 m — a white 1-px core with a green
 halo; the 40 W heads seen side-on are 11 / 4 / 1.2 × — white near, pale green far. The room page and the Studio draw lasers
 through the same path since #972. OWED: the room page floor shots before/after and the lamp diff (held by heat, 88–100 °C) —
-`scripts/measure/laser-look-gpu-chain.sh`, hand-over in `docs/ai/sessions/feat-laser-lines-look-2026-10-15.md` (Job 3).
+`scripts/measure/laser-look-gpu-chain.sh`, hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (Job 3 of the branch note).
 
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
