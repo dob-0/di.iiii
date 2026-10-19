@@ -1,3 +1,4 @@
+import { CONE_RADIAL_SEGMENTS } from './primitiveSegments.js'
 import React from 'react'
 import PrimitiveMaterial from './PrimitiveMaterial.jsx'
 import { safeDimension } from './safeDimension.js'
@@ -7,7 +8,7 @@ export default function ConeObject({ color, coneRadius = 0.5, coneHeight = 1.5, 
     const safeHeight = safeDimension(coneHeight, 1.5)
     return (
         <mesh position-y={safeHeight / 2}>
-            <coneGeometry args={[safeRadius, safeHeight, 32]} />
+            <coneGeometry args={[safeRadius, safeHeight, CONE_RADIAL_SEGMENTS]} />
             <PrimitiveMaterial color={color} wireframe={wireframe} opacity={opacity} {...material} />
         </mesh>
     )
