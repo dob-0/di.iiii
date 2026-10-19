@@ -3,6 +3,7 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { buildPublicProjectPath, buildShareUrl, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import { listProjects } from '../services/projectsApi.js'
 import { getServerSpace } from '../../services/serverSpaces.js'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Known hierarchies for specific spaces, front door first. Unlisted ids keep
 // the server's order (most-recently-touched) and sort after every listed id.
@@ -216,7 +217,7 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
             {open ? (
                 <nav style={cardStyle} aria-label="Projects in this space">
                     {projects === null ? (
-                        <div style={{ ...itemStyle, cursor: 'default', opacity: 0.7 }}>Loading projects...</div>
+                        <div style={{ ...itemStyle, cursor: 'default', opacity: 0.7 }}><LoadingScreen variant="inline" label="Loading projects" text="loading projects" /></div>
                     ) : projects.length === 0 ? (
                         <div style={{ ...itemStyle, cursor: 'default', opacity: 0.7 }}>No projects here.</div>
                     ) : (

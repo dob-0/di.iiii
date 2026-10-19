@@ -1,0 +1,10 @@
+{
+  "what": "MOXIR: the one lamp drawn on the truss with no real twin there (rig-par-cut-07, no address) goes to the floor just past the truss's low end, and takes U1.329 — the address of the wash that really stands there. rig-par-planes-37, which carried U1.329 as a stand-in, gives the address back (its place is checked with the floor washes).",
+  "source": "owner at the venue 2026-10-17 ~06:40, with all ten truss washes lit in ten colours (group-identify.mjs): 'one on trus need to go down on the ground after the next beam others right', 'after the truss', and his marked 3D screenshot (circle on the unlit truss lamp, arrow down to the floor past the low end). Earlier the same night: 'the other wash in univers 1 after truss beam ... in real life it 329 address' and U1.329 lit green in the hall.",
+  "moves": [
+    { "id": "rig-par-cut-07", "position": [-11.55, 0.322, 3.31], "rotation": [3.1416, 0, 0],
+      "fixture": { "universe": 1, "address": 329, "position": "floor past the truss low end, U1.329 (owner 2026-10-17)" } },
+    { "id": "rig-par-planes-37", "position": [10.36, 0.322, -17.1],
+      "fixture": { "address": null } }
+  ]
+}

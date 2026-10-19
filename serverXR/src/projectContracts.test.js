@@ -903,13 +903,45 @@ describe('project contracts', () => {
         expect(first['bare-one'].layers).toEqual({})
         // A window (the outliner) is neither a thing nor a connection.
         expect(first['held-one'].layers).toEqual({
-            objects: 2, things: 2, lamps: 1, joinedLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
+            objects: 2, things: 2, lamps: 1, joinedLamps: 1, stageLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
         })
         // Asked again from the cache: the same answer, and still nothing written.
         const second = await list()
         expect(second['held-one'].layers).toEqual(first['held-one'].layers)
         expect(second['held-one'].documentVersion).toBe(newVersion)
         expect(await readFile(documentPath, 'utf8')).toBe(before)
+    })
+
+    // P1 (2026-10-13): the card said "empty" over 133 files because the count
+    // never read document.assets. The list now counts the files, the pictures
+    // and the videos, and a picture's file is not counted twice.
+    it('the project list counts files and media, so a project that holds files is not empty', async () => {
+        const server = await startServer()
+        const created = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Files', slug: 'files-one', source: 'studio-v3' })
+        })
+        expect(created.status).toBe(201)
+        const asset = (id, size) => ({ type: 'upsertAsset', payload: { asset: { id, name: `${id}.bin`, mimeType: 'application/octet-stream', size } } })
+        const submit = await fetch(`${server.baseUrl}/api/projects/files-one/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [
+                    asset('pic-1', 1048576),
+                    asset('doc-1', 2097152),
+                    asset('doc-2', 1048576),
+                    { type: 'createEntity', payload: { entity: { id: 'pic', type: 'image', name: 'Pic', components: { media: { assetId: 'pic-1' } } } } }
+                ]
+            })
+        })
+        expect(submit.status).toBe(200)
+        const response = await fetch(`${server.baseUrl}/api/spaces/main/projects`)
+        const { projects } = await response.json()
+        const held = projects.find((project) => project.id === 'files-one')
+        expect(held.layers).toEqual({ objects: 1, things: 1, images: 1, files: 2, fileBytes: 4194304 })
     })
 
     it('names the collision when a project title/slug collides with one in a different space', async () => {

@@ -160,6 +160,125 @@ export const lineLuminance = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, widt
     return (Math.max(num(sigmaS), 0) * hgPhase(cosTheta, g) * Math.max(num(flux), 0) * T) / (Math.max(width, 1e-9) * sin)
 }
 
+// 7. CORE AND HALO (2026-10-15, owner: "the lasers don't even look like lasers"). What the eye sees of a laser in haze is a
+//    thin bright CORE (the singly scattered light, 1. and 2. above, as wide as the beam) and a faint HALO around it: light
+//    that scattered more than once on its way out of the beam. The pure arithmetic of both, for the renderer (owed: the
+//    shader, laserLineMaterial.js; the measurements are in laserLine.test.js).
+//    Core: drawn as wide as the beam, never thinner than MIN_CORE_PX pixels; what a pixel sums is kept (3.).
+//    Halo share: of the light singly scattered toward the eye, the part that scatters again over the path s it has already
+//    run in the beam's air is 1 − exp(−σs·s) (Beer–Lambert); the core keeps exp(−σs·s). Energy is kept, not lost.
+//    Halo radius: small-angle multiple scattering, the Fermi–Eyges result for a pencil beam (Eyges, Phys. Rev. 74, 1948;
+//    used for light beams in water by the beam-spread-function literature): the mean square radial spread after a path s
+//    is ⟨r²⟩ = (2/3)·σs·⟨θ²⟩·s³, with ⟨θ²⟩ ≈ 2·(1 − g) for a Henyey–Greenstein phase with asymmetry g (⟨cos θ⟩ = g, and
+//    1 − cos θ ≈ θ²/2). The halo radius is √⟨r²⟩. ASSUMPTION: HG under-states the sharp forward peak of real glycol-droplet
+//    Mie scattering, so this halo is wider and fainter than a real one; it is a stated model, unvalidated against a photo.
+//    Cap: no halo is drawn wider than HALO_SPACING_CAP of the angle to the next line of the same fan, so a comb of lines
+//    stays a comb of lines. The capped Gaussian still carries the whole haloShare (2026-10-15, shader job 2: the cap
+//    corrects the model's too-wide HG halo, it does not throw light away — what a pixel row sums stays I).
+//    A line with no neighbour in its own fan (a cube's single static beam) is capped as if its neighbour were
+//    LONE_LINE_SPACING_RAD away: the cube's own scan step (SCAN_STEP_DEG), the finest comb a cube draws. ASSUMPTION,
+//    unvalidated against a photo: without it a lone line's Fermi–Eyges halo is metres wide (8 m at s 20 m, σs 0.02,
+//    g 0.7) and the lines of six cubes, each a separate entity, sum into a fog under the roof again.
+export const MIN_CORE_PX = 1
+export const HALO_SPACING_CAP = 0.5
+export const LONE_LINE_SPACING_RAD = (SCAN_STEP_DEG * Math.PI) / 180
+
+/** The core's drawn width (m): the beam's own width at s, or MIN_CORE_PX pixels at the eye's distance, whichever is wider. */
+export const coreWidth = ({ s = 0, dist = 1, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, minPx = MIN_CORE_PX } = {}) =>
+    Math.max(beamWidth(s, diameter_mm, divergence_mrad), Math.max(dist, 0) * Math.max(pixelAngle, 0) * minPx)
+
+/** The share of the scattered light that sits in the halo after a path s (m) in air of σs (1/m): 1 − exp(−σs·s). */
+export const haloShare = (sigmaS, s) => 1 - Math.exp(-Math.max(num(sigmaS), 0) * Math.max(num(s), 0))
+
+/** Fermi–Eyges halo radius (m) after a path s: √((2/3)·σs·2(1 − g)·s³). */
+export const haloRadius = (sigmaS, g, s) => {
+    const gg = clamp(num(g, 0.7), -0.95, 0.95)
+    return Math.sqrt((2 / 3) * Math.max(num(sigmaS), 0) * 2 * (1 - gg) * Math.pow(Math.max(num(s), 0), 3))
+}
+
+/** The halo radius held under HALO_SPACING_CAP of the gap to the neighbouring line (spacing in radians, at path s). */
+export const haloRadiusCapped = (sigmaS, g, s, spacingRad = Infinity) => {
+    const r = haloRadius(sigmaS, g, s)
+    const cap = Number.isFinite(spacingRad) && spacingRad > 0 ? HALO_SPACING_CAP * spacingRad * Math.max(s, 0) : Infinity
+    return Math.min(r, cap)
+}
+
+/**
+ * A line's look at one point: the intensity per unit length I (= L·W, cd/m per lm of Φ, 2.), the core's luminance over its
+ * drawn width, and the halo's peak luminance (a Gaussian of the capped radius r across the line: peak = share·I / (√(2π)·r)).
+ * The shader (laserLineMaterial.js) draws exactly this: core·W + halo·√(2π)·r = I.
+ */
+export const coreHalo = ({ sigmaS, sigmaT = sigmaS, g, flux, cosTheta, s = 0, d = 0, dist = d, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, spacingRad = Infinity }) => {
+    const perLength = lineLuminance({ sigmaS, sigmaT, g, flux, cosTheta, width: 1, s, d })
+    const W = coreWidth({ s, dist, pixelAngle, diameter_mm, divergence_mrad })
+    const share = haloShare(sigmaS, s)
+    const r = haloRadiusCapped(sigmaS, g, s, spacingRad)
+    return {
+        perLength,
+        coreWidth: W,
+        core: ((1 - share) * perLength) / W,
+        haloRadius: r,
+        haloShare: share,
+        halo: r > 0 ? (share * perLength) / (Math.sqrt(2 * Math.PI) * r) : 0
+    }
+}
+
+/**
+ * Per line of a fan, the angle (rad) to its nearest neighbour in the same fan — what caps its halo (haloRadiusCapped).
+ * A fan of one line: LONE_LINE_SPACING_RAD. Lines that point the same way (two sub-lines of one point) do not count as
+ * neighbours. dirs: unit vectors.
+ */
+export const lineSpacings = (dirs) => {
+    const list = Array.isArray(dirs) ? dirs : []
+    return list.map((a, i) => {
+        let best = Infinity
+        for (let j = 0; j < list.length; j += 1) {
+            if (j === i) continue
+            const b = list[j]
+            const c = clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1, 1)
+            const angle = Math.acos(c)
+            if (angle > 1e-6 && angle < best) best = angle
+        }
+        return Number.isFinite(best) ? best : LONE_LINE_SPACING_RAD
+    })
+}
+
+// 8. THE END SPOT (2026-10-15). Where a line meets its first surface (beamReach.js) it lights a dot as wide as the beam
+//    there (beamWidth: 4 mm + 1 mrad → 4 cm at 40 m, 6 cm at 60 m). A diffuse (Lambertian) surface of reflectance ρ under
+//    illuminance E = Φ·T/A shows the luminance L = ρ·E/π (the definition of a Lambertian reflector; CIE S 017 17-21-087).
+//    Drawn at least MIN_CORE_PX wide; a dot drawn wider than the beam is dimmed by the area ratio, so its total light (L·A)
+//    stays the beam's. SPOT_ALBEDO 0.3: ASSUMPTION, a mid-grey building surface — the hit does not know its material yet.
+export const SPOT_ALBEDO = 0.3
+
+/** The end spot of a line reaching a surface at path s: { width (m, drawn), luminance (per unit Φ the line law uses) }. */
+export const laserSpot = ({ flux = 1, s = 0, sigmaT = 0, dist = 1, pixelAngle = 0.001, diameter_mm = 4, divergence_mrad = 1, albedo = SPOT_ALBEDO } = {}) => {
+    const w = beamWidth(s, diameter_mm, divergence_mrad)
+    const drawn = coreWidth({ s, dist, pixelAngle, diameter_mm, divergence_mrad })
+    const area = (Math.PI * drawn * drawn) / 4
+    const E = (Math.max(num(flux), 0) * Math.exp(-Math.max(num(sigmaT), 0) * Math.max(num(s), 0))) / area
+    return { beamWidth: w, width: drawn, luminance: (clamp(num(albedo, SPOT_ALBEDO), 0, 1) * E) / Math.PI }
+}
+
+// 9. WHAT THE SCREEN SHOWS (2026-10-15, owner 15:5x: "white core with colour halo"). The room tone-maps with three.js's
+//    ACESFilmicToneMapping (three r185 tonemapping_pars_fragment: Stephen Hill's RRT+ODT fit, sRGB→AP1 input matrix,
+//    exposure/0.6). Its input matrix mixes every channel into the other two, so a line far above white saturates all three
+//    and reads WHITE, while its dimmer halo stays inside the curve and keeps the laser's colour. No special case: this is
+//    the same curve the room applies, reproduced here so the look can be tested without a GPU.
+const ACES_IN = [[0.59719, 0.35458, 0.04823], [0.076, 0.90834, 0.01566], [0.0284, 0.13383, 0.83777]]
+const ACES_OUT = [[1.60475, -0.53108, -0.07367], [-0.10208, 1.10813, -0.00605], [-0.00327, -0.07276, 1.07602]]
+const acesFit = (v) => (v * (v + 0.0245786) - 0.000090537) / (v * (0.983729 * v + 0.432951) + 0.238081)
+const mul3 = (m, v) => m.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2])
+
+/** Linear HDR rgb → linear display rgb 0…1, as the room's ACESFilmic tone mapping at `exposure` draws it. */
+export const toneMapAces = (rgb, exposure = 1) =>
+    mul3(ACES_OUT, mul3(ACES_IN, rgb.map((c) => (Math.max(num(c), 0) * exposure) / 0.6)).map(acesFit)).map((c) => clamp(c, 0, 1))
+
+/** How white a displayed colour is: its smallest channel over its largest (1 = white or grey, 0 = a pure primary). */
+export const whiteness = (rgb) => {
+    const hi = Math.max(...rgb)
+    return hi > 0 ? Math.min(...rgb) / hi : 0
+}
+
 /** A frame's points, cleaned the way the Nodes editor's laser frame is: [x, y, r, g, b], x/y −1…1, colour 0…1; bad points dropped. */
 export const framePoints = (points, max = 2000) => {
     const out = []
@@ -198,8 +317,11 @@ export const scanLines = (points, { fieldHalfDeg = FIELD_HALF_DEG, stepDeg = SCA
     for (let i = 0; i < N; i += 1) {
         const a = pts[i]
         const b = pts[(i + 1) % N]
-        const colour = [b[2], b[3], b[4]]
-        if (!(colour[0] > 0 || colour[1] > 0 || colour[2] > 0)) continue
+        const own = [b[2], b[3], b[4]]
+        if (!(own[0] > 0 || own[1] > 0 || own[2] > 0)) continue
+        // The lamp's colour (the look's, read as drive) scales the frame's own colour per diode, as a projector's DMX
+        // colour channels scale the frame it plays; default drive [1, 1, 1] leaves the frame as written.
+        const colour = own.map((c, k) => c * (drive[k] ?? 1))
         const angle = Math.hypot(b[0] - a[0], b[1] - a[1]) * fieldHalfDeg
         const k = Math.max(1, Math.ceil(angle / stepDeg))
         segments.push({ a, b, colour, k })
@@ -232,7 +354,7 @@ export const scanLines = (points, { fieldHalfDeg = FIELD_HALF_DEG, stepDeg = SCA
 
 /**
  * A lamp's `beam.laser` read for the renderer, or null: the diodes (mW per nm), beam diameter and
- * divergence, the scene's exposure scale, and the frame it holds (if any).
+ * divergence, the scene's exposure scale, the frame it holds (if any) and its frames in time (if any, see 6.).
  */
 export const laserOf = (beam) => {
     const l = beam?.laser
@@ -246,6 +368,85 @@ export const laserOf = (beam) => {
         divergence_mrad: Math.max(num(l.divergence_mrad, 1), 0.01),
         sceneScale: num(l.sceneScale, 0.02) > 0 ? num(l.sceneScale, 0.02) : 0.02,
         fieldHalfDeg: clamp(num(l.fieldHalfDeg, FIELD_HALF_DEG), 1, 60),
-        frame: Array.isArray(l.frame) ? framePoints(l.frame) : null
+        frame: Array.isArray(l.frame) ? framePoints(l.frame) : null,
+        frames: framesOf(l.frames)
     }
+}
+
+// 6. FRAMES IN TIME (2026-10-13, ledger N562). Next to the static `frame`, a laser may hold `frames`:
+//    { period, list } — `list` frames played in order, evenly, over `period` seconds, again and again. The frame on at
+//    show time t (seconds) is list[floor(((t mod period) / period) · n)]; t is the SERVER's time (serverClock.js), so
+//    every viewer draws the same frame. A frame here is a cube's whole drawing for that step (each still scanned at its
+//    point rate and time-averaged as in 4.). A laser with `frames` draws them; `frame` is then not read. Without
+//    `frames` nothing changes: the static path is the same call as before.
+export const MIN_PERIOD_S = 0.05
+export const MAX_PERIOD_S = 3600
+export const MAX_FRAMES = 256
+export const MAX_FRAME_POINTS_TOTAL = 20000
+
+/** `frames` cleaned: { period (s), list: [points…] } with every frame non-empty, or null. */
+export const framesOf = (frames) => {
+    if (!frames || typeof frames !== 'object' || !Array.isArray(frames.list)) return null
+    const period = num(frames.period, 0)
+    if (!(period > 0)) return null
+    const list = []
+    let total = 0
+    for (const f of frames.list.slice(0, MAX_FRAMES)) {
+        const pts = framePoints(f)
+        if (!pts.length) continue
+        if (total + pts.length > MAX_FRAME_POINTS_TOTAL) break
+        total += pts.length
+        list.push(pts)
+    }
+    // `tween` (2026-10-17): the frames are keyframes; between two the pose glides (poseAt), as the cubes' player does
+    // (serverXR/src/laser/laserShow.js poseAt, the same arithmetic) — so the room shows what the wall shows.
+    return list.length ? { period: clamp(period, MIN_PERIOD_S, MAX_PERIOD_S), list, ...(frames.tween === true ? { tween: true } : {}) } : null
+}
+
+/** Which of `frames.list` is on at show time `t` (seconds): an index, or -1 when there are no frames. */
+export const frameIndexAt = (frames, t) => {
+    if (!frames?.list?.length || !(frames.period > 0)) return -1
+    const n = frames.list.length
+    const phase = ((num(t) % frames.period) + frames.period) % frames.period
+    return Math.min(n - 1, Math.floor((phase / frames.period) * n))
+}
+
+/** How often a blending laser is redrawn (the player's TWEEN_KEY_HZ 20). */
+export const TWEEN_TICK_MS = 50
+
+const isLitPoint = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
+
+/**
+ * The pose at show time `t`: the frame on now, or — when the frames are keyframes (`frames.tween`, or `tween` asked) —
+ * the straight blend into the next frame, point by point, by how far `t` is through the step. A pair that does not
+ * match (point count, which points are lit) is not blended: the frame holds, exactly as the player holds it.
+ */
+export const poseAt = (frames, t, tween = false) => {
+    const i = frameIndexAt(frames, t)
+    if (i < 0) return null
+    const a = frames.list[i]
+    if (!tween && frames.tween !== true) return a
+    const n = frames.list.length
+    const b = frames.list[(i + 1) % n]
+    if (!b || b.length !== a.length || a.some((p, k) => isLitPoint(p) !== isLitPoint(b[k]))) return a
+    const phase = ((num(t) % frames.period) + frames.period) % frames.period
+    const f = Math.min(1, Math.max(0, (phase / frames.period) * n - i))
+    return a.map((p, k) => p.map((v, c) => v + (b[k][c] - v) * f))
+}
+
+/** The points a laser (laserOf's reading) draws at show time `t`: its frame in time (blended when it tweens), else its static frame. */
+export const laserFrameAt = (laser, t) => {
+    const pose = poseAt(laser?.frames, t)
+    return pose || laser?.frame || null
+}
+
+/** scanLines of what a laser draws at show time `t` (its own field half-angle). */
+export const scanLinesAt = (laser, t, opts = {}) => scanLines(laserFrameAt(laser, t), { fieldHalfDeg: laser?.fieldHalfDeg ?? FIELD_HALF_DEG, ...opts })
+
+/** Seconds until the frame on at `t` changes (Infinity when the laser holds no frames in time). */
+export const nextFrameIn = (frames, t) => {
+    if (!frames?.list?.length || !(frames.period > 0)) return Infinity
+    const step = frames.period / frames.list.length
+    const phase = ((num(t) % step) + step) % step
+    return step - phase
 }

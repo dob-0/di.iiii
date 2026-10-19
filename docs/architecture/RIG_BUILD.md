@@ -643,6 +643,13 @@ owed) was drawn white at full by the mirror, which assumed "no colour channel" m
 Such a fixture is now `known: false`, and the lamp keeps its authored light. See the
 known-fixes row and `useLightingMirror.test.jsx`.
 
+**Heads that move (2026-10-15).** A look may carry `heads: { pattern, period_s, pan_deg, tilt_deg, spatial, kinds }`
+(`components.rigLooks.looks[].heads`; patterns sweep, nod, circle, figure8, fan, wave, cross). One pure function,
+`serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port
+`src/rigbuild/headMotion.js` drives the room, both from the server's clock and the look's fire time, so desk and room agree
+(pinned to 0.01 degree by `headMotion.test.js`). Offsets sit on the look's rest aim. From a vertical rest only the tilt
+patterns (nod, wave, circle, figure8) show. Session note: `PROGRESS.md`, 2026-10-15 "Looks move the moving heads" (folded from the branch's note).
+
 ### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
 
 The data came from `space-bundle.mjs export moxir` on the local tier, taken after the
@@ -1952,11 +1959,22 @@ lamp carries a view-only `rigDmx` note (never written). The Studio's `liveLight`
 
 **While the desk is live and a lamp has a patched profile with a channel list, DMX wins** — attribute by
 attribute, for what the list controls; what it does not (a PAR's aim, set by hand on its clamp) keeps the
-look's pose. A lamp with no list, or not on the desk, is drawn as before. Overall: a page's own GO
+look's pose. A lamp with no list is drawn as before; one not on the desk is dark (below). Overall: a page's own GO
 (`explicit`) > DMX > the desk's look (by rule) > the show's clock (only where no desk answers, §16) > the
 document. So a look must reach the room as DMX: `deskLookValues.js` writes each designed look as values
 through each fixture's list (a lamp the look does not name is at 0), and `show-loop.mjs` puts those on the
 desk — the looping show plays through DMX and the room shows exactly what the desk sends.
+
+**Not the desk's (MOXIR 2026-10-17).** While the desk is live, a lamp it does not drive (no row on the desk) is
+drawn dark, as it is on the rig. A network laser — a LaserCube line: `fixture.dmx === false`, its picture in
+`beam.laser` — is never the desk's: it follows the laser server (`src/rigbuild/laserShowState.js`). It is drawn as
+the design holds it while `GET /laser/api/state` says the show plays and the cube that plays its group is armed
+(the player's own `show.cubes` map, a group being the line's id without its letters: rig-laser-1a…1f →
+rig-laser-1; the engine's `cubes[].armed`), else dark — a laser rests dark. One poll per page, every 2 s, only
+while the room follows a desk and holds a network laser; a failed, refused or slow (4 s) read reads dark.
+Limits: the room draws its own project's frames for every group the player maps to an armed cube (another
+project with the same line names would show this one's pictures), and the run's `tween` switch is not carried
+(the room blends only where the document's `frames.tween` says so).
 
 ### 18.5 The stream (`serverXR/src/lighting/dmxstream.js`, LIGHTING_DESK.md "The pushed frame")
 
@@ -2149,6 +2167,8 @@ Four additions to the planner, each with a test in `src/rigbuild/patchPlan.test.
 
 Also fixed on the way: a lamp with no position name never converged (the planner wanted `position: ""`, the schema stores none), so a re-run wrote it again.
 
+**One command for a version onto the desk (2026-10-15, ledger N877):** `node scripts/rigbuild/version-to-desk.mjs --project <id> --api <base>/serverXR --token-file <f> --plan <plan.patch.json> [--dry-run] [--keep-others] [--no-start]` runs, in order, `patch-plan.mjs --keep-circuits`, `patch.mjs --unpatch` for every other project on the desk, `patch.mjs --exact`, `show-loop.mjs` (the document's own cues), then prints the desk per project, U1/U2 and the runner, and exits 1 if a step failed or another project is still on the desk. `--dry-run` writes nothing.
+
 Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 353 / 400, no LaserCube on any universe, the controls that make it fail on a wrong plan; `MOXIR_PATCH_FILE=` points it at any candidate). The crew's short table is `node scripts/rigbuild/patch-table.mjs --plan <plan> --out <dir> --pdf` (universe, start address, fixture, mode; Markdown, a page, CSV, a PDF through LibreOffice). The B380F's 16-channel map against the equivalent chart, and what is walked on the unit: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
 
 Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
@@ -2314,6 +2334,28 @@ the atmospheric PSF) — not drawn. Beams are not cut by what stands in them (no
 through the DJ lights the air behind him). Auto-exposure (an eye adapts to the red room; Reinhard et al.
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
+
+**Laser lines in the room's picture — core, halo, end spot, drawn after the bloom (2026-10-15).** A laser is drawn as a
+line source (`src/objectComponents/laserLine.js`, `laserLineMaterial.js`), its intensity per length σs·p(θ)·Φ·T/sinθ kept at
+any drawn width. Until 2026-10-15 each line was a ≥ 1.5 px soft ribbon fed into the room's bloom; from the floor (fov 70°,
+900 px: 1.556 mrad a pixel) MOXIR's cube lines are 6–7 × the screen's white after exposure 3.5, and the bloom spread them
+into one green slab (`scripts/measure/laser-look-diagnose.mjs`). The Studio looked right only because it draws the laser
+server's frames on top as 1-px GL lines (`src/rigbuild/LaserView.jsx`, Studio only); the room page has no such overlay. Now
+(shader job 2, the owner's look "a white core with the colour in the halo", decided from his words of 2026-10-15): each line
+is a CORE as wide as the beam or 1 px (a box with 1-px ramps) carrying 1 − haloShare, plus a HALO — a Gaussian of
+`haloRadiusCapped` (Fermi–Eyges, ≤ half the gap to the next line of the fan; a lone line takes the 0.5° scan step,
+ASSUMPTION) carrying haloShare = 1 − exp(−σs·s); a line far above white tone-maps to a white core in a coloured halo. The
+lines and their end spots are left out of the bloom input and drawn over the picture after the glow
+(`src/project/viewport/laserOverBloom.js`, three's selective-bloom pattern as an over-pass; lamps' bloom unchanged). Where a
+line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
+Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
+between two lines 0.03 of the peak (Rayleigh < 0.735). The owner confirmed the look on 2026-10-15 15:5x ("white core with
+colour halo"); it is tested (`laserLine.js` 9., `toneMapAces` = the room's ACESFilmic): the ACES shoulder whitens a green core
+gradually (whiteness 0.44 at 1 × white, 0.83 at 4 ×, 0.92 at 8 ×, 0.99 at 30 ×), the halo keeps the colour. From the floor
+(fov 60, exposure 1.5) a cube line seen along its fan is 80 / 30 / 8 × white at 5 / 10 / 20 m — a white 1-px core with a green
+halo; the 40 W heads seen side-on are 11 / 4 / 1.2 × — white near, pale green far. The room page and the Studio draw lasers
+through the same path since #972. OWED: the room page floor shots before/after and the lamp diff (held by heat, 88–100 °C) —
+`scripts/measure/laser-look-gpu-chain.sh`, hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (Job 3 of the branch note).
 
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
@@ -2539,3 +2581,51 @@ edits", which on a `di up --guests` install hands a guest the sign-in card on th
 - **Stars.** The operator sees a star on each non-laser brick of the SHOW list; a toggle posts the new list (at five, the oldest star leaves) and the row updates at once (window event `di:show-answer`).
 - **Tests.** `serverXR/src/showContracts.test.js` (operator only, <= 5, unknown/laser refused, shared, persisted), `showRemote.test.js`, `src/rigbuild/RoomFavourites.test.jsx`, `showApi.test.js`.
 
+
+## 25. Editing a scene in the Studio (2026-10-15)
+
+Until now a scene (a rig look and its cue) was built only by scripts. Since 2026-10-15 the Studio's Scenes window edits it, and the
+build script and the Studio build a look with the same function.
+
+**The data.** A rig look keeps its SOURCE next to what was built from it: `parts` `{part: [hex|null, level 0..1]}` (a part left out is
+off), `motion`, `heads`, `laser_colour`, `desk_caps` and `act` (schema: `normalizeRigLooks`, bounded; `shared/projectSchema.cjs` mirrors
+it). The project remembers which units belong to which part: `rigParts` `{ parts: {part: [unitId…]} }` on the show entity
+(`normalizeRigParts`; `epic-build.mjs` writes it from `fixtures[].part`, a laser's beams are the part `laser`). A project without it: each
+unit's `fixture.part` if it has one, else no parts, and the editor edits per unit (a look with no `parts` is seeded from its built
+levels). Written by `epic-build.mjs --looks-only --apply`, like the looks.
+
+**The one function.** `src/shared/buildLook.js` `buildLook(source, rigParts, units)` → `{colours, levels, aims}`. `epic-build.mjs`
+(`v1Looks`) and `src/studio/utils/sceneEdit.js` both call it. Parity (`src/shared/buildLook.test.js`): the 51 looks of
+`scripts/place/rigs/moxir-v2-11-2026-10-15.json` built by the script are byte-identical to what the script gave before the refactor
+(sha256 of colours, levels and aims), and `buildLook` from a stored look's source and the document alone gives the same for every look
+(0 differences).
+
+**The editor.** `ScenePicker.jsx` → `SceneEditor.jsx`: Edit on a scene row opens title, act, intent; one row per part (hex + swatch,
+level slider + number, "off"); motion (mode, bpm, depth, spatial, kinds, still); heads (pattern, period, pan, tilt, spatial); cue fade
+and hold; Play. New scene, Duplicate, Delete and the arrows (cue order) are the window's buttons. Every change is ops through the
+Studio's `applyLocalOps` (one undo each), and the look is rebuilt by `buildLook` in the same op.
+- **The flash rule is enforced, not only shown** (`sceneEdit.js` `FLASH`): glitch never (greyed, and `changeSceneOps` refuses it);
+  sparkle only at 20 bpm; every other mode at most 132 bpm (a bpm above it is clamped). Source: `scenes-design-report.md` "Decisions"
+  (flash ≤ 3 a second per lamp, `flashrate.cjs` on `fx.js`).
+- **Heads:** sweep and cross only pan; the editor warns that a head resting vertical shows nothing.
+- **Play** = the desk's GO on this cue: `playScene.js` loads the project's cue list on the desk (`deskCues.load`, as the cards page does)
+  and goes to the cue's index. With no desk it says why in the editor.
+
+**Limits, stated.** A look's lamps are found by the keys in its `aims`; a key the schema drops (`lookKey` allows no parentheses, so
+`named-v1-plane-1-(behind-the-DJ)-in0/up-b380f` of the v2-11 rig is dropped on every save, before this change too) is not rebuilt: owed,
+a separate fix with the owner's look (it would light those lamps). `desk_caps` is kept and shown in the data, not yet edited in the UI.
+Studio edits do not re-load the desk's cue list by themselves; Play does.
+
+## The 40 W lines: addresses and per-scene parts (2026-10-15, ledger N852)
+
+- **Addresses.** A rig unit's `dmx` block (universe, address, footprint, mode) is now what `epic-build.mjs` writes for laser and
+  smoke units too (`dmxOf`; a LaserCube with no block stays `dmx: false`, run over the LAN). `epic-build.mjs --patch-only [--apply]`
+  writes only the rig file's addresses into a project (fixture ops where the document differs), then `patch.mjs --exact` puts the desk
+  there. MOXIR v2.11: UP-LA40WF ×2 at **U1.401 and U1.433** (32 ch, the maker chart `scripts/place/fixtures/charts/up-la40wf.json`),
+  UP-YZ31P at **U1.501** (1 ch, ASSUMED) — the v2 patch plan's own blocks (owner N460.2).
+- **Parts.** A scene's `laser_lines` (laser_frames.py `validate_line`) drives the single-beam DMX lasers: `still` (the crossed X),
+  `sweep` (the X closes inward by up to `amplitude_deg` and opens, on the master clock), `lift` (rises above the aim, never below);
+  colour only one of the unit's 7 diode colours (chart ch 5); `base_lift_deg` / `base_yaw_in_deg` move the base aim by the unit's
+  ch 7 / ch 6 without moving the unit. Every ray takes the cubes' physics (first surface, column lines, the near crane ≥ 9.2 m,
+  ≤ 3 flashes a second). `laser-frames.mjs`: the rig's own frames now win for the 40 W too (the matrix stays the fallback).
+- **Limit.** The room draws a look's one laser colour for every line; a 40 W colour that differs from the cubes' is desk data only.

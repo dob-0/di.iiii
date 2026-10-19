@@ -35,6 +35,24 @@
 //      UNVALIDATED until a real cube has been tested (checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
 //   8. Server going down (SIGTERM, SIGINT, close): every addressed cube is blanked and sent
 //      output-off twice before the socket closes (shutdown()).
+//   9. THE GALVO AND POWER GUARDS (laserGuards.js, 2026-10-14): every frame, whatever sent it, is
+//      step-limited, corner-held, dwelt and blank-delayed for the cube's rate before it streams; a
+//      new frame is reached by a blank, step-limited bridge; colour is scaled down from 60 °C to
+//      50 % at 75 °C (averaged); every stop — no frame, still beam, link lost, disarm, shutdown —
+//      clears the cube's ring buffer (0x8d), walks the beam blank to the centre and parks it, then
+//      output-off; a resume clears the buffer before output-on. The still-beam guard (7) stops a frame
+//      that is still as posted OR as optimised. Round 2 (review of PR #931): the path work runs once
+//      per posted frame (shared by cubes at the same rate), not in the tick; a frame longer than the
+//      frame budget (67 ms of points at the cube's rate, ≤ its buffer) is refused (frame-too-long);
+//      a dark frame cuts the lit pass at once; the path is planned at the rate the cube says it
+//      plays; the cube's over-temperature flag stops it, its warning drops the power to the minimum.
+//  10. ONE LASER OUT PER CUBE, ARMED ONE BY ONE (2026-10-14, the TouchDesigner-style Laser Out): each
+//      Out names its cube by address; the server checks the address answers the info question
+//      (0x77), adds the cube keyed by serial (upsertCube) and gives that Out the cube (a claim,
+//      CLAIM_TTL_MS, renewed by its frames, keep-alives and checks). Another Out's frames, arm or
+//      address on a claimed cube are refused. arm({ cube }) switches ONE cube on or off; the sign-off
+//      phrase is asked on the first ON of a run (after a start, a reload or a disarm-all) and the
+//      run stays signed off until the next disarm-all. Every guard above applies per cube as before.
 // What software cannot do, said plainly: a galvo that stalls while a figure is being sent is a
 // still beam the server never sees (it only knows what it commanded); a server killed with -9, or a
 // cable pulled, leaves the cube to its own firmware, whose behaviour when the stream stops is not
@@ -43,11 +61,13 @@
 // Config (optional): <dataDir>/laser/laser.json
 //   { "cubes": [{ "id": "cube-1", "name": "Cut 1", "ip": "192.168.1.51",
 //                 "stillBeams": [{ "x": -0.2, "y": 0.4, "within": 0.01 }] }, …],
-//     "zone": { "xMin": -1, "xMax": 1, "yMin": 0, "yMax": 1 }, "dacRate": 30000 }
+//     "zone": { "xMin": -1, "xMax": 1, "yMin": 0, "yMax": 1 }, "dacRate": 30000,
+//     "guards": { "litStep": 0.025, … } }   (and per cube "guards": {…}; keys: laserGuards.js)
 //   stillBeams  the still beams the officer approved for this cube, in the cube's field (x, y -1…1),
 //               each allowed to wander `within` (field units, default 0.01) of its point
-//   dacRate     optional cap on the points per second; without it the cube's own current DAC rate
-//               (from its info) is used, never more than its maximum
+//   dacRate     optional REQUEST for the cube's points per second, sent as SET_RATE only with
+//               guards.sendSetRate; di always plans and paces at the rate the cube's own info says it
+//               plays (never above its maximum), and shows rateMismatch when the two differ
 // No file: six cubes cube-1…cube-6 without addresses (the rig's six), sim.
 'use strict'
 
@@ -56,6 +76,7 @@ const path = require('path')
 const dgram = require('dgram')
 const { ALL_CUBES, normaliseFramePoints } = require('../../../shared/laserFrame.cjs')
 const proto = require('./lasercubeProtocol')
+const guardsLib = require('./laserGuards')
 
 const ARM_PHRASE = 'the laser safety officer has signed off'
 const DEFAULT_ZONE = Object.freeze({ xMin: -1, xMax: 1, yMin: 0, yMax: 1 })
@@ -64,6 +85,9 @@ const TICK_MS = 20
 const BUFFER_MARGIN = 200
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
+// A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
+// (the editor closed, the tab gone) frees the cube for another Out.
+const CLAIM_TTL_MS = 10000
 
 // THE GUARDS' NUMBERS — chosen 2026-10-09 against ~/work/agent-reports-2026-10-09/devices/lasers-exact.md.
 // All UNVALIDATED until tested on a real cube (the checklist: PROGRESS.md, "LaserCube drive finished", 2026-10-09).
@@ -108,12 +132,14 @@ const GUARD = Object.freeze({
     VALIDATED: false
 })
 const STILL_WINDOW_FIELD = GUARD.STILL_WINDOW_DEG / GUARD.SCAN_HALF_ANGLE_DEG
-const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost' })
+const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost', FRAME_TOO_LONG: 'frame-too-long', OVER_TEMPERATURE: 'over-temperature' })
 const STOP_TEXT = Object.freeze({
     [STOP.NO_INFO]: 'not armed: the cube never answered the info question',
     [STOP.NO_FRAME]: `stopped: no frame for ${GUARD.FRAME_TIMEOUT_MS} ms`,
     [STOP.STILL_BEAM]: `stopped: a still beam held ${GUARD.STILL_HOLD_MS} ms`,
-    [STOP.LINK_LOST]: `stopped: the cube went silent for ${GUARD.LINK_LOST_MS / 1000} s — arm again`
+    [STOP.LINK_LOST]: `stopped: the cube went silent for ${GUARD.LINK_LOST_MS / 1000} s — arm again`,
+    [STOP.FRAME_TOO_LONG]: `stopped: the frame needs more points than one pass may take (${Math.round(guardsLib.FRAME_MAX_MS)} ms at the cube's rate) once the galvo guards are in — simplify it`,
+    [STOP.OVER_TEMPERATURE]: 'stopped: the cube reports over-temperature — let it cool, then arm again'
 })
 
 const clampTo = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
@@ -230,20 +256,38 @@ const normaliseStillBeams = (list) => (Array.isArray(list) ? list : [])
     .map((b) => ({ x: Number(b?.x), y: Number(b?.y), within: Number(b?.within) > 0 ? Math.min(Number(b.within), 0.1) : GUARD.DEFAULT_STILL_WITHIN }))
     .filter((b) => Number.isFinite(b.x) && Number.isFinite(b.y))
 
-const cubeFrom = (c, i) => ({
-    id: String(c?.id || `cube-${i + 1}`),
-    name: String(c?.name || c?.id || `Cube ${i + 1}`),
-    ip: typeof c?.ip === 'string' && c.ip ? c.ip : null,
-    stillBeams: normaliseStillBeams(c?.stillBeams)
-})
+// An address laser.json gives that cannot be one cube (broadcast, network, multicast, loopback:
+// laserFind.js cubeAddressProblem) is not used: the cube has no address and the reason is in state.
+// A serial, when the file has one, is checked against what the box at that address answers.
+const cubeFrom = (c, i, base = guardsLib.DEFAULT_GUARDS) => {
+    const given = typeof c?.ip === 'string' && c.ip ? c.ip : null
+    const problem = given ? require('./laserFind').cubeAddressProblem(given) : null
+    const serial = String(c?.serial || '').toLowerCase()
+    return {
+        id: String(c?.id || `cube-${i + 1}`),
+        name: String(c?.name || c?.id || `Cube ${i + 1}`),
+        ip: problem ? null : given,
+        addressRefused: problem,
+        serial: /^[0-9a-f]{12}$/.test(serial) ? serial : null,
+        stillBeams: normaliseStillBeams(c?.stillBeams),
+        guards: guardsLib.normaliseGuards(c?.guards, base)
+    }
+}
+
+// The officer approved a cube's still beams for ONE box. When laser.json names its serial and the box
+// answering that address reports another one (DHCP gave the address to another cube), none apply.
+const serialMismatch = (c) => Boolean(c.serial && c.info?.serial && String(c.info.serial).toLowerCase() !== c.serial)
+const approvedStill = (c) => (serialMismatch(c) ? [] : c.stillBeams)
 
 const readConfig = (dir) => {
     try {
         const raw = JSON.parse(fs.readFileSync(path.join(dir, 'laser.json'), 'utf8'))
-        const cubes = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes.map(cubeFrom) : DEFAULT_CUBES.map(cubeFrom)
-        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null }
+        const base = guardsLib.normaliseGuards(raw.guards)
+        const list = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes : DEFAULT_CUBES
+        const cubes = list.map((c, i) => cubeFrom(c, i, base))
+        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base }
     } catch {
-        return { cubes: DEFAULT_CUBES.map(cubeFrom), zone: normaliseZone(), dacRate: null }
+        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS }
     }
 }
 
@@ -264,21 +308,30 @@ const createLaserEngine = ({
     setTimeout: later = setTimeout
 } = {}) => {
     const config = readConfig(dataDir)
-    const live = new Map(config.cubes.map((c) => [c.id, {
+    for (const c of config.cubes) if (c.addressRefused) log?.warn?.(`[laser] ${c.id}: laser.json address not used: ${c.addressRefused}`)
+    const liveEntry = (c) => ({
         ...c,
         lastFrameAt: null,
         info: null, infoAt: null, heardAt: null,
         bufferFree: null, bufferAt: null, sentSince: 0,
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
-        stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0 }
-    }]))
+        prep: null, playingPrep: null, guardsKey: JSON.stringify(c.guards), clearAt: null, clearConfirmed: false,
+        temp: guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs }),
+        stops: { [STOP.NO_FRAME]: 0, [STOP.STILL_BEAM]: 0, [STOP.LINK_LOST]: 0, [STOP.FRAME_TOO_LONG]: 0, [STOP.OVER_TEMPERATURE]: 0 }
+    })
+    const live = new Map(config.cubes.map((c) => [c.id, liveEntry(c)]))
     const frames = { all: null, byCube: new Map() }
     let armed = false
+    // Signed off for this run: the phrase was typed since the engine started or the last disarm-all.
+    // Never written anywhere, never survives a restart (rule 1).
+    let signedOff = false
+    // cube id -> { out, at }: which Laser Out sends to that cube (rule 10).
+    const claims = new Map()
     let socket = null
     let timer = null
     let infoTimer = null
-    const sim = () => !config.cubes.some((c) => c.ip)
+    const sim = () => ![...live.values()].some((c) => c.ip)
 
     const send = (cube, buf, port, done) => {
         if (!socket || !cube.ip) { done?.(); return }
@@ -293,6 +346,7 @@ const createLaserEngine = ({
             c.heardAt = t
             if (info) { c.info = info; c.infoAt = t }
             if (free !== null) { c.bufferFree = free; c.bufferAt = t; c.sentSince = 0 }
+            if (free !== null && msg[0] === proto.CMD.GET_BUFFER_FREE && c.clearAt !== null && t >= c.clearAt) c.clearConfirmed = true
         }
     }
     const askInfo = () => { for (const c of live.values()) send(c, proto.getFullInfo(), proto.PORT.CMD) }
@@ -308,44 +362,144 @@ const createLaserEngine = ({
         infoTimer?.unref?.()
     }
     const framesFor = (id) => frames.byCube.get(id) || frames.all
+    const claimOf = (id, t = now()) => {
+        const claim = claims.get(id)
+        return claim && t - claim.at <= CLAIM_TTL_MS ? claim : null
+    }
+    // Another Out holds this cube: the refusal's words, or null. A request without an Out (the
+    // panel's old cube input, a script) is "another" too once an Out holds the cube.
+    const heldByOther = (id, out) => {
+        const claim = claimOf(id)
+        if (!claim || (out && claim.out === String(out))) return null
+        const c = live.get(id)
+        return `${c?.name || id} (${id}${c?.ip ? ` at ${c.ip}` : ''}) is already driven by another Laser Out — one Out per cube. Give this Out another cube's address, or delete the other Out.`
+    }
+    const touchClaim = (id, out) => { if (out && live.has(id) && !heldByOther(id, out)) claims.set(id, { out: String(out), at: now() }) }
 
+    // The rate the cube PLAYS (round 2, review §6): its last info answer (info.dacRate), never above
+    // its maximum. laser.json's dacRate is a REQUEST: sent as SET_RATE only with guards.sendSetRate,
+    // and it counts only once the cube's own answer says it plays it. Planning at a rate the cube
+    // does not play would run the galvos faster than the step limit.
     const rateOf = (c) => {
         if (!infoUsable(c.info)) return null
-        const want = config.dacRate || c.info.dacRate || c.info.maxDacRate
-        return Math.min(want, c.info.maxDacRate)
+        return Math.min(c.info.dacRate || c.info.maxDacRate, c.info.maxDacRate)
     }
-    const allowed = (c, spot) => c.stillBeams.some((b) => Math.hypot(spot.x - b.x, spot.y - b.y) <= b.within)
-    const stillOf = (c, frame) => (frame?.still || []).filter((s) => !allowed(c, s))
+    const rateMismatch = (c) => Boolean(config.dacRate && rateOf(c) && rateOf(c) !== Math.min(config.dacRate, c.info.maxDacRate))
+    // The rate a cube's path is planned at: the rate it plays, or (sim, no info yet) laser.json's
+    // dacRate, or the 30 kpps the guards were tuned at.
+    const planRate = (c) => rateOf(c) || config.dacRate || guardsLib.REFERENCE_RATE
+    const planOf = (c) => guardsLib.pathPlan(c.guards, planRate(c))
+    const budgetOf = (c, rate) => guardsLib.frameBudget(rate, c.info?.rxBufferSize || null, BUFFER_MARGIN)
+    // The frame as this cube will draw it (laserGuards.js), its still beams judged on that, and
+    // whether it fits the frame budget. Worked out ONCE per posted frame for each (guards, rate,
+    // budget), shared by every cube with the same, and kept on the frame (round 2, review §2): the
+    // work happens when a frame is posted (setFrame), the tick only looks it up.
+    const prepare = (c, frame) => {
+        if (!frame) return null
+        const rate = planRate(c)
+        const budget = budgetOf(c, rate)
+        const key = `${c.guardsKey}|${rate}|${budget}`
+        let prep = frame.preps.get(key)
+        if (!prep) {
+            const plan = guardsLib.pathPlan(c.guards, rate)
+            const opt = guardsLib.optimisePath(frame.points, plan, budget)
+            prep = { key, rate, budget, plan, points: opt.points, overBudget: opt.overBudget, stats: opt.stats, still: opt.points ? stillBeams(opt.points) : [] }
+            frame.preps.set(key, prep)
+        }
+        c.prep = prep
+        return prep
+    }
+    const allowed = (c, spot) => approvedStill(c).some((b) => Math.hypot(spot.x - b.x, spot.y - b.y) <= b.within)
+    // Still if EITHER the frame as posted OR as optimised is still (round 2, review §3): the
+    // optimiser turns the move into a dot into a lit line and adds blank holds to the frame's time,
+    // so the optimised list alone let a dot through that the raw frame shows plainly. Never looser
+    // than the guard before the optimiser.
+    const stillOf = (c, frame) => {
+        if (!frame) return []
+        const prep = prepare(c, frame)
+        return [...frame.rawStill, ...(prep?.still || [])].filter((s) => !allowed(c, s))
+    }
+    // Brightness: the averaged-temperature limiter, and the cube's own temperature warning (byte 5)
+    // takes it straight to the limiter's minimum.
+    const powerOf = (c) => {
+        const scale = guardsLib.powerScale(c.temp.average(), c.guards)
+        return c.info?.temperatureWarning ? Math.min(scale, c.guards.tempMinScale) : scale
+    }
 
-    // A stop: blank, then output off twice (the spec: send critical commands twice, they are idempotent).
+    // The ring buffer cleared (CLEAR_RINGBUFFER 0x8d, twice): what was queued before a stop must not
+    // play when the output comes back. The free count is full again.
+    // Round 3 (re-review R2-1): the clear goes to the command port and the stream to the data port,
+    // and UDP keeps no order between the two — a data message the cube takes BEFORE the clear would
+    // lose its blank bridge to the clear, and the next one would jump lit from the park. So after a
+    // clear nothing streams until the cube has answered a buffer-free question asked after it (0x8a,
+    // on the same command port, so behind the clear) or, failing an answer, a whole tick later; and
+    // the first data after a clear always starts a fresh pass with the blank bridge from where the
+    // beam was parked.
+    const clearBuffer = (c, t) => {
+        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        send(c, proto.getBufferFree(), proto.PORT.CMD)
+        if (c.info?.rxBufferSize) { c.bufferFree = c.info.rxBufferSize; c.bufferAt = t; c.sentSince = 0 }
+        c.clearAt = t
+        c.clearConfirmed = false
+        c.playing = null
+        c.index = 0
+        c.playingPrep = null
+    }
+    const holdingForClear = (c, t) => c.clearAt !== null && !c.clearConfirmed && t - c.clearAt < TICK_MS
+    // The stop's points (laserGuards.parkPath): blank where the beam is, a blank walk to the centre,
+    // parked there — as ≤140-point messages. Data only; the caller sends output-off after.
+    const parkMessages = (c) => {
+        const pts = guardsLib.parkPath(c.lastPoint, planOf(c))
+        const out = []
+        for (let i = 0; i < pts.length; i += proto.MAX_POINTS_PER_MESSAGE) {
+            out.push(proto.encodeSampleData(pts.slice(i, i + proto.MAX_POINTS_PER_MESSAGE), c.message, c.frameNum))
+            c.message = (c.message + 1) & 0xff
+        }
+        c.sentSince += pts.length
+        c.lastPoint = [0, 0]
+        c.playingPrep = null
+        return out
+    }
+
+    // A stop, in this order: the ring buffer cleared (twice), the beam parked blank at the centre,
+    // output off (twice; the spec: critical commands twice, they are idempotent). The clear and the
+    // park go to different ports, so the cube may take them in either order — UNVALIDATED on a real
+    // cube; the output-off is what makes it dark.
     const stopCube = (c, reason, t, detail = null) => {
         c.stop = { reason, at: t, detail }
         c.stops[reason] = (c.stops[reason] || 0) + 1
         c.stillSince = null
         c.playing = null
         c.index = 0
-        const blank = Array.from({ length: 10 }, () => [c.lastPoint[0], c.lastPoint[1], 0, 0, 0])
-        send(c, proto.encodeSampleData(blank, c.message, c.frameNum), proto.PORT.DATA)
-        c.message = (c.message + 1) & 0xff
+        clearBuffer(c, t)
+        for (const buf of parkMessages(c)) send(c, buf, proto.PORT.DATA)
         send(c, proto.setOutput(false), proto.PORT.CMD)
         send(c, proto.setOutput(false), proto.PORT.CMD)
         log?.warn?.(`[laser] ${c.id} ${STOP_TEXT[reason]}${detail ? ` (${detail})` : ''}`)
     }
-    const resumeCube = (c) => {
+    // Back on: the buffer cleared first, so nothing queued before the stop can light.
+    const resumeCube = (c, t) => {
         c.stop = null
         c.stillSince = null
+        clearBuffer(c, t)
         send(c, proto.setOutput(true), proto.PORT.CMD)
         log?.warn?.(`[laser] ${c.id} resumed on a new frame`)
     }
 
     // The next stretch of the cube's frame, as much as its ring buffer has room for, in ≤140-point
     // messages. Room is estimated as the spec advises: the last free count the cube reported, plus
-    // what it has played since at its DAC rate, minus what was sent since. A new frame starts at the
-    // end of the one playing (no torn figures); blackout and stops cut at once.
+    // what it has played since at its DAC rate, minus what was sent since. A new lit frame starts at
+    // the end of the one playing (no torn figures; one pass is at most the frame budget, ≤ 67 ms); a
+    // DARK frame, blackout and stops cut at once (round 2, review §1: no lit point of a replaced
+    // figure after the editor went dark).
     const stream = (c, frame, t) => {
         if (!c.ip) return
         const rate = rateOf(c)
         if (!rate) return
+        if (holdingForClear(c, t)) return
+        const prep = prepare(c, frame)
+        if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) { c.playing = null; c.index = 0 }
         const perTick = Math.ceil((rate * TICK_MS) / 1000)
         let room = perTick
         if (c.bufferFree !== null) {
@@ -353,7 +507,14 @@ const createLaserEngine = ({
             if (c.info?.rxBufferSize) free = Math.min(free, c.info.rxBufferSize)
             room = Math.min(perTick, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
         }
-        const next = () => (frame?.points?.length ? frame.points : [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]])
+        // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
+        const next = () => {
+            if (!prep?.points?.length) { c.playingPrep = null; return [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]] }
+            const bridge = c.playingPrep === prep ? [] : guardsLib.bridgePath(c.lastPoint, prep.points[0], prep.plan)
+            c.playingPrep = prep
+            return bridge.length ? bridge.concat(prep.points) : prep.points
+        }
+        const power = powerOf(c)
         while (room > 0) {
             const chunk = []
             while (chunk.length < Math.min(room, proto.MAX_POINTS_PER_MESSAGE)) {
@@ -367,34 +528,47 @@ const createLaserEngine = ({
                 chunk.push(p)
                 c.lastPoint = [p[0], p[1]]
             }
-            send(c, proto.encodeSampleData(chunk, c.message, c.frameNum), proto.PORT.DATA)
+            send(c, proto.encodeSampleData(guardsLib.scaleColour(chunk, power), c.message, c.frameNum), proto.PORT.DATA)
             c.message = (c.message + 1) & 0xff
             c.sentSince += chunk.length
             room -= chunk.length
         }
     }
 
-    // Every tick, while armed, per armed cube: the link, the signal-loss stop, the still-beam guard,
-    // then the stream. In sim the guards run and nothing is sent.
+    // Every tick, while armed, per armed cube: the link, the cube's over-temperature flag, the
+    // signal-loss stop, the frame budget, the still-beam guard, then the stream. In sim the guards
+    // run and nothing is sent. The frame's path work was done when it was posted (prepare).
     const tick = () => {
         if (!armed) return
         const t = now()
         for (const c of live.values()) {
             if (!c.armed) continue
+            // A temperature reading counts only while fresh (two info periods), not a stale one.
+            if (c.info && t - c.infoAt <= 2 * INFO_POLL_MS) c.temp.sample(t, c.info.temperature)
             if (c.ip && t - (c.heardAt ?? 0) > GUARD.LINK_LOST_MS) {
                 stopCube(c, STOP.LINK_LOST, t)
                 c.armed = false
                 continue
             }
+            if (c.info?.overTemperature) {
+                stopCube(c, STOP.OVER_TEMPERATURE, t, `${c.info.temperature} °C`)
+                c.armed = false
+                continue
+            }
             const frame = framesFor(c.id)
+            const prep = prepare(c, frame)
             const still = stillOf(c, frame)
             if (c.stop) {
                 // Back on only on a frame newer than the stop that would not stop it again.
                 const fresh = frame && frame.at > c.stop.at && t - frame.at <= GUARD.FRAME_TIMEOUT_MS
-                if (!fresh || (c.stop.reason === STOP.STILL_BEAM && still.length)) continue
-                resumeCube(c)
+                if (!fresh || (frame.lit && prep?.overBudget) || (c.stop.reason === STOP.STILL_BEAM && still.length)) continue
+                resumeCube(c, t)
             }
             if (frame?.lit && t - frame.at > GUARD.FRAME_TIMEOUT_MS) { stopCube(c, STOP.NO_FRAME, t); continue }
+            if (frame?.lit && prep?.overBudget) {
+                stopCube(c, STOP.FRAME_TOO_LONG, t, `more than ${prep.budget} points after the guards (${prep.stats.in} posted)`)
+                continue
+            }
             if (frame?.lit && still.length) {
                 c.stillSince ??= t
                 if (t - c.stillSince >= GUARD.STILL_HOLD_MS) {
@@ -408,65 +582,115 @@ const createLaserEngine = ({
     }
 
     const infoView = (c, t) => (c.info ? { ...c.info, ageMs: t - c.infoAt } : null)
+    // What the guards did to the frame this cube is drawing: points in and out, the longest steps,
+    // and how many times a second the figure is drawn at the cube's rate.
+    const pathView = (c) => {
+        const prep = c.prep
+        if (!prep) return null
+        const { plan } = prep
+        return {
+            rate: prep.rate,
+            budget: prep.budget,
+            overBudget: prep.overBudget,
+            pointsIn: prep.stats.in,
+            pointsOut: prep.overBudget ? null : prep.stats.out,
+            framesPerSecond: !prep.overBudget && prep.stats.out ? Math.round((prep.rate / prep.stats.out) * 10) / 10 : null,
+            maxLitStep: prep.stats.maxLitStep,
+            maxBlankStep: prep.stats.maxBlankStep,
+            plan: { litStep: plan.litStep, blankStep: plan.blankStep, startDwell: plan.startDwell, endDwell: plan.endDwell, blankBeforeOn: plan.blankBeforeOn, litAfterOn: plan.litAfterOn, litBeforeOff: plan.litBeforeOff, blankAfterOff: plan.blankAfterOff, parkPoints: plan.parkPoints }
+        }
+    }
+    // The temperature limiter (laserGuards.powerScale): hot at an average ≥ tempEndC.
+    const temperatureView = (c) => {
+        const averageC = c.temp.average()
+        return {
+            lastC: c.info ? c.info.temperature : null,
+            averageC: averageC === null ? null : Math.round(averageC * 10) / 10,
+            samples: c.temp.count(),
+            powerScale: powerOf(c),
+            hot: averageC !== null && averageC >= c.guards.tempEndC,
+            cubeWarning: Boolean(c.info?.temperatureWarning),
+            cubeOverTemperature: Boolean(c.info?.overTemperature)
+        }
+    }
     const state = () => {
         const t = now()
         return {
             armed,
+            signedOff,
             sim: sim(),
             zone: { ...config.zone },
-            armPhrase: ARM_PHRASE,
             guard: {
                 frameTimeoutMs: GUARD.FRAME_TIMEOUT_MS,
                 linkLostMs: GUARD.LINK_LOST_MS,
                 stillWindowDeg: GUARD.STILL_WINDOW_DEG,
                 stillDwellShare: GUARD.STILL_DWELL_SHARE,
                 stillHoldMs: GUARD.STILL_HOLD_MS,
-                validated: GUARD.VALIDATED
+                validated: GUARD.VALIDATED,
+                path: { ...config.guards, referenceRate: guardsLib.REFERENCE_RATE }
             },
             cubes: [...live.values()].map((c) => ({
                 id: c.id,
                 name: c.name,
                 ip: c.ip,
+                serial: c.serial,
                 connected: Boolean(c.ip) && c.heardAt !== null && t - c.heardAt <= GUARD.LINK_LOST_MS,
                 armed: armed && c.armed,
+                claimedBy: claimOf(c.id, t)?.out ?? null,
                 stop: c.stop ? { reason: c.stop.reason, text: STOP_TEXT[c.stop.reason], detail: c.stop.detail, at: c.stop.at } : null,
                 stops: { ...c.stops },
                 info: infoView(c, t),
                 rate: rateOf(c),
-                stillBeams: c.stillBeams.length,
-                lastFrameAt: c.lastFrameAt
+                rateMismatch: rateMismatch(c),
+                stillBeams: approvedStill(c).length,
+                serialMismatch: serialMismatch(c),
+                addressRefused: c.addressRefused,
+                lastFrameAt: c.lastFrameAt,
+                guards: c.guards,
+                path: pathView(c),
+                temperature: temperatureView(c)
             }))
         }
     }
 
+    // A frame for 'all' replaces every cube's own frame except those a Laser Out holds (rule 10).
     const keep = (target, frame) => {
-        if (target === ALL_CUBES) { frames.all = frame; frames.byCube.clear() } else frames.byCube.set(target, frame)
-        for (const c of live.values()) if (target === ALL_CUBES || c.id === target) c.lastFrameAt = frame.at
+        if (target === ALL_CUBES) {
+            frames.all = frame
+            for (const id of [...frames.byCube.keys()]) if (!claimOf(id)) frames.byCube.delete(id)
+        } else frames.byCube.set(target, frame)
+        for (const c of live.values()) if (target === ALL_CUBES ? !claimOf(c.id) : c.id === target) c.lastFrameAt = frame.at
     }
     const targetOf = (cube) => (cube == null || cube === '' ? ALL_CUBES : String(cube))
     const unknown = (target) => (target !== ALL_CUBES && !live.has(target) ? `no cube "${target}" (cubes: ${[...live.keys()].join(', ')})` : null)
 
     /** Keep a frame for every cube ('all') or one; the zone applied. Never sends by itself. */
-    const setFrame = (cube, points) => {
+    const setFrame = (cube, points, out = null) => {
         const target = targetOf(cube)
-        const error = unknown(target)
+        const error = unknown(target) || (target === ALL_CUBES ? null : heldByOther(target, out))
         if (error) return { ok: false, error }
+        if (target !== ALL_CUBES) touchClaim(target, out)
         const clean = normaliseFramePoints(points)
         const zoned = applyZone(clean.points, config.zone)
         keep(target, {
             points: zoned.points,
             at: now(),
             lit: zoned.points.some(isLit),
-            still: stillBeams(zoned.points)
+            rawStill: stillBeams(zoned.points),
+            preps: new Map()
         })
+        // The guards' work for this frame, now, once per (guards, rate, budget) — not in the tick.
+        const kept = target === ALL_CUBES ? frames.all : frames.byCube.get(target)
+        for (const c of live.values()) if (target === ALL_CUBES ? !frames.byCube.has(c.id) : c.id === target) prepare(c, kept)
         return { ok: true, armed, dropped: clean.dropped, blanked: zoned.blanked, cubes: state().cubes }
     }
 
     /** The editor's keep-alive: the frame it holds is still wanted. Refreshes the frame's time only. */
-    const alive = (cube) => {
+    const alive = (cube, out = null) => {
         const target = targetOf(cube)
-        const error = unknown(target)
+        const error = unknown(target) || (target === ALL_CUBES ? null : heldByOther(target, out))
         if (error) return { ok: false, error }
+        if (target !== ALL_CUBES) touchClaim(target, out)
         const frame = target === ALL_CUBES ? frames.all : frames.byCube.get(target)
         if (!frame) return { ok: true, armed, kept: false }
         frame.at = now()
@@ -481,36 +705,95 @@ const createLaserEngine = ({
         return { ok: true, armed }
     }
 
-    const offAll = (done) => {
+    // Every addressed cube off: the cubes that were armed first park blank at the centre (their
+    // stream's points), then every one gets output-off twice and buffer answers off. A cube never
+    // armed gets no data point (rule 1), only the off commands. `done` is called once per message;
+    // returns how many there are.
+    const offAll = (wasArmed, done, only = null) => {
+        const msgs = []
         for (const c of live.values()) {
-            if (!c.ip) continue
-            send(c, proto.setOutput(false), proto.PORT.CMD, done)
-            send(c, proto.setOutput(false), proto.PORT.CMD, done)
-            send(c, proto.enableBufferSizeResponse(false), proto.PORT.CMD, done)
+            if (!c.ip || (only && !only.has(c.id))) continue
+            if (wasArmed.has(c.id)) {
+                msgs.push([c, proto.clearRingBuffer(), proto.PORT.CMD], [c, proto.clearRingBuffer(), proto.PORT.CMD])
+                for (const buf of parkMessages(c)) msgs.push([c, buf, proto.PORT.DATA])
+            }
+            msgs.push([c, proto.setOutput(false), proto.PORT.CMD], [c, proto.setOutput(false), proto.PORT.CMD], [c, proto.enableBufferSizeResponse(false), proto.PORT.CMD])
         }
+        for (const [c, buf, port] of msgs) send(c, buf, port, done)
+        return msgs.length
     }
+    const armedIds = () => new Set(armed ? [...live.values()].filter((c) => c.armed).map((c) => c.id) : [])
 
     const armCube = (c, t) => {
         if (c.armed) return
         if (c.ip && !infoUsable(c.info)) { c.stop = { reason: STOP.NO_INFO, at: t, detail: null }; return }
+        // Round 3 (re-review R2-2): a cube that says it is over temperature is not armed at all.
+        if (c.ip && c.info?.overTemperature) { c.stop = { reason: STOP.OVER_TEMPERATURE, at: t, detail: `${c.info.temperature} °C` }; return }
         c.armed = true
         c.stop = null
         c.stillSince = null
         c.playing = null
         c.index = 0
+        c.playingPrep = null
+        // A fresh temperature average each arm (review §7): an old session's cool readings must not
+        // hold the limiter off while the cube is hot now.
+        c.temp = guardsLib.createTempAverager({ samples: c.guards.tempSamples, periodMs: c.guards.tempPeriodMs })
         send(c, proto.enableBufferSizeResponse(true), proto.PORT.CMD)
+        // SET_RATE only as a request from laser.json; the plan follows the cube's next answer.
+        if (c.guards.sendSetRate && config.dacRate && c.info) send(c, proto.setRate(Math.min(config.dacRate, c.info.maxDacRate)), proto.PORT.CMD)
+        clearBuffer(c, t)
         send(c, proto.setOutput(true), proto.PORT.CMD)
     }
 
-    const arm = ({ armed: want, confirm } = {}) => {
+    // ONE cube on or off (rule 10). Off is always allowed and always sent. On needs: the cube known
+    // and addressed, not held by another Out, the run signed off (the phrase now, or earlier in this
+    // run), and the cube's own answer (armCube's checks).
+    const armOne = ({ armed: want, cube, confirm, out }) => {
+        const c = live.get(String(cube))
+        if (!c) return { ok: false, armed, error: `no cube "${cube}" (cubes: ${[...live.keys()].join(', ')})` }
         if (want !== true) {
-            if (armed) offAll()
+            const wasOn = armed && c.armed
+            offAll(new Set(wasOn ? [c.id] : []), undefined, new Set([c.id]))
+            c.armed = false
+            c.stillSince = null
+            if (c.stop?.reason !== STOP.NO_INFO) c.stop = null
+            if (![...live.values()].some((x) => x.armed)) {
+                armed = false
+                if (timer) { stopEvery(timer); timer = null }
+            }
+            if (wasOn) log?.warn?.(`[laser] ${c.id} OFF`)
+            return { ok: true, armed, cube: c.id, cubeArmed: false, signedOff }
+        }
+        const held = heldByOther(c.id, out)
+        if (held) return { ok: false, armed, error: `not on: ${held}` }
+        if (!c.ip) return { ok: false, armed, error: `not on: ${c.id} has no address — give the Laser Out its cube's IP` }
+        if (!signedOff && confirm !== ARM_PHRASE) {
+            return { ok: false, armed, needsPhrase: true, error: confirm ? 'not on: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' : 'not on: the first ON of a run takes the sign-off phrase' }
+        }
+        openSocket()
+        const t = now()
+        armCube(c, t)
+        if (!c.armed) return { ok: false, armed, error: `not on: ${c.id}: ${c.stop?.reason === STOP.OVER_TEMPERATURE ? 'the cube reports over-temperature' : 'the cube has not answered its info question — is it on and on this network?'}` }
+        signedOff = true
+        armed = true
+        touchClaim(c.id, out)
+        if (!timer) { timer = every(tick, TICK_MS); timer?.unref?.() }
+        log?.warn?.(`[laser] ${c.id} ON (${c.ip})`)
+        return { ok: true, armed, cube: c.id, cubeArmed: true, signedOff }
+    }
+
+    const arm = ({ armed: want, confirm, cube, out } = {}) => {
+        if (cube != null && cube !== '' && cube !== ALL_CUBES) return armOne({ armed: want, cube, confirm, out })
+        if (want !== true) {
+            if (armed) offAll(armedIds())
             armed = false
+            signedOff = false
             for (const c of live.values()) { c.armed = false; c.stillSince = null; if (c.stop?.reason !== STOP.NO_INFO) c.stop = null }
             if (timer) { stopEvery(timer); timer = null }
             return { ok: true, armed }
         }
-        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: `arming needs the sign-off phrase exactly: "${ARM_PHRASE}"` }
+        // The phrase is never echoed (nor in state()): it is typed by the officer, not copied from a hint.
+        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: 'not armed: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' }
         openSocket()
         const t = now()
         for (const c of live.values()) armCube(c, t)
@@ -518,12 +801,59 @@ const createLaserEngine = ({
         const refused = [...live.values()].filter((c) => !c.armed).map((c) => c.id)
         if (!sim() && !ready.some((c) => c.ip)) {
             for (const c of ready) c.armed = false
-            return { ok: false, armed, error: `no cube has answered its info question yet (${refused.join(', ')}): nothing armed. Check the cubes are on and on this network, then arm again.`, cubes: state().cubes }
+            const why = [...live.values()].filter((c) => !c.armed && c.ip).map((c) => `${c.id}: ${c.stop?.reason === STOP.OVER_TEMPERATURE ? 'over temperature' : 'no info'}`)
+            return { ok: false, armed, error: `no cube could be armed (${why.join(', ')}): nothing armed. A cube needs to have answered its info question and not be over temperature. Check the cubes are on, cool and on this network, then arm again.`, cubes: state().cubes }
         }
         armed = true
+        signedOff = true
         if (!timer) { timer = every(tick, TICK_MS); timer?.unref?.() }
         log?.warn?.(`[laser] ARMED (${sim() ? 'sim: no cube addresses, nothing is sent' : `${ready.filter((c) => c.ip).length} cubes`}${refused.length ? `; not armed, no info: ${refused.join(', ')}` : ''})`)
         return { ok: true, armed, refused, cubes: state().cubes }
+    }
+
+    // A Laser Out's address checked (rule 10): may this Out take the cube with this serial at this
+    // address? null when it may, else the refusal. Nothing changes.
+    const canTake = ({ serial, ip, out }) => {
+        const bySerial = [...live.values()].find((c) => c.serial === serial)
+        if (bySerial) {
+            const held = heldByOther(bySerial.id, out)
+            if (held) return held
+            if (bySerial.armed && bySerial.ip !== ip) return `${bySerial.id} (serial ${serial}) is ON at ${bySerial.ip}: switch it OFF before moving it to ${ip}`
+        }
+        const atIp = [...live.values()].find((c) => c.ip === ip && c !== bySerial)
+        if (atIp?.armed) return `${atIp.id} at ${ip} is ON: switch it OFF first`
+        if (atIp) { const held = heldByOther(atIp.id, out); if (held) return held }
+        return null
+    }
+
+    /**
+     * Add or move a cube found at a Laser Out's address, keyed by serial, without a reload: the other
+     * cubes keep running. `cube` is the entry laserConfig.upsertCube wrote; `info` the 0x77 answer
+     * that was just read from that address. Call canTake first. Returns the cube's id.
+     */
+    const upsertCube = (cube, info, out) => {
+        const fresh = cubeFrom(cube, live.size, config.guards)
+        if (!fresh.ip) return { ok: false, error: fresh.addressRefused || 'no address' }
+        const t = now()
+        // Whoever else had this address does not any more: that box is this cube now.
+        for (const c of live.values()) {
+            if (c.id !== fresh.id && c.ip === fresh.ip) { c.ip = null; c.info = null; c.heardAt = null; c.armed = false }
+        }
+        let c = live.get(fresh.id)
+        if (!c) { c = liveEntry(fresh); live.set(fresh.id, c) }
+        if (c.ip !== fresh.ip) { c.info = null; c.infoAt = null; c.heardAt = null; c.stop = null }
+        Object.assign(c, { name: fresh.name, ip: fresh.ip, serial: fresh.serial, stillBeams: fresh.stillBeams })
+        if (infoUsable(info)) { c.info = info; c.infoAt = t; c.heardAt = t }
+        touchClaim(c.id, out)
+        openSocket()
+        send(c, proto.getFullInfo(), proto.PORT.CMD)
+        return { ok: true, id: c.id }
+    }
+    // The live cube at an address that answered within the link window, with its info: a Laser Out's
+    // 3-second check needs no new question for a cube the engine already hears.
+    const heardAt = (ip) => {
+        const t = now()
+        return [...live.values()].find((c) => c.ip === ip && c.info?.serial && c.heardAt !== null && t - c.heardAt <= GUARD.LINK_LOST_MS) || null
     }
 
     /** What the room's laser view and the editor read: the kept frames, armed or not, and which cubes are stopped. */
@@ -543,6 +873,7 @@ const createLaserEngine = ({
     const shutdown = () => new Promise((resolve) => {
         if (timer) { stopEvery(timer); timer = null }
         if (infoTimer) { stopEvery(infoTimer); infoTimer = null }
+        const wasArmed = armedIds()
         armed = false
         for (const c of live.values()) c.armed = false
         if (!socket) { resolve(); return }
@@ -553,9 +884,11 @@ const createLaserEngine = ({
             if (socket) { try { socket.close() } catch { /* already closed */ } socket = null }
             resolve()
         }
-        let pending = [...live.values()].filter((c) => c.ip).length * 3
-        if (!pending) { finish(); return }
-        offAll(() => { pending -= 1; if (pending <= 0) finish() })
+        if (![...live.values()].some((c) => c.ip)) { finish(); return }
+        let sent = 0
+        let total = Infinity
+        total = offAll(wasArmed, () => { sent += 1; if (sent >= total) finish() })
+        if (sent >= total) finish()
         later(finish, SHUTDOWN_WAIT_MS)
     })
 
@@ -563,7 +896,7 @@ const createLaserEngine = ({
     // question starts, so the cubes' info is there by the time anyone arms.
     openSocket()
 
-    return { state, setFrame, alive, blackout, arm, frames: framesView, close: shutdown, shutdown, tick }
+    return { state, setFrame, alive, blackout, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
 }
 
-module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP }
+module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, CLAIM_TTL_MS }

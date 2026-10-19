@@ -53,40 +53,6 @@ export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES
     return hit ? hit.point.clone() : null
 }
 
-// When nothing is under the pointer (fog, the open length of a hall, sky), Blender keeps the
-// previous depth. Here the previous depth can be camera-controls' 0.35 m clamp — after a
-// wheel zoom into open air `infinityDolly` has dragged the orbit point along at that clamp,
-// and every pan and wheel step is then scaled by 0.35 m (measured 2026-10-12, MOXIR v1.1:
-// 240 px drag = 0.128 m, the owner's "stuck"). This fallback is OUR rule, not Blender's:
-// the depth is the nearest surface around the camera along six world axes (the floor you
-// stand over, the roof, the wall behind you), and the pivot is placed that far along the
-// view ray. In the same measurement the floor was 4.46 m down and a wall 3.68 m back.
-// Returns null when no axis hits (the camera is outside every surface).
-export const FALLBACK_DIRECTIONS = Object.freeze([
-    new Vector3(0, -1, 0), new Vector3(0, 1, 0),
-    new Vector3(-1, 0, 0), new Vector3(1, 0, 0),
-    new Vector3(0, 0, -1), new Vector3(0, 0, 1),
-])
-const sharedOrigin = new Vector3()
-const sharedDir = new Vector3()
-export function fallbackPivot({ camera, objects, maxMeshes = DEFAULT_MAX_MESHES }) {
-    if (!camera || !objects?.length) return null
-    const meshes = collectMeshes(objects, maxMeshes, [])
-    if (!meshes.length) return null
-    camera.updateMatrixWorld?.()
-    camera.getWorldPosition(sharedOrigin)
-    let depth = Infinity
-    for (const dir of FALLBACK_DIRECTIONS) {
-        sharedRaycaster.set(sharedOrigin, dir)
-        const hits = sharedRaycaster.intersectObjects(meshes, false)
-        if (hits.length && hits[0].distance < depth) depth = hits[0].distance
-    }
-    if (!Number.isFinite(depth)) return null
-    camera.getWorldDirection(sharedDir)
-    return sharedOrigin.clone().addScaledVector(sharedDir, depth)
-}
-
-// Pointer position on an element -> normalized device coordinates.
 export function clientToNdc(clientX, clientY, rect) {
     if (!rect || !rect.width || !rect.height) return null
     return [
@@ -102,4 +68,32 @@ export function selectionCenter(objects) {
     for (const object of objects) box.expandByObject(object)
     if (box.isEmpty()) return null
     return box.getCenter(new Vector3())
+}
+
+// A material the eye sees through: drawn without depth writes, faded, not drawn into colour, or hidden. Pure.
+export function isSeeThrough(material) {
+    const list = Array.isArray(material) ? material : [material]
+    return list.every((m) => !m || m.visible === false || m.depthWrite === false || m.colorWrite === false || (m.transparent === true && Number(m.opacity) < 0.99))
+}
+
+// The largest side of what the space shows: visible meshes under `roots`, not helpers, not see-through (a light's 33 m beam cone
+// is not the space). The standard move's automatic speed is taken from it once (freeMove.js). 0 while nothing has loaded.
+export function contentLargestSide(roots, maxMeshes = DEFAULT_MAX_MESHES) {
+    const box = new Box3(), one = new Box3()
+    const stack = [...(roots || [])]
+    let n = 0
+    while (stack.length && n < maxMeshes) {
+        const o = stack.pop()
+        if (!o || !o.visible || isNavigationHelper(o)) continue
+        if (o.isMesh && o.geometry && !isSeeThrough(o.material)) {
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox()
+            o.updateWorldMatrix(true, false)
+            one.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld)
+            box.union(one); n += 1
+        }
+        for (const c of o.children || []) stack.push(c)
+    }
+    if (box.isEmpty()) return 0
+    const size = box.getSize(new Vector3())
+    return Math.max(size.x, size.y, size.z)
 }

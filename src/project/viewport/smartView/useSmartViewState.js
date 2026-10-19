@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { parseViewHash, presetForKey, viewHash } from './smartViewGeometry.js'
 
 // The DOM side of the smart view: which preset is on, x-ray, the keys, the link.
@@ -11,11 +11,16 @@ import { parseViewHash, presetForKey, viewHash } from './smartViewGeometry.js'
 //             Back still leaves the room. Taking the camera clears it.
 //   keysLive  false while this viewport should not listen (a Studio pane the pointer is
 //             not over — the Blender rule: shortcuts act on the area under the cursor).
-export default function useSmartViewState({ enabled = true, deepLink = false, keysLive = true, reservedKeys = null } = {}) {
-    const [presets, setPresets] = useState([])
+//   select    (computed presets) → the ones this audience gets (viewData.resolveViews: the project's own
+//             list, live only for a visitor). A key or a link to a view not selected does nothing.
+export default function useSmartViewState({ enabled = true, deepLink = false, keysLive = true, reservedKeys = null, select = null } = {}) {
+    const [computed, setPresets] = useState([])
+    const presets = useMemo(() => (typeof select === 'function' ? select(computed) : computed), [select, computed])
     const [activeId, setActiveId] = useState(null)
     const [command, setCommand] = useState({ presetId: null, nonce: 0 })
     const [xray, setXray] = useState(false)
+    // Auto fly (autoFly.js): the drone flight through the room; ?fly=1 starts it on open.
+    const [flying, setFlying] = useState(() => typeof window !== 'undefined' && /[?&]fly=1(&|$)/.test(window.location.search))
     const hashApplied = useRef(false)
 
     const choose = useCallback((id) => {
@@ -66,5 +71,5 @@ export default function useSmartViewState({ enabled = true, deepLink = false, ke
         return () => window.removeEventListener('keydown', onKey)
     }, [enabled, keysLive, presets, reservedKeys, choose])
 
-    return { presets, setPresets, activeId, command, xray, setXray, choose, release }
+    return { presets, setPresets, activeId, command, xray, setXray, choose, release, flying, setFlying }
 }
