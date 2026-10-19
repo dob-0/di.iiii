@@ -3,7 +3,7 @@ import {
     CMF_1931, KM, beamWidth, driveOfHex, fieldDirection, gamutMapConstantY, hgPhase, laserColourFlux, laserFlux, laserOf,
     lineLuminance, linePerLumen, lumaOf, scanLines, xyzToLinearRgb, frameIndexAt, framesOf, laserFrameAt, nextFrameIn, poseAt, scanLinesAt,
     MIN_CORE_PX, coreHalo, coreWidth, haloRadius, haloRadiusCapped, haloShare,
-    LONE_LINE_SPACING_RAD, SCAN_STEP_DEG, SPOT_ALBEDO, laserSpot, lineSpacings
+    LONE_LINE_SPACING_RAD, SCAN_STEP_DEG, SPOT_ALBEDO, laserSpot, lineSpacings, toneMapAces, whiteness
 } from './laserLine.js'
 import { laserLineGeometry, laserSpotGeometry } from './laserLineMaterial.js'
 
@@ -301,5 +301,46 @@ describe('laserLine 7.: core and halo (2026-10-15, lasers that look like lasers)
         const at = { sigmaS: 0.02, g: 0.7, cosTheta: 0.5, s: 10, d: 10, dist: 10, pixelAngle: 1e-3 }
         expect(coreHalo({ ...at, flux: forty }).perLength / coreHalo({ ...at, flux: cube }).perLength).toBeCloseTo(forty / cube, 9)
         expect(forty / cube).toBeGreaterThan(40)
+    })
+})
+
+describe('laserLine 9.: the drawing at 5, 10 and 20 m — a thin white core, the colour in the halo (owner 15:5x)', () => {
+    // the owner's floor camera on v2-11 (plan.json: fov 60), a 720-row frame; the room's exposure 1.5, σs 0.02, g 0.74
+    const pixelAngle = (2 * Math.tan(Math.PI / 6)) / 720
+    const EXPOSURE = 1.5
+    const CUBE = { mW: [666.667, 333.333, 250], nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1 } // v2-11's 36 cube lines
+    const FORTY = { mW: [16000, 15000, 10000], nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1.3 } // v2-11's two 40 W heads
+    const green = (l) => laserColourFlux({ mW: l.mW, nm: l.nm, drive: [0, 1, 0] }).rgb.map((c) => c * 0.02) // sceneScale 0.02
+    // the cube lines are seen nearly along their fan from the floor (forward scatter); the 40 W heads cross the view
+    const look = (l, cosTheta, s) => {
+        const ch = coreHalo({ sigmaS: 0.02, g: 0.74, flux: 1, cosTheta, s, d: s, dist: s, pixelAngle, diameter_mm: l.diameter_mm, divergence_mrad: l.divergence_mrad, spacingRad: LONE_LINE_SPACING_RAD })
+        const f = green(l)
+        return { ...ch, coreRgb: toneMapAces(f.map((c) => c * ch.core), EXPOSURE), haloRgb: toneMapAces(f.map((c) => c * ch.halo), EXPOSURE), coreHdr: f[1] * ch.core * EXPOSURE }
+    }
+    for (const [name, l, cosTheta] of [['cube line', CUBE, 0.98], ['40 W line', FORTY, 0]]) {
+        for (const s of [5, 10, 20]) {
+            it(`${name} at ${s} m: core 1 px (the beam is thinner than a pixel), never wider than the physics`, () => {
+                const v = look(l, cosTheta, s)
+                expect(v.coreWidth).toBeCloseTo(Math.max(beamWidth(s, l.diameter_mm, l.divergence_mrad), s * pixelAngle * MIN_CORE_PX), 12)
+                expect(v.coreWidth / (s * pixelAngle)).toBeCloseTo(1, 9)
+                // the halo stays inside half the gap to the next line of a fan: 36 lines stay 36
+                expect(v.haloRadius).toBeLessThanOrEqual(0.5 * LONE_LINE_SPACING_RAD * s + 1e-12)
+                // the core carries the line: its luminance is above the halo's peak
+                expect(v.core).toBeGreaterThan(v.halo)
+            })
+            it(`${name} at ${s} m: far above white reads white; the halo keeps the laser's green`, () => {
+                const v = look(l, cosTheta, s)
+                // "far above white" = 5x: the ACES shoulder whitens a green core gradually (1x 0.44, 4x 0.83, 8x 0.92, 30x 0.99 whiteness)
+                if (v.coreHdr >= 5) expect(whiteness(v.coreRgb)).toBeGreaterThan(0.85)
+                expect(v.haloRgb[1]).toBeGreaterThan(v.haloRgb[0])
+                expect(whiteness(v.haloRgb)).toBeLessThan(0.6)
+            })
+        }
+    }
+    it('toneMapAces is three r185 ACESFilmic: 0 stays 0, white stays near white, a green far above white turns white', () => {
+        expect(toneMapAces([0, 0, 0], 1).every((c) => c < 0.003)).toBe(true)
+        expect(whiteness(toneMapAces([1, 1, 1], 1))).toBeGreaterThan(0.99)
+        expect(whiteness(toneMapAces([0, 0.1, 0], 1))).toBeLessThan(0.1)
+        expect(whiteness(toneMapAces([0, 20, 0], 1))).toBeGreaterThan(0.9)
     })
 })

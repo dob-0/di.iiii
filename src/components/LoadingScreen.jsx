@@ -19,6 +19,8 @@ import './loadingScreen.css'
 //   variant   "screen" (default, fixed full-bleed black), "cover" (fills the
 //             nearest positioned parent, black), "inline" (small, no
 //             background, for a panel or a button row).
+//   slowText  OPTIONAL replacement for the 8 s line when the cause is known
+//             ("too many tabs of this site are open — close one").
 //   slowAfterMs  override the 8 s threshold (tests).
 export const LOADING_SLOW_AFTER_MS = 8000
 
@@ -37,6 +39,7 @@ export default function LoadingScreen({
     detail = '',
     text = '',
     waitingFor = '',
+    slowText = '',
     variant = 'screen',
     slowAfterMs = LOADING_SLOW_AFTER_MS
 }) {
@@ -60,7 +63,7 @@ export default function LoadingScreen({
         >
             <LoadingRing size={variant === 'inline' ? 20 : undefined} />
             {text ? <span className="loading-screen-text">{text}</span> : null}
-            {slow ? <span className="loading-screen-slow">{slowLine}</span> : null}
+            {slow ? <span className="loading-screen-slow">{slowText || slowLine}</span> : null}
             <span className="loading-screen-label">{spoken}</span>
         </div>
     )
