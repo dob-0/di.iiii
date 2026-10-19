@@ -37,7 +37,10 @@ const sharedNdc = new Vector2()
 // Nearest visible, non-helper mesh hit under ndc ([-1..1, -1..1]), as a
 // Vector3, or null. Only the first `maxMeshes` meshes (depth-first) are tested,
 // so a huge scene costs a bounded amount per gesture.
-export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES }) {
+// `beyond` (metres): a surface closer than this is the one the camera is pressed against (camera-controls' minDistance
+// clamp, 0.35 m); the pick looks PAST it to what is behind, so a wheel notch keeps going through instead of dollying
+// 15.7 % of 0.35 m (owner, 2026-10-12: "you can unlimited scroll"; his trace: 25 notches at 0.35 m from the roof, 4 cm each).
+export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES, beyond = 0 }) {
     if (!camera || !Array.isArray(ndc) || !objects?.length) return null
     const meshes = collectMeshes(objects, maxMeshes, [])
     if (!meshes.length) return null
@@ -46,10 +49,10 @@ export function pickPivot({ camera, ndc, objects, maxMeshes = DEFAULT_MAX_MESHES
     sharedRaycaster.setFromCamera(sharedNdc, camera)
     // recursive=false: collectMeshes already walked the tree and dropped helpers.
     const hits = sharedRaycaster.intersectObjects(meshes, false)
-    return hits.length ? hits[0].point.clone() : null
+    const hit = hits.find((h) => h.distance > beyond)
+    return hit ? hit.point.clone() : null
 }
 
-// Pointer position on an element -> normalized device coordinates.
 export function clientToNdc(clientX, clientY, rect) {
     if (!rect || !rect.width || !rect.height) return null
     return [
@@ -65,4 +68,32 @@ export function selectionCenter(objects) {
     for (const object of objects) box.expandByObject(object)
     if (box.isEmpty()) return null
     return box.getCenter(new Vector3())
+}
+
+// A material the eye sees through: drawn without depth writes, faded, not drawn into colour, or hidden. Pure.
+export function isSeeThrough(material) {
+    const list = Array.isArray(material) ? material : [material]
+    return list.every((m) => !m || m.visible === false || m.depthWrite === false || m.colorWrite === false || (m.transparent === true && Number(m.opacity) < 0.99))
+}
+
+// The largest side of what the space shows: visible meshes under `roots`, not helpers, not see-through (a light's 33 m beam cone
+// is not the space). The standard move's automatic speed is taken from it once (freeMove.js). 0 while nothing has loaded.
+export function contentLargestSide(roots, maxMeshes = DEFAULT_MAX_MESHES) {
+    const box = new Box3(), one = new Box3()
+    const stack = [...(roots || [])]
+    let n = 0
+    while (stack.length && n < maxMeshes) {
+        const o = stack.pop()
+        if (!o || !o.visible || isNavigationHelper(o)) continue
+        if (o.isMesh && o.geometry && !isSeeThrough(o.material)) {
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox()
+            o.updateWorldMatrix(true, false)
+            one.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld)
+            box.union(one); n += 1
+        }
+        for (const c of o.children || []) stack.push(c)
+    }
+    if (box.isEmpty()) return 0
+    const size = box.getSize(new Vector3())
+    return Math.max(size.x, size.y, size.z)
 }

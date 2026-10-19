@@ -92,6 +92,17 @@ describe('useLiveLightEntity — follows the desk while live, authored when not'
         expect(mirror.probe).not.toHaveBeenCalled()
     })
 
+    it('work light (enabled: false): a live desk playing amber or dark never replaces the lamp it is handed, and is not watched', () => {
+        // MOXIR 2026-10-16: the owner's desk was playing; 54 of 60 numbered lamps kept its colours or went dark under Work light.
+        const mirror = mirrorOf({ present: true, fixtures: [DARK], master: 255, blackout: true })
+        const entity = lamp({ index: 3 })
+        const { result } = renderHook(() => useLiveLightEntity(entity, { mirror, enabled: false }))
+        expect(result.current).toBe(entity)
+        act(() => mirror.set({ present: true, fixtures: [AMBER_FULL], master: 255, blackout: false }))
+        expect(result.current).toBe(entity)
+        expect(mirror.watch).not.toHaveBeenCalled()
+    })
+
     it('follows the desk frame by frame while it is here, and falls back to the authored light when it goes', () => {
         const mirror = mirrorOf({ present: true, fixtures: [AMBER_FULL], master: 255, blackout: false })
         const entity = lamp({ index: 3 })

@@ -120,7 +120,7 @@ describe('/api/health says whose server it is, to a direct loopback caller only'
     const { config } = require('./config.js')
     const health = (req) => {
         const routes = {}
-        registerStatusRoutes({ get: (p, h) => { routes[p] = h } }, { recentEvents: [], startedAt: 0, releaseInfo: {} })
+        registerStatusRoutes({ get: (p, h) => { routes[p] = h } }, { recentEvents: [], startedAt: 0, releaseInfo: {}, checkDb: () => {} })
         let body
         routes['/api/health'](req, { json: (b) => { body = b } })
         return body

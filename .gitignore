@@ -76,3 +76,8 @@ android-twa/*
 !android-twa/twa-manifest.json
 android-twa-staging/
 .verify-vj-deck/
+.claude/settings.local.json
+__pycache__/
+
+# desk bundle output (npm run desk:bundle)
+/build/desk-bundle/

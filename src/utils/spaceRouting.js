@@ -38,6 +38,12 @@ export const APP_PAGE_FOR_APPS = 'for-apps'
 // plan for one shoot day, opened by its link. The key is the second segment and
 // the only credential (serverXR/src/routes/shootRoutes.js).
 export const APP_PAGE_SHOOT = 'shoot'
+// The browser half of `di login` — /device (src/pages/DeviceLoginPage.jsx): a
+// terminal shows a code, the person types it here and approves it. Reserved so no
+// space or project can take the word. Checked before reserving, 2026-10-07:
+// /serverXR/api/spaces/device and /serverXR/api/projects/device answer 404 on prod
+// (diiii.xyz) and on the dev tier (the local install was not running to ask).
+export const APP_PAGE_DEVICE = 'device'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
@@ -50,6 +56,7 @@ export const RESERVED_APP_SEGMENTS = [
     // Checked before reserving (2026-10-07): /serverXR/api/spaces/shoot and
     // /serverXR/api/resolve/shoot 404 on diiii.xyz and dev.diiii.xyz.
     APP_PAGE_SHOOT,
+    APP_PAGE_DEVICE,
     'beta',
     'raw',
     'seed',
@@ -312,6 +319,7 @@ export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCa
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
 export const isShootPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_SHOOT
+export const isDevicePageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_DEVICE
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
@@ -398,6 +406,12 @@ export const getAppLocationState = (locationLike = null) => {
                 page: APP_PAGE_SHOOT,
                 spaceId: null,
                 shootKey: relative.split('/')[1] || ''
+            }
+        }
+        if (isDevicePageSegment(segment)) {
+            return {
+                page: APP_PAGE_DEVICE,
+                spaceId: null
             }
         }
         if (segment) {

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { movedTransforms } from './transformDelta.js'
 
 const transformOf = (entity) => entity.components?.transform || {}
 
@@ -38,4 +39,32 @@ export const applyPivotTransform = (entities, initialPivot, currentPivot) => {
             }
         }
     })
+}
+
+// The multi-selection gizmo's drag, without three.js events: the gizmo calls `draggingChanged`
+// from TransformControls' 'dragging-changed' (fired only by a pointer press/release on a handle)
+// and `objectChange` while it moves. The selection is read at the grab and the delta is applied
+// to THAT snapshot; a release commits only the entities that actually moved (transformDelta.js).
+// A document change is never a gesture: it reaches no handler here, so it writes nothing.
+export const createPivotDrag = ({ readPivot, getEntities, onPreview, onCommit }) => {
+    let grab = null
+    const updatesNow = () => (grab ? applyPivotTransform(grab.entities, grab.pivot, readPivot()) : [])
+    return {
+        draggingChanged(dragging) {
+            if (dragging) {
+                grab = { pivot: readPivot(), entities: getEntities() }
+                return
+            }
+            if (!grab) return
+            const changed = movedTransforms(grab.entities, updatesNow())
+            grab = null
+            onPreview({})
+            if (changed.length) onCommit(changed)
+        },
+        objectChange() {
+            if (!grab) return
+            onPreview(Object.fromEntries(updatesNow().map((entry) => [entry.id, entry.transform])))
+        },
+        get dragging() { return Boolean(grab) }
+    }
 }

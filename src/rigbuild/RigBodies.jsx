@@ -26,7 +26,7 @@ import { measurementOf } from '../project/viewport/measure/measureState.js'
 // Lazy-loaded by the rooms and mounted only when the document has a typed lamp, so a
 // space with no rig pays nothing — not even the fixture models' download.
 
-export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
+export default function RigBodies({ entities, library = TYPE_LIBRARY, onPick }) {
     const shownLibrary = useMemo(() => libraryWithShow(library, entities), [library, entities])
     const lamps = useMemo(() => rigBodyLamps(entities, shownLibrary), [entities, shownLibrary])
     // The rig's own light coming back off the hall (rigBounce.js): only in a room whose
@@ -36,7 +36,7 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
     return (
         <>
             <Suspense fallback={null}>
-                <FixtureBodies lamps={lamps} library={shownLibrary} />
+                <FixtureBodies lamps={lamps} library={shownLibrary} onPick={onPick} />
             </Suspense>
             {/* strobes and blinders: their face and their flash (looks.js flashEntities) */}
             <RigFlashes entities={entities} />

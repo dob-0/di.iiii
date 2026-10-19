@@ -23,7 +23,8 @@ down someone's show, silently: the log ends mid-request with no error. Run the
 stack somewhere else instead. The server port follows the API base:
 
 ```bash
-VITE_API_BASE_URL=http://localhost:4360/serverXR npm run dev   # server on 4360
+di-dev up <tree> --api scratch     # aylmo: a throwaway serverXR on a di-dev port (api 4300–4399)
+VITE_API_BASE_URL=http://localhost:4360/serverXR npm run dev   # elsewhere only (CI, a laptop without di-dev)
 ```
 
 `dev-stack.mjs` passes that port to `serverXR` (`PORT`), proxies `/serverXR` to
@@ -83,7 +84,21 @@ npm run build          # -> dist/, ~1s warm
 
 ## Run (agent path)
 
-Start the stack and wait for the port rather than sleeping:
+**On aylmo (the owner's machine) the only way to start is `di-dev`** — it owns ports, databases and
+the `*.diiii.localhost` names, and `di-dev ls` / `di-dev doctor` say who holds what:
+
+```bash
+di-dev up <tree>                      # frontend against the installed di; --api scratch for a throwaway serverXR
+di-dev logs <tree>                    # the stack log (-f to follow)
+curl -sf -o /dev/null http://<tree>.diiii.localhost/ && echo up
+di-dev down <tree>                    # stop; --wipe also drops the scratch data
+```
+
+Drive `http://<tree>.diiii.localhost/`; pass it to the driver with `--base`. Browser checks run on
+the agent screen: `di-test-browser up <url>`, `di-test-browser run script.cjs`, `di-test-browser shot`.
+Never `npm run dev`, `nohup`, `systemd-run` or `pkill` on aylmo (CLAUDE.md hard rule, 2026-10-02).
+
+Elsewhere (CI, a laptop without di-dev) start the stack and wait for the port rather than sleeping:
 
 ```bash
 npm run dev > /tmp/di-iiii-dev.log 2>&1 &
@@ -91,7 +106,7 @@ timeout 60 bash -c 'until curl -sf http://localhost:4000/serverXR/api/health >/d
 timeout 60 bash -c 'until curl -sf http://localhost:5173/ >/dev/null; do sleep 1; done'
 ```
 
-**Drive `:5173`, never `:4000`.** Port 4000 serves the last `dist/` build, so it
+**There, drive `:5173`, never `:4000`.** Port 4000 serves the last `dist/` build, so it
 happily answers with code from some previous day; 5173 is the source you just
 edited. On 4000 the API also lives under `/serverXR` — a bare `/api/...` there
 returns Express's own 404 HTML, which reads exactly like a dead server.
@@ -205,7 +220,8 @@ fingerprint, and the same six have to appear on Ann's side.)
 ## Run (human path)
 
 ```bash
-npm run dev     # -> http://localhost:5173/ , Ctrl-C to stop
+di-dev up <tree>     # aylmo -> http://<tree>.diiii.localhost/ ; di-dev down <tree> to stop
+npm run dev          # elsewhere -> http://localhost:5173/ , Ctrl-C to stop
 ```
 
 ## Test

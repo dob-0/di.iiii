@@ -174,4 +174,66 @@ module.exports = [
     agent: false,
     note: "grants roles and/or space access directly — may go through the approval gate."
   },
+  {
+    route: "POST /api/auth/device/start",
+    summary: "a terminal asks to be signed in: gets a secret it keeps and a short code a person types in the browser (di login)",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "opens no access by itself: nothing is signed in until a person with an account approves the code at /device. 404 login_not_available where there are no accounts (a `di up` install). docs/architecture/CLI_LOGIN.md."
+  },
+  {
+    route: "POST /api/auth/device/token",
+    summary: "the terminal's poll: authorization_pending until the person answers, then its login, once",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "400 {error} is the protocol's way of saying not yet: authorization_pending, slow_down, access_denied, expired_token. The token is in the one 200 and is never shown again."
+  },
+  {
+    route: "POST /api/auth/device/lookup",
+    summary: "a signed-in person types a terminal's code and sees what is asking (its label, when, from where)",
+    reach: "private",
+    role: "viewer",
+    agent: false,
+    note: "an account's own cookie session only — a guest, a sync key, a di.bo token or a terminal login is refused. Rate limited per address and per account."
+  },
+  {
+    route: "POST /api/auth/device/decision",
+    summary: "a signed-in person approves or denies the terminal that showed a code",
+    reach: "private",
+    role: "viewer",
+    agent: false,
+    note: "approving hands that terminal a login that acts as this person (never public, never accounts or keys). An account's own cookie session only."
+  },
+  {
+    route: "GET /api/auth/cli/tokens",
+    summary: "list this account's signed-in terminals: label, when made, when last used, when it would expire",
+    reach: "read",
+    role: "viewer",
+    agent: false
+  },
+  {
+    route: "DELETE /api/auth/cli/tokens/:id",
+    summary: "end one of this account's signed-in terminals",
+    reach: "private",
+    role: "viewer",
+    agent: false,
+    note: "closing a door: it takes effect on the terminal's next request."
+  },
+  {
+    route: "GET /api/auth/cli/whoami",
+    summary: "a terminal asks who its login is and when it ends",
+    reach: "read",
+    role: "viewer",
+    agent: false,
+    note: "answers only to a terminal's own login (Authorization: Bearer dii_cli_…); everything else under /api/auth is refused to that login."
+  },
+  {
+    route: "DELETE /api/auth/cli/token",
+    summary: "a terminal ends its own login (di logout)",
+    reach: "private",
+    role: "viewer",
+    agent: false
+  },
 ]

@@ -21,7 +21,6 @@ const defaultWithSpaceOpsLock = createKeyedLock()
 const PRIVATE_PUBLISH_ERROR = 'That project is private, so it cannot be the space\'s published front door. Make it public first (project settings), then publish it.'
 
 function registerSpaceRoutes(router, {
-  appendOpsHistory,
   applySceneOps,
   blankScene,
   broadcastLiveEvent,
@@ -55,7 +54,15 @@ function registerSpaceRoutes(router, {
   getPublicAuthState = () => ({ spaces: null }),
   isAllowedUpload = () => true,
   googleDrive = defaultGoogleDrive,
+  // The scene write lock (sceneWrite.js withSceneWriteLock in index.js: this
+  // server's keyed lock plus the data folder's cross-process lock). The bare
+  // in-process lock is only the default for unit tests that build the routes.
   withSpaceOpsLock = defaultWithSpaceOpsLock,
+  // sceneWrite.js commitSceneWrite: stage scene.json, commit ops + version in
+  // one transaction, put the scene in place. The only way a route here writes
+  // a scene; absent, a scene write fails loudly instead of falling back to
+  // the old three separate steps.
+  commitSceneWrite = async () => { throw new Error('commitSceneWrite is not wired (index.js createSceneWriter)') },
   getSandboxStats = null,
   getSpacePaths,
   hydrateSceneAssetManifest,
@@ -1059,9 +1066,18 @@ function registerSpaceRoutes(router, {
           timestamp
         }))
         const updatedScene = applySceneOps(scene, opsWithVersion)
-        await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory, maxOpAgeMs, actor)
-        await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
+        // One write that a crash at any point leaves whole, and that another
+        // server on this data folder cannot interleave (sceneWrite.js).
+        const committed = await commitSceneWrite({
+          spaceId, baseVersion: currentVersion, ops: opsWithVersion, scene: updatedScene,
+          maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
+        })
+        if (committed.notFound) throw Object.assign(new Error('Space not found.'), { status: 404 })
+        if (committed.conflict) {
+          const history = await readOpsHistory(spaceId)
+          const pendingOps = history.filter(entry => (entry.version || 0) > parsedBaseVersion)
+          return { conflict: true, latestVersion: committed.latestVersion, pendingOps }
+        }
         return { nextVersion, opsWithVersion }
       })
 
@@ -1133,7 +1149,6 @@ function registerSpaceRoutes(router, {
     await fsp.mkdir(spaceDir, { recursive: true })
     await fsp.mkdir(assetsDir, { recursive: true })
     const previousScene = await readJson(scenePath, blankScene)
-    await writeJson(scenePath, sceneData)
     const nextVersion = currentVersion + 1
     const resetOp = {
       opId: crypto.randomUUID?.() || `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1151,8 +1166,19 @@ function registerSpaceRoutes(router, {
     // referenced, so wiping it strands both. applySceneOps already treats a
     // replaceScene op mid-log as a full reset, so replay from any earlier
     // version still converges on the same scene.
-    await appendOpsHistory(spaceId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
-    await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
+    // Same one write as POST /ops (sceneWrite.js): the scene and its version
+    // land together or not at all.
+    const committed = await commitSceneWrite({
+      spaceId, baseVersion: currentVersion, ops: [resetOp], scene: sceneData,
+      maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
+    })
+    if (committed.notFound) throw Object.assign(new Error('Space not found.'), { status: 404 })
+    if (committed.conflict) {
+      const history = await readOpsHistory(spaceId)
+      const since = expectedVersion ?? currentVersion
+      const pendingOps = history.filter(entry => (entry.version || 0) > since)
+      return { conflict: true, latestVersion: committed.latestVersion, pendingOps }
+    }
     broadcastLiveEvent(spaceId, 'scene-op', {
       version: nextVersion,
       ops: [resetOp]

@@ -3635,6 +3635,29 @@
 
 /* Laser Out reuses the DMX panel's frame; these are only its own two things:
    the square the shape is drawn in, and the armed/disarmed badge. */
+.raw-laser-panel-budget {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-1) var(--di-space-2);
+    font-size: 11px;
+}
+
+.raw-laser-panel-budget label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-1);
+}
+
+.raw-laser-panel-budget input[type='range'] {
+    width: 120px;
+}
+
+.raw-laser-panel-budget-text {
+    flex-basis: 100%;
+    opacity: 0.75;
+}
+
 .raw-laser-panel-canvas {
     align-self: center;
     width: 100%;
@@ -3667,6 +3690,72 @@
 
 .raw-laser-panel-cube-warn {
     color: var(--di-danger);
+}
+
+.raw-laser-panel-armed.is-armed {
+    color: var(--di-danger);
+}
+
+/* Arm / Disarm and Find cubes (2026-10-14). Disarm is the biggest thing in the panel and is
+   always there; arming is a typed phrase, never a hint. Rectangles only. */
+.raw-laser-panel-arm,
+.raw-laser-panel-find,
+.raw-laser-panel-arm-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+}
+
+.raw-laser-panel-disarm {
+    min-height: 44px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--di-black);
+    background: var(--di-danger);
+    border: 1px solid var(--di-danger);
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.raw-laser-panel-button,
+.raw-laser-panel-input {
+    min-height: 32px;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: var(--di-scrim);
+    color: inherit;
+    font: inherit;
+}
+
+.raw-laser-panel-button {
+    cursor: pointer;
+}
+
+.raw-laser-panel-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.raw-laser-panel-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 var(--di-space-1);
+}
+
+.raw-laser-panel-label,
+.raw-laser-panel-note {
+    overflow-wrap: anywhere;
+}
+
+.raw-laser-panel-found {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    overflow-wrap: anywhere;
 }
 
 /* Phones. The topbar is a fixed-height single flex row holding the back button,

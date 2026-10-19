@@ -266,33 +266,16 @@ const coerceProjectDocument = (spaceId, projectId, document = null, projectMeta 
   }
 }
 
-// Short-circuiting deep-equal — used instead of comparing two full
-// JSON.stringify passes on every read, which serializes the whole document
-// twice even when nothing changed (the common case).
-const deepEqual = (a, b) => {
-  if (a === b) return true
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
-    return a.every((item, index) => deepEqual(item, b[index]))
-  }
-  const isObj = (v) => v !== null && typeof v === 'object'
-  if (isObj(a) && isObj(b)) {
-    const aKeys = Object.keys(a)
-    if (aKeys.length !== Object.keys(b).length) return false
-    return aKeys.every((key) => Object.prototype.hasOwnProperty.call(b, key) && deepEqual(a[key], b[key]))
-  }
-  return false
-}
-
+// A read. It normalises in memory for the answer and never writes the file:
+// the normalised form reaches disk only through a save, which holds the
+// project's write lock (projectWrite.js). A read that wrote back did so with no
+// lock, so racing a save it could put the pre-save document back over a
+// committed version (audit 2026-10-09, F3).
 const readProjectDocument = async (spacesDir, spaceId, projectId) => {
   const { documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
   const existing = await readJson(documentPath, null)
   const projectMeta = await loadProjectMeta(spacesDir, spaceId, projectId)
-  const nextDocument = coerceProjectDocument(spaceId, projectId, existing, projectMeta)
-  if (existing && !deepEqual(existing, nextDocument)) {
-    await writeJson(documentPath, nextDocument)
-  }
-  return nextDocument
+  return coerceProjectDocument(spaceId, projectId, existing, projectMeta)
 }
 
 const writeProjectDocument = async (spacesDir, spaceId, projectId, document) => {

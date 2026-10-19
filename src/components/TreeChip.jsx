@@ -8,7 +8,7 @@ import { devTreeChipText, devTreeChipTitle, resolveDevTree } from '../utils/devT
 // `di-dev` started this copy (VITE_DI_TREE set); the installed di and a
 // production build render nothing. Unlike ModeMark's chip it does not fade:
 // the point is that a dev copy never looks like the owner's real di.
-export default function TreeChip({ env }) {
+export default function TreeChip({ env, inline = false }) {
     const info = resolveDevTree(env)
     if (!info) return null
     // Same exclusions as ModeMark: a thumbnail, an embed and a projector's
@@ -17,7 +17,7 @@ export default function TreeChip({ env }) {
     if (getMapLocationState().isOutput) return null
     return (
         <div
-            className="tree-chip"
+            className={inline ? 'tree-chip tree-chip--inline' : 'tree-chip'}
             data-mode={info.mode}
             role="status"
             title={devTreeChipTitle(info)}

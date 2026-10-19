@@ -279,6 +279,9 @@ export const NOISE_TILE_M = 8
  */
 export const hazeScatteringAt = (field, p, time = 0) => {
     if (!field) return 0
+    // no air outside the building's box (the shader's uHazeBox*, beamReach.js): field.box { min, max } when known
+    const box = field.box
+    if (box && [0, 1, 2].some((k) => p[k] < box.min[k] || p[k] > box.max[k])) return 0
     const q = [
         (p[0] - field.drift[0] * time) / NOISE_TILE_M,
         (p[1] - field.drift[1] * time) / NOISE_TILE_M,

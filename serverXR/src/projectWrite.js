@@ -27,22 +27,12 @@
  */
 
 const fsp = require('node:fs/promises')
-const lockfile = require('proper-lockfile')
 const { createKeyedLock } = require('./asyncLock')
+const { withDataFileLock, STALE_MS, RETRIES } = require('./dataFolderLock')
 const projectStore = require('./projectStore')
 const { getProjectPaths, recoverStagedDocuments } = projectStore
 
 const inProcess = createKeyedLock()
-
-// A write holds the lock for milliseconds; ten seconds without a touch means
-// the holder is gone (killed by node --watch, a crash). proper-lockfile
-// touches the lock every stale/2 while it is held, so a slow write on a big
-// document does not lose it.
-const STALE_MS = 10_000
-// About fifteen seconds of patience, growing from 10 ms to 200 ms between
-// tries — longer than STALE_MS, so a dead holder's lock is always taken over
-// before a waiting request gives up.
-const RETRIES = { retries: 80, factor: 1.25, minTimeout: 10, maxTimeout: 200 }
 
 const busyError = (projectId) => Object.assign(
   new Error(`Project ${projectId} is being saved by another di.iiii server on this data folder. Try again in a moment.`),
@@ -60,31 +50,13 @@ const withProjectWriteLock = ({ spacesDir, spaceId, projectId, log = console, st
   inProcess(projectId, async () => {
     const { projectDir, documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
     await fsp.mkdir(projectDir, { recursive: true })
-    let release
-    try {
-      release = await lockfile.lock(documentPath, {
-        realpath: false,
-        lockfilePath: `${documentPath}.lock`,
-        stale,
-        retries,
-        // Compromised = another process judged us dead and took the lock. The
-        // database's own version check still stands behind this, so it is a
-        // warning, never a crash (proper-lockfile's default is to throw).
-        onCompromised: (error) => log.warn?.(`[projects] ${projectId}: write lock taken over by another process (${error?.message || error}) — the version check in the database still guards this write`)
-      })
-    } catch (error) {
-      if (error?.code === 'ELOCKED') throw busyError(projectId)
-      throw error
-    }
-    try {
+    return withDataFileLock({ filePath: documentPath, label: `[projects] ${projectId}`, busy: () => busyError(projectId), log, stale, retries }, async () => {
       const recovered = await recoverStagedDocuments(spacesDir, spaceId, projectId)
       for (const entry of recovered) {
         log.warn?.(`[projects] ${projectId}: a stopped write left document v${entry.version} — ${entry.action === 'applied' ? 'it was committed, so it is now in place' : 'it was never committed, so it was removed'}`)
       }
-      return await fn()
-    } finally {
-      try { await release() } catch { /* already released or taken over — said above */ }
-    }
+      return fn()
+    })
   })
 
 /**

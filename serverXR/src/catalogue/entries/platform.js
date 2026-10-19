@@ -83,6 +83,14 @@ module.exports = [
     note: "the `listen` field can include this machine's LAN address(es) — not a plain status read for the agent door."
   },
   {
+    route: "GET /api/guest-address",
+    summary: "this machine's https place address for devices without di (a phone, a headset, a guest's laptop): the name in the certificate it serves, its port, whether this start is on the network, and where the name points as this machine looks it up",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "local runtimes only (404 on a hosted server, 403 from the network unless di up --lan). Can include this machine's LAN addresses. No address without a certificate or with a wildcard one — never an invented one; pointsHere says whether the name resolves to this machine (null when the lookup failed)."
+  },
+  {
     route: "PATCH /api/config",
     summary: "change the default space and/or the global shared space every guest without one lands in",
     reach: "public",

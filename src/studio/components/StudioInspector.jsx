@@ -84,7 +84,23 @@ const setNestedValue = (value, path, nextValue) => {
 const readNestedValue = (value, path = []) =>
     path.reduce((cur, key) => cur?.[key], value)
 
-function InspNumber({ field, value, onChange, compact = false, axisColor }) {
+// A rotation is stored in radians and read in degrees (Blender's Transform panel; owner 2026-10-13,
+// arranging lamps by hand: 1.5708 is not a number a person types). The field steps by 1°, Shift 0.1°,
+// Ctrl 10°; what is written back is radians, exactly the typed degrees over 180/π.
+const DEG_PER_RAD = 180 / Math.PI
+export const inDegrees = ({ field, value, onChange }) => ({
+    field: { ...field, step: 1 },
+    value: Number.isFinite(Number(value)) ? Number(value) * DEG_PER_RAD : value,
+    onChange: (next) => onChange?.(Number(next) / DEG_PER_RAD)
+})
+
+function InspNumber(props) {
+    return props.field?.degrees
+        ? <InspNumberField {...props} {...inDegrees(props)} />
+        : <InspNumberField {...props} />
+}
+
+function InspNumberField({ field, value, onChange, compact = false, axisColor }) {
     const baseStep = field.step ?? 0.1
     const fieldMin = field.min ?? -Infinity
     const fieldMax = field.max ?? Infinity
@@ -432,7 +448,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfac
                 <div className="insp-section-body">
                     {groupVectorFields(section.fields).map((group) => group.vector ? (
                         <div className="insp-vec3-group" key={`${section.id}-${group.base}`}>
-                            <label className="insp-label">{group.base}</label>
+                            <label className="insp-label">{group.fields[0].degrees ? `${group.base} °` : group.base}</label>
                             <div className="insp-vec3-row">
                                 {group.fields.map((field, axisIndex) => (
                                     <InspNumber
@@ -513,6 +529,8 @@ export default function StudioInspector({
     values = {},
     onSectionChange,
     footer = null,
+    // A control that acts on the whole selection (the Lock toggle), beside the title.
+    headerAction = null,
     emptyMessage = 'Select an object to edit it.',
     // The lighting-desk store the Fixture field reads; only tests pass one.
     lightingMirror = undefined,
@@ -530,6 +548,7 @@ export default function StudioInspector({
             <div className="insp-header">
                 <span className="insp-title">{title}</span>
                 {subtitle ? <span className="insp-subtitle">{subtitle}</span> : null}
+                {headerAction ? <span className="insp-header-action">{headerAction}</span> : null}
             </div>
 
             {sections.map((section) => {

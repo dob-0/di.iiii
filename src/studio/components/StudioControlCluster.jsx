@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
-import StudioCueStrip from './StudioCueStrip.jsx'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -19,10 +18,21 @@ export default function StudioControlCluster({
     projectName,
     onViewLive,
     canViewLive = false,
+    // This project's VIEW page as a visitor opens it (an absolute address, built in StudioEditor from the
+    // space and the project's slug). Null until the ids are known, and then the button is not drawn.
+    previewUrl = null,
     editMode,
     onSetEditMode,
+    // Blender's Select Box tool is on (StudioShell viewportSelectTool).
+    selectTool = false,
+    // The running walk ('walk' | 'fly' | null) and the start / switch / leave call (useWalkNavigation's useWalkMode and
+    // requestWalk). Null onWalk draws no buttons.
+    walkMode = null,
+    onWalk = null,
     gizmoMode,
     onSetGizmoMode,
+    gizmoSpace = 'world',
+    onSetGizmoSpace,
     openPanels,
     onTogglePanel,
     onFullscreen,
@@ -123,12 +133,43 @@ export default function StudioControlCluster({
                                 >
                                     Edit
                                 </button>
+                                <button
+                                    className={`scc-btn ${selectTool ? 'active' : ''}`}
+                                    onClick={() => onSetEditMode('select')}
+                                    aria-pressed={selectTool}
+                                    title="Select box: drag on the room to select everything inside (Shift adds, Ctrl removes). B for one box from any mode."
+                                >
+                                    Select
+                                </button>
+                                {onWalk && (
+                                    <>
+                                        <button
+                                            className={`scc-btn ${walkMode === 'walk' ? 'active' : ''}`}
+                                            data-walk-mode="walk"
+                                            onClick={() => onWalk('walk')}
+                                            aria-pressed={walkMode === 'walk'}
+                                            title="Walk: the camera stays at eye height above the floor; mouse looks, W A S D move, Tab flies; Esc keeps the place, right click returns (Blender: Walk with gravity)"
+                                        >
+                                            Walk
+                                        </button>
+                                        <button
+                                            className={`scc-btn ${walkMode === 'fly' ? 'active' : ''}`}
+                                            data-walk-mode="fly"
+                                            onClick={() => onWalk('fly')}
+                                            aria-pressed={walkMode === 'fly'}
+                                            title="Fly (Shift+`): mouse looks, W A S D move, Q E down/up, Tab walks; Esc keeps the place, right click returns (Blender: Walk without gravity)"
+                                        >
+                                            Fly
+                                        </button>
+                                    </>
+                                )}
                                 {editMode === 'edit' && (
                                     <>
                                         <div className="scc-sep" />
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move (G)">G</button>
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'rotate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('rotate')} title="Rotate (R)">R</button>
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'scale' ? 'active' : ''}`} onClick={() => onSetGizmoMode('scale')} title="Scale (S)">S</button>
+                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move — G starts it at once, X / Y / Z constrain">Move G</button>
+                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'rotate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('rotate')} title="Rotate — R starts it at once">Rotate R</button>
+                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'scale' ? 'active' : ''}`} onClick={() => onSetGizmoMode('scale')} title="Scale — S starts it at once (S is never Select; Select is the tool, B for one box)">Scale S</button>
+                                        <button className={`scc-btn ${gizmoSpace === 'local' ? 'active' : ''}`} aria-pressed={gizmoSpace === 'local'} onClick={() => onSetGizmoSpace?.(gizmoSpace === 'local' ? 'world' : 'local')} title="Local axes — the gizmo follows the object's own axes; off, it moves along the world's (Blender: Transform Orientation, Global / Local)">Local</button>
                                     </>
                                 )}
                             </div>
@@ -155,6 +196,15 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
+                                {previewUrl && (
+                                    <button
+                                        className="scc-btn"
+                                        onClick={() => window.open(previewUrl, '_blank', 'noopener')}
+                                        title="Preview — the scene as visitors see it (new tab)"
+                                    >
+                                        Preview
+                                    </button>
+                                )}
                                 {!minimal && (
                                     <button className="scc-btn" onClick={onBackToHub} title="Back to projects">← Projects</button>
                                 )}
@@ -188,19 +238,9 @@ export default function StudioControlCluster({
                             </div>
                         </div>
 
-                        {!minimal && onFireCue && cues.length > 0 && (
-                            <div className="scc-section">
-                                <div className="scc-section-label">Cues</div>
-                                <StudioCueStrip
-                                    cues={cues}
-                                    liveCueId={liveCueId}
-                                    onFire={onFireCue}
-                                    className="scc-buttons"
-                                    buttonClassName="scc-btn"
-                                />
-                            </div>
-                        )}
-
+                        {/* The Cues section is gone from the cluster (owner 2026-10-12 06:30, editing MOXIR v2.7 lamps: "the cue
+                            things is not necessary, remove that"): firing a cue from the editing panel changes the shared show
+                            for everyone watching; looks are previewed in the scene's SHOW chip and run from the desk / cue list. */}
                         {(canVr || canAr) && (
                             <div className="scc-section">
                                 <div className="scc-section-label">XR</div>

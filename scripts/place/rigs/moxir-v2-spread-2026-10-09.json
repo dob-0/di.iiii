@@ -1,7 +1,7 @@
 {
  "snapshot": "moxir-v2-spread-2026-10-09",
- "version": "MOXIR v2 B spread \u00b7 the hot zone",
- "title": "MOXIR v2 B spread \u00b7 the owner's hot zone, one machine",
+ "version": "MOXIR v2 B spread · the hot zone",
+ "title": "MOXIR v2 B spread · the owner's hot zone, one machine",
  "what": "B tuned, after the owner's look (10-09, PR #853) and his painted plan (17:42): the DJ, the booth and the speaker faces lit from the audience side; every light inside his hot zone, placed from the audience's eyes (both wings and behind the stage, column brackets out of reach); the cut kept at 10 PARs; the six cubes on the free crane at z -12. Three planes kept: the ember fan behind the DJ, the wings, behind the stage.",
  "written_by": "scripts/place/moxir_v2_spread.py build (from scripts/place/rigs/moxir-v2-planes-tuned-2026-10-09.json)",
  "date": "2026-10-09",
@@ -3909,7 +3909,7 @@
       }
      ],
      "note": "every tested level passes in the dark look; the lasers are not in the dark look itself (one colour: ember): this is the ceiling if the desk brings them in",
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   },
@@ -4008,7 +4008,7 @@
        "white_pct": 0.53
       }
      ],
-     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader\u00b2 in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
+     "method": "the highest tested laser fader (100 / 40 / 25 / 15 %) whose total white-out of the floor view (1.7 m, z 18) stays <= 0.65 %, measured 2026-10-09 (moxir-v2-true-frames.cjs setKeys + recordLamps; frame_luma.py; EV100 2.84, Full, haze 40 min); drawn fraction = the renderer's own laser intensity / its intensity at 100 % (fader² in the room before 28f4028d; the tested rows are faders under that bug; since the fix a fader draws itself, so the cap fader = the drawn fraction)"
     }
    }
   }
@@ -4016,13 +4016,13 @@
  "cues": [
   {
    "look": "dark",
-   "name": "B tuned + stage + lasers \u00b7 dark (one colour)",
+   "name": "B tuned + stage + lasers · dark (one colour)",
    "fade": 3,
    "hold": 40
   },
   {
    "look": "peak",
-   "name": "B tuned + stage + lasers \u00b7 peak",
+   "name": "B tuned + stage + lasers · peak",
    "fade": 2,
    "hold": 20
   }
@@ -4497,19 +4497,19 @@
    9.7
   ],
   "counts": {
-   "B380F \u00b7 plane 1 (behind the DJ)": 6,
-   "B380F \u00b7 plane 3 (behind the stage)": 5,
-   "B380F \u00b7 plane 2 (the wings)": 7,
-   "PAR \u00b7 cut down": 5,
-   "PAR \u00b7 cut up": 5,
-   "PAR \u00b7 stage columns": 3,
-   "PAR \u00b7 halo": 3,
-   "PAR \u00b7 columns": 23,
-   "PAR \u00b7 roof": 3,
-   "PAR \u00b7 stage key": 2,
-   "PAR \u00b7 speaker face L": 1,
-   "PAR \u00b7 speaker face R": 1,
-   "PAR \u00b7 embers": 4
+   "B380F · plane 1 (behind the DJ)": 6,
+   "B380F · plane 3 (behind the stage)": 5,
+   "B380F · plane 2 (the wings)": 7,
+   "PAR · cut down": 5,
+   "PAR · cut up": 5,
+   "PAR · stage columns": 3,
+   "PAR · halo": 3,
+   "PAR · columns": 23,
+   "PAR · roof": 3,
+   "PAR · stage key": 2,
+   "PAR · speaker face L": 1,
+   "PAR · speaker face R": 1,
+   "PAR · embers": 4
   },
   "circuits": 14,
   "circuits_ok": false,
@@ -5930,7 +5930,7 @@
  "lasers": {
   "source": "git cf954908:scripts/place/rigs/moxir-epic-v1-1-2026-10-08.json (PR #844, branch fix/moxir-v1-1-bugs-2026-10-09; the laser session)",
   "table": {
-   "table": "/tmp/claude-1000/-home-dob/f28555fe-b198-4163-85d9-cbd2b3df47ba/scratchpad/aerial-far-crane.json",
+   "table": "scripts/place/rigs/moxir-aerial-far-crane-2026-10-09.json",
    "table_sha256": "56826b0dea8b8e03b9ea704434e4eb34a58052db62b6e819210dbd5d90c8fefa",
    "equal": true
   },

@@ -3,7 +3,9 @@
 // The lasers when the server goes down. A real serverXR is booted with one LaserCube address — a UDP
 // socket in this test standing in for the cube on 127.0.0.1:45457 — and then sent SIGTERM (and, in
 // the second case, SIGINT). The cube must hear output-off twice before the process ends, and the
-// process must still end by the signal, as it did before the lasers had a say.
+// process then ends in order — exit 0 after the orderly stop (gracefulShutdown.js), the lasers
+// being its first step. (Until 2026-10-12 it ended by the signal, re-raised; that killed the
+// orderly stop of #859 mid-way.)
 // Spec of the stop: serverXR/src/laser/laserEngine.js (rule 8), index.js (stopLasersThenExit).
 import dgram from 'node:dgram'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
@@ -46,7 +48,7 @@ const bootWithOneCube = async () => {
   await mkdir(path.join(dataRoot, 'laser'), { recursive: true })
   await writeFile(path.join(dataRoot, 'laser', 'laser.json'), JSON.stringify({ cubes: [{ id: 'cube-1', ip: '127.0.0.1' }] }))
   const port = await getFreePort()
-  const env = { ...process.env, PORT: String(port), DATA_ROOT: dataRoot, DI_LOCAL: '1', AUTH_SESSION_SECRET: 'laser-down-secret' }
+  const env = { ...process.env, PORT: String(port), DATA_ROOT: dataRoot, DI_LOCAL: '1', DI_LASER_TEST_LOOPBACK: '1', AUTH_SESSION_SECRET: 'laser-down-secret' }
   delete env.NODE_ENV
   delete env.SPACES_DIR
   delete env.UPLOADS_DIR
@@ -73,7 +75,7 @@ const bootWithOneCube = async () => {
 
 describe('the lasers when serverXR goes down', () => {
   for (const signal of ['SIGTERM', 'SIGINT']) {
-    it(`${signal}: the cube hears output-off twice, then the process ends by the signal`, async () => {
+    it(`${signal}: the cube hears output-off twice, then the process ends in order, exit 0`, async () => {
       const cube = await fakeCube()
       cleanups.push(cube.close)
       const { child, base, exited, logs } = await bootWithOneCube()
@@ -85,7 +87,7 @@ describe('the lasers when serverXR goes down', () => {
       cube.heard.length = 0
       child.kill(signal)
       const end = await Promise.race([exited, wait(5000).then(() => null)])
-      expect(end, `the server did not end on ${signal}\n${logs()}`).toEqual({ code: null, signal })
+      expect(end, `the server did not end on ${signal}\n${logs()}`).toEqual({ code: 0, signal: null })
       expect(cube.heard.filter((m) => m[0] === 0x80)).toEqual([[0x80, 0], [0x80, 0]])
     }, 40000)
   }

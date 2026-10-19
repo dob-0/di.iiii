@@ -1,5 +1,6 @@
+import { movableEntities, pickLampBody } from '../utils/selectionTools.js'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
-import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
+import { gizmoSnapSteps, useSnapModifier } from '../utils/gizmoSnap.js'
 import StudioGraphNodes from './StudioGraphNodes.jsx'
 import { runViewCommand } from '../utils/viewCommands.js'
 import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -11,23 +12,31 @@ import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei
 import RigMirror from './RigMirror.jsx'
 import { useLiveLightEntity } from '../../rigMirror/liveLight.js'
 import { useRigLookEntities } from '../../rigbuild/useRigLook.js'
+import { workLightEntities } from '../../rigbuild/workLight.js'
 import { hasRigLamps } from '../../rigbuild/hasRigLamps.js'
 import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
+import ScenePicker from './ScenePicker.jsx'
+import ModelLoading from './ModelLoading.jsx'
+import LaserTest from './LaserTest.jsx'
+import { laserUnitsOf } from '../utils/laserTest.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
+import { ShadowsOnDemand } from '../../project/viewport/RenderSettingsEffect.jsx'
 import '../../project/viewport/spotLightSkip.js'
+import { bodyBounds } from '../utils/selectionBounds.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
 import LaserView from '../../rigbuild/LaserView.jsx'
 import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
-import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
+import { createPivotDrag, getSelectionCentroid } from '../utils/multiTransform.js'
+import { sameTransform } from '../utils/transformDelta.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
 import { animationSeed, applyAnimation, authoredAnimation } from '../../project/viewport/entityAnimation.js'
 import { applyProximity, resolveProximity } from '../../project/viewport/entityProximity.js'
@@ -40,15 +49,20 @@ import {
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
+import { MOVE_1_CAMERA } from '../navigation/freeMove.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
-import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import { classifyArchitecture, parseLayersParam } from '../../project/viewport/smartView/smartViewGeometry.js'
+import { resolveViews } from '../../project/viewport/smartView/viewData.js'
+import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
+import { handlePickClick, pickUserData } from '../utils/pickPriority.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
@@ -208,12 +222,22 @@ function AutoLookAround({ controlsRef, config }) {
     return null
 }
 
-function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+// Alt+click on a laser line selects its whole unit (pickPriority.js); provided inside the Canvas, read by the two entity kinds.
+const UnitSelectContext = createContext(null)
+// False while the Studio's Work light is on: a live desk's colour and level (rigMirror/liveLight.js) must not
+// replace the white work light on a lamp with a fixture number (owner 2026-10-16: "still not all work lights works").
+const DeskLightContext = createContext(true)
+
+// Edit and Select both transform the selection; Navigate never does.
+const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
+
+function SelectableEntity({ entity, assetMap, screens = null, selected, selectedIdSet = null, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, gizmoSpace = 'world', overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
     const highlightRef = useRef(null)
     const isDragging = useRef(false)
     const { scene } = useThree()
+    const onSelectUnit = useContext(UnitSelectContext)
     const runtime = entity.components?.runtime || {}
     const isVisible = runtime.visible !== false
     const isLocked = runtime.locked === true
@@ -229,7 +253,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
 
     useEffect(() => {
         if (!selected || !isVisible || !groupRef.current) return undefined
-        const helper = new THREE.BoxHelper(groupRef.current, isPrimary ? 0xffa500 : 0x2ecc71)
+        // The box is the entity's body (selectionBounds.js), never its beam: a spot light's
+        // subtree holds a cone as long as the throw, and BoxHelper took all of it (owner 2026-10-13).
+        const helper = new THREE.Box3Helper(bodyBounds(groupRef.current), isPrimary ? 0xffa500 : 0x2ecc71)
         helper.material.depthTest = false
         helper.material.transparent = true
         helper.material.opacity = 0.95
@@ -252,17 +278,19 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
     // selected-but-static entity (2026-07-17 perf audit).
     useEffect(() => {
         if (highlightRef.current && groupRef.current) {
-            highlightRef.current.setFromObject(groupRef.current)
+            bodyBounds(groupRef.current, highlightRef.current.box)
         }
     }, [overrideTransform, entity.components?.transform, selected])
 
     useFrame(() => {
         if (isDragging.current && highlightRef.current && groupRef.current) {
-            highlightRef.current.setFromObject(groupRef.current)
+            bodyBounds(groupRef.current, highlightRef.current.box)
         }
     })
 
-    const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
+    // Edit AND Select move the selection (owner 2026-10-13 13:2x: "in Select I can't move there"): the gizmo
+    // mounts in both; a box-select starts only where no gizmo handle took the pointer (BoxSelect.jsx).
+    const gizmoActive = isPrimary && canTransform(editMode) && gizmoVisible && !isLocked
     const snapping = useSnapModifier()
     useEntityPose(entity, groupRef, isDragging)
 
@@ -275,9 +303,14 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
         const group = groupRef.current
         if (!tc || !group || !gizmoActive) return
         tc.attach(group)
-        tc.setSpace('local')
+        // World axes by default (Blender's Global orientation); 'local' follows the object's own axes (owner 10-13: 'no way
+        // to move an object in the world frame').
+        tc.setSpace(gizmoSpace)
         return () => { tc.detach() }
-    }, [gizmoActive])
+    }, [gizmoActive, gizmoSpace])
+
+    const storedTransformRef = useRef(entity.components?.transform)
+    useEffect(() => { storedTransformRef.current = entity.components?.transform }, [entity.components?.transform])
 
     // Drag events: disable orbit during drag, commit on release
     useEffect(() => {
@@ -294,11 +327,13 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
             if (orbitRef?.current) orbitRef.current.enabled = !e.value
             if (!e.value && groupRef.current) {
                 const { position, rotation, scale } = groupRef.current
-                onTransformCommit?.(entity.id, {
+                const next = {
                     position: [position.x, position.y, position.z],
                     rotation: [rotation.x, rotation.y, rotation.z],
                     scale: [scale.x, scale.y, scale.z]
-                })
+                }
+                // A press and release with no motion is not an edit (transformDelta.js).
+                if (!sameTransform(storedTransformRef.current, next)) onTransformCommit?.(entity.id, next)
             }
         }
         tc.addEventListener('dragging-changed', handleDraggingChanged)
@@ -310,7 +345,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
     // A lamp with a fixture number draws what the desk says it is emitting, while the
     // desk is here; the authored light otherwise (src/rigMirror/liveLight.js). The
     // document is untouched — only what reaches the renderer changes.
-    const shown = useLiveLightEntity(entity)
+    const deskLight = useContext(DeskLightContext)
+    const shown = useLiveLightEntity(entity, { enabled: deskLight })
 
     if (!isVisible) return null
 
@@ -321,22 +357,20 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
-                // How the smart view finds an entity's object (SmartView.jsx).
-                userData={{ svEntityId: entity.id }}
-                onClick={(e) => {
-                    e.stopPropagation()
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (additive) onToggleSelect?.(entity.id)
-                    else onSelect?.(entity.id)
-                }}
+                // How the smart view finds an entity's object (SmartView.jsx), and what a click weighs (pickPriority.js).
+                userData={pickUserData(entity)}
+                // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a
+                // locked entity is picked (the lock stops moves), the one selected object clicked again deselects —
+                // the same rule as a group entity's click below.
+                onClick={(e) => handlePickClick(e, { onSelect, onToggleSelect, onSelectUnit, selectedIds: selectedIdSet })}
             >
                 {/* Live only where the surface turned links on (a visitor's
                     view mode) — see entityLinkContext.js. */}
                 <EntityLink entity={entity}>
                     <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
                 </EntityLink>
-                {selected && (
-                    <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]}>
+                {selected && isPrimary && (
+                    <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]} style={{ pointerEvents: 'none' }}>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}
@@ -348,17 +382,18 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
-                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
-                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
-                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
+                    translationSnap={gizmoSnapSteps(snapping).translation}
+                    rotationSnap={gizmoSnapSteps(snapping).rotation}
+                    scaleSnap={gizmoSnapSteps(snapping).scale}
                 />
             )}
         </>
     )
 }
 
-function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
+function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, gizmoSpace = 'world', overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
     const groupTimelineRef = useRef(null)
+    const onSelectUnit = useContext(UnitSelectContext)
     useEntityPose(entity, groupTimelineRef)
     const t = entity.components?.transform || {}
     if (entity.type === 'group') {
@@ -370,14 +405,11 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
-                userData={{ svEntityId: entity.id }}
-                onClick={(e) => {
-                    if (e.delta > 2) return
-                    e.stopPropagation()
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
-                    if (additive) onToggleSelectEntity?.(entity.id)
-                    else onSelectEntity?.(entity.id)
-                }}
+                userData={pickUserData(entity)}
+                // Every hit under the pointer decides (pickPriority.js): a lamp body beats a beam in front of it, a beam
+                // beats what is behind it; a locked entity is picked (the lock stops moves); the one selected object
+                // clicked again deselects.
+                onClick={(e) => handlePickClick(e, { onSelect: onSelectEntity, onToggleSelect: onToggleSelectEntity, onSelectUnit, selectedIds: selectedIdSet })}
             >
                 {/* Pivot dot — clickable hit target + visual marker for the group origin */}
                 <mesh>
@@ -389,8 +421,8 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                     />
                 </mesh>
                 {editMode === 'edit' && <axesHelper args={[0.4]} />}
-                {selected && (
-                    <Html position={[0, 0.25, 0]} center zIndexRange={[900, 0]}>
+                {selected && entity.id === selectedEntityId && (
+                    <Html position={[0, 0.25, 0]} center zIndexRange={[900, 0]} style={{ pointerEvents: 'none' }}>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}
@@ -407,6 +439,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                         gizmoMode={gizmoMode}
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
+                        gizmoSpace={gizmoSpace}
                         overrideById={overrideById}
                         onSelectEntity={onSelectEntity}
                         onToggleSelectEntity={onToggleSelectEntity}
@@ -423,11 +456,13 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
             assetMap={assetMap}
             screens={screens}
             selected={selectedIdSet.has(entity.id)}
+            selectedIdSet={selectedIdSet}
             isPrimary={entity.id === selectedEntityId}
             editMode={editMode}
             gizmoMode={gizmoMode}
             gizmoAxis={gizmoAxis}
             gizmoVisible={gizmoVisible}
+            gizmoSpace={gizmoSpace}
             overrideTransform={overrideById[entity.id] || null}
             onSelect={onSelectEntity}
             onToggleSelect={onToggleSelectEntity}
@@ -440,10 +475,9 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
 function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVisible, onPreview, onCommit, orbitRef }) {
     const pivotRef = useRef()
     const controlsRef = useRef()
-    const initialPivotRef = useRef(null)
     const isDraggingRef = useRef(false)
     const centroid = useMemo(() => getSelectionCentroid(entities), [entities])
-    const active = editMode === 'edit' && gizmoVisible && entities.length > 1
+    const active = canTransform(editMode) && gizmoVisible && entities.length > 1
     const snapping = useSnapModifier()
 
     useEffect(() => {
@@ -454,6 +488,10 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
         pivot.scale.set(1, 1, 1)
     }, [centroid])
 
+    // Read at the grab, so a document change never re-attaches the gizmo or reaches a commit.
+    const entitiesRef = useRef(entities)
+    useEffect(() => { entitiesRef.current = entities }, [entities])
+
     useEffect(() => {
         const controls = controlsRef.current
         const pivot = pivotRef.current
@@ -462,33 +500,29 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
         controls.attach(pivot)
         controls.setSpace('world')
 
-        const pivotTransform = () => ({
-            position: pivot.position.toArray(),
-            rotation: [pivot.rotation.x, pivot.rotation.y, pivot.rotation.z],
-            scale: pivot.scale.toArray()
+        const drag = createPivotDrag({
+            readPivot: () => ({
+                position: pivot.position.toArray(),
+                rotation: [pivot.rotation.x, pivot.rotation.y, pivot.rotation.z],
+                scale: pivot.scale.toArray()
+            }),
+            getEntities: () => entitiesRef.current,
+            onPreview,
+            onCommit
         })
-        const preview = () => {
-            if (!initialPivotRef.current) return []
-            const updates = applyPivotTransform(entities, initialPivotRef.current, pivotTransform())
-            onPreview(Object.fromEntries(updates.map((entry) => [entry.id, entry.transform])))
-            return updates
-        }
         const handleDraggingChanged = (event) => {
             const dragging = Boolean(event.value)
             isDraggingRef.current = dragging
             if (orbitControls) orbitControls.enabled = !dragging
-            if (dragging) {
-                initialPivotRef.current = pivotTransform()
-            } else if (initialPivotRef.current) {
-                const updates = preview()
-                initialPivotRef.current = null
-                onPreview({})
-                onCommit(updates)
+            drag.draggingChanged(dragging)
+            // The pivot rests at identity between grabs; a rotation left on it made every next
+            // grab's delta R·R⁻¹ — float noise the release then wrote back (scale 0.9999…).
+            if (!dragging) {
+                pivot.rotation.set(0, 0, 0)
+                pivot.scale.set(1, 1, 1)
             }
         }
-        const handleObjectChange = () => {
-            if (isDraggingRef.current) preview()
-        }
+        const handleObjectChange = () => drag.objectChange()
         controls.addEventListener('dragging-changed', handleDraggingChanged)
         controls.addEventListener('objectChange', handleObjectChange)
         return () => {
@@ -497,7 +531,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
             controls.detach()
             if (orbitControls) orbitControls.enabled = true
         }
-    }, [active, entities, onCommit, onPreview, orbitRef])
+    }, [active, onCommit, onPreview, orbitRef])
 
     return (
         <>
@@ -509,16 +543,16 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
-                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
-                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
-                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
+                    translationSnap={gizmoSnapSteps(snapping).translation}
+                    rotationSnap={gizmoSnapSteps(snapping).rotation}
+                    scaleSnap={gizmoSnapSteps(snapping).scale}
                 />
             )}
         </>
     )
 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null, editMode = 'navigate' }) {
     const isXrPresenting = useXR((state) => state.session != null)
     useHoldFrames(isXrPresenting, 'xr') // a headset session is the headset's own loop
     const scene = useThree((state) => state.scene)
@@ -527,8 +561,18 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
     const navigation = useNavigationPreference()
-    const preset = getNavigationPreset(navigation.preset)
+    // The tool picks the mapping (owner, 2026-10-12: "view like sketchfab, edit like blender — people will not need to
+    // learn something new"): Navigate and the public viewer move like Sketchfab, Edit exactly like Blender.
+    const preset = getNavigationPreset(editMode === 'edit' ? 'blender' : 'studio')
+    // Blender turns 0.4° per pixel (its Orbit Sensitivity default, the owner's value); camera-controls turns 360° per
+    // viewport height, so the speed is scaled by the height to keep Blender's per-pixel feel in Edit.
+    const viewportHeight = useThree((state) => state.size.height)
+    const rotateSpeed = preset.id === 'blender' && viewportHeight > 0 ? viewportHeight / 900 : MOVE_1_CAMERA.rotateSpeed
     const isOrtho = (cameraView?.fov ?? 50) < 20
+    // Blender's Walk (Shift+`): the camera is free of any orbit point while walking; frames are held while it lasts.
+    const [walking, setWalking] = useState(false)
+    useHoldFrames(walking, 'walk')
+    useWalkNavigation({ controlsRef, active: enabled && !isXrPresenting, onWalkingChange: setWalking, onCameraChange })
     useCameraNavigation({
         controlsRef,
         presetId: preset.id,
@@ -536,6 +580,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         orbitSelection: navigation.orbitSelection,
         selectedEntityIds,
         getScene,
+        speed: navigation.speed,
+        turn: navigation.turn,
         active: enabled && !isXrPresenting,
     })
 
@@ -614,15 +660,17 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         <CameraControls
             ref={controlsRef}
             makeDefault
-            dollyToCursor={preset.dollyToCursor}
+            azimuthRotateSpeed={rotateSpeed}
+            polarRotateSpeed={rotateSpeed}
             // Zoom never stops: at minDistance the wheel carries the target forward with the
             // camera instead of doing nothing (a room's Inside lock holds the camera ≥ 2 m from
             // its target, and the zoom used to die there). The target stays in its boundary.
             infinityDolly
-            smoothTime={0.15}
-            draggingSmoothTime={0.0}
-            minDistance={0.35}
-            maxDistance={500}
+            smoothTime={preset.smoothTime}
+            draggingSmoothTime={preset.draggingSmoothTime}
+            // The standard move (useCameraNavigation): no distance range bends a move; the public viewer's Inside lock sets its own.
+            minDistance={MOVE_1_CAMERA.minDistance}
+            maxDistance={MOVE_1_CAMERA.maxDistance}
             mouseButtons={bindings.mouseButtons}
             touches={bindings.touches}
             onControlEnd={() => {
@@ -643,10 +691,12 @@ function StudioSceneContent({
     selectedEntityIds = [],
     onSelectEntity,
     onToggleSelectEntity,
+    onSelectEntities = null,
     editMode,
     gizmoMode,
     gizmoAxis = null,
     gizmoVisible = true,
+    gizmoSpace = 'world',
     transformOp = null,
     onTransformCommit,
     onTransformCommitMany,
@@ -658,10 +708,17 @@ function StudioSceneContent({
     screens = null,
     followLinks = false,
     rigLook = undefined,
+    laserTest = false,
     lookDrawn = false,
     smartView = null,
     graphRoom = null
 }) {
+    // Alt+click on a laser line: every line of its unit (the locked ones stay out), added to the selection with Shift.
+    const onSelectUnit = useMemo(() => (onSelectEntities ? (unitKey, { additive = false } = {}) => {
+        const locked = new Set((document.entities || []).filter((e) => e.components?.runtime?.locked === true).map((e) => e.id))
+        const ids = (laserUnitsOf(document.entities).get(unitKey) || []).filter((id) => !locked.has(id))
+        onSelectEntities(additive ? [...new Set([...selectedEntityIds, ...ids])] : ids)
+    } : null), [document.entities, onSelectEntities, selectedEntityIds])
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -674,7 +731,9 @@ function StudioSceneContent({
     // drawn as handed: posed a second time, every look level was drawn squared (MOXIR
     // 2026-10-09, docs/ai/known-fixes.md; src/rigbuild/lookLevel.test.jsx).
     const look = useRigLookEntities(lookDrawn ? null : document, { explicit: rigLook })
-    const sceneEntities = lookDrawn ? (document.entities || NO_SCENE_ENTITIES) : look.entities
+    // "Work light" in the Scenes panel ('' = no scene): every lamp white at its own strength (src/rigbuild/workLight.js).
+    const workLit = useMemo(() => (rigLook === '' && !lookDrawn ? workLightEntities(look.entities) : look.entities), [rigLook, lookDrawn, look.entities])
+    const sceneEntities = lookDrawn ? (document.entities || NO_SCENE_ENTITIES) : workLit
     const childMap = useMemo(() => {
         const map = new Map()
         for (const entity of sceneEntities) {
@@ -692,6 +751,7 @@ function StudioSceneContent({
         () => (insideGeo ? [] : sceneEntities.filter((e) => !e.parentId)),
         [sceneEntities, insideGeo]
     )
+    const pickLamp = onSelectEntity ? (id, e) => pickLampBody(sceneEntities, id, e, { onSelect: onSelectEntity, onToggle: onToggleSelectEntity }) : undefined
     const hasRig = useMemo(() => hasRigLamps(sceneEntities), [sceneEntities])
     const [previewById, setPreviewById] = useState({})
 
@@ -735,7 +795,11 @@ function StudioSceneContent({
     return (
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
+        <UnitSelectContext.Provider value={onSelectUnit}>
+        <DeskLightContext.Provider value={!(rigLook === '' && !lookDrawn)}>
+            <LaserTest active={laserTest} entities={document.entities} />
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            <ShadowsOnDemand live={Boolean(transformOp)} changeKey={document} />
             {/* MOXIR's LaserCubes: what the laser server is drawing, as beams (rigbuild/laserView.js) */}
             <LaserView entities={document.entities} />
             <ShaderWarmup />
@@ -810,6 +874,7 @@ function StudioSceneContent({
                                 gizmoMode={gizmoMode}
                                 gizmoAxis={gizmoAxis}
                                 gizmoVisible={gizmoVisibleEffective && transformableSelectedEntities.length === 1}
+                                gizmoSpace={gizmoSpace}
                                 overrideById={previewById}
                                 onSelectEntity={onSelectEntity}
                                 onToggleSelectEntity={onToggleSelectEntity}
@@ -831,6 +896,7 @@ function StudioSceneContent({
                                 gizmoMode={gizmoMode}
                                 gizmoAxis={gizmoAxis}
                                 gizmoVisible={gizmoVisibleEffective}
+                                gizmoSpace={gizmoSpace}
                                 orbitRef={controlsRef}
                             />
                         </Suspense>
@@ -840,7 +906,7 @@ function StudioSceneContent({
                         — the whole room blanked while the lamps' bodies loaded. */}
                     {hasRig && !insideGeo ? (
                         <Suspense fallback={null}>
-                            <RigBodies entities={sceneEntities} />
+                            <RigBodies entities={sceneEntities} onPick={pickLamp} />
                         </Suspense>
                     ) : null}
                     <MultiSelectionGizmo
@@ -849,6 +915,7 @@ function StudioSceneContent({
                         gizmoMode={gizmoMode}
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisibleEffective}
+                        gizmoSpace={gizmoSpace}
                         onPreview={setPreviewById}
                         onCommit={onTransformCommitMany}
                         orbitRef={controlsRef}
@@ -867,16 +934,20 @@ function StudioSceneContent({
                         lockInside={smartView.lockInside}
                         onBuilding={smartView.onBuilding}
                         onLockPaused={smartView.onLockPaused}
+                        layers={smartView.layers}
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
+                        fly={smartView.fly}
+                        onFlyEnd={smartView.onFlyEnd}
                     />
                 </Suspense>
             ) : null}
-            {transformOp && selectedEntities.length > 0 && (
+            {transformOp && movableEntities(selectedEntities).length > 0 && (
                 <ModalTransform
                     op={transformOp}
-                    selectedEntities={selectedEntities}
+                    // A locked or hidden object never moves, even when it was selected before it was locked or hidden.
+                    selectedEntities={movableEntities(selectedEntities)}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
@@ -884,6 +955,8 @@ function StudioSceneContent({
                     onStatus={onTransformStatus}
                 />
             )}
+        </DeskLightContext.Provider>
+        </UnitSelectContext.Provider>
         </EntityLinksContext.Provider>
         </LiveTimelineContext.Provider>
     )
@@ -1080,11 +1153,15 @@ export default function StudioViewport({
     controlsRef,
     xrStore,
     editMode = 'navigate',
+    boxSelect = false,
+    onSelectEntities,
     gizmoMode = 'translate',
     gizmoAxis = null,
     gizmoVisible = true,
+    gizmoSpace = 'world',
     transformOp = null,
     setEditMode,
+    viewBar = false,
     setGizmoMode,
     onTransformCommit,
     onTransformCommitMany,
@@ -1103,6 +1180,13 @@ export default function StudioViewport({
     // A designed look to pose the room by ('' none), overriding the desk's (view C's GO
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
+    onRigLook = null,
+    // The scene editor (ScenePicker): ops through the Studio's history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
+    // The Studio's laser test (a work tool, nothing written to the document): every laser unit's field as a square.
+    laserTest = false,
+    onLaserTest = null,
     // The document's entities are the room ALREADY drawn in its look (the public page:
     // RoomLookFollower drew them): draw them as handed, never pose them again.
     lookDrawn = false,
@@ -1131,13 +1215,28 @@ export default function StudioViewport({
     const reservedKeys = useMemo(() => (
         studioBar ? new Set((cues || []).map((c) => c?.key).filter(Boolean).map(String)) : null
     ), [studioBar, cues])
+    // The project's own view list (viewData.js): the Studio bar has every view it keeps, marked live or work;
+    // anywhere else (the visitor's page, the Studio's preview of it) only the live ones.
+    const viewList = document.presentationState?.viewPresets
+    const selectViews = useCallback((presets) => resolveViews(presets, viewList, studioBar ? 'studio' : 'visitor'), [viewList, studioBar])
     const sv = useSmartViewState({
         enabled: smartOn,
         deepLink: Boolean(smartView?.deepLink),
         keysLive: studioBar ? pointerOver : true,
-        reservedKeys
+        reservedKeys,
+        select: selectViews
     })
     const { setPresets, release: releaseView } = sv
+    // Auto fly: the room page's own button (PublicProjectViewer) controls it through smartView.onFlyChange; the Studio's bar does it here.
+    const hostFly = typeof smartView?.onFlyChange === 'function'
+    const flying = hostFly ? Boolean(smartView.flyOn) : sv.flying
+    const setFlying = hostFly ? smartView.onFlyChange : sv.setFlying
+    // The building switches of the Studio bar (Roof · Walls · Machines · Outside): null = everything shown; a host that
+    // passes its own `smartView.layers` (the visitor page) keeps them.
+    // The layer switches open from the address when it names them (?layers=, as the visitor's room reads it; 2026-10-15:
+    // ?layers=roof,walls,machines,outside = the whole building, Cut off), else null = every switch on.
+    const [studioLayers, setStudioLayers] = useState(() => (typeof window !== 'undefined' && /[?&]layers=/.test(window.location.search)) ? parseLayersParam(window.location.search) : null)
+    const setStudioLayer = useCallback((id, shown) => setStudioLayers((prev) => ({ ...(prev || {}), [id]: shown })), [])
     const smartViewProps = useMemo(() => (smartOn ? {
         fovRef,
         command: sv.command,
@@ -1146,9 +1245,12 @@ export default function StudioViewport({
         lockInside: Boolean(smartView?.lockInside),
         onBuilding: smartView?.onBuilding,
         onLockPaused: smartView?.onLockPaused,
+        layers: smartView?.layers || studioLayers,
         onPresets: setPresets,
-        onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, setPresets, releaseView])
+        onUserMove: releaseView,
+        fly: flying,
+        onFlyEnd: () => setFlying(false)
+    } : null), [smartOn, sv.command, sv.xray, flying, setFlying, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, smartView?.layers, studioLayers, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1185,12 +1287,18 @@ export default function StudioViewport({
         if (lowPower) return undefined
         const kick = () => demand.kick()
         const visible = () => { if (!window.document.hidden) kick() }
+        // The pointer arriving over the view: frames start before the first drag, so the GPU clock is up when it begins
+        // (measured 2026-10-12: after ~4 s idle the clock sat at 225 MHz and the first frames of a drag took 52–144 ms;
+        // 300 ms of frames bring it back to 1680 MHz — docs/ai/research/render-smoothness-audit-2026-10-12.md).
+        const over = (e) => { if (e.target?.tagName === 'CANVAS') kick() }
         window.addEventListener('resize', kick)
         window.addEventListener('keydown', kick, true)
         window.addEventListener('keyup', kick, true)
+        window.addEventListener('pointerover', over, true)
         window.document.addEventListener('visibilitychange', visible)
         return () => {
             window.removeEventListener('resize', kick)
+            window.removeEventListener('pointerover', over, true)
             window.removeEventListener('keydown', kick, true)
             window.removeEventListener('keyup', kick, true)
             window.document.removeEventListener('visibilitychange', visible)
@@ -1258,7 +1366,17 @@ export default function StudioViewport({
                         enabled={enableNavigation}
                         fovRef={smartOn ? fovRef : null}
                         selectedEntityIds={selectedEntityIds}
+                        editMode={editMode}
                     />
+                    {onSelectEntities && !lowPower ? (
+                        <BoxSelect
+                            active={boxSelect}
+                            entities={document.entities}
+                            selectedEntityIds={selectedEntityIds}
+                            onSelectEntities={onSelectEntities}
+                            controlsRef={controlsRef}
+                        />
+                    ) : null}
                     <StudioSceneContent
                         document={document}
                         selectedEntityId={selectedEntityId}
@@ -1269,6 +1387,7 @@ export default function StudioViewport({
                         gizmoMode={gizmoMode}
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
+                        gizmoSpace={gizmoSpace}
                         transformOp={transformOp}
                         onTransformCommit={onTransformCommit}
                         onTransformCommitMany={onTransformCommitMany}
@@ -1278,6 +1397,8 @@ export default function StudioViewport({
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
                         rigLook={rigLook}
+                        laserTest={laserTest}
+                        onSelectEntities={onSelectEntities}
                         lookDrawn={lookDrawn}
                         screens={screens}
                         followLinks={followLinks}
@@ -1304,13 +1425,21 @@ export default function StudioViewport({
                 />
             )}
 
-            {setEditMode && controlsRef && (
+            {/* Mounted only where a surface asks for it (`viewBar`). Its gate used to be setEditMode,
+                which no caller passes — so the bar was dead everywhere, the Studio included, while it
+                looked wired (brief 2026-10-13 item 2). */}
+            {viewBar && controlsRef && (
                 <ViewCommandBar
                     onCommand={(command) => runViewCommand(controlsRef.current, command, {
                         entities: document.entities || [],
                         selectedEntities: (document.entities || []).filter((e) => (selectedEntityIds || []).includes(e.id))
                     })}
                 />
+            )}
+
+            <ModelLoading />
+            {onRigLook && (
+                <ScenePicker document={document} current={rigLook} onPick={onRigLook} laserTest={laserTest} onLaserTest={onLaserTest} onApplyOps={onSceneOps} onPlay={onPlayScene} />
             )}
 
             {transformStatus && (
@@ -1326,7 +1455,16 @@ export default function StudioViewport({
                     onXray={sv.setXray}
                     variant={studioBar ? 'studio' : 'visitor'}
                     compact={isPhoneCompact}
+                    layers={studioBar ? (smartView?.layers || studioLayers) : null}
+                    onLayer={studioBar && !smartView?.layers ? setStudioLayer : null}
+                    flying={flying}
+                    onFly={studioBar ? setFlying : null}
                 />
+            ) : null}
+            {smartOn && flying ? (
+                <div role="status" data-autofly-hint style={{ position: 'absolute', left: '50%', bottom: '1.2rem', transform: 'translateX(-50%)', zIndex: 20, padding: '0.5rem 0.9rem', borderRadius: 2, background: 'rgba(5,7,10,0.7)', border: '1px solid var(--di-cyan-border, rgba(77,249,255,0.3))', color: 'var(--di-text, #fff)', font: '12px/1.2 var(--di-font-mono, monospace)', letterSpacing: '0.04em', pointerEvents: 'none' }}>
+                    flying · tap to take the controls
+                </div>
             ) : null}
 
             {showChrome && <FullscreenButton />}

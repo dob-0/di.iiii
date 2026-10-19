@@ -23,7 +23,9 @@ import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
+import { UI_TOGGLE_EVENT, requestWalk, useWalkMode } from '../navigation/useWalkNavigation.js'
 import { isJamProject, loadJamAllTools, saveAllTools, saveJamAllTools, useAllTools } from '../utils/jamMode.js'
+import { hallEntityIds, isLockedEntity } from '../utils/selectionTools.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
@@ -37,6 +39,7 @@ import {
     StructurePanel,
     TimelinePanel,
 } from './StudioShellPanels.jsx'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -93,6 +96,7 @@ const PANEL_ID_MIGRATION = {
 const migratePanelIds = (ids) => (Array.isArray(ids) ? ids.map((id) => PANEL_ID_MIGRATION[id] || id) : ids)
 
 export default function StudioShell({
+    walkBuild = null,
     document,
     // What each layer of the project holds and which are open, from
     // src/project/useProjectLayers.js — null until the real document is here.
@@ -133,6 +137,10 @@ export default function StudioShell({
     onRenameEntity,
     onToggleEntityVisible,
     onToggleEntityLocked,
+    onSetEntitiesLocked,
+    onLockHall,
+    onUnlockAll,
+    onSelectEntities,
     onReparentEntity,
     onViewportDropFiles,
     onDuplicateSelected,
@@ -148,8 +156,11 @@ export default function StudioShell({
     onClearLiveProject,
     onMakeSpacePublic,
     onSaveCurrentCamera,
+    views,
+    lightEnv,
     onCopyShareLink,
     onViewLive,
+    previewUrl,
     onExportProject,
     exportStatus,
     onImportProjectFile,
@@ -173,6 +184,9 @@ export default function StudioShell({
     cues = [],
     liveCueId = null,
     onFireCue = null,
+    // The scene editor's two doors (ScenePicker): changes as ops through the Studio's own history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
     // Nodes' things in the room, and which room Studio stands in — the whole
     // room, or the inside of a Geo (StudioEditor; null on the open jam).
     // geoSwitcher: { geos, currentGeoId, onOpenGeo, onNewGeo }
@@ -187,7 +201,27 @@ export default function StudioShell({
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
     const [uiHidden, setUiHidden] = useState(false)
     const [viewportEditMode, setViewportEditMode] = useState('navigate')
+    // Blender's Select Box tool (owner 2026-10-12): in Edit, a left drag draws a box and
+    // selects what is inside; the Tools row's "Select" button turns it on, Navigate off.
+    const [viewportSelectTool, setViewportSelectTool] = useState(false)
+    // Walk / Fly in the cluster (owner, 2026-10-13): the controller lives in the canvas, the buttons only ask it.
+    const walkMode = useWalkMode()
+    useEffect(() => {
+        const toggle = () => setUiHidden((v) => !v)
+        globalThis.document.addEventListener(UI_TOGGLE_EVENT, toggle)
+        return () => globalThis.document.removeEventListener(UI_TOGGLE_EVENT, toggle)
+    }, [])
+    const setEditModeFromTools = useCallback((mode) => {
+        if (mode === 'navigate') setViewportSelectTool(false)
+        if (mode === 'select') {
+            setViewportEditMode('edit')
+            setViewportSelectTool((on) => !on)
+            return
+        }
+        setViewportEditMode(mode)
+    }, [])
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
+    const [viewportGizmoSpace, setViewportGizmoSpace] = useState('world')
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
@@ -396,6 +430,7 @@ export default function StudioShell({
             if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
+                setViewportSelectTool(false)
             }
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
@@ -415,7 +450,8 @@ export default function StudioShell({
             // gizmo mode + chosen axis (mouse delta moves on that axis immediately).
             // ModalTransform's capture listener owns X/Y/Z once a session is running.
             // T toggles gizmo visibility.
-            if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            // Alt+G/R/S are Clear Location/Rotation/Scale (StudioEditor) — never a grab.
+            if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'
@@ -423,6 +459,10 @@ export default function StudioShell({
                 if (modeForKey) {
                     e.preventDefault()
                     selectGizmoMode(modeForKey)
+                    // Blender: G / R / S with a selection start the transform at once — the mouse moves it,
+                    // X / Y / Z constrain, click or Enter confirm, Esc cancels (ModalTransform.jsx). No handle
+                    // to find, so it works with the Select tool on (owner 2026-10-13: "in Select I can't move").
+                    if (selectedEntityIds.length > 0 && onStartTransform && !transformOp) onStartTransform(modeForKey, null)
                 } else if (['x', 'y', 'z'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
@@ -463,8 +503,12 @@ export default function StudioShell({
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
+        // Navigate moves like Sketchfab (owner, 2026-10-12): a double-click focuses the camera on the surface under the pointer
+        // (useCameraNavigation). Quick Insert on double-click stays the Edit tool's. Walked through 2026-10-12: with both, the
+        // Quick Insert panel took the wheel and every scroll after a double-click did nothing.
+        if (viewportEditMode === 'navigate') return
         setQuickInsert({ x: e.clientX, y: e.clientY, worldPos: computeGroundPoint(e, controlsRef) })
-    }, [controlsRef])
+    }, [controlsRef, viewportEditMode])
 
     // Drop targets: OS files and Files-list items land in the scene at the
     // ground point under the cursor (same raycast as double-click Quick Insert).
@@ -499,6 +543,28 @@ export default function StudioShell({
         }
     }, [])
 
+    // Lock (owner 2026-10-12: "a function where you can lock the objects, not only the
+    // hall"): the toggle for the whole selection — any kind of object. Locked = not
+    // picked by a click or a box, not moved by G/R/S or the gizmo (runtime.locked).
+    const selectionLocked = useMemo(() => {
+        const ids = new Set(selectedEntityIds.length ? selectedEntityIds : (selectedEntityId ? [selectedEntityId] : []))
+        const picked = (entities || []).filter((entity) => ids.has(entity.id))
+        return { ids: [...ids], all: picked.length > 0 && picked.every(isLockedEntity) }
+    }, [entities, selectedEntityIds, selectedEntityId])
+    const hallIds = useMemo(() => hallEntityIds(entities), [entities])
+    const lockedCount = useMemo(() => (entities || []).filter(isLockedEntity).length, [entities])
+    const lockToggle = onSetEntitiesLocked && selectionLocked.ids.length ? (
+        <button
+            type="button"
+            className={`scc-btn insp-lock-btn${selectionLocked.all ? ' active' : ''}`}
+            aria-pressed={selectionLocked.all}
+            title={selectionLocked.all ? 'Unlock: it can be picked and moved again' : 'Lock: it can no longer be clicked, boxed or moved'}
+            onClick={() => onSetEntitiesLocked(selectionLocked.ids, !selectionLocked.all)}
+        >
+            {selectionLocked.all ? 'Locked' : 'Lock'}
+        </button>
+    ) : null
+
     const inspectorFooter = (
         <button
             className="scc-btn spa-btn-wide insp-delete-btn"
@@ -510,7 +576,8 @@ export default function StudioShell({
     )
 
     const viewportShared = {
-        document,
+        // a Try in the Light environment section draws the viewport with another version's light; nothing is written
+        document: lightEnv?.previewDocument || document,
         selectedEntityId,
         selectedEntityIds,
         onSelectEntity: handleSelectEntity,
@@ -520,7 +587,10 @@ export default function StudioShell({
         onCursorLeave: presence?.clearCursor,
         xrStore: xrState?.xrStore,
         editMode: viewportEditMode,
+        boxSelect: viewportSelectTool && viewportEditMode === 'edit',
+        onSelectEntities,
         gizmoMode: viewportGizmoMode,
+        gizmoSpace: viewportGizmoSpace,
         gizmoAxis: viewportGizmoAxis,
         gizmoVisible: viewportGizmoVisible,
         transformOp,
@@ -534,6 +604,8 @@ export default function StudioShell({
         onCloseHelp: () => setShowHelp(false),
         rigMirror: rigMirror.on,
         graphRoom,
+        onSceneOps,
+        onPlayScene,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -590,9 +662,27 @@ export default function StudioShell({
                                     surfaceOptions={surfaceOptions}
                                     onSectionChange={onInspectorChange}
                                     footer={inspectorFooter}
+                                    headerAction={lockToggle}
                                 />
                             ) : (
-                                <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
+                                <>
+                                    <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
+                                    {(onLockHall || onUnlockAll) && (
+                                        <div className="scc-buttons insp-lock-row">
+                                            {onLockHall && hallIds.length > 0 && (
+                                                <button type="button" className="scc-btn" onClick={onLockHall}
+                                                    title="Lock the building and its outside boxes: they can no longer be clicked, boxed or moved">
+                                                    Lock the hall
+                                                </button>
+                                            )}
+                                            {onUnlockAll && lockedCount > 0 && (
+                                                <button type="button" className="scc-btn" onClick={onUnlockAll} title={`Unlock all ${lockedCount} locked objects`}>
+                                                    Unlock all ({lockedCount})
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
                             {selectedEntity && selectedEntityIds.length <= 1 && !insideGeo && (
                                 <TimelinePanel
@@ -617,7 +707,7 @@ export default function StudioShell({
         ),
         world: (
             <>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} lightEnv={lightEnv} />
             </>
         )
     }
@@ -633,7 +723,7 @@ export default function StudioShell({
             />
 
             {loading && (
-                <div className="sfp-overlay-card">Loading project…</div>
+                <LoadingScreen variant="cover" label="Loading project" text="loading the project" waitingFor="the project file" />
             )}
             {loadError && (
                 <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>
@@ -715,10 +805,16 @@ export default function StudioShell({
                         projectName={document?.projectMeta?.title || document?.projectMeta?.id || ''}
                         onViewLive={onViewLive}
                         canViewLive={Boolean(liveProjectState?.isLiveProject)}
+                        previewUrl={previewUrl}
                         editMode={viewportEditMode}
-                        onSetEditMode={setViewportEditMode}
+                        onSetEditMode={setEditModeFromTools}
+                        selectTool={viewportSelectTool && viewportEditMode === 'edit'}
+                        walkMode={walkMode}
+                        onWalk={requestWalk}
                         gizmoMode={viewportGizmoMode}
                         onSetGizmoMode={selectGizmoMode}
+                        gizmoSpace={viewportGizmoSpace}
+                        onSetGizmoSpace={setViewportGizmoSpace}
                         openPanels={open}
                         onTogglePanel={handleTogglePanel}
                         onFullscreen={handleFullscreen}
@@ -844,7 +940,9 @@ export default function StudioShell({
                 </>
             )}
 
-            {uiHidden && (
+            {walkBuild ? walkBuild(uiHidden) : null}
+
+            {uiHidden && !walkMode && (
                 <button className="sfp-show-ui-btn" onClick={() => setUiHidden(false)} title="Show UI (H)">
                     ≡
                 </button>
