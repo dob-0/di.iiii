@@ -38,3 +38,15 @@ describe('navigation preference', () => {
         expect(getOrbitSelectionPreference()).toBe(true)
     })
 })
+
+describe('the standard move\'s settings (speed, turning)', () => {
+    it('default auto and place (where you stand); set values stick; junk falls back', async () => {
+        const m = await import('./preference.js')
+        m.resetNavigationPreferenceMemory()
+        try { window.localStorage.removeItem(m.SPEED_STORAGE_KEY); window.localStorage.removeItem(m.TURN_STORAGE_KEY) } catch { /* no storage */ }
+        expect(m.getSpeedPreference()).toBe('auto'); expect(m.getTurnPreference()).toBe('place')
+        expect(m.setSpeedPreference('2.5')).toBe(2.5); expect(m.getSpeedPreference()).toBe(2.5)
+        expect(m.setTurnPreference('place')).toBe('place'); expect(m.getTurnPreference()).toBe('place')
+        expect(m.setSpeedPreference('nonsense')).toBe('auto'); expect(m.setTurnPreference('spin')).toBe('place')
+    })
+})
