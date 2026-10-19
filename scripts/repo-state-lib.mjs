@@ -35,6 +35,12 @@ export const FOLD_BRANCH_PATTERN = /^(chore\/fold-notes-|land\/)/
 
 export const isFoldBranch = (name) => typeof name === 'string' && FOLD_BRANCH_PATTERN.test(name)
 
+// CURRENT.md's freshness (code newer than the last recap) can only be fixed where CURRENT.md may be
+// written: dev itself and a fold branch. A feature branch must keep dev's copy byte for byte, so asking
+// it to be fresh is a gate it cannot pass — while dev's recap was 3 days behind (2026-10-16, N885) every
+// push from every branch was refused. A branch we cannot name (null: detached HEAD outside CI) stays checked.
+export const ownsCurrentMdFreshness = (name) => name === null || name === undefined || name === '' || name === 'dev' || isFoldBranch(name)
+
 // A hand-fold branch (chore/fold-notes-*) IS the thing that empties docs/ai/sessions/, so
 // it must not have to leave a note of its own: that note would sit on dev, and the
 // pre-push gate refuses every push from a dev checkout while the directory is not empty

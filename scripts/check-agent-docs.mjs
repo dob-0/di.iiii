@@ -9,7 +9,7 @@ import {
   repoRoot,
   toLf
 } from './sync-agent-docs.mjs'
-import { isFoldBranch, isFoldNotesBranch, isNoiseBranch } from './repo-state-lib.mjs'
+import { isFoldBranch, isFoldNotesBranch, isNoiseBranch, ownsCurrentMdFreshness } from './repo-state-lib.mjs'
 
 const normalizePath = (value) => value.split(path.sep).join('/')
 
@@ -315,7 +315,9 @@ const main = async () => {
       }
     }
 
-    errors.push(...collectCurrentMdFreshnessErrors())
+    // On a PR run CI checks out a detached merge commit; GITHUB_HEAD_REF names the branch.
+    const branch = gitOrNull(['branch', '--show-current']) || process.env.GITHUB_HEAD_REF || null
+    if (ownsCurrentMdFreshness(branch)) errors.push(...collectCurrentMdFreshnessErrors())
   }
 
   for (const entry of getGeneratedEntries()) {
