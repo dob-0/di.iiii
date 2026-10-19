@@ -674,3 +674,9 @@ package to be under 88 °C before each.
 The Meshroom invocation in `reconstruct.py` is written from the 2025.1.0
 documentation. The rest of the Colab step — sign-in, session, chunked upload,
 detached start, polling, download, stop — has been run against a real box.
+
+## Sheets for a show (`scenes_sheet.py`, `laser_sheet.py`, 2026-10-15)
+
+`python3 -I scripts/place/scenes_sheet.py SCENES.json out.html [--meta M.json] [--front F.html]` is the owner's picture per scene;
+`laser_sheet.py SCENES.json laser-plan.json out.html [--site S.json] [--meta M.json]` is the laser design sheet (plan from `laser_frames.py --plan-out`).
+Production text lives in the `--meta`/`--front`/`--site` files beside the scenes file (`rigs/moxir-*-2026-10-15*`); outside views for `look_shots.cjs`: `rigs/moxir-views-2026-10-15.json`.
