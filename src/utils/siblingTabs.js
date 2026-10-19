@@ -50,9 +50,13 @@ export const isCrowded = ({ otherTabs, protocol = originProtocol() }) => (
 )
 
 // `waiting`: the document is here but the live stream has not opened.
+// Mounted once per page for its whole life, so a tab that finished loading still answers.
+export function useAnswerTabPings() {
+    useEffect(() => answerTabPings(), [])
+}
+
 export function useCrowdedTabs(waiting, stallMs = STREAM_STALL_MS) {
     const [crowded, setCrowded] = useState(false)
-    useEffect(() => answerTabPings(), [])
     useEffect(() => {
         if (!waiting) {
             setCrowded(false)

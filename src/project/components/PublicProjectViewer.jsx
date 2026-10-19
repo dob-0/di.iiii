@@ -10,7 +10,7 @@ import { roomHasSound } from '../../utils/roomSound.js'
 import RoomTextLayer from './RoomTextLayer.jsx'
 import './roomTextLayer.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
-import { crowdedTabsLine, useCrowdedTabs } from '../../utils/siblingTabs.js'
+import { crowdedTabsLine, useAnswerTabPings, useCrowdedTabs } from '../../utils/siblingTabs.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
@@ -70,6 +70,13 @@ const MoveControl = lazyWithReload(() => import('./MoveControl.jsx'), 'move-cont
 const loadingOverlay = <LoadingScreen label="Loading live experience" />
 const crowdedOverlay = <LoadingScreen label="Loading live experience" slowText={crowdedTabsLine} slowAfterMs={0} />
 
+// The ring, asking after the stall whether other tabs hold the connections. Used for BOTH waits: the document/stream
+// and the lazy scene code — a starved tab can get its document and then hang on the scene chunk (seen 2026-10-20,
+// 6 tabs over http: the ring that stayed was the Suspense fallback, which never asked).
+function LiveStallRing({ waiting = true }) {
+    return useCrowdedTabs(waiting) ? crowdedOverlay : loadingOverlay
+}
+
 // deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
 // page has a real security origin — getUserMedia is impossible in an opaque one
 const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals'
@@ -89,7 +96,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const [viewMode, setViewMode] = useState(null)
     const [streamOpen, setStreamOpen] = useState(false)
     // Stalled on the ring with no stream: is it the browser's per-host ceiling?
-    const crowdedTabs = useCrowdedTabs(state.status === 'loading' && !streamOpen)
+    useAnswerTabPings()
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
@@ -760,7 +767,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </div>
                 )
             ) : document ? (
-                <Suspense fallback={loadingOverlay}>
+                <Suspense fallback={<LiveStallRing />}>
                     <PublicProjectSceneSurface
                         key={renderMode}
                         projectId={projectId}
@@ -945,7 +952,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 the exact box embed mode exists to remove — inside a window it
                 would flash one on every open. The host's own page is what the
                 visitor waits on. */}
-            {state.status === 'loading' && !isEmbed ? (crowdedTabs ? crowdedOverlay : loadingOverlay) : null}
+            {state.status === 'loading' && !isEmbed ? <LiveStallRing waiting={!streamOpen} /> : null}
 
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
