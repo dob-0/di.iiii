@@ -411,6 +411,19 @@ Still open for the owner (no word is settled here, so nothing changed): the fami
 sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
 node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
 
+## Amended 2026-10-14 — the laser nodes (Phase 1 of the laser workflow)
+
+Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decisions with docs PR #933). The rows for **master clock**, **clock**, **cube group**,
+**draw mode** and **point budget** live in the dictionary above (docs PR #933); these are the words Phase 1 adds.
+
+| Word | Its one job |
+|---|---|
+| **Laser Trace** | The node that turns a shape (any geometry wire: a Cube, a Geo, a Merge, an Array) into laser paths, so the laser draws what the viewport shows. Its draw modes: **Outline** (default), **Edges**, **Wireframe**, **Points**. Its views: **Front** and **From a point**. Two words, no parenthesis; "trace" is `laserFrame.cjs`'s own word ("a list of points the scanner traces"). |
+| **Laser Merge** | The node that joins two sets of laser paths into one, as Merge joins shapes. Chain it for more. Not "Merge": that card joins shapes. |
+| **Laser** (port type) | The wire type laser nodes speak: a set of paths (below). Green on the canvas. Not to be confused with the **Laser** node (`laser.shape`), which keeps its name. |
+| **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
+| **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
+
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 
 The owner, 2026-10-13: the looks (*"the wall"*, *"peak"*) and the Dilijan things get Studio words; he did not pick

@@ -67,6 +67,9 @@ export function formatPortValue(value, type = 'any') {
         return { text: `a shape — ${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`, swatch: null, empty: false }
     }
 
+    // A laser frame flows between laser nodes; the type says what it is, the shape of the object need not.
+    if (type === 'laser' && typeof value === 'object') return { text: 'laser paths', swatch: null, empty: false }
+
     // Reached by a live output carrying a MediaStream, an AudioBuffer, a model
     // — things with no honest one-line reading. Saying so beats "[object
     // Object]", and beats inventing a description of a thing we did not look at.

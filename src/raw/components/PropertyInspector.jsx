@@ -186,7 +186,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
             </span>
         )
     }
-    return <input type="text" value={value || ''} maxLength={field.maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    return <input type="text" value={typeof value === 'string' || typeof value === 'number' ? value : ''} maxLength={field.maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
 }
 
 // A sentence a field must be read with, drawn under the box, with a link
