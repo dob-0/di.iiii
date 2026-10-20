@@ -33,6 +33,7 @@ const withProjectLock = (project, fn) => withProjectWriteLock({
 const withKeyLock = createKeyedLock()
 
 /** The sync key a request came with, when that is all it is (not an owner, not an admin). */
+const projectMovedAnswer = () => ({ status: 409, body: { error: 'This project is no longer in the space this request was made for; nothing was changed.', code: 'project_moved' } })
 const syncKeyOf = (req) => (req.authState?.authenticated && req.authState.type === 'sync-key' ? req.authState.syncKey || null : null)
 
 // A change to a project's row (title, slug, visibility, trash, its space) is
@@ -538,6 +539,13 @@ function registerProjectRoutes(router, {
         // Its own limits and its log (§13.5, §13.6); never the front door.
         const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'trash', projectId: project.projectId, outcome, reason })
         const answer = await withKeyLock(key.keyId, async () => {
+          // Re-read inside the lock: the project may have moved since the gate
+          // resolved its space (review r3 L1).
+          const now = await resolveProjectContext(project.projectId)
+          if (!now || now.spaceId !== project.spaceId) {
+            record('refused', 'project_moved')
+            return projectMovedAnswer()
+          }
           const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
           if (spaceMeta?.publishedProjectId === project.projectId) {
             const why = "This project is the space's front door; a sync key does not move it to the trash. The space's owner can unpublish it first."
@@ -644,6 +652,13 @@ function registerProjectRoutes(router, {
         const alsoKeyId = req.authState?.alsoSyncKey?.keyId || null
         const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome, reason, alsoKeyId })
         const refused = await withKeyLock(key.keyId, async () => {
+          // Re-read inside the lock (review r3 L1): the loser of two moves finds
+          // the project already elsewhere and changes nothing.
+          const now = await resolveProjectContext(project.projectId)
+          if (!now || now.spaceId !== project.spaceId) {
+            record('refused', 'project_moved')
+            return projectMovedAnswer()
+          }
           const budget = syncKeyActions ? syncKeyActions.checkBudget({ keyId: key.keyId, action: 'move' }) : { ok: true }
           if (!budget.ok) {
             record('refused', budget.reason)
@@ -658,7 +673,7 @@ function registerProjectRoutes(router, {
           if (!report?.dryRun) record('done')
           return null
         })
-        if (refused) return res.status(429).json(refused)
+        if (refused) return refused.status === 409 ? res.status(409).json(refused.body) : res.status(429).json(refused)
       } else {
         report = await doMove()
       }

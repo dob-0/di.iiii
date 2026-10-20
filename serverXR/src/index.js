@@ -1733,7 +1733,9 @@ const keyMoveWidensAccess = async ({ fromMeta, toMeta, project, alsoKeyId }) => 
     if (otherLiveKeys(toMeta.id, alsoKeyId, now).length) return `"${toMeta.id}" has other sync keys out, and who holds them cannot be counted`
     return null
   } catch (error) {
-    return `who could see it in "${toMeta?.id || 'the other space'}" could not be counted (${error?.message || error})`
+    // The detail stays in the server log: a driver error is not for a key holder (review r3 L2).
+    logger.error('[keyMoveWidensAccess] could not count the audience', toMeta?.id || null, error)
+    return `who could see it in "${toMeta?.id || 'the other space'}" could not be counted`
   }
 }
 
