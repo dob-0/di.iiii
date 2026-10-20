@@ -1196,14 +1196,20 @@ const cmdFollow = async (args) => {
         insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
+        // The short form asked the stored follow's remote, through its pin:
+        // name those — not "undefined", and no --at hint when a pin was used.
+        const stored = from ? null : (readFollows(paths(home).data)[spaceId] ?? null)
+        const where = from || stored?.remote
+        const pin = at || stored?.address || null
         if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
         else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
-        else sayFollowRefusal(result.reason, { spaceId, url: from }, at)
+        else sayFollowRefusal(result.reason, { spaceId, url: where }, pin)
         process.exitCode = 1
         return
     }
     if (result.keptKey) say(ui.followKeptKey())
-    say(ui.following(spaceId, result.base, result.running, at))
+    // result.address is the pin used: typed with --at, or the stored follow's.
+    say(ui.following(spaceId, result.base, result.running, result.address))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */
