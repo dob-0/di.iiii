@@ -25,6 +25,7 @@ import {
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
+import InviteAMachine from '../../sync/InviteAMachine.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { SpaceDeleteDialog, SpaceTrashPanel } from './SpaceTrash.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
@@ -373,6 +374,8 @@ export default function SpaceHub() {
     // The invite links a space has out: the only way to stop one before its
     // week is up (2026-09-28 — the server could revoke, nothing here asked it to).
     const [invites, setInvites] = useState(null)
+    // "Invite a machine": the four-word code for another di.iiii to follow this space (src/sync).
+    const [machineInvite, setMachineInvite] = useState(null)
     // History: the space's restore points, opened from Manage.
     const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
@@ -927,6 +930,13 @@ export default function SpaceHub() {
                         Invite links
                     </button>
                     <button
+                        className={`ssh-card-btn${machineInvite === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => { e.stopPropagation(); setMachineInvite(id => (id === space.id ? null : space.id)) }}
+                        title="Four words that let another di.iiii follow this space, live — valid 10 minutes"
+                    >
+                        Invite a machine
+                    </button>
+                    <button
                         className={`ssh-card-btn${domainsSpaceId === space.id ? ' ssh-card-btn--active' : ''}`}
                         onClick={e => { e.stopPropagation(); setDomainsSpaceId(id => (id === space.id ? null : space.id)) }}
                         title="Show this space on a domain of your own"
@@ -1127,6 +1137,19 @@ export default function SpaceHub() {
                             Close
                         </button>
                     </div>
+                </div>
+            )}
+
+            {machineInvite === space.id && (
+                <div
+                    className="ssh-project-linker"
+                    role="presentation"
+                    // The panel opens under eight rows of buttons, below the fold on a normal screen: bring it into view.
+                    ref={el => { if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' }) }}
+                    onClick={e => e.stopPropagation()}
+                    onKeyDown={e => e.stopPropagation()}
+                >
+                    <InviteAMachine space={space.id} onBack={() => setMachineInvite(null)} />
                 </div>
             )}
 
