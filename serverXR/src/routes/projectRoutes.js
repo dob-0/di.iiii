@@ -7,6 +7,7 @@ const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore'
 const { receiveBodyToTempFile } = require('../verbatimAsset')
 const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite: commitWrite } = require('../projectWrite')
 const { createKeyedLock } = require('../asyncLock')
+const { createTestBarrier } = require('../testBarrier')
 const logger = require('../logger')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
@@ -31,6 +32,8 @@ const withProjectLock = (project, fn) => withProjectWriteLock({
 // One sync key's limited actions run one at a time, so two requests at once
 // cannot both pass the same last unit of its budget (SPEC_space_sync_keys.md §13.5).
 const withKeyLock = createKeyedLock()
+// Test-only (inert unless NODE_ENV=test): lets a test hold two key moves until both have passed their gates.
+const testBarrier = createTestBarrier()
 
 /** The sync key a request came with, when that is all it is (not an owner, not an admin). */
 const projectMovedAnswer = () => ({ status: 409, body: { error: 'This project is no longer in the space this request was made for; nothing was changed.', code: 'project_moved' } })
@@ -651,6 +654,8 @@ function registerProjectRoutes(router, {
       if (key) {
         const alsoKeyId = req.authState?.alsoSyncKey?.keyId || null
         const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome, reason, alsoKeyId })
+        // Both racing moves are past every gate here; a test barrier (X-Test-Barrier) holds each until its partner is too.
+        await testBarrier.arrive(req)
         const refused = await withKeyLock(key.keyId, async () => {
           // Re-read inside the lock (review r3 L1): the loser of two moves finds
           // the project already elsewhere and changes nothing.
