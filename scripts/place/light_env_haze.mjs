@@ -10,7 +10,8 @@ if (!process.argv[2] || process.argv[2] === '-h' || process.argv[2] === '--help'
 register('data:text/javascript,' + encodeURIComponent("export async function load(u,c,n){return u.endsWith('.json')?n(u,{...c,importAttributes:{type:'json'}}):n(u,c)}"))
 const R=fileURLToPath(new URL('../../src/', import.meta.url))
 const { buildHazeField, hazeSettingsOf, hazeMachinesOf } = await import(R+'objectComponents/hazeField.js')
-const { TYPE_LIBRARY } = await import(R+'rigbuild/types/index.js')
+const { loadLibrary } = await import('../rigbuild/library.mjs')
+const TYPE_LIBRARY = loadLibrary() // node reads the library from disk; types/index.js is the bundler's glob
 const { libraryWithShow } = await import(R+'rigbuild/rental.js')
 const { typeById } = await import(R+'rigbuild/fixtureTypes.js')
 for (const f of process.argv.slice(2)) {

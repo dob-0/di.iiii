@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 import { assignCircuits, circuitLimitW, groupFlags, patchCsv, plotData, powerCsv, renderSheetBody, renderSheetHtml, sheetModel, toCsv } from './sheet.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 

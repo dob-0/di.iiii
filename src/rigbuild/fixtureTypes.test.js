@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { ALIAS_FILE, LIBRARY_DIR, buildLibrary, libraryFiles } from '../../scripts/rigbuild/types.mjs'
+import { LIBRARY_DIR, buildLibrary, libraryFiles } from '../../scripts/rigbuild/types.mjs'
 import { loadLibrary } from '../../scripts/rigbuild/library.mjs'
 import { PROVENANCE_BASES, footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest, valueBasesOf } from './fixtureTypes.js'
 import { isAssumedMode } from './assumedProfiles.js'
@@ -12,7 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const committed = loadLibrary()
 
 describe('the fixture library (src/rigbuild/types/library/: the starter set)', () => {
-    it('is exactly what the generator makes from the manifest (never edited by hand): one file per type, the index, the alias', () => {
+    it('is exactly what the generator makes from the manifest (never edited by hand): one file per type and the index', () => {
         const files = libraryFiles(buildLibrary())
         for (const [file, text] of Object.entries(files)) expect(fs.readFileSync(path.join(ROOT, file), 'utf8'), file).toBe(text)
         const onDisk = fs.readdirSync(path.join(ROOT, LIBRARY_DIR)).filter((f) => f.endsWith('.json')).map((f) => `${LIBRARY_DIR}/${f}`).sort()
@@ -36,9 +36,6 @@ describe('the fixture library (src/rigbuild/types/library/: the starter set)', (
             .toEqual({ measured: 1, tested: 1, datasheet: 1, equivalent: 1, assumed: 1, unknown: 0 })
     })
 
-    it('moxir.json (the file the app reads today) holds the same types as the per-type library; part 3 of the split moves its readers', () => {
-        expect(JSON.parse(fs.readFileSync(path.join(ROOT, ALIAS_FILE), 'utf8')).types).toEqual(committed.types)
-    })
 
     it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), the three other-supplier planning types, and the owner’s LaserCube', () => {
         expect(committed.types.map((t) => t.code).filter((c) => c.startsWith('UP-')).sort()).toEqual(

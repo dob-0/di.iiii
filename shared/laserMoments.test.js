@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { createRequire } from 'node:module'
-import { readFileSync } from 'node:fs'
+import { loadLibrary } from '../scripts/rigbuild/library.mjs'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { LASER_TYPE_IDS, hasSignOffMarker, isLaserGroupKey, laserMomentOf } = require('./laserMoments.cjs')
 
-const library = JSON.parse(readFileSync(new URL('../src/rigbuild/types/moxir.json', import.meta.url), 'utf8'))
+const library = loadLibrary()
 
 describe('which looks are laser moments', () => {
     it('names every laser in the fixture library — a laser added there and not here fails the build', () => {
