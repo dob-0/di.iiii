@@ -142,7 +142,7 @@ def main():
     res = {'lines': len(lines), 'shots': {}}
     shots = json.load(open(a.shots))
     for shot in (shots['shots'] if isinstance(shots, dict) else shots):
-        f = os.path.join(a.dir, shot['name'] + '.png')
+        f = os.path.join(a.dir, shot.get('file') or shot['name'] + '.png')
         if not shot.get('camera') or not os.path.exists(f):
             continue
         L = luma(np.asarray(Image.open(f).convert('RGB')))
