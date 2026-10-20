@@ -9,7 +9,7 @@
  * The officer's word (owner, 2026-10-17 20:1x–20:3x): "use the full power of the lasers too it safe", "we can use the all in full power".
  * Values are the ones TESTED on the wire by the owner's shape walk this morning (docs/moxir/devices/la40wf-shape-wire-log-2026-10-17.txt):
  * ch1 dimmer 255 · ch2 250 · ch3 graphic · ch4 0 · ch5 colour · ch6 64 · ch7 64 (X/Y centre). Graphics only from the walked range
- * (never 74, 75, 78, 79, 166, 167, 246–253; never the dots 146–165, 185–187 — the owner's rule, memory reference_la40wf_graphics).
+ * (the never-use values and dots are read from scripts/place/fixtures/charts/up-la40wf.json, not retyped here).
  *
  *   node scripts/rigbuild/la40-player.mjs --cues 2,8,10 [--units 137,169] [--universe 1] [--desk http://diiii.localhost/light]
  *        [--colour 25] [--every 8] [--preview 30]
@@ -20,6 +20,7 @@
  * --preview  seconds to play at once, whatever the cue, so the officer can see where they land, then follow the cues
  * Holds only its own 14 channels; releases them (value -1) on exit, SIGINT or SIGTERM. Writes a line a change to stdout.
  */
+import { readFileSync } from 'node:fs'
 const args = Object.fromEntries(process.argv.slice(2).reduce((o, a, i, all) => (a.startsWith('--') ? [...o, [a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : o), []))
 const desk = String(args.desk || 'http://diiii.localhost/light')
 const universe = Number(args.universe ?? 1)
@@ -33,8 +34,10 @@ const previewUntil = Date.now() + Number(args.preview || 0) * 1000
 // --graphics 1,5,8 — the shapes to cycle (owner 20:4x: "only lines and cool underground ones": the horizontal lines of the
 // walk sheet la40wf-shapes-by-value-1: 1 one line, 2 dashed, 5 two parallel, 8 and 10 staggered layers, 27 dashed, 48 three stacked)
 const GRAPHICS = String(args.graphics || '1,5,8,10,48,2,27').split(',').map(Number)
-const NEVER = new Set([74, 75, 78, 79, 166, 167, 246, 247, 248, 249, 250, 251, 252, 253])
-const dot = (g) => (g >= 146 && g <= 165) || (g >= 185 && g <= 187)
+// The never-use values and the dot ranges live in the device's chart (one home); this player only reads them.
+const chart = JSON.parse(readFileSync(new URL('../place/fixtures/charts/up-la40wf.json', import.meta.url), 'utf8')).graphics
+const NEVER = new Set(chart.neverUseValues)
+const dot = (g) => chart.safety.dotValueRanges.some(([a, b]) => g >= a && g <= b)
 if (GRAPHICS.some((g) => NEVER.has(g) || dot(g))) throw new Error('a forbidden graphic is in the list')
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }
 
