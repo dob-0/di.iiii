@@ -70,6 +70,7 @@ import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './chan
 import * as autoupdate from './autoupdate.mjs'
 import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
+import { withUserAgent } from './userAgent.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -598,7 +599,8 @@ const cmdMove = async (args) => {
     try {
         const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
             method: 'POST',
-            headers,
+            // `--from` aims this at another di.iiii: it says who it is there too (userAgent.mjs).
+            headers: withUserAgent(headers),
             body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
         })
         const body = await response.json().catch(() => ({}))

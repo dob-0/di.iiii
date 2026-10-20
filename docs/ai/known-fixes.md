@@ -1085,6 +1085,7 @@ outbound requests go through `httpClient.js` (node:http), which sends NO User-Ag
 sent `di.iiii-join/1`, which has no contact and is anonymous too. Fix: one helper per side — `serverXR/src/diUserAgent.js` and `scripts/di/userAgent.mjs` — builds
 `di.iiii/<release version or dev> (+https://diiii.xyz/for-apps)`, which `classifyUserAgent` reads as `{ kind: 'app', name: 'di.iiii' }`. serverXR: `httpClient` adds it to every
 request that does not name its own User-Agent (follower, file chase, machine links, rig hello, join; GitHub's `di.iiii-space-sync` keeps its own). CLI: `hubCommit` (auto-update),
-`fetchJson`/`resolveRemoteBase` (`di sync`, `di link`), `share.mjs` request and the address-pinned request (`di follow`'s checks, invites), `login.mjs` (`di login`). Credentials are untouched.
+`fetchJson`/`resolveRemoteBase` (`di sync`, `di link`), `share.mjs` request and the address-pinned request (`di follow`'s checks, invites), `login.mjs` (`di login`), `di move --from` (`cli.mjs`, added in review). Credentials are untouched.
 Guards: `serverXR/src/diUserAgent.test.js` (10 cases: real classifier, real sockets, the real recorder+bouncer in express — 40 reads with the header all 200, 40 as `node` give 30 × 200 and
-10 × 429) and `scripts/di/userAgent.test.js` (8) plus one case in `scripts/di/login.test.js`; 9 cases fail with the source changes reverted.
+10 × 429) and `scripts/di/userAgent.test.js` (8) plus one case in `scripts/di/login.test.js`; 9 cases fail with the source changes reverted. `scripts/di/move.test.js` checks the header on
+`di move --from` (fails on the old `cli.mjs`: it sent `node`).
