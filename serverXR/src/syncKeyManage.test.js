@@ -483,3 +483,76 @@ describe('the manage scope is opt-in, and the server checks it on every manage a
         expect(row.visibility ?? 'public').not.toBe('private')
     })
 })
+
+// Round-3 review of #811, info findings I1 and I2 (2026-10-20): what a refused
+// move tells the caller must not depend on whether a private project or a
+// target space exists.
+describe('a refused move says nothing about what exists (review r3 I1, I2)', () => {
+    const from = '10.9.3.1'
+    // A person who edits the source space but owns nothing: a signed-in
+    // editor, not an admin.
+    const editorCookie = `dii_serverxr_session=${createAuthSessionValue({
+        secret: SESSION_SECRET,
+        session: { subject: 'editor-under-test', label: 'Editor', role: 'editor', spaces: ['info-a'], tokenVersion: 0, via: 'signin' }
+    }).value}`
+    const asEditor = (route, options = {}) => call(route, { ...options, cookie: editorCookie })
+
+    beforeAll(async () => {
+        for (const id of ['info-a', 'info-b']) await ownedSpace(id)
+    })
+
+    it('I1: a dead second key answers 401 on a private project, the same as on a public one and on an id that never existed', async () => {
+        const manageA = tokenOf(await mint('info-a', { manage: true, from }))
+        const shown = await makeProject('info-a', 'i1-public')
+        const hidden = await makeProject('info-a', 'i1-private')
+        expect((await asAdmin(`/api/projects/${hidden.id}`, { method: 'PATCH', body: { visibility: 'private' } })).status).toBe(200)
+        const dead = 'dii_sync_mnothing.wrong'
+        const answers = []
+        for (const id of [shown.id, hidden.id, 'no-such-project-i1']) {
+            const answer = await call(`/api/projects/${id}/move`, { method: 'POST', token: manageA, also: dead, body: { toSpace: 'info-b' } })
+            answers.push({ status: answer.status, payload: answer.payload })
+        }
+        for (const [index, answer] of answers.entries()) {
+            expect(answer.status, `case ${index}: ${JSON.stringify(answer.payload)}`).toBe(401)
+            expect(answer.payload, `case ${index}`).toEqual(answers[0].payload)
+        }
+        // The key on its own still sees its private project; nothing moved.
+        expect((await call(`/api/projects/${hidden.id}`, { token: manageA })).status).toBe(200)
+        expect(await liveIn('info-a', hidden.id)).toBeTruthy()
+    })
+
+    it('I2: a key move into a space that does not exist answers exactly what a move into a space it may not use answers', async () => {
+        const manageA = tokenOf(await mint('info-a', { manage: true, from }))
+        const editA = tokenOf(await mint('info-a', { from }))
+        const manageB = tokenOf(await mint('info-b', { manage: true, from }))
+        const project = await makeProject('info-a', 'i2-key')
+        const tries = [
+            { token: manageA, also: null },
+            { token: editA, also: null },
+            { token: manageA, also: manageB }
+        ]
+        for (const [index, { token, also }] of tries.entries()) {
+            // 'space-b' exists (same owner) but neither key is of it.
+            const existing = await call(`/api/projects/${project.id}/move`, { method: 'POST', token, also, body: { toSpace: also ? 'space-b' : 'info-b' } })
+            const missing = await call(`/api/projects/${project.id}/move`, { method: 'POST', token, also, body: { toSpace: 'no-such-space-i2' } })
+            expect(existing.status, `try ${index} existing: ${JSON.stringify(existing.payload)}`).toBe(403)
+            expect(missing.status, `try ${index} missing: ${JSON.stringify(missing.payload)}`).toBe(403)
+            expect(missing.payload, `try ${index}`).toEqual(existing.payload)
+            expect(JSON.stringify(missing.payload)).not.toMatch(/not found|no-such-space/)
+        }
+        expect(await liveIn('info-a', project.id)).toBeTruthy()
+    })
+
+    it('I2: a signed-in editor who owns neither space gets one answer whether the target exists or not; an admin still hears 404', async () => {
+        const project = await makeProject('info-a', 'i2-person')
+        const existing = await asEditor(`/api/projects/${project.id}/move`, { method: 'POST', body: { toSpace: 'info-b' } })
+        const missing = await asEditor(`/api/projects/${project.id}/move`, { method: 'POST', body: { toSpace: 'no-such-space-i2' } })
+        expect(existing.status, JSON.stringify(existing.payload)).toBe(403)
+        expect(missing.status, JSON.stringify(missing.payload)).toBe(403)
+        expect(missing.payload).toEqual(existing.payload)
+        // An admin can list every space anyway: the plain 404 stays for a typo.
+        const admin = await asAdmin(`/api/projects/${project.id}/move`, { method: 'POST', body: { toSpace: 'no-such-space-i2' } })
+        expect(admin.status).toBe(404)
+        expect(await liveIn('info-a', project.id)).toBeTruthy()
+    })
+})

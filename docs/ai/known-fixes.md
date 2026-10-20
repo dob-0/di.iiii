@@ -988,6 +988,19 @@ Fix (2026-10-20): inside `withKeyLock`, both key trash and key move re-read the 
 its space is no longer the one the request was made for; the counting error is logged and the 403 carries a fixed text.
 Guard: `serverXR/src/syncKeyMoveRace.test.js` (3 cases). Measured: 2 of 3 failed on origin/dev, 3/3 after, 10 of 10 runs.
 
+## A dead second key said which ids are private projects; a move said which spaces exist
+
+Symptom (review r3 of #811, I1/I2): a `POST /api/projects/:id/move` with a sync key and an `alsoSyncKey` that does not
+resolve answered 404 "Project not found." on a private project and 401 on a public one (or an id never made), so the pair
+told the key holder which ids are private projects. Separately, the move answered `404 target space "x" not found` before
+any auth check, so any key or editor of the source space could test whether a space id exists. Cause: the dead second key
+makes the request unauthenticated, and the private-project 404 in the `/api/projects/:projectId` gate ran before the write
+gate's 401; the move route checked the target's existence before deciding who the caller is.
+Fix (2026-10-20): the project gate answers the 401 first, before the lookup, for every id with one body; the move route
+answers the missing-target 404 only to an admin, and anyone else gets the refusal a space they may not use gets, word for word.
+Guard: `serverXR/src/syncKeyManage.test.js` describe "a refused move says nothing about what exists" (3 cases; all 3 failed
+on origin/dev bd4d8908 with 404, all pass after).
+
 
 ## physics_check.py tested beams against planes copied by hand, not the hall the room draws
 

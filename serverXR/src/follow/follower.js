@@ -713,8 +713,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * project into this space from another space it follows from the same
      * host; on the host it is still in that other space. Find which one (each
      * other follow's key reads its own space), and ask the host to move it with
-     * that space's key as the bearer and this space's in X-Di-Sync-Key-Also —
-     * the host checks both are manage keys (SPEC_space_sync_keys.md §13.2).
+     * that space's key as the bearer and this space's as `alsoSyncKey` in the
+     * JSON body (never a header; review L4, r3 I3) — the host checks both are
+     * manage keys (SPEC_space_sync_keys.md §13.2, §13.3).
      * Returns true when the host moved it.
      */
     const moveThere = async (projectId) => {
