@@ -191,3 +191,14 @@ describe('the strip menus close the way menus close', () => {
         expect(screen.queryByRole('menu', { name: 'Add a window' })).toBe(null)
     })
 })
+
+// Audit 2026-10-21, row F2: axe-core "aria-prohibited-attr" (serious) — an aria-label on a plain div is not
+// read by every screen reader. The four beat dots are one picture with a name.
+describe('the clock window', () => {
+    it('names the beat as an image, not as a bare div', () => {
+        renderDesk()
+        const beats = document.querySelector('.perform-beats')
+        expect(beats.getAttribute('role')).toBe('img')
+        expect(beats.getAttribute('aria-label')).toMatch(/^Beat \d of 4$/)
+    })
+})
