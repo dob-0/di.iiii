@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8')
+const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 
 /** The blocks of `css` that open with `blockStart` (every one of them), or the whole sheet. */
 const blocks = (css, blockStart) => {
@@ -41,5 +41,18 @@ describe('the plot on a touch screen (audit row P3)', () => {
     const css = read('./plot.css')
     it.each(['.rigplot-toggle button', '.rigplot-sheet__handle', '.rigplot-rail button'])('%s is at least 44 px high on a coarse pointer', (selector) => {
         expect(pxIn(css, selector, 'min-height', '@media (pointer: coarse)')).toBeGreaterThanOrEqual(44)
+    })
+})
+
+describe('the Perform windows (audit row F4)', () => {
+    const css = read('../perform/perform.css')
+    it('the Follow Light box and the master sliders are at least 24 px for a pointer', () => {
+        expect(pxIn(css, '.perform-toggle input', 'width')).toBeGreaterThanOrEqual(24)
+        expect(pxIn(css, '.perform-toggle input', 'height')).toBeGreaterThanOrEqual(24)
+        expect(pxIn(css, ".perform-master-row input[type='range']", 'min-height')).toBeGreaterThanOrEqual(24)
+    })
+    it('and 44 px on a coarse pointer', () => {
+        expect(pxIn(css, '.perform-toggle', 'min-height', '@media (pointer: coarse)')).toBeGreaterThanOrEqual(44)
+        expect(pxIn(css, ".perform-master-row input[type='range']", 'min-height', '@media (pointer: coarse)')).toBeGreaterThanOrEqual(44)
     })
 })
