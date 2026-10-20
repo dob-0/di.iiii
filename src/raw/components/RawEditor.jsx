@@ -3186,8 +3186,14 @@ export default function RawEditor({
                 floating button sat over content on dev and under the column
                 on #769. */}
             <div className={`raw-workbench${regionOccupant && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
+            {/* Named, so it is the canvas region a screen reader can jump to
+                rather than a nameless section carrying drop handlers (jsx-a11y
+                no-static-element-interactions, 2026-10-21). Dropping files is
+                pointer-only; the inspector's file field is the keyboard way to
+                give a node a file. */}
             <section
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                aria-label="Canvas"
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}

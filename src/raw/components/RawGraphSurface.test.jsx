@@ -1248,3 +1248,17 @@ describe('RawGraphSurface zoom strip (audit row 6, §3.8)', () => {
         expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('100%')
     })
 })
+
+// A port dot is a pointer handle inside the card, and the card is the button: a
+// focusable or announced child would be a control nested in a control. The row's
+// label names the port; the dot is hidden from the reader (2026-10-21).
+describe('port dots and the reader', () => {
+    it('every port dot is hidden from assistive tech; the port label stays', () => {
+        const text = makeNode('view.text', { id: 't1' })
+        const { container } = render(<RawGraphSurface nodes={[text]} edges={[]} initialZoom={1} />)
+        const dots = [...container.querySelectorAll('.raw-graph-port-dot')]
+        expect(dots).toHaveLength(2)
+        for (const dot of dots) expect(dot.getAttribute('aria-hidden')).toBe('true')
+        expect(container.querySelector('.raw-graph-port-label').textContent).toBe('Content')
+    })
+})
