@@ -100,6 +100,9 @@
 }
 
 .wiki-search:focus { border-color: var(--di-cyan); }
+/* The border shift alone is a 1 px change from one cyan to another; the
+   landing's ring (landing.css) is what a keyboard reader gets everywhere else. */
+.wiki-search:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
 
 .wiki-layout {
     position: relative;

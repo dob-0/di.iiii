@@ -37,4 +37,10 @@ describe('wiki.css', () => {
         const fg = surface.map((bg, i) => muted[i] * alpha + bg * (1 - alpha))
         expect(ratio(fg, surface)).toBeGreaterThanOrEqual(4.5)
     })
+
+    // Audit 2026-10-21 W2 (WCAG 2.4.7): Tab onto the search and the only change
+    // was a 1 px border going from one cyan to another (outline: none, measured).
+    it('rings the search field when it has keyboard focus', () => {
+        expect(rule('.wiki-search:focus-visible')).toMatch(/outline:\s*2px solid var\(--di-cyan\)/)
+    })
 })
