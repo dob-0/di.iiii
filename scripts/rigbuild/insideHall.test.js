@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../place/common.mjs'
 import { buildRig } from '../place/rig-lib.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
-import { outsideHall } from './safety.mjs'
+import { outsideHall, outsideHallLines } from './safety.mjs'
 
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const manifest = read('scripts/place/fixtures/fixtures.json')
@@ -31,8 +31,12 @@ describe('inside the hall', () => {
         })
         expect(placed.length).toBeGreaterThan(40)
         expect(placed.some((p) => /^(hazer|smoke)/.test(p.id))).toBe(true)
-        const outside = outsideHall(placed, g)
-            .map((p) => `${p.id} at ${p.pos.map((v) => v.toFixed(2)).join(', ')}`)
-        expect(outside).toEqual([])
+        expect(outsideHallLines(placed, g)).toEqual([])
+    })
+
+    it('can fail: a lamp 1 m past the end wall is caught, one inside is not', () => {
+        const g = { end_wall_inner_y_m: 54.5, far_wall_z_m: 0, walls_x_m: [-10, 10] }
+        expect(outsideHallLines([{ id: 'out', pos: [0, 3, 55.5] }, { id: 'in', pos: [0, 3, 54] }], g)).toEqual(['out at 0.00, 3.00, 55.50'])
+        expect(outsideHall([{ id: 'side', pos: [10.1, 3, 5] }], g)).toHaveLength(1)
     })
 })

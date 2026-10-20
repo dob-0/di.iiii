@@ -85,7 +85,31 @@ describe('di_rig_check', () => {
         expect(v.looks).toMatchObject({ status: 'pass', built: 25 })
         expect(v.lasers).toMatchObject({ status: 'pass', min_m: 3, beamsChecked: 150 })
         expect(v.groundPolicy.status).toBe('pass')
-        expect(Object.keys(s.unavailable)).toEqual(['tieoffClash', 'insideHall', 'laserLantern'])
+        // the three hall-geometry checks (scripts/rigbuild/safety.mjs) are real now, with their numbers
+        expect(v.tieoffClash).toMatchObject({ status: 'pass', clashing: [] })
+        expect(v.tieoffClash.tieoffs).toBeGreaterThan(0)
+        expect(v.insideHall).toMatchObject({ status: 'pass', outside: [] })
+        expect(v.insideHall.checked).toBeGreaterThan(40)
+        expect(v.laserLantern).toMatchObject({ status: 'pass', failing: [] })
+        expect(v.laserLantern.beamsChecked).toBeGreaterThan(0)
+        // only the tie-off RATING stays unavailable, and says which data is missing
+        expect(Object.keys(s.unavailable)).toEqual(['tieoffRating'])
+        expect(s.unavailable.tieoffRating).toMatch(/rated_kg/)
+    }, 30000)
+
+    it('can fail: with the end wall pulled in to 20 m the lamps beyond it are reported outside the hall', async () => {
+        const real = fs.readFileSync
+        const spy = vi.spyOn(fs, 'readFileSync').mockImplementation((file, ...rest) => {
+            const text = real(file, ...rest)
+            return typeof text === 'string' && text.includes('end_wall_inner_y_m') ? text.replace(/("end_wall_inner_y_m"\s*:\s*)[\d.]+/g, '$120') : text
+        })
+        try {
+            const s = (await recorder().door.rigCheck({ version: 'known-full' })).structuredContent
+            const v = s.versions['known-full']
+            expect(v.insideHall.status).toBe('fail')
+            expect(v.insideHall.outside.length).toBeGreaterThan(0)
+            expect(v.status).toBe('fail')
+        } finally { spy.mockRestore() }
     }, 30000)
 
     it('can fail: with the bridle limit tightened to 100 deg the 119 deg pick is reported over', async () => {

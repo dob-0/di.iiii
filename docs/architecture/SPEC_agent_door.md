@@ -91,9 +91,10 @@ Measured 2026-10-07 (bytes of the text an agent reads; no token counter on this 
 | are the rigs safe | `vitest` over the rig tests | 9,219 B, 2.6 s for 12 versions; 1,632 B, 1.3 s for one |
 | context before the first question | 4 tools, 3,685 B | 8 tools, 6,722 B (+3,038 B) |
 
-Limits, plainly: the tie-off / crane-cab clash, inside-the-walls and laser-vs-lantern checks exist
-only as test-local functions in PR #772 (not on dev); `di_rig_check` lists them as `unavailable`
-until they are exported to a module. The tools read a checkout, not an install. Geometry only:
+Limits, plainly: `di_rig_check` runs the tie-off / crane-cab clash, inside-the-walls and laser-vs-lantern
+checks from `scripts/rigbuild/safety.mjs` (the one copy the tests and the tool share; sources: audit 2026-10-05,
+PR #772; the 3 m laser floor is laser-distance.mjs). The beam-spread rule (landings > 1 m apart) is a project rule,
+UNVALIDATED. A tie-off's strength stays `unavailable`: tie-offs carry prose, no `rated_kg`, and no anchor capacity exists. The tools read a checkout, not an install. Geometry only:
 no load rating, no hardware rating, no sign-off — a human signs the rigging.
 
 Each result carries both text and `structuredContent`. Lists are paged (`limit`, `cursor`).
