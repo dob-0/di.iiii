@@ -1,0 +1,12 @@
+{
+ "what": "MOXIR v2.10: six 'truss' models the owner created by mistake in the Studio at 2026-10-15 01:36 (default place y 6 near the entry). Owner 01:37: 'delete this trusses :D there are by mistake'.",
+ "source": "ops 556-561 of moxir-v2-10 on moxir-one (createEntity, name 'truss', random ids)",
+ "ids": [
+  "20ca8f10-66e3-4d16-85ae-81aa877e80a1",
+  "32d9d201-7489-4e68-b763-8e32136c624f",
+  "bb78742f-89f7-4a2f-94d9-300740c192d3",
+  "2345c29e-0e17-4e61-93e4-bc0edce4359b",
+  "be564d88-85a8-4cf2-b2ff-aa5f18245891",
+  "76cb8fca-3f51-4a42-a7bd-65002c5589e0"
+ ]
+}

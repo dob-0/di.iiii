@@ -5,6 +5,8 @@ import * as THREE from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { fitCameraToAspect, getFovForArm } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
+import { flightPath, flightPois, sampleFlight } from '../autoFly.js'
+import useAutoFlyStop from '../useAutoFlyStop.js'
 import { hazeFogBase, setCameraOutside } from '../../../objectComponents/atmosphereStore.js'
 import {
     approach,
@@ -294,6 +296,8 @@ const worldBox = (object) => {
  * @param {Function} props.onBuilding    (true) once the room has a building to lock inside
  * @param {Function} props.onLockPaused  (bool) a preset whose camera stands outside the building pauses the lock
  * @param {object}   props.layers        { roof, walls, machines, outside } — false hides that layer (SceneBar, ?layers=)
+ * @param {boolean}  props.fly           the Auto fly flight is on (autoFly.js); any input ends it through onFlyEnd
+ * @param {Function} props.onFlyEnd      () the visitor took the controls (pointer, wheel, key, touch) — hand the camera back
  */
 export default function SmartView({
     document,
@@ -308,7 +312,9 @@ export default function SmartView({
     lockInside = false,
     onBuilding,
     onLockPaused,
-    layers = null
+    layers = null,
+    fly = false,
+    onFlyEnd
 }) {
     const { scene, camera, gl, size, invalidate } = useThree()
     const entities = useMemo(() => document?.entities || [], [document?.entities])
@@ -673,6 +679,10 @@ export default function SmartView({
         live.current.lockPaused = false
         onLockPausedRef.current?.(false)
     }, [lockInside])
+    // Auto fly: any input ends the flight where it is (useAutoFlyStop); the camera goes back to camera-controls in the frame loop.
+    const flyRef = useRef(fly)
+    useEffect(() => { flyRef.current = fly; invalidate() }, [fly, invalidate])
+    useAutoFlyStop(fly, onFlyEnd)
     const onUserMoveRef = useRef(onUserMove)
     useEffect(() => { onUserMoveRef.current = onUserMove }, [onUserMove])
     const bindControls = (cc) => {
@@ -744,6 +754,7 @@ export default function SmartView({
             state.misses = state.frame ? 0 : (state.misses || 0) + 1
         }
         const frame = state.frame
+        if (import.meta.env.DEV && typeof window !== 'undefined') window.__diFlyState = { frame: Boolean(frame), fly: flyRef.current, misses: state.misses || 0, entities: entities.length }
         if (!frame) { if ((state.misses || 0) <= 20) frameState.invalidate(); return }
         if (!state.building) {
             state.building = true
@@ -751,6 +762,34 @@ export default function SmartView({
         }
         const cc = controlsRef?.current
         bindControls(cc)
+        // --- Auto fly: the camera follows autoFly.js's path while the flight is on --------
+        if (flyRef.current && !state.flight) {
+            state.flight = { path: flightPath(frame, flightPois(frame, { stageBox: state.stageBox, rigBox: state.rigBox })), t: 0 }
+            if (cc) cc.enabled = false
+            // DEV ONLY, for the harness's physics check (window.__diRoom is the Full renderer's; Lite has none): the frame, the path, the camera.
+            if (import.meta.env.DEV && typeof window !== 'undefined' && window) window.__diFly = { frame, path: state.flight.path, camera }
+        }
+        if (state.flight) {
+            const flight = state.flight
+            if (flyRef.current && flight.path) {
+                flight.t += Math.min(delta, 0.1)
+                const shot = sampleFlight(flight.path, flight.t)
+                cc?.setLookAt?.(...shot.eye, ...shot.at, false)
+                camera.position.set(...shot.eye)
+                camera.up.set(0, 1, 0)
+                camera.lookAt(...shot.at)
+                camera.rotateZ(shot.roll)   // the bank: a quad leans into the turn
+                state.flightShot = shot
+                moving = true
+            } else {
+                // handed back where it is: camera-controls re-aims from the last eye and look-ahead, level
+                state.flight = null
+                camera.up.set(0, 1, 0)
+                if (cc) { cc.enabled = true }
+                if (state.flightShot) cc?.setLookAt?.(...state.flightShot.eye, ...state.flightShot.at, false)
+                state.flightShot = null
+            }
+        }
         const target = scratch.target
         if (cc?.getTarget) cc.getTarget(target)
         else target.set(...frame.center)

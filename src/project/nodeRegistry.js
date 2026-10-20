@@ -15,6 +15,8 @@ export const PORT_TYPES = {
     geometry: { label: 'Geometry', color: '#bd93f9' },
     texture:  { label: 'Texture',  color: '#ff5555' },
     signal:   { label: 'Signal',   color: '#ffffff' },
+    // Laser paths (frame v2, shared/laserFrame.cjs): what flows between laser nodes to Laser Out.
+    laser:    { label: 'Laser',    color: '#39ff14' },
     any:      { label: 'Any',      color: '#888888' },
 }
 
@@ -88,6 +90,8 @@ export const FAMILY_BY_TYPE = {
     // make — things you conjure into the space
     'geom.cube': 'make',
     'laser.shape': 'make',
+    'laser.trace': 'make',
+    'laser.merge': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -838,13 +842,24 @@ export const NODE_TYPES = {
         singleton: false,
         keywords: ['laser', 'lasers', 'lasercube', 'cube', 'beam', 'show', 'ilda', 'stage', 'blackout', 'preview'],
         inputs: [
-            // The frame from a Laser node (or anything that makes the same
-            // shape of object); the panel draws it and sends it on change.
-            { id: 'frame',    type: 'any',    label: 'Frame' },
-            // 'all' or one cube's id, as the server names them.
+            // Laser paths (frame v2) or a legacy frame, from Laser, Laser Trace
+            // or Laser Merge; the panel orders and resamples them to the budget,
+            // draws them and sends them on change.
+            { id: 'frame',    type: 'laser',  label: 'Frame' },
+            // 'all' or one cube's id, as the server names them. Used only
+            // while IP is empty (the old way, one setup for all cubes).
             { id: 'cube',     type: 'string', label: 'Cube', default: 'all' },
+            // The TouchDesigner way (2026-10-14): this Out's own cube, by
+            // its address. Find cubes fills it (and values.serial, the box
+            // it expects); typing it by hand works the same.
+            { id: 'ip',       type: 'string', label: 'IP',   default: '' },
             // `any`, the DMX Out idiom: a Button, a Compare, a Toggle.
             { id: 'blackout', type: 'any',    label: 'Blackout' },
+            // Points per frame, a plain number so an Oscillator, a slider or MIDI
+            // can drive it; 0 = auto (sized from the drawn length). Clamped to the
+            // frame cap and to what the cube can draw in 67 ms (#931); the panel
+            // shows the value in effect.
+            { id: 'budget',   type: 'number', label: 'Budget',  default: 1000 },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
@@ -2135,9 +2150,10 @@ export const NODE_TYPES = {
         category: 'geometry',
         runtime: 'any',
         singleton: false,
-        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'beam', 'draw', 'frame', 'lasercube'],
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
         inputs: [
-            // One of: circle, line, square, triangle, star, wave, fan, spiral.
+            // One of: circle, line, square, triangle, star, wave, fan, spiral, galaxy, sunflower, noisy, grid —
+            // or a comma list of them that plays in turn every `cycle` seconds (laserShapes.js).
             { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
             { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
             // Where the shape sits up the cube's field, -1..1. 0.5 keeps a size-0.5 shape wholly in
@@ -2151,9 +2167,73 @@ export const NODE_TYPES = {
             // Brightness 0..1 — Sound's volume wired here makes the shape breathe.
             { id: 'level',    type: 'number', label: 'Level',    default: 1 },
             { id: 'points',   type: 'number', label: 'Points',   default: 120 },
+            // Galaxy's spirals or noisy's rings; 0 is the shape's own number (6, 3).
+            { id: 'copies',   type: 'number', label: 'Copies',   default: 0 },
+            // The hue runs along the path and drifts with time (TouchDesigner's COLORS ramp).
+            { id: 'rainbow',  type: 'boolean', label: 'Rainbow', default: false },
+            // Seconds each shape of a comma list plays; 0 plays the first only.
+            { id: 'cycle',    type: 'number', label: 'Cycle',    default: 0 },
         ],
         outputs: [
-            { id: 'frame', type: 'any', label: 'Frame' },
+            { id: 'frame', type: 'laser', label: 'Frame' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Geometry -> laser paths (design 2026-10-14 §2.2): what the viewport shows is what the laser draws.
+    'laser.trace': {
+        id: 'laser.trace',
+        label: 'Laser Trace',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'trace', 'outline', 'edges', 'wireframe', 'points', 'geometry', 'shape', 'draw', 'lasercube', 'sop'],
+        inputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+            { id: 'mode',     type: 'string',   label: 'Draw',     default: 'outline', options: [
+                { value: 'outline',   label: 'Outline' },
+                { value: 'edges',     label: 'Edges' },
+                { value: 'wireframe', label: 'Wireframe' },
+                { value: 'points',    label: 'Points' },
+            ] },
+            { id: 'view',     type: 'string',   label: 'View',     default: 'front', options: [
+                { value: 'front', label: 'Front' },
+                { value: 'point', label: 'From a point' },
+            ] },
+            // Front view: field units per metre; 0 fits the shape into 80 % of the field.
+            { id: 'size',     type: 'number',   label: 'Size',     default: 0 },
+            // Point view: where the laser stands and what it aims at, in metres.
+            { id: 'position', type: 'vec3',     label: 'Position', default: [0, 0, 6] },
+            { id: 'aim',      type: 'vec3',     label: 'Aim',      default: [0, 0, 0] },
+            // Edges: the crease angle in degrees over which an edge is drawn.
+            { id: 'angle',    type: 'number',   label: 'Angle',    default: 30 },
+            // Unwired, each piece keeps its own colour; wired, one colour for all.
+            { id: 'colour',   type: 'color',    label: 'Colour' },
+            { id: 'level',    type: 'number',   label: 'Level',    default: 1 },
+        ],
+        outputs: [
+            { id: 'frame',  type: 'laser',  label: 'Frame' },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Two laser path sets in, one out (TD Merge); chain for more.
+    'laser.merge': {
+        id: 'laser.merge',
+        label: 'Laser Merge',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'merge', 'combine', 'join', 'paths', 'lasercube'],
+        inputs: [
+            { id: 'a', type: 'laser', label: 'A' },
+            { id: 'b', type: 'laser', label: 'B' },
+        ],
+        outputs: [
+            { id: 'frame', type: 'laser', label: 'Frame' },
         ],
         defaultValues: {},
         render: 'hidden',

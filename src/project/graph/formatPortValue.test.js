@@ -63,3 +63,10 @@ describe('formatPortValue', () => {
         expect(formatPortValue(new Map(), 'any').text).toBe('something this sheet cannot read')
     })
 })
+
+describe('formatPortValue laser frames', () => {
+    it('reads a laser frame object by its type, never as "something this sheet cannot read"', async () => {
+        const { formatPortValue } = await import('./formatPortValue.js')
+        expect(formatPortValue({ paths: [] }, 'laser').text).toBe('laser paths')
+    })
+})

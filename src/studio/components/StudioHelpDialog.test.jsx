@@ -30,7 +30,7 @@ describe('StudioHelpDialog', () => {
     it('keeps the complete shortcut reference behind the Shortcuts tab', () => {
         render(<StudioHelpDialog open onClose={vi.fn()} />)
         fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
-        expect(screen.getByText('Move (grab) mode')).toBeInTheDocument()
+        expect(screen.getByText('Move: with a selection the drag starts at once (Blender grab); without, picks the gizmo mode')).toBeInTheDocument()
         expect(screen.getByText('Toggle Navigate ↔ Edit')).toBeInTheDocument()
         expect(screen.getByText('Quick insert')).toBeInTheDocument()
     })
@@ -41,5 +41,18 @@ describe('StudioHelpDialog', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Close' }))
         fireEvent.click(screen.getByRole('button', { name: 'Close help' }))
         expect(onClose).toHaveBeenCalledTimes(2)
+    })
+
+    // Brief 2026-10-13 item 4: the picking and deselect rules the owner asked for are on the table.
+    it('lists click-a-beam, the locked click, the lock keys and both deselects', () => {
+        render(<StudioHelpDialog open onClose={vi.fn()} />)
+        fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
+        const row = (key) => screen.getAllByText(key, { selector: 'code' })
+        expect(screen.getByText('Select its lamp; a lamp body in front of a beam wins')).toBeInTheDocument()
+        expect(screen.getByText('Not picked: the click goes through; with only locked things under the pointer, the selection clears')).toBeInTheDocument()
+        expect(screen.getByText('Deselect all')).toBeInTheDocument()
+        expect(screen.getByText('Deselect')).toBeInTheDocument()
+        expect(screen.getByText('Unlock all (our own keys, Blender has no lock key)')).toBeInTheDocument()
+        for (const key of ['Click a beam', 'Click a locked object', 'L', 'Alt+L', 'Alt+A']) expect(row(key).length).toBeGreaterThan(0)
     })
 })

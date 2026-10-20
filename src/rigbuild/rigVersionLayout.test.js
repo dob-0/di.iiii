@@ -21,7 +21,7 @@ describe('rigChromeTops', () => {
         expect(chipTop).toBe(`calc(${rowTop} + ${CONTROL_LINE})`)
     })
 
-    // MOXIR v1.1 at 390x844: Walk / Fly + Inside + Lite are three lines; the show chip sat on Lite.
+    // MOXIR v1.1 at 390x844: Walk / Fly + Inside + Quality are three lines; the show chip sat on the quality button.
     it('puts the show chip under the whole right-hand stack on a portrait phone', () => {
         expect(rigChromeTops(top, { rowShown: false, compact: true, rightLines: 3 }).chipTop).toBe(`calc(${top} + 3 * ${CONTROL_LINE})`)
         expect(rigChromeTops(top, { rowShown: true, compact: true, rightLines: 3 }).rowTop).toBe(`calc(${top} + 3 * ${CONTROL_LINE})`)

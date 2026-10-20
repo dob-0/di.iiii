@@ -245,6 +245,29 @@ check('fade interpolates between looks', () => {
   assert.ok(buf[0] > 100 && buf[0] < 155, 'halfway through the fade, got ' + buf[0]);
 });
 
+check('a colour wheel steps at the start of a fade while the dimmer fades (MOXIR 2026-10-17)', () => {
+  addProfile('test wheel 3ch', ['dimmer', 'color', 'gobo'], { replace: true });
+  const f = makeFixture({ profile: 'test wheel 3ch', address: 1, values: { dimmer: 0, color: 12, gobo: 0 } });
+  const e = new Engine(baseState([f]));
+  e.tick();
+  f.values.dimmer = 255; f.values.color = 132; f.values.gobo = 40;
+  e.startFade(1000);
+  e.fade.start = Date.now() - 500;
+  const buf = e.tick().get(0);
+  assert.ok(buf[0] > 100 && buf[0] < 155, 'the dimmer still fades, got ' + buf[0]);
+  assert.strictEqual(buf[1], 132, 'the wheel is already on the new slot, never a slot in between');
+  assert.strictEqual(buf[2], 40, 'the gobo wheel steps too');
+  removeProfile('test wheel 3ch');
+});
+
+check('a profile whose chart rests its dimmer at 0 (a DMX laser) comes up dark when patched (MOXIR 2026-10-17)', () => {
+  addProfile('test laser 3ch', ['dimmer', 'c2', 'c3'], { replace: true, defaults: { dimmer: 0, c2: 250 } });
+  const f = makeFixture({ profile: 'test laser 3ch', address: 1 });
+  assert.strictEqual(f.values.dimmer, 0, 'the laser rests dark, got ' + f.values.dimmer);
+  assert.strictEqual(makeFixture({ profile: 'dimmer', address: 1 }).values.dimmer, 255, 'a plain lamp still comes up alive');
+  removeProfile('test laser 3ch');
+});
+
 check('addresses cannot run off the end of a universe', () => {
   const f = makeFixture({ profile: 'rgbw', address: 511, values: { r: 255, g: 255, b: 255, w: 255, dimmer: 255 } });
   const buf = new Engine(baseState([f])).render().get(0);
@@ -779,6 +802,31 @@ check('a palette that names itself costs a lookup, not a frame', () => {
   const looks = sanitizeLooks([{ id: 'loop', steps: [{ values: { '*': { r: { ref: 'loop' } } } }] }]);
   const out = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
   assert.deepStrictEqual(out.get('a'), undefined, 'it resolves to nothing rather than hanging');
+});
+
+check("a look's motion moves the dimmer on the wire from the layer's firedAt; without it the frame is the old one", () => {
+  const { sanitizeLook, sanitizeLayer } = require('../looks');
+  const { motionLevels } = require('../lookMotion');
+  const desk = (motion) => {
+    const f = makeFixture({ id: 'w1', profile: 'drgb', address: 1, universe: 0, values: { dimmer: 255, r: 255, g: 255, b: 255 } });
+    const look = sanitizeLook({ id: 'L', steps: [{ values: { w1: { dimmer: 200 } } }], fixtures: ['w1'], ...(motion ? { motion } : {}) });
+    const layer = sanitizeLayer({ id: 'c', lookId: 'L', level: 1, merge: 'ltp' });
+    layer.firedAt = 1000;
+    return new Engine({ master: 255, blackout: false, fixtures: [f], raw: {}, scenes: [], activeScene: null, chase: { enabled: false, sceneIds: [], holdMs: 1000, fadeMs: 0 }, looks: [look], layers: [layer], fx: { mode: 'none', enabled: false, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0 } });
+  };
+  const motion = { mode: 'breathe', bpm: 66, depth: 200, spatial: 'patch', kinds: ['wash'], still: 0, units: [{ id: 'w1', x: 0.5, y: 0.5 }] };
+  const still = desk(null), moving = desk(motion);
+  const seen = new Set();
+  for (let ms = 0; ms <= 2000; ms += 25) {
+    const a = still.render(still.state, 1000 + ms).get(0)[0];
+    const b = moving.render(moving.state, 1000 + ms).get(0)[0];
+    assert.strictEqual(a, 200, "no motion: the look's dimmer, every frame");
+    const want = Math.round(200 * motionLevels(moving.state.looks[0].motion, 1000 + ms, 1000).get('w1') / 255);
+    assert.ok(Math.abs(b - want) <= 1, `at +${ms} ms the wire reads ${b}, fx.js says ${want}`);
+    seen.add(b);
+  }
+  assert.ok(seen.size > 10, `a breathe over 2 s passes through many levels, got ${seen.size}`);
+  assert.strictEqual(moving.render(moving.state, 1000).get(0)[0], 43, 'at the fire a breathe of depth 200 sits at its floor: 200 x 55/255');
 });
 
 check('a kind keeps a colour palette off the heads', () => {
@@ -1474,6 +1522,98 @@ check('the show sentence: the migration offer says it is a copy before the press
   assert.strictEqual(n.button, "Use this machine's show for Lab");
   assert.strictEqual(n.action, 'copy');
   assert.strictEqual(deskShow.copied({ space: 'lab', label: 'Lab' }), "Copied. Lab has its own show now; this machine's show is unchanged.");
+});
+
+// ---- what the page may offer, and what it says when it cannot draw ---------------
+// ui/caps.js is plain script the page loads; the poll's failure rule is held here.
+const deskCaps = require('../ui/caps');
+
+check('a render error neither raises nor resets the failure counter; only a lost reply counts', () => {
+  let n = 0;
+  n = deskCaps.nextFails(n, 'network');
+  assert.strictEqual(n, 1);
+  assert.strictEqual(deskCaps.nextFails(n, 'render'), 1, 'a reply that could not be drawn is not the network, and not a recovery either');
+  assert.strictEqual(deskCaps.nextFails(0, 'render'), 0, 'a state the page cannot draw never reads as offline');
+  assert.strictEqual(deskCaps.nextFails(deskCaps.nextFails(n, 'render'), 'network'), 2, 'the second lost reply still latches the banner');
+  assert.strictEqual(deskCaps.nextFails(2, 'drawn'), 0, 'only a reply that drew resets it');
+});
+
+check('cap() is on without caps, off only on an explicit false, and mic and MIDI need a secure page', () => {
+  assert.strictEqual(deskCaps.cap(undefined, 'midi', true), true, 'no caps is the full desk');
+  assert.strictEqual(deskCaps.cap(null, 'looks', true), true);
+  assert.strictEqual(deskCaps.cap({}, 'midi', true), true);
+  assert.strictEqual(deskCaps.cap({ midi: false }, 'midi', true), false);
+  assert.strictEqual(deskCaps.cap({ midi: false }, 'audio', true), true, 'one cap does not turn off another');
+  assert.strictEqual(deskCaps.cap({ audio: false }, 'audio', true), false);
+  assert.strictEqual(deskCaps.cap(undefined, 'midi', false), false, 'a plain http page cannot open MIDI');
+  assert.strictEqual(deskCaps.cap(undefined, 'audio', false), false, 'or the microphone');
+  assert.strictEqual(deskCaps.cap(undefined, 'looks', false), true, 'but everything else is unaffected');
+  assert.strictEqual(deskCaps.cap({ midi: 0 }, 'midi', true), true, 'only false means off, so a malformed value cannot hide a control');
+});
+
+check('the render line names the key the page could not draw', () => {
+  const st = { fixtures: [], fx: {}, output: {}, chase: {}, scenes: [], groups: [], lfos: [], layers: [] };
+  assert.strictEqual(deskCaps.culprit(new TypeError("Cannot read properties of undefined (reading 'universes')"), st), 'status');
+  assert.strictEqual(deskCaps.unreadable(new TypeError('x'), st), 'the desk sent a state this page cannot draw: status');
+  const whole = { status: {}, output: {}, fx: {}, chase: {}, fixtures: [], scenes: [], groups: [], lfos: [], layers: [] };
+  assert.strictEqual(deskCaps.culprit(new TypeError("Cannot read properties of undefined (reading 'mode')"), whole), 'mode', 'with every key present, the engine\'s own word');
+  assert.ok(deskCaps.culprit(new Error('boom'), whole).length > 0);
+});
+
+// ---- This node (caps.node, plan step D5) ----
+check('the "This node" fold is opt-in: hidden without caps.node, shown only on an explicit true', () => {
+  assert.strictEqual(deskCaps.cap(undefined, 'node', true), false, 'no caps is the full desk on a machine: no node fold');
+  assert.strictEqual(deskCaps.cap({}, 'node', true), false);
+  assert.strictEqual(deskCaps.cap({ node: false }, 'node', true), false);
+  assert.strictEqual(deskCaps.cap({ node: 1 }, 'node', true), false, 'only true turns it on, so a malformed value cannot show it');
+  assert.strictEqual(deskCaps.cap({ node: 'yes' }, 'node', true), false);
+  assert.strictEqual(deskCaps.cap({ node: true }, 'node', true), true);
+  assert.strictEqual(deskCaps.cap({ node: true }, 'node', false), true, 'a node serves plain http; the fold does not need a secure page');
+  assert.strictEqual(deskCaps.cap({ node: true }, 'looks', true), true, 'and it changes no other cap');
+  // The markup half of the rule: one fold, gated by data-cap="node", which applyCaps turns into .capoff.
+  const html = require('fs').readFileSync(require('path').join(__dirname, '../ui/index.html'), 'utf8');
+  const css = require('fs').readFileSync(require('path').join(__dirname, '../ui/style.css'), 'utf8');
+  const folds = html.match(/<details[^>]*id="ndDetails"[^>]*>/g) || [];
+  assert.strictEqual(folds.length, 1, 'one "This node" fold');
+  assert.ok(/data-cap="node"/.test(folds[0]), 'the fold carries data-cap="node"');
+  assert.ok(/\.capoff\s*\{\s*display:\s*none\s*!important/.test(css), 'and .capoff hides it');
+  assert.ok(html.indexOf('id="inDetails"') < html.indexOf('id="ndDetails"') && html.indexOf('id="ndDetails"') < html.indexOf('<main class="page" data-page="control"'), 'it sits on Setup, under Input');
+});
+
+check('a node\'s /status reads the same from the firmware and the simulator, and an absent fact stays null', () => {
+  const fw = { ip: '192.168.4.1', sta_ip: '10.0.0.7', sta_connected: true, sta_ssid: 'lab', wl_status: 3, ssid: 'node-ap', name: 'n1',
+    net_mode: 0, net: 0, subnet: 1, uni: 2, uni15: 18, mode: 1, artnet_active: true, sacn_active: false, ao: true, ao_target: 'broadcast',
+    burn_safe: true, safe_ceiling: 96, safe_slew_step: 8, artnet_fallback_to_web: true, usb_active: false, heap_free: 150000, heap_max_block: 90000, fw: 'v1.2' };
+  const f = deskCaps.nodeFacts(fw);
+  assert.strictEqual(f.apIp, '192.168.4.1'); assert.strictEqual(f.staOn, true); assert.strictEqual(f.wl, 'joined');
+  assert.strictEqual(f.ceiling, 96); assert.strictEqual(f.slew, 8); assert.strictEqual(f.fw, 'v1.2');
+  assert.deepStrictEqual(f.live, { artnet: true, sacn: false, usb: false });
+  assert.strictEqual(f.uptimeS, null, 'no node sends uptime: it is not reported, never invented');
+  const sim = deskCaps.nodeFacts({ ap_ip: '192.168.4.1', sta: false, wl_status: 4, mode: 2 }, { firmware: { tag: 'simulator' } });
+  assert.strictEqual(sim.apIp, '192.168.4.1'); assert.strictEqual(sim.staOn, false);
+  assert.strictEqual(sim.wl, 'join failed: check the password', 'a failed join says why');
+  assert.strictEqual(sim.fw, 'simulator', 'the manifest\'s tag when /status has no fw');
+  assert.strictEqual(sim.heapFree, null); assert.strictEqual(sim.burnSafe, null);
+  assert.strictEqual(deskCaps.nodeSummary(f), 'n1 · 10.0.0.7 · network only · burn-safe');
+  assert.strictEqual(deskCaps.nodeFacts(null).name, null, 'no answer is not a crash');
+  assert.strictEqual(deskCaps.wlWords(undefined), 'not reported');
+});
+
+check('factory reset (and every two-press control) fires only on a second press of the same button within 4 s', () => {
+  let a = null;
+  let s = deskCaps.confirmStep(a, 'ndFactory', 1000);
+  assert.strictEqual(s.fire, false, 'one press arms, never fires'); a = s.armed;
+  assert.ok(deskCaps.stillArmed(a, 2000));
+  s = deskCaps.confirmStep(a, 'ndFactory', 3000);
+  assert.strictEqual(s.fire, true, 'the second press fires'); assert.strictEqual(s.armed, null, 'and disarms');
+  a = deskCaps.confirmStep(null, 'ndFactory', 0).armed;
+  s = deskCaps.confirmStep(a, 'ndFactory', 4001);
+  assert.strictEqual(s.fire, false, 'after 4 s the second press only arms again');
+  a = deskCaps.confirmStep(null, 'ndReboot', 0).armed;
+  s = deskCaps.confirmStep(a, 'ndFactory', 100);
+  assert.strictEqual(s.fire, false, 'restart armed, then factory reset pressed: nothing fires');
+  assert.strictEqual(s.armed.key, 'ndFactory');
+  assert.strictEqual(deskCaps.stillArmed(a, 4001), false, 'time disarms');
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

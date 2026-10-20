@@ -1,0 +1,58 @@
+{
+ "what": "MOXIR side line right: the five beams run the other way in the hall — U2.001 stands nearest the audience, U2.065 farthest (behind the DJ). The lamps swap places end for end; addresses unchanged, the middle one (U2.033) stays.",
+ "source": "owner at the venue 2026-10-17 ~07:1x, with the side lines lit red-green-blue-yellow-pink by address (group-identify.mjs): 'in 3d lef side ok , but righ side is wrong' (after the left side was reversed).",
+ "moves": [
+  {
+   "id": "rig-beam-planes-16",
+   "position": [
+    20.594200047529903,
+    0.7,
+    18.952552808902645
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "position": [
+    21.114,
+    0.7,
+    -26.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "position": [
+    20.594200047529903,
+    0.7,
+    6.952552808902642
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "position": [
+    21.114,
+    0.7,
+    -14.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  }
+ ]
+}

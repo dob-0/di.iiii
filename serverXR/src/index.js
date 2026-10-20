@@ -17,7 +17,7 @@ const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
-const { initDb, getDb, SCHEMA_VERSION } = require('./db')
+const { initDb, getDb, getStartupReport, SCHEMA_VERSION } = require('./db')
 const { installShutdown, createInflight } = require('./gracefulShutdown')
 const inflight = createInflight()
 const { migrateFromFilesystem } = require('./migrate')
@@ -358,6 +358,8 @@ async function initStorage() {
     .then((removed) => { if (removed.length) logger.info(`[uploads] removed ${removed.length} stale temp file(s)`) })
     .catch(() => {})
   initDb(DB_PATH)
+  const { archivedTitlesMoved } = getStartupReport()
+  if (archivedTitlesMoved) logger.info(`[db] ${archivedTitlesMoved} project title(s) wearing "[archived]" moved to state archived`)
   configStore.init(SPACES_DIR)
   await migrateFromFilesystem(SPACES_DIR)
 }
@@ -542,7 +544,12 @@ const lighting = registerLightingRoutes(app, {
 // desk's twin (built on first use, local-only, 404 hosted), and DISARMED at every start.
 const lasers = registerLaserRoutes(app, {
   dataDir: config.directories.dataDir,
-  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])]
+  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])],
+  // The show player reads a project's document the way the project API does (laser/laserShow.js).
+  loadDocument: async (projectId) => {
+    const project = await resolveProjectContext(projectId)
+    return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
+  }
 })
 
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,

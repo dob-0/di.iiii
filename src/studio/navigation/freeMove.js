@@ -18,6 +18,9 @@ export const FALLBACK_SPEED = 1
 export const MIN_SPEED = 0.001
 export const MAX_SPEED = 10000
 export const TURN_MODES = Object.freeze(['point', 'place'])
+// The turn a person meets before they choose: 'place' — a turn drag turns the view where you stand (owner, 2026-10-16:
+// "make everywhere move … where you stand mode by default"). A choice someone already made stays theirs (preference.js).
+export const DEFAULT_TURN = 'place'
 
 // 'auto' or metres per notch. Junk is 'auto'. Pure.
 export function normalizeSpeedSetting(value) {
@@ -29,7 +32,7 @@ export function normalizeSpeedSetting(value) {
 
 // 'point' (around a point ahead) or 'place' (where you stand). Junk is 'point'. Pure.
 export function normalizeTurnSetting(value) {
-    return TURN_MODES.includes(value) ? value : 'point'
+    return TURN_MODES.includes(value) ? value : DEFAULT_TURN
 }
 
 // The automatic speed from the space's largest side, or null when the space has no size yet. Pure.
