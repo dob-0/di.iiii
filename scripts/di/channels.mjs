@@ -81,13 +81,15 @@ export const retryAfterMs = (value, now = Date.now()) => {
 }
 
 // One line that says who answered: a 429 from the edge and one from serverXR
-// look the same by status alone.
+// look the same by status alone. Behind Cloudflare `server: cloudflare` and a
+// `cf-ray` come on every answer, serverXR's own too (measured on dev.diiii.xyz,
+// 2026-10-21); `x-powered-by: Express` and the JSON body are what mark serverXR.
 const healthFailure = async (hub, response, retries) => {
     let body = ''
     try { body = typeof response.text === 'function' ? String(await response.text()) : '' } catch { body = '' }
     body = body.replace(/\s+/g, ' ').trim().slice(0, 120)
     const parts = [`${hub}: ${response.status}`]
-    for (const name of ['server', 'cf-ray', 'retry-after']) {
+    for (const name of ['server', 'x-powered-by', 'cf-ray', 'retry-after']) {
         const value = header(response, name)
         if (value) parts.push(`${name} ${value}`)
     }

@@ -132,6 +132,11 @@ describe('the health read waits out a 429 or 503 and says who answered when it g
         await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([r, r, r, r]), sleep: async () => {} }))
             .rejects.toThrow("could not read the hub's health (https://h: 503; retry-after 1; after 3 retries; no body)")
     })
+    it('names x-powered-by, which marks serverXR behind Cloudflare (server and cf-ray come on every answer)', async () => {
+        const bounced = { status: 429, headers: { server: 'cloudflare', 'x-powered-by': 'Express', 'cf-ray': 'a4db4dc48bf9d94c-EVN', 'retry-after': '1' }, body: '{"error":"Too many requests from this address by an unidentified program — retry in 1s."}' }
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([bounced, bounced, bounced, bounced]), sleep: async () => {} }))
+            .rejects.toThrow('(https://h: 429; server cloudflare; x-powered-by Express; cf-ray a4db4dc48bf9d94c-EVN; retry-after 1; after 3 retries; body "{\\"error\\":\\"Too many requests from this address by an unidentified program')
+    })
     it('does not retry a 500', async () => {
         const calls = []; const slept = []
         await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([{ status: 500, body: 'boom' }], calls), sleep: async (ms) => { slept.push(ms) } }))

@@ -1076,6 +1076,7 @@ manual probes with curl and Node fetch returned 200. Cause (code reading plus a 
 in parentheses (Node's default `node`) the anonymous read allowance — 30 API reads a minute per address, against 300 for an identified app — shared with every other unnamed program
 from that address. The health read sent no User-Agent of its own. Fix: (d) the health read sends `User-Agent: di/<installed version> (+https://diiii.xyz/for-apps)`, which `classifyUserAgent`
 counts as an app; (a) `hubCommit` retries on 429 and 503 only: Retry-After (seconds or HTTP date) when given, else 2 s, 4 s, 8 s; at most 3 retries, at most 30 s of waiting in all; the per-request
-timeout is unchanged; (b) when it still fails the one error line names status, `server`, `cf-ray`, `retry-after`, the retry count and the first 120 characters of the body. A 500 and every other status fail at once, as before.
+timeout is unchanged; (b) when it still fails the one error line names status, `server`, `x-powered-by`, `cf-ray`, `retry-after`, the retry count and the first 120 characters of the body
+(behind Cloudflare `server: cloudflare` and `cf-ray` come on every answer, serverXR's own included, measured on dev 2026-10-21; `x-powered-by: Express` and serverXR's JSON body mark an answer from serverXR). A 500 and every other status fail at once, as before.
 scripts/di has no shared request helper; the other hub requests in `scripts/di` still send Node's default User-Agent.
-Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (6 cases, injected `fetchImpl` and `sleep`) and "di names itself to the hub…" (2 cases, one runs serverXR's own `classifyUserAgent`); all 8 fail on the old code.
+Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (7 cases, injected `fetchImpl` and `sleep`) and "di names itself to the hub…" (2 cases, one runs serverXR's own `classifyUserAgent`); all 9 fail on the old code.
