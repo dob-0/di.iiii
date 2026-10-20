@@ -1,0 +1,7 @@
+## 2026-10-20 — `di follow` without `--key` keeps the stored edit key instead of writing null
+
+- Defect seen 2026-10-20 22:19 +04: a re-run of `di follow di-laser --from … --into di-laser --take-mine` with no `--key` wrote `"token": null`, the key minted 10-04 was lost, and the host refused every edit. `followSpace` (`scripts/di/follow.mjs`) now reads a missing key as "not said": same remote keeps the stored key and label and prints "kept the stored edit key"; another remote is refused (`remote-differs`, both remotes named, follows.json untouched); `--key` / `--key -` still replaces.
+- `di follow <space> --take-mine` / `--take-host` alone on a followed space now uses that follow's remote, address pin and key (and is not a merge). Without a direction a bare name is still refused.
+- `di stage join` goes through the same function: joining another remote over a keyed follow of the same space now needs `--key`.
+- Tests: `scripts/di/followKeepsKey.test.js` 7 cases, 7/7 fail without the fix, pass with it; `npx vitest run scripts/di/` 526 pass, 4 fail — the same 4 (`oneAddressPrinted`, `openFile`, port-80 address cases) fail on unchanged dev in the cloud container.
+- Not tested: the real CLI against a real install and dev.diiii.xyz; no browser surface changed.

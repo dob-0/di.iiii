@@ -1172,16 +1172,18 @@ const cmdFollow = async (args) => {
     const at = readAtFlag(args)
     if (at === false) { process.exitCode = 1; return }
 
-    if (!spaceId || !from) {
-        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
-        process.exitCode = 1
-        return
-    }
-
     // The answer to a refusal, never a default (audit F4): at most one.
     const takeHost = Boolean(args.flags['take-host'])
     const takeMine = Boolean(args.flags['take-mine'])
     if (takeHost && takeMine) { fail(ui.followBothDirections()); process.exitCode = 1; return }
+
+    // `--take-mine` / `--take-host` alone may name a space already followed:
+    // followSpace takes that follow's remote. Anything else needs --from.
+    if (!spaceId || (!from && !takeHost && !takeMine)) {
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        process.exitCode = 1
+        return
+    }
     // `--from-now` is the default start, accepted so it can be said out loud;
     // `--replay` is the old one — read both logs from the beginning.
     if (args.flags['from-now'] && args.flags.replay) { fail(ui.followBothStarts()); process.exitCode = 1; return }
@@ -1194,10 +1196,13 @@ const cmdFollow = async (args) => {
         insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
-        sayFollowRefusal(result.reason, { spaceId, url: from }, at)
+        if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
+        else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
+        else sayFollowRefusal(result.reason, { spaceId, url: from }, at)
         process.exitCode = 1
         return
     }
+    if (result.keptKey) say(ui.followKeptKey())
     say(ui.following(spaceId, result.base, result.running, at))
 }
 
