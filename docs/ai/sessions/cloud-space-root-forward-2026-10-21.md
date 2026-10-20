@@ -1,0 +1,7 @@
+## 2026-10-20 — an old space's address forwards to its front door after a move
+
+- `di move PROJECT --to SPACE --unpublish` left `/old-space` opening an empty space while the old project links already forwarded. Now the space root forwards too, by the same pointer (`{ movedTo }` from `/api/resolve`) and the same client-side `replace()` the project forward uses.
+- Server: `project_moves.forwards_space_root` (set by `projectMove.js` when the moved project was the front door), a sqlite trigger clears it as soon as the space gets a new front door (it stays cleared if that door is later taken down), new `GET /api/resolve/:spaceSegment` (catalogued). The `/api/resolve` gate middleware now matches the one-segment form too.
+- Visibility: the pointer is only given to a caller who could open the destination project (private/draft/archived → members only) AND its space (public, or member). Otherwise 404, and the space opens as before.
+- Client: `SpaceRootRoute` in `RootApp.jsx`, only for the bare one-segment address; `useResolveSpaceRoot` hook; `resolveSpaceRoot` in `serverSpaces.js`. Wiki "Delete a space, the Trash, and moving a project" updated.
+- Tests: 4 new contract cases, 2 store cases, 3 router cases; 5 of them fail without the change. Not done: no browser check (cloud session, no dev server); moves made before this change do not forward (nothing recorded which move was the front door's). The existing project forward still checks only project visibility, not whether the destination SPACE is readable — left as it was, worth a look.

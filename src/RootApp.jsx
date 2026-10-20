@@ -27,6 +27,7 @@ import { hasServerApi } from './services/apiClient.js'
 import { isSpaceInSessionScope } from './utils/sessionScope.js'
 import { rigToolAccess } from './rigbuild/rigToolAccess.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
+import useResolveSpaceRoot from './hooks/useResolveSpaceRoot.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
@@ -335,6 +336,31 @@ function SlugProjectRoute({ appState }) {
     }
 
     return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: appState.spaceId }} />
+}
+
+// The bare /{space} address. When the space's front door was moved to another
+// space (di move … --unpublish) and nothing has been put on its door since,
+// the server names where that project lives now and the visitor is sent on —
+// the same pointer and the same replace() SlugProjectRoute gives an old
+// project link, so an old space address never opens onto an empty room. The
+// server only names a destination this visitor could open. No forward, or the
+// question failing: the space opens exactly as it did before.
+function SpaceRootRoute({ appState }) {
+    const rrNavigate = useNavigate()
+    const { search, hash } = useLocation()
+    const { result } = useResolveSpaceRoot(appState.spaceId)
+    const movedTo = result?.movedTo || null
+
+    useEffect(() => {
+        if (!movedTo?.spaceId || !movedTo?.projectId) return
+        const keep = `${search || ''}${hash || ''}`
+        rrNavigate(`${buildPublicProjectPath(movedTo.spaceId, movedTo.projectId)}${keep}`, { replace: true })
+    }, [movedTo?.spaceId, movedTo?.projectId, search, hash, rrNavigate])
+
+    if (result === undefined || (movedTo?.spaceId && movedTo?.projectId)) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+    return <SpaceSurfaceRoute appState={appState} />
 }
 
 // The doorway on the /{space}/p/{id} form: ids are already real, so this is a heal
@@ -951,6 +977,10 @@ function AppRouter() {
             return <RouteSurfaceFallback label="Loading" detail="" />
         }
         return <ReservedAddressCard word={bareReserved} />
+    }
+
+    if (pathSegments.length === 1 && appState.page === APP_PAGE_EDITOR && !appState.projectId) {
+        return <SpaceRootRoute appState={appState} />
     }
 
     return <SpaceSurfaceRoute appState={appState} />

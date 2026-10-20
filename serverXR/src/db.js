@@ -724,6 +724,20 @@ function initDb(dbPath) {
   // Per-space trusted list: JSON array of account ids (spaceStore.trustedUserIds).
   ensureColumn(db, 'spaces', 'trusted_user_ids', 'TEXT')
   ensureColumn(db, 'projects', 'slug', 'TEXT')
+  // A move that took a space's front door with it (projectMove.js, --unpublish)
+  // forwards the OLD space's bare address to where that project went, until
+  // the space is given a front door again — the trigger below clears it then,
+  // whoever writes the row (spaceStore upsert, space-bundle, a hand edit).
+  // Moves recorded before this column existed stay 0: nothing then said which
+  // move was the front door's, and a forward guessed from timing could point
+  // a space at the wrong work.
+  ensureColumn(db, 'project_moves', 'forwards_space_root', 'INTEGER NOT NULL DEFAULT 0')
+  db.exec(`CREATE TRIGGER IF NOT EXISTS project_moves_space_root_ends
+    AFTER UPDATE OF published_project_id ON spaces
+    WHEN NEW.published_project_id IS NOT NULL
+    BEGIN
+      UPDATE project_moves SET forwards_space_root = 0 WHERE from_space = NEW.id AND forwards_space_root = 1;
+    END`)
   // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
   // `state` replaces the only archive the platform had: five titles with
   // "[archived]" typed in front of them, which filtered nothing.
