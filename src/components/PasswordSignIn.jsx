@@ -148,11 +148,13 @@ export default function PasswordSignIn({ onSignedIn, resetToken = null, canMail 
                 />
             )}
 
+            {/* Said out loud as well as printed: a refusal that only appears
+                is one a screen reader never hears (WCAG 4.1.3). */}
             {error && (
-                <Typography variant="caption" sx={{ color: 'var(--ui-danger)' }}>{error}</Typography>
+                <Typography variant="caption" role="alert" sx={{ color: 'var(--ui-danger)' }}>{error}</Typography>
             )}
             {said && (
-                <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>{said}</Typography>
+                <Typography variant="caption" role="status" sx={{ color: 'var(--ui-text-muted)' }}>{said}</Typography>
             )}
 
             <Button

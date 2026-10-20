@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const passwordSignInMock = vi.hoisted(() => vi.fn())
@@ -26,5 +26,17 @@ describe('PasswordSignIn', () => {
         expect(getComputedStyle(fieldRoot('Email or username')).outline).toMatch(/^2px solid /)
         // …and only there: the field without focus keeps its plain border.
         expect(getComputedStyle(fieldRoot('Password')).outline).not.toMatch(/solid/)
+    })
+
+    // Audit 2026-10-21 S2 (WCAG 4.1.3): a refused password printed a plain caption;
+    // nothing told a screen reader the form had answered.
+    it('announces a refused sign-in', async () => {
+        passwordSignInMock.mockRejectedValueOnce(new Error('That password is not right.'))
+        render(<PasswordSignIn />)
+        fireEvent.change(screen.getByLabelText('Email or username'), { target: { value: 'ann' } })
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong-one' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+        const said = await screen.findByText('That password is not right.')
+        expect(said.closest('[role="alert"]')).not.toBeNull()
     })
 })
