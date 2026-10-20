@@ -1030,3 +1030,30 @@ Also: a lamp OUTSIDE the hall is a leak row (`outside_hall`, counted, exit 1, ne
 - `--restore --yes` reads the project's current version first. If it is newer than the checkpoint's, it refuses and prints both versions and entity counts (what would be lost); `--force-overwrite` is the only way through. RESTORE.md says both.
 - Before: 6 tests; the real run (PR #1037) had sent the owner's token to a scratch server and could overwrite newer work. After: 8 tests.
 | 2026-10-20 | **Loading strip ('Loading the place · 0 of 2') covered the Low and Move buttons on a 320 px phone** | `.model-loading` was centred, nowrap, with no max-width and no narrow rule, so it spanned the screen over the right-hand view-button column | Narrow rule (max 480px): left-anchored, `max-width: calc(100vw - 144px)`, dots hidden, track on the bottom edge. Guard: `modelLoading.test.js` | `src/studio/styles/model-loading.css` |
+
+## The hall floor was an infinite plane, a beam through a gate ended on "floor" 250 m outside; reach 0 m was written as the type's throw (2026-10-20)
+
+Symptom (the three LOW findings of the Opus review of PR #1046): (1) `FLOOR_Y` in `physics_check.first_surface_through` and `hall-reach.mjs` was the plane
+y = 0 without edges, so a ray leaving through the entry or far gate and falling met "floor" 160-250 m outside the hall (laser rays: 240-297 m); (2) epic-build's
+`reachOf` kept a first hit only when `> 0`, so a lamp inside a slab or on the floor aiming down (first hit 0 m) got `throw_m` or the type's 24-40 m as `beam.length`, a beam
+drawn through the slab or floor (and `beam.length` 0 cannot be written: the schema drops it and the room then draws its 60 m default); (3) the hall-reach parity test said
+"600 rays" but ran 240 distinct rays from 40 of 280 origins and compared the distance only, so a tie between two slabs at one distance (a ray into a wall corner: node picked
+the east wall, python the entry wall) was invisible. Fix: (1) the floor is the hall's footprint (the shell's x, z extent); a ray with no first hit ends in `open sky (through <opening>)`,
+the opening named from the shell (`end-wall-entry opening`, `the roof`), plain `none (open sky)` when it started outside the hall; python and node give the same name
+(`hallFirstSurface`); (2) `reachOf` returns 0 for a first hit of 0 m, `v1Entities` writes `beam: { visible: false, haze }` with no length for that lamp and epic-build says
+`0 m: <id> inside_slab|on_floor (<surface>): its beam is not drawn; move the lamp` (physics_check's words; it never moves the lamp, never writes a length); (3) the test is 600 distinct
+rays from all 280 origins and compares distance and surface name; a tie goes to the name that sorts first, in both. Measured read-only, before -> after: reference rig v526 (79 beams) and v2.11 v928 (97)
+through `physics_check.py`: leaks 4 -> 4 and 6 -> 6, rows identical, 0 lamps changed; the 44 lamps of the hall reference 10-17: 0 changed; epic-build reach of the epic and v2.11 energy rigs (96 / 60 lamps): 0 changed, 0 lamps at 0 m;
+`laser_frames.py` on the v2.11 energy rig + the 50 scenes (99 888 rays): 384 rays move (372 `floor` and 12 `column line` -> `open sky`, all through the entry gate, all fail before and after; the stored frames are identical).
+Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `hall-reach.test.js` (gate, 0 m, parity). Session note: `docs/ai/sessions/fix-hall-shell-lows-2026-10-20.md`.
+
+## A beam out of a gate and down was drawn underground; a lamp with a hidden 0 m beam was skipped by physics_check (2026-10-20, review of #1050)
+
+Symptom (two MEDIUM findings of the review of PR #1050): (1) with the floor bounded to the footprint, a ray that left through a gate and fell met nothing, was `open sky`, and epic-build
+drew it to the type's throw: on the v13 hall a lamp at (0, 4, 50) tilted -60 deg (axis (0, -0.5, 0.866), out of the entry gate) had a reach of 40 m (up-b380f) and 24 m (up-pl5403) and ended 16 m and 8 m
+below grade, and `physics_check` read `L = inf` as no leak (on dev: 8 m, a fixable leak); (2) epic-build writes a lamp inside a slab or on the floor aiming down as `beam { visible: false }` with no length, and
+`physics_check` skipped every `visible: false` beam, so `inside_slab` / `on_floor` was said once in a build log and every later check printed `leaks: 0`, exit 0 (on dev: a row, exit 1).
+Fix: (1) beyond the footprint y = 0 is the ground the hall stands on: `ground outside (through <opening>)` stops the ray (python and node, same name; `laser_frames.rule_label` reads it as the
+rule `floor`, as before #1050); open sky is a ray that does not go down; the lamp above has reach 8 m and the beam is a fixable leak again; (2) for a beam not drawn (hidden or 0 m) `physics_check` still casts the lamp,
+and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
+Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
