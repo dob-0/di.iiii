@@ -29,6 +29,7 @@ Measured in Chromium by `scripts/audit/site-wiki-admin.cjs` (axe-core WCAG 2.2 A
 |---|---|---|---|
 | Tab into the sign-in form and nothing on screen changes: the focused field looks exactly like the other one | MUI `InputBase` paints no focus state, and the field's `sx` gave it none (border 0.3-alpha cyan both ways, outline none, no shadow, read from `getComputedStyle`) | `&.Mui-focused` gets the accent border and a 2 px accent outline | `src/components/PasswordSignIn.test.jsx` |
 | A refused sign-in (wrong password, taken name) was printed under the form and never announced: a screen reader heard nothing after Sign in | The message was a plain `Typography` caption, no live region | The refusal is `role="alert"`, the "a message is on its way" answer `role="status"` | `src/components/PasswordSignIn.test.jsx` |
+| On a phone, tapping a sign-in field zoomed the whole page in (iOS Safari) | The fields were 14 px; Safari zooms into any focused field under 16 px | Fields are 16 px, the rule `src/pages/deviceLogin.css` already keeps for the device code. Not seen on a real iPhone (Chromium cannot show it) | `src/components/PasswordSignIn.test.jsx` |
 
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 

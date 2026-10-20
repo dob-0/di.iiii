@@ -56,7 +56,8 @@ const field = {
     width: '100%',
     px: 1.5,
     py: 1,
-    fontSize: 14,
+    // 16 px or more, or iOS Safari zooms the page into the field on focus.
+    fontSize: 16,
     borderRadius: 1,
     border: '1px solid var(--ui-border)',
     color: 'var(--ui-text-primary)',

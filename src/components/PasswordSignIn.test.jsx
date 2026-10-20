@@ -39,4 +39,14 @@ describe('PasswordSignIn', () => {
         const said = await screen.findByText('That password is not right.')
         expect(said.closest('[role="alert"]')).not.toBeNull()
     })
+
+    // Audit 2026-10-21 S3: the fields were 14 px, and iOS Safari zooms the page
+    // into any field under 16 px the moment it takes focus (the same rule
+    // src/pages/deviceLogin.css keeps for the device code).
+    it('keeps the fields at 16 px so a phone does not zoom in on focus', () => {
+        render(<PasswordSignIn />)
+        for (const name of ['Email or username', 'Password']) {
+            expect(parseFloat(getComputedStyle(fieldRoot(name)).fontSize)).toBeGreaterThanOrEqual(16)
+        }
+    })
 })
