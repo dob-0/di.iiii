@@ -32,3 +32,23 @@ describe('transformDelta', () => {
         expect(movedTransforms(entities, updates).map((entry) => entry.id)).toEqual(['b'])
     })
 })
+
+describe('transformChange (the commit choke point)', () => {
+    it('is null when nothing moved, even re-spelled', async () => {
+        const { transformChange } = await import('./transformDelta.js')
+        expect(transformChange(stored, respelled)).toBeNull()
+        expect(transformChange(stored, stored)).toBeNull()
+    })
+    it('carries only the fields that moved; the rest keep their stored numbers', async () => {
+        const { transformChange } = await import('./transformDelta.js')
+        expect(transformChange(stored, { ...respelled, position: [4, 5.4, -2.15] })).toEqual({ position: [4, 5.4, -2.15] })
+        expect(transformChange(stored, { ...respelled, scale: [2, 2, 2] })).toEqual({ scale: [2, 2, 2] })
+        expect(transformChange(stored, { ...respelled, rotation: [0, 0, 0] })).toEqual({ rotation: [0, 0, 0] })
+    })
+    it('holds at the 1e-4 edge, and the measured π re-spelling (7.4e-6 rad) writes nothing', async () => {
+        const { transformChange } = await import('./transformDelta.js')
+        expect(transformChange(stored, { position: [3.2 + 5e-5, 5.4, -2.15] })).toBeNull()
+        expect(transformChange(stored, { position: [3.2 + 2e-4, 5.4, -2.15] })).not.toBeNull()
+        expect(transformChange({ ...stored, rotation: [Math.PI, 0, -0.5236] }, { rotation: [3.1415853, 0, -0.5236] })).toBeNull()
+    })
+})

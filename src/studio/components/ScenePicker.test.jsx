@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -20,7 +20,9 @@ const document = {
     ] } } }],
 }
 
-afterEach(() => cleanup())
+// the picker is open at first visit (a fold is remembered per viewer)
+beforeEach(() => window.localStorage.clear())
+afterEach(() => { cleanup(); window.localStorage.clear() })
 
 describe('scenesOf: the cue list with each look\'s one-line intent', () => {
     it('keeps the cue order, strips the rig- prefix, carries title and intent; a cue without a look still lists', () => {
@@ -147,5 +149,42 @@ describe('studio.css .scene-picker: where it sits and how big its targets are', 
         const section = studioCss.slice(studioCss.indexOf('/* ─── Scenes picker'))
         expect(section).not.toMatch(/border-radius/)
         expect(Number(/--di-radius:\s*(\d+)px/.exec(baseCss)?.[1])).toBeLessThanOrEqual(2)
+    })
+})
+
+describe('ScenePicker: the Laser test button (a work tool, nothing written)', () => {
+    const lasers = { ...document, entities: [...document.entities, { id: 'rig-laser-41a', components: { beam: { laser: { mW: [1, 1, 1] } } } }] }
+    it('shows only when the project has laser lines and a handler, and toggles', () => {
+        const onLaserTest = vi.fn()
+        const { rerender } = render(<ScenePicker document={document} current={undefined} onPick={vi.fn()} laserTest={false} onLaserTest={onLaserTest} />)
+        expect(screen.queryByRole('button', { name: 'Laser test' })).toBeNull()
+        rerender(<ScenePicker document={lasers} current={undefined} onPick={vi.fn()} laserTest={false} onLaserTest={onLaserTest} />)
+        const button = screen.getByRole('button', { name: 'Laser test' })
+        expect(button.getAttribute('aria-pressed')).toBe('false')
+        fireEvent.click(button)
+        expect(onLaserTest).toHaveBeenCalledWith(true)
+        rerender(<ScenePicker document={lasers} current={undefined} onPick={vi.fn()} laserTest onLaserTest={onLaserTest} />)
+        expect(screen.getByRole('button', { name: 'Laser test' }).getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(screen.getByRole('button', { name: 'Laser test' }))
+        expect(onLaserTest).toHaveBeenLastCalledWith(false)
+    })
+    it('a project with lasers but no show still gets the window, for the button', () => {
+        render(<ScenePicker document={{ entities: lasers.entities }} current={undefined} onPick={vi.fn()} laserTest={false} onLaserTest={vi.fn()} />)
+        expect(screen.getByRole('button', { name: 'Laser test' })).toBeInTheDocument()
+    })
+})
+
+describe('ScenePicker: open at first visit in the Studio, a fold is remembered for this viewer', () => {
+    it('starts open, a click folds it, and the next visit finds it folded; opening again forgets the fold', () => {
+        const first = render(<ScenePicker document={document} current={undefined} onPick={vi.fn()} />)
+        expect(screen.getByText('the tent')).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'fold' }))
+        expect(screen.queryByText('the tent')).toBeNull()
+        first.unmount()
+        const second = render(<ScenePicker document={document} current={undefined} onPick={vi.fn()} />)
+        expect(screen.queryByText('the tent')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'open' }))
+        expect(window.localStorage.getItem('di.panel.studio-scenes')).toBeNull()
+        second.unmount()
     })
 })

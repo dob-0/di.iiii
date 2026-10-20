@@ -31,6 +31,16 @@ describe('Studio keyboard contract', () => {
         }
     })
 
+    // 2026-10-13: Alt+G/R/S clear the transform (Blender). StudioShell's G/R/S branch registers first and
+    // starts a grab, so without an Alt guard Alt+G would start a move AND clear the location.
+    it('Alt+G/R/S clear the transform and never start a grab', () => {
+        const shell = read('components/StudioShell.jsx')
+        expect(shell).toMatch(/if \(!e\.shiftKey && !e\.ctrlKey && !e\.metaKey && !e\.altKey\) \{\s*const modeForKey/)
+        const editor = read('components/StudioEditor.jsx')
+        expect(editor).toMatch(/clearFromKey\(event\)/)
+        expect(read('utils/studioGuide.js')).toMatch(/\['Alt\+G \/ Alt\+R \/ Alt\+S'/)
+    })
+
     it('the help dialog still promises select-all and deselect-all', () => {
         const guide = read('utils/studioGuide.js')
         expect(guide).toMatch(/Select all/i)
@@ -87,5 +97,19 @@ describe('Studio keyboard contract', () => {
         const viewport = read('components/StudioViewport.jsx')
         expect(viewport).toMatch(/\{viewBar && controlsRef && \(/)
         expect(viewport).not.toMatch(/setEditMode && controlsRef/)
+    })
+
+    // 2026-10-13 (found by reading, while adding Walk / Fly): the walk listens on document in the capture phase but let keys go on
+    // to StudioShell's window listener, so E (fly up) and Tab also toggled Navigate/Edit and H hid the panels mid-walk. The walk is
+    // modal (Blender): every key stops at it. And the help names the buttons and Tab, and Shift+` still starts Fly.
+    it('the walk keeps its keys, the help names Walk / Fly and Tab, and Shift+` starts Fly', () => {
+        const walk = read('navigation/useWalkNavigation.js')
+        expect(walk).toMatch(/if \(!walk\) return\s*\n(\s*\/\/.*\n)*\s*e\.stop(Immediate)?Propagation\(\)/) // immediate: also the window's other capture listeners (the standard move, 2026-10-13)
+        expect(walk).toMatch(/if \(isWalkToggle\(e\)\) \{ e\.preventDefault\(\); if \(walk\) end\(\); else begin\('fly'\)/)
+        const guide = read('utils/studioGuide.js')
+        expect(guide).toMatch(/\['Walk \/ Fly buttons'/)
+        expect(guide).toMatch(/\['Tab \(walking\)', 'Switch Walk ↔ Fly/)
+        const shell = read('components/StudioShell.jsx')
+        expect(shell).toMatch(/onWalk=\{requestWalk\}/)
     })
 })

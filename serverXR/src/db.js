@@ -2,6 +2,12 @@ const { DatabaseSync } = require('node:sqlite')
 
 let _db = null
 
+// What the start-up passes did on the last initDb, for the server to say in its
+// own log (index.js). This file takes no sibling module on purpose: the image
+// layout test (scripts/space-bundle.test.js) runs it alone, as the CLI tools do.
+let _startupReport = { archivedTitlesMoved: 0 }
+const getStartupReport = () => ({ ..._startupReport })
+
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS spaces (
     id TEXT PRIMARY KEY,
@@ -152,6 +158,25 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_sync_keys_space ON space_sync_keys(space_id);
 
+  -- What a sync key did to projects (SPEC_space_sync_keys.md §13.6): every
+  -- manage action it attempted, done or refused, and every restore. The host's
+  -- per-key limits are counted from here, so a restart does not reset them.
+  -- No foreign key: the log outlives a revoked key, and is kept for the owner.
+  CREATE TABLE IF NOT EXISTS sync_key_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key_id TEXT NOT NULL,
+    key_label TEXT NOT NULL DEFAULT '',
+    space_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    project_id TEXT,
+    to_space_id TEXT,
+    outcome TEXT NOT NULL,
+    reason TEXT,
+    at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_sync_key_actions_key ON sync_key_actions(key_id, action, at);
+  CREATE INDEX IF NOT EXISTS idx_sync_key_actions_space ON sync_key_actions(space_id, at);
+
   CREATE TABLE IF NOT EXISTS space_invites (
     id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
@@ -165,6 +190,23 @@ const SCHEMA = `
     use_count INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_space_invites_space ON space_invites(space_id);
+
+  -- Join codes (serverXR/src/joinCodeStore.js): four words that stand in, for ten
+  -- minutes and once, for a per-space sync key. Only a hash of the words is kept —
+  -- never the words, and never a key: the key is minted at the moment of redeeming.
+  CREATE TABLE IF NOT EXISTS space_join_codes (
+    id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    owner_user_id TEXT,
+    code_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER,
+    revoked INTEGER NOT NULL DEFAULT 0,
+    key_id TEXT
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_join_codes_hash ON space_join_codes(code_hash);
+  CREATE INDEX IF NOT EXISTS idx_join_codes_space ON space_join_codes(space_id);
 
   CREATE TABLE IF NOT EXISTS space_links (
     space_id TEXT PRIMARY KEY REFERENCES spaces(id) ON DELETE CASCADE,
@@ -571,17 +613,30 @@ function ensureColumn(db, table, column, definition) {
 // The only archive the platform had was five project titles with "[archived] "
 // typed in front of them — plain text that filtered nothing, sorted nothing and
 // hid nothing. Now that `state` exists, those titles say what they meant: the
-// state becomes 'archived' and the prefix comes off the name. Runs once.
+// state becomes 'archived' and the prefix comes off the name.
+//
+// It ran once, in September. A project followed or synced in from an older
+// tier can arrive wearing the prefix long after, so since 2026-10-13 it runs on
+// EVERY start: idempotent (a moved row no longer matches) and cheap (one scan
+// of the projects table). It returns how many rows it moved; initDb keeps the
+// count in getStartupReport() and the server says so in its log when it is not
+// zero. It reads the prefix the way the readers do
+// (projectRoutes.js isLegacyArchivedTitle: leading space, any case) and leaves
+// updated_at alone — tidying a name is not a change to the work.
+const ARCHIVED_PREFIX = /^\s*\[archived\]\s*/i
 function backfillArchivedTitles(db) {
-  const KEY = 'v3_archived_title_to_state'
-  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
-  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '[archived]%'").all()
+  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '%[archived]%'").all()
+    .filter((row) => ARCHIVED_PREFIX.test(String(row.title)))
+  if (!rows.length) return 0
   const update = db.prepare('UPDATE projects SET title = ?, state = ? WHERE id = ?')
-  for (const row of rows) {
-    const cleaned = String(row.title).replace(/^\s*\[archived\]\s*/i, '').trim() || row.title
-    update.run(cleaned, 'archived', row.id)
-  }
-  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+  db.transaction(() => {
+    for (const row of rows) {
+      // A name that was only the prefix keeps the id as its name: leaving the
+      // prefix on would match again on the next start.
+      update.run(String(row.title).replace(ARCHIVED_PREFIX, '').trim() || row.id, 'archived', row.id)
+    }
+  })()
+  return rows.length
 }
 
 // Replace the legacy "spaces = JSON 'null' means unrestricted" convention with
@@ -658,6 +713,8 @@ function initDb(dbPath) {
 
   db.exec(SCHEMA)
   ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
+  // A sync key's scope: 'edit' (every key before 2026-10-07) or 'manage' (SPEC_space_sync_keys.md §13).
+  ensureColumn(db, 'space_sync_keys', 'scope', "TEXT NOT NULL DEFAULT 'edit'")
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')
@@ -685,6 +742,10 @@ function initDb(dbPath) {
   // in the product. Deleted work now waits out TRASH_TTL_MS before anything
   // touches the bytes.
   ensureColumn(db, 'projects', 'deleted_at', 'INTEGER')
+  // When the project's visibility last changed (SPEC_space_sync_keys.md §13.7).
+  ensureColumn(db, 'projects', 'visibility_at', 'INTEGER')
+  // The second key of a move made with two manage keys (§13.6), so that key's undo sees it too.
+  ensureColumn(db, 'sync_key_actions', 'also_key_id', 'TEXT')
   ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
   // Archive: the space is kept whole and only leaves the default list. Nullable,
   // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
@@ -735,7 +796,7 @@ function initDb(dbPath) {
   db.exec('CREATE INDEX IF NOT EXISTS idx_space_ops_created ON space_ops(space_id, created_at)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_project_ops_created ON project_ops(project_id, created_at)')
   backfillUserUnrestricted(db)
-  backfillArchivedTitles(db)
+  _startupReport = { archivedTitlesMoved: backfillArchivedTitles(db) }
   backfillGlobalSpace(db)
   dedupeAndUniqueOps(db)
   // Nullable, independently-renameable public handle distinct from the
@@ -763,4 +824,4 @@ function closeDb() {
   }
 }
 
-module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, runArchiveBackfill: backfillArchivedTitles }
+module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, getStartupReport, runArchiveBackfill: backfillArchivedTitles }

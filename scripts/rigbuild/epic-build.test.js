@@ -6,7 +6,8 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { RIG_FILE, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps } from './epic-build.mjs'
+import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
+import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -215,5 +216,61 @@ describe('epic-build: the laser colour rule reaches the looks (MOXIR v2.9, ledge
         const own = Object.entries(now.get('peak').colours).filter(([k]) => isLaser(k)).map(([, c]) => c)
         expect(own.filter((c) => c === '#e8e4dc').length).toBe(26)
         expect(own.filter((c) => c === '#ff3a12').length).toBe(12)
+    })
+})
+
+describe('epic-build: solid steel stops a beam (2026-10-14)', () => {
+    const solids = [
+        { id: 'rig-far-crane-z-12-girder-a', kind: 'box' }, { id: 'rig-crane-bar', kind: 'box' }, { id: 'rig-hoist-1-steel', kind: 'box' },
+        { id: 'rig-tower-cube6', kind: 'tower' }, { id: 'rig-line-1', kind: 'truss-3m' }, { id: 'x', kind: 'box', steel: true },
+        { id: 'rig-pa-l', kind: 'box' }, { id: 'rig-deck-1', kind: 'deck-2x1' }, { id: 'rig-crowd-barrier', kind: 'box' }, { id: 'rig-hoist-1-chain', kind: 'box' }
+    ]
+    it('what counts as steel: by kind, flag or structural word; a speaker, deck, barrier and chain are not', () => {
+        expect(solids.filter(isSteelSolid).map((s) => s.id)).toEqual(['rig-far-crane-z-12-girder-a', 'rig-crane-bar', 'rig-hoist-1-steel', 'rig-tower-cube6', 'rig-line-1', 'x'])
+    })
+    it('a new build flags its steel boxes and only those', () => {
+        const rig = { fixtures: [], solids: solids.map((s) => ({ ...s, p: [0, 0, 0], s: [1, 1, 1], name: s.id })) }
+        const out = v1Entities(rig)
+        const flagged = out.filter(isSteelEntity).map((e) => e.id)
+        expect(flagged).toEqual(['rig-far-crane-z-12-girder-a', 'rig-crane-bar', 'rig-hoist-1-steel', 'rig-tower-cube6', 'rig-line-1', 'x'])
+    })
+    it('--tag-steel-only: updateComponent on existing, unflagged steel only; nothing created or deleted', () => {
+        const rig = { solids }
+        const doc = { entities: [
+            { id: 'rig-crane-bar', components: {} }, { id: 'rig-far-crane-z-12-girder-a', components: { occluder: { kind: 'steel' } } },
+            { id: 'rig-pa-l', components: {} }, { id: 'rig-line-1', components: { piece: { kind: 'truss-3m' } } }
+        ] }
+        const { ops, already, absent } = steelTagOps(doc, rig)
+        expect(ops).toEqual([{ type: 'updateComponent', payload: { entityId: 'rig-crane-bar', component: 'occluder', patch: { kind: 'steel' } } }])
+        expect(already.sort()).toEqual(['rig-far-crane-z-12-girder-a', 'rig-line-1'])
+        expect(absent).toEqual(['rig-hoist-1-steel', 'rig-tower-cube6', 'x'])
+    })
+    it('the real rig file: every flagged solid is structural', () => {
+        const rig = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../..', RIG_FILE), 'utf8'))
+        const ids = (rig.solids || []).filter(isSteelSolid).map((s) => s.id)
+        expect(ids.every((id) => !/-pa-|barrier|foh|deck|shell|out-|ash-wall|dj-table/.test(id))).toBe(true)
+    })
+})
+
+describe('the rig file\'s planned addresses (2026-10-15, laser-40w N852)', () => {
+    const rig = { fixtures: [
+        { id: 'l1', type: 'up-la40wf', p: [0, 6, 50], dmx: { universe: 1, address: 401, footprint: 32, mode: '32ch' }, laser: { colour: 'ash white', beams: [{ id: '41', r: [1.62, 0, 0], length_m: 60 }] } },
+        { id: 'cube', type: 'ext-lc-ultra-mk2', p: [0, 8, -40], laser: { beams: [{ id: '1a', r: [1.6, 0, 0], length_m: 60 }] } },
+        { id: 'smoke', type: 'up-yz31p', p: [0, 0, -30], dmx: { universe: 1, address: 501, footprint: 1, mode: '1ch' } }
+    ] }
+    it('a laser or smoke unit with a dmx block is on DMX at its address; a LaserCube stays off DMX', () => {
+        expect(dmxOf(rig.fixtures[0])).toEqual({ universe: 1, address: 401, mode: '32ch' })
+        expect(dmxOf(rig.fixtures[1])).toEqual({ dmx: false })
+        expect(dmxOf(rig.fixtures[2])).toEqual({ universe: 1, address: 501, mode: '1ch' })
+    })
+    it('--patch-only: fixture ops only where the document differs, putting off-DMX units on DMX', () => {
+        const doc = { entities: [
+            { id: 'rig-laser-41', components: { fixture: { type: 'up-la40wf', dmx: false } } },
+            { id: 'rig-laser-1a', components: { fixture: { type: 'ext-lc-ultra-mk2', dmx: false } } },
+            { id: 'smoke', components: { fixture: { type: 'up-yz31p', universe: 1, address: 501, mode: '1ch' } } }
+        ] }
+        const { ops, absent } = patchOps(doc, rig)
+        expect(absent).toEqual([])
+        expect(ops).toEqual([{ type: 'updateComponent', payload: { entityId: 'rig-laser-41', component: 'fixture', patch: { universe: 1, address: 401, mode: '32ch', dmx: null } } }])
     })
 })

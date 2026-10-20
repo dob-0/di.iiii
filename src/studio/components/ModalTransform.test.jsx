@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { Euler, Vector3 } from 'three'
 import ModalTransform from './ModalTransform.jsx'
 
 vi.mock('@react-three/drei', () => ({ Line: () => null }))
@@ -153,6 +154,22 @@ describe('the drag follows the cursor at once (Blender; owner 2026-10-13: "stuck
         p = onPreview.mock.calls.at(-1)[0].e1.position
         expect(p[0] % 0.5).toBeCloseTo(0, 6)
     })
+    it('X after a free move puts the WHOLE move on X (Blender): the Y part goes back; X again frees it', () => {
+        const { onPreview } = setup()
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 240 })
+        let p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[1]).toBeCloseTo(60 * PER_PX, 3)
+        fireEvent.keyDown(window, { key: 'x' })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(100 * PER_PX, 3); expect(p[1]).toBe(0)
+        fireEvent.pointerMove(window, { clientX: 520, clientY: 200 })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(120 * PER_PX, 3); expect(p[1]).toBe(0)
+        fireEvent.keyDown(window, { key: 'x' })
+        p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(120 * PER_PX, 3); expect(p[1]).toBeCloseTo(100 * PER_PX, 3)
+    })
     it('R turns by the angle the pointer makes around the pivot; S scales by the distance ratio', () => {
         const rotate = setup({ op: { mode: 'rotate', seq: 2 } })
         fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })
@@ -165,5 +182,74 @@ describe('the drag follows the cursor at once (Blender; owner 2026-10-13: "stuck
         fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })
         const sc = scale.onPreview.mock.calls.at(-1)[0].e1.scale
         expect(sc[0]).toBeCloseTo(2, 6); expect(sc[1]).toBeCloseTo(2, 6); expect(sc[2]).toBeCloseTo(2, 6)
+    })
+})
+
+// Owner 2026-10-13: "no way to move an object in the world frame" — arranging lamps on a floor wants
+// the floor plane: Blender's Shift+Y keeps X and Z and leaves Y out (Axis Locking).
+describe('Shift+X / Shift+Y / Shift+Z keep a plane (Blender: Axis Locking)', () => {
+    it('G Shift+Y slides on the floor: a move up the screen does not lift the object', () => {
+        const { onPreview } = setup()
+        fireEvent.keyDown(window, { key: 'Y', shiftKey: true })
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 240 })
+        const p = onPreview.mock.calls.at(-1)[0].e1.position
+        expect(p[0]).toBeCloseTo(100 * PER_PX, 3)
+        expect(Math.abs(p[1])).toBeLessThan(1e-9)
+    })
+
+    it('S Shift+Z scales X and Y and leaves Z alone', () => {
+        const { onPreview } = setup({ op: { mode: 'scale', seq: 1 } })
+        fireEvent.keyDown(window, { key: 'Z', shiftKey: true })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 600, clientY: 300 })
+        const s = onPreview.mock.calls.at(-1)[0].e1.scale
+        expect(s[0]).toBeCloseTo(2, 3)
+        expect(s[1]).toBeCloseTo(2, 3)
+        expect(s[2]).toBe(1)
+    })
+})
+
+// A typed angle used to be added to one Euler component — a world turn only for X. On a tilted lamp
+// R Z 90 typed went elsewhere than R Z by mouse. Blender: a typed value is the same turn about the axis.
+describe('typed R and S (Blender numeric input)', () => {
+    const typed = (keys) => { for (const ch of keys) fireEvent.keyDown(window, { key: ch }) }
+    const localX = (rot) => new Vector3(1, 0, 0).applyEuler(new Euler(rot[0], rot[1], rot[2], 'XYZ'))
+
+    it('R Z 90 on a lamp tilted 90° about X turns it about the WORLD Z: its local X ends on world +Y', () => {
+        const tilted = { id: 'e1', components: { transform: { position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: [1, 1, 1] } } }
+        const { onPreview } = setup({ op: { mode: 'rotate', seq: 1 }, selectedEntities: [tilted] })
+        typed('z90')
+        const x = localX(onPreview.mock.calls.at(-1)[0].e1.rotation)
+        expect(x.x).toBeCloseTo(0, 6)
+        expect(x.y).toBeCloseTo(1, 6)
+        expect(x.z).toBeCloseTo(0, 6)
+    })
+
+    it('R 90 with no axis turns around the view axis (here world +Z, toward the viewer)', () => {
+        const { onPreview } = setup({ op: { mode: 'rotate', seq: 1 } })
+        typed('90')
+        expect(onPreview).toHaveBeenCalled()
+        expect(onPreview.mock.calls.at(-1)[0].e1.rotation[2]).toBeCloseTo(Math.PI / 2, 6)
+    })
+
+    it('S 2 with no axis doubles every axis; G with no axis still ignores digits', () => {
+        const scaled = setup({ op: { mode: 'scale', seq: 1 } })
+        typed('2')
+        expect(scaled.onPreview.mock.calls.at(-1)[0].e1.scale).toEqual([2, 2, 2])
+        scaled.unmount()
+        const grab = setup()
+        typed('2')
+        expect(grab.onPreview).not.toHaveBeenCalled()
+    })
+})
+
+describe('Ctrl+Shift snaps to a tenth of the increment (Blender: precision snap)', () => {
+    it('G X, 100 px with Ctrl+Shift: the fine move (0.155 m) lands on the 5 cm grid, not the 0.5 m one', () => {
+        const { onPreview } = setup()
+        fireEvent.keyDown(window, { key: 'x' })
+        fireEvent.pointerMove(window, { clientX: 400, clientY: 300 })
+        fireEvent.pointerMove(window, { clientX: 500, clientY: 300, ctrlKey: true, shiftKey: true })
+        expect(onPreview.mock.calls.at(-1)[0].e1.position[0]).toBeCloseTo(0.15, 9)
     })
 })

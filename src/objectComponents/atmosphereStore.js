@@ -163,3 +163,33 @@ export function useAtmosphere(gl) {
         () => getAtmosphere(gl)
     )
 }
+
+// THE SCHEMATIC LOOK (render Tech, src/shared/renderPlan.js; decision 2026-10-15-studio-tech-show-render.md): every beam a plain
+// flat cone in its own colour, every laser a plain line to its first surface — no air, no additive glow. RenderSettingsEffect
+// writes it from `renderSettings.look === 'schematic'` (a render-time copy; the document never holds it); every beam reads it.
+const schematicStores = new WeakMap()
+const schematicOf = (gl) => {
+    if (!gl) return null
+    let store = schematicStores.get(gl)
+    if (!store) { store = { value: false, listeners: new Set() }; schematicStores.set(gl, store) }
+    return store
+}
+export const setSchematic = (gl, on) => {
+    const store = schematicOf(gl)
+    if (!store || store.value === Boolean(on)) return
+    store.value = Boolean(on)
+    for (const listener of store.listeners) listener()
+}
+export const isSchematic = (gl) => schematicOf(gl)?.value === true
+export function useSchematic(gl) {
+    return useSyncExternalStore(
+        (listener) => {
+            const store = schematicOf(gl)
+            if (!store) return () => {}
+            store.listeners.add(listener)
+            return () => store.listeners.delete(listener)
+        },
+        () => isSchematic(gl),
+        () => isSchematic(gl)
+    )
+}

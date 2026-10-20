@@ -25,12 +25,14 @@ import {
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
+import InviteAMachine from '../../sync/InviteAMachine.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { SpaceDeleteDialog, SpaceTrashPanel } from './SpaceTrash.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
 import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
+import { describeSpaceHolds } from '../utils/spaceHolds.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
@@ -44,6 +46,7 @@ import {
 import { lightingDeskPath, probeLightingDesk } from '../../map/lightingLink.js'
 import { PREVIEW_POSTER_MESSAGE, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Every space card embeds the SAME app at a different route, and browsers
 // coalesce overlapping requests for the same module: twelve cards booting
@@ -371,6 +374,8 @@ export default function SpaceHub() {
     // The invite links a space has out: the only way to stop one before its
     // week is up (2026-09-28 — the server could revoke, nothing here asked it to).
     const [invites, setInvites] = useState(null)
+    // "Invite a machine": the four-word code for another di.iiii to follow this space (src/sync).
+    const [machineInvite, setMachineInvite] = useState(null)
     // History: the space's restore points, opened from Manage.
     const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
@@ -925,6 +930,13 @@ export default function SpaceHub() {
                         Invite links
                     </button>
                     <button
+                        className={`ssh-card-btn${machineInvite === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => { e.stopPropagation(); setMachineInvite(id => (id === space.id ? null : space.id)) }}
+                        title="Four words that let another di.iiii follow this space, live — valid 10 minutes"
+                    >
+                        Invite a machine
+                    </button>
+                    <button
                         className={`ssh-card-btn${domainsSpaceId === space.id ? ' ssh-card-btn--active' : ''}`}
                         onClick={e => { e.stopPropagation(); setDomainsSpaceId(id => (id === space.id ? null : space.id)) }}
                         title="Show this space on a domain of your own"
@@ -1027,7 +1039,7 @@ export default function SpaceHub() {
 
             {invites?.spaceId === space.id && (
                 <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    {invites.loading && <p className="ssh-linker-status">Loading invite links…</p>}
+                    {invites.loading && <LoadingScreen variant="inline" label="Loading invite links" text="loading invite links" />}
                     {invites.error && <p className="ssh-linker-status ssh-linker-error">{invites.error}</p>}
                     {invites.notice && <p className="ssh-linker-status">{invites.notice}</p>}
                     {!invites.loading && !invites.error && invites.items.length === 0 && (
@@ -1070,7 +1082,7 @@ export default function SpaceHub() {
 
             {history?.spaceId === space.id && (
                 <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    {history.loading && <p className="ssh-linker-status">Loading history…</p>}
+                    {history.loading && <LoadingScreen variant="inline" label="Loading history" text="loading history" />}
                     {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
                     {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
                     {!history.loading && history.changes?.length > 0 && (
@@ -1128,6 +1140,19 @@ export default function SpaceHub() {
                 </div>
             )}
 
+            {machineInvite === space.id && (
+                <div
+                    className="ssh-project-linker"
+                    role="presentation"
+                    // The panel opens under eight rows of buttons, below the fold on a normal screen: bring it into view.
+                    ref={el => { if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' }) }}
+                    onClick={e => e.stopPropagation()}
+                    onKeyDown={e => e.stopPropagation()}
+                >
+                    <InviteAMachine space={space.id} onBack={() => setMachineInvite(null)} />
+                </div>
+            )}
+
             {github?.spaceId === space.id && (
                 <div className="ssh-github-panel" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                     {github.loading
@@ -1138,7 +1163,7 @@ export default function SpaceHub() {
 
             {isLinking && (
                 <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
+                    {linker.loading && <LoadingScreen variant="inline" label="Loading projects" text="loading projects" />}
                     {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                     {!linker.loading && !linker.error && linker.projects.length === 0 && (
                         <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
@@ -1370,7 +1395,8 @@ export default function SpaceHub() {
                     </p>
                 )}
 
-                {status && (
+                {status === 'loading...' && <LoadingScreen variant="inline" label="Loading" text="loading" />}
+                {status && status !== 'loading...' && (
                     <p className={`ssh-status${status.includes('error') ? ' ssh-status-error' : ''}`}>
                         {status}
                     </p>
@@ -1667,9 +1693,7 @@ export default function SpaceHub() {
                                         person may enter; zero is an answer too. */}
                                     {Number.isFinite(space.projectCount) && (
                                         <p className="ssh-space-project">
-                                            {space.projectCount === 0
-                                                ? 'No projects yet'
-                                                : `${space.projectCount} project${space.projectCount === 1 ? '' : 's'} · ${space.publishedCount > 0 ? `${space.publishedCount} published` : 'none published'}`}
+                                            {describeSpaceHolds(space)}
                                         </p>
                                     )}
                                     {/* A card opens the space's one door. Everything

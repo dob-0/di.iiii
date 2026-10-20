@@ -179,3 +179,27 @@ export const removeOps = (document, id) => {
     if (!before) throw new Error(`no version "${id}" in the list`)
     return { ops: [{ type: 'deleteEntity', payload: { entityId: versionEntityId(id) } }], before }
 }
+
+// THE PRODUCTION'S VIEWS (docs/ai/decisions/2026-10-13-views-library-words-workflow.md, decision 3): every version of a
+// production shows the same view buttons, so the choice is the production's — kept on the list's `production` entity as
+// component `productionViews` { viewPresets } (the same list a project keeps in presentationState.viewPresets,
+// src/project/viewport/smartView/viewData.js). The list project is private, so a visitor never reads it: the Studio and
+// the migration command write the same list into every version's own document, which is what the viewer reads.
+
+/** The production's view list (as stored), or null when the production has not chosen one. */
+export const productionViewsOf = (document) => {
+    const entities = Array.isArray(document?.entities) ? document.entities : []
+    const views = entities.find((e) => e?.id === PRODUCTION_ENTITY_ID)?.components?.productionViews?.viewPresets
+    return Array.isArray(views) ? views : null
+}
+
+/** The op that sets the production's view list. Throws when the list has no production entity yet. Pure. */
+export const productionViewsOps = (document, viewPresets) => {
+    const entities = Array.isArray(document?.entities) ? document.entities : []
+    if (!entities.some((e) => e?.id === PRODUCTION_ENTITY_ID)) throw new Error('the version list has no production entity yet (productionOps first)')
+    if (!Array.isArray(viewPresets)) throw new Error('views are a list')
+    return [{ type: 'updateComponent', payload: { entityId: PRODUCTION_ENTITY_ID, component: 'productionViews', patch: { viewPresets } } }]
+}
+
+/** Every project that is a version of this production (archived ones too: a version opened by its address shows the same buttons). */
+export const versionProjectIds = (document) => [...new Set(versionsFromDocument(document).entries.map((v) => v.projectId))]

@@ -210,12 +210,28 @@ function say(text, bad) {
 // A single dropped fetch — a lid closing, a wifi blip — is not an offline server, and a
 // banner that latches on forever trains you to ignore the banner.
 let pollFails = 0;
+
+// What this desk can do. `S.caps` may be absent: that is the full desk.
+const cap = (name) => window.deskCaps.cap(S && S.caps, name, window.isSecureContext);
+function applyCaps() {
+  $$('[data-cap]').forEach((el) => el.classList.toggle('capoff', !cap(el.dataset.cap)));
+  // A hidden page must not stay the open one: a bookmark to #midi on a desk without MIDI.
+  const open = document.querySelector('.page.is-active');
+  if (open && open.classList.contains('capoff')) { location.hash = 'setup'; showPage('setup'); }
+}
+// A state the page cannot draw is said on its own line and never counts as the desk being
+// offline; the last good state stays on screen until a drawable one arrives.
+function renderNote(text) {
+  const n = $('#renderNote');
+  n.hidden = !text;
+  n.textContent = text || '';
+}
 async function pullState() {
   try {
     const reply = await fetch('api/state');
     const next = await reply.json();
-    if (pollFails >= 2) say('back in touch with the desk');
-    pollFails = 0;
+    // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
+    const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
     // drawn rather than drawing the other show under this space's name.
     if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
@@ -224,7 +240,7 @@ async function pullState() {
     const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
     const first = !S;
     if (busy) {
-      next.fixtures = S.fixtures; next.master = S.master; next.raw = S.raw;
+      next.fixtures = S.fixtures; next.master = S.master; next.raw = S.raw; next.rawOwners = S.rawOwners;
       // The LFO and audio panels edit these optimistically the same way the faders do —
       // without this a poll landing mid-drag snaps a slider back to its pre-edit value.
       if (S.lfos) next.lfos = S.lfos;
@@ -235,23 +251,40 @@ async function pullState() {
       // desk's pre-drag level and the fader jumps out from under the finger.
       if (S.layers) next.layers = S.layers;
     }
+    const lastGood = S;
     S = next;
-    // Selection is pruned against what actually exists. With the desk open on two clients
-    // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
-    // stayed correct because selectedFixtures() filters, but the header counted fixtures
-    // that were not there, which is a status line lying.
-    if (!busy && sel.size) {
-      const alive = new Set(S.fixtures.map((f) => f.id));
-      for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+    try {
+      // Selection is pruned against what actually exists. With the desk open on two clients
+      // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
+      // stayed correct because selectedFixtures() filters, but the header counted fixtures
+      // that were not there, which is a status line lying.
+      if (!busy && sel.size) {
+        const alive = new Set(S.fixtures.map((f) => f.id));
+        for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+      }
+      // start with everything selected, so the faders do something the moment you open it
+      if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
+      renderAll(busy);
+    } catch (e) {
+      // The desk answered; this page cannot draw what it said. Not a network failure: the
+      // counter stays as it was, the last good state stays on screen, and the page says why.
+      S = lastGood;
+      pollFails = window.deskCaps.nextFails(pollFails, 'render');
+      renderNote(window.deskCaps.unreadable(e, next));
+      console.error('renderAll threw on the desk\'s state:', e);
+      return;
     }
-    // start with everything selected, so the faders do something the moment you open it
-    if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
     DMX = next.dmx || DMX;
-    renderAll(busy);
+    pollFails = window.deskCaps.nextFails(pollFails, 'drawn');
+    renderNote('');
+    if (wasOffline) say('back in touch with the desk');
+    applyCaps();
+    dmxFeed.setAllowed(streamWanted());
   } catch (e) {
     // Latch only after it has really gone, and then keep saying it until it comes back:
     // this one does NOT expire, because a desk that is not answering is not a passing note.
-    if (++pollFails >= 2) {
+    pollFails = window.deskCaps.nextFails(pollFails, 'network');
+    if (pollFails >= 2) {
       clearTimeout(sayTimer);
       const s = $('#statusStrip');
       s.hidden = false;
@@ -261,16 +294,27 @@ async function pullState() {
   }
 }
 
-async function pullDmx() {
-  if (document.hidden || !S) return;
-  try {
-    DMX = (await (await fetch('api/dmx')).json()).dmx;
-    paintStage();
-    paintSelList();
-    syncAttr();
-    if (page === 'fader') syncFaders();
-  } catch (e) { /* the slow poll reports it */ }
+// The live DMX comes from the desk's pushed stream when it offers one (`caps.stream`, absent =
+// the full desk, which has it), and from this 10 Hz poll when it does not or the stream goes
+// quiet; dmxfeed.js holds that rule. Either way the same painters run on the same DMX object.
+async function fetchDmx() {
+  if (document.hidden || !S) return null;
+  try { return (await (await fetch('api/dmx')).json()).dmx || null; } catch (e) { return null; }   // the slow poll reports it
 }
+function paintDmx(dmx) {
+  DMX = dmx;
+  paintStage();
+  paintSelList();
+  syncAttr();
+  if (page === 'fader') syncFaders();
+}
+const dmxFeed = window.dmxFeed.createFeed({
+  open: (url) => new EventSource(url),
+  poll: fetchDmx,
+  onUpdate: paintDmx,
+});
+// Is the stream on? Needs the page to have EventSource and the desk not to have said no.
+const streamWanted = () => typeof EventSource === 'function' && !!S && cap('stream');
 
 /* =============== colour =============== */
 
@@ -1623,6 +1667,26 @@ function syncAttr(force) {
 let fUni = 0;
 let faderCells = [];             // cached per-fader refs; 512 querySelectors at 10Hz is waste
 
+// Who holds a manual channel (the desk's holds.js). This interface is "owner"; a script or
+// another session holds under its own tag, and a release from here never reaches those
+// unless she says so.
+const heldBy = (key) => (S && S.rawOwners && S.rawOwners[key]) || 'owner';
+const holdersText = (kept) => Object.entries(kept).map(([who, n]) => `${n} by ${who}`).join(', ');
+// After a release of her own: if somebody else still holds channels there, name them and ask
+// before letting go of theirs too — that is the explicit release-all.
+async function offerReleaseOthers(replies, universes) {
+  const kept = {};
+  for (const r of replies) for (const [who, n] of Object.entries((r && r.kept) || {})) kept[who] = (kept[who] || 0) + n;
+  if (!Object.keys(kept).length) return;
+  const where = `universe${universes.length === 1 ? '' : 's'} ${universes.map((u) => u + 1).join(', ')}`;
+  if (!confirm(`Still held on ${where}: ${holdersText(kept)}.\n\nThose are not yours. Release them too?`)) {
+    say(`released yours; still held on ${where}: ${holdersText(kept)}`);
+    return;
+  }
+  await Promise.all(universes.map((u) => post('api/raw', { clear: true, all: true, universe: u })));
+  say(`released every hold on ${where}`);
+}
+
 // Channel writes are batched: dragging a fader fires input events far faster than the
 // server's debounced save, and one request per event would race it.
 const rawPending = new Map();
@@ -1631,7 +1695,7 @@ let lastRawFlush = 0;
 function queueRaw(universe, channel, value) {
   const key = `${universe}:${channel}`;
   rawPending.set(key, { universe, channel, value });
-  if (value == null) delete S.raw[key]; else S.raw[key] = value;
+  if (value == null) { if (heldBy(key) === 'owner') delete S.raw[key]; } else { S.raw[key] = value; if (S.rawOwners) S.rawOwners[key] = 'owner'; }
   touchedAt = Date.now();
   // Same leading-edge shape as queueFixture, same reason.
   const flushRaw = () => {
@@ -1667,6 +1731,7 @@ async function setAllFaders(value) {
   for (let ch = 1; ch <= 512; ch++) {
     channels.push({ universe: fUni, channel: ch, value });
     S.raw[`${fUni}:${ch}`] = value;
+    if (S.rawOwners) S.rawOwners[`${fUni}:${ch}`] = 'owner';
   }
   syncFaders();
   await post('api/raw', { channels });
@@ -1758,6 +1823,13 @@ function syncFaders() {
     const wire = buf[c.ch - 1] || 0;
     const isHeld = held != null;
     if (isHeld !== c.held) { c.el.classList.toggle('over', isHeld); c.held = isHeld; }
+    // A channel somebody else holds says whose it is, so a fader that will not let go explains itself.
+    const by = isHeld ? heldBy(`${fUni}:${c.ch}`) : 'owner';
+    if (by !== c.by) {
+      if (c.tip == null) c.tip = c.el.title;
+      c.el.title = by === 'owner' ? c.tip : `${c.tip} · held by ${by}`;
+      c.by = by;
+    }
     // an untouched fader follows what the fixtures are doing; grab it and it takes over
     const want = isHeld ? held : wire;
     if (document.activeElement !== c.input && +c.input.value !== want) c.input.value = want;
@@ -5180,9 +5252,10 @@ $('#fJump').addEventListener('change', (e) => {
 $('#fReleaseAll').addEventListener('click', () => {
   // scoped to the universe on screen — silently wiping holds on universes she cannot see
   // would be a nasty surprise on a big rig
-  for (const k of Object.keys(S.raw)) if (k.startsWith(fUni + ':')) delete S.raw[k];
+  for (const k of Object.keys(S.raw)) if (k.startsWith(fUni + ':') && heldBy(k) === 'owner') delete S.raw[k];
   syncFaders();
-  post('api/raw', { clear: true, universe: fUni }).then(pullState);
+  const u = fUni;
+  post('api/raw', { clear: true, universe: u }).then((r) => offerReleaseOthers([r], [u])).then(pullState);
 });
 $('#fAllZero').addEventListener('click', () => setAllFaders(0));
 // Every channel in the universe to full is a whiteout with no undo, and on a universe of
@@ -5935,9 +6008,10 @@ $('#tReleaseHeld').addEventListener('click', () => {
   if (!S) return;
   const unis = [...new Set(Object.keys(S.raw).map((k) => +k.split(':')[0]))];
   if (!unis.length) return;
-  for (const k of Object.keys(S.raw)) delete S.raw[k];
-  Promise.all(unis.map((u) => post('api/raw', { clear: true, universe: u }))).then(pullState);
+  for (const k of Object.keys(S.raw)) if (heldBy(k) === 'owner') delete S.raw[k];
   say(`released held channels on universe${unis.length === 1 ? '' : 's'} ${unis.map((u) => u + 1).join(', ')}`);
+  Promise.all(unis.map((u) => post('api/raw', { clear: true, universe: u })))
+    .then((replies) => offerReleaseOthers(replies, unis)).then(pullState);
 });
 
 function buildTouchStrip() {
@@ -6158,7 +6232,194 @@ $('#inPill').addEventListener('click', () => {
   $('#inDetails').open = true; pullInput();
 });
 $('#inDetails').addEventListener('toggle', () => { if ($('#inDetails').open) pullInput(); });
-setInterval(pullInput, 1000);
+
+/* =============== THIS NODE: a hardware node's own settings (caps.node) =============== */
+// Shown only when the state says caps.node: true. Every control calls the node's own console
+// route as its README documents it: POST with X-Vizzz-Console: 1, numbers in the query, a
+// form body for wifi/set and node/set. Facts come from GET status on the same one-second
+// tick as the Input panel (Setup only, tab visible); there is no timer of its own.
+// api-contract.json `node_routes` lists every path here; lint:api-contract holds it.
+const ND = { st: null, manifest: null, peers: null, nets: null, scanPending: false, armed: null, tick: 0, manifestAsked: false };
+async function nodeGet(path) {
+  const r = await fetch(path, { cache: 'no-store' });
+  if (!r.ok) throw new Error(path + ' answered ' + r.status);
+  return r.json();
+}
+async function nodePost(path, args, form) {
+  touchedAt = Date.now();
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(args || {})) if (v !== undefined && v !== null) q.set(k, String(v));
+  const init = { method: 'POST', headers: { 'X-Vizzz-Console': '1' } };
+  let url = path;
+  if (form) { init.headers['content-type'] = 'application/x-www-form-urlencoded'; init.body = q.toString(); }
+  else if ([...q.keys()].length) url += '?' + q.toString();
+  try {
+    const r = await fetch(url, init);
+    if (r.ok) return { ok: true };
+    const text = await r.text();
+    let why = text;
+    try { const j = JSON.parse(text); why = j.error + (j.arg ? ' (' + j.arg + (j.min != null ? ' ' + j.min + '-' + j.max : '') + ')' : ''); } catch (e) { /* plain text */ }
+    return { error: why || 'answered ' + r.status };
+  } catch (e) { return { error: String(e) }; }
+}
+// Every press says what happened; a refusal says the node's own reason.
+async function nodeDo(path, what, args, form) {
+  const r = await nodePost(path, args, form);
+  if (r.error) say(what + ': ' + r.error, true); else say(what);
+  pullNode(true);
+  return r;
+}
+// Two presses for anything that restarts the node, erases it, or narrows where light goes.
+function nodeArm(btn, armedText, fire) {
+  const step = window.deskCaps.confirmStep(ND.armed, btn.id, Date.now());
+  ND.armed = step.armed;
+  paintArmed();
+  if (step.fire) { fire(); return; }
+  btn.dataset.armedText = armedText;
+  paintArmed();
+}
+function paintArmed() {
+  const live = window.deskCaps.stillArmed(ND.armed, Date.now()) ? ND.armed.key : null;
+  if (!live) ND.armed = null;
+  $$('#ndDetails .sq[data-label]').forEach((b) => {
+    const on = b.id === live;
+    b.classList.toggle('armed', on);
+    b.textContent = on ? b.dataset.armedText : b.dataset.label;
+  });
+}
+$$('#ndDetails .sq').forEach((b) => { b.dataset.label = b.textContent; });
+// Any other press inside the fold disarms (capture phase: it runs before the button's own handler).
+$('#ndDetails').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (ND.armed && (!b || b.id !== ND.armed.key)) { ND.armed = null; paintArmed(); }
+}, true);
+
+async function pullNode(force) {
+  if (!cap('node') || document.hidden || page !== 'setup') return;
+  const open = $('#ndDetails').open;
+  try { ND.st = await nodeGet('status'); } catch (e) { ND.st = null; }
+  if (open && (force || ND.tick % 5 === 0)) { try { ND.peers = await nodeGet('peers'); } catch (e) { /* the table keeps its last answer */ } }
+  if (open && !ND.manifestAsked) { ND.manifestAsked = true; try { ND.manifest = await nodeGet('node/manifest'); } catch (e) { ND.manifestAsked = false; } }
+  if (ND.scanPending) pullScan();
+  ND.tick++;
+  paintNode();
+}
+async function pullScan() {
+  try {
+    const j = await nodeGet('wifi/scan');
+    ND.scanPending = !!j.scanning;
+    ND.nets = j.networks || [];
+    $('#ndScanNote').textContent = ND.scanPending ? 'scanning…' : ND.nets.length + ' found';
+  } catch (e) { ND.scanPending = false; $('#ndScanNote').textContent = 'scan failed: ' + e.message; }
+  paintNets();
+}
+function paintNets() {
+  const nets = ND.nets || [];
+  $('#ndNets').innerHTML = nets.map((n) => `<button class="ndrow" data-nd-ssid="${esc(n.ssid)}"><span class="grow">${esc(n.ssid)}</span><span class="muted">${n.enc ? 'password' : 'open'}</span><span class="muted">${n.rssi} dBm</span></button>`).join('');
+}
+const nd = (v, unit) => (v === null || v === undefined ? 'not reported' : v + (unit || ''));
+function setIfIdle(el, v) { if (document.activeElement !== el && v !== null && v !== undefined) el.value = v; }
+function paintNode() {
+  const D = window.deskCaps;
+  const f = ND.st ? D.nodeFacts(ND.st, ND.manifest) : null;
+  $('#ndSummary').textContent = f ? D.nodeSummary(f) : 'not reached: no answer from status';
+  $('#ndLamp').className = 'inlamp' + (!f ? ' error' : f.live.artnet || f.live.sacn || f.live.usb ? ' live' : '');
+  paintArmed();
+  if (!f) return;
+  $('#ndAddr').innerHTML = [
+    `access point <b>${esc(f.apIp || 'off')}</b>${f.apName ? ' · ' + esc(f.apName) : ''}${f.apClients !== null ? ' · ' + f.apClients + ' connected' : ''}`,
+    f.staOn ? `Wi-Fi <b>${esc(f.staIp || '')}</b> on ${esc(f.staSsid || '?')}${f.staRssi !== null ? ' · ' + f.staRssi + ' dBm' : ''}`
+      : `Wi-Fi ${esc(f.wl)}${f.staSsid ? ' (' + esc(f.staSsid) + ')' : ''}`,
+  ].join('<br>');
+  setIfIdle($('#ndNetMode'), f.netMode);
+  setIfIdle($('#ndMode'), f.sourceMode);
+  if (f.fallback !== null) $('#ndFallback').checked = f.fallback;
+  const lamp = (name, on) => `<span><i class="inlamp${on ? ' live' : ''}"></i>${name} ${on === null ? 'not reported' : on ? 'live' : 'quiet'}</span>`;
+  $('#ndLive').innerHTML = lamp('Art-Net', f.live.artnet) + lamp('sACN', f.live.sacn) + lamp('USB', f.live.usb);
+  setIfIdle($('#ndArtNet'), f.art.net); setIfIdle($('#ndArtSub'), f.art.subnet); setIfIdle($('#ndArtUni'), f.art.uni);
+  $('#ndArtNote').textContent = f.art.uni15 === null ? '' : `port-address ${f.art.uni15} · sACN universe ${f.art.uni15 + 1} · Art-Net out ${f.artOut ? 'on' : 'off'} → ${f.artOutTarget || 'broadcast'}`;
+  const peers = (ND.peers && ND.peers.peers) || [];
+  const sel = $('#ndPeerTarget');
+  const want = f.artOutTarget && f.artOutTarget !== 'broadcast' ? f.artOutTarget : '';
+  const sig = JSON.stringify([peers.map((p) => p.ip + p.name), want]);
+  if (sel.dataset.sig !== sig && document.activeElement !== sel) {
+    sel.dataset.sig = sig;
+    const ips = new Set(peers.map((p) => p.ip));
+    sel.innerHTML = '<option value="">every node (broadcast)</option>'
+      + peers.map((p) => `<option value="${esc(p.ip)}">only ${esc(p.name || p.ip)} · ${esc(p.ip)}</option>`).join('')
+      + (want && !ips.has(want) ? `<option value="${esc(want)}">only ${esc(want)}</option>` : '');
+    sel.value = want;
+  }
+  const burn = $('#ndBurn');
+  burn.dataset.label = f.burnSafe ? 'Burn-safe is ON' : 'Burn-safe is OFF';
+  if (!burn.classList.contains('armed')) burn.textContent = burn.dataset.label;
+  burn.classList.toggle('on', !!f.burnSafe);
+  $('#ndBurnNums').textContent = `ceiling ${nd(f.ceiling)} of 255 · slew ${nd(f.slew)} per frame`;
+  $('#ndPeerCount').textContent = ND.peers ? peers.length + (peers.length === 1 ? ' peer' : ' peers') : (f.peerCount !== null ? f.peerCount + ' peers' : '');
+  $('#ndPeers').innerHTML = peers.map((p) => `<div class="ndrow"><span class="grow">${esc(p.name || '?')}</span><span>${esc(p.ip)}</span><span class="muted">univ ${esc(p.uni)}</span><span class="muted">${ageWords(p.age)}</span></div>`).join('');
+  setIfIdle($('#ndName'), f.name); setIfIdle($('#ndApSsid'), f.apName);
+  const kb = (b) => (b === null ? 'not reported' : Math.round(b / 1024) + ' KB');
+  $('#ndHealth').innerHTML = `firmware ${esc(nd(f.fw))}<br>free memory ${kb(f.heapFree)} · largest block ${kb(f.heapMaxBlock)}<br>uptime ${f.uptimeS === null ? 'not reported by this node' : ageWords(f.uptimeS * 1000).replace(' ago', '')}`;
+}
+
+$('#ndDetails').addEventListener('toggle', () => { if ($('#ndDetails').open) pullNode(true); });
+$('#ndNetModeSet').addEventListener('click', (e) => {
+  const m = +$('#ndNetMode').value;
+  nodeArm(e.currentTarget, 'Restart as ' + window.deskCaps.NET_MODES[m] + '?', () => nodeDo('netmode/set', 'Wi-Fi mode set: the node restarts', { m }));
+});
+$('#ndScan').addEventListener('click', () => { ND.scanPending = true; $('#ndScanNote').textContent = 'scanning…'; pullScan(); });
+$('#ndNets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-nd-ssid]');
+  if (!b) return;
+  $('#ndSsid').value = b.dataset.ndSsid; $('#ndPass').focus();
+});
+$('#ndJoin').addEventListener('click', async () => {
+  const ssid = $('#ndSsid').value;
+  const pass = $('#ndPass').value;
+  if (!ssid) { say('Join: type or pick a network name', true); return; }
+  if (pass && (pass.length < 8 || pass.length > 63)) { say('Join: a Wi-Fi password is 8 to 63 characters, or empty for an open network', true); return; }
+  const r = await nodeDo('wifi/set', 'Joining ' + ssid + ': the address shows here when it is joined', { ssid, pass }, true);
+  if (!r.error) $('#ndPass').value = '';
+});
+$('#ndForget').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Forget the saved network?', () => nodeDo('wifi/forget', 'Saved Wi-Fi network forgotten')));
+$('#ndMode').addEventListener('change', (e) => nodeDo('mode/set', 'Source: ' + window.deskCaps.SOURCE_MODES[+e.target.value], { m: +e.target.value }));
+$('#ndFallback').addEventListener('change', (e) => nodeDo('mode/fallback', 'Fallback to web ' + (e.target.checked ? 'on' : 'off'), { en: e.target.checked ? 1 : 0 }));
+$('#ndArtSet').addEventListener('click', () => {
+  const v = (id, hi) => { const n = Math.round(+$(id).value); return n >= 0 && n <= hi ? n : null; };
+  const net = v('#ndArtNet', 127); const subnet = v('#ndArtSub', 15); const uni = v('#ndArtUni', 15);
+  if (net === null || subnet === null || uni === null) { say('Art-Net: net 0-127, subnet 0-15, universe 0-15', true); return; }
+  nodeDo('artnet/set', `Art-Net port-address ${net}:${subnet}:${uni}`, { net, subnet, uni });
+});
+$('#ndPeerSet').addEventListener('click', (e) => {
+  const ip = $('#ndPeerTarget').value;
+  if (!ip) { nodeDo('artout/peer', 'Art-Net out: every node (broadcast)', { ip: '' }); return; }
+  nodeArm(e.currentTarget, 'Send only to ' + ip + '?', () => nodeDo('artout/peer', 'Art-Net out: only ' + ip, { ip }));
+});
+$('#ndBurn').addEventListener('click', () => {
+  const f = ND.st ? window.deskCaps.nodeFacts(ND.st) : null;
+  const on = !(f && f.burnSafe);
+  nodeDo('safety/set', 'Burn-safe ' + (on ? 'on' : 'off'), { burn: on ? 1 : 0 });
+});
+$('#ndPanic').addEventListener('click', () => nodeDo('panic', 'Panic: master 0, black, FX and cues off, web only'));
+$('#ndDiscover').addEventListener('click', async () => {
+  await nodePost('announce');
+  try { ND.peers = await nodeGet('peers'); } catch (e) { say('Discover: ' + e.message, true); }
+  paintNode();
+});
+$('#ndNameSet').addEventListener('click', () => {
+  const name = $('#ndName').value.trim();
+  const apSsid = $('#ndApSsid').value.trim();
+  const apPass = $('#ndApPass').value;
+  if (!name || !apSsid) { say('Name and access point need a name each', true); return; }
+  if (apPass && (apPass.length < 8 || apPass.length > 63)) { say('An access point password is 8 to 63 characters', true); return; }
+  const args = { name, ap_ssid: apSsid };
+  if (apPass) args.ap_pass = apPass;
+  nodeDo('node/set', 'Saved: ' + name, args, true).then((r) => { if (!r.error) $('#ndApPass').value = ''; });
+});
+$('#ndReboot').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Restart now?', () => nodeDo('reboot', 'Restarting: this page reconnects when the node is back')));
+$('#ndFactory').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Erase everything? Press again', () => nodeDo('factory-reset', 'Factory reset: every setting erased, the node restarts')));
+
+setInterval(() => { pullInput(); pullNode(); }, 1000);
 
 showPage(location.hash.slice(1));
 // The slow poll reschedules itself after each answer instead of firing on a fixed
@@ -6171,7 +6432,8 @@ showPage(location.hash.slice(1));
   Promise.resolve(pullState()).then(next, next);
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
-setInterval(pullDmx, 100);
+dmxFeed.start();
+document.addEventListener('visibilitychange', () => { if (document.hidden) dmxFeed.pause(); else dmxFeed.resume(); });
 
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:

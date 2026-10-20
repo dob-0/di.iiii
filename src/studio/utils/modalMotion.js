@@ -51,15 +51,41 @@ export const distanceFrom = (center, x, y) => Math.max(1, Math.hypot(x - center.
 
 const AXIS_VEC = { x: new Vector3(1, 0, 0), y: new Vector3(0, 1, 0), z: new Vector3(0, 0, 1) }
 
+// Blender's plane constraint (Shift+X / Shift+Y / Shift+Z during G/R/S, manual: Scene Layout › Object
+// › Transform Control › Axis Locking): the move keeps every axis BUT the one pressed. 'xz' is the floor —
+// Shift+Y slides a lamp across the floor without lifting it.
+export const PLANE_OF_KEY = { x: 'yz', y: 'xz', z: 'xy' }
+const NORMAL_OF_PLANE = { yz: 'x', xz: 'y', xy: 'z' }
+export const isPlane = (axis) => Object.prototype.hasOwnProperty.call(NORMAL_OF_PLANE, axis)
+/** The axis a plane leaves out (its normal); a single axis is its own. */
+export const normalAxisOf = (axis) => (isPlane(axis) ? NORMAL_OF_PLANE[axis] : axis)
+/** The coordinate indices a constraint lets move: none/'all' = all three, a plane = two, an axis = one. */
+export const indicesOf = (axis) => {
+    if (!axis || axis === 'all') return [0, 1, 2]
+    if (isPlane(axis)) return [...axis].map((c) => 'xyz'.indexOf(c))
+    return ['xyz'.indexOf(axis)]
+}
+
 /**
- * One pointer step of a grab. `prev`/`next` are world points on the pivot plane; returns the world
- * delta to add (a Vector3): free or 'all' = the plane delta, an axis = its projection on that axis.
+ * A world delta under a constraint: free or 'all' = as it is, an axis = its projection on that axis,
+ * a plane ('xz') = the delta with the left-out axis taken away. Returns a new Vector3.
  */
-export function grabStep(prev, next, axis, precision = 1) {
-    const d = new Vector3().subVectors(next, prev).multiplyScalar(precision)
-    if (!axis || axis === 'all') return d
+export function constrainDelta(d, axis) {
+    if (!axis || axis === 'all') return d.clone()
+    if (isPlane(axis)) {
+        const n = AXIS_VEC[NORMAL_OF_PLANE[axis]]
+        return d.clone().sub(n.clone().multiplyScalar(d.dot(n)))
+    }
     const u = AXIS_VEC[axis]
     return u.clone().multiplyScalar(d.dot(u))
+}
+
+/**
+ * One pointer step of a grab. `prev`/`next` are world points on the pivot plane; returns the world
+ * delta to add (a Vector3), constrained as constrainDelta says.
+ */
+export function grabStep(prev, next, axis, precision = 1) {
+    return constrainDelta(new Vector3().subVectors(next, prev).multiplyScalar(precision), axis)
 }
 
 /**
@@ -70,7 +96,8 @@ export function grabStep(prev, next, axis, precision = 1) {
 export function rotateAxis(camera, axis) {
     const view = viewDirection(camera, new Vector3()).negate() // toward the viewer
     if (!axis || axis === 'all') return view
-    const u = AXIS_VEC[axis].clone()
+    // a plane turns around the axis it leaves out (Blender: R Shift+Z turns around Z)
+    const u = AXIS_VEC[normalAxisOf(axis)].clone()
     return u.dot(view) < 0 ? u.negate() : u
 }
 
@@ -90,6 +117,22 @@ export function orbitAroundPivot(pos, pivot, axisVec, angle) {
 
 /** Scale factor for the step: the ratio of distances, softened by precision (×0.1 pulls the ratio toward 1). */
 export const scaleStep = (prevDist, nextDist, precision = 1) => 1 + (nextDist / prevDist - 1) * precision
+
+/**
+ * The world axis a TYPED rotation turns around (R X 90): the axis itself, never flipped — Blender's
+ * sign convention, so R Z 90 is the same quarter turn from any side. Free or 'all' = the view axis
+ * (toward the viewer: a typed positive angle turns counter-clockwise on screen).
+ */
+export function typedRotateAxis(camera, axis) {
+    if (!axis || axis === 'all') return viewDirection(camera, new Vector3()).negate()
+    return AXIS_VEC[normalAxisOf(axis)].clone()
+}
+
+// Ctrl-held snap increments (Blender-style, the same as the gizmo's: src/studio/utils/gizmoSnap.js):
+// world metres / radians (15°) / scale-factor steps. Ctrl+Shift snaps to a tenth of them (Blender:
+// Shift while snapping = precision snap) — 5 cm, 1.5°, 0.01.
+export const SNAP_STEP = { translate: 0.5, rotate: Math.PI / 12, scale: 0.1 }
+export const snapStepFor = (mode, fine = false) => (SNAP_STEP[mode] ?? 0) * (fine ? 0.1 : 1)
 
 /** Snap helpers (Ctrl): a vector to a world grid, an angle to 15°, a factor to 0.1. */
 export const snapVector = (v, step) => new Vector3(Math.round(v.x / step) * step, Math.round(v.y / step) * step, Math.round(v.z / step) * step)

@@ -139,8 +139,11 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
                 select?.(mergeSelection(current, hits, start.mode))
                 // The click that follows this release is the box's, not a pick or a miss.
                 swallowClickUntil = performance.now() + 400
-                armed = false
             }
+            // B arms ONE box: a drag draws it, and a click without a drag ends it too (as
+            // Blender's does). Left armed, the next left drag — minutes later, in
+            // Navigate — drew a box instead of orbiting (N581, 2026-10-15).
+            armed = false
             end()
         }
 

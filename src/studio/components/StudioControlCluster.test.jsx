@@ -42,7 +42,7 @@ describe('the Preview button', () => {
         render(<StudioControlCluster {...base} previewUrl={previewUrl} />)
         fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
         expect(open).toHaveBeenCalledTimes(1)
-        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/v2-9`, '_blank', 'noopener')
+        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/v2-9?render=show`, '_blank', 'noopener')
     })
 
     it('opens the permanent address when the project has no slug', () => {
@@ -50,7 +50,7 @@ describe('the Preview button', () => {
         const previewUrl = buildStudioPreviewUrl({ spaceId: 'moxir', projectId: 'moxir-v2-9' })
         render(<StudioControlCluster {...base} previewUrl={previewUrl} />)
         fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
-        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/p/moxir-v2-9`, '_blank', 'noopener')
+        expect(open).toHaveBeenCalledWith(`${window.location.origin}/moxir/p/moxir-v2-9?render=show`, '_blank', 'noopener')
     })
 
     it('is there in the simple jam view too: a preview is not power-user chrome', () => {
@@ -87,5 +87,42 @@ describe('the Local axes button', () => {
         expect(local.getAttribute('aria-pressed')).toBe('true')
         fireEvent.click(local)
         expect(onSetGizmoSpace).toHaveBeenCalledWith('world')
+    })
+})
+
+// Owner 2026-10-13 20:2x: "can the Studio too have the buttons Walk / Fly?" — the visitor page has them; the Studio had Fly only on Shift+`.
+describe('the Walk and Fly buttons', () => {
+    it('are in the Tools section, after Select, and not pressed while nobody walks', () => {
+        render(<StudioControlCluster {...base} onWalk={() => {}} />)
+        const select = screen.getByRole('button', { name: 'Select' })
+        const walk = screen.getByRole('button', { name: 'Walk' })
+        const fly = screen.getByRole('button', { name: 'Fly' })
+        expect(select.nextElementSibling).toBe(walk)
+        expect(walk.nextElementSibling).toBe(fly)
+        expect(walk.closest('.scc-section').querySelector('.scc-section-label')).toHaveTextContent('Tools')
+        for (const b of [walk, fly]) { expect(b.className).toBe('scc-btn '); expect(b).toHaveAttribute('aria-pressed', 'false') }
+        expect(walk).toHaveAttribute('data-walk-mode', 'walk')
+        expect(fly).toHaveAttribute('data-walk-mode', 'fly')
+    })
+    it('a click asks for that mode', () => {
+        const onWalk = vi.fn()
+        render(<StudioControlCluster {...base} onWalk={onWalk} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Walk' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Fly' }))
+        expect(onWalk.mock.calls).toEqual([['walk'], ['fly']])
+    })
+    it('the running mode is pressed, the other is not', () => {
+        const { rerender } = render(<StudioControlCluster {...base} onWalk={() => {}} walkMode="walk" />)
+        expect(screen.getByRole('button', { name: 'Walk' })).toHaveAttribute('aria-pressed', 'true')
+        expect(screen.getByRole('button', { name: 'Walk' }).className).toContain('active')
+        expect(screen.getByRole('button', { name: 'Fly' })).toHaveAttribute('aria-pressed', 'false')
+        rerender(<StudioControlCluster {...base} onWalk={() => {}} walkMode="fly" />)
+        expect(screen.getByRole('button', { name: 'Fly' })).toHaveAttribute('aria-pressed', 'true')
+        expect(screen.getByRole('button', { name: 'Walk' })).toHaveAttribute('aria-pressed', 'false')
+    })
+    it('are not drawn without onWalk', () => {
+        render(<StudioControlCluster {...base} />)
+        expect(screen.queryByRole('button', { name: 'Walk' })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Fly' })).toBeNull()
     })
 })

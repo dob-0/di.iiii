@@ -33,6 +33,7 @@ const {
 } = require('./looks');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
 const { createDmxStream } = require('./dmxstream');
+const holds = require('./holds');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -78,6 +79,8 @@ function createDesk(opts = {}) {
     fixtures: [],
     groups: [],
     raw: {},
+    // Who holds each manual channel, keyed like raw (holds.js).
+    rawOwners: {},
     scenes: [],
     activeScene: null,
     chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800,
@@ -302,6 +305,7 @@ function createDesk(opts = {}) {
         .map((g) => ({ id: g.id, name: String(g.name || 'Group').slice(0, 24), ids: g.ids.filter((id) => typeof id === 'string') }));
       s.scenes = (Array.isArray(disk.scenes) ? disk.scenes : []).map(sanitizeScene).filter(Boolean);
       s.raw = sanitizeRaw(disk.raw);
+      s.rawOwners = holds.sanitizeRawOwners(disk.rawOwners, s.raw);
       s.master = Number.isFinite(+disk.master) ? Math.max(0, Math.min(255, Math.round(+disk.master))) : 255;
       s.blackout = !!disk.blackout;
       return s;
@@ -434,6 +438,9 @@ function createDesk(opts = {}) {
     // (sanitizeLayer drops them): a fade in progress does not survive a restart.
     const before = layer.lookId;
     layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    // The beat the replaced look keeps through the crossfade: its own firedAt (lookMotion.js motionFrame blends the two
+    // looks' level motion over fadeMs, the old on its beat, the new on this one). In memory only, like fromLookId.
+    layer.fromFiredAt = before && before !== look.id ? (Number.isFinite(layer.firedAt) ? layer.firedAt : null) : (before === look.id ? layer.fromFiredAt || null : null);
     layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
     layer.firedAt = Date.now();
     layer.lookId = look.id;
@@ -528,12 +535,14 @@ function createDesk(opts = {}) {
   // The driver for one extra send, built or rebuilt when what it points at changes.
   function extraDriver(send) {
     const held = extraDrivers.get(send.id);
-    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority].join('|');
+    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority, send.universes.join()].join('|');
     if (held && held.sig !== sig) { held.drv.close(); extraDrivers.delete(send.id); }
     const again = extraDrivers.get(send.id);
     if (again) return again.drv;
     let drv = null;
-    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline });
+    // A widget carries ONE line: the universe it was told to (sendExtras sends that one). Built without it, the
+    // widget kept its default 0 and refused every other universe as unreachable — a U2 widget sent nothing (MOXIR 2026-10-17).
+    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline, universe: send.universes.length ? send.universes[0] : 0 });
     else if (send.driver === 'sacn') drv = new SACN({ offline, targets: send.targets, priority: send.priority, sourceName: 'di.iiii lighting desk' });
     // Art-Net needs no instance: one socket carries every destination, so an extra
     // Art-Net send is a list of addresses to also send each frame to, nothing more.
@@ -953,12 +962,18 @@ function createDesk(opts = {}) {
   // One manual channel override. Out-of-range channels are dropped rather than stored:
   // render ignores them anyway, and letting them accumulate would quietly bloat show.json
   // with keys that can never do anything.
-  function setRaw(universe, channel, value) {
+  // `owner` is the caller's tag (holds.js): a value takes the channel for it, a release
+  // lets go only of a channel it holds. Returns the holder a release was refused for.
+  function setRaw(universe, channel, value, owner, all) {
     const ch = channel | 0;
-    if (ch < 1 || ch > 512) return;
+    if (ch < 1 || ch > 512) return null;
     const key = Math.max(0, Math.min(32767, universe | 0)) + ':' + ch;
-    if (value == null || value < 0) delete state.raw[key];
-    else state.raw[key] = Math.max(0, Math.min(255, value | 0));
+    if (value == null || value < 0) {
+      const r = holds.release(state, key, owner, all);
+      return r === 'released' || r === 'free' ? null : r;
+    }
+    holds.hold(state, key, Math.max(0, Math.min(255, value | 0)), owner);
+    return null;
   }
 
   function snapshot() {
@@ -1073,6 +1088,8 @@ function createDesk(opts = {}) {
     const patched = new Set(state.fixtures.map((f) => f.id));
     return Object.assign({}, state, {
       now: nowOnDesk(),
+      // Who holds each manual channel (holds.js), filled in for a show that predates tags.
+      rawOwners: holds.sanitizeRawOwners(state.rawOwners, state.raw),
       // How much of each scene still exists. Recall skips fixtures that have been unpatched,
       // so a scene saved against a rig that has since been repatched recalls silently and
       // does nothing at all — which reads as a broken button. The counts let the interface
@@ -1847,24 +1864,42 @@ function createDesk(opts = {}) {
     // one request — a fader panel drags across a dozen channels at a time, and one request
     // each would be a burst of round trips racing the 400ms debounced save. A null or
     // negative value releases the channel back to whatever the fixtures are rendering.
+    //
+    // Every hold is OWNED (holds.js): `owner` names the caller (a session or client id; none
+    // = "owner", the desk's own interface). A release — a negative value or {clear:true} —
+    // lets go of the caller's own channels only; somebody else's stay held and the reply
+    // says whose (`kept`, `refused`). {clear:true, all:true} is the explicit release-all.
+    // Old callers that name no owner are "owner": they hold as before, and their clear still
+    // empties the desk of "owner" holds — but no longer of a tagged caller's.
     'POST /api/raw': (req, res, body) => {
+      const owner = holds.holdOwner(body.owner);
+      if (!owner) return json(res, { error: 'owner must be 1-40 letters, digits or . _ : @ -' }, 400);
+      const all = body.all === true;
+      const out = { ok: true };
       if (body.clear) {
-        // {clear:true} releases every manual channel; {clear:true, universe:N} releases just
-        // that one. "Reset all" on a fader page means the universe in front of you — wiping
-        // held channels on universes you cannot see would be a nasty surprise on a big rig.
-        if (body.universe != null) {
-          const prefix = (body.universe | 0) + ':';
-          for (const key of Object.keys(state.raw)) if (key.startsWith(prefix)) delete state.raw[key];
-        } else {
-          state.raw = {};
-        }
-      } else if (Array.isArray(body.channels)) {
-        for (const c of body.channels) setRaw(c && c.universe, c && c.channel, c && c.value);
-      } else if (body.channel) {
-        setRaw(body.universe, body.channel, body.value);
+        // {clear:true} releases the caller's manual channels; {clear:true, universe:N} just
+        // that universe's. "Reset all" on a fader page means the universe in front of you —
+        // wiping held channels on universes you cannot see would be a nasty surprise on a big rig.
+        const r = holds.releaseHolds(state, { owner, all, universe: body.universe != null ? body.universe : null });
+        out.released = r.released;
+        if (Object.keys(r.kept).length) out.kept = r.kept;
+      } else {
+        const refused = {};
+        const one = (u, ch, v) => { const by = setRaw(u, ch, v, owner, all); if (by) refused[by] = (refused[by] || 0) + 1; };
+        if (Array.isArray(body.channels)) for (const c of body.channels) one(c && c.universe, c && c.channel, c && c.value);
+        else if (body.channel) one(body.universe, body.channel, body.value);
+        if (Object.keys(refused).length) out.refused = refused;
       }
-      engine.cancelFade(); save(); pushFrame(); json(res, { ok: true, raw: state.raw });
+      engine.cancelFade(); save(); pushFrame();
+      json(res, Object.assign(out, { raw: state.raw, rawOwners: state.rawOwners, holders: holds.holdsByOwner(state) }));
     },
+
+    // Who holds what, without the rest of the state: every held channel with its value and
+    // its holder, and the count per holder.
+    'GET /api/raw': (req, res) => json(res, {
+      holds: Object.keys(state.raw).map((key) => ({ key, value: state.raw[key], owner: holds.ownerOf(state, key) })),
+      holders: holds.holdsByOwner(state),
+    }, 200, req),
 
     'POST /api/scenes/save': (req, res, body) => {
       const scene = engine.captureScene(body.name);
@@ -1972,11 +2007,14 @@ function createDesk(opts = {}) {
       const scene = state.scenes.find((s) => s.id === body.id);
       // Same grid as a look: hold the recall until the next beat or bar when asked to.
       const wait = scene ? quantiseWait(body.quantize) : 0;
+      // The hand recalling it: the scene's holds replace that hand's own (holds.js).
+      const recallOwner = holds.holdOwner(body.owner);
+      if (!recallOwner) return json(res, { error: 'owner must be 1-40 letters, digits or . _ : @ -' }, 400);
       if (wait > 0) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs);
+          engine.recallScene(scene, body.fadeMs, recallOwner);
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -1996,7 +2034,7 @@ function createDesk(opts = {}) {
       // otherwise invisible until something looks wrong.
       const fxWasOn = fxActive(state.fx);
       const rawBefore = Object.keys(state.raw);
-      const ok = engine.recallScene(scene, body.fadeMs);
+      const ok = engine.recallScene(scene, body.fadeMs, recallOwner);
       const out = { ok };
       if (chasePaused) out.chasePaused = true;
       if (ok) {

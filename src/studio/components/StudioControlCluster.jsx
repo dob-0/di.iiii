@@ -25,6 +25,10 @@ export default function StudioControlCluster({
     onSetEditMode,
     // Blender's Select Box tool is on (StudioShell viewportSelectTool).
     selectTool = false,
+    // The running walk ('walk' | 'fly' | null) and the start / switch / leave call (useWalkNavigation's useWalkMode and
+    // requestWalk). Null onWalk draws no buttons.
+    walkMode = null,
+    onWalk = null,
     gizmoMode,
     onSetGizmoMode,
     gizmoSpace = 'world',
@@ -137,6 +141,28 @@ export default function StudioControlCluster({
                                 >
                                     Select
                                 </button>
+                                {onWalk && (
+                                    <>
+                                        <button
+                                            className={`scc-btn ${walkMode === 'walk' ? 'active' : ''}`}
+                                            data-walk-mode="walk"
+                                            onClick={() => onWalk('walk')}
+                                            aria-pressed={walkMode === 'walk'}
+                                            title="Walk: the camera stays at eye height above the floor; mouse looks, W A S D move, Tab flies; Esc keeps the place, right click returns (Blender: Walk with gravity)"
+                                        >
+                                            Walk
+                                        </button>
+                                        <button
+                                            className={`scc-btn ${walkMode === 'fly' ? 'active' : ''}`}
+                                            data-walk-mode="fly"
+                                            onClick={() => onWalk('fly')}
+                                            aria-pressed={walkMode === 'fly'}
+                                            title="Fly (Shift+`): mouse looks, W A S D move, Q E down/up, Tab walks; Esc keeps the place, right click returns (Blender: Walk without gravity)"
+                                        >
+                                            Fly
+                                        </button>
+                                    </>
+                                )}
                                 {editMode === 'edit' && (
                                     <>
                                         <div className="scc-sep" />

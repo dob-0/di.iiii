@@ -304,3 +304,30 @@ describe('StudioShell — a new project opens bare', () => {
         expect(wall()).not.toBeNull()
     })
 })
+
+// N581 (2026-10-15): X/Y/Z armed the modal for ANY selection. With a selection that cannot
+// move (every object in it locked) the viewport never mounted the operator, nobody cancelled
+// the op, and every editor shortcut — Escape, A, Alt+A, Delete — stayed dead until a reload.
+describe('StudioShell transform shortcuts and a locked selection', () => {
+    const locked = { id: 'hall', name: 'hall', components: { runtime: { locked: true } } }
+    const free = { id: 'lamp', name: 'lamp', components: {} }
+
+    it('x on a selection that is entirely locked never arms the modal; it constrains the gizmo instead', () => {
+        const onStartTransform = vi.fn()
+        renderShell({ entities: [locked, free], selectedEntityIds: ['hall'], onStartTransform })
+
+        fireEvent.keyDown(window, { key: 'x' })
+
+        expect(onStartTransform).not.toHaveBeenCalled()
+        expect(screen.getByTestId('gizmo-axis')).toHaveTextContent('x')
+    })
+
+    it('x on a mixed selection arms the modal (the locked one stays where it is)', () => {
+        const onStartTransform = vi.fn()
+        renderShell({ entities: [locked, free], selectedEntityIds: ['hall', 'lamp'], onStartTransform })
+
+        fireEvent.keyDown(window, { key: 'x' })
+
+        expect(onStartTransform).toHaveBeenCalledWith('translate', 'x')
+    })
+})

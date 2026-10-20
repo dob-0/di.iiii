@@ -26,6 +26,23 @@ const lamp = (index = null) => {
     const entity = createEntityOfType('spotLight')
     return index == null ? entity : { ...entity, components: { ...entity.components, fixture: { index } } }
 }
+// Files the project holds are entries of document.assets, the way the server
+// stores them. An image or a video on the canvas points at its file by
+// components.media.assetId.
+const MB = 1024 * 1024
+const asset = (id, size) => ({ id, name: `${id}.bin`, mimeType: 'application/octet-stream', size, url: '', source: 'server' })
+const filesTotalling = (count, total) => {
+    const each = Math.floor(total / count)
+    return Array.from({ length: count }, (_, index) => asset(`f${index}`, index === count - 1 ? total - each * (count - 1) : each))
+}
+const mediaObject = (type, assetId) => {
+    const entity = createEntityOfType(type)
+    return { ...entity, components: { ...entity.components, media: { ...entity.components.media, assetId } } }
+}
+const typedLamp = () => {
+    const entity = createEntityOfType('spotLight')
+    return { ...entity, components: { ...entity.components, fixture: { type: 'up-pl5403', mode: '8ch', universe: 2, address: 1 } } }
+}
 const noise = createNode('top.noise')
 const blur = createNode('top.blur')
 const FIXTURES = {
@@ -36,7 +53,29 @@ const FIXTURES = {
     aSurface: doc({ mappingState: { surfaces: [{ id: 's1', name: 'Wall A' }] } }),
     aPictureOut: doc({ nodes: [createNode('top.out')] }),
     aLamp: doc({ entities: [lamp()] }),
-    aJoinedLamp: doc({ entities: [lamp(3)] })
+    aJoinedLamp: doc({ entities: [lamp(3)] }),
+    // 2026-10-13, the holds line (P1): what the line used to leave out.
+    onlyFiles: doc({ assets: filesTotalling(133, 123102822) }),
+    pageWithObjects: doc({
+        entities: [createEntityOfType('box'), createEntityOfType('sphere')],
+        presentationState: { mode: 'code', codeFiles: [{ name: 'index.html', content: 'x'.repeat(32 * 1024) }] }
+    }),
+    cuesAndLight: doc({
+        mappingState: {
+            surfaces: [{ id: 's1', name: 'Wall A' }],
+            cues: [{ id: 'c1' }, { id: 'c2', lightScene: 'scene-1' }, { id: 'c3', lightLook: 'look-1' }]
+        }
+    }),
+    aMediaBoard: doc({
+        entities: [mediaObject('image', 'a1'), mediaObject('image', 'a2'), mediaObject('video', 'a3')],
+        assets: [asset('a1', 5 * MB), asset('a2', 5 * MB), asset('a3', 2 * MB)]
+    }),
+    aSceneWithFiles: doc({
+        entities: [createEntityOfType('box'), mediaObject('image', 'a1')],
+        assets: [asset('a1', MB), asset('g1', 2 * MB), asset('g2', MB)]
+    }),
+    lampsAndLights: doc({ entities: [lamp(3), typedLamp(), lamp(), lamp()] }),
+    aTemplate: doc({ templates: [{ id: 't1', label: 'Rig', typeId: 'geom.cube' }] })
 }
 
 const openOf = (document) => readProjectLayers(document).open
@@ -53,14 +92,14 @@ describe('layers — what inside what', () => {
         const layers = readProjectLayers(FIXTURES.objectsOnly)
         expect(layers.holds.things).toBe(true)
         expect(layers.open).toEqual({ space: true, things: true, connections: true, wall: false, lamps: false, handover: true })
-        expect(describeProjectLayers(layers.counts)).toBe('3 things')
+        expect(describeProjectLayers(layers.counts)).toBe('3 objects')
     })
 
     it('nodes only: a standing node is a thing, a Time node is a connection — so the wall opens', () => {
         const layers = readProjectLayers(FIXTURES.nodesOnly)
         expect(layers.counts).toMatchObject({ things: 1, standingNodes: 1, nodes: 1 })
         expect(layers.open).toMatchObject({ connections: true, wall: true, lamps: false })
-        expect(describeProjectLayers(layers.counts)).toBe('1 thing · 1 node')
+        expect(describeProjectLayers(layers.counts)).toBe('1 object · 1 node')
     })
 
     it('a wire with no thing in the room still opens connections and the wall (a layer that holds something never hides)', () => {
@@ -89,7 +128,7 @@ describe('layers — what inside what', () => {
         expect(layers.open.lamps).toBe(true)
         expect(layers.holds.lamps).toBe(false)
         expect(layers.holds.things).toBe(true)
-        expect(describeProjectLayers(layers.counts)).toBe('1 lamp')
+        expect(describeProjectLayers(layers.counts)).toBe('1 light')
     })
 
     it('a lamp joined to a fixture: the lamps layer holds something', () => {
@@ -97,6 +136,7 @@ describe('layers — what inside what', () => {
         expect(layers.counts).toMatchObject({ lamps: 1, joinedLamps: 1 })
         expect(layers.holds.lamps).toBe(true)
         expect(layers.open.lamps).toBe(true)
+        expect(describeProjectLayers(layers.counts)).toBe('1 lamp')
     })
 
     it('nothing opens or hides before the project has loaded', () => {
@@ -126,7 +166,7 @@ describe('layers — what inside what', () => {
     it('a project that builds a page is never empty', () => {
         const layers = readProjectLayers(doc({ presentationState: { mode: 'code', codeHtml: '<h1>hi</h1>' } }))
         expect(layers.empty).toBe(false)
-        expect(describeProjectLayers(layers.counts)).toBe('a page')
+        expect(describeProjectLayers(layers.counts)).toBe('page 11 B')
     })
 
     it('reads a raw, unnormalized document without throwing', () => {
@@ -147,6 +187,58 @@ describe('layers — what inside what', () => {
         expect(isProjectLoaded(FIXTURES.empty, 'p1', true)).toBe(true)
         // Switched to another project: the old document is still there, and so is hasLoaded.
         expect(isProjectLoaded(FIXTURES.empty, 'p2', true)).toBe(false)
+    })
+})
+
+describe('layers — the holds line says what the project holds (P1, 2026-10-13)', () => {
+    const line = (document) => describeProjectLayers(readProjectLayers(document).counts)
+
+    it('a project that holds only files says so, with their size — it is not empty', () => {
+        expect(readProjectLayers(FIXTURES.onlyFiles).counts).toMatchObject({ files: 133, fileBytes: 123102822, images: 0, videos: 0 })
+        expect(line(FIXTURES.onlyFiles)).toBe('133 files · 117.4 MB')
+    })
+
+    it('a page beside objects is both parts, and the page has its size', () => {
+        expect(readProjectLayers(FIXTURES.pageWithObjects).counts).toMatchObject({ page: true, pageBytes: 32 * 1024 })
+        expect(line(FIXTURES.pageWithObjects)).toBe('2 objects · page 32 kB')
+    })
+
+    it('a cue is counted once: a cue that calls the light desk is a light cue', () => {
+        expect(line(FIXTURES.cuesAndLight)).toBe('1 surface · 1 cue · 2 light cues')
+    })
+
+    it('images and videos are counted as such, and their files are not counted twice', () => {
+        expect(readProjectLayers(FIXTURES.aMediaBoard).counts).toMatchObject({ images: 2, videos: 1, files: 0, fileBytes: 12 * MB })
+        expect(line(FIXTURES.aMediaBoard)).toBe('2 images · 1 video · 12.0 MB')
+    })
+
+    it('files that no image or video stands for are files; the size is all of them', () => {
+        expect(line(FIXTURES.aSceneWithFiles)).toBe('1 object · 1 image · 2 files · 4.0 MB')
+    })
+
+    it('a lamp is a stage fixture (typed, or joined to the desk); a light is a scene light', () => {
+        expect(readProjectLayers(FIXTURES.lampsAndLights).counts).toMatchObject({ lamps: 4, joinedLamps: 1, stageLamps: 2 })
+        expect(line(FIXTURES.lampsAndLights)).toBe('2 lamps · 2 lights')
+    })
+
+    it('a template is something held', () => {
+        expect(line(FIXTURES.aTemplate)).toBe('1 template')
+    })
+
+    it('says "empty" only when nothing at all is held', () => {
+        expect(line(FIXTURES.empty)).toBe('empty')
+        const held = [
+            { things: 1 }, { nodes: 1 }, { wires: 1 }, { surfaces: 1 }, { cues: 1 }, { lightCues: 1 }, { lamps: 1 },
+            { images: 1 }, { videos: 1 }, { files: 1 }, { templates: 1 }, { page: true }
+        ]
+        for (const counts of held) expect(describeProjectLayers(counts), JSON.stringify(counts)).not.toBe('empty')
+    })
+
+    it('writes sizes the way the design shows them: B, whole kB, MB and GB with one decimal', () => {
+        expect(describeProjectLayers({ files: 1, fileBytes: 512 })).toBe('1 file · 512 B')
+        expect(describeProjectLayers({ files: 1, fileBytes: 2048 })).toBe('1 file · 2 kB')
+        expect(describeProjectLayers({ files: 2, fileBytes: 1024 * 1024 * 1024 })).toBe('2 files · 1.0 GB')
+        expect(describeProjectLayers({ page: true })).toBe('page')
     })
 })
 

@@ -68,10 +68,13 @@ export default function StudioPresentationSurface({
     rigMirror = false,
     // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
     graphRoom = null,
+    onSceneOps = null,
+    onPlayScene = null,
 }) {
     // The scene the Studio shows while editing (ScenePicker.jsx): undefined = follow the show clock,
     // '' = work light (no look), an id = that look.
     const [rigLook, setRigLook] = useState(undefined)
+    const [laserTest, setLaserTest] = useState(false)
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const isFixedCamera = previewMode === 'fixed-camera'
@@ -164,6 +167,10 @@ export default function StudioPresentationSurface({
             document={document}
             rigLook={rigLook}
             onRigLook={setRigLook}
+            onSceneOps={onSceneOps}
+            onPlayScene={onPlayScene}
+            laserTest={laserTest}
+            onLaserTest={setLaserTest}
             selectedEntityId={selectedEntityId}
             selectedEntityIds={selectedEntityIds}
             onSelectEntity={onSelectEntity}
