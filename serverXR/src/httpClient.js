@@ -7,6 +7,18 @@ const http = require('node:http')
 const https = require('node:https')
 const net = require('node:net')
 
+// Tie a request to a caller's AbortSignal. A follow shares ONE signal across
+// every request it makes for hours, so the listener must come off when the
+// request is over: { once: true } only removes it on abort, and left on, each
+// finished request (socket, buffers) stays reachable from the signal.
+const linkAbort = (signal, req) => {
+  if (!signal) return
+  if (signal.aborted) { req.destroy(new Error('aborted')); return }
+  const onAbort = () => req.destroy(new Error('aborted'))
+  signal.addEventListener('abort', onAbort, { once: true })
+  req.once('close', () => signal.removeEventListener('abort', onAbort))
+}
+
 // The ADDRESS PIN's dns.lookup replacement — the name stays (Host header, SNI,
 // certificate check all still use the URL's hostname, untouched), the socket
 // goes to `address`. Must honour both forms Node calls a custom lookup with:
@@ -83,10 +95,7 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     // A caller may change its mind: a replication read parked on another server
     // for twenty seconds has to be abandonable the instant this machine makes
     // an edit of its own, or the edit waits out someone else's silence.
-    if (signal) {
-      if (signal.aborted) req.destroy(new Error('aborted'))
-      else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true })
-    }
+    linkAbort(signal, req)
     if (body) req.write(body)
     req.end()
   })
@@ -118,10 +127,7 @@ const open = (url, { method, headers, timeoutMs, signal, servername, address }, 
   }, onResponse)
   req.on('error', reject)
   req.setTimeout(timeoutMs, () => req.destroy(new Error('request timeout')))
-  if (signal) {
-    if (signal.aborted) req.destroy(new Error('aborted'))
-    else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true })
-  }
+  linkAbort(signal, req)
   return req
 }
 

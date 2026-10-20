@@ -89,6 +89,15 @@ A generalised sync key. A person signed in with a **session** mints an **agent k
   refuses (403, with the entry's reach and the key's ceiling named in the body) anything above the
   key's ceiling, anything undeclared, anything `x-di-agent: never`.
 
+**Status, 2026-10-07: the mint path is built as `di login`** (`docs/architecture/CLI_LOGIN.md`). A person signed in with a session
+approves a code a terminal shows (the OAuth device grant, RFC 8628), and the terminal receives a per-person key `dii_cli_…`: acts as
+the person (capped like a di.bo member), never public (every route the catalogue marks `reach: 'public'` is refused, and so is any
+`/api` route the catalogue does not describe), never a root (the di.bo refusal list: accounts, keys, approvals, ownership), hashed at
+rest, shown once, revocable at once from a list in the browser, 90 days of disuse. Where it differs from this section, on purpose: the
+enforcement is `serverXR/src/cliTokenGate.js`, a router-level guard on the catalogue's **reach**, not on the entry's `agent` flag —
+`agent: false` also marks routes the MCP cannot carry (uploads, streams), which a person's terminal needs. Not built yet: a list of
+spaces per key, a reach ceiling the person chooses, a shorter expiry the person chooses, a rate limit per key.
+
 ## 7. Remote door (phase 3)
 
 The same catalogue served over MCP Streamable HTTP from serverXR itself, so a person connects

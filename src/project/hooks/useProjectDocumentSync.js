@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createProjectSyncService } from '../services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -7,8 +7,35 @@ import {
     submitProjectOps,
     updateProjectDocument
 } from '../services/projectsApi.js'
+import {
+    createDefaultPendingOpsStore,
+    heldPendingOpsLocks,
+    holdPendingOpsLock,
+    pendingOpsKey,
+    pendingOpsLockName
+} from '../services/pendingOpsStore.js'
 import { generateId } from '../../shared/projectSchema.js'
 import { placeOps } from '../../shared/placement.js'
+
+// The one sentence the page shows while edits are not on the server
+// (decision 2026-10-02-local-hosting, H5). Both lanes render it as is
+// (.studio-sync-alert, .raw-sync-alert).
+export const describeUnsaved = (reason, count = 0) => {
+    const waiting = count > 0 ? ` · ${count} ${count === 1 ? 'change' : 'changes'} waiting` : ''
+    return `Not saved — ${reason}${waiting}`
+}
+
+// apiFetch marks a fetch that never reached the server (isServerUnavailable);
+// a proxy in front of a dead server answers 502 (Vite 8, Caddy) or 503/504.
+export const isServerUnreachableError = (error) => (
+    Boolean(error?.isServerUnavailable) || [502, 503, 504].includes(Number(error?.status))
+)
+
+const describeFailure = (error, fallback = 'project sync failed') => (
+    isServerUnreachableError(error) ? 'server unreachable' : (error?.message || fallback)
+)
+
+const opIdOf = (op) => (typeof op?.opId === 'string' ? op.opId : '')
 
 const MAX_SEEN_OPS = 2000
 // A failed op batch is retried automatically after this delay rather than
@@ -31,6 +58,9 @@ const MAX_CONSECUTIVE_CONFLICT_RETRIES = 5
 // continuous multi-second drag still flushes periodically instead of only
 // once at the very end (2026-07-17 perf audit).
 const FLUSH_THROTTLE_MS = 50
+// How long the read-back of waiting edits may take before sync goes on
+// without it (the edits stay in the store for the next visit).
+const RESTORE_READ_TIMEOUT_MS = 5000
 
 // The server keeps a bounded op window (maxOpHistory, 500 by default), so a
 // client that fell further behind than that window can never be caught up from
@@ -48,13 +78,39 @@ export function useProjectDocumentSync({
     projectId,
     store,
     clientIdPrefix = 'project-client',
-    opIdPrefix = 'project-op'
+    opIdPrefix = 'project-op',
+    // Where waiting edits are kept between visits (pendingOpsStore.js).
+    // Defaults to IndexedDB; tests pass a memory store they share across
+    // "reloads".
+    pendingStore = null
 } = {}) {
     const dispatch = store?.dispatch
     const state = store?.state
     const syncServiceRef = useRef(createProjectSyncService())
+    const [pendingOpsStore] = useState(() => pendingStore || createDefaultPendingOpsStore())
     const versionRef = useRef(0)
     const pendingQueueRef = useRef([])
+    // The batch on the wire. Spliced off pendingQueueRef while it is sent, so
+    // without this a reload mid-request had nothing left to keep.
+    const inFlightRef = useRef([])
+    // Edits from an earlier visit (a reload, a closed tab, another tab that is
+    // gone), read back from pendingOpsStore and not yet replayed.
+    // status: 'idle' | 'reading' | 'ready' | 'done'
+    const restoreRef = useRef({ status: 'idle', ops: [], keys: [], sinceVersion: null })
+    // The document version when the oldest waiting edit was made: the replay
+    // asks the server for everything since then to skip what it already has.
+    const sinceVersionRef = useRef(null)
+    // True once this project's document is in the store (load or resync);
+    // restored edits are applied on top of it, never on the empty stand-in.
+    const documentReadyRef = useRef(false)
+    const loadFailureRef = useRef(null)
+    // Why the waiting edits are not on the server, if they are not:
+    // { reason, authExpired }. The banner text is built from it and the count.
+    const failureRef = useRef(null)
+    const persistChainRef = useRef(Promise.resolve())
+    const persistWarnedRef = useRef(false)
+    const projectIdRef = useRef(projectId)
+    const flushQueueRef = useRef(null)
     const isFlushingRef = useRef(false)
     const retryTimerRef = useRef(null)
     const flushThrottleTimerRef = useRef(null)
@@ -67,6 +123,66 @@ export function useProjectDocumentSync({
     useEffect(() => {
         stateRef.current = state
     }, [state])
+
+    const waitingCount = useCallback(() => (
+        restoreRef.current.ops.length + inFlightRef.current.length + pendingQueueRef.current.length
+    ), [])
+
+    // Tells the store how many edits wait, and keeps the banner's count true.
+    const reportWaiting = useCallback(() => {
+        const count = waitingCount()
+        dispatch?.({ type: 'pending-ops-count', count })
+        const failure = failureRef.current
+        if (failure) {
+            dispatch?.({
+                type: 'pending-sync-error',
+                error: describeUnsaved(failure.reason, count),
+                authExpired: Boolean(failure.authExpired)
+            })
+        }
+    }, [dispatch, waitingCount])
+
+    const setFailure = useCallback((reason, { authExpired = false } = {}) => {
+        failureRef.current = { reason, authExpired }
+        reportWaiting()
+    }, [reportWaiting])
+
+    const clearFailure = useCallback(() => {
+        failureRef.current = null
+        dispatch?.({ type: 'pending-sync-error', error: null, authExpired: false })
+        reportWaiting()
+    }, [dispatch, reportWaiting])
+
+    // Writes what waits (in flight + queued) for this tab and project, or
+    // removes the record when nothing does. Writes are chained so they land in
+    // the order they were asked for; flushQueue awaits the chain before it
+    // sends, so an edit is in the browser's store before it is on the wire.
+    const persistWaiting = useCallback(() => {
+        const currentProjectId = projectIdRef.current
+        if (!currentProjectId) return persistChainRef.current
+        const clientId = localClientIdRef.current
+        const key = pendingOpsKey(currentProjectId, clientId)
+        const ops = [...inFlightRef.current, ...pendingQueueRef.current]
+        const record = ops.length
+            ? {
+                projectId: currentProjectId,
+                spaceId: stateRef.current?.document?.projectMeta?.spaceId || null,
+                clientId,
+                ops,
+                sinceVersion: Number.isFinite(sinceVersionRef.current) ? sinceVersionRef.current : versionRef.current,
+                updatedAt: Date.now(),
+                origin: typeof window !== 'undefined' ? window.location?.origin || null : null
+            }
+            : null
+        persistChainRef.current = persistChainRef.current
+            .then(() => (record ? pendingOpsStore.write(key, record) : pendingOpsStore.remove(key)))
+            .catch((error) => {
+                if (persistWarnedRef.current) return
+                persistWarnedRef.current = true
+                console.warn('[project-sync] could not keep waiting edits in this browser:', error?.message || error)
+            })
+        return persistChainRef.current
+    }, [pendingOpsStore])
 
     const rememberSeenOps = useCallback((ops = []) => {
         ops.forEach((op) => {
@@ -94,9 +210,19 @@ export function useProjectDocumentSync({
     // the previous project's version blocks the new document forever behind
     // the stale-version guard (permanent "Loading project…"), and ops still
     // queued for the old project get POSTed into the new one.
+    //
+    // The old project's waiting edits are NOT dropped any more: they stay in
+    // pendingOpsStore under the old project's key and are replayed the next
+    // time that project is opened at this address.
     useEffect(() => {
+        projectIdRef.current = projectId
         versionRef.current = 0
         pendingQueueRef.current = []
+        inFlightRef.current = []
+        sinceVersionRef.current = null
+        documentReadyRef.current = false
+        loadFailureRef.current = null
+        failureRef.current = null
         seenOpIdsRef.current = new Set()
         seenOpOrderRef.current = []
         isFlushingRef.current = false
@@ -105,7 +231,73 @@ export function useProjectDocumentSync({
             clearTimeout(flushThrottleTimerRef.current)
             flushThrottleTimerRef.current = null
         }
-    }, [projectId])
+        restoreRef.current = { status: projectId ? 'reading' : 'idle', ops: [], keys: [], sinceVersion: null }
+        dispatch?.({ type: 'pending-ops-count', count: 0 })
+        dispatch?.({ type: 'pending-sync-error', error: null, authExpired: false })
+        if (!projectId) return undefined
+
+        // This tab's claim on its own record (pendingOpsStore.js, Web Locks):
+        // while it is held, another tab will not take these edits over.
+        const ownKey = pendingOpsKey(projectId, localClientIdRef.current)
+        const releaseLock = holdPendingOpsLock(ownKey)
+        let cancelled = false
+
+        // Read back what an earlier visit left waiting: our own record (this
+        // tab, before a project switch) and any record whose tab is gone.
+        void (async () => {
+            let records = []
+            try {
+                // Bounded: a browser store that never answers must not hold
+                // every new edit back (flushQueue waits for this read).
+                let timer = null
+                const [stored, held] = await Promise.race([
+                    Promise.all([pendingOpsStore.list(projectId), heldPendingOpsLocks()]),
+                    new Promise((_, reject) => {
+                        timer = setTimeout(() => reject(new Error('browser store did not answer')), RESTORE_READ_TIMEOUT_MS)
+                    })
+                ]).finally(() => clearTimeout(timer))
+                records = stored.filter((record) => record.key === ownKey || !held.has(pendingOpsLockName(record.key)))
+            } catch (error) {
+                console.warn('[project-sync] could not read waiting edits from this browser:', error?.message || error)
+            }
+            if (cancelled) return
+            records.sort((a, b) => (Number(a.updatedAt) || 0) - (Number(b.updatedAt) || 0))
+            const seen = new Set()
+            const ops = []
+            records.forEach((record) => {
+                (Array.isArray(record.ops) ? record.ops : []).forEach((op) => {
+                    const opId = opIdOf(op)
+                    if (!opId || seen.has(opId)) return
+                    seen.add(opId)
+                    ops.push(op)
+                })
+            })
+            const versions = records.map((record) => Number(record.sinceVersion)).filter(Number.isFinite)
+            restoreRef.current = {
+                status: 'ready',
+                ops,
+                keys: records.map((record) => record.key).filter((key) => key !== ownKey),
+                sinceVersion: versions.length ? Math.min(...versions) : 0
+            }
+            if (ops.length && !documentReadyRef.current && loadFailureRef.current) {
+                failureRef.current = { reason: describeFailure(loadFailureRef.current, 'project did not load'), authExpired: false }
+            }
+            reportWaiting()
+            void flushQueueRef.current?.()
+        })()
+
+        return () => {
+            cancelled = true
+            releaseLock()
+        }
+    }, [dispatch, pendingOpsStore, projectId, reportWaiting])
+
+    // Once the document is in the store, restored edits can go on top of it.
+    const markDocumentReady = useCallback(() => {
+        documentReadyRef.current = true
+        loadFailureRef.current = null
+        if (restoreRef.current.ops.length) void flushQueueRef.current?.()
+    }, [])
 
     const reloadDocument = useCallback(async () => {
         if (!projectId) return
@@ -125,6 +317,7 @@ export function useProjectDocumentSync({
                     document: stateRef.current?.document,
                     version: versionRef.current
                 })
+                markDocumentReady()
                 return
             }
             versionRef.current = nextVersion
@@ -133,13 +326,18 @@ export function useProjectDocumentSync({
                 document: response.document,
                 version: versionRef.current
             })
+            markDocumentReady()
         } catch (error) {
             dispatch?.({
                 type: 'load-error',
                 error: error.message || 'Failed to load project.'
             })
+            // Edits from an earlier visit are waiting and the server did not
+            // answer: say so now, not when the first send fails.
+            loadFailureRef.current = error
+            if (waitingCount()) setFailure(describeFailure(error, 'project did not load'))
         }
-    }, [dispatch, projectId])
+    }, [dispatch, markDocumentReady, projectId, setFailure, waitingCount])
 
     useEffect(() => {
         reloadDocument()
@@ -198,11 +396,14 @@ export function useProjectDocumentSync({
         })
         // The snapshot only holds what the server accepted; edits still queued
         // locally were applied optimistically and would visually vanish if they
-        // weren't put back on top (they are resubmitted, not lost).
-        if (pendingQueueRef.current.length) {
-            dispatch?.({ type: 'apply-ops', ops: [...pendingQueueRef.current] })
+        // weren't put back on top (they are resubmitted, not lost). The batch
+        // on the wire counts too: its echo is filtered as already seen.
+        const unacknowledged = [...inFlightRef.current, ...pendingQueueRef.current]
+        if (unacknowledged.length) {
+            dispatch?.({ type: 'apply-ops', ops: unacknowledged })
         }
-    }, [dispatch, projectId])
+        markDocumentReady()
+    }, [dispatch, markDocumentReady, projectId])
 
     // Brings the client level with the server from `fromVersion`, either from
     // ops the caller already has (a 409 body) or by fetching the window.
@@ -226,28 +427,120 @@ export function useProjectDocumentSync({
         return ops.length ? 'applied' : 'level'
     }, [applyRemoteOps, projectId, resyncDocument])
 
-    const flushQueue = useCallback(async () => {
-        if (isFlushingRef.current || !projectId || !pendingQueueRef.current.length) {
+    // Puts a batch that did not land back at the head of the queue.
+    const requeue = useCallback((batch) => {
+        inFlightRef.current = []
+        pendingQueueRef.current.unshift(...batch)
+    }, [])
+
+    // Edits read back from an earlier visit go on top of the loaded document,
+    // except the ones the server already has. Proven safe to replay twice
+    // (report B4, serverXR/src/routes/projectRoutes.js POST /ops): every op
+    // carries an opId, and the server skips an opId already in its retained
+    // log. This filters on the client as well, from the same log, so an edit
+    // that landed before the reload is neither drawn twice here nor sent again.
+    const adoptRestored = useCallback(async () => {
+        const restore = restoreRef.current
+        const since = Number.isFinite(restore.sinceVersion) ? restore.sinceVersion : 0
+        const response = await listProjectOps(projectId, since)
+        const serverOps = Array.isArray(response?.ops) ? response.ops : []
+        const latestVersion = Number(response?.latestVersion)
+        if (Number.isFinite(latestVersion) && latestVersion < since) {
+            // The server's history is shorter than the one these edits were
+            // made against: another database behind the same address (a dev
+            // copy on a reused port), or a restore. Replaying would write old
+            // edits into a different history. Keep them in this browser, untouched,
+            // and say so.
+            restoreRef.current = { status: 'done', ops: [], keys: [], sinceVersion: null }
+            pushActivity(
+                `${restore.ops.length} unsaved ${restore.ops.length === 1 ? 'change' : 'changes'} from an earlier visit were made against another copy of this project (it was at version ${since}, this server is at ${latestVersion}). They are kept in this browser and not sent.`,
+                'error'
+            )
+            reportWaiting()
             return
         }
+        const known = new Set(serverOps.map(opIdOf).filter(Boolean))
+        const queued = new Set([...inFlightRef.current, ...pendingQueueRef.current].map(opIdOf).filter(Boolean))
+        const replay = restore.ops.filter((op) => {
+            const opId = opIdOf(op)
+            return opId && !known.has(opId) && !queued.has(opId)
+        })
+        restoreRef.current = { status: 'done', ops: [], keys: [], sinceVersion: null }
+        if (replay.length) {
+            sinceVersionRef.current = Math.min(
+                Number.isFinite(sinceVersionRef.current) ? sinceVersionRef.current : since,
+                since
+            )
+            rememberSeenOps(replay)
+            // Older than anything made since the page opened, so first in line.
+            pendingQueueRef.current.unshift(...replay)
+            dispatch?.({ type: 'apply-ops', ops: replay })
+            pushActivity(`${replay.length} unsaved ${replay.length === 1 ? 'change' : 'changes'} from an earlier visit are being saved now.`)
+        }
+        // Ours first, then the records we took over: never a moment where
+        // the edits are in neither.
+        await persistWaiting()
+        await Promise.all(restore.keys.map((key) => pendingOpsStore.remove(key).catch(() => {})))
+        reportWaiting()
+    }, [dispatch, pendingOpsStore, persistWaiting, projectId, pushActivity, rememberSeenOps, reportWaiting])
+
+    const scheduleRetry = useCallback(() => {
+        clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = setTimeout(() => {
+            void flushQueueRef.current?.()
+        }, SYNC_RETRY_DELAY_MS)
+    }, [])
+
+    const flushQueue = useCallback(async () => {
+        if (isFlushingRef.current || !projectId) return
+        const restore = restoreRef.current
+        // Wait for the read-back: it finishes by calling flushQueue, so the
+        // older edits go out before anything made since.
+        if (restore.status === 'reading') return
+        const hasRestored = restore.ops.length > 0
+        // Restored edits need the document under them; load/resync calls back.
+        if (hasRestored && !documentReadyRef.current) return
+        if (!hasRestored && !pendingQueueRef.current.length) return
         isFlushingRef.current = true
         let consecutiveConflicts = 0
         let resyncAfterConflict = false
 
         try {
+            if (hasRestored) {
+                try {
+                    await adoptRestored()
+                } catch (error) {
+                    pushActivity(`Project sync failed: ${error.message || 'unknown error'}`, 'error')
+                    setFailure(describeFailure(error))
+                    scheduleRetry()
+                    return
+                }
+            }
             while (pendingQueueRef.current.length) {
                 const batch = pendingQueueRef.current.splice(0, pendingQueueRef.current.length)
+                inFlightRef.current = batch
+                // In the browser's store before it is on the wire.
+                await persistChainRef.current
                 try {
                     const response = await submitProjectOps(projectId, versionRef.current, batch)
+                    // The editor moved to another project while this was on
+                    // the wire: nothing below belongs to the new one. The
+                    // batch's record stays under the old project's key until
+                    // that project is opened again (and is skipped there, as
+                    // the server now has it).
+                    if (projectIdRef.current !== projectId) return
                     consecutiveConflicts = 0
+                    inFlightRef.current = []
                     const appliedOps = Array.isArray(response?.ops) && response.ops.length ? response.ops : batch
                     rememberSeenOps(appliedOps)
                     versionRef.current = Number(response?.newVersion) || versionRef.current
+                    if (!waitingCount()) sinceVersionRef.current = null
+                    void persistWaiting()
                     dispatch?.({
                         type: 'set-version',
                         version: versionRef.current
                     })
-                    dispatch?.({ type: 'pending-sync-error', error: null, authExpired: false })
+                    clearFailure()
                     if (resyncAfterConflict) {
                         resyncAfterConflict = false
                         try {
@@ -257,6 +550,7 @@ export function useProjectDocumentSync({
                         }
                     }
                 } catch (error) {
+                    if (projectIdRef.current !== projectId) return
                     if (error?.status === 401) {
                         // Session expired mid-edit: retrying with the same
                         // stale session will just fail again forever (the
@@ -266,13 +560,9 @@ export function useProjectDocumentSync({
                         // edit, by which point the user has hopefully signed
                         // back in. Surface a distinct message so this reads
                         // as "you're signed out," not a generic sync hiccup.
-                        pendingQueueRef.current.unshift(...batch)
+                        requeue(batch)
                         pushActivity('Your session has expired — sign in again to keep syncing.', 'error')
-                        dispatch?.({
-                            type: 'pending-sync-error',
-                            error: 'Session expired — sign in again to keep syncing.',
-                            authExpired: true
-                        })
+                        setFailure('session expired, sign in again to keep syncing', { authExpired: true })
                         clearTimeout(retryTimerRef.current)
                         break
                     }
@@ -283,16 +573,10 @@ export function useProjectDocumentSync({
                             // writer -- stop resubmitting instantly. Fall through
                             // to the same queue-and-delay path every other error
                             // uses instead of looping forever.
-                            pendingQueueRef.current.unshift(...batch)
+                            requeue(batch)
                             pushActivity('Project sync is stuck behind concurrent edits — retrying shortly.', 'error')
-                            dispatch?.({
-                                type: 'pending-sync-error',
-                                error: 'Sync is stuck behind concurrent edits — retrying shortly.'
-                            })
-                            clearTimeout(retryTimerRef.current)
-                            retryTimerRef.current = setTimeout(() => {
-                                void flushQueue()
-                            }, SYNC_RETRY_DELAY_MS)
+                            setFailure('sync is stuck behind concurrent edits, retrying shortly')
+                            scheduleRetry()
                             break
                         }
                         const latestVersion = Number(error?.data?.latestVersion)
@@ -303,7 +587,7 @@ export function useProjectDocumentSync({
                         // listProjectOps would unwind past the unshift and
                         // silently drop ops the UI has already applied
                         // optimistically ("never drop an edit", above).
-                        pendingQueueRef.current.unshift(...batch)
+                        requeue(batch)
                         // The conflict body carries the server's whole retained
                         // op window, not just what this client missed --
                         // replaying ops already baked into the loaded snapshot
@@ -323,14 +607,8 @@ export function useProjectDocumentSync({
                             }
                         } catch (catchUpError) {
                             pushActivity(`Project sync failed: ${catchUpError.message || 'catch-up failed'}`, 'error')
-                            dispatch?.({
-                                type: 'pending-sync-error',
-                                error: catchUpError.message || 'Project sync failed.'
-                            })
-                            clearTimeout(retryTimerRef.current)
-                            retryTimerRef.current = setTimeout(() => {
-                                void flushQueue()
-                            }, SYNC_RETRY_DELAY_MS)
+                            setFailure(describeFailure(catchUpError))
+                            scheduleRetry()
                             break
                         }
                         continue
@@ -340,23 +618,21 @@ export function useProjectDocumentSync({
                     // optimistically (see docs/ai/known-fixes.md). Put the batch
                     // back, surface a visible error, and retry after a delay
                     // instead of hot-looping against a persistent failure.
-                    pendingQueueRef.current.unshift(...batch)
+                    requeue(batch)
                     pushActivity(`Project sync failed: ${error.message || 'unknown error'}`, 'error')
-                    dispatch?.({
-                        type: 'pending-sync-error',
-                        error: error.message || 'Project sync failed.'
-                    })
-                    clearTimeout(retryTimerRef.current)
-                    retryTimerRef.current = setTimeout(() => {
-                        void flushQueue()
-                    }, SYNC_RETRY_DELAY_MS)
+                    setFailure(describeFailure(error))
+                    scheduleRetry()
                     break
                 }
             }
         } finally {
             isFlushingRef.current = false
         }
-    }, [catchUp, dispatch, projectId, pushActivity, rememberSeenOps, resyncDocument])
+    }, [adoptRestored, catchUp, clearFailure, dispatch, persistWaiting, projectId, pushActivity, rememberSeenOps, requeue, resyncDocument, scheduleRetry, setFailure, waitingCount])
+
+    useEffect(() => {
+        flushQueueRef.current = flushQueue
+    }, [flushQueue])
 
     // Coalesces bursts of applyLocalOps calls (see FLUSH_THROTTLE_MS above)
     // into one flushQueue() per window, instead of one per call.
@@ -393,16 +669,20 @@ export function useProjectDocumentSync({
         if (!normalizedOps.length) return
 
         rememberSeenOps(normalizedOps)
+        if (!waitingCount()) sinceVersionRef.current = versionRef.current
         pendingQueueRef.current.push(...normalizedOps)
+        // Kept in the browser before it is sent (flushQueue awaits this write).
+        void persistWaiting()
         dispatch?.({
             type: 'apply-ops',
             ops: normalizedOps
         })
+        reportWaiting()
         if (options.activityMessage) {
             pushActivity(options.activityMessage, options.activityLevel || 'info')
         }
         scheduleFlush()
-    }, [dispatch, opIdPrefix, pushActivity, rememberSeenOps, scheduleFlush])
+    }, [dispatch, opIdPrefix, persistWaiting, pushActivity, rememberSeenOps, reportWaiting, scheduleFlush, waitingCount])
 
     const replaceDocument = useCallback(async (document, options = {}) => {
         if (!projectId) return
@@ -430,7 +710,17 @@ export function useProjectDocumentSync({
             },
             onReady: async () => {
                 dispatch?.({ type: 'scene-stream-state', value: 'connected', error: null })
+                // The first load failed (the server was gone when the page
+                // opened): it was never retried, so the page sat on the load
+                // error and edits read back from an earlier visit had no
+                // document to go on. The server answers again — load now.
+                if (loadFailureRef.current && !documentReadyRef.current) {
+                    await reloadDocument()
+                }
                 await catchUp(versionRef.current)
+                // The server is back: send what waited now, not at the next
+                // 4 s retry. Not while signed out — that waits for sign-in.
+                if (!failureRef.current?.authExpired) void flushQueueRef.current?.()
             },
             // A failed post-connect catch-up used to be swallowed, leaving the
             // stream reading "connected" while the document sat silently
@@ -458,15 +748,39 @@ export function useProjectDocumentSync({
         return () => {
             syncService.disconnect()
         }
-    }, [applyRemoteOps, catchUp, dispatch, projectId, pushActivity])
+    }, [applyRemoteOps, catchUp, dispatch, projectId, pushActivity, reloadDocument])
+
+    // While edits wait, leaving the page asks first (the browser's own
+    // dialog). They are kept in this browser either way, but only at this
+    // address and only until they reach the server. `online` sends them as soon
+    // as the machine is back on a network.
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const onBeforeUnload = (event) => {
+            if (!waitingCount()) return undefined
+            event.preventDefault()
+            event.returnValue = ''
+            return ''
+        }
+        const onOnline = () => {
+            if (!failureRef.current?.authExpired) void flushQueueRef.current?.()
+        }
+        window.addEventListener('beforeunload', onBeforeUnload)
+        window.addEventListener('online', onOnline)
+        return () => {
+            window.removeEventListener('beforeunload', onBeforeUnload)
+            window.removeEventListener('online', onOnline)
+        }
+    }, [waitingCount])
 
     const syncState = useMemo(() => ({
         presenceState: state?.presenceState || 'disconnected',
         sceneStreamState: state?.sceneStreamState || 'idle',
         sceneStreamError: state?.sceneStreamError || null,
         pendingSyncError: state?.pendingSyncError || null,
+        pendingOpCount: Number(state?.pendingOpCount) || 0,
         authExpired: Boolean(state?.authExpired)
-    }), [state?.presenceState, state?.sceneStreamError, state?.sceneStreamState, state?.pendingSyncError, state?.authExpired])
+    }), [state?.presenceState, state?.sceneStreamError, state?.sceneStreamState, state?.pendingSyncError, state?.pendingOpCount, state?.authExpired])
 
     return {
         applyLocalOps,

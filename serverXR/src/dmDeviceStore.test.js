@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { beforeEach, afterEach, describe, expect, it } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { createRequire } from 'node:module'
 import { webcrypto } from 'node:crypto'
 
@@ -63,6 +63,28 @@ describe('the public-key phone book', () => {
         // the first ones published are the ones that went
         expect(kept.map((d) => d.publicKey)).not.toContain(keys[0])
         expect(kept.map((d) => d.publicKey)).toContain(keys.at(-1))
+    })
+
+    // Devices published in the same millisecond tie on last_seen_at. Without a
+    // tie-break SQLite hands ties back in index order — by public key, which is
+    // random — so the cap dropped a random device, and the test above failed in
+    // CI about one run in many. Publishing the keys in DESCENDING key order with
+    // a frozen clock makes key order the exact opposite of publish order, so
+    // this fails every time unless ties fall back to the order they arrived.
+    it('drops the earliest published when every device shares one millisecond', async () => {
+        const keys = []
+        for (let i = 0; i < MAX_DEVICES_PER_USER + 3; i++) keys.push(await realKey())
+        keys.sort().reverse()
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_791_400_000_000)
+        try {
+            for (const key of keys) publishDevice({ userId: 'u1', publicKey: key })
+        } finally {
+            now.mockRestore()
+        }
+        const kept = listDevices('u1').map((d) => d.publicKey)
+        expect(kept).toHaveLength(MAX_DEVICES_PER_USER)
+        for (const gone of keys.slice(0, 3)) expect(kept).not.toContain(gone)
+        expect(kept).toEqual(keys.slice(3).reverse())
     })
 
     it('lets a person take a device back — and only their own', async () => {

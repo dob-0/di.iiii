@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { KEYMAP, KEYMAP_BY_ID, isTypingTarget, keyHint, matchesCombo, matchesKeyId } from './keymap.js'
-import { GUIDE_SECTIONS } from '../utils/rawGuide.js'
+import { helpKeyRows } from '../utils/rawGuide.js'
 
 const key = (k, mods = {}) => ({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods })
 
@@ -23,8 +23,7 @@ describe('the keymap table', () => {
     })
 
     it('the help dialog keys list is written from the table, row for row', () => {
-        const keys = GUIDE_SECTIONS.find((s) => s.id === 'keys')
-        expect(keys.controls.map(([does]) => does)).toEqual(KEYMAP.map((r) => r.does))
+        expect(helpKeyRows().map(([does]) => does)).toEqual(KEYMAP.map((r) => r.does))
     })
 })
 

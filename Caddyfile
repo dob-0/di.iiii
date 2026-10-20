@@ -1,3 +1,17 @@
+# Global options. The only one is for a space on its own domain (the block
+# at the end of this file): before Caddy asks Let's Encrypt for a certificate
+# for a name it has never seen, it asks serverXR whether we serve that name,
+# and goes ahead only on a 200. Without this, anyone could aim any name at us
+# and spend our Let's Encrypt limits. Inert while no site block uses
+# `tls { on_demand }` with a real address -- see CUSTOM_DOMAINS_SITE below.
+#   https://caddyserver.com/docs/automatic-https#on-demand-tls
+#   https://caddyserver.com/docs/caddyfile/options#on-demand-tls
+{
+	on_demand_tls {
+		ask http://server:4000/serverXR/api/domain-check
+	}
+}
+
 {$SITE_DOMAIN} {
 	# Caddy issues the certificate but does not send HSTS on its own. A year
 	# without preload: browsers that have visited once stop trying http://
@@ -29,5 +43,24 @@
 # and its DNS record exists, same as DEV_DOMAIN above.
 {$MAP_DOMAIN} {
 	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy client:8080
+}
+
+# A space on its own domain, without Cloudflare (docs/architecture/
+# SPEC_space_own_domain.md, "Without Cloudflare: Caddy on-demand TLS").
+# Every hostname not named above lands here; Caddy gets its certificate the
+# first time a visitor arrives, once the `ask` above says yes -- i.e. once
+# serverXR (DOMAINS_PROVIDER=caddy) has seen the domain's DNS point at this
+# host. The app then reads the host and shows that space.
+# Inert by default: CUSTOM_DOMAINS_SITE defaults (in docker-compose.yml) to a
+# name under .invalid that never resolves, and an on-demand site gets no
+# certificate until a visitor arrives, so nothing is issued and nothing is
+# logged. To switch it on, set CUSTOM_DOMAINS_SITE=https:// in .env and
+# restart caddy. No HSTS here: that header would bind someone else's domain,
+# which is the domain owner's decision, not ours.
+{$CUSTOM_DOMAINS_SITE} {
+	tls {
+		on_demand
+	}
 	reverse_proxy client:8080
 }

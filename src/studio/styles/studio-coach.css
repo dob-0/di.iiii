@@ -13,7 +13,7 @@
     padding: var(--di-space-2) var(--di-space-3);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan-border);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     color: var(--di-text);
     font-size: var(--di-text-3);
     letter-spacing: 0.02em;
@@ -35,7 +35,7 @@
 .studio-coach-dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: rgba(var(--di-cyan-rgb), 0.25);
 }
 

@@ -12,6 +12,13 @@ export const RAW_PAGE_PROJECTS = 'projects'
 // hold fullscreen. ?scope=<nodeId> aims it at a container's room.
 export const RAW_PAGE_OUT = 'out'
 export const RAW_RESERVED_SEGMENT = 'raw'
+
+// The floating account chip is for pages with no bar of their own. A project's
+// canvas has the one bar and carries the account as its last cell (audit
+// 2026-10-05 B6), and the projector cable shows the work, not the tool.
+export const rawShowsFloatingAccount = (rawState = {}) => (
+    rawState.page !== RAW_PAGE_OUT && !rawState.projectId
+)
 // The lane was called Seed until 2026-07-30. Old links stay alive: a /seed path
 // still resolves, and RootApp rewrites it to the /raw equivalent so the address
 // bar heals itself instead of leaving the old name circulating forever.

@@ -58,6 +58,23 @@ describe('resolveKeeperEndpoint', () => {
             .toBe('https://box.local/v1/chat/completions')
     })
 
+    // The regression: llama.cpp, vLLM and LM Studio name their OpenAI *base* URL
+    // ".../v1", so that is what gets pasted. POSTing to it 404s, and the panel
+    // reported a working server as broken ("The keeper answered 404 Not Found").
+    it('completes an OpenAI base URL (.../v1) to the chat route', () => {
+        expect(resolveKeeperEndpoint('http://127.0.0.1:8090/v1'))
+            .toBe('http://127.0.0.1:8090/v1/chat/completions')
+        expect(resolveKeeperEndpoint('http://127.0.0.1:8090/v1/'))
+            .toBe('http://127.0.0.1:8090/v1/chat/completions')
+        expect(resolveKeeperEndpoints('http://127.0.0.1:8090/v1'))
+            .toEqual(['http://127.0.0.1:8090/v1/chat/completions'])
+    })
+
+    it('does not touch a path that merely contains v1', () => {
+        expect(resolveKeeperEndpoint('https://box.local/v1beta/openai')).toBe('https://box.local/v1beta/openai')
+        expect(resolveKeeperEndpoint('https://box.local/api/v1/models')).toBe('https://box.local/api/v1/models')
+    })
+
     it('names the OpenAI path as the second guess for a bare host', () => {
         expect(resolveKeeperEndpoints('http://127.0.0.1:8090')).toEqual([
             'http://127.0.0.1:8090/api/chat',
@@ -103,6 +120,20 @@ describe('askKeeper', () => {
         const result = await askKeeper({ endpoint: 'http://127.0.0.1:8090', model: 'qwen3-4b', prompt: 'there?', fetchImpl })
         expect(calls).toEqual(['http://127.0.0.1:8090/api/chat', 'http://127.0.0.1:8090/v1/chat/completions'])
         expect(result).toMatchObject({ status: KEEPER_STATUS.ANSWERED, text: 'Here.' })
+    })
+
+    it('reaches a llama.cpp-style server given its printed .../v1 base URL, not "answered 404"', async () => {
+        // Only the chat route answers; the bare base URL is a 404 on a healthy server.
+        const calls = []
+        const fetchImpl = vi.fn(async (url) => {
+            calls.push(url)
+            return url.endsWith('/v1/chat/completions')
+                ? okResponse({ choices: [{ message: { content: 'Welcome.' } }] })
+                : { ok: false, status: 404, statusText: 'Not Found', json: async () => ({}) }
+        })
+        const result = await askKeeper({ endpoint: 'http://127.0.0.1:8090/v1', model: 'qwen3-4b', prompt: 'hi', fetchImpl })
+        expect(calls).toEqual(['http://127.0.0.1:8090/v1/chat/completions'])
+        expect(result).toMatchObject({ status: KEEPER_STATUS.ANSWERED, text: 'Welcome.' })
     })
 
     it('does not guess a second path when the first was given explicitly', async () => {

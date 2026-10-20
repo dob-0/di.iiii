@@ -49,13 +49,14 @@ const cluster = {
 }
 
 describe('the cue strip inside the control cluster', () => {
-    it('sits in the cluster, next to the way through to Projection', () => {
+    // Owner 2026-10-12 06:30, editing a show's lamps: "the cue things is not necessary, remove that" — firing a cue from the
+    // editing panel changed the shared show for everyone watching. The strip itself stays (phone bar, jam mode).
+    it('is NOT in the cluster any more, even for a project with cues', () => {
         const onFireCue = vi.fn()
         render(<StudioControlCluster {...cluster} onOpenProjection={() => {}} cues={CUES} onFireCue={onFireCue} />)
-
-        expect(screen.getByRole('group', { name: 'Cues' })).toBeTruthy()
-        fireEvent.click(screen.getByRole('button', { name: /Open/ }))
-        expect(onFireCue).toHaveBeenCalledWith(CUES[0])
+        expect(screen.queryByRole('group', { name: 'Cues' })).toBe(null)
+        expect(screen.queryByRole('button', { name: /^Open$/ })).toBe(null)
+        expect(onFireCue).not.toHaveBeenCalled()
     })
 
     // The cluster is every project's chrome. A project that has never been on

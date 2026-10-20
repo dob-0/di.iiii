@@ -1,0 +1,957 @@
+{
+ "site": "MOXIR hall, Charentsavan",
+ "date": "2026-10-07",
+ "layer": "PHOTO ANALYSIS layer. NOT for dimsFiles yet: hall.py does not read these keys (floor_occupancy, column_check, zone_suggestions). No massing/cameras key, so it cannot replace an earlier list. Read with docs/moxir/PHOTO_ANALYSIS_2026-10-07.md.",
+ "source": "photo 032-file_76.jpg (the owner's 0387927a; camera = hall json geometry.cameras.photo-032), segmentation + depth by scripts/place/photo_analyse.py",
+ "frame": "HALL FRAME: metres, y up, x across (+x house right), z along (+z toward the entry), z 0 = expansion joint",
+ "models": {
+  "oneformer": {
+   "id": "shi-labs/oneformer_ade20k_swin_large",
+   "revision": "4a5bac8e64f82681a12db2e151a4c2f4ce6092b2",
+   "licence": "MIT"
+  },
+  "gdino": {
+   "id": "IDEA-Research/grounding-dino-tiny",
+   "revision": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+   "licence": "Apache-2.0"
+  },
+  "sam2": {
+   "id": "facebook/sam2.1-hiera-small",
+   "revision": "ee5bba1d82bb8749febdf90f45e84b687142ba03",
+   "licence": "Apache-2.0"
+  },
+  "depth": {
+   "id": "depth-anything/Depth-Anything-V2-Small-hf",
+   "revision": "5426e4f0f36572d16453bbda7a8389317b1bef99",
+   "licence": "Apache-2.0"
+  },
+  "sam1": {
+   "id": "facebook/sam-vit-base",
+   "revision": "70c1a07f894ebb5b307fd9eaaee97b9dfc16068f",
+   "licence": "Apache-2.0"
+  }
+ },
+ "floor_occupancy": {
+  "method": "occupancy grid on y = 0, 0.5 m cells: OneFormer ADE20K floor pixels -> free; contacts of non-floor masks and SAM standing objects (single-view metrology height >= 0.4 m, verticality from DA-V2 relative depth) -> occupied",
+  "photo": "032-file_76.jpg",
+  "seen_z_m": [
+   8.2,
+   39.7
+  ],
+  "confidence": "medium for z 10-35 (fit rms 3 px -> +-0.2..0.8 m), low for z 8.2-10 and 35-40; \"free\" = no standing object, lying debris is NOT separated",
+  "polygons": [
+   {
+    "class": "standing_object",
+    "xz_m": [
+     [
+      15.75,
+      32.25
+     ],
+     [
+      11.75,
+      35.25
+     ],
+     [
+      12.75,
+      35.25
+     ]
+    ]
+   },
+   {
+    "class": "standing_object",
+    "xz_m": [
+     [
+      -15.75,
+      31.75
+     ],
+     [
+      -12.25,
+      35.75
+     ],
+     [
+      -12.75,
+      36.25
+     ],
+     [
+      -10.25,
+      37.25
+     ],
+     [
+      -11.25,
+      36.25
+     ],
+     [
+      -10.75,
+      35.25
+     ],
+     [
+      -9.75,
+      35.75
+     ],
+     [
+      -10.25,
+      32.75
+     ],
+     [
+      -10.25,
+      34.25
+     ],
+     [
+      -12.75,
+      35.25
+     ]
+    ]
+   },
+   {
+    "class": "standing_object",
+    "xz_m": [
+     [
+      -11.75,
+      29.25
+     ],
+     [
+      -12.25,
+      28.75
+     ],
+     [
+      -12.75,
+      29.75
+     ],
+     [
+      -13.75,
+      29.75
+     ]
+    ]
+   },
+   {
+    "class": "standing_object",
+    "xz_m": [
+     [
+      13.75,
+      27.25
+     ],
+     [
+      11.75,
+      28.75
+     ]
+    ]
+   },
+   {
+    "class": "standing_object",
+    "xz_m": [
+     [
+      10.25,
+      18.75
+     ],
+     [
+      10.25,
+      23.75
+     ],
+     [
+      11.25,
+      23.75
+     ],
+     [
+      13.75,
+      19.75
+     ],
+     [
+      10.75,
+      23.75
+     ]
+    ]
+   },
+   {
+    "class": "wall_or_mass",
+    "xz_m": [
+     [
+      -12.25,
+      28.25
+     ],
+     [
+      -13.25,
+      28.75
+     ],
+     [
+      -14.25,
+      27.75
+     ],
+     [
+      -14.75,
+      28.75
+     ],
+     [
+      -15.75,
+      28.25
+     ],
+     [
+      -15.75,
+      29.25
+     ],
+     [
+      -14.25,
+      29.25
+     ],
+     [
+      -13.75,
+      28.25
+     ],
+     [
+      -12.75,
+      29.25
+     ],
+     [
+      -13.25,
+      28.75
+     ]
+    ]
+   },
+   {
+    "class": "wall_or_mass",
+    "xz_m": [
+     [
+      13.75,
+      20.75
+     ],
+     [
+      13.75,
+      21.75
+     ],
+     [
+      14.75,
+      22.25
+     ],
+     [
+      14.25,
+      23.25
+     ],
+     [
+      15.25,
+      23.75
+     ],
+     [
+      15.75,
+      23.25
+     ]
+    ]
+   },
+   {
+    "class": "wall_or_mass",
+    "xz_m": [
+     [
+      -12.25,
+      16.75
+     ],
+     [
+      -13.75,
+      20.75
+     ],
+     [
+      -12.25,
+      18.25
+     ]
+    ]
+   },
+   {
+    "class": "wall_or_mass",
+    "xz_m": [
+     [
+      10.25,
+      8.25
+     ],
+     [
+      11.25,
+      9.25
+     ]
+    ]
+   },
+   {
+    "class": "movable",
+    "xz_m": [
+     [
+      0.75,
+      24.25
+     ],
+     [
+      0.25,
+      25.25
+     ],
+     [
+      1.75,
+      26.75
+     ],
+     [
+      2.25,
+      25.75
+     ],
+     [
+      1.75,
+      26.25
+     ]
+    ]
+   }
+  ]
+ },
+ "column_check": {
+  "method": "vertical-edge scan along each row in photo 032 + manual reading of the zoomed photo",
+  "photo": "032-file_76.jpg",
+  "rows": {
+   "x-36": {
+    "z_visible_m": [
+     -10.0,
+     19.7
+    ],
+    "model_columns_in_view": 6,
+    "peaks": [
+     {
+      "z_m": -7.6,
+      "u_px": 294.6,
+      "prominence": 104.7,
+      "nearest_model_z_m": -6.0,
+      "dz_m": -1.6,
+      "in_model": false,
+      "n": 1
+     },
+     {
+      "z_m": -5.6,
+      "u_px": 282.8,
+      "prominence": 29.5,
+      "nearest_model_z_m": -6.0,
+      "dz_m": 0.4,
+      "in_model": true,
+      "n": 2
+     },
+     {
+      "z_m": -2.5,
+      "u_px": 262.8,
+      "prominence": 110.7,
+      "nearest_model_z_m": -0.5,
+      "dz_m": -2.0,
+      "in_model": false,
+      "n": 3
+     },
+     {
+      "z_m": 1.25,
+      "u_px": 235.1,
+      "prominence": 94.2,
+      "nearest_model_z_m": 0.5,
+      "dz_m": 0.75,
+      "in_model": true,
+      "n": 4
+     },
+     {
+      "z_m": 4.25,
+      "u_px": 209.7,
+      "prominence": 22.3,
+      "nearest_model_z_m": 6.0,
+      "dz_m": -1.75,
+      "in_model": false,
+      "n": 5
+     },
+     {
+      "z_m": 6.1,
+      "u_px": 192.3,
+      "prominence": 15.5,
+      "nearest_model_z_m": 6.0,
+      "dz_m": 0.1,
+      "in_model": true,
+      "n": 6
+     },
+     {
+      "z_m": 10.0,
+      "u_px": 150.5,
+      "prominence": 36.6,
+      "nearest_model_z_m": 12.0,
+      "dz_m": -2.0,
+      "in_model": false,
+      "n": 7
+     },
+     {
+      "z_m": 13.45,
+      "u_px": 106.0,
+      "prominence": 28.5,
+      "nearest_model_z_m": 12.0,
+      "dz_m": 1.45,
+      "in_model": true,
+      "n": 8
+     },
+     {
+      "z_m": 15.8,
+      "u_px": 70.6,
+      "prominence": 24.2,
+      "nearest_model_z_m": 18.0,
+      "dz_m": -2.2,
+      "in_model": false,
+      "n": 9
+     },
+     {
+      "z_m": 18.55,
+      "u_px": 22.5,
+      "prominence": 25.0,
+      "nearest_model_z_m": 18.0,
+      "dz_m": 0.55,
+      "in_model": true,
+      "n": 10
+     }
+    ],
+    "model_without_peak_z_m": [
+     -0.5
+    ]
+   },
+   "x-12": {
+    "z_visible_m": [
+     -10.0,
+     39.5
+    ],
+    "model_columns_in_view": 9,
+    "peaks": [
+     {
+      "z_m": -5.95,
+      "u_px": 522.2,
+      "prominence": 131.4,
+      "nearest_model_z_m": -6.0,
+      "dz_m": 0.05,
+      "in_model": true,
+      "n": 11
+     },
+     {
+      "z_m": -1.45,
+      "u_px": 513.3,
+      "prominence": 77.7,
+      "nearest_model_z_m": -0.5,
+      "dz_m": -0.95,
+      "in_model": true,
+      "n": 12
+     },
+     {
+      "z_m": 4.65,
+      "u_px": 498.5,
+      "prominence": 213.5,
+      "nearest_model_z_m": 6.0,
+      "dz_m": -1.35,
+      "in_model": true,
+      "n": 13
+     },
+     {
+      "z_m": 8.25,
+      "u_px": 487.7,
+      "prominence": 100.1,
+      "nearest_model_z_m": 6.0,
+      "dz_m": 2.25,
+      "in_model": false,
+      "n": 14
+     },
+     {
+      "z_m": 10.8,
+      "u_px": 478.9,
+      "prominence": 139.4,
+      "nearest_model_z_m": 12.0,
+      "dz_m": -1.2,
+      "in_model": true,
+      "n": 15
+     },
+     {
+      "z_m": 14.1,
+      "u_px": 465.6,
+      "prominence": 37.8,
+      "nearest_model_z_m": 12.0,
+      "dz_m": 2.1,
+      "in_model": false,
+      "n": 16
+     },
+     {
+      "z_m": 16.7,
+      "u_px": 453.4,
+      "prominence": 165.0,
+      "nearest_model_z_m": 18.0,
+      "dz_m": -1.3,
+      "in_model": true,
+      "n": 17
+     },
+     {
+      "z_m": 19.95,
+      "u_px": 435.0,
+      "prominence": 56.2,
+      "nearest_model_z_m": 18.0,
+      "dz_m": 1.95,
+      "in_model": false,
+      "n": 18
+     },
+     {
+      "z_m": 23.35,
+      "u_px": 411.1,
+      "prominence": 91.0,
+      "nearest_model_z_m": 24.0,
+      "dz_m": -0.65,
+      "in_model": true,
+      "n": 19
+     },
+     {
+      "z_m": 26.35,
+      "u_px": 384.3,
+      "prominence": 57.1,
+      "nearest_model_z_m": 24.0,
+      "dz_m": 2.35,
+      "in_model": false,
+      "n": 20
+     },
+     {
+      "z_m": 29.7,
+      "u_px": 345.1,
+      "prominence": 99.4,
+      "nearest_model_z_m": 30.0,
+      "dz_m": -0.3,
+      "in_model": true,
+      "n": 21
+     },
+     {
+      "z_m": 36.15,
+      "u_px": 217.1,
+      "prominence": 36.1,
+      "nearest_model_z_m": 36.0,
+      "dz_m": 0.15,
+      "in_model": true,
+      "n": 22
+     }
+    ],
+    "model_without_peak_z_m": [
+     0.5
+    ]
+   },
+   "x12": {
+    "z_visible_m": [
+     -10.0,
+     38.6
+    ],
+    "model_columns_in_view": 9,
+    "peaks": [
+     {
+      "z_m": -8.45,
+      "u_px": 753.6,
+      "prominence": 55.3,
+      "nearest_model_z_m": -6.0,
+      "dz_m": -2.45,
+      "in_model": false,
+      "n": 23
+     },
+     {
+      "z_m": -6.75,
+      "u_px": 757.5,
+      "prominence": 17.8,
+      "nearest_model_z_m": -6.0,
+      "dz_m": -0.75,
+      "in_model": true,
+      "n": 24
+     },
+     {
+      "z_m": -3.55,
+      "u_px": 765.5,
+      "prominence": 37.5,
+      "nearest_model_z_m": -6.0,
+      "dz_m": 2.45,
+      "in_model": false,
+      "n": 25
+     },
+     {
+      "z_m": 0.1,
+      "u_px": 775.8,
+      "prominence": 91.7,
+      "nearest_model_z_m": 0.5,
+      "dz_m": -0.4,
+      "in_model": true,
+      "n": 26
+     },
+     {
+      "z_m": 2.95,
+      "u_px": 784.9,
+      "prominence": 61.1,
+      "nearest_model_z_m": 0.5,
+      "dz_m": 2.45,
+      "in_model": false,
+      "n": 27
+     },
+     {
+      "z_m": 4.45,
+      "u_px": 790.2,
+      "prominence": 18.3,
+      "nearest_model_z_m": 6.0,
+      "dz_m": -1.55,
+      "in_model": false,
+      "n": 28
+     },
+     {
+      "z_m": 7.05,
+      "u_px": 800.2,
+      "prominence": 32.5,
+      "nearest_model_z_m": 6.0,
+      "dz_m": 1.05,
+      "in_model": true,
+      "n": 29
+     },
+     {
+      "z_m": 9.2,
+      "u_px": 809.5,
+      "prominence": 77.7,
+      "nearest_model_z_m": 12.0,
+      "dz_m": -2.8,
+      "in_model": false,
+      "n": 30
+     },
+     {
+      "z_m": 10.75,
+      "u_px": 816.7,
+      "prominence": 37.1,
+      "nearest_model_z_m": 12.0,
+      "dz_m": -1.25,
+      "in_model": true,
+      "n": 31
+     },
+     {
+      "z_m": 12.65,
+      "u_px": 826.5,
+      "prominence": 44.4,
+      "nearest_model_z_m": 12.0,
+      "dz_m": 0.65,
+      "in_model": true,
+      "n": 32
+     },
+     {
+      "z_m": 14.85,
+      "u_px": 839.1,
+      "prominence": 20.0,
+      "nearest_model_z_m": 12.0,
+      "dz_m": 2.85,
+      "in_model": false,
+      "n": 33
+     },
+     {
+      "z_m": 17.8,
+      "u_px": 858.7,
+      "prominence": 65.5,
+      "nearest_model_z_m": 18.0,
+      "dz_m": -0.2,
+      "in_model": true,
+      "n": 34
+     },
+     {
+      "z_m": 19.6,
+      "u_px": 872.5,
+      "prominence": 16.5,
+      "nearest_model_z_m": 18.0,
+      "dz_m": 1.6,
+      "in_model": false,
+      "n": 35
+     },
+     {
+      "z_m": 21.8,
+      "u_px": 891.7,
+      "prominence": 14.4,
+      "nearest_model_z_m": 24.0,
+      "dz_m": -2.2,
+      "in_model": false,
+      "n": 36
+     },
+     {
+      "z_m": 24.55,
+      "u_px": 920.4,
+      "prominence": 63.1,
+      "nearest_model_z_m": 24.0,
+      "dz_m": 0.55,
+      "in_model": true,
+      "n": 37
+     },
+     {
+      "z_m": 28.6,
+      "u_px": 976.0,
+      "prominence": 26.8,
+      "nearest_model_z_m": 30.0,
+      "dz_m": -1.4,
+      "in_model": true,
+      "n": 38
+     },
+     {
+      "z_m": 32.1,
+      "u_px": 1044.1,
+      "prominence": 36.0,
+      "nearest_model_z_m": 30.0,
+      "dz_m": 2.1,
+      "in_model": false,
+      "n": 39
+     },
+     {
+      "z_m": 35.35,
+      "u_px": 1136.0,
+      "prominence": 16.1,
+      "nearest_model_z_m": 36.0,
+      "dz_m": -0.65,
+      "in_model": true,
+      "n": 40
+     }
+    ],
+    "model_without_peak_z_m": []
+   },
+   "x36": {
+    "z_visible_m": [
+     -10.0,
+     18.2
+    ],
+    "model_columns_in_view": 5,
+    "peaks": [
+     {
+      "z_m": -8.25,
+      "u_px": 982.0,
+      "prominence": 55.7,
+      "nearest_model_z_m": -6.0,
+      "dz_m": -2.25,
+      "in_model": false,
+      "n": 41
+     },
+     {
+      "z_m": -1.15,
+      "u_px": 1031.5,
+      "prominence": 67.3,
+      "nearest_model_z_m": -0.5,
+      "dz_m": -0.65,
+      "in_model": true,
+      "n": 42
+     },
+     {
+      "z_m": 1.0,
+      "u_px": 1049.3,
+      "prominence": 57.5,
+      "nearest_model_z_m": 0.5,
+      "dz_m": 0.5,
+      "in_model": true,
+      "n": 43
+     },
+     {
+      "z_m": 4.9,
+      "u_px": 1085.9,
+      "prominence": 65.0,
+      "nearest_model_z_m": 6.0,
+      "dz_m": -1.1,
+      "in_model": true,
+      "n": 44
+     },
+     {
+      "z_m": 6.75,
+      "u_px": 1105.6,
+      "prominence": 38.8,
+      "nearest_model_z_m": 6.0,
+      "dz_m": 0.75,
+      "in_model": true,
+      "n": 45
+     },
+     {
+      "z_m": 11.4,
+      "u_px": 1163.3,
+      "prominence": 46.1,
+      "nearest_model_z_m": 12.0,
+      "dz_m": -0.6,
+      "in_model": true,
+      "n": 46
+     },
+     {
+      "z_m": 14.95,
+      "u_px": 1217.6,
+      "prominence": 42.0,
+      "nearest_model_z_m": 12.0,
+      "dz_m": 2.95,
+      "in_model": false,
+      "n": 47
+     },
+     {
+      "z_m": 37.9,
+      "u_px": null,
+      "prominence": 13.1,
+      "nearest_model_z_m": 36.0,
+      "dz_m": 1.9,
+      "in_model": false,
+      "n": 48
+     }
+    ],
+    "model_without_peak_z_m": [
+     -6.0
+    ]
+   }
+  },
+  "corrections": "none applied: see the doc table; values are SUSPECTED until the 10-08 survey"
+ },
+ "zone_suggestions": {
+  "dance_floor_recommended": {
+   "x_m": [
+    -6.0,
+    6.0
+   ],
+   "z_m": [
+    8.5,
+    40.0
+   ],
+   "confidence": "medium (seen free in 032, z 8.5-10 low)"
+  },
+  "speaker_candidates": [
+   {
+    "id": "S1 main L",
+    "x_m": [
+     -8.0,
+     -6.5
+    ],
+    "z_m": [
+     6.0,
+     8.0
+    ]
+   },
+   {
+    "id": "S2 main R",
+    "x_m": [
+     6.5,
+     8.0
+    ],
+    "z_m": [
+     6.0,
+     8.0
+    ]
+   },
+   {
+    "id": "S3 delay L",
+    "x_m": [
+     -8.0,
+     -6.5
+    ],
+    "z_m": [
+     26.0,
+     28.0
+    ]
+   },
+   {
+    "id": "S4 delay R",
+    "x_m": [
+     6.5,
+     8.0
+    ],
+    "z_m": [
+     26.0,
+     28.0
+    ]
+   }
+  ],
+  "basis": "docs/moxir/PHOTO_ANALYSIS_2026-10-07.md"
+ },
+ "column_check_multiview": {
+  "date": "2026-10-07",
+  "status": "CHECK ONLY: no grid correction. The evidence does not show a different grid.",
+  "method": "VGGT-1B poses (38 views) aligned to the hall frame by Umeyama similarity + RANSAC on photo 032 floor pixels (17 608 inliers, 0.70 m rms); per view an LM refit on hand-picked, gradient-snapped column-edge lines and points with EXIF intrinsics (scripts/place/multiview_columns.py fit2; picks in scripts/place/picks/). Gate: rms <= 8 px at the image's own resolution.",
+  "fits": {
+   "014-file_66.JPG": {
+    "accepted": true,
+    "rms_px": 7.39,
+    "image_px": [
+     4032,
+     2688
+    ],
+    "f_px": 2795.6,
+    "f_source": "EXIF 24 mm-eq (iPhone 14 Pro Max main)",
+    "camera_m": [
+     4.19,
+     6.18,
+     6.98
+    ],
+    "camera_sd_m": [
+     0.16,
+     0.18,
+     0.63
+    ],
+    "fit_on": "left row columns z 12 and z 6 (4 edges, 3 points); joint pair held out"
+   },
+   "003-file_86.JPG": {
+    "accepted": false,
+    "rms_px": 11.5,
+    "why": "picks on the right row snap onto pipes and the stair; best of three pick sets 11.5 px; left-row-only fit is degenerate (pitch 16 deg)"
+   },
+   "953-FXT51095.JPG": {
+    "accepted": false,
+    "rms_px": 23.05,
+    "mrad": 3.05,
+    "image_px": [
+     7728,
+     5152
+    ],
+    "f_px": 7565,
+    "f_source": "EXIF 23 mm x 3289 px/cm",
+    "why": "8 px gate = 1.06 mrad at f 7565; camera height unconstrained (sd 7 m); pitch 12 deg against VGGT 4.8"
+   }
+  },
+  "joint_pair": {
+   "status": "CONFIRMED present (left row x -12): two separate shafts, each with its own head and its own upper column to the roof",
+   "source": "photo 014 (crops-014.jpg tiles 2-3; columns-014-count.png boxes 3-4)",
+   "measured_centres_z_m": [
+    0.08,
+    -1.12
+   ],
+   "model_z_m": [
+    0.5,
+    -0.5
+   ],
+   "measured_gap_m": 1.2,
+   "confidence": "centres +-0.6 m (camera z sd 0.63 m); gap +-0.2 m",
+   "tag": "centres SUSPECTED offset, within the fit uncertainty; no change"
+  },
+  "segments": [
+   {
+    "row_x": -12,
+    "z_m": [
+     -1.2,
+     12.0
+    ],
+    "real_count": 4,
+    "model_count": 4,
+    "views": [
+     "014 (fit 7.4 px)"
+    ],
+    "note": "A z 12, B z 6, joint pair; nothing of column size between"
+   },
+   {
+    "row_x": -36.4,
+    "z_m": [
+     -24,
+     31
+    ],
+    "real_count": "one wall post per 6 m bay plus a pair at the joint",
+    "model_count": "row x -36 at the 6 m grid",
+    "views": [
+     "014 (fit 7.4 px, wall at 40-50 m)"
+    ],
+    "tag": "SUSPECTED (by eye; the automatic sweep also fires on window mullions)"
+   },
+   {
+    "row_x": 12,
+    "z_m": [
+     -30,
+     12
+    ],
+    "real_count": "8 shafts in a regular perspective sequence (the joint shows as one shaft wide, about 0.9 m)",
+    "model_count": "8 positions (12, 6, joint pair, -6 ... -30)",
+    "views": [
+     "953 (eye; fit not accepted)"
+    ],
+    "test": "1-D homography (cross-ratio) on 6 column centres: residuals <= 10 px against a 12 px read error, so the spacing is uniform with no missing or extra column",
+    "tag": "SUSPECTED (identities by order, no accepted camera)"
+   }
+  ],
+  "box_39": {
+   "what": "a slender steel post beside the stair to the runway, about 0.25 m wide; not a precast column (0.8 x 0.5 m would be 70-110 px at this range, the post is about 30-35 px)",
+   "views": [
+    "012-file_64.JPG",
+    "009-file_92.JPG (box39-crops.jpg, VGGT-init cameras: identity only, NOT accepted fits)",
+    "032 box 39"
+   ],
+   "tag": "SUSPECTED: not a column; a site look on 10-08 closes it"
+  },
+  "roof_954": {
+   "frames": "954-FXT51128 t1.8, t2.6, t3.2, t4.6 (sharpest per tilt segment, Laplacian variance)",
+   "video_f_px": "about 2004 (23 mm on the full 23.5 mm width; VGGT 1939-2222)",
+   "seen": "two lanterns with a solid roof strip between them, as the model has them (z -7.25 to 7.25); lantern end glazing in 4 panes across 12 m (3 m module); space-frame node stars in line with the column heads",
+   "tag": "SUSPECTED (by eye, no fitted roof camera); nodes per bay not counted"
+  }
+ }
+}

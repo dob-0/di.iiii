@@ -21,6 +21,8 @@ export const spaceState = (space) => {
     return space.publishedProjectId ? 'open' : 'nodoor'
 }
 
+export const isArchived = (space) => Boolean(space.archivedAt)
+
 export const ARRANGE_MODES = [
     { key: 'recent', label: 'Recent' },
     { key: 'name', label: 'Name' },
@@ -32,6 +34,7 @@ export const FILTER_MODES = [
     { key: 'open', label: 'Open to anyone' },
     { key: 'private', label: 'Only you' },
     { key: 'nodoor', label: 'Needs a door' },
+    { key: 'archived', label: 'Archived' },
 ]
 
 const isArrange = (key) => ARRANGE_MODES.some(m => m.key === key)
@@ -49,8 +52,12 @@ const STATE_ORDER = { open: 0, nodoor: 1, private: 2 }
 
 export const filterSpaces = (spaces, filterKey) => {
     const key = normalizeFilter(filterKey)
-    if (key === 'all') return [...spaces]
-    return spaces.filter(s => spaceState(s) === key)
+    // An archived space is kept whole and only leaves the default views: it is
+    // in no state chip and not in "All" — only under "Archived".
+    if (key === 'archived') return spaces.filter(isArchived)
+    const live = spaces.filter(s => !isArchived(s))
+    if (key === 'all') return live
+    return live.filter(s => spaceState(s) === key)
 }
 
 export const arrangeSpaces = (spaces, arrangeKey) => {
@@ -75,7 +82,11 @@ export const applyView = (spaces, { arrange, filter } = {}) =>
 // How many of each state are in a list — the count beside each filter chip, so
 // "Needs a door" is visible as a number before it is clicked.
 export const countStates = (spaces) => {
-    const counts = { all: spaces.length, open: 0, nodoor: 0, private: 0 }
-    for (const s of spaces) counts[spaceState(s)] += 1
+    const counts = { all: 0, open: 0, nodoor: 0, private: 0, archived: 0 }
+    for (const s of spaces) {
+        if (isArchived(s)) { counts.archived += 1; continue }
+        counts.all += 1
+        counts[spaceState(s)] += 1
+    }
     return counts
 }

@@ -1,0 +1,37 @@
+{
+ "what": "MOXIR hall top plan for laser_sheet.py: z right (entry), x up (east)",
+ "source": "hard-coded in laser_sheet.py of agent-reports-2026-10-15/moxir-50",
+ "date": "2026-10-15",
+ "window": {
+  "z0": -54.5,
+  "z1": 54.5,
+  "x0": -14.5,
+  "x1": 14.5,
+  "scale": 3.0
+ },
+ "bay": [
+  -53.6,
+  -12,
+  53.8,
+  12
+ ],
+ "bands": [
+  [
+   -46.9,
+   -6.0,
+   -6,
+   6
+  ],
+  [
+   6.0,
+   46.9,
+   -6,
+   6
+  ]
+ ],
+ "cranes": [
+  3.2,
+  -42.45
+ ],
+ "crane_half_x": 12
+}

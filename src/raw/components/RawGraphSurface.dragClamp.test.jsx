@@ -60,7 +60,11 @@ describe('dragging a card (real pointer events)', () => {
         const card = container.querySelector('.raw-graph-node-card')
         card.setPointerCapture = vi.fn()
         const v0 = view(container)
-        const start = { x: 40 * v0.zoom + v0.panX + 10, y: 40 * v0.zoom + v0.panY + 95 + 10 }
+        // grab the title at the card's own top-left + 10, wherever the opening fit put it
+        const start = {
+            x: parseFloat(card.style.left) * v0.zoom + v0.panX + 10,
+            y: parseFloat(card.style.top) * v0.zoom + v0.panY + 95 + 10
+        }
         fireEvent.pointerDown(card, { button: 0, clientX: start.x, clientY: start.y, pointerId: 1 })
         for (let i = 1; i <= 16; i += 1) {
             fireEvent.pointerMove(window, { clientX: start.x + dx * i / 16, clientY: start.y + dy * i / 16 })
