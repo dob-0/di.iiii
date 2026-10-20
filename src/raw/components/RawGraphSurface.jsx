@@ -391,7 +391,7 @@ export default function RawGraphSurface({
     // over half a phone (audit 2026-10-21 NR-08). Cleared when a pinch begins.
     const touchSelectRef = useRef(null)
     const onSelectNodeRef = useRef(onSelectNode)
-    onSelectNodeRef.current = onSelectNode
+    useEffect(() => { onSelectNodeRef.current = onSelectNode })
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
     const hasFitRef = useRef(false)
     const lastFitViewportRef = useRef(null)
@@ -1733,6 +1733,7 @@ export default function RawGraphSurface({
     }
 
     return (
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the canvas: a named group that holds the cards and takes the canvas keys
         <div
             className="raw-graph-surface"
             ref={containerRef}
@@ -1741,6 +1742,7 @@ export default function RawGraphSurface({
             // 2026-10-21 NR-02). Focusable for the canvas keys; Enter on it
             // still creates a node.
             role="group"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the canvas keys (H, F, 1, arrows) act only while it has focus (WCAG 2.1.4)
             tabIndex={0}
             aria-label="Node canvas"
             aria-keyshortcuts="Enter"
