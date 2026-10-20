@@ -11,8 +11,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { v1Entities, v1Looks } from '../rigbuild/epic-build.mjs'
-import library from '../../src/rigbuild/types/moxir.json'
+import { loadLibrary } from '../rigbuild/library.mjs'
 import { planPatch } from '../../src/rigbuild/patchPlan.js'
+
+const library = loadLibrary()
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repo = path.resolve(here, '..', '..')

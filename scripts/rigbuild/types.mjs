@@ -12,10 +12,6 @@
  * (src/rigbuild/types/projectTypes.js), and `index.json`: the order, and each type's code and
  * category, small enough for anything to read first. The rule for adding a type: the README.
  *
- * ALIAS: src/rigbuild/types/moxir.json, the whole library in one file under its old name,
- * is still written (identical content): the app and many tests read it until the split of PR #914
- * moves them to the library (part 3). Delete it, and ALIAS_FILE here, once nothing reads it.
- *
  * The output is generated, never edited by hand; src/rigbuild/fixtureTypes.test.js
  * regenerates it and compares.
  */
@@ -47,7 +43,6 @@ export const buildLibrary = ({
 export const serialise = (library) => `${JSON.stringify(library, null, 2)}\n`
 
 export const LIBRARY_DIR = 'src/rigbuild/types/library'
-export const ALIAS_FILE = 'src/rigbuild/types/moxir.json'
 export const INDEX_FILE = 'index.json'
 
 /** The library's index: the order, and per type the little a reader needs before it loads one. Pure. */
@@ -61,19 +56,18 @@ export const indexOf = (library) => ({
 /**
  * Every file the generator writes, path (from the repo root) → text. Pure.
  * @param {object} library  buildLibrary()'s output
- * @param {{ dir?: string, alias?: string|null }} [where]
+ * @param {{ dir?: string }} [where]
  */
-export const libraryFiles = (library, { dir = LIBRARY_DIR, alias = ALIAS_FILE } = {}) => {
+export const libraryFiles = (library, { dir = LIBRARY_DIR } = {}) => {
     const files = { [`${dir}/${INDEX_FILE}`]: serialise(indexOf(library)) }
     for (const t of library.types) files[`${dir}/${t.id}.json`] = serialise(t)
-    if (alias) files[alias] = serialise(library)
     return files
 }
 
 const main = () => {
     const dir = opt('out', LIBRARY_DIR)
     const library = buildLibrary({ manifest: opt('manifest', undefined), glbDir: opt('glb-dir', undefined) })
-    const files = libraryFiles(library, { dir, alias: dir === LIBRARY_DIR ? ALIAS_FILE : null })
+    const files = libraryFiles(library, { dir })
     if (args.includes('--check')) {
         const stale = Object.entries(files).filter(([file, text]) => {
             const target = path.join(ROOT, file)
