@@ -52,12 +52,12 @@ describe('di_rig_versions', () => {
 })
 
 describe('di_rig_truss', () => {
-    it('gives the flipped cut of Known · full: ends, three picks with kg and bridle angles, two tie-offs', async () => {
+    it('gives the 09-29 cut of Known · full (low house left, high right): ends, three picks with kg and bridle angles, two tie-offs', async () => {
         const s = (await recorder().door.rigTruss({ version: 'known-full' })).structuredContent
-        expect(s.summary.slope_deg).toBe(-15)
-        expect(s.summary.ends.map((e) => e.bottom_chord_m)).toEqual([6.55, 3.44])
-        expect(s.summary.picks.map((p) => Math.round(p.kg_on_line))).toEqual([59, 146, 45])
-        expect(s.summary.picks[0].bridle_included_deg).toBe(119)
+        expect(s.summary.slope_deg).toBe(15)
+        expect(s.summary.ends.map((e) => e.bottom_chord_m)).toEqual([3.24, 6.35])
+        expect(s.summary.picks.map((p) => Math.round(p.kg_on_line))).toEqual([45, 146, 59])
+        expect(s.summary.picks.map((p) => p.bridle_included_deg)).toEqual([26, 42, 119])
         expect(s.summary.tieoffs.map((t) => t.id)).toEqual(['hl', 'hr'])
         expect(s.bridle).toMatchObject({ status: 'pass', max_included_deg: 120 })
         expect(s.truss).toBeUndefined()
@@ -88,10 +88,19 @@ describe('di_rig_check', () => {
         expect(Object.keys(s.unavailable)).toEqual(['tieoffClash', 'insideHall', 'laserLantern'])
     }, 30000)
 
-    it('can fail: against the measured 09-29 hall the high pick is the recorded 144.4 deg bridle', async () => {
-        const s = (await recorder().door.rigCheck({ version: 'known-full', hall: MEASURED_HALL })).structuredContent
-        expect(s.status).toBe('fail')
-        expect(s.versions['known-full'].bridle.over).toEqual([{ u: -5.25, included_deg: 144.4 }])
+    it('can fail: with the bridle limit tightened to 100 deg the 119 deg pick is reported over', async () => {
+        // The committed halls all pass Known · full now (the 09-29 cut is back, ledger of the 10-07 flip undo),
+        // so the failing case is made by lowering the rig's own limit as it is read, not by a stored fixture.
+        const real = fs.readFileSync
+        const spy = vi.spyOn(fs, 'readFileSync').mockImplementation((file, ...rest) => {
+            const text = real(file, ...rest)
+            return typeof text === 'string' && text.includes('max_included_deg') ? text.replace(/("max_included_deg"\s*:\s*)[\d.]+/g, '$1100') : text
+        })
+        try {
+            const s = (await recorder().door.rigCheck({ version: 'known-full', hall: MEASURED_HALL })).structuredContent
+            expect(s.status).toBe('fail')
+            expect(s.versions['known-full'].bridle.over.map((o) => o.included_deg)).toEqual([119.1])
+        } finally { spy.mockRestore() }
     }, 30000)
 
     it('reads only committed hall files', async () => {
