@@ -958,3 +958,14 @@ on trash, hide and move). Measured: 2 of 21 failed before the fix, 21/21 after; 
 removed (`canManageProjectsState` reading `spaces` instead of `manageSpaces`) 2 of 21 fail, so the check is held on
 the server, not in a UI.
 
+
+## Two moves of one project by one sync key both answered 200; a move's counting error reached the key holder
+
+Symptom (review r3 of #811, L1/L2): two `POST /api/projects/:id/move` by the same manage key sent at once (a to b, a to d)
+both answered 200 and the project ended in d, checked only against a; a key trash could hit a project that had already left
+the key's space. Separately, an internal error while counting who could see the target (for example a SQLite "no such table")
+was returned to the key holder inside the 403 body. Cause: the route resolved the project's space once at the gate and
+applied later inside the key lock with no re-check; `keyMoveWidensAccess` put `error.message` in its refusal text.
+Fix (2026-10-20): inside `withKeyLock`, both key trash and key move re-read the project and answer 409 `project_moved` when
+its space is no longer the one the request was made for; the counting error is logged and the 403 carries a fixed text.
+Guard: `serverXR/src/syncKeyMoveRace.test.js` (3 cases). Measured: 2 of 3 failed on origin/dev, 3/3 after, 10 of 10 runs.
