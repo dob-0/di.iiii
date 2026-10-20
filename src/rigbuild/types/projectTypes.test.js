@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { PENDING, loadProjectLibrary, typeIdsUsedBy, useProjectLibrary } from './projectTypes.js'
 import { TYPE_LIBRARY } from './index.js'
+import whole from './library/all.json'
 
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'library')
 const bytesOf = (ids) => ids.reduce((sum, id) => sum + fs.statSync(path.join(DIR, `${id}.json`)).size, 0)
@@ -55,6 +56,19 @@ describe('a kind added to the room', () => {
         rerender({ doc: [lamp('p1', 'up-pl5403'), lamp('s1', 'ext-strobe')] })
         expect(result.current.types.map((t) => t.id)).toEqual(['up-pl5403'])
         await waitFor(() => expect(result.current.types.map((t) => t.id)).toEqual(['up-pl5403', 'ext-strobe']))
+    })
+})
+
+// The tool surfaces take the whole library as ONE file (library/all.json, generated), not as 13 per-type files plus
+// the index: measured by `vite build` on 2026-10-20, 15 files were 31,835 B gzip against dev's one chunk of 16,722 B.
+// The per-type files stay the room's (a project loads only what it uses); a type is in both, from one generator.
+describe('the whole library is one file for the tools', () => {
+    it('types/index.js is library/all.json, and the room\'s loaders never pick it up as a type', () => {
+        expect(TYPE_LIBRARY).toEqual(whole)
+        expect(whole.types.map((t) => t.id)).toEqual(JSON.parse(fs.readFileSync(path.join(DIR, 'index.json'), 'utf8')).types.map((t) => t.id))
+        const source = (file) => fs.readFileSync(path.join(DIR, '..', file), 'utf8')
+        expect(source('index.js')).not.toMatch(/import\.meta\.glob/)
+        expect(source('projectTypes.js')).toMatch(/'!\.\/library\/all\.json'/)
     })
 })
 

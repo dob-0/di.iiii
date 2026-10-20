@@ -110,13 +110,18 @@ export function useRigLookEntities(document, { explicit, mirror, laserShowStore,
 
     const mapping = document?.mappingState
     const show = useMemo(() => (looks ? showOf({ mappingState: mapping }) : null), [looks, mapping])
-    const driver = showDriver({ explicit, deskChecked, deskPresent, show })
+    // The project's lamp types are on their way (types/projectTypes.js): nothing is posed or driven from a library that
+    // lacks them. The room is the document as it is until they are in; 'pending' is the driver's own word for "not yet".
+    const typesPending = !givenLibrary && Boolean(projectLibrary.pending)
+    const driver = typesPending ? 'pending' : showDriver({ explicit, deskChecked, deskPresent, show })
     const clock = useShowClockState(show, driver === 'clock')
 
-    const lookId = explicit !== undefined
-        ? explicit
-        : driver === 'desk' ? deskLook
-            : driver === 'clock' && clock.state ? clock.state.lookId : NONE
+    const lookId = typesPending
+        ? NONE
+        : explicit !== undefined
+            ? explicit
+            : driver === 'desk' ? deskLook
+                : driver === 'clock' && clock.state ? clock.state.lookId : NONE
     const fade = explicit !== undefined
         ? null
         : driver === 'desk'

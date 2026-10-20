@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import index from './library/index.json'
 
-const loaders = import.meta.glob(['./library/*.json', '!./library/index.json'], { import: 'default' })
+const loaders = import.meta.glob(['./library/*.json', '!./library/index.json', '!./library/all.json'], { import: 'default' })
 const KNOWN = new Set(index.types.map((t) => t.id))
 const ORDER = new Map(index.types.map((t, i) => [t.id, i]))
 
