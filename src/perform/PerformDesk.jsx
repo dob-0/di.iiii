@@ -332,7 +332,7 @@ export default function PerformDesk({
                                             // eslint-disable-next-line jsx-a11y/no-autofocus
                                             autoFocus
                                             value={saveName}
-                                            placeholder={saving === 'mine' ? 'friday at MOCT' : 'sunday caller'}
+                                            placeholder={saving === 'mine' ? 'friday, small room' : 'sunday caller'}
                                             aria-label={saving === 'mine' ? 'Name for your preset' : 'Name for the show’s preset'}
                                             onChange={(event) => setSaveName(event.target.value)}
                                         />
