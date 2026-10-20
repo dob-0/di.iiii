@@ -424,6 +424,20 @@ Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decision
 | **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
 | **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
 
+## Amended 2026-10-21 — Beat and Oscillator v2 (Phase 2 of the laser workflow)
+
+Decision 3 of `docs/ai/decisions/2026-10-14-raw-laser-workflow.md` (owner 2026-10-14): one **master clock** runs, LFOs follow it,
+extra **clocks** can be added. The rows for **master clock** and **clock** are in the dictionary above; these are the words Phase 2 adds.
+
+| Word | Its one job |
+|---|---|
+| **Beat** | The node that is a **clock** (TouchDesigner's Beat CHOP): a tempo in BPM and the moment of beat 0. Outputs Clock, Ramp, Pulse, Count, Beat, Bar, Ramp bar, BPM. Its **Clock** setting is **Master** (the first Beat set to Master is the project's master clock) or **Extra**. Not "Time": that card counts seconds. |
+| **Tempo from** | A Beat's choice of whose tempo it keeps: **This node** (its BPM and its own taps) or **Light desk** (the `/light` desk's clock and tap, an optional source; with no desk answering, the Beat keeps its own). |
+| **Clock** (port type) | The wire a Beat's Clock output speaks; wired into an Oscillator's Clock, that Oscillator follows that clock instead of the master. |
+| **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
+| **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
+| **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
+
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 
 The owner, 2026-10-13: the looks (*"the wall"*, *"peak"*) and the Dilijan things get Studio words; he did not pick
