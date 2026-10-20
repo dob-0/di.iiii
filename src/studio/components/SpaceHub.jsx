@@ -1141,7 +1141,14 @@ export default function SpaceHub() {
             )}
 
             {machineInvite === space.id && (
-                <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                <div
+                    className="ssh-project-linker"
+                    role="presentation"
+                    // The panel opens under eight rows of buttons, below the fold on a normal screen: bring it into view.
+                    ref={el => { if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' }) }}
+                    onClick={e => e.stopPropagation()}
+                    onKeyDown={e => e.stopPropagation()}
+                >
                     <InviteAMachine space={space.id} onBack={() => setMachineInvite(null)} />
                 </div>
             )}
