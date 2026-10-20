@@ -1065,6 +1065,26 @@ describe('wheel policy', () => {
         fireEvent.wheel(surface.querySelector('.raw-window-header'), { deltaY: -100 })
         expect(readZoom()).not.toBe(mid)
     })
+
+    // A touchpad's two-finger swipe is a wheel with pixel deltas on BOTH
+    // axes. Its deltaX pans; it was dropped, and a pure sideways swipe
+    // (deltaY 0) zoomed the desk out by the minimum step instead (audit
+    // 2026-10-21 NR-01, measured 1 -> 0.984 in Chromium).
+    it('a touchpad swipe pans by its deltaX, and a sideways swipe never zooms', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = () => /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        const [x0, y0, z0] = stage()
+        for (let i = 0; i < 10; i++) fireEvent.wheel(surface, { deltaX: 40, deltaY: 0, deltaMode: 0 })
+        const [x1, y1, z1] = stage()
+        expect(z1).toBe(z0)
+        expect(y1).toBe(y0)
+        expect(x1).toBeCloseTo(x0 - 400, 5)
+        fireEvent.wheel(surface, { deltaX: 30, deltaY: -10, deltaMode: 0, ctrlKey: true })
+        const [x2, , z2] = stage()
+        expect(z2).toBeGreaterThan(z1)
+        expect(x2).not.toBeCloseTo(x1 - 30, 1)
+    })
 })
 
 describe('RawGraphSurface wires follow portScopeNodes', () => {

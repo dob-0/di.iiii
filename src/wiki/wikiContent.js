@@ -1528,7 +1528,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
-                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
+                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk; on a touchpad a sideways two-finger swipe pans it instead of zooming. Ctrl/⌘ + scroll (and a touchpad pinch) zooms the desk from anywhere, including over a window.',
                 'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
                 'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
                 'A node\'s window opens below its card, never over it, also when the canvas moves a little as the first node lands. Positions you have saved stay as they are.',
@@ -1536,7 +1536,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-20'
+        updated: '2026-10-21'
     },
     {
         id: 'raw-on-a-phone',

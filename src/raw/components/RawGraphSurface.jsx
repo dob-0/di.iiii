@@ -887,15 +887,23 @@ export default function RawGraphSurface({
             // fires dozens of small events per swipe and a flat step made it
             // fly; a mouse notch (deltaY 100) lands near the old step.
             const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1
+            const vp = viewportRef.current
+            // A touchpad's two-finger swipe carries deltaX: it pans, so a
+            // sideways swipe moves the desk sideways (audit 2026-10-21 NR-01).
+            // A pinch's deltaX is not a pan, it zooms only.
+            const panX = vp.panX - (event.ctrlKey || event.metaKey ? 0 : event.deltaX * unit)
+            if (!event.deltaY) {
+                applyViewport(panX, vp.panY, vp.zoom)
+                return
+            }
             const magnitude = clamp(Math.abs(event.deltaY) * unit, 1, 120)
             const factor = Math.exp((event.deltaY < 0 ? 1 : -1) * magnitude * 0.0016)
-            const vp = viewportRef.current
             const rect = container.getBoundingClientRect()
             const mx = event.clientX - rect.left
             const my = event.clientY - rect.top
             const nextZoom = clamp(vp.zoom * factor, GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM)
             const scale = nextZoom / vp.zoom
-            applyViewport(mx - (mx - vp.panX) * scale, my - (my - vp.panY) * scale, nextZoom)
+            applyViewport(mx - (mx - panX) * scale, my - (my - vp.panY) * scale, nextZoom)
         }
         container.addEventListener('wheel', handleWheel, { passive: false })
         return () => container.removeEventListener('wheel', handleWheel)

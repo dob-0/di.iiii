@@ -31,6 +31,10 @@ Symptom: `followIntegration.test.js` failed 1 run in 10 with `Server exited earl
 Cause: 17 test files asked the OS for a free port, closed the probe, and only then started the server on that number; vitest runs files in parallel, so a sibling could take the number in between. Most files then polled `/api/health`, which a SIBLING's server could answer (wrong instance, odd 401s).
 Fix: every test that starts a serverXR child goes through `serverXR/src/testSupport/spawnServer.mjs` `spawnServerUntilReady` (waits for the child's own listen line, retries a lost race on a new port; `port:` pins one for a restart of the same install). In-process servers listen on port 0 and read `address().port`. Guard: `testSupport/noPickedPort.test.js` fails on any test file that picks a port by hand. Side effect found: the child is now ready sooner, so `gracefulShutdown.test.js` walked the data folder while `follows.lock.guard` vanished (ENOENT); its `findDb` now looks again.
 
+## A sideways touchpad swipe zoomed the node canvas out (Raw, 2026-10-21)
+
+Cause: `RawGraphSurface`'s wheel handler read `deltaY` only and clamped the zoom step to at least 1, so a two-finger swipe with `deltaY: 0` zoomed out (measured 1 → 0.984 for ten events in Chromium) and its `deltaX` was dropped. Fix: a wheel's `deltaX` pans the canvas (not under Ctrl/⌘, where it is a pinch), and a wheel with no `deltaY` never zooms. The vertical wheel still zooms, as documented. Guard: `RawGraphSurface.test.jsx` "a touchpad swipe pans by its deltaX". Audit: `docs/ai/audits/2026-10-21-nodes-raw.md` NR-01.
+
 ## A new node's card window opened over its own node (Raw, 2026-10-20)
 
 Cause: the graph surface published its screen origin only on pan/zoom/resize, but the surface moves (~57 px) when the first node lands, so every world window rendered off its card by the stale origin. Fix: `RawGraphSurface` re-measures on ResizeObserver and one frame after a pan. Guard: `src/raw/components/RawGraphSurface.origin.test.jsx`. Note: `docs/ai/sessions/fix-raw-card-window-placement-2026-10-20.md`.
