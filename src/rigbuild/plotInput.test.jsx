@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createProjectStoreState } from '../project/state/projectStore.js'
 import { createPlanWheel } from './planWheel.js'
 
 // The plot's input across devices (docs/ai/audits/2026-10-21-rig-show-pages.md, P1/P2): a touchpad's

@@ -219,7 +219,7 @@ export default function PerformDesk({
             window.removeEventListener('keydown', onKey)
             window.removeEventListener('pointerdown', onDown)
         }
-    }, [menu]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [menu])
 
     const pick = (id) => {
         setChosenId(id)

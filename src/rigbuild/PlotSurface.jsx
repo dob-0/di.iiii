@@ -632,16 +632,8 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         setView(zoomView(v, zoom, toPlan(event)))
     }
     // Zoom without a wheel or a second finger (WCAG 2.5.1, 2.1.1): the buttons on the plan and + / - / 0.
-    const zoomBy = (factor) => setView(zoomView(v, factor, [v[0] + v[2] / 2, v[1] + v[3] / 2]))
-    const fit = () => setView(fitView(extent, box))
-    const zoomKeys = useRef(null)
-    zoomKeys.current = (key) => {
-        if (key === '+' || key === '=') zoomBy(ZOOM_STEP)
-        else if (key === '-' || key === '_') zoomBy(1 / ZOOM_STEP)
-        else if (key === '0') fit()
-        else return false
-        return true
-    }
+    const zoomBy = useCallback((factor) => setView(zoomView(v, factor, [v[0] + v[2] / 2, v[1] + v[3] / 2])), [v])
+    const fit = useCallback(() => setView(fitView(extent, box)), [extent, box])
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
@@ -655,7 +647,13 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         const onKey = (event) => {
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
-            if (!event.ctrlKey && !event.metaKey && !event.altKey && zoomKeys.current(event.key)) { event.preventDefault(); return }
+            const zoomKey = { '+': ZOOM_STEP, '=': ZOOM_STEP, '-': 1 / ZOOM_STEP, _: 1 / ZOOM_STEP }[event.key]
+            if (!event.ctrlKey && !event.metaKey && !event.altKey && (zoomKey || event.key === '0')) {
+                event.preventDefault()
+                if (zoomKey) zoomBy(zoomKey)
+                else fit()
+                return
+            }
             if (readOnly) {
                 if (event.key === 'Escape') { setMeasure(null); setTool('select'); select([]) }
                 const t = VIEW_TOOLS.find((x) => x.key === event.key)
@@ -696,7 +694,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [selectedIds, selectedSet, entities, library, model, tool, edit, select, undo, redo, readOnly])
+    }, [selectedIds, selectedSet, entities, library, model, tool, edit, select, undo, redo, readOnly, zoomBy, fit])
 
     useEffect(() => { setGhost(null); setMeasure((m) => (tool === 'measure' ? m : null)) }, [tool])
     useEffect(() => {
