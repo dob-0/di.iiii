@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
-import { boxModeFor, hallEntityIds, isPickableEntity, lockOps, mergeSelection, movableEntities, normalizeRect, pickInRect } from './selectionTools.js'
+import { boxModeFor, hallEntityIds, isDeselectingMiss, isPickableEntity, lockOps, mergeSelection, movableEntities, normalizeRect, pickInRect, selectionCanMove, selectionWithout } from './selectionTools.js'
 
 const lamp = (id, extra = {}) => ({ id, type: 'spotLight', name: id, components: { light: {}, ...extra } })
 const ents = [
@@ -52,6 +52,40 @@ describe('box select', () => {
     })
 })
 
+// N581 (2026-10-15): the stale-state sweep. Three rules the editor, the shell and the
+// viewport all read from here, so they cannot drift apart again.
+describe('selection after a lock, and what a transform may move', () => {
+    it('a locked object leaves the selection, whichever control locked it', () => {
+        expect(selectionWithout(['a', 'b', 'c'], ['b'])).toEqual(['a', 'c'])
+        expect(selectionWithout(['a'], ['a'])).toEqual([])
+        expect(selectionWithout([], ['a'])).toEqual([])
+    })
+    it('a transform may move only the selected objects that are not locked', () => {
+        expect(movableEntities(ents, ['rig-beam-planes-01', 'rig-beam-planes-02']).map((e) => e.id)).toEqual(['rig-beam-planes-01'])
+        expect(movableEntities(ents, ['rig-beam-planes-02'])).toEqual([])
+        expect(movableEntities(ents, [])).toEqual([])
+    })
+    it('the shell asks whether a selection can move at all; an id it does not know counts as movable', () => {
+        expect(selectionCanMove(ents, ['rig-beam-planes-02'])).toBe(false)
+        expect(selectionCanMove(ents, ['rig-beam-planes-02', 'rig-beam-planes-01'])).toBe(true)
+        expect(selectionCanMove([], ['cube-1'])).toBe(true)
+        expect(selectionCanMove(ents, [])).toBe(false)
+    })
+})
+
+describe('a pointer miss that deselects', () => {
+    it('a primary click or a tap deselects', () => {
+        expect(isDeselectingMiss({ type: 'click', button: 0 })).toBe(true)
+        expect(isDeselectingMiss({ type: 'click' })).toBe(true)
+        expect(isDeselectingMiss(null)).toBe(true)
+    })
+    it('the context-menu event (the right button, on its press on Linux) and other buttons never deselect', () => {
+        expect(isDeselectingMiss({ type: 'contextmenu', button: 2 })).toBe(false)
+        expect(isDeselectingMiss({ type: 'click', button: 1 })).toBe(false)
+        expect(isDeselectingMiss({ type: 'auxclick', button: 2 })).toBe(false)
+    })
+})
+
 // Walked 2026-10-13: Objects window → select Lamp B → Hide → G, move, click: the hidden lamp moved 0.54 m unseen.
 describe('movableEntities — what G/R/S may move', () => {
     const shown = { id: 'a', components: { runtime: { visible: true, locked: false } } }
@@ -63,6 +97,7 @@ describe('movableEntities — what G/R/S may move', () => {
     })
     it('the Studio viewport hands ModalTransform only movable entities', () => {
         const src = fs.readFileSync(path.join(cwd(), 'src/studio/components/StudioViewport.jsx'), 'utf8')
-        expect(src).toMatch(/selectedEntities=\{movableEntities\(selectedEntities\)\}/)
+        expect(src).toMatch(/selectedEntities=\{modalEntities\}/)
+        expect(src).toMatch(/modalEntities = useMemo\(\s*\(\) => movableEntities\(selectedEntities\)/)
     })
 })

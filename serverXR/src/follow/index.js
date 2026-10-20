@@ -31,6 +31,9 @@ const entryKey = (spaceId, entry) => JSON.stringify([spaceId, entry.spaceId || s
 // over http got no answer and a follow on that install never wrote a thing.
 // `tlsName` is the certificate's name: the follower still connects to loopback
 // and checks the certificate against that name (see httpClient's servername).
+/** Two follows.json entries that follow the same host. */
+const sameRemote = (one, two) => String(one?.remote || '').replace(/\/$/, '') === String(two?.remote || '').replace(/\/$/, '')
+
 const selfBase = (port, basePath = '/serverXR', tlsName = null) => `${tlsName ? 'https' : 'http'}://127.0.0.1:${port}${basePath}`
 
 /**
@@ -94,7 +97,19 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
             // First start: from now, unless the follow asked to replay (follower.js).
             start: entry.start === 'replay' ? 'replay' : 'now',
             direction: entry.direction || null,
-            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) }
+            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) },
+            // A project the host moved between two spaces moves here only when
+            // both are followed here from the same host (followProjects.js).
+            sameHostFollows: (other) => {
+                const theirs = readFollows(dataDir)[other]
+                return Boolean(theirs && other !== spaceId && running.has(other) && sameRemote(theirs, entry))
+            },
+            // A project moved HERE between two followed spaces is moved on the
+            // host with both spaces' keys, when both are manage keys. The keys
+            // stay in memory, handed to the follower only (SPEC_follow.md).
+            sameHostSides: () => Object.entries(readFollows(dataDir))
+                .filter(([other, theirs]) => other !== spaceId && running.has(other) && theirs?.token && sameRemote(theirs, entry))
+                .map(([other, theirs]) => ({ spaceId: theirs.spaceId || other, token: theirs.token }))
         }))
         startedWith.set(spaceId, entry.direction || null)
         startedKey.set(spaceId, entryKey(spaceId, entry))

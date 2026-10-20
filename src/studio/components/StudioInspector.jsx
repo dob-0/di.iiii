@@ -134,8 +134,15 @@ function InspNumberField({ field, value, onChange, compact = false, axisColor })
     }
     const stopRepeat = () => { clearInterval(intervalRef.current) }
 
-    // Keyboard arrows with modifier step
+    // Keyboard arrows with modifier step. Enter and Escape hand the focus back to the
+    // page: the value is already written on change, and while a field holds the focus
+    // every editor shortcut — Escape to deselect first of all — steps aside (N581).
     const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+            e.preventDefault()
+            e.currentTarget.blur()
+            return
+        }
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
         e.preventDefault()
         applyDelta(e.key === 'ArrowUp' ? 1 : -1, resolveStep(e))
