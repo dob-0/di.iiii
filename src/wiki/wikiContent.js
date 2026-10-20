@@ -82,10 +82,11 @@ export const WIKI_ARTICLES = [
         summary: 'Every wait in di.iiii shows the same ring, so a page that is still working never looks broken.',
         body: [
             'Whenever di.iiii is waiting for something — a room, a project, a list, your sign-in — you see one thin white ring turning on black. It is the same ring everywhere: the room page, Studio, the space pages, the lists in Preferences.',
-            'A short line under the ring says what is loading, for example “loading the room”. If the wait lasts more than 8 seconds a second, dimmer line appears — “still waiting for the scene file…” — so a slow connection or a stuck server is seen as that, never mistaken for a finished black page. If it stays for long, reload; if it keeps coming back, the line tells you what to report.'
+            'A short line under the ring says what is loading, for example “loading the room”. If the wait lasts more than 8 seconds a second, dimmer line appears — “still waiting for the scene file…” — so a slow connection or a stuck server is seen as that, never mistaken for a finished black page. If it stays for long, reload; if it keeps coming back, the line tells you what to report.',
+            'If the wait lasts 6 seconds and five or more other tabs of this site are open, the line says “too many tabs of this site are open — close one”. Browsers allow only a few live connections to one site on a plain-HTTP address, and many open tabs use them all, so the page cannot get its own. Close some tabs and it goes on by itself.'
         ],
-        tags: ['loading', 'wait', 'spinner', 'ring', 'black screen'],
-        updated: '2026-10-15'
+        tags: ['loading', 'wait', 'spinner', 'ring', 'black screen', 'tabs'],
+        updated: '2026-10-20'
     },
     {
         id: 'spaces-and-projects',
@@ -961,10 +962,11 @@ export const WIKI_ARTICLES = [
         body: [
             'In the Studio, a project with laser lines shows a Laser test button in the SCENES window. While it is on, every laser unit draws the whole of its scan field as a white square where it lands on the room\'s surfaces, and one label says how big it is: width × height in metres, measured between the four corners where they land, then the distance from the unit to the middle of the square. It is a work tool: nothing is written to the project, and turning it off leaves no trace.',
             'A unit is the lines that belong together: the LaserCube\'s lines share one name up to the last letter. The square starts at the middle of their origins and points where they point on average, and its size is the unit\'s scan field. That field is the half-angle the maker publishes. Where nothing is published it is an assumption, and the project\'s fixture record says so: the LaserCube\'s is read from its ">37°" and the 40 W unit has no published figure, so check both against the unit\'s own menu on site. A corner that finds no wall in reach is left open and the label says so.',
+            'In the 3D view a laser line is drawn with a white core and a coloured halo, as a real beam looks in haze: the core stays thin at any distance and the halo keeps the line\'s colour, so a fan of 36 lines is still 36 lines at 5, 10 or 20 m.',
             'To place a unit by hand, Alt+click any one of its lines (or select a line and press Shift+G) to select every line of the unit, then move it with the usual G or the gizmo. The square and its label follow when you let go.',
         ],
         tags: ['studio', 'laser', 'lighting', 'scenes', 'throw', 'previs'],
-        updated: '2026-10-13'
+        updated: '2026-10-20'
     },
     {
         id: 'scenes-that-show-themselves',
@@ -1529,11 +1531,12 @@ export const WIKI_ARTICLES = [
                 'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
                 'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
                 'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
+                'A node\'s window opens below its card, never over it, also when the canvas moves a little as the first node lands. Positions you have saved stay as they are.',
                 'Escape closes the window in front that you opened or clicked — one per press. Windows the project opened with stay, and Escape still leaves a level when no such window is open. Closing only hides a window; double-click its card to open it again.'
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-05'
+        updated: '2026-10-20'
     },
     {
         id: 'raw-on-a-phone',
@@ -2057,10 +2060,11 @@ export const WIKI_ARTICLES = [
             'Each version is a whole rig: its own lamps, equipment list, patch, looks and plot. The plot, the cards, the equipment page, the patch sheet and the build view all work on a version exactly as on the rig as ordered. Nothing is shared between them but the hall.',
             'The switch shows only on a project that is one of a set, and only in the view (not while walking). The one you are on is lit. They are plain links: open one in a new tab to put two side by side.',
             'A version\'s looks can say where there is NO light: a look sets each group of lamps to a level, and 0 is out — the beam gone from the air, nothing on the columns. That is how a look like "blackout + one beam" or "strobe hit" is written. Resting the room on a look writes its aims and colours only; the levels are played by the desk.',
+            'A visitor sees only the versions that are public, with their public names; a version that is private, and its notes, stay out of the row.',
             'Strobes, blinders and hazers are not on the rental house\'s list; a version lists them as lines from another supplier, each with two or three real products to choose from, and no price until one is quoted.'
         ],
         tags: ['versions', 'rig', 'minimal', 'full', 'compare', 'switch', 'looks', 'level', 'blackout', 'strobe', 'blinder', 'hazer', 'haze', 'underground', 'moxir', 'equipment'],
-        updated: '2026-09-28'
+        updated: '2026-10-20'
     },
     {
         id: 'smart-view',
