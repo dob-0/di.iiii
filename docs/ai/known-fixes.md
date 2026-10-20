@@ -1007,3 +1007,9 @@ Guard: `scripts/place/physics_check_test.py` (17 cases: slab stop, lantern openi
 its first surfaces = 0 leaks) and `scripts/place/physics-check.test.js`. OWED (ledger rows): `scripts/rigbuild/hall-reach.mjs`
 (epic-build writes `beam.length` with the same hand planes: it is where the 4 stored lengths came from) and
 `scripts/place/laser_frames.py` (now holds the old planes as `hand_planes_first_surface`, labelled legacy, unchanged output) move to `dims.shell`.
+
+## show-checkpoint: token and restore guards (2026-10-20)
+
+- The default token `~/.di/di.env` is used only when `--api` is the default (`http://diiii.localhost/serverXR`). Any other api (save, or the manifest's api on restore) without `--token-file` is refused before any network call, naming `--token-file`.
+- `--restore --yes` reads the project's current version first. If it is newer than the checkpoint's, it refuses and prints both versions and entity counts (what would be lost); `--force-overwrite` is the only way through. RESTORE.md says both.
+- Before: 6 tests; the real run (PR #1037) had sent the owner's token to a scratch server and could overwrite newer work. After: 8 tests.

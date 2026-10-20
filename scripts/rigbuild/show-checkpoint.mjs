@@ -9,7 +9,8 @@
  *
  *   node scripts/rigbuild/show-checkpoint.mjs --project <slug> --space <slug> [--api <url>] [--token-file <f>]
  *       [--out <dir>] [--include <file>]… [--no-copy] [--dry-run]
- *   node scripts/rigbuild/show-checkpoint.mjs --restore <dir> [--yes]   # without --yes: prints the plan only
+ *       (the default token ~/.di/di.env is used only with the default --api; any other --api needs --token-file)
+ *   node scripts/rigbuild/show-checkpoint.mjs --restore <dir> [--yes] [--force-overwrite]   # refuses if the project is newer than the saved version; without --yes: prints the plan only
  *
  * Exit code is non-zero when the document cannot be fetched. A desk fetch that fails is written
  * into manifest.json (`failures`), never skipped quietly. Restore PUTs the saved document back to
@@ -33,10 +34,17 @@ export const DESK_ROUTES = (project) => [
 ]
 
 const VALUE_FLAGS = new Set(['project', 'space', 'api', 'token-file', 'out', 'include', 'restore'])
-const BOOL_FLAGS = new Set(['no-copy', 'dry-run', 'yes'])
+const BOOL_FLAGS = new Set(['no-copy', 'dry-run', 'yes', 'force-overwrite'])
+
+/** The owner's default token goes ONLY to the default api; any other server needs its own --token-file. */
+export const tokenFileFor = (api, tokenFile) => {
+    if (tokenFile) return tokenFile
+    if (api === DEFAULT_API) return DEFAULT_TOKEN_FILE
+    throw new Error(`refusing to send the default token (${DEFAULT_TOKEN_FILE}) to ${api}: pass --token-file <file> for that server`)
+}
 
 export const parseArgs = (argv) => {
-    const opts = { api: DEFAULT_API, tokenFile: DEFAULT_TOKEN_FILE, include: [], noCopy: false, dryRun: false, yes: false }
+    const opts = { api: DEFAULT_API, tokenFile: undefined, include: [], noCopy: false, dryRun: false, yes: false }
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
         if (!a.startsWith('--')) throw new Error(`unexpected argument: ${a}`)
@@ -105,7 +113,9 @@ ${manifest.failures.length ? `Failures while taking it: ${manifest.failures.join
 
 Restore the project document (from a di.iiii tree; without --yes it only prints the plan):
 
-    node ${scriptPath} --restore ${dir} --yes [--token-file <file>]   # same server as ${manifest.api}; default token ~/.di/di.env
+    node ${scriptPath} --restore ${dir} --yes [--token-file <file>]   # same server as ${manifest.api}; the default token ~/.di/di.env is used only for the default api (${DEFAULT_API}), any other server needs --token-file
+
+If the project was saved again after this checkpoint (its version is newer than v${manifest.version}), the restore refuses and prints both versions; add --force-overwrite to replace the newer work anyway.
 
 Side files and the desk's saved JSON are kept for reading; load the desk again with your show's own loader.
 `
@@ -172,7 +182,13 @@ export const runRestore = async (opts, { client, log = console.log } = {}) => {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'))
     const plan = planRestore(manifest, fs.readdirSync(dir))
     log(`restore plan: PUT ${plan.api}${plan.route} from ${path.join(dir, plan.docFile)} (v${plan.version}, ${plan.entities} entities)`)
+    const cur = await client.get(plan.route)
+    const newer = cur?.ok && Number(cur.body?.version) > Number(plan.version)
+    const lost = `project is at v${cur?.body?.version} (${cur?.body?.document?.entities?.length ?? '?'} entities now), the checkpoint is v${plan.version} (${plan.entities} entities): a restore would replace the newer work`
+    if (!cur?.ok) log(`warning: could not read the current version of ${plan.project} (HTTP ${cur?.status})`)
+    else if (newer) log(`${opts.yes && !opts.forceOverwrite ? 'REFUSED' : 'warning'}: ${lost}`)
     if (!opts.yes) { log('not sent: add --yes to do it'); return { sent: false, plan } }
+    if (newer && !opts.forceOverwrite) throw new Error(`restore refused: ${lost}. Add --force-overwrite to do it anyway.`)
     const saved = JSON.parse(fs.readFileSync(path.join(dir, plan.docFile), 'utf8'))
     const res = await client.put(plan.route, saved.document)
     if (!res.ok) throw new Error(`restore failed: HTTP ${res.status}${[401, 403, 404].includes(res.status) ? ` (the token or the api may be wrong: it was sent to ${plan.api}; pass --api and --token-file for that server)` : ''}`)
@@ -186,12 +202,14 @@ const main = async () => {
     if (opts.restore) {
         let manifest
         try { manifest = JSON.parse(fs.readFileSync(path.join(expandHome(opts.restore), 'manifest.json'), 'utf8')) } catch (e) { console.error(`cannot read manifest: ${e.message}`); process.exit(2) }
-        const token = readToken(expandHome(opts.tokenFile))
+        let token
+        try { token = readToken(expandHome(tokenFileFor(manifest.api, opts.tokenFile))) } catch (e) { console.error(e.message); process.exit(2) }
         if (!token) { console.error('no token found (--token-file)'); process.exit(2) }
         try { await runRestore(opts, { client: makeClient(manifest.api, token) }) } catch (e) { console.error(e.message); process.exit(1) }
         return
     }
-    const token = readToken(expandHome(opts.tokenFile))
+    let token
+    try { token = readToken(expandHome(tokenFileFor(opts.api, opts.tokenFile))) } catch (e) { console.error(e.message); process.exit(2) }
     if (!token) { console.error('no token found (--token-file)'); process.exit(2) }
     try {
         const { out, manifest } = await takeCheckpoint(opts, { client: makeClient(opts.api, token) })
