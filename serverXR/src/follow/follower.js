@@ -633,6 +633,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         })
         const abandoned = Boolean(parking?.signal.aborted)
         parking = null
+        // Stopped while the read was out: write nothing. A read parked on the
+        // other machine outlives stop() by up to WAIT_SECONDS, and the edit that
+        // ends it would otherwise be carried by a follow that no longer exists
+        // (2026-10-13, the 409 in followIntegration "same field at the same
+        // moment": the stopped follow wrote the host's edit into this install
+        // between someone's read of its version and their write).
+        if (stopped) return { moved: false, skipped: true }
         // Only the stream that parks reads the mark: it is the whole space's.
         // An answer without one (an older server) leaves the last one standing.
         const markBefore = spaceMark
@@ -865,7 +872,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
 
     loop()
     return {
-        stop() { stopped = true; chase.stop() },
+        stop() {
+            stopped = true
+            // A stopped follow holds nothing open on the other machine.
+            parking?.abort()
+            wakeNow?.()
+            chase.stop()
+        },
         wake() {
             interval = FLOOR_MS
             woken = true
