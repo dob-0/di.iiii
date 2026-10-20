@@ -13,6 +13,10 @@ import { spawn } from 'node:child_process'
 
 const READY_LINE = 'Server running. Listening on:'
 
+// How many servers one call may start when it keeps losing the port race. The test that guards "no server left behind per
+// retry" counts against this, so the cap lives in one place.
+export const MAX_ATTEMPTS = 5
+
 export const getFreePort = () => new Promise((resolve, reject) => {
     const server = net.createServer()
     server.on('error', reject)
@@ -70,7 +74,7 @@ export const spawnServerUntilReady = async ({ entry, cwd, env, nodeArgs = [], po
             // would ever stop it — it outlived the test run (an orphan serverXR seen running for 22 minutes), and the retry
             // below would start the next one beside it.
             stopChild(child)
-            if (!pinnedPort && attempt < 5 && /EADDRINUSE/.test(`${state.stdout}${state.stderr}`)) continue
+            if (!pinnedPort && attempt < MAX_ATTEMPTS && /EADDRINUSE/.test(`${state.stdout}${state.stderr}`)) continue
             throw error
         }
     }
