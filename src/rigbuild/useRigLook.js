@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getSharedLightingMirror } from '../rigMirror/useLightingMirror.js'
-import { TYPE_LIBRARY } from './types/index.js'
+import { useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
 import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withLookWash, withWashLevel } from './looks.js'
 import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
@@ -74,9 +74,13 @@ export const fadeProgress = (fade, now = Date.now()) => {
     return Math.min(1, Math.max(0, (now - fade.firedAt) / fade.fadeMs))
 }
 
-export function useRigLookEntities(document, { explicit, mirror, laserShowStore, library: baseLibrary = TYPE_LIBRARY, now: clockNow = () => Date.now() } = {}) {
+// `library` absent: the project's own types alone, loaded on demand (types/projectTypes.js) — a viewer never
+// downloads the whole fixture library for a room that hangs three kinds of lamp.
+export function useRigLookEntities(document, { explicit, mirror, laserShowStore, library: givenLibrary = null, now: clockNow = () => Date.now() } = {}) {
     const list = document?.entities
     const entities = useMemo(() => list || [], [list])
+    const projectLibrary = useProjectLibrary(givenLibrary ? null : list || null)
+    const baseLibrary = givenLibrary || projectLibrary
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     const looks = useMemo(() => rigLooksOf(entities), [entities])
     const store = mirror || getSharedLightingMirror()
