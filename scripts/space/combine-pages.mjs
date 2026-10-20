@@ -12,7 +12,8 @@
 // SPEC.json: { into, title, start, tabs: [{ label, id }], links: [{ label, href }], relink: { "/old": "/new" } }
 //   (the Dilijan one: spaces/dilijan/combine-aren.json). Flags override the spec.
 // --assets-from: read a page's assets from ANOTHER api when this one does not have them yet (e.g. a scratch stack
-//   that holds the originals, while --api is the server being changed).
+//   that holds the originals, while --api is the server being changed). DI_TOKEN is the bearer for --api and goes
+//   to the --assets-from host only when it IS --api; another host gets DI_ASSETS_TOKEN, or no token at all.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -26,7 +27,10 @@ const apply = args.includes('--apply')
 const api = (flag('--api') || '').replace(/\/$/, '')
 if (!api) { console.error('--api URL is required (e.g. http://<tree>.diiii.localhost/serverXR)'); process.exit(2) }
 const assetsApi = (flag('--assets-from') || api).replace(/\/$/, '')
-const auth = process.env.DI_TOKEN ? { authorization: `Bearer ${process.env.DI_TOKEN}` } : {}
+const bearer = (token) => (token ? { authorization: `Bearer ${token}` } : {})
+const auth = bearer(process.env.DI_TOKEN)
+// A token for one server must not reach another (2026-10-21 review: DI_TOKEN went to the --assets-from host too).
+const assetsAuth = process.env.DI_ASSETS_TOKEN ? bearer(process.env.DI_ASSETS_TOKEN) : (assetsApi === api ? auth : {})
 const ua = { 'user-agent': userAgent('di-combine-pages') }
 
 async function call(method, route, body) {
@@ -40,18 +44,23 @@ const getDoc = async (id) => { const d = await call('GET', `/api/projects/${id}/
 const say = (what) => console.log(`${apply ? 'do ' : 'would'} ${what}`)
 const hasAsset = async (base, id, hash) => (await fetch(`${base}/api/projects/${id}/assets/${hash}/meta`, { headers: { ...ua, ...auth } })).ok
 
-// Put one asset of `from` into `into` on --api, unless it is already there.
+// Put one asset of `from` into `into` on --api, unless it is already there. Returns the id it has there.
 async function ensureAsset(from, into, hash) {
-  if (await hasAsset(api, into, hash)) return
+  if (await hasAsset(api, into, hash)) return hash
   say(`copy asset ${hash.slice(0, 12)}… from ${from} into ${into}`)
-  if (!apply) return
-  const res = await fetch(`${assetsApi}/api/projects/${from}/assets/${hash}`, { headers: { ...ua, ...auth } })
+  if (!apply) return hash
+  const res = await fetch(`${assetsApi}/api/projects/${from}/assets/${hash}`, { headers: { ...ua, ...assetsAuth } })
   if (!res.ok) throw new Error(`asset ${hash.slice(0, 12)}… is not on ${assetsApi} for ${from} (${res.status}); restore it there first, or pass --assets-from with a server that has it`)
   const form = new FormData()
   form.append('assetId', hash)
   form.append('asset', new Blob([await res.arrayBuffer()], { type: res.headers.get('content-type') || 'application/octet-stream' }), `${hash}.bin`)
   const up = await fetch(`${api}/api/projects/${into}/assets`, { method: 'POST', headers: { ...ua, ...auth }, body: form })
   if (!up.ok) throw new Error(`copy asset into ${into}: ${up.status} ${(await up.text()).slice(0, 120)}`)
+  // The server re-encodes a photo to strip its metadata, so a copy can come back under a NEW id (2026-10-21: the yard's
+  // three JPEGs did, and the kept page asked for the old ids: 3 × 404). The page must name the id the server gives.
+  const id = (await up.json().catch(() => ({})))?.asset?.id || hash
+  if (id !== hash) say(`asset ${hash.slice(0, 12)}… is ${id.slice(0, 12)}… in ${into} (re-encoded by the server)`)
+  return id
 }
 
 const undo = flag('--undo')
@@ -83,8 +92,11 @@ for (const [label, id] of tabs) {
   const source = doc.presentationState?.codeHtml
   if (!source) { console.error(`${id} has no code page`); process.exit(1) }
   const moved = repointAssets(source, id, into)
-  for (const hash of moved.hashes) await ensureAsset(id, into, hash)
   let html = moved.html
+  for (const hash of moved.hashes) {
+    const got = await ensureAsset(id, into, hash)
+    if (got !== hash) html = html.split(`/api/projects/${into}/assets/${hash}`).join(`/api/projects/${into}/assets/${got}`)
+  }
   for (const [from, to] of Object.entries(relinks)) {
     const r = relinkHtml(html, from, to)
     if (r.count) say(`relink ${id}: ${r.count} × ${from} -> ${to}`)

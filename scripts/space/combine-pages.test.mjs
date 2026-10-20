@@ -35,7 +35,7 @@ function fakeApi({ docs, assets = {} }) {
     req.on('end', () => {
       const body = Buffer.concat(chunks)
       const kind = classifyUserAgent(req.headers['user-agent']).kind
-      log.push({ method: req.method, url: req.url, kind })
+      log.push({ method: req.method, url: req.url, kind, authorization: req.headers.authorization })
       const send = (code, data, type = 'application/json') => { res.writeHead(code, { 'content-type': type }); res.end(type === 'application/json' ? JSON.stringify(data) : data) }
       if (kind === 'anonymous') return send(429, { error: 'Too many requests from this address by an unidentified program — retry in 28s.' })
       let m
@@ -51,8 +51,10 @@ function fakeApi({ docs, assets = {} }) {
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/assets$/)) && req.method === 'POST') {
         const id = /name="assetId"\r\n\r\n([0-9a-f]{64})/.exec(body.toString('latin1'))
         if (!id) return send(400, { error: 'no asset id' })
-        assets[`${m[1]}/${id[1]}`] = Buffer.from('copied')
-        return send(200, { ok: true })
+        // like the real server (assetScrub.js), a photo is re-encoded (its metadata stripped) and stored under the id of its new bytes
+        const stored = body.toString('latin1').includes('PHOTO-BYTES') ? 'c'.repeat(64) : id[1]
+        assets[`${m[1]}/${stored}`] = Buffer.from('copied')
+        return send(200, { ok: true, asset: { id: stored } })
       }
       return send(404, { error: `no route ${req.method} ${req.url}` })
     })
@@ -60,7 +62,7 @@ function fakeApi({ docs, assets = {} }) {
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, log, docs, assets, url: `http://127.0.0.1:${server.address().port}` })))
 }
 
-const run = (argv) => new Promise((resolve) => execFile(process.execPath, [COMBINE, ...argv], { timeout: 20000 }, (error, stdout, stderr) => resolve({ code: error ? error.code : 0, stdout, stderr })))
+const run = (argv, env = {}) => new Promise((resolve) => execFile(process.execPath, [COMBINE, ...argv], { timeout: 20000, env: { ...process.env, DI_TOKEN: '', DI_ASSETS_TOKEN: '', ...env } }, (error, stdout, stderr) => resolve({ code: error ? error.code : 0, stdout, stderr })))
 const pagesIn = (html) => JSON.parse(/const PAGES=(\[.*?\]),ALLOW=/s.exec(html)[1])
 
 describe('the program says who it is', () => {
@@ -137,6 +139,31 @@ describe('buildCombinedPage', () => {
     expect(state().allow).toContain('camera')
     expect(first.isConnected).toBe(false) // the old page was unloaded, not hidden
   })
+  // The viewer gives the TOP page window.diiPageOrigin/diiPageQuery (presentationPreviewDocument.js); a tab's srcdoc
+  // frame must get them too, or AirCanvas falls back to its hard-coded prod host on every other tier.
+  const viewerHands = (html, origin, query) => new JSDOM(html, { runScripts: 'dangerously', beforeParse(w) { w.diiPageOrigin = origin; w.diiPageQuery = query } })
+  const runTab = (srcdoc) => new JSDOM(srcdoc, { runScripts: 'dangerously' }).window
+  const air = '<!doctype html><html><head><title>air</title><script>window.base=(window.diiPageOrigin||"https://di-studio.xyz");window.room=window.diiPageParams&&window.diiPageParams.get("room")</script></head><body>air</body></html>'
+  it('hands the viewer\'s origin and query on to the open tab, before the tab\'s own scripts run', () => {
+    const dom = viewerHands(buildCombinedPage({ pages: [{ label: 'AirCanvas', html: air }, { label: 'Yard', html: yardHtml }] }), 'https://dev.diiii.xyz', '?room=r1')
+    const tab = runTab(dom.window.document.querySelector('iframe').srcdoc)
+    expect(tab.base).toBe('https://dev.diiii.xyz')
+    expect(tab.diiPageQuery).toBe('?room=r1')
+    expect(tab.room).toBe('r1')
+    dom.window.document.querySelectorAll('nav button')[1].click() // a page with no <head> gets one
+    const yard = dom.window.document.querySelector('iframe').srcdoc
+    expect(yard).toMatch(/^<html><head><script>window\.diiPageOrigin="https:\/\/dev\.diiii\.xyz";/)
+    expect(runTab(yard).diiPageOrigin).toBe('https://dev.diiii.xyz')
+  })
+  it('a value cannot close the script it is handed in; outside the viewer the page is left as it is', () => {
+    const query = '?x=</script><script>window.pwned=1</script>'
+    const dom = viewerHands(buildCombinedPage({ pages: [{ label: 'a', html: air }, { label: 'b', html: airHtml }] }), 'https://dev.diiii.xyz', query)
+    const tab = runTab(dom.window.document.querySelector('iframe').srcdoc)
+    expect(tab.pwned).toBeUndefined()
+    expect(tab.diiPageQuery).toBe(query)
+    const bare = new JSDOM(buildCombinedPage({ pages: [{ label: 'a', html: air }, { label: 'b', html: airHtml }] }), { runScripts: 'dangerously' })
+    expect(bare.window.document.querySelector('iframe').srcdoc).toBe(air)
+  })
   it('refuses an empty list', () => {
     expect(() => buildCombinedPage({ pages: [] })).toThrow()
   })
@@ -202,6 +229,41 @@ describe('combine-pages.mjs against a fake serverXR', () => {
     expect(r.code).not.toBe(0)
     expect(r.stderr).toMatch(/is not on .* for elevation/)
     expect(isCombined(api.docs['the-yard'].presentationState.codeHtml)).toBe(false)
+  })
+
+  it('a photo the server re-encodes on copy is named by the id the server gives it (it 404s under the old one)', async () => {
+    api.assets[`elevation/${H2}`] = Buffer.from('PHOTO-BYTES')
+    const H3 = 'c'.repeat(64)
+    const r = await run(argv(['--apply', '--backup', path.join(tmp, 'b.json')]))
+    expect(r.code).toBe(0)
+    expect(r.stdout).toMatch(/re-encoded by the server/)
+    const wall = pagesIn(api.docs['the-yard'].presentationState.codeHtml)[2]
+    expect(wall).toContain(`/serverXR/api/projects/the-yard/assets/${H3}`)
+    expect(wall).not.toContain(H2)
+    expect(api.assets[`the-yard/${H3}`]).toBeDefined()
+  })
+
+  it('DI_TOKEN reaches --api only: another --assets-from host gets DI_ASSETS_TOKEN, or no token', async () => {
+    delete api.assets[`elevation/${H2}`]
+    const source = await fakeApi({ docs: {}, assets: { [`elevation/${H2}`]: Buffer.from('wall') } })
+    try {
+      const go = (env) => run(argv(['--apply', '--backup', path.join(tmp, 'b.json'), '--assets-from', source.url]), env)
+      expect((await go({ DI_TOKEN: 'api-secret' })).code).toBe(0)
+      expect(api.log.filter((l) => l.method !== 'GET').every((l) => l.authorization === 'Bearer api-secret')).toBe(true)
+      expect(source.log.length).toBeGreaterThan(0)
+      expect(source.log.map((l) => l.authorization)).toEqual(source.log.map(() => undefined))
+      source.log.length = 0
+      api.docs['the-yard'] = docOf(yardHtml)
+      delete api.assets[`the-yard/${H2}`]
+      expect((await go({ DI_TOKEN: 'api-secret', DI_ASSETS_TOKEN: 'source-secret' })).code).toBe(0)
+      expect(source.log.map((l) => l.authorization)).toEqual(source.log.map(() => 'Bearer source-secret'))
+    } finally { source.server.close() }
+  })
+
+  it('DI_TOKEN still reads assets when --assets-from is --api itself', async () => {
+    const r = await run(argv(['--apply', '--backup', path.join(tmp, 'b.json'), '--assets-from', api.url]), { DI_TOKEN: 'api-secret' })
+    expect(r.code).toBe(0)
+    expect(api.log.find((l) => l.url === `/api/projects/elevation/assets/${H2}`).authorization).toBe('Bearer api-secret')
   })
 
   it('--assets-from takes the missing asset from another server', async () => {
