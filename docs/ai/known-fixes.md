@@ -1067,3 +1067,11 @@ Fix: (1) beyond the footprint y = 0 is the ground the hall stands on: `ground ou
 rule `floor`, as before #1050); open sky is a ray that does not go down; the lamp above has reach 8 m and the beam is a fixable leak again; (2) for a beam not drawn (hidden or 0 m) `physics_check` still casts the lamp,
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
+
+## Follow: a file named only by a document a converge brought in was never fetched (audit F10, 2026-10-21)
+
+The file chase (`serverXR/src/follow/assets.js`) learned names from `upsertAsset` ops and from each project's document once per process. When the host's op was out of its retained window, the converge brought in a document naming the file and nothing asked for its bytes: a dead frame, no word, until a restart. **Fix (already on dev, ccd00a91, 2026-10-05):** a document is read again every `reconcileEveryMs` (10 min), and the follower hands every project to `noteProjects` on each tick. **Guard:** `assets.test.js` "fetches a file named only by a document a converge brought in, within one period (audit F10)" — fake clock, 1 s period: not fetched at 999 ms, fetched at 1000 ms; red on `ccd00a91^`. Limit: up to one period late.
+
+## OPEN: Follow: a host restored from an older backup that passes the old version number is skipped over (audit F13, 2026-10-21)
+
+Confirmed by test, not fixed. A cursor is a bare version number and the follower notices a rebuilt log only when its cursor is past the log's end (`follower.js` `runStream`, `behind`). Host restored from v3 to its v1 copy, three edits to v4, follower resumes from saved cursor 3: v4 arrives, v2 and v3 never do (`['op-after-1', 'op-after-2']` missing). **Guard:** `followRaces.test.js` "F13", `it.fails` — when the fix lands it goes red and must become a plain `it`. **Fix owed (protocol):** a `logEpoch` minted when a log is created or restored, returned with the ops, saved beside each cursor; a changed epoch resets that cursor to null. Sketch in `docs/ai/audits/follow-audit-2026-10-04.md` F13.

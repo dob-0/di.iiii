@@ -191,6 +191,45 @@ describe('the chase', () => {
         expect(world.there.files.get(sha(bytes)).equals(bytes)).toBe(true)
     })
 
+    // Follow audit F10 (2026-10-04): a document was read once per process, so a
+    // file named only by a document a converge brought in (the upsertAsset op
+    // long gone from the host's window) was never asked for. The follower hands
+    // every project to noteProjects on every tick (follower.js tick()), so the
+    // file is asked for at the first tick one period after the last comparison.
+    // Red on the code before ccd00a91; this is its guard.
+    it('fetches a file named only by a document a converge brought in, within one period (audit F10)', async () => {
+        const world = twoMachines()
+        const bytes = Buffer.from('placed on the host before this follow, its op out of the window')
+        world.there.files.set(sha(bytes), bytes)
+        world.here.docs.set('show', { assets: [] })
+        world.there.docs.set('show', { assets: [] })
+        let clock = 0
+        await make(world, { now: () => clock, reconcileEveryMs: 1000 })
+
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.calls.downloads).toEqual([])
+
+        // The converge writes the host's document over this one: it names the
+        // file, and no op about it is ever seen by the chase.
+        clock = 10
+        const named = { assets: [{ id: sha(bytes), name: 'clip.mp4', size: bytes.length }] }
+        world.here.docs.set('show', structuredClone(named))
+        world.there.docs.set('show', structuredClone(named))
+
+        // Inside the period the document is not read again: that wait is the limit.
+        clock = 999
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.here.files.has(sha(bytes))).toBe(false)
+
+        clock = 1000
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.here.files.get(sha(bytes))?.equals(bytes)).toBe(true)
+        expect(chase.files).toMatchObject({ listed: 1, carried: 1, missing: 0 })
+    })
+
     it('says how many files are listed and how many a machine still lacks', async () => {
         const world = twoMachines()
         const [a, b, c] = ['one', 'two', 'three'].map(text => Buffer.from(text))
