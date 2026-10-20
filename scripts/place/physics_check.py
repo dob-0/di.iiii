@@ -4,20 +4,29 @@
 For every spot-light entity of a project document whose beam is drawn, the beam's REST axis (the entity's local −Y, three.js
 Euler XYZ) is cast against the building as the hall record gives it, and the drawn length (beam.length, else light.distance)
 is compared with the distance to the first surface. A beam drawn longer than that by more than --tol metres passes through a
-wall or the roof: a LEAK. The surfaces, from the hall record's dims (sources inside the record) and the rig scripts' building
-planes: the two side walls and the two end walls, the floor, the roof deck underside (truss_top_h_m: the space frame is open
-lattice, the deck is the first solid surface), and the lantern glazing top (ridge) over the bay's centre band (lantern_w_m).
+wall or the roof: a LEAK.
 
-Limits, stated: the rest axis only (a look may aim a unit elsewhere at show time — the room clips at runtime for that); planes
-and boxes, not the hall's triangles; the cone's spread is not cast (the axis only). `--fix` writes beam.length = the first-hit
+THE SURFACES COME FROM ONE SOURCE (2026-10-20, owner rule "Physics first" 2: a stored number that only fits an old state is a
+bug): the hall record's `dims.shell`, the wall, deck, lantern and glazing slabs scripts/place/hall_shell.py takes from the
+model the room draws (every corner a vertex of that GLB). Each slab is a box; the beam is cast against its faces (slab method,
+from inside or outside). The floor is the one surface the shell does not carry: the plane y = 0 of the hall frame. A hall
+record WITHOUT dims.shell is refused (exit 2), never checked against copied planes: run hall_shell.py --write first.
+Before this the walls (x -36.4 / 60.4, z 53.8 / -53.6), the deck (truss_top_h_m) and a lantern roof (ridge_h_m over |x| <= 6,
+the whole length) were copied by hand into this file; they differed from the model (back wall 0.2 m, deck 0.05 m, lantern roof
+0.1 m and no gap between the lantern segments).
+
+Limits, stated: the rest axis only (a look may aim a unit elsewhere at show time — the room clips at runtime for that); slab
+boxes, not the hall's triangles; no space frame lattice, columns or cranes; glazing ends a beam here although light would
+transmit it (an outside-exposure check must treat it as an opening); the cone's spread is not cast (the axis only). A lamp
+whose origin lies inside a slab is at distance 0 from it (reported, not skipped). `--fix` writes beam.length = the first-hit
 distance for each leak, lasers too (ops on the project; back it up first).
 
     python3 scripts/place/physics_check.py --api http://127.0.0.1:4337/serverXR --project moxir-v2-9 \
         --hall scripts/place/rigs/moxir-hall-2026-10-11-v11-show-park-far41.hall.json [--fix]
 """
-import argparse, json, math, time, urllib.request
+import argparse, json, math, sys, time, urllib.request
 
-WEST_X, EAST_X, WALL_Z, BACK_Z = -36.4, 60.4, 53.8, -53.6   # the building's walls (moxir_v2_8_floor.py, the hall frame)
+FLOOR_Y = 0.0   # the hall frame's floor; dims.shell carries walls, deck, lanterns and glazing, not the floor
 
 
 def axis_of(r):
@@ -29,20 +38,48 @@ def axis_of(r):
     return [x, y, z]
 
 
-def first_surface(p, d, dims):
-    deck = float(dims['truss_top_h_m']); ridge = float(dims['ridge_h_m']); half_lantern = float(dims['lantern_w_m']) / 2
+def refuse(msg):
+    print('physics_check: ' + msg, file=sys.stderr); raise SystemExit(2)
+
+
+def shell_of(dims):
+    """dims.shell as a list of (label, lo[3], hi[3]) boxes in the hall frame. Refuses (SystemExit 2) a record with none."""
+    shell = dims.get('shell')
+    if not isinstance(shell, list) or not shell:
+        refuse('the hall record has no dims.shell (the wall and roof slabs of hall_shell.py); refusing to check beams against '
+               'copied planes. Run: python3 scripts/place/hall_shell.py --hall <record> --write')
+    boxes = []
+    for m in shell:
+        try:
+            lo = [float(m[k][0]) for k in ('x_m', 'y_m', 'z_m')]; hi = [float(m[k][1]) for k in ('x_m', 'y_m', 'z_m')]
+        except (KeyError, TypeError, ValueError, IndexError):
+            refuse('dims.shell slab %r has no x_m/y_m/z_m [min, max]' % (m.get('id') if isinstance(m, dict) else m))
+        boxes.append((f"{m.get('surface', 'shell')} [{m.get('id', '?')}]", lo, hi))
+    return boxes
+
+
+def ray_box(p, d, lo, hi):
+    """Distance along the unit ray p + t d to where it enters the box (0.0 if p is inside it), or None (misses / box behind)."""
+    t0, t1 = 0.0, math.inf
+    for i in range(3):
+        if abs(d[i]) < 1e-12:
+            if p[i] < lo[i] or p[i] > hi[i]: return None
+            continue
+        a, b = (lo[i] - p[i]) / d[i], (hi[i] - p[i]) / d[i]
+        if a > b: a, b = b, a
+        t0, t1 = max(t0, a), min(t1, b)
+        if t0 > t1: return None
+    return t0
+
+
+def first_surface(p, d, shell):
+    """(distance, surface) of the first thing the ray p + t d meets: the floor, or a dims.shell slab (shell = shell_of(dims))."""
     hits = []
-    for name, axis, val in (('east wall', 0, EAST_X), ('west wall', 0, WEST_X), ('entry wall', 2, WALL_Z), ('back wall', 2, BACK_Z), ('floor', 1, 0.0)):
-        if abs(d[axis]) > 1e-9:
-            t = (val - p[axis]) / d[axis]
-            if t > 1e-6: hits.append((t, name))
-    if d[1] > 1e-9:  # upward: the deck, or the lantern glazing where the beam meets the deck inside the lantern band
-        t = (deck - p[1]) / d[1]; x_at = p[0] + d[0] * t
-        if abs(x_at) <= half_lantern:
-            hits.append(((ridge - p[1]) / d[1], 'lantern glazing (ridge)'))
-        else:
-            hits.append((t, 'roof deck'))
-    return min(hits)
+    if d[1] < -1e-9 and p[1] > FLOOR_Y: hits.append(((FLOOR_Y - p[1]) / d[1], 'floor'))
+    for name, lo, hi in shell:
+        t = ray_box(p, d, lo, hi)
+        if t is not None: hits.append((t, name))
+    return min(hits) if hits else (math.inf, 'none (open sky)')
 
 
 def fix_ops(leaks, stamp):
@@ -52,12 +89,13 @@ def fix_ops(leaks, stamp):
              'opId': f'physics-fix-{stamp}-{i}', 'clientId': 'physics-check'} for i, l in enumerate(leaks)]
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(); ap.add_argument('--api', required=True); ap.add_argument('--project', required=True)
     ap.add_argument('--hall', required=True); ap.add_argument('--tol', type=float, default=0.5); ap.add_argument('--fix', action='store_true')
-    a = ap.parse_args()
-    dims = json.load(open(a.hall))['dims']
-    raw = json.load(urllib.request.urlopen(f'{a.api}/api/projects/{a.project}/document', timeout=30)); doc = raw['document']
+    a = ap.parse_args(argv)
+    with open(a.hall) as f: shell = shell_of(json.load(f)['dims'])
+    with urllib.request.urlopen(f'{a.api}/api/projects/{a.project}/document', timeout=30) as r: raw = json.load(r)
+    doc = raw['document']
     ents = doc['entities']; ents = list(ents.values()) if isinstance(ents, dict) else ents
     leaks, checked = [], 0
     for e in ents:
@@ -67,7 +105,7 @@ def main():
         drawn = float(beam.get('length') or 0) or float(light.get('distance') or 0)
         if drawn <= 0: continue
         t = c.get('transform') or {}; p = t.get('position') or [0, 0, 0]; d = axis_of(t.get('rotation') or [0, 0, 0])
-        L, name = first_surface(p, d, dims); checked += 1
+        L, name = first_surface(p, d, shell); checked += 1
         if drawn > L + a.tol:
             leaks.append({'id': e['id'], 'drawn': round(drawn, 2), 'first_hit': round(L, 2), 'surface': name, 'over_m': round(drawn - L, 2), 'laser': bool(beam.get('laser'))})
     print(json.dumps({'project': a.project, 'version': raw.get('version'), 'beams_checked': checked, 'leaks': len(leaks)}))

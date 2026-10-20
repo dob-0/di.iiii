@@ -63,7 +63,7 @@ show), hits as their lit share in the drive. Tempo inside a step is NOT visible 
 
 CHECKS (fail = exit 1, nothing written): schema; every point inside the line's field (|x|,|y| <= 1) and the cube's field
 (|Y|,|P| <= fieldHalfDeg, ±18.5 ASSUMED, fixtures.json); no lit ray below the horizontal (the lowest point is the cube, over the
-hand rule); every ray's first surface (physics_check.first_surface: walls, floor, roof deck, lantern glazing) plus the bay's
+hand rule); every ray's first surface (hand_planes_first_surface, the legacy planes: walls, floor, roof deck, lantern glazing) plus the bay's
 column lines (|x| = span/2 below the truss bottom) and the near crane (height at its z >= 9.2 m, the rig's crossing rule): a ray
 must end on the roof deck, an end wall at >= 9.0 m, or a side wall — never the glazing (light would leave the building), the
 columns, the crane or the floor; flashes <= 3 per second (WCAG 2.x); the room's frame caps; the real cube's point budget
@@ -113,6 +113,30 @@ def _physics():
 
 
 PHYS = _physics()
+
+# LEGACY, OWED (2026-10-20): the hall planes physics_check.py used to copy by hand, kept HERE unchanged so this design tool's
+# output does not move under it. physics_check.py now reads dims.shell (one source); this tool's labels ('entry wall', 'floor',
+# 'lantern ...') and its dims-only fixtures still lean on the hand planes. Moving it to the shell is a ledger row (known-fixes
+# 2026-10-20: "physics_check.py had hand-copied planes"); the planes differ from the model (back wall -53.6 vs -53.8, deck 13.3
+# vs 13.35, a lantern the whole length over |x| <= 6 where the model has two lanterns with a 12 m deck gap and a gate opening).
+HAND_WEST_X, HAND_EAST_X, HAND_WALL_Z, HAND_BACK_Z = -36.4, 60.4, 53.8, -53.6
+
+
+def hand_planes_first_surface(p, d, dims):
+    deck = float(dims['truss_top_h_m']); ridge = float(dims['ridge_h_m']); half_lantern = float(dims['lantern_w_m']) / 2
+    hits = []
+    for name, axis, val in (('east wall', 0, HAND_EAST_X), ('west wall', 0, HAND_WEST_X), ('entry wall', 2, HAND_WALL_Z),
+                            ('back wall', 2, HAND_BACK_Z), ('floor', 1, 0.0)):
+        if abs(d[axis]) > 1e-9:
+            t = (val - p[axis]) / d[axis]
+            if t > 1e-6: hits.append((t, name))
+    if d[1] > 1e-9:  # upward: the deck, or the lantern glazing where the beam meets the deck inside the lantern band
+        t = (deck - p[1]) / d[1]; x_at = p[0] + d[0] * t
+        if abs(x_at) <= half_lantern:
+            hits.append(((ridge - p[1]) / d[1], 'lantern glazing (ridge)'))
+        else:
+            hits.append((t, 'roof deck'))
+    return min(hits)
 
 
 # ---- vectors and three.js Euler XYZ ---------------------------------------------------------------------------------------
@@ -391,7 +415,7 @@ def drive_at(laser, t):
 # ---- the physics ----------------------------------------------------------------------------------------------------------
 def end_of(p, d, dims):
     """First surface of a lit ray: (distance, label, end point, ok, why)."""
-    t, label = PHYS.first_surface(p, d, dims)
+    t, label = hand_planes_first_surface(p, d, dims)
     half_span = float(dims['span_m']) / 2
     truss_bottom = float(dims['truss_bottom_h_m'])
     # the bay's column lines: crossing |x| = span/2 below the truss bottom

@@ -1,11 +1,14 @@
 // WHERE A RIG LAMP'S BEAM STOPS IN THE HALL, when epic-build writes it (PHYSICS FIRST, owner 2026-10-13). The room
 // re-casts every beam at run time against the hall's own triangles (src/objectComponents/beamReach.js); this is the
 // length written with the lamp, so the document never carries a reach that runs through the roof before the room
-// has looked. The building is the hall record's dims and the hall frame's walls, the same surfaces as
-// scripts/place/physics_check.py (walls: moxir_v2_8_floor.py): the four walls, the floor, the roof deck underside
-// (truss_top_h_m: the space frame is open lattice, the deck the first solid surface) and the lantern glazing (ridge_h_m)
-// over the centre band (lantern_w_m). Planes, not the hall's triangles; the lamp's rest axis (a look re-aims it and
-// the room re-casts). Pure.
+// has looked. The building is the hall record's dims and the hall frame's walls: the four walls, the floor, the roof deck
+// underside (truss_top_h_m: the space frame is open lattice, the deck the first solid surface) and the lantern glazing
+// (ridge_h_m) over the centre band (lantern_w_m). Planes, not the hall's triangles; the lamp's rest axis (a look re-aims it
+// and the room re-casts). Pure.
+// OWED (2026-10-20): these are HAND-COPIED planes. scripts/place/physics_check.py no longer uses them: it reads the hall
+// record's dims.shell (hall_shell.py, the model's own slabs). On the owner's final reference rig the two differ: 4 lamps in
+// the 12 m deck gap between the lantern segments (and laser 42) are written longer than the model lets them go, and the
+// span-1 lantern is missing here. Moving this file to dims.shell is a ledger row (known-fixes 2026-10-20).
 import fs from 'node:fs'
 import path from 'node:path'
 import { firstHit } from '../../src/objectComponents/beamReach.js'
@@ -21,7 +24,7 @@ export const hallDimsOf = (file, root = '.') => {
     return JSON.parse(fs.readFileSync(p, 'utf8')).dims || null
 }
 
-/** The first hall surface along a ray (p, unit d) — physics_check.py first_surface, line for line. Null: a miss. */
+/** The first hall surface along a ray (p, unit d) — the hand planes physics_check.py used to copy (it reads dims.shell now). Null: a miss. */
 export const hallFirstHit = (p, d, dims, walls = HALL_WALLS) => {
     if (!dims) return null
     const planes = [
