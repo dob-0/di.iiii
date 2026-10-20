@@ -598,7 +598,12 @@ function registerProjectRoutes(router, {
       if (config.requireAuth) {
         const state = req.authState || {}
         const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(project.spaceId), loadSpaceMeta(toSpaceId)])
-        if (!toMeta) return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
+        // Only an admin, who can list every space anyway, hears that a target
+        // does not exist. Everyone else gets the refusal a space they may not
+        // use gets, word for word, so a move is not a test of which space ids
+        // exist (review r3 I2, 2026-10-20). A missing target is never theirs:
+        // no owner matches null, and no key's space is a missing id.
+        if (!toMeta && state.role === 'admin') return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
         const asOwner = canAccessSpace(state, toSpaceId) &&
           isSpaceOwnerOrAdminState(state, fromMeta) && isSpaceOwnerOrAdminState(state, toMeta)
         if (!asOwner) {
@@ -613,7 +618,7 @@ function registerProjectRoutes(router, {
           const also = state.alsoSyncKey
           const record = (why) => key && syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome: 'refused', reason: why, alsoKeyId: also?.keyId || null })
           const managesFrom = key && typeof canManageProjectsState === 'function' && canManageProjectsState(state, fromMeta)
-          const managesTo = Boolean(also && also.scope === 'manage' && also.spaceId === toMeta.id)
+          const managesTo = Boolean(toMeta && also && also.scope === 'manage' && also.spaceId === toMeta.id)
           if (!managesFrom || !managesTo) {
             const why = key
               ? 'A sync key moves a project only with a manage key of BOTH spaces: this one as the bearer, the other as alsoSyncKey in the body.'
