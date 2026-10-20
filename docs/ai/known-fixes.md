@@ -34,6 +34,7 @@ Measured in Chromium by `scripts/audit/site-wiki-admin.cjs` (axe-core WCAG 2.2 A
 | /admin → Manage: a keyboard could open a space in the Directory and never close it; axe `nested-interactive`, serious ×4 | The caret was a `role=button` span inside the row's `<button>`, and it was the only way to close a space | The row is the one control: it opens and selects a space, and closes the selected one; `aria-expanded` says which | `src/components/preferences/AdminManageSection.test.jsx` (axe-core `nested-interactive` in jsdom) |
 | "Sign-in failed — please try again." after an OAuth return disappeared on its own after 6 s, announced only politely | `AuthReturnNotice` gave every outcome the same 6 s timer and `role="status"` | A failure is `role="alert"` and stays until Dismiss; only the success note goes by itself | `src/components/AuthReturnNotice.test.jsx` |
 | The sign-in toast's Dismiss "×" was a 15.5 × 14.4 px target | A bare glyph with `padding: 0 4px` and `line-height: 1` | 24 px minimum, 44 px under `(pointer: coarse)` | `src/components/authReturnNotice.css.test.js` |
+| The wiki's "Updated …" line under every article failed contrast (axe `color-contrast`, serious; 3.14:1) | `--di-text-muted` (already exactly AA) was dimmed again with `opacity: 0.7` | The opacity is gone; the muted token alone is the dim | `src/wiki/wikiStyles.test.js` |
 
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 
