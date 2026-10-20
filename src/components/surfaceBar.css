@@ -212,6 +212,10 @@
         padding-bottom: 0;
         line-height: var(--di-touch-target);
     }
+
+    /* a short name or word is still a finger wide */
+    .sbar-where,
+    .sbar-more { min-width: var(--di-touch-target); }
 }
 
 /* Desk | Perform (src/perform/DeskPerformSwitch.jsx): two of the bar's own

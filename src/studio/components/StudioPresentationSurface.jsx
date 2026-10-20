@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import StudioViewport from './StudioViewport.jsx'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
@@ -49,6 +50,8 @@ export default function StudioPresentationSurface({
     onCameraChange,
     onRotateStart,
     editMode,
+    boxSelect = false,
+    onSelectEntities,
     gizmoMode,
     gizmoAxis = null,
     gizmoVisible = true,
@@ -63,7 +66,15 @@ export default function StudioPresentationSurface({
     onCloseHelp,
     overlays,
     rigMirror = false,
+    // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
+    graphRoom = null,
+    onSceneOps = null,
+    onPlayScene = null,
 }) {
+    // The scene the Studio shows while editing (ScenePicker.jsx): undefined = follow the show clock,
+    // '' = work light (no look), an id = that look.
+    const [rigLook, setRigLook] = useState(undefined)
+    const [laserTest, setLaserTest] = useState(false)
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const isFixedCamera = previewMode === 'fixed-camera'
@@ -81,7 +92,15 @@ export default function StudioPresentationSurface({
     const rawHtml = hasFiles
         ? bundleCodeFiles(presentationState.codeFiles)
         : (presentationState.codeHtml || '')
-    const previewDocument = buildPresentationPreviewDocument(rawHtml)
+    // The page's own host, as the public view passes it (PublicProjectViewer):
+    // a page that loads its assets from `${diiPageOrigin}/serverXR/...` got an
+    // empty origin here and hung on its loader in Studio (di.laser's chapter,
+    // owner's screenshot 2026-10-05). The sandbox's opaque origin cannot supply it.
+    const previewDocument = buildPresentationPreviewDocument(
+        rawHtml,
+        '',
+        typeof window !== 'undefined' ? window.location.origin : ''
+    )
 
     if (showCodeView) {
         const isUrlSource = presentationState.codeSourceType === 'url'
@@ -146,6 +165,12 @@ export default function StudioPresentationSurface({
     return (
         <StudioViewport
             document={document}
+            rigLook={rigLook}
+            onRigLook={setRigLook}
+            onSceneOps={onSceneOps}
+            onPlayScene={onPlayScene}
+            laserTest={laserTest}
+            onLaserTest={setLaserTest}
             selectedEntityId={selectedEntityId}
             selectedEntityIds={selectedEntityIds}
             onSelectEntity={onSelectEntity}
@@ -159,11 +184,19 @@ export default function StudioPresentationSurface({
             onCameraChange={onCameraChange}
             onRotateStart={onRotateStart}
             editMode={editMode}
+            boxSelect={boxSelect}
+            onSelectEntities={onSelectEntities}
             gizmoMode={gizmoMode}
             gizmoAxis={gizmoAxis}
             gizmoVisible={gizmoVisible}
             transformOp={transformOp}
             setEditMode={setEditMode}
+            // No view bar on the Studio surface (brief 2026-10-13 item 2): each pane already has the
+            // axis widget (top-right: Front/Back/Left/Right/Top/Bottom) and the keys run the same
+            // commands (Numpad or Shift+1/3/7, F, Home — studioGuide.js, View rows). A third way to the same
+            // six views, as 44 px buttons over the bottom of every pane, is a new shape on the
+            // owner's screen; the bar stays for a surface without that widget.
+            viewBar={false}
             setGizmoMode={setGizmoMode}
             onTransformCommit={onTransformCommit}
             onTransformCommitMany={onTransformCommitMany}
@@ -175,6 +208,7 @@ export default function StudioPresentationSurface({
             overlays={overlays}
             rigMirror={rigMirror}
             smartView={STUDIO_SMART_VIEW}
+            graphRoom={graphRoom}
         />
     )
 }

@@ -224,6 +224,12 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
         palette
     } = piece
     const trackRef = useRef(null)
+    // Keys act only while keyboard focus is inside this panel. The listeners
+    // below sit on window (so they still hear keys from a focused child), but
+    // a mounted panel must not steal Space/arrows/B from the node canvas or
+    // anything else. tabIndex={-1} on the section lets a click focus it.
+    const panelRef = useRef(null)
+    const focusInPanel = () => Boolean(panelRef.current?.contains(document.activeElement))
     const dragRef = useRef(null)
     const [trackWidth, setTrackWidth] = useState(0)
     const [source, setSource] = useState(null)
@@ -350,6 +356,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
 
     useEffect(() => {
         const onKey = (event) => {
+            if (!focusInPanel()) return
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
             if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -511,6 +518,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
     useEffect(() => {
         const onKey = (event) => {
             if (event.key !== 'b' && event.key !== 'B') return
+            if (!focusInPanel()) return
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
             if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -523,6 +531,8 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
 
     return (
         <section
+            ref={panelRef}
+            tabIndex={-1}
             className={`di-director${collapsed ? ' is-collapsed' : ''}`}
             aria-label="Director panel"
         >

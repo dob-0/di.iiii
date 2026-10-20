@@ -64,32 +64,15 @@ describe('raw colour roles', () => {
         expect(btn).toMatch(/font-family/)
     })
 
-    it('holds the only way into a node on a phone to the same floor', () => {
-        // Inside @media (hover: none) — the coarse-pointer branch, where the
-        // door is the sole affordance for entering a container node.
-        //
-        // Look the selector up EXPLICITLY rather than slicing on indexOf: a
-        // rename made indexOf return -1, slice(-1) then read one character, and
-        // the failure surfaced as a baffling regex mismatch instead of "that
-        // selector is gone". Renaming this control should fail loudly here.
-        const coarse = css.slice(css.indexOf('@media (hover: none)'))
-        const at = coarse.indexOf('.raw-graph-node-door')
-        expect(at, 'the coarse-pointer branch no longer mentions .raw-graph-node-door').toBeGreaterThan(-1)
+    it('holds the Open row of the selection sheet to the same floor on a phone', () => {
+        // The door is gone (audit 2026-10-05 B2). A finger has no double-click,
+        // so the sheet's first row, Open, is the way in on touch: 44px there.
+        expect(css).not.toMatch(/\.raw-graph-node-door/)
+        const coarse = css.slice(css.indexOf('@media (hover: none), (pointer: coarse)'))
+        const at = coarse.indexOf('.raw-property-open')
+        expect(at, 'the coarse-pointer branch no longer mentions .raw-property-open').toBeGreaterThan(-1)
         const rule = coarse.slice(at, coarse.indexOf('}', at))
         expect(rule).toMatch(/min-height:\s*44px/)
-        expect(rule).toMatch(/min-width:\s*44px/)
-    })
-
-    // The door is counter-scaled by the surface's zoom, so its size in the
-    // stylesheet is a SCREEN size at every zoom. It lived in the card header
-    // inside the graph transform before, where the fit shrank it to 7x7 real
-    // pixels while every DOM-presence test kept passing.
-    it('anchors the door outside the card so it can be counter-scaled', () => {
-        const anchor = css.slice(css.indexOf('.raw-graph-node-door-anchor'))
-        const rule = anchor.slice(0, anchor.indexOf('}'))
-        expect(rule).toMatch(/position:\s*absolute/)
-        expect(rule).toMatch(/right:\s*100%/)
-        expect(rule).toMatch(/transform-origin:\s*100%\s*50%/)
     })
 
     it('gives pinned and minimized windows a visible difference', () => {
@@ -107,8 +90,10 @@ describe('raw colour roles', () => {
     // "what is it made of" sits in the marker strip, which is the one thing a
     // lost person on a phone reaches for; and the sheet's only control is a
     // link-looking button that is still a finger's target.
-    it('holds the anatomy sheet\'s two controls to the same floor', () => {
-        for (const selector of ['.raw-scope-marker-what', '.raw-anatomy-goto']) {
+    // The marker's "?" went with the round pill (audit 2026-10-05 §3.6: the
+    // inside view is the reading); the sheet's own control keeps the floor.
+    it('holds the anatomy sheet\'s control to the finger floor', () => {
+        for (const selector of ['.raw-anatomy-goto']) {
             const rule = block(selector)
             expect(rule, `${selector} rule not found — did the selector change?`).toBeTruthy()
             expect(rule, selector).toMatch(/min-height:\s*44px/)
@@ -133,13 +118,17 @@ describe('raw colour roles', () => {
         const base = readFileSync(join(stylesDir, '../../styles/base.css'), 'utf8')
         const bare = [...css.matchAll(/var\((--[a-z0-9-]+)\s*\)/gi)].map((m) => m[1])
         // Set inline by a component, which is a definition — just not in a file.
-        const setByComponents = new Set(['--card-family', '--window-accent', '--raw-scaffold-top'])
+        const setByComponents = new Set(['--card-family', '--window-accent', '--raw-scaffold-top', '--raw-zoom'])
         // Declared by the one bar's own stylesheet. The only rules here that read
         // its height apply while the bar is drawn (.is-under-sbar), and drawing it
         // loads that sheet — so the token is always there when it is read.
         const bar = readFileSync(join(stylesDir, '../../components/surfaceBar.css'), 'utf8')
+        // raw.css's first line imports the Nodes chrome sheet, which declares
+        // the --raw-* scale (spacing, type, cell) on :root.
+        const chrome = readFileSync(join(stylesDir, 'rawChrome.css'), 'utf8')
+        expect(css.startsWith('@import "./rawChrome.css";')).toBe(true)
         const missing = [...new Set(bare)].filter((token) => (
-            !setByComponents.has(token) && !base.includes(`${token}:`) && !css.includes(`${token}:`) && !bar.includes(`${token}:`)
+            !setByComponents.has(token) && !base.includes(`${token}:`) && !css.includes(`${token}:`) && !bar.includes(`${token}:`) && !chrome.includes(`${token}:`)
         ))
         expect(missing, `raw.css uses undefined token(s) with no fallback: ${missing.join(', ')}`).toEqual([])
     })

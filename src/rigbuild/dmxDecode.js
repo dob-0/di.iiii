@@ -11,7 +11,10 @@
 //   shutter    'open' | 'closed' | 'strobe'  (and `strobeHz` when strobing)
 //   pan, tilt  degrees FROM HOME (the fixture's own frame, fixture-lib.mjs), or null
 //   zoomDeg    the full beam angle, or null
-//   gobo, prism, wheelSpin   noted, not drawn yet (the owner's brief: note them)
+//   gobo, prism, wheelSpin   noted (the owner's brief: note them)
+//   optics     what is in the beam's path, for the room to draw (beamOptics.js):
+//              { prism, honeycomb, frost, gobo } from the channel caps that state them
+//              (goboSlots, prismIn, prism2, prismRotation, frost) — null when nothing is in
 //
 // Conventions, each stated once:
 //   - 16-bit: coarse × 256 + fine, over 65535 (ANSI E1.11 slots are 8-bit; a fine
@@ -33,6 +36,54 @@ const hexRgb = (hex) => {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t)
+// LED emitters are driven LINEARLY (PWM): R at 255 and G at 128 is half the green light,
+// not the sRGB code 128 (which three.js reads as 21 %). An emitter mix is therefore made
+// linear, normalised, and only then written as an sRGB colour code — the code every
+// `color=` in the room is decoded from. (Render audit B, 2026-10-01: amber 255/128 came
+// out redder and 35 % dimmer; pastels with W went deep.)
+const toLinear = (c) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+const toCode = (l) => { const v = l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055; return Math.max(0, Math.min(1, v)) * 255 }
+/** Emitter drive levels (linear, 0..255) → the sRGB colour code at full. */
+const emitterHex = (drive) => {
+    const peak = Math.max(...drive)
+    return peak > 0 ? rgbHex(drive.map((v) => toCode(v / peak))) : null
+}
+// XYZ → linear Rec.709 (IEC 61966-2-1, D65) and its luminance row
+const XYZ_TO_RGB = [[3.2406, -1.5372, -0.4986], [-0.9689, 1.8758, 0.0415], [0.0557, -0.204, 1.057]]
+const LUMA709 = [0.2126, 0.7152, 0.0722]
+/**
+ * The colour of emitters in XYZ: `emitters` { r, g, b, w?: { x, y, flux_lm } } (CIE 1931 xy, lumens at full),
+ * `drive` 0..255 each (linear, PWM). Returns { colour (sRGB code at full), share (of the all-on lumens) } or
+ * null when the data is missing. Out-of-gamut mixes are desaturated toward the grey of equal luminance.
+ */
+export const emitterMix = (emitters, drive) => {
+    const keys = ['r', 'g', 'b', 'w'].filter((k) => emitters?.[k])
+    if (!['r', 'g', 'b'].every((k) => keys.includes(k))) return null
+    const ok = (e) => Number(e.x) > 0 && Number(e.y) > 0 && Number(e.flux_lm) > 0
+    if (!keys.every((k) => ok(emitters[k]))) return null
+    const XYZ = [0, 0, 0]
+    let full = 0
+    for (const k of keys) {
+        const { x, y, flux_lm: lm } = emitters[k]
+        const d = Math.max(0, Math.min(255, Number(drive[k]) || 0)) / 255
+        const f = lm * d
+        XYZ[0] += (f * x) / y
+        XYZ[1] += f
+        XYZ[2] += (f * (1 - x - y)) / y
+        full += lm
+    }
+    if (!(XYZ[1] > 0)) return { colour: null, share: 0 }
+    let rgb = XYZ_TO_RGB.map((row) => row[0] * XYZ[0] + row[1] * XYZ[1] + row[2] * XYZ[2])
+    const Y = LUMA709.reduce((sum, w, i) => sum + w * rgb[i], 0)
+    if (rgb.some((c) => c < 0)) {
+        let t = 0
+        for (const c of rgb) if (c < 0) t = Math.max(t, -c / (Y - c))
+        rgb = rgb.map((c) => Math.max(0, c + t * (Y - c)))
+    }
+    const peak = Math.max(...rgb)
+    return { colour: rgbHex(rgb.map((v) => toCode(v / peak))), share: Math.min(1, XYZ[1] / full) }
+}
+
 const WARM_3200K = [255, 180, 107]
 // What a white emitter adds, the desk's own mix (src/rigMirror/fixtureColour.js EMITTER_MIX.w).
 const WHITE_MIX = [0.92, 0.92, 0.92]
@@ -110,7 +161,9 @@ export const decodeDmx = (channels, values, type = null) => {
 
     // Colour: RGB(W) emitters, else a wheel, else nothing to say.
     let rgb = null
+    let emitterDrive = false
     if (has('r') || has('g') || has('b')) {
+        emitterDrive = true
         rgb = [at.r || 0, at.g || 0, at.b || 0]
         if (has('w')) rgb = rgb.map((v, i) => v + (at.w || 0) * WHITE_MIX[i])
     } else if (has('w')) {
@@ -122,23 +175,53 @@ export const decodeDmx = (channels, values, type = null) => {
         rgb = top > 0 ? mix(WARM_3200K, COOL_5600K, c / (w + c)).map((v) => (v * top) / 255) : [0, 0, 0]
     }
     const wheel = Object.values(spec).find((c) => c.cap?.wheel)
+    // A wheel slot or a laser's colour slot IS the light's colour, darkness included (a filter passes less than open):
+    // it is drawn as it is, never stretched to full like an emitter mix (MOXIR 2026-10-17: the B380F green #00d12a was
+    // drawn as #00ff33, brighter than the real beam).
+    let slotColour = false
     if (!rgb && wheel) {
         const w = wheelAt(wheel.cap.wheel, at[wheel.role])
         if (w?.spin) { out.wheelSpin = w.spin; out.notes.push(`colour wheel spinning (${w.spin}) — drawn open`) }
         rgb = hexRgb(w?.colour) || [255, 255, 255]
         rgb = rgb.slice()
+        slotColour = true
+    }
+    // A laser's own colour slots (UP-LA40WF ch 5, cap.laserColour): the room draws the colour the desk picked, so a red
+    // laser on the rig is a red line in the room (MOXIR 2026-10-17: the room kept the design's white while the rig was red).
+    const laserColour = Object.values(spec).find((c) => c.cap?.laserColour)
+    if (!rgb && laserColour) {
+        const w = wheelAt(laserColour.cap.laserColour, at[laserColour.role])
+        rgb = (hexRgb(w?.colour) || [255, 255, 255]).slice()
+        slotColour = true
     }
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (rgb && cto && at[cto.role] > 0) {
         const peak = Math.max(...rgb) || 1
-        rgb = mix(rgb, WARM_3200K.map((v) => v * peak / 255), at[cto.role] / 255)
+        // the warm target in the same space as the mix: linear drive for emitters, a code otherwise
+        const warm = emitterDrive ? WARM_3200K.map((v) => toLinear(v) * 255) : WARM_3200K
+        rgb = mix(rgb, warm.map((v) => v * peak / 255), at[cto.role] / 255)
     }
     const peak = rgb ? Math.max(...rgb) : 0
-    if (rgb) out.colour = peak > 0 ? rgbHex(rgb.map((v) => (v / peak) * 255)) : null
+    if (rgb) out.colour = peak > 0 ? (emitterDrive ? emitterHex(rgb) : rgbHex(slotColour ? rgb : rgb.map((v) => (v / peak) * 255))) : null
 
     // Level: the dimmer (16-bit with its fine), times the emitters where there is no wheel.
     const dim = has('dimmer') ? sixteen(at.dimmer, has('dimmerFine') ? at.dimmerFine : null) : 1
-    const emitted = (has('r') || has('g') || has('b') || has('w') || has('warm') || has('cool')) ? Math.min(1, peak / 255) : 1
+    let emitted = (has('r') || has('g') || has('b') || has('w') || has('warm') || has('cool')) ? Math.min(1, peak / 255) : 1
+    // PER-EMITTER COLOUR (2026-10-09): when the type carries each emitter's chromaticity and flux (CIE 1931
+    // xy and lumens at full, e.g. from a spectrometer or a GDTF <Emitter>), the mix is summed in XYZ and
+    // converted to linear Rec.709 (CIE 015:2018; IEC 61966-2-1), and the level is the mix's share of the
+    // full-white lumens. Otherwise the emitters are taken as the sRGB primaries (above) — said in
+    // `colourBasis`: no UPlight unit publishes emitter data (fixtures.json emitter_component: UNKNOWN).
+    if (emitterDrive) {
+        const mixed = emitterMix(type?.emitters, { r: at.r || 0, g: at.g || 0, b: at.b || 0, w: at.w || 0 })
+        if (mixed) {
+            out.colour = mixed.colour
+            emitted = mixed.share
+            out.colourBasis = `per-emitter XYZ (${type.emitters.basis || 'basis not given'}${type.emitters.source ? `, ${type.emitters.source}` : ''})`
+        } else {
+            out.colourBasis = 'ASSUMED: emitters as the sRGB primaries, white as a fixed 0.92 grey (no per-emitter chromaticity or flux)'
+        }
+    }
     out.level = Math.round(dim * emitted * 10000) / 10000
 
     // Shutter / strobe, or a dedicated flash-rate channel (a strobe fixture).
@@ -155,6 +238,20 @@ export const decodeDmx = (channels, values, type = null) => {
     const [panRange, tiltRange] = Array.isArray(type?.pan_tilt_deg?.value) ? type.pan_tilt_deg.value : [540, 270]
     if (has('pan')) out.pan = Math.round(degFromHome(sixteen(at.pan, has('panFine') ? at.panFine : null), panRange) * 100) / 100
     if (has('tilt')) out.tilt = Math.round(degFromHome(sixteen(at.tilt, has('tiltFine') ? at.tiltFine : null), tiltRange) * 100) / 100
+    // A scanning laser's X/Y position (UP-LA40WF ch 6/7, cap.aim: 0-125 by hand, 64 = centre) read back as degrees on the
+    // unit's own scan axes — the exact inverse of encodeDmx below — so the room moves the laser's picture where the desk
+    // moves the unit (owner 2026-10-17: "add movement in 3d that i can sync that"). A byte above the by-hand range is the
+    // unit's own auto motion (circle, jump): drawn at centre and said in the notes.
+    for (const c of Object.values(spec)) {
+        const a = c.cap?.aim
+        if (!a || (a.axis !== 'x' && a.axis !== 'y')) continue
+        const v = at[c.role]
+        let deg = 0
+        if (v > a.to) out.notes.push(`laser ${a.axis.toUpperCase()} auto motion (${v}) — drawn at centre`)
+        else if (v >= a.centre) deg = a.to > a.centre ? ((v - a.centre) / (a.to - a.centre)) * a.halfDeg : 0
+        else deg = a.centre > a.from ? ((v - a.centre) / (a.centre - a.from)) * a.halfDeg : 0
+        out.aim = { x: 0, y: 0, ...(out.aim || {}), [a.axis]: Math.round(deg * 100) / 100 }
+    }
 
     // Beam.
     const zoom = Object.values(spec).find((c) => c.cap?.zoom)
@@ -166,11 +263,48 @@ export const decodeDmx = (channels, values, type = null) => {
     const gobo = Object.values(spec).find((c) => c.cap?.gobo)
     if (gobo && at[gobo.role] > 0) { out.gobo = at[gobo.role]; out.notes.push(`gobo at ${at[gobo.role]} — not drawn yet`) }
     const prism = Object.values(spec).find((c) => c.cap?.prism)
-    if (prism && at[prism.role] > 0) { out.prism = at[prism.role]; out.notes.push(`prism at ${at[prism.role]} — not drawn yet`) }
+    if (prism && at[prism.role] > 0) { out.prism = at[prism.role]; out.notes.push(`prism at ${at[prism.role]}`) }
+    out.optics = opticsAt(spec, at)
+    if (out.optics?.goboShake) out.notes.push('gobo shaking — drawn still')
     return out
 }
 
 export default decodeDmx
+
+// What is in the beam's path, from the caps that say so (fixtureTypes.js — the B380F's
+// list carries them, each with its basis). A rotation channel whose cap states an
+// index range (the B380F's printed manual: 0-127 = 0…360°, 128+ spins) is read so:
+// inside the range an angle, above it a spin (angle 0, `spin: true` — a spinning
+// prism has no phase to draw). A cap without a range is read as an index 0…255 → 0…360°.
+const opticsAt = (spec, at) => {
+    const caps = Object.values(spec)
+    const optics = {}
+    const rotationOf = (n) => {
+        const c = caps.find((x) => x.cap?.prismRotation?.prism === n)
+        if (!c) return { rotation: 0 }
+        const idx = c.cap.prismRotation.index
+        if (!idx) return { rotation: (at[c.role] / 255) * Math.PI * 2 }
+        const v = at[c.role]
+        if (v > idx.to) return { rotation: 0, spin: true }
+        return { rotation: ((v - idx.from) / (idx.to - idx.from)) * Math.PI * 2 }
+    }
+    const gobo = caps.find((c) => c.cap?.goboSlots)
+    if (gobo) {
+        const v = at[gobo.role]
+        const g = gobo.cap.goboSlots
+        if (v >= g.from && v <= g.to) optics.gobo = { pattern: 1 + Math.min(g.count - 1, Math.floor(((v - g.from) * g.count) / (g.to - g.from + 1))), rotation: 0 }
+        if (gobo.cap.goboShake && v >= gobo.cap.goboShake.from) optics.goboShake = true
+    }
+    const p1 = caps.find((c) => c.cap?.prismIn)
+    if (p1 && at[p1.role] >= p1.cap.prismIn.from) optics.prism = { facets: p1.cap.prismIn.facets || 16, ...rotationOf(1) }
+    const p2 = caps.find((c) => c.cap?.prism2)
+    if (p2 && at[p2.role] >= (p2.cap.prism2.in?.from ?? 128)) optics.honeycomb = { ...rotationOf(2) }
+    const frost = caps.find((c) => c.cap?.frost)
+    // a chart that states the frost's range (an insert, not a curve) is read as in/out; one that does not is read as linear
+    if (frost && frost.cap.frost.from != null) { if (at[frost.role] >= frost.cap.frost.from && at[frost.role] <= frost.cap.frost.to) optics.frost = 1 }
+    else if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
+    return Object.keys(optics).length ? optics : null
+}
 
 // ---- the other way: what a look WANTS, as a fixture's DMX (RIG_BUILD.md §18.4) --------
 // A designed look (looks.js lookPoses) says, per lamp: aim, colour, level. The desk plays
@@ -179,12 +313,23 @@ export default decodeDmx
 // room the look designed. Pure. Values the look does not speak about are left out (the
 // fixture's own resting values stand).
 
+// CIELAB (D65) of an sRGB triple: the slot nearest to the eye, not to the numbers (2026-10-17: by plain RGB distance
+// sky blue #26bcff picked the deep blue slot, ΔE 98, over light blue).
+const labOf = ([r, g, b]) => {
+    const lin = (v) => { v /= 255; return v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92 }
+    const [R, G, B] = [lin(r), lin(g), lin(b)]
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116)
+    const X = f((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), Y = f(R * 0.2126 + G * 0.7152 + B * 0.0722), Z = f((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883)
+    return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)]
+}
+
 const nearestSlot = (ranges, rgb) => {
     let best = null
+    const want = labOf(rgb)
     for (const r of ranges || []) {
         if (!r.colour) continue
-        const c = hexRgb(r.colour)
-        const d = (c[0] - rgb[0]) ** 2 + (c[1] - rgb[1]) ** 2 + (c[2] - rgb[2]) ** 2
+        const c = labOf(hexRgb(r.colour))
+        const d = (c[0] - want[0]) ** 2 + (c[1] - want[1]) ** 2 + (c[2] - want[2]) ** 2
         if (!best || d < best.d) best = { d, r }
     }
     return best ? Math.round((best.r.from + best.r.to) / 2) : null
@@ -229,19 +374,42 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     const rgb = hexRgb(want.colour)
     const wheel = Object.values(spec).find((c) => c.cap?.wheel)
     const emitters = has('r') || has('g') || has('b')
+    // A colour carries its own brightness: '#a3200c' is a DARK red, and light = level × colour. The emitters (or the
+    // wheel slot) give the hue at full; what the colour lacks of full goes to the dimmer, in linear light — else a
+    // darkened colour leaves the lamp at full (MOXIR 2026-10-17: 62 lamp-looks lit brighter than the 3D drew them).
+    let colourGain = 1
     if (rgb && emitters) {
-        const peak = Math.max(...rgb) || 1
-        const scale = has('dimmer') || level == null ? 1 : level
-        if (has('r')) out.r = Math.round((rgb[0] / peak) * 255 * scale)
-        if (has('g')) out.g = Math.round((rgb[1] / peak) * 255 * scale)
-        if (has('b')) out.b = Math.round((rgb[2] / peak) * 255 * scale)
-        if (has('w')) out.w = 0
+        // the look's colour code → linear light → emitter drive (decode's emitterHex, inverted)
+        const lin = rgb.map(toLinear)
+        const peak = Math.max(...lin) || 1
+        colourGain = Math.max(...lin)
+        const scale = has('dimmer') || level == null ? 1 : level * colourGain
+        // An exactly neutral colour on a lamp with a white emitter is that emitter alone
+        // (cleaner than R+G+B at full); any tint keeps the RGB mix and W 0.
+        if (has('w') && rgb[0] === rgb[1] && rgb[1] === rgb[2] && rgb[0] > 0) {
+            if (has('r')) out.r = 0
+            if (has('g')) out.g = 0
+            if (has('b')) out.b = 0
+            out.w = Math.round(255 * scale)
+        } else {
+            if (has('r')) out.r = Math.round((lin[0] / peak) * 255 * scale)
+            if (has('g')) out.g = Math.round((lin[1] / peak) * 255 * scale)
+            if (has('b')) out.b = Math.round((lin[2] / peak) * 255 * scale)
+            if (has('w')) out.w = 0
+        }
     } else if (emitters && !has('dimmer') && level === 0) {
         // A colour-only mode (RGBW, no dimmer) has no other way to say OUT.
         for (const role of ['r', 'g', 'b', 'w']) if (has(role)) out[role] = 0
     } else if (rgb && wheel) {
-        const v = nearestSlot(wheel.cap.wheel, rgb)
-        if (v != null) out[wheel.role] = v
+        // the slot is picked by HUE (the wanted colour and every slot taken at full), the slot's own darkness is its
+        // filter's, and only what the wanted colour has less than that slot goes to the dimmer
+        const full = (c) => { const p = Math.max(...c) || 1; return c.map((x) => (x * 255) / p) }
+        const v = nearestSlot(wheel.cap.wheel.map((r) => (r.colour ? { ...r, colour: rgbHex(full(hexRgb(r.colour))) } : r)), full(rgb))
+        if (v != null) {
+            out[wheel.role] = v
+            const slot = hexRgb(wheelAt(wheel.cap.wheel, v)?.colour)
+            if (slot) colourGain = Math.min(1, Math.max(...rgb.map(toLinear)) / (Math.max(...slot.map(toLinear)) || 1))
+        }
     } else if (rgb && (has('warm') || has('cool'))) {
         const f = coolShareOf(rgb)
         const top = Math.max(f, 1 - f)
@@ -249,10 +417,25 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         if (has('warm')) out.warm = Math.round(((1 - f) / top) * 255 * scale)
         if (has('cool')) out.cool = Math.round((f / top) * 255 * scale)
     }
+    // A laser's own colour slots (cap.laserColour) and its X/Y position (cap.aim, 0-125 by hand, pan/tilt in
+    // degrees from home mapped over ±halfDeg, centre exact): the static beam's bytes. Never read back by decode.
+    const laserColour = Object.values(spec).find((c) => c.cap?.laserColour)
+    if (laserColour && rgb) {
+        const v = nearestSlot(laserColour.cap.laserColour, rgb)
+        if (v != null) out[laserColour.role] = v
+    }
+    for (const c of Object.values(spec)) {
+        const a = c.cap?.aim
+        const deg = a ? (a.axis === 'x' ? want.pan : want.tilt) : null
+        if (deg == null) continue
+        const t = Math.max(-1, Math.min(1, Number(deg) / a.halfDeg))
+        out[c.role] = Math.round(a.centre + t * (t >= 0 ? a.to - a.centre : a.centre - a.from))
+    }
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (cto && rgb) out[cto.role] = 0
     if (level != null && has('dimmer')) {
-        if (has('dimmerFine')) { const [c, f] = toSixteen(level); out.dimmer = c; out.dimmerFine = f } else out.dimmer = Math.round(level * 255)
+        const lit = clamp01(level * colourGain)
+        if (has('dimmerFine')) { const [c, f] = toSixteen(lit); out.dimmer = c; out.dimmerFine = f } else out.dimmer = Math.round(lit * 255)
     }
     const shutter = Object.values(spec).find((c) => c.cap?.shutter)
     const rate = Object.values(spec).find((c) => c.cap?.rate)

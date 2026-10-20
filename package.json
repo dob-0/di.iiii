@@ -5,8 +5,8 @@
     "version": "0.4.0",
     "type": "module",
     "engines": {
-        "node": "22.x",
-        "npm": "10.x"
+        "node": "22.x || 24.x",
+        "npm": ">=10"
     },
     "scripts": {
         "dev": "node scripts/dev-stack.mjs",
@@ -65,15 +65,18 @@
         "selfhost": "node scripts/self-host.mjs",
         "space:promote": "node scripts/promote-space-projects.mjs",
         "wcc:page-snapshot": "node scripts/wcc-page-snapshot.mjs",
-        "check:input": "node scripts/input-check.mjs",
+        "check:input": "node scripts/input-check.mjs && node scripts/input-check-drag.mjs",
         "preview": "vite preview",
-        "lint": "eslint src serverXR scripts sdk shared vite.config.js eslint.config.js",
+        "lint": "eslint src serverXR scripts sdk shared vite.config.js eslint.config.js && npm run lint:api-contract",
+        "lint:api-contract": "node serverXR/src/lighting/tests/lint-api-contract.js",
+        "desk:bundle": "node serverXR/src/lighting/tools/desk-bundle.js",
+        "test:desk-node": "node serverXR/src/lighting/tests/test-node-section.js",
         "test": "vitest run",
-        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary map/MapInspector map/lightingLink rigbuild/lookRules rigbuild/looks.test rigbuild/dmxPose rigbuild/readOnlySurfaces rigbuild/noWriteOnLoad ../scripts/nodeAnatomy.test.js",
+        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary map/MapInspector map/lightingLink rigbuild/lookRules rigbuild/looks.test rigbuild/headMotion rigbuild/lookLevel rigbuild/lightPool.fit rigbuild/dmxPose rigbuild/readOnlySurfaces rigbuild/noWriteOnLoad objectComponents/beamMirror ../scripts/nodeAnatomy.test.js",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
         "check:works": "node scripts/works-boundary.mjs",
-        "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js serverXR/src/ndiContracts.test.js serverXR/src/placeContracts.test.js serverXR/src/projectVisibilityContracts.test.js",
+        "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js serverXR/src/ndiContracts.test.js serverXR/src/laserShutdownContracts.test.js serverXR/src/placeContracts.test.js serverXR/src/projectVisibilityContracts.test.js serverXR/src/shelfScopeContracts.test.js serverXR/src/showContracts.test.js serverXR/src/localNameContracts.test.js serverXR/src/guestAddressContracts.test.js",
         "verify:surfaces": "node scripts/verify-surfaces.mjs",
         "verify:capture": "node scripts/verify-capture.mjs",
         "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
@@ -89,7 +92,7 @@
         "count:controls": "node scripts/count-controls.mjs"
     },
     "devDependencies": {
-        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/jest-dom": "^7.0.1",
         "@testing-library/react": "^16.3.3",
         "@testing-library/user-event": "^14.6.6",
         "@vitejs/plugin-react": "^6.1.1",
@@ -102,9 +105,10 @@
         "eslint-plugin-react-hooks": "^7.0.1",
         "globals": "^17.12.0",
         "jsdom": "^30.0.1",
-        "playwright": "^1.62.1",
+        "jsqr": "1.4.0",
+        "playwright": "^1.63.0",
         "prettier": "^3.9.6",
-        "vite": "^8.2.1",
+        "vite": "^8.3.2",
         "vitest": "^5.0.2"
     },
     "dependencies": {
@@ -112,30 +116,31 @@
         "@emotion/styled": "^11.14.1",
         "@fontsource/arimo": "^5.3.0",
         "@gltf-transform/core": "^4.4.0",
-        "@gltf-transform/extensions": "^4.4.2",
+        "@gltf-transform/extensions": "^4.5.1",
         "@gltf-transform/functions": "^4.4.0",
-        "@modelcontextprotocol/server": "2.1.0",
+        "@modelcontextprotocol/server": "2.3.1",
         "@mui/icons-material": "^7.3.9",
         "@mui/material": "^7.3.9",
         "@react-three/drei": "^9.108.1",
         "@react-three/fiber": "^8.16.8",
         "@react-three/xr": "^6.6.27",
-        "@testing-library/dom": "^10.4.1",
+        "@testing-library/dom": "^10.4.2",
         "gsap": "^3.15.0",
         "idb-keyval": "^6.2.1",
-        "jszip": "^3.10.1",
+        "jszip": "^3.10.2",
         "pdfjs-dist": "^6.3.289",
         "r3f-perf": "^7.2.1",
         "react": "18.3",
         "react-dom": "18.3",
         "react-router-dom": "^7.18.3",
-        "socket.io-client": "^4.7.0",
-        "three": "^0.185.1",
-        "three-mesh-bvh": "^0.7.8",
-        "troika-three-text": "^0.52.4"
+        "socket.io-client": "^4.8.4",
+        "three": "^0.186.1",
+        "three-mesh-bvh": "^0.9.15",
+        "troika-three-text": "^0.52.4",
+        "uqr": "0.1.3"
     },
     "overrides": {
         "postcss": "^8.5.10",
-        "sharp": "^0.35.3"
+        "sharp": "^0.35.5"
     }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     SHEETS, boxesOf, freeEnds, roomCameraFor, chooseScale, dimension, fitView, hitTest, inMarquee, lampTransform, layRun, layoutLabels,
-    nextUnit, pieceFootprint, piecesOf, ridersOf, rigExtent, scaleBar, sheetLayout, trussRuns, trussSegments, zoomView
+    nextUnit, pieceFootprint, piecesOf, placeNotes, ridersOf, rigExtent, scaleBar, sheetLayout, trussRuns, trussSegments, zoomView
 } from './plotGeometry.js'
 import { mountFromLens } from './lampGeometry.js'
 import { typeById } from './fixtureTypes.js'
@@ -199,5 +199,22 @@ describe('dimensions and the view', () => {
     it('frames what is rigged, and the venue when nothing is', () => {
         expect(rigExtent({ lamps: [{ at: [1, 2] }, { at: [3, 5] }] }, null, 1)).toEqual([0, 1, 4, 6])
         expect(rigExtent({}, [0, 0, 9, 9])).toEqual([0, 0, 9, 9])
+    })
+})
+
+describe('placeNotes', () => {
+    it('takes the first clear spot, leaves out a note with none, and keeps a dimension', () => {
+        const blockers = [[0, 0, 10, 2]]
+        const out = placeNotes([
+            { id: 'a', boxes: [[1, 0, 5, 1], [1, 3, 5, 4]] },
+            { id: 'b', boxes: [[2, 3, 6, 4]] },
+            { id: 'c', boxes: [[0, 0, 4, 1]] },
+            { id: 'dim', keep: true, boxes: [[0, 0, 4, 1], [3, 3, 7, 4]] }
+        ], blockers)
+        expect(out.get('a')).toBe(1)
+        expect(out.get('b')).toBe(-1)
+        expect(out.get('c')).toBe(-1)
+        // the dimension's second box overlaps note a's placed box: both cost something, the least is kept
+        expect(out.get('dim')).toBeGreaterThanOrEqual(0)
     })
 })

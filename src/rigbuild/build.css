@@ -176,6 +176,8 @@
 .rigbuild-mode--items { left: auto; right: 16px; top: auto; bottom: 16px; border-color: rgba(255, 255, 255, 0.6); }
 .rigbuild.is-building .rigbuild-mode--items { bottom: 16px; }
 .rigbuild-inventory { position: absolute; inset: 0; z-index: 30; }
+/* the room's Fly switch rides above the items button (both sat at the bottom right and overprinted) */
+.rigbuild:not(.is-phone) .live-scene-fly-btn { right: 16px; bottom: 72px; }
 .rigbuild.is-phone .rigbuild-mode--items { top: 58px; left: auto; right: auto; bottom: auto; left: 96px; }
 
 /* The two rows of the rig's bar sit over the room (RigSteps.jsx, rigbar--float): the

@@ -150,9 +150,15 @@ const SPARE_UNITS = 1
 const HOLD_MARGIN = 0.15
 const HELD = '__diShadowHeld'
 
-/** What a lamp puts into the room: intensity × its cone's solid angle (lightPool.js's score). */
+/**
+ * What a lamp puts into the room: intensity × its cone's solid angle (lightPool.js's score).
+ * The NOMINAL intensity when the lamp carries one (SpotLightObject): a strobe's flash moves
+ * light.intensity every frame, and scored on that it won and lost a shadow on alternate
+ * re-dresses (render audit K, 2026-10-01).
+ */
 export const shadowScore = (light) => {
-    const intensity = Math.max(0, Number(light?.intensity) || 0)
+    const nominal = light?.userData?.nominalIntensity
+    const intensity = Math.max(0, Number(nominal ?? light?.intensity) || 0)
     const angle = Math.min(Math.PI / 2, Math.max(0, Number(light?.angle) || 0))
     return intensity * 2 * Math.PI * (1 - Math.cos(angle))
 }

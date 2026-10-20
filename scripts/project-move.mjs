@@ -65,7 +65,6 @@
 
 import { createRequire } from 'node:module'
 import fs from 'node:fs'
-import fsp from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 // Dynamic-friendly requires below (createRequire), not a static import of
@@ -111,186 +110,50 @@ const resolvePaths = (dataRoot) => {
     }
 }
 
-// Same shapes assetHash.js validates uploads against — an id embedded in a
-// URL or a project asset's meta filename is one of these two kinds.
-const SHA256_HEX_REGEX = /^[a-f0-9]{64}$/i
-const ASSET_ID_IN_URL_RE = /[a-f0-9-]{8,64}/i
-
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-// Space-level asset URLs embed the space id — the exact pattern
-// space-bundle.mjs's remapSpaceUrls rewrites on a whole-space import/rename.
-const remapSpaceUrls = (text, oldId, newId) =>
-    oldId === newId ? text : text.split(`/api/spaces/${oldId}/`).join(`/api/spaces/${newId}/`)
-
-const moveDir = async (from, to) => {
-    try {
-        await fsp.rename(from, to)
-    } catch (error) {
-        if (error.code !== 'EXDEV') throw error
-        await fsp.cp(from, to, { recursive: true })
-        await fsp.rm(from, { recursive: true, force: true })
-    }
-}
-
-const copyIfMissing = async (from, to) => {
-    if (!fs.existsSync(from) || fs.existsSync(to)) return false
-    await fsp.mkdir(path.dirname(to), { recursive: true })
-    await fsp.copyFile(from, to)
-    return true
-}
-
 async function moveProject(args) {
     const { dataRoot, spacesDir, dbPath } = resolvePaths(args.dataRoot)
-    const projectId = args.target
-    const toSpaceId = args.to
-    if (!projectId) die('project-move needs a project id')
-    if (!toSpaceId) die('--to <spaceId> is required')
+    if (!args.target) die('project-move needs a project id')
+    if (!args.to) die('--to <spaceId> is required')
     if (!fs.existsSync(dbPath)) die(`no database at ${dbPath} — wrong --data-root?`)
 
     const { initDb, closeDb } = require(path.join(SERVER_SRC, 'db.js'))
+    const { moveProjectBetweenSpaces, MoveRefused } = require(path.join(SERVER_SRC, 'projectMove.js'))
     const db = initDb(dbPath)
-
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId)
-    if (!project) die(`project "${projectId}" not found in ${dbPath}`)
-    const fromSpaceId = project.space_id
-
-    const targetSpace = db.prepare('SELECT * FROM spaces WHERE id = ?').get(toSpaceId)
-    if (!targetSpace) die(`target space "${toSpaceId}" not found in ${dbPath}`)
-
-    if (fromSpaceId === toSpaceId) die(`project "${projectId}" is already in space "${toSpaceId}"`)
-
-    const sourceSpace = db.prepare('SELECT * FROM spaces WHERE id = ?').get(fromSpaceId)
-    if (!sourceSpace) die(`project "${projectId}" points at space "${fromSpaceId}", which does not exist — fix the data before moving it`)
-
-    const isPublished = sourceSpace.published_project_id === projectId
-    if (isPublished && !args.unpublish) {
-        die(`space "${fromSpaceId}" currently shows this project to visitors (published_project_id) — `
-            + `moving it would silently change what the space's front door shows.\n`
-            + `  pass --unpublish to move it anyway and clear the source space's published project`)
-    }
-
-    // A project slug is only unique WITHIN a space (idx_projects_slug is on
-    // (space_id, slug)) — carrying the old slug into a target that already
-    // has one would fail the unique index. Drop it rather than refuse the
-    // whole move; the id-based /p/ link and the project_moves pointer both
-    // still work without it.
-    const originalSlug = project.slug || null
-    let slugDropped = false
-    if (originalSlug) {
-        const collision = db.prepare('SELECT id FROM projects WHERE space_id = ? AND slug = ? AND id != ?').get(toSpaceId, originalSlug, projectId)
-        if (collision) slugDropped = true
-    }
-
-    const maxPos = db.prepare('SELECT MAX(position) AS top FROM projects WHERE space_id = ?').get(toSpaceId)
-    const newPosition = (maxPos?.top ?? -1) + 1
-
-    const sourceSpaceDir = path.join(spacesDir, fromSpaceId)
-    const targetSpaceDir = path.join(spacesDir, toSpaceId)
-    const sourceProjectDir = path.join(sourceSpaceDir, 'projects', projectId)
-    const targetProjectDir = path.join(targetSpaceDir, 'projects', projectId)
-    if (fs.existsSync(targetProjectDir)) die(`target already has a directory at ${targetProjectDir} — refusing to overwrite`)
-
-    // ---- gather asset work up front so --dry-run can report it truthfully ----
-
-    // 1. project-owned assets whose bytes live in the SOURCE space's blob
-    // store (a `<hash>.json` reference with no sibling binary in the
-    // project's own assets dir — see projectRoutes.js POST .../assets).
-    const blobAssetIds = []
-    const projectAssetsDir = path.join(sourceProjectDir, 'assets')
-    if (fs.existsSync(projectAssetsDir)) {
-        for (const name of fs.readdirSync(projectAssetsDir)) {
-            if (!name.endsWith('.json')) continue
-            const assetId = name.slice(0, -'.json'.length)
-            if (!SHA256_HEX_REGEX.test(assetId)) continue
-            if (fs.existsSync(path.join(projectAssetsDir, assetId))) continue // legacy local binary — moves with the dir
-            blobAssetIds.push(assetId)
-        }
-    }
-
-    // 2. space-scoped assets the project's own documents reference by URL.
-    const docFiles = ['document.json', 'project.json']
-        .map((name) => path.join(sourceProjectDir, name))
-        .filter((file) => fs.existsSync(file))
-    const docTexts = new Map()
-    const spaceAssetIds = new Set()
-    let needsUrlRewrite = false
-    for (const file of docFiles) {
-        const text = fs.readFileSync(file, 'utf8')
-        docTexts.set(file, text)
-        if (!text.includes(`/api/spaces/${fromSpaceId}/`)) continue
-        needsUrlRewrite = true
-        const re = new RegExp(`/api/spaces/${escapeRegExp(fromSpaceId)}/assets/(${ASSET_ID_IN_URL_RE.source})`, 'gi')
-        let m
-        while ((m = re.exec(text))) spaceAssetIds.add(m[1])
-    }
-
-    if (args.dryRun) {
-        log(`DRY RUN — would move project "${projectId}" from "${fromSpaceId}" to "${toSpaceId}"`)
-        log(`  position: end of "${toSpaceId}"'s order (${newPosition})`)
-        if (slugDropped) log(`  slug "${originalSlug}" collides with another project in "${toSpaceId}" — would be cleared`)
-        if (isPublished) log(`  "${fromSpaceId}".published_project_id would be cleared (--unpublish)`)
-        log(`  ${blobAssetIds.length} project-owned blob asset(s) would be copied into "${toSpaceId}"'s blob store`)
-        if (needsUrlRewrite) log(`  document references space "${fromSpaceId}" assets — ${spaceAssetIds.size} would be copied and the URLs rewritten`)
-        log('  nothing written (--dry-run)')
+    let r
+    try {
+        // The logic lives in serverXR/src/projectMove.js, shared with the
+        // product route. This script keeps its older choice on a slug clash:
+        // drop the slug rather than refuse.
+        r = await moveProjectBetweenSpaces({
+            db, spacesDir, projectId: args.target, toSpaceId: args.to,
+            unpublish: args.unpublish, dryRun: args.dryRun, onSlugClash: 'drop'
+        })
+    } catch (error) {
         closeDb()
-        return
+        if (error instanceof MoveRefused) die(error.message)
+        throw error
     }
-
-    // ---- do it: DB row first, in one transaction ----
-    // slug is cleared in the SAME statement as space_id, not a follow-up
-    // UPDATE — (space_id, slug) is a unique pair, and setting space_id alone
-    // first would collide against the very slug this is dropping to avoid.
-    const now = Date.now()
-    db.transaction(() => {
-        db.prepare('UPDATE projects SET space_id = ?, slug = ?, collection_id = NULL, position = ?, updated_at = ? WHERE id = ?')
-            .run(toSpaceId, slugDropped ? null : originalSlug, newPosition, now, projectId)
-        if (isPublished) db.prepare('UPDATE spaces SET published_project_id = NULL, updated_at = ? WHERE id = ?').run(now, fromSpaceId)
-        db.prepare('INSERT INTO project_moves (project_id, from_space, to_space, old_slug, moved_at) VALUES (?, ?, ?, ?, ?)')
-            .run(projectId, fromSpaceId, toSpaceId, originalSlug, now)
-    })()
     closeDb()
 
-    // ---- then the files ----
-    if (fs.existsSync(sourceProjectDir)) {
-        await fsp.mkdir(path.dirname(targetProjectDir), { recursive: true })
-        await moveDir(sourceProjectDir, targetProjectDir)
-    } else {
-        log(`warning: no project directory at ${sourceProjectDir} (DB row only — nothing to move on disk)`)
+    if (r.dryRun) {
+        log(`DRY RUN — would move project "${r.projectId}" from "${r.fromSpaceId}" to "${r.toSpaceId}"`)
+        log(`  position: end of "${r.toSpaceId}"'s order (${r.position})`)
+        if (r.slugDropped) log(`  slug "${r.originalSlug}" collides with another project in "${r.toSpaceId}" — would be cleared`)
+        if (r.wasPublished) log(`  "${r.fromSpaceId}".published_project_id would be cleared (--unpublish)`)
+        log(`  ${r.blobAssets} project-owned blob asset(s) would be copied into "${r.toSpaceId}"'s blob store`)
+        if (r.urlsRewritten) log(`  document references space "${r.fromSpaceId}" assets — ${r.spaceAssets} would be copied and the URLs rewritten`)
+        log('  nothing written (--dry-run)')
+        return
     }
-
-    let blobsCopied = 0
-    if (blobAssetIds.length) {
-        await fsp.mkdir(path.join(targetSpaceDir, 'blobs'), { recursive: true })
-        for (const assetId of blobAssetIds) {
-            const copied = await copyIfMissing(path.join(sourceSpaceDir, 'blobs', assetId), path.join(targetSpaceDir, 'blobs', assetId))
-            if (copied) blobsCopied++
-        }
-    }
-
-    let spaceAssetsCopied = 0
-    if (needsUrlRewrite) {
-        for (const assetId of spaceAssetIds) {
-            const copiedBinary = await copyIfMissing(path.join(sourceSpaceDir, 'assets', assetId), path.join(targetSpaceDir, 'assets', assetId))
-            const copiedMeta = await copyIfMissing(path.join(sourceSpaceDir, 'assets', `${assetId}.json`), path.join(targetSpaceDir, 'assets', `${assetId}.json`))
-            if (copiedBinary || copiedMeta) spaceAssetsCopied++
-        }
-        for (const file of docFiles) {
-            const newPath = path.join(targetProjectDir, path.basename(file))
-            if (!fs.existsSync(newPath)) continue // e.g. project dir was missing above
-            const rewritten = remapSpaceUrls(docTexts.get(file), fromSpaceId, toSpaceId)
-            await fsp.writeFile(newPath, rewritten)
-        }
-    }
-
-    log(`moved project "${projectId}" from "${fromSpaceId}" to "${toSpaceId}" (position ${newPosition})`)
-    if (slugDropped) log(`  slug "${originalSlug}" collided in "${toSpaceId}" — cleared. /${fromSpaceId}/${originalSlug} now resolves via the moved-project pointer; /${toSpaceId}/p/${projectId} is the stable link`)
-    if (isPublished) log(`  cleared "${fromSpaceId}".published_project_id — it was showing this project to visitors`)
-    if (blobsCopied) log(`  copied ${blobsCopied} project-owned blob asset(s) into "${toSpaceId}"'s blob store`)
-    if (spaceAssetsCopied) log(`  copied ${spaceAssetsCopied} space-scoped asset(s) referenced in the document into "${toSpaceId}", and rewrote their URLs`)
-    log(`  old links: /${fromSpaceId}/p/${projectId} and /api/projects/${projectId} keep working (project id is global);`)
-    log(`  /${fromSpaceId}/${originalSlug || projectId} now answers via a project_moves pointer to /${toSpaceId}/p/${projectId}`)
-    return { fromSpaceId, toSpaceId, dataRoot }
+    if (!r.hadDirectory) log(`warning: no project directory for "${r.projectId}" (DB row only — nothing to move on disk)`)
+    log(`moved project "${r.projectId}" from "${r.fromSpaceId}" to "${r.toSpaceId}" (position ${r.position})`)
+    if (r.slugDropped) log(`  slug "${r.originalSlug}" collided in "${r.toSpaceId}" — cleared. /${r.fromSpaceId}/${r.originalSlug} now resolves via the moved-project pointer; /${r.toSpaceId}/p/${r.projectId} is the stable link`)
+    if (r.wasPublished) log(`  cleared "${r.fromSpaceId}".published_project_id — it was showing this project to visitors`)
+    if (r.blobsCopied) log(`  copied ${r.blobsCopied} project-owned blob asset(s) into "${r.toSpaceId}"'s blob store`)
+    if (r.spaceAssetsCopied) log(`  copied ${r.spaceAssetsCopied} space-scoped asset(s) referenced in the document into "${r.toSpaceId}", and rewrote their URLs`)
+    log(`  old links: /${r.fromSpaceId}/p/${r.projectId} and /api/projects/${r.projectId} keep working (project id is global);`)
+    log(`  /${r.fromSpaceId}/${r.originalSlug || r.projectId} now answers via a project_moves pointer to /${r.toSpaceId}/p/${r.projectId}`)
+    return { fromSpaceId: r.fromSpaceId, toSpaceId: r.toSpaceId, dataRoot }
 }
 
 export { moveProject, resolvePaths }

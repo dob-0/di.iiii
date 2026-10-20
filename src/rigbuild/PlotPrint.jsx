@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import PlotDrawing, { PAPER_SIZES } from './PlotDrawing.jsx'
+import PlotDrawing, { FREE_END_WORDS, PAPER_SIZES } from './PlotDrawing.jsx'
 import { SHEETS, chooseScale, scaleBar, sheetLayout } from './plotGeometry.js'
 import { shapePath } from './plotSymbols.js'
 import { titleTotals } from './plotModel.js'
@@ -130,6 +130,7 @@ export default function PlotPrint({ model, title, spaceId, projectId, extent: ri
                                 <text x={side.x + 4} y={y + 11}>inside = unit # on its position</text>
                                 <text x={side.x + 4} y={y + 14}>symbol = the hanging point</text>
                                 <text x={side.x + 4} y={y + 17}>- - - overhead · ▨ machinery</text>
+                                {model.freeEnds?.length ? <text x={side.x + 4} y={y + 19.8}>{`◌ ${FREE_END_WORDS}`}</text> : null}
                                 {hiddenNote.split('; ').map((line, i) => <text key={i} x={side.x + 4} y={y + 22 + i * 2.6} fontSize="1.7">{line}{i === 0 ? ';' : ''}</text>)}
                             </g>
                         )

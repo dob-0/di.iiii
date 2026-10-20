@@ -75,6 +75,8 @@ describe('StudioPresentationSurface', () => {
         expect(iframe).not.toBeNull()
         expect(iframe?.getAttribute('srcdoc')).toContain('Studio code preview')
         expect(iframe?.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
+        // The page learns its host, as on the public view (di.laser hung without it, 2026-10-05).
+        expect(iframe?.getAttribute('srcdoc')).toContain(`window.diiPageOrigin = "${window.location.origin}"`)
         // Without escape, tabs opened by preview content inherit the sandbox's
         // opaque origin and white-screen (module loads become cross-origin).
         expect(iframe?.getAttribute('sandbox')).toContain('allow-popups-to-escape-sandbox')
@@ -131,5 +133,14 @@ describe('StudioPresentationSurface', () => {
                 projection: 'orthographic'
             })
         }))
+    })
+
+    // Brief 2026-10-13 item 2: the view bar's gate was setEditMode, which nothing hands this
+    // surface, so the bar looked wired and was dead. The contract is explicit now.
+    it('hands the viewport an explicit "no view bar" and a wired Scenes picker', () => {
+        render(<StudioPresentationSurface document={buildDocument()} />)
+        const props = viewportPropsSpy.mock.calls.at(-1)[0]
+        expect(props.viewBar).toBe(false)
+        expect(typeof props.onRigLook).toBe('function')
     })
 })

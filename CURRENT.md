@@ -13,9 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a canvas that asks for 'high-performance' must not go black when the browser refuses it
-- the show chip's recording light is square; the rectangle guard reads inline styles right
-- dev's 3D rooms were black: the viewport crashed on frozen camera bindings
+- physics: every beam stops at the first surface it meets, measured at run time along its current aim
+- the desk's API is written down, and a server can be held to it
+- `npm run desk:bundle`: one command writes what a node build consumes
+- the desk says when it cannot draw a state, reads caps, and the node console is inventoried
+- "This node": the Setup section a hardware node adds (plan step D5)
+- …and 98 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 

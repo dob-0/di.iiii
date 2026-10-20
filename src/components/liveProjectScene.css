@@ -115,6 +115,11 @@
     animation: hint-pulse 2.2s ease-in-out infinite;
 }
 
+.live-scene-hint--touch {
+    opacity: 0.55;
+    letter-spacing: 0.08em;
+}
+
 .live-scene-hint--vr {
     position: static;
     max-width: 220px;
@@ -201,7 +206,10 @@
     z-index: 10;
     pointer-events: none;
     user-select: none;
-    opacity: 0;
+    /* Resting place: a faint ring bottom-left. Walker moves it under the thumb on touch. */
+    left: 52px;
+    bottom: 124px;
+    opacity: 0.35;
     transition: opacity 0.12s ease;
 }
 

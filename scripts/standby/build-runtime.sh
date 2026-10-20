@@ -28,6 +28,9 @@ REPO=https://github.com/dob-0/di.iiii.git
 case "$(uname -s)-$(uname -m)" in
   # macOS ships bash 3.2 (no associative arrays), hence one case arm per platform
   Darwin-arm64) plat=darwin-arm64 node_sha256=8294b7aa9b03997481c06babf1e8b270c859358f27da57a11509afe537ac381d ;;
+  # r-di (Raspberry Pi 3 B+, Debian 13 aarch64), added 2026-10-08. Hash from nodejs.org SHASUMS256.txt over HTTPS;
+  # the release-keys signature of that file is NOT yet checked for this line (owed, as the macOS line was).
+  Linux-aarch64) plat=linux-arm64 node_sha256=d28c8a5bf0a808f0ed434a1dce8c54ae98f0371c0bd86ac58abc613f73e6643f ;;
   *) echo "no pinned Node hash for $(uname -s)-$(uname -m); add one here" >&2; exit 2 ;;
 esac
 
@@ -43,7 +46,7 @@ if [[ ! -x $nd/bin/node ]]; then
   tgz="node-v$NODE_VERSION-$plat.tar.gz"
   log "fetching $tgz"
   curl -fsSL --retry 3 --retry-all-errors --connect-timeout 20 --max-time 900 -o "$work/$tgz" "https://nodejs.org/dist/v$NODE_VERSION/$tgz"
-  got=$(shasum -a 256 "$work/$tgz" | cut -d' ' -f1)
+  if command -v shasum >/dev/null; then got=$(shasum -a 256 "$work/$tgz" | cut -d' ' -f1); else got=$(sha256sum "$work/$tgz" | cut -d' ' -f1); fi
   [[ $got == "$node_sha256" ]] || { echo "node tarball sha256 $got != pinned $node_sha256" >&2; exit 1; }
   mkdir -p "$nd.tmp" && tar -xzf "$work/$tgz" -C "$nd.tmp" --strip-components 1 && mv "$nd.tmp" "$nd"
 fi
@@ -79,9 +82,17 @@ printf '{"deployEnv":"%s","sourceRef":"%s","gitCommit":"%s","releaseId":"%s","ge
   standby "$sha" "$sha" "$sha" "$(date -u +%FT%TZ)" > "$rel.tmp/app/release.json"
 
 # 4. client, as the root Dockerfile builds it (VITE_API_BASE_URL empty, as in prod's build)
-log "client: npm ci + build"
-(cd "$src" && npm ci --no-audit --no-fund --loglevel=error && VITE_API_BASE_URL= npm run build)
-cp -R "$src/dist" "$rel.tmp/dist"
+# CLIENT_DIST=<dir>: use a dist built elsewhere at THIS SAME commit instead of building here. The SPA is
+# plain files, the same on every platform, and a 1 GB Pi cannot run the vite build.
+if [[ -n ${CLIENT_DIST:-} ]]; then
+  log "client: using CLIENT_DIST=$CLIENT_DIST (built elsewhere, same commit)"
+  [[ -f $CLIENT_DIST/index.html ]] || { echo "CLIENT_DIST has no index.html" >&2; exit 1; }
+  cp -R "$CLIENT_DIST" "$rel.tmp/dist"
+else
+  log "client: npm ci + build"
+  (cd "$src" && npm ci --no-audit --no-fund --loglevel=error && VITE_API_BASE_URL= npm run build)
+  cp -R "$src/dist" "$rel.tmp/dist"
+fi
 cp "$src/nginx.conf" "$rel.tmp/nginx.conf.prod"
 # server-env.mjs reads each tier's variable list from these: prod = docker-compose.yml, dev = that
 # plus docker-compose.dev.yml

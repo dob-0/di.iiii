@@ -249,7 +249,7 @@ function SyncStrip({ ledger, compared, readOnly, onFile, onExport, onChoose, fil
         <section className="rigscenes-sync is-off" aria-label="Sync with the other copy" aria-live="polite">
             <div className="rigscenes-row">
                 <b>SYNC: OFFLINE</b>
-                <span className="rigscenes-dim">{last ? `last synced ${last}` : 'never synced'}</span>
+                <span className="rigscenes-dim">{last ? `last synced ${last}` : 'not synced to another machine'}</span>
             </div>
             <p>{OFFLINE_SENTENCE}</p>
             {compared ? (

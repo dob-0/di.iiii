@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ordered",
+    "projectId": "moxir-hall",
+    "title": "As ordered — the rig of the 27.09 order",
+    "summary": "The base rig in the hall's own project: every head on the order, the CO2, sparks and smoke included — kept as it is, to compare."
+  },
+  {
+    "id": "minimal",
+    "projectId": "moxir-hall-minimal",
+    "title": "Minimal — the cut, simple: fixed lights only",
+    "summary": "No stage, no towers: the DJ stand alone, the crane parked over it. THE CUT — one straight 12 m line sloped 15° under the bridge, low house left, high over the p"
+  },
+  {
+    "id": "minimal-cut-movers",
+    "projectId": "moxir-hall-minimal-cut-movers",
+    "title": "The cut, full: moving heads on the line",
+    "summary": "The same cut (12 m, 15°, 3 bridled hoists, tie-offs) carrying moving heads: 5 UP-B380F standing on it fanning into the roof, 2 hung under the ends crossing in a"
+  },
+  {
+    "id": "middle",
+    "projectId": "moxir-hall-middle",
+    "title": "Middle — the line, the roof, one laser",
+    "summary": "The line of 7 plus 10 column-base beams in the roof, the 12 x 250 W heads (header and side booms), 1 laser in one colour, 38 PARs on the nave columns and the pr"
+  },
+  {
+    "id": "full",
+    "projectId": "moxir-hall-full",
+    "title": "Full — the whole list, used darkly",
+    "summary": "Every rental head: 17 beams hung (+1 spare), 12 x 250 W, 8 bee-eyes, 50 PARs, 2 lasers in single colours; 6 strobes and 8 blinders; 6 hazers. Still no CO2, no s"
+  },
+  {
+    "id": "full-ground",
+    "projectId": "moxir-hall-full-ground",
+    "title": "Full · movers on the ground · effects",
+    "summary": "Minimal · movers on the ground, plus the effects, all on the floor and none hung: 6 CO2 jets and 4 cold-spark machines in the pit, 4 smoke machines beside the n"
+  },
+  {
+    "id": "known-full-ponyo-10-04",
+    "projectId": "moxir-hall-known-full",
+    "title": "Known · full · the cut, movers on the ground · PONYO 10-04",
+    "summary": "The area, used smart (emily-41 spec 5, Emily 2026-10-02: \"analyse the area, use it smart, a really cool stage\"). Five layers from the floor: the cut's slash (a"
+  },
+  {
+    "id": "known-ground-ponyo-10-04",
+    "projectId": "moxir-hall-known-ground",
+    "title": "Known · movers on the ground · haze and smoke · PONYO 10-04",
+    "summary": "Full · movers on the ground, only the fixtures whose DMX is known — tested on these rental units at the Sevan festival (Dilijan camp): 13 UP-B380F on the floor"
+  }
+]

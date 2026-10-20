@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Canvas } from '@react-three/fiber'
+import Canvas from './GuardedCanvas.jsx'
 import * as THREE from 'three'
 import Experience from '../Experience.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
@@ -48,7 +48,7 @@ export default function SceneCanvas({
                 orthographic={cameraSettings?.orthographic}
                 camera={cameraProps}
                 dpr={renderSettings.dpr}
-                shadows={renderSettings.shadows}
+                shadows={renderSettings.shadows ? 'percentage' : false}
                 gl={rendererWithFallback({
                     antialias: renderSettings.antialias,
                     powerPreference: renderSettings.powerPreference
@@ -76,7 +76,7 @@ export default function SceneCanvas({
                         : THREE.ACESFilmicToneMapping
                     gl.toneMappingExposure = renderSettings.toneMappingExposure ?? 1
                     gl.shadowMap.enabled = !!renderSettings.shadows
-                    gl.shadowMap.type = renderSettings.shadowType ?? THREE.PCFSoftShadowMap
+                    gl.shadowMap.type = renderSettings.shadowType ?? THREE.PCFShadowMap
                 }}
                 onContextMenu={(event) => event.preventDefault()}
                 onPointerMissed={handlePointerMissed}

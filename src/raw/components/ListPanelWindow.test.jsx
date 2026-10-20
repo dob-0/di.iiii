@@ -46,7 +46,8 @@ describe('ListPanelWindow', () => {
     it('deletes a row and leaves the others alone', () => {
         const onChange = vi.fn()
         render(<ListPanelWindow node={nodeWith(rows)} onChange={onChange} />)
-        fireEvent.click(screen.getAllByLabelText('Delete')[0])
+        fireEvent.click(screen.getByLabelText('More for Laptops'))
+        fireEvent.click(screen.getByLabelText('Delete'))
         const items = lastPatch(onChange).items
         expect(items.map((i) => i.id)).toEqual(['b', 'c'])
     })
@@ -54,6 +55,7 @@ describe('ListPanelWindow', () => {
     it('moves a row to another group', () => {
         const onChange = vi.fn()
         render(<ListPanelWindow node={nodeWith(rows)} onChange={onChange} />)
+        fireEvent.click(screen.getByLabelText('More for Displays'))
         fireEvent.change(screen.getByLabelText('Group of Displays'), { target: { value: 'Would be good' } })
         expect(lastPatch(onChange).items.find((i) => i.id === 'b').group).toBe('Would be good')
     })
@@ -69,7 +71,8 @@ describe('ListPanelWindow', () => {
             { id: 'b', text: 'Displays', group: 'Core' }
         ]
         render(<ListPanelWindow node={nodeWith(interleaved)} onChange={onChange} />)
-        fireEvent.click(screen.getAllByLabelText('Move up')[1])
+        fireEvent.click(screen.getByLabelText('More for Displays'))
+        fireEvent.click(screen.getByLabelText('Move up'))
         const core = lastPatch(onChange).items.filter((i) => i.group === 'Core').map((i) => i.text)
         expect(core).toEqual(['Displays', 'Laptops'])
     })
@@ -95,9 +98,35 @@ describe('ListPanelWindow', () => {
         expect(patch.items.find((i) => i.id === 'c').group).toBe('Core')
     })
 
+    // Owner 2026-10-02: four controls per row left the text ~280 px of a
+    // 660 px window. They now sit behind one ⋯ per row, closed by default.
+    it('keeps the row actions behind one ⋯ button until it is pressed', () => {
+        render(<ListPanelWindow node={nodeWith(rows)} onChange={() => {}} />)
+        expect(screen.queryByLabelText('Delete')).toBeNull()
+        expect(screen.queryByLabelText('Move up')).toBeNull()
+        expect(screen.getAllByText('⋯')).toHaveLength(3)
+        fireEvent.click(screen.getByLabelText('More for Speaker'))
+        expect(screen.getAllByLabelText('Delete')).toHaveLength(1)
+    })
+
+    it('moves a row with Alt+arrow from its text', () => {
+        const onChange = vi.fn()
+        render(<ListPanelWindow node={nodeWith(rows)} onChange={onChange} />)
+        fireEvent.keyDown(screen.getByDisplayValue('Displays'), { key: 'ArrowUp', altKey: true })
+        const core = lastPatch(onChange).items.filter((i) => i.group === 'Core').map((i) => i.text)
+        expect(core).toEqual(['Displays', 'Laptops'])
+    })
+
+    it('never stores a line break inside a row', () => {
+        const onChange = vi.fn()
+        render(<ListPanelWindow node={nodeWith(rows)} onChange={onChange} />)
+        fireEvent.change(screen.getByDisplayValue('Laptops'), { target: { value: 'two\nlines' } })
+        expect(lastPatch(onChange).items.find((i) => i.id === 'a').text).toBe('two lines')
+    })
+
     it('is a plain reading surface with no handler', () => {
         const { container } = render(<ListPanelWindow node={nodeWith(rows)} />)
-        expect(container.querySelector('input')).toBeNull()
+        expect(container.querySelector('input, textarea')).toBeNull()
         expect(container.querySelector('button')).toBeNull()
         expect(container.textContent).toMatch(/Laptops/)
     })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getNodeType, isNodeTypeImplemented } from '../../nodeRegistry.js'
+import { getNodeType, isNodeTypeImplemented, listNodeTypes } from '../../nodeRegistry.js'
 import { createNodeGraphContext, evaluateNodeInput } from '../nodeGraphRuntime.js'
 import { SCENE_EXAMPLE_CUBE_COLOR, buildSceneExample } from './sceneExample.js'
 
@@ -15,12 +15,24 @@ describe('scene example', () => {
         }
     })
 
+    // An example teaches by being copied, so it may only be made of cards the
+    // palette still offers. It built the retired `world.light` until
+    // 2026-10-02 (node audit: sceneExample.js:82).
+    it('is made only of types the palette offers, none retired', () => {
+        const offered = new Set(listNodeTypes().map((type) => type.id))
+        for (const node of build().nodes) {
+            expect(getNodeType(node.typeId).paletteHidden, node.typeId).toBeFalsy()
+            expect(offered.has(node.typeId), node.typeId).toBe(true)
+        }
+    })
+
     // The four building blocks the example demonstrates: a room, a light, a
     // shape, and a place to upload your own file.
     it('contains a room, a light, a shape and a place for your own file', () => {
         const types = build().nodes.map((node) => node.typeId)
         expect(types).toContain('universe.world')
-        expect(types).toContain('world.light')
+        expect(types).toContain('world.environment')
+        expect(types).not.toContain('world.light')
         expect(types).toContain('geom.cube')
         expect(types).toContain('geom.model')
     })

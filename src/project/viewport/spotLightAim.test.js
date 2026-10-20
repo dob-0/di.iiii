@@ -166,6 +166,7 @@ describe('both renderers aim their spot lights', () => {
         }
         expect(props(files['EntityContent.jsx'])).toEqual(props(files['LiveProjectScene.jsx']))
         expect(props(files['EntityContent.jsx']))
-            .toEqual(['angle', 'beam', 'color', 'decay', 'distance', 'intensity', 'penumbra'])
+            // `fitted`: a rig fixture's real light is fitted to its beam angle (render audit A)
+            .toEqual(['angle', 'beam', 'color', 'decay', 'distance', 'fitted', 'intensity', 'penumbra'])
     })
 })

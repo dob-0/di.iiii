@@ -69,6 +69,9 @@ describe('the steps — one list, in the order a show is made', () => {
         // from the room, "next" is the step the show waits on
         expect(rigNeighbours('room', 'patch')).toMatchObject({ back: null, next: { key: 'patch' } })
         expect(rigNeighbours('room')).toMatchObject({ back: null, next: { key: 'equipment' } })
+        // the visualiser and the scenes end the row: each has a way back, the last has no "next"
+        expect(rigNeighbours('visualise')).toMatchObject({ back: { key: 'light' }, next: { key: 'scenes' } })
+        expect(rigNeighbours('scenes')).toMatchObject({ back: { key: 'visualise' }, next: null })
     })
 
     it('the Kit prints the same list, one line a step', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
@@ -6,6 +6,7 @@ import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
 import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
 import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
+import { useGraphMakesRoom } from './graphRoom.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
@@ -120,11 +121,26 @@ export default function PublicProjectSceneSurface({
     title,
     entryView,
     navMode,
+    walkLook = 'lock',
     onNavModeChange,
+    topClear = null,
     isPreview,
     initialCameraView = null,
     xrDefaultMode = 'none',
-    canOfferXrEntry = false
+    canOfferXrEntry = false,
+    // the lamps as the desk's live look poses them (RoomLookFollower), or null
+    posedEntities = null,
+    // output mode (viewport/outputMode.js): the room drawn light enough for a phone
+    outputMode = false,
+    lockInside = false,
+    onBuilding,
+    onLockPaused,
+    // the scene bar's layer toggles: { roof, walls, machines, outside } (smartViewGeometry.parseLayersParam)
+    layers = null,
+    // the author's switch for the views bar (visitorChrome.views); the bar is on unless it says false
+    viewsBar = true,
+    flyOn = false,
+    onFlyChange = null
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
@@ -171,44 +187,65 @@ export default function PublicProjectSceneSurface({
 
     // A document carries both lanes (`nodes` and `entities`) and either may be
     // empty. Whichever renderer we pick has to be the one that can show
-    // everything this document holds — and only RawViewport shows both.
-    const hasGraph = (document.nodes || []).length > 0
+    // everything this document holds — and only RawViewport shows both. Only a graph that DRAWS in the room
+    // (a Scene node, a spatial node) needs it: a VJ Deck alone sent MOXIR v2-11's room to RawViewport, which has
+    // none of the room's light, and the page went dark where the Studio was lit (graphRoom.js, 2026-10-15).
+    // null while the node registry loads for a document with nodes: nothing is drawn for that moment.
+    const hasGraph = useGraphMakesRoom(document.nodes)
 
     // The smart view (docs/architecture/SMART_VIEW.md) for a visitor: the camera kept out
     // of the floor and near the building, the cutaway from outside, the occlusion fade,
     // the view row and #view-… links. Not on a caged (locked) composition, and not on a
     // thumbnail. Inside somebody else's page (?embed=1) the row stays off — embed is
     // glass — unless the host asks for it with &views=1 (the visualiser's split).
-    const [smartView] = useState(() => {
+    const smartView = useMemo(() => {
         const embed = isEmbedRequest()
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
         return {
-            bar: embed && params?.get('views') !== '1' ? false : 'visitor',
+            bar: !viewsBar || (embed && params?.get('views') !== '1') ? false : 'visitor',
             constraints: true,
             deepLink: !embed
         }
-    })
+    }, [viewsBar])
+
+    // The "Inside" toggle (PublicProjectViewer) and its two reports travel with the smart view's settings.
+    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused, layers, flyOn, onFlyChange }), [smartView, lockInside, onBuilding, onLockPaused, layers, flyOn, onFlyChange])
 
     return (
         <>
             {navMode === 'walk' ? (
                 <LiveProjectScene
+                    // a new renderer on a quality switch: antialias is fixed when the context is made
+                    key={outputMode ? 'lite' : 'full'}
+                    outputMode={outputMode}
                     projectId={projectId}
                     spaceId={spaceId}
+                    // Walk/Fly keeps the look the desk is playing: the walk scene loads its own
+                    // copy of the document, and drew the room as saved (a green look walked
+                    // into amber) until it was handed the posed lamps
+                    entitiesOverride={posedEntities}
                     interactive
                     showChrome
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                    // the view page walks with one look (drag), never a pointer lock
+                    walkLook={walkLook}
+                    topClear={topClear}
                 />
-            ) : hasGraph ? (
+            ) : hasGraph === null ? null : hasGraph ? (
                 <PublicGraphSurface
                     document={document}
                     interactive={!caged && !isPreview}
                 />
             ) : (
                 <StudioViewport
+                    key={outputMode ? 'lite' : 'full'}
                     document={document}
+                    // the document's entities are then the room as RoomLookFollower drew it in the
+                    // look that plays: drawn as handed, never posed again (a second pose drew
+                    // every look level squared, MOXIR 2026-10-09)
+                    lookDrawn={Boolean(posedEntities)}
                     selectedEntityId={null}
                     onSelectEntity={null}
                     cursors={{}}
@@ -239,7 +276,7 @@ export default function PublicProjectSceneSurface({
                     // A visitor's click on an object with a link follows it.
                     // Not on a space-card picture (?preview=1).
                     followLinks={!isPreview}
-                    smartView={!caged && !isPreview ? smartView : null}
+                    smartView={!caged && !isPreview ? smartViewLive : null}
                 />
             )}
 

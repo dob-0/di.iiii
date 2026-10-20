@@ -95,8 +95,71 @@ describe('atmosphereOf', () => {
         expect(atmosphereOf(null)).toBeNull()
     })
     it('reads scattering and anisotropy, clamped', () => {
-        expect(atmosphereOf({ atmosphere: { scattering: 0.04, anisotropy: 0.7 } })).toEqual({ scattering: 0.04, anisotropy: 0.7 })
-        expect(atmosphereOf({ atmosphere: { scattering: 5, anisotropy: 2 } })).toEqual({ scattering: 1, anisotropy: 0.95 })
+        expect(atmosphereOf({ atmosphere: { scattering: 0.04, anisotropy: 0.7 } })).toEqual({ scattering: 0.04, anisotropy: 0.7, haze: null })
+        expect(atmosphereOf({ atmosphere: { scattering: 5, anisotropy: 2 } })).toEqual({ scattering: 1, anisotropy: 0.95, haze: null })
+    })
+    it('a room that works its haze out from its machines needs no hand-set scattering', () => {
+        expect(atmosphereOf({ atmosphere: { haze: { volume_m3: 9000 } } })).toEqual({ scattering: 0.03, anisotropy: 0.7, haze: { volume_m3: 9000 } })
         expect(atmosphereOf({ atmosphere: { scattering: 0.02 } }).anisotropy).toBe(0.7)
+    })
+})
+
+describe('the beam\'s cross-section — beam angle 50 %, field angle 10 %', () => {
+    it('is half the centre at the beam angle, whatever the edge', async () => {
+        const { beamProfile } = await import('./beamAir.js')
+        for (const edge of [0.2, 0.5, 1]) expect(beamProfile(1, edge)).toBeCloseTo(0.5, 9)
+        expect(beamProfile(0, 0.5)).toBe(1)
+    })
+    it('a soft lamp (a wash) is a Gaussian: field ≈ 1.82 × beam', async () => {
+        const { beamProfile } = await import('./beamAir.js')
+        const field = Math.sqrt(Math.log(10) / Math.LN2)
+        expect(beamProfile(field, 1)).toBeCloseTo(0.1, 9)
+    })
+    it('a hard lamp (a beam fixture) falls off steeply: under 15 % by 1.2 × the beam angle', async () => {
+        const { beamProfile } = await import('./beamAir.js')
+        expect(beamProfile(1.2, 0.2)).toBeLessThan(0.15)
+        expect(beamProfile(1.2, 1)).toBeGreaterThan(0.3)
+    })
+    it('the hull reaches where the light has fallen to 2 % — the same floor the shader uses', async () => {
+        const { beamExtent, beamProfile, PROFILE_FLOOR } = await import('./beamAir.js')
+        for (const edge of [0.2, 0.6, 1]) expect(beamProfile(beamExtent(edge), edge)).toBeCloseTo(PROFILE_FLOOR, 9)
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const shader = fs.readFileSync(path.resolve(cwd(), 'src/objectComponents/beamAirMaterial.js'), 'utf8')
+        expect(shader).toContain(`log(1.0 / ${PROFILE_FLOOR})`)
+    })
+})
+
+describe('no large constant-bound loop in the beam shader (ANGLE / Direct3D 11)', () => {
+    it('every loop over 8 is bounded by a uniform', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const { GOBO_GLSL, BEAM_SHAPE_GLSL } = await import('./beamOptics.js')
+        const source = fs.readFileSync(path.resolve(cwd(), 'src/objectComponents/beamAirMaterial.js'), 'utf8') + GOBO_GLSL + BEAM_SHAPE_GLSL
+        const loops = [...source.matchAll(/for\s*\(\s*int\s+\w+\s*=\s*[-\w]+\s*;\s*\w+\s*<=?\s*([\w.]+)\s*;/g)].map((m) => m[1])
+        expect(loops.length).toBeGreaterThan(0)
+        for (const bound of loops) {
+            const uniform = /^u[A-Z]/.test(bound)
+            const small = /^\d+$/.test(bound) && Number(bound) <= 8
+            expect(uniform || small, `loop bound ${bound}`).toBe(true)
+        }
+    })
+})
+
+describe('the beam shader steps through the samples it actually runs', () => {
+    it('the step divides the chord by uSamples (the governor lowers it), never the full count', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const shader = fs.readFileSync(path.resolve(cwd(), 'src/objectComponents/beamAirMaterial.js'), 'utf8')
+        expect(shader).toContain('float dl = (lb - la) / float(uSamples);')
+        expect(shader).not.toContain('/ float(BEAM_SAMPLES)')
+    })
+    it('the JS integral covers the whole chord at any sample count', () => {
+        const lamp = { candela: 1e6, aperture: 0.08, tanHalf: Math.tan(0.0157), length: 12, edge: 0.2, scattering: 0.03, anisotropy: 0.7 }
+        const full = beamAirRadiance([-14, -6, 0], [1, 0, 0], { ...lamp, samples: 64 })
+        for (const samples of [5, 6, 8, 12]) expect(beamAirRadiance([-14, -6, 0], [1, 0, 0], { ...lamp, samples }) / full).toBeGreaterThan(0.8)
     })
 })

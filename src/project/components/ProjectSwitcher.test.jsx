@@ -1,10 +1,15 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
 
 const listProjects = vi.fn()
 const appNavigate = vi.fn()
+const getServerSpace = vi.fn()
+
+vi.mock('../../services/serverSpaces.js', () => ({
+    getServerSpace: (...args) => getServerSpace(...args)
+}))
 
 vi.mock('../services/projectsApi.js', () => ({
     listProjects: (...args) => listProjects(...args)
@@ -15,9 +20,14 @@ vi.mock('../../utils/appNavigate.js', () => ({
 }))
 
 describe('ProjectSwitcher', () => {
+    beforeEach(() => {
+        getServerSpace.mockResolvedValue({ id: 'wcc', domain: null })
+    })
+
     afterEach(() => {
         listProjects.mockReset()
         appNavigate.mockReset()
+        getServerSpace.mockReset()
     })
 
     it('lists the space projects and navigates to a sibling project link', async () => {
@@ -120,5 +130,24 @@ describe('ProjectSwitcher', () => {
 
         await userEvent.click(screen.getByRole('button', { name: /Copy public link for No Slug/ }))
         expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/wcc/p/no-slug`)
+    })
+
+    // docs/architecture/SPEC_space_own_domain.md — a share link on the space's own domain.
+    it('copies the address on the space\'s own domain when it has a live one', async () => {
+        getServerSpace.mockResolvedValue({ id: 'taronx', slug: 'taronx', domain: 'yokozo.xyz' })
+        listProjects.mockResolvedValue([
+            { id: 'p1', title: 'Instruments', slug: 'taronx-instruments' },
+            { id: 'p2', title: 'No Slug' }
+        ])
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.assign(navigator, { clipboard: { writeText } })
+
+        render(<ProjectSwitcher spaceId="taronx" currentProjectId="p1" spaceLabel="taronx" />)
+        await userEvent.click(screen.getByRole('button', { name: /taronx/ }))
+
+        await userEvent.click(await screen.findByRole('button', { name: /Copy public link for Instruments/ }))
+        await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith('https://yokozo.xyz/taronx-instruments'))
+        await userEvent.click(screen.getByRole('button', { name: /Copy public link for No Slug/ }))
+        expect(writeText).toHaveBeenCalledWith('https://yokozo.xyz/p/p2')
     })
 })

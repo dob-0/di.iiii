@@ -99,21 +99,17 @@ describe('DesktopWindow', () => {
         expect(patch.y).not.toBe(windowState.y)
     })
 
-    // Regression: panel-2d node types (universe.world, view.text, etc.) never
-    // rendered as an enterable graph card, so there was no way to reach
-    // scopeEnterNode for them — nodes created "inside" a World always landed
-    // as siblings at the surrounding scope instead of real children. The
-    // window itself is now the entry point.
-    it('renders an Enter button when onEnter is provided and calls it on click', () => {
-        const onEnter = vi.fn()
+    // Audit 2026-10-05 B2: going inside a node is Open on the card, the keyboard
+    // and the settings. A window header never carried a second, different Enter.
+    it('has no Enter button in its header', () => {
         render(
-            <DesktopWindow windowState={windowState} title="World" onEnter={onEnter}>
+            // onEnter is the retired prop: handing it must change nothing.
+            <DesktopWindow windowState={windowState} title="World" onEnter={() => {}}>
                 content
             </DesktopWindow>
         )
-
-        fireEvent.click(screen.getByText('Enter ›'))
-        expect(onEnter).toHaveBeenCalledTimes(1)
+        expect(screen.queryByText('Enter ›')).toBeNull()
+        expect(screen.queryByRole('button', { name: /enter/i })).toBeNull()
     })
 
     // Maximise is the fourth control, and it only exists where the workspace
@@ -143,16 +139,6 @@ describe('DesktopWindow', () => {
         )
         expect(screen.getByRole('button', { name: 'Restore' })).toBeTruthy()
         expect(container.querySelector('.raw-window').classList.contains('is-maximized')).toBe(true)
-    })
-
-    it('omits the Enter button when onEnter is not provided', () => {
-        render(
-            <DesktopWindow windowState={windowState} title="World">
-                content
-            </DesktopWindow>
-        )
-
-        expect(screen.queryByText('Enter ›')).not.toBeInTheDocument()
     })
 })
 

@@ -9,6 +9,7 @@ import {
     HEADER_HEIGHT,
     PORT_ROW_HEIGHT,
     TOP_PICTURE_HEIGHT,
+    cardContentHeight,
     cardHeight
 } from '../../utils/cardGeometry.js'
 import { cardPreviewKind, hasCardPreview } from './previewTypes.js'
@@ -59,7 +60,9 @@ describe('card geometry with previews', () => {
         for (const typeId of Object.keys(NODE_TYPES)) {
             const node = makeNode(typeId, { id: `n-${typeId}` })
             const grown = hasCardPreview(typeId) ? TOP_PICTURE_HEIGHT + 4 : 0
-            expect(cardHeight(node), typeId).toBe(legacyHeight(node) + grown)
+            // A List/Text card also grows by its content lines (2026-10-02),
+            // below the ports as the picture is — counted separately here.
+            expect(cardHeight(node), typeId).toBe(legacyHeight(node) + grown + cardContentHeight(node))
         }
     })
 

@@ -17,7 +17,7 @@ export function useSpaceActions({
 }) {
     const handleDeleteSpace = useCallback(async (spaceIdentifier) => {
         if (!spaceIdentifier || spaceIdentifier === spaceId) return
-        const confirmed = window.confirm('Delete this space link? This cannot be undone.')
+        const confirmed = window.confirm('Delete this space link? The space goes to the Trash for 30 days (Spaces page, Trash, Restore).')
         if (!confirmed) return
         if (supportsServerSpaces && !isOfflineMode && typeof deleteServerSpace === 'function') {
             try {

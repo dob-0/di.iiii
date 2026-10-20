@@ -15,6 +15,8 @@ export const PORT_TYPES = {
     geometry: { label: 'Geometry', color: '#bd93f9' },
     texture:  { label: 'Texture',  color: '#ff5555' },
     signal:   { label: 'Signal',   color: '#ffffff' },
+    // Laser paths (frame v2, shared/laserFrame.cjs): what flows between laser nodes to Laser Out.
+    laser:    { label: 'Laser',    color: '#39ff14' },
     any:      { label: 'Any',      color: '#888888' },
 }
 
@@ -87,6 +89,9 @@ export const FAMILY_BY_TYPE = {
     'device.ptz.osc': 'bring-in',
     // make — things you conjure into the space
     'geom.cube': 'make',
+    'laser.shape': 'make',
+    'laser.trace': 'make',
+    'laser.merge': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -174,6 +179,7 @@ export const FAMILY_BY_TYPE = {
     // changes is what a stranger receives, not what the graph makes.
     'view.publish': 'send-out',
     'device.dmx.out': 'send-out',
+    'device.laser.out': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -209,6 +215,63 @@ export const getNodeCardSummary = (node) => {
         const groups = Array.isArray(node.values?.groups) ? node.values.groups.length : 0
         if (!rows) return 'empty'
         return `${rows} row${rows === 1 ? '' : 's'} · ${groups} group${groups === 1 ? '' : 's'}`
+    }
+    return null
+}
+
+// What a card shows of its CONTENT, below its port rows (owner 2026-10-02:
+// a List card read "7 rows · 3 groups" and a Text card read "Content" —
+// you had to open every card to know what was in it). The lines sit under
+// the ports, like a picture operator's picture, so no port moves and no wire
+// lands anywhere new; cardGeometry.js adds their height to the card.
+//
+// One line per entry, each clipped to the card width, so the height is a
+// pure function of the node and never of the font.
+export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
+
+// The one field a card shows and lets you edit in place (Enter or a
+// double-click on its text). The side column keeps everything else. Both write
+// node.values[key] — one value, no second copy (owner, 2026-10-05).
+export const CARD_MAIN_FIELD = { 'view.text': { key: 'content', label: 'Content' } }
+export const getCardMainField = (typeId) => CARD_MAIN_FIELD[typeId] || null
+
+export const getNodeCardLines = (node, { unlimited = false } = {}) => {
+    if (!node) return null
+    if (node.typeId === 'view.list') {
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.list']
+        const items = (Array.isArray(node.values?.items) ? node.values.items : [])
+            .filter((it) => String(it?.text || '').trim())
+        if (!items.length) return null
+        const declared = Array.isArray(node.values?.groups) && node.values.groups.length ? node.values.groups : ['List']
+        // A row whose group was renamed away still exists — show it at the end
+        // rather than lose it from the card.
+        const orphans = items.filter((it) => !declared.includes(it.group))
+        const sections = declared.map((group) => ({ group, rows: items.filter((it) => it.group === group) }))
+        if (orphans.length) sections.push({ group: null, rows: orphans })
+        const lines = []
+        let shown = 0
+        for (const { group, rows } of sections) {
+            if (!rows.length) continue
+            // A heading with no row under it reads as an empty group — only
+            // start a section when at least one of its rows fits too.
+            if (group !== null) {
+                if (lines.length + 2 > max) break
+                lines.push({ kind: 'group', text: group })
+            }
+            for (const row of rows) {
+                if (lines.length >= max) break
+                lines.push({ kind: 'row', text: String(row.text).trim() })
+                shown += 1
+            }
+        }
+        return { lines, more: items.length - shown }
+    }
+    if (node.typeId === 'view.text') {
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.text']
+        const text = String(node.values?.content ?? node.values?.text ?? '')
+        const all = text.split('\n').map((line) => line.trim()).filter(Boolean)
+        if (!all.length) return null
+        return { lines: all.slice(0, max).map((line) => ({ kind: 'line', text: line })), more: Math.max(0, all.length - max) }
     }
     return null
 }
@@ -300,6 +363,20 @@ export const isAutoOperationLabel = (node, label) => {
     if (!menu) return false
     const type = getNodeType(node?.typeId)
     return label === type?.label || menu.some((operation) => operation.label === label)
+}
+
+// The title a card WEARS. Picked as "Math" in the palette, an operator card
+// is stored (and was drawn) as "Add"; nothing said it was a Math. While the
+// name is the automatic one the card reads "<palette name> · <Operation>"; a
+// name a person typed reads alone. Nothing stored changes — this is only what
+// is drawn. The operation shown is the menu's, not the stored label, so an old
+// document whose label lags its operation still says what the card does.
+export const getNodeCardTitle = (node) => {
+    const type = getNodeType(node?.typeId)
+    const operation = getNodeOperationLabel(node)
+    if (!operation) return node?.label || type?.label || ''
+    if (!isAutoOperationLabel(node, node?.label)) return node.label
+    return `${type?.label || node.typeId} · ${operation}`
 }
 
 export const getNodeFamily = (typeId) => {
@@ -451,6 +528,7 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
+        keywords: ['camera', 'cam', 'video', 'browser', 'getusermedia'],
         singleton: false,
         inputs: [],
         outputs: [
@@ -753,7 +831,44 @@ export const NODE_TYPES = {
         // isn't answering" and "the desk's output is off" are all normal states
         // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
-        defaultFrame: { width: 340, height: 260 },
+        defaultFrame: { width: 340, height: 330 },
+    },
+
+    'device.laser.out': {
+        id: 'device.laser.out',
+        label: 'Laser Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['laser', 'lasers', 'lasercube', 'cube', 'beam', 'show', 'ilda', 'stage', 'blackout', 'preview'],
+        inputs: [
+            // Laser paths (frame v2) or a legacy frame, from Laser, Laser Trace
+            // or Laser Merge; the panel orders and resamples them to the budget,
+            // draws them and sends them on change.
+            { id: 'frame',    type: 'laser',  label: 'Frame' },
+            // 'all' or one cube's id, as the server names them. Used only
+            // while IP is empty (the old way, one setup for all cubes).
+            { id: 'cube',     type: 'string', label: 'Cube', default: 'all' },
+            // The TouchDesigner way (2026-10-14): this Out's own cube, by
+            // its address. Find cubes fills it (and values.serial, the box
+            // it expects); typing it by hand works the same.
+            { id: 'ip',       type: 'string', label: 'IP',   default: '' },
+            // `any`, the DMX Out idiom: a Button, a Compare, a Toggle.
+            { id: 'blackout', type: 'any',    label: 'Blackout' },
+            // Points per frame, a plain number so an Oscillator, a slider or MIDI
+            // can drive it; 0 = auto (sized from the drawn length). Clamped to the
+            // frame cap and to what the cube can draw in 67 ms (#931); the panel
+            // shows the value in effect.
+            { id: 'budget',   type: 'number', label: 'Budget',  default: 1000 },
+        ],
+        outputs: [
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        // panel-2d: the preview of the shape is the point, and "disarmed" and
+        // "no server" are normal states that each need somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 360 },
     },
 
     'device.midi.out': {
@@ -988,6 +1103,12 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'Scene'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
+            // Owner 2026-10-02: "a scene can have inputs — objects, other
+            // info". What is wired here stands on the Scene's stage
+            // (RawViewport's sceneObjects); info arrives through Title, which
+            // a Text or List OUT now feeds. One wire: many objects come
+            // through Merge. docs/raw/2026-10-02-nodes-audit.md.
+            { id: 'objects',  type: 'geometry', label: 'Objects' },
         ],
         // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
         //
@@ -1008,9 +1129,15 @@ export const NODE_TYPES = {
         // separate keyspaces in the runtime and edgesByTarget only ever keys
         // inputs, and a self-wire is impossible because resolveWireDrop skips
         // the source node.
+        //
+        // Picture is not a child leaking out: it is the Scene itself, seen —
+        // TouchDesigner's Render TOP, objects in, an image out (owner
+        // 2026-10-02, docs/raw/2026-10-02-nodes-audit.md). It is live only
+        // while the live Scene's window draws it (ScenePictureFeed.jsx).
         outputs: [
-            { id: 'title',   type: 'string', label: 'Title' },
-            { id: 'bgColor', type: 'color',  label: 'Sky'   },
+            { id: 'title',   type: 'string',  label: 'Title'   },
+            { id: 'bgColor', type: 'color',   label: 'Sky'     },
+            { id: 'picture', type: 'texture', label: 'Picture' },
         ],
         defaultValues: {
             title: 'Scene',
@@ -1518,7 +1645,14 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'content', type: 'string', label: 'Content', default: 'Hello' },
         ],
-        outputs: [],
+        // What it says, so a note can feed a Scene's title, a Plane, another
+        // Text. Owner 2026-10-02: "a Text has an OUT we can connect to
+        // something" (docs/raw/2026-10-02-nodes-audit.md).
+        // Labelled like the input it passes on, so the card reads one row,
+        // "Content", with a joint on each side — not two parameters.
+        outputs: [
+            { id: 'text', type: 'string', label: 'Content' },
+        ],
         defaultValues: {},
         render: 'panel-2d',
     },
@@ -1594,11 +1728,16 @@ export const NODE_TYPES = {
         category: 'view',
         runtime: 'any',
         singleton: false,
-        // No ports. A list is read by people, and the dead-port rule says a
-        // socket nothing consumes should not exist — see view.timeline, which
-        // only grew outputs once the transport actually read them.
+        // No inputs: the rows are typed by people. Two outputs since
+        // 2026-10-02 (docs/raw/2026-10-02-nodes-audit.md: a List was a dead
+        // end). Both have consumers, so the dead-port rule holds: every string
+        // input (Text, Plane, a Scene's title) reads `text`, every number
+        // input reads `count`. view.list/runtime.js says what they carry.
         inputs: [],
-        outputs: [],
+        outputs: [
+            { id: 'text',  type: 'string', label: 'Rows'  },
+            { id: 'count', type: 'number', label: 'Count' },
+        ],
         // `groups` are plain strings and the rows carry their group by name,
         // so the headings are editable without a migration. The defaults are
         // deliberately generic: the grouping is the thinking, and fixing the
@@ -2000,6 +2139,101 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'laser.shape': {
+        id: 'laser.shape',
+        label: 'Laser',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
+        inputs: [
+            // One of: circle, line, square, triangle, star, wave, fan, spiral, galaxy, sunflower, noisy, grid —
+            // or a comma list of them that plays in turn every `cycle` seconds (laserShapes.js).
+            { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
+            { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
+            // Where the shape sits up the cube's field, -1..1. 0.5 keeps a size-0.5 shape wholly in
+            // the upper half — the server blanks every point below the cube's own aim (the keep-in
+            // zone, serverXR/src/laser), so a shape at 0 loses its lower half.
+            { id: 'height',   type: 'number', label: 'Height',   default: 0.5 },
+            // Turns, not degrees: 0.25 is a quarter turn, the Oscillator's unit.
+            { id: 'rotation', type: 'number', label: 'Rotation', default: 0 },
+            { id: 'spin',     type: 'number', label: 'Spin',     default: 0 },
+            { id: 'colour',   type: 'color',  label: 'Colour',   default: '#00ff40' },
+            // Brightness 0..1 — Sound's volume wired here makes the shape breathe.
+            { id: 'level',    type: 'number', label: 'Level',    default: 1 },
+            { id: 'points',   type: 'number', label: 'Points',   default: 120 },
+            // Galaxy's spirals or noisy's rings; 0 is the shape's own number (6, 3).
+            { id: 'copies',   type: 'number', label: 'Copies',   default: 0 },
+            // The hue runs along the path and drifts with time (TouchDesigner's COLORS ramp).
+            { id: 'rainbow',  type: 'boolean', label: 'Rainbow', default: false },
+            // Seconds each shape of a comma list plays; 0 plays the first only.
+            { id: 'cycle',    type: 'number', label: 'Cycle',    default: 0 },
+        ],
+        outputs: [
+            { id: 'frame', type: 'laser', label: 'Frame' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Geometry -> laser paths (design 2026-10-14 §2.2): what the viewport shows is what the laser draws.
+    'laser.trace': {
+        id: 'laser.trace',
+        label: 'Laser Trace',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'trace', 'outline', 'edges', 'wireframe', 'points', 'geometry', 'shape', 'draw', 'lasercube', 'sop'],
+        inputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+            { id: 'mode',     type: 'string',   label: 'Draw',     default: 'outline', options: [
+                { value: 'outline',   label: 'Outline' },
+                { value: 'edges',     label: 'Edges' },
+                { value: 'wireframe', label: 'Wireframe' },
+                { value: 'points',    label: 'Points' },
+            ] },
+            { id: 'view',     type: 'string',   label: 'View',     default: 'front', options: [
+                { value: 'front', label: 'Front' },
+                { value: 'point', label: 'From a point' },
+            ] },
+            // Front view: field units per metre; 0 fits the shape into 80 % of the field.
+            { id: 'size',     type: 'number',   label: 'Size',     default: 0 },
+            // Point view: where the laser stands and what it aims at, in metres.
+            { id: 'position', type: 'vec3',     label: 'Position', default: [0, 0, 6] },
+            { id: 'aim',      type: 'vec3',     label: 'Aim',      default: [0, 0, 0] },
+            // Edges: the crease angle in degrees over which an edge is drawn.
+            { id: 'angle',    type: 'number',   label: 'Angle',    default: 30 },
+            // Unwired, each piece keeps its own colour; wired, one colour for all.
+            { id: 'colour',   type: 'color',    label: 'Colour' },
+            { id: 'level',    type: 'number',   label: 'Level',    default: 1 },
+        ],
+        outputs: [
+            { id: 'frame',  type: 'laser',  label: 'Frame' },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Two laser path sets in, one out (TD Merge); chain for more.
+    'laser.merge': {
+        id: 'laser.merge',
+        label: 'Laser Merge',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'merge', 'combine', 'join', 'paths', 'lasercube'],
+        inputs: [
+            { id: 'a', type: 'laser', label: 'A' },
+            { id: 'b', type: 'laser', label: 'B' },
+        ],
+        outputs: [
+            { id: 'frame', type: 'laser', label: 'Frame' },
         ],
         defaultValues: {},
         render: 'hidden',
@@ -2766,6 +3000,11 @@ export const NODE_TYPES = {
         id: 'agent.keeper',
         label: 'Keeper',
         category: 'agent',
+        // "Keeper" is the rite's word for it, not the one anyone searches with.
+        // Without these, typing "local llm", "llama" or "openai" in the palette
+        // found nothing and the node might as well not exist. Same words as the
+        // keeper-node article's tags (src/wiki/wikiContent.js).
+        keywords: ['local', 'llm', 'llama', 'llama.cpp', 'ollama', 'openai', 'model', 'ai', 'offline', 'keeper'],
         runtime: 'web',
         singleton: false,
         inputs: [
@@ -2835,7 +3074,11 @@ export const arePortsCompatible = (fromType, toType) => {
     if (fromType === 'any' || toType === 'any') return true
     if (fromType === toType) return true
     const colorVec = (fromType === 'color' && toType === 'vec3') || (fromType === 'vec3' && toType === 'color')
-    return colorVec
+    // One number fills all three (evaluateNodeInput converts at the link, as
+    // Blender does): a Number into a Cube's Size makes it uniformly that big.
+    // The audit's first wire a person tries; it was refused (2026-10-02).
+    const numberToVec = fromType === 'number' && toType === 'vec3'
+    return colorVec || numberToVec
 }
 
 // Create a node instance from a type ID.

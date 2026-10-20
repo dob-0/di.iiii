@@ -177,7 +177,7 @@ export default function SpacesPanel({
                                     <span>Updated {formatRelativeTime(space.lastActive)}</span>
                                 </div>
                                 {isLive && (
-                                    <div className="space-row-live-link">{getSpaceShareUrl(space.id)}</div>
+                                    <div className="space-row-live-link">{getSpaceShareUrl(space.id, space.domain || '')}</div>
                                 )}
                                 <div className="space-row-actions">
                                     <button type="button" onClick={() => onOpenSpace?.(space.id)}>

@@ -849,3 +849,88 @@ describe('mappingState.lightPool survives normalization (review A5-1)', () => {
         expect(normalizeProjectDocument({ mappingState: { lightPool: {} } }).mappingState).not.toHaveProperty('lightPool')
     })
 })
+
+describe('renderSettings.atmosphere.haze — the haze worked out from the machines', () => {
+    it('keeps the hall, the levels and the drift, clamped; drops the rest', () => {
+        const doc = normalizeProjectDocument({
+            renderSettings: {
+                atmosphere: {
+                    scattering: 0.05,
+                    anisotropy: 0.7,
+                    haze: {
+                        volume_m3: 12000,
+                        airChangesPerHour: 6,
+                        levels: { 'rig-hazer-back-01': 1.5, 'rig-smoke-01': 0.5, bad: 'x' },
+                        kindLevels: { hazer: 0.6, 'smoke-machine': -1, laser: 1 },
+                        patchiness: 0.35,
+                        drift: [0.15, 9, 0.05],
+                        junk: 1
+                    }
+                }
+            }
+        })
+        expect(doc.renderSettings.atmosphere).toEqual({
+            scattering: 0.05,
+            anisotropy: 0.7,
+            haze: {
+                volume_m3: 12000,
+                airChangesPerHour: 6,
+                levels: { 'rig-hazer-back-01': 1, 'rig-smoke-01': 0.5 },
+                kindLevels: { hazer: 0.6, 'smoke-machine': 0 },
+                patchiness: 0.35,
+                drift: [0.15, 5, 0.05]
+            }
+        })
+    })
+    it('a haze with no hand-set scattering is still a haze', () => {
+        const doc = normalizeProjectDocument({ renderSettings: { atmosphere: { haze: {} } } })
+        expect(doc.renderSettings.atmosphere).toEqual({ scattering: 0.03, anisotropy: 0.7, haze: {} })
+    })
+    it('a room without one reads back as before', () => {
+        expect(normalizeProjectDocument({ renderSettings: { atmosphere: { scattering: 0.05 } } }).renderSettings.atmosphere).toEqual({ scattering: 0.05, anisotropy: 0.7 })
+        expect(normalizeProjectDocument({ renderSettings: {} }).renderSettings).not.toHaveProperty('atmosphere')
+    })
+})
+
+describe('components.beam.optics — prism, honeycomb, frost, gobo', () => {
+    const lamp = (beam) => normalizeProjectDocument({ entities: [{ id: 'l', type: 'spotLight', components: { beam } }] }).entities[0].components.beam
+    it('keeps what is in the beam\'s path, clamped', () => {
+        expect(lamp({ visible: true, optics: { prism: { facets: 40, rotation: 1 }, honeycomb: {}, frost: 3, gobo: { pattern: 4, rotation: 0.5 }, junk: 1 } }).optics)
+            .toEqual({ prism: { facets: 32, rotation: 1 }, honeycomb: { rotation: 0 }, frost: 1, gobo: { pattern: 4, rotation: 0.5 } })
+    })
+    it('drops a gobo the wheel does not have, and stores nothing when nothing is in', () => {
+        expect(lamp({ visible: true, optics: { gobo: { pattern: 40 } } })).not.toHaveProperty('optics')
+        expect(lamp({ visible: true })).not.toHaveProperty('optics')
+    })
+})
+
+describe('fields this build does not know ride through (audit 2026-10-09 F3)', () => {
+    // Mirror of the CJS case in serverXR/src/schemaSync.test.js: a newer
+    // build's section or object field survives a normalize and an edit here.
+    it('keeps an unknown top-level section and an unknown object field, the same as the CJS twin', () => {
+        const read = normalizeProjectDocument({
+            timelineState: { cues: [{ id: 'c1', at: 3 }] },
+            entities: [{ id: 'e1', type: 'box', futureField: { keep: 'me' } }]
+        })
+        expect(read.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+        expect(read.entities[0].futureField).toEqual({ keep: 'me' })
+        const edited = applyProjectOps(read, [{ type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }])
+        expect(edited.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+        expect(edited.entities[0]).toMatchObject({ name: 'Renamed', futureField: { keep: 'me' } })
+        expect(normalizeProjectDocument({ version: 99 }).version).toBe(PROJECT_DOCUMENT_VERSION)
+    })
+})
+
+import { createRequire as createRequireForPan } from 'node:module'
+describe('a measured pan correction survives a save on both sides (MOXIR 2026-10-17)', () => {
+    it('the server copy (shared/projectSchema.cjs) and the client copy keep panOffsetDeg and panInvert', async () => {
+        const server = createRequireForPan(import.meta.url)('../../shared/projectSchema.cjs')
+        const client = await import('./projectSchema.js')
+        const doc = { entities: [{ id: 'h', type: 'spotLight', components: { fixture: { type: 'up-b380f', hung: true, panOffsetDeg: -270, panInvert: true } } }] }
+        for (const normalize of [server.normalizeProjectDocument, client.normalizeProjectDocument]) {
+            const f = normalize(doc).entities[0].components.fixture
+            expect(f.panOffsetDeg).toBe(-270)
+            expect(f.panInvert).toBe(true)
+        }
+    })
+})

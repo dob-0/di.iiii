@@ -27,8 +27,8 @@ describe('the visualiser', () => {
         const loadDocument = async () => ({ document: { projectMeta: { title: 'MOXIR' }, entities: [lamp('a', 'up-b380f', '16ch-assumed')] } })
         render(<VisualiserSurface spaceId="moxir" projectId="moxir-hall-minimal" loadDocument={loadDocument} />)
         const desk = await screen.findByTitle('The light desk')
-        expect(desk.getAttribute('src')).toBe('/light/?space=moxir&project=moxir-hall-minimal&label=MOXIR&from=visualise')
-        expect(screen.getByTitle('The room').getAttribute('src')).toBe('/moxir/p/moxir-hall-minimal?probe=1&embed=1')
+        expect(desk.getAttribute('src')).toBe('/light/?space=moxir&project=moxir-hall-minimal&label=MOXIR&from=visualise#touch') // opens on its looks and cue bar, not Setup
+        expect(screen.getByTitle('The room').getAttribute('src')).toBe('/moxir/p/moxir-hall-minimal?probe=1&embed=1&views=1') // with its view chips
         expect(await screen.findByText(/ASSUMED channel lists drive 1 lamp — verify/)).toBeTruthy()
         expect(screen.getByRole('button', { name: /room ↗/ })).toBeTruthy()
     })

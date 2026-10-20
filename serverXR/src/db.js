@@ -2,6 +2,12 @@ const { DatabaseSync } = require('node:sqlite')
 
 let _db = null
 
+// What the start-up passes did on the last initDb, for the server to say in its
+// own log (index.js). This file takes no sibling module on purpose: the image
+// layout test (scripts/space-bundle.test.js) runs it alone, as the CLI tools do.
+let _startupReport = { archivedTitlesMoved: 0 }
+const getStartupReport = () => ({ ..._startupReport })
+
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS spaces (
     id TEXT PRIMARY KEY,
@@ -60,6 +66,52 @@ const SCHEMA = `
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops ON project_ops(project_id, version);
+
+  -- Ops that claimed a version their project never reached: rows in
+  -- project_ops above projects.document_version. Two servers on one data
+  -- folder (2026-10-02, aylmo) left a project at document_version 809 with ops
+  -- 805-819, and every later write at 810 failed the UNIQUE index with a 500,
+  -- forever. projectStore.js quarantineOrphanOps moves such rows here, with
+  -- the reason and the version the project actually stood at, instead of
+  -- deleting them: nothing is lost, and a person can read what was set aside.
+  -- No foreign key on purpose — this is a record, it outlives the project.
+  CREATE TABLE IF NOT EXISTS project_ops_quarantine (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    actor TEXT,
+    actor_type TEXT,
+    actor_label TEXT,
+    original_seq INTEGER,
+    document_version INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    quarantined_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_project_ops_quarantine ON project_ops_quarantine(project_id, quarantined_at);
+
+  -- The same record for a space's own scene log: rows in space_ops above
+  -- spaces.scene_version, which the old three-step scene write (scene.json,
+  -- then ops, then version) left when two servers wrote one space or a write
+  -- was cut off between its steps (audit 2026-10-09, data F1).
+  -- spaceStore.js healOrphanSpaceOps moves them here. No foreign key on
+  -- purpose, as above.
+  CREATE TABLE IF NOT EXISTS space_ops_quarantine (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    space_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    actor TEXT,
+    actor_type TEXT,
+    actor_label TEXT,
+    original_seq INTEGER,
+    document_version INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    quarantined_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_ops_quarantine ON space_ops_quarantine(space_id, quarantined_at);
 
   -- A breadcrumb left by scripts/project-move.mjs. Project ids are global and
   -- the row it moves keeps its id, so /api/projects/:projectId keeps working
@@ -382,6 +434,85 @@ const SCHEMA = `
     consumed_at INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_telegram_login_expiry ON telegram_login_tokens(expires_at);
+
+  -- di.bo acting as a team member (telegramActTokenStore.js). A short-lived
+  -- bearer bound to one account; only the SHA-256 of its secret is kept.
+  -- token_version is the account's at mint time, so signing out everywhere
+  -- kills these too, exactly as it kills the person's own cookies.
+  -- No SCHEMA_VERSION bump: a new table is invisible to an older build.
+  CREATE TABLE IF NOT EXISTS telegram_act_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    telegram_id TEXT NOT NULL,
+    label TEXT,
+    token_version INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_telegram_act_expiry ON telegram_act_tokens(expires_at);
+
+  -- Signing in from a terminal (cliLoginStore.js, docs/architecture/CLI_LOGIN.md).
+  -- A terminal asking to be signed in: the device code it keeps and the short
+  -- code a person types are both stored as a SHA-256 only. status runs
+  -- pending -> approved | denied -> consumed (given once, to the first poll).
+  -- No SCHEMA_VERSION bump: a new table is invisible to an older build.
+  CREATE TABLE IF NOT EXISTS cli_device_codes (
+    id TEXT PRIMARY KEY,
+    device_hash TEXT NOT NULL UNIQUE,
+    user_code_hash TEXT NOT NULL,
+    label TEXT,
+    created_from TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    user_id TEXT,
+    interval_ms INTEGER NOT NULL,
+    last_poll_at INTEGER,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_cli_device_user_code ON cli_device_codes(user_code_hash);
+  CREATE INDEX IF NOT EXISTS idx_cli_device_expiry ON cli_device_codes(expires_at);
+
+  -- What the approval turns into: a terminal's own login, dii_cli_<id>.<secret>,
+  -- bound to one account, only the SHA-256 of the secret kept. Unlike an act
+  -- token it is NOT tied to the account's token_version: a browser sign-out must
+  -- not end a terminal login. It ends by revoke, by 90 days unused, or 365 days
+  -- after it was made.
+  CREATE TABLE IF NOT EXISTS cli_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    label TEXT,
+    created_from TEXT,
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    expires_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_cli_tokens_user ON cli_tokens(user_id);
+  CREATE INDEX IF NOT EXISTS idx_cli_tokens_expiry ON cli_tokens(expires_at);
+
+  -- A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+  -- One row per hostname: yokozo.xyz and www.yokozo.xyz are two rows for the
+  -- same space. The host -> space lookup only ever answers for state 'active',
+  -- so a row nobody has pointed DNS at yet changes nothing anyone sees.
+  -- cf_hostname_id is Cloudflare's id for the custom hostname; null when the
+  -- platform is not connected to Cloudflare (a local install, dev).
+  CREATE TABLE IF NOT EXISTS space_domains (
+    hostname TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    state TEXT NOT NULL DEFAULT 'pending',
+    cf_hostname_id TEXT,
+    records TEXT NOT NULL DEFAULT '[]',
+    last_error TEXT,
+    added_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    checked_at INTEGER,
+    active_since INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_domains_space ON space_domains(space_id);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used
@@ -394,11 +525,18 @@ function addCompatLayer(db) {
   // better-sqlite3: db.transaction(fn) returns a callable that runs fn inside
   // a BEGIN/COMMIT/ROLLBACK block. Track nesting so re-entrant calls run
   // inline instead of starting a nested BEGIN (which SQLite rejects).
+  //
+  // `{ immediate: true }` starts with BEGIN IMMEDIATE: the database write lock
+  // is taken before the first read, so a check made inside the transaction
+  // ("is the project still at the version this write was based on?") cannot
+  // be overtaken by another PROCESS writing the same file between the read and
+  // the write. A deferred BEGIN only takes the write lock at the first write,
+  // which is after the check. SQLite documents this: https://sqlite.org/lang_transaction.html
   let _inTx = false
-  db.transaction = (fn) => (...args) => {
+  db.transaction = (fn, { immediate = false } = {}) => (...args) => {
     if (_inTx) return fn(...args)
     _inTx = true
-    db.exec('BEGIN')
+    db.exec(immediate ? 'BEGIN IMMEDIATE' : 'BEGIN')
     try {
       const result = fn(...args)
       db.exec('COMMIT')
@@ -456,17 +594,30 @@ function ensureColumn(db, table, column, definition) {
 // The only archive the platform had was five project titles with "[archived] "
 // typed in front of them — plain text that filtered nothing, sorted nothing and
 // hid nothing. Now that `state` exists, those titles say what they meant: the
-// state becomes 'archived' and the prefix comes off the name. Runs once.
+// state becomes 'archived' and the prefix comes off the name.
+//
+// It ran once, in September. A project followed or synced in from an older
+// tier can arrive wearing the prefix long after, so since 2026-10-13 it runs on
+// EVERY start: idempotent (a moved row no longer matches) and cheap (one scan
+// of the projects table). It returns how many rows it moved; initDb keeps the
+// count in getStartupReport() and the server says so in its log when it is not
+// zero. It reads the prefix the way the readers do
+// (projectRoutes.js isLegacyArchivedTitle: leading space, any case) and leaves
+// updated_at alone — tidying a name is not a change to the work.
+const ARCHIVED_PREFIX = /^\s*\[archived\]\s*/i
 function backfillArchivedTitles(db) {
-  const KEY = 'v3_archived_title_to_state'
-  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
-  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '[archived]%'").all()
+  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '%[archived]%'").all()
+    .filter((row) => ARCHIVED_PREFIX.test(String(row.title)))
+  if (!rows.length) return 0
   const update = db.prepare('UPDATE projects SET title = ?, state = ? WHERE id = ?')
-  for (const row of rows) {
-    const cleaned = String(row.title).replace(/^\s*\[archived\]\s*/i, '').trim() || row.title
-    update.run(cleaned, 'archived', row.id)
-  }
-  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+  db.transaction(() => {
+    for (const row of rows) {
+      // A name that was only the prefix keeps the id as its name: leaving the
+      // prefix on would match again on the next start.
+      update.run(String(row.title).replace(ARCHIVED_PREFIX, '').trim() || row.id, 'archived', row.id)
+    }
+  })()
+  return rows.length
 }
 
 // Replace the legacy "spaces = JSON 'null' means unrestricted" convention with
@@ -518,6 +669,13 @@ function initDb(dbPath) {
   addCompatLayer(db)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+  // More than one server may open this file — the installed di and a dev stack
+  // on the same data folder do, on purpose. Without a busy timeout the second
+  // writer gets SQLITE_BUSY the instant the first holds the write lock, and
+  // that surfaced as a 500. Five seconds of waiting inside SQLite's own busy
+  // handler (https://sqlite.org/pragma.html#pragma_busy_timeout); a write
+  // transaction here lasts milliseconds.
+  db.pragma('busy_timeout = 5000')
   // BEFORE any migration runs: is this data from a build newer than this one?
   const found = readSchemaVersion(db)
   if (found > SCHEMA_VERSION && !ALLOW_OLDER_CODE()) {
@@ -564,6 +722,9 @@ function initDb(dbPath) {
   // touches the bytes.
   ensureColumn(db, 'projects', 'deleted_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
+  // Archive: the space is kept whole and only leaves the default list. Nullable,
+  // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
+  ensureColumn(db, 'spaces', 'archived_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
@@ -610,7 +771,7 @@ function initDb(dbPath) {
   db.exec('CREATE INDEX IF NOT EXISTS idx_space_ops_created ON space_ops(space_id, created_at)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_project_ops_created ON project_ops(project_id, created_at)')
   backfillUserUnrestricted(db)
-  backfillArchivedTitles(db)
+  _startupReport = { archivedTitlesMoved: backfillArchivedTitles(db) }
   backfillGlobalSpace(db)
   dedupeAndUniqueOps(db)
   // Nullable, independently-renameable public handle distinct from the
@@ -638,4 +799,4 @@ function closeDb() {
   }
 }
 
-module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, runArchiveBackfill: backfillArchivedTitles }
+module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, getStartupReport, runArchiveBackfill: backfillArchivedTitles }

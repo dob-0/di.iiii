@@ -5,6 +5,13 @@
 // Spawns its own server on an ephemeral HTTP port with an ephemeral Art-Net socket and a
 // throwaway show file, so it never contends with a desk already running on 8080/6454.
 // Run with: npm run test:http   (npm test runs this after the unit tests)
+//
+//   DESK_URL=http://host:port node tests/test-http.js   use a server that is already up
+//                                                       instead of starting one
+//   node tests/test-http.js --class a                   only the class-a routes of
+//                                                       api-contract.json, each reply
+//                                                       checked against the contract's shape
+// Both flags together are how a node (anything that is not this desk) is held to the contract.
 
 const assert = require('assert');
 const { spawn } = require('child_process');
@@ -1222,6 +1229,18 @@ check('two outputs cannot be told to open the same serial port', async () => {
   await POST('/api/output/send/remove', { id: a.body.send.id });
 });
 
+check('a USB widget told to carry Universe 2 sends Universe 2 (MOXIR 2026-10-17: it sent nothing)', async () => {
+  const port = process.platform === 'win32' ? 'COM8' : '/dev/ttyUSB8';
+  const was = (await GET('/api/state')).body.output.enabled;
+  await POST('/api/output', { enabled: true });
+  const a = await POST('/api/output/send', { driver: 'enttec', serialPort: port, universes: [1], enabled: true });
+  await new Promise((r) => setTimeout(r, 400));
+  const s = (await GET('/api/state')).body.status.extra.find((x) => x.id === a.body.send.id);
+  assert.ok(s.packetsSent > 0, 'its frames go out, packetsSent ' + s.packetsSent);
+  await POST('/api/output/send/remove', { id: a.body.send.id });
+  await POST('/api/output', { enabled: was });
+});
+
 check('a hand-edited show cannot smuggle in an output the route would refuse', async () => {
   const r = await POST('/api/output/send', { driver: 'artnet', targets: ['not-an-ip', '10.0.0.4'], universes: [1, 1, 99999, -3] });
   assert.deepStrictEqual(r.body.send.targets, ['10.0.0.4'], 'a target that is not an address is dropped');
@@ -1288,6 +1307,22 @@ check('a look library round-trips, and a bad one is refused whole', async () => 
   assert.ok(read.kinds.includes('colour'), 'the page is told what kinds exist rather than keeping its own list');
   const bad = await POST('/api/looks', { looks: 'nope' });
   assert.strictEqual(bad.status, 400);
+});
+
+check('a look keeps its motion (the levels it moves, lookMotion.js); junk motion is dropped, numbers are clamped', async () => {
+  const motion = { mode: 'breathe', bpm: 66, depth: 200, spatial: 'patch', kinds: ['up-pl5403'], still: 0.3, units: [{ id: 'm1', x: 0.25, y: -0.5 }, { id: 'm2', x: 1.75, y: 0.5 }] };
+  const made = await POST('/api/looks/add', { look: { id: 'mv', name: 'Breathe', steps: [{ values: { '*': { dimmer: 200 } } }], motion } });
+  assert.strictEqual(made.status, 200, made.text);
+  assert.deepStrictEqual(made.body.look.motion, motion, 'the look comes back with its motion, the same numbers');
+  const { body: read } = await GET('/api/looks');
+  assert.deepStrictEqual(read.looks.find((l) => l.id === 'mv').motion, motion, 'GET /api/looks carries it');
+  const junk = await POST('/api/looks/add', { look: { id: 'mj', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'wobble', units: [{ id: 'm1' }] } } });
+  assert.strictEqual(junk.body.look.motion, undefined, 'an unknown mode is no motion');
+  const noUnits = await POST('/api/looks/add', { look: { id: 'mn', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'pulse' } } });
+  assert.strictEqual(noUnits.body.look.motion, undefined, 'motion with nothing to move is no motion');
+  const clamped = await POST('/api/looks/add', { look: { id: 'mc', steps: [{ values: { '*': { dimmer: 1 } } }], motion: { mode: 'strobe', bpm: 9999, depth: -4, spatial: 'sideways', units: [{ id: 'm1' }, { id: 'm1' }] } } });
+  assert.deepStrictEqual(clamped.body.look.motion, { mode: 'strobe', bpm: 300, depth: 0, spatial: 'patch', kinds: [], still: 0, units: [{ id: 'm1', x: 0, y: 0 }] });
+  for (const id of ['mv', 'mj', 'mn', 'mc']) await POST('/api/looks/remove', { id });
 });
 
 check('a layer drives the wire, and its fader is one small request', async () => {
@@ -1391,6 +1426,44 @@ check('fan leaves alone a fixture that has no such attribute', async () => {
   assert.strictEqual(await wire(0, 471), 255, 'the head tilted');
   assert.strictEqual(await wire(0, 460), 255, 'and the wash kept its dimmer, not a tilt it does not have');
   await POST('/api/fixtures/remove', { ids: [wash.id, head.id] });
+});
+
+// One NOW for the desk (MOXIR UI audit, 2026-10-01): /api/state says what is on the cue layer
+// and who put it there, so no page has to guess from the cue list ("Nothing fired" while a
+// look was on).
+check('/api/state carries now: a hand-fired look is manual, a cue-fired one is cue with its index', async () => {
+  await POST('/api/looks', { looks: [
+    { id: 'now-a', name: 'Green core', kind: 'colour', steps: [{ values: {} }] },
+    { id: 'now-b', name: 'Red room', kind: 'colour', steps: [{ values: {} }] },
+  ] });
+  await POST('/api/layers', { layers: [] });
+  assert.strictEqual((await GET('/api/state')).body.now, null, 'nothing on is null');
+  await POST('/api/looks/fire', { id: 'now-a' });
+  let now = (await GET('/api/state')).body.now;
+  assert.ok(now, 'a look is on, so now is not null');
+  assert.strictEqual(now.source, 'manual');
+  assert.strictEqual(now.lookId, 'now-a');
+  assert.strictEqual(now.name, 'Green core');
+  assert.strictEqual(now.cue, null, 'no cue list loaded');
+  await POST('/api/cues/load', { project: 'now-test', list: [
+    { id: 'c1', name: 'One', lookId: 'now-a', hold: 0, fade: 0 },
+    { id: 'c2', name: 'Two', lookId: 'now-b', hold: 0, fade: 0 },
+  ], loop: false });
+  await POST('/api/cues/go', {});
+  await POST('/api/cues/go', {});
+  now = (await GET('/api/state')).body.now;
+  assert.strictEqual(now.source, 'cue');
+  assert.strictEqual(now.name, 'Red room');
+  assert.strictEqual(now.cue.index, 1);
+  assert.strictEqual(now.cue.n, 2);
+  // Taking the layer back by hand makes it manual again, and the cue list is still there to resume.
+  await POST('/api/looks/fire', { id: 'now-a' });
+  now = (await GET('/api/state')).body.now;
+  assert.strictEqual(now.source, 'manual');
+  assert.strictEqual(now.cue.index, 1, 'the cue list keeps its place');
+  await POST('/api/cues/load', { project: '', list: [], loop: false });
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
 });
 
 check('fan refuses without an attribute, and says the styles it knows', async () => {
@@ -1735,13 +1808,107 @@ check('the desk\'s own state is read through: a holder of the desk reaches the l
   } finally { await d.stop(); }
 });
 
+// ---- the API contract --------------------------------------------------------
+// api-contract.json says what the desk UI reads from every route. --class a runs the routes
+// every node must really answer; each reply is held to the keys and JSON types written there.
+
+const contract = require('../api-contract.json');
+
+function jsonType(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
+function shapeProblems(body, shape, where) {
+  const out = [];
+  if (jsonType(body) !== 'object') return [where + ': the reply is not a JSON object (' + jsonType(body) + ')'];
+  for (const [key, want] of Object.entries(shape)) {
+    if (!(key in body)) { out.push(where + ': missing "' + key + '"'); continue; }
+    const got = jsonType(body[key]);
+    if (!want.split('|').includes(got)) out.push(where + ': "' + key + '" is ' + got + ', the UI reads ' + want);
+  }
+  return out;
+}
+
+function fill(v, ctx) {
+  if (typeof v === 'string' && v[0] === '$') {
+    if (!(v.slice(1) in ctx)) throw new Error('the probe wants ' + v + ' but no earlier route captured it');
+    return ctx[v.slice(1)];
+  }
+  if (Array.isArray(v)) return v.map((x) => fill(x, ctx));
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fill(x, ctx)]));
+  return v;
+}
+const dig = (obj, dotted) => dotted.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
+
+// An SSE entry: open it, read until the first `frame` event, check the shape, close.
+function streamCheck(e, cls) {
+  return {
+    name: 'contract ' + cls + ': ' + e.method + ' /' + e.path + ' (sse)',
+    fn: async () => {
+      const ac = new AbortController();
+      const res = await fetch(base + '/' + e.path, { signal: ac.signal });
+      try {
+        assert.strictEqual(res.status, 200, 'answered ' + res.status);
+        assert.ok(/text\/event-stream/.test(res.headers.get('content-type') || ''), 'content-type is not text/event-stream');
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        const t0 = Date.now();
+        while (!/event: frame\ndata: (.*)\n\n/.test(buf)) {
+          assert.ok(Date.now() - t0 < 5000, 'no frame event in 5 s');
+          const { value, done } = await reader.read();
+          assert.ok(!done, 'stream ended before a frame');
+          buf += dec.decode(value, { stream: true });
+        }
+        const body = JSON.parse(/event: frame\ndata: (.*)\n\n/.exec(buf)[1]);
+        const bad = shapeProblems(body, e.reply, e.path);
+        assert.ok(!bad.length, bad.join('\n       '));
+        assert.strictEqual(body.k, 1, 'the first frame is a key frame');
+        assert.ok(body.d.every((r) => Array.isArray(r) && r.length === 3 && Number.isInteger(r[0]) && Number.isInteger(r[1]) && Array.isArray(r[2])), 'd is [[universe, start, [values]], ...]');
+      } finally { ac.abort(); }
+    },
+  };
+}
+
+function contractChecks(cls) {
+  const ctx = {};
+  const list = [];
+  for (const e of contract.entries.filter((x) => x.class === cls)) {
+    if (e.transport === 'sse') { list.push(streamCheck(e, cls)); continue; }   // a stream never ends: read one frame, not a body
+    list.push({
+      name: 'contract ' + cls + ': ' + e.method + ' /' + e.path,
+      fn: async () => {
+        const route = '/' + e.path;
+        const r = e.method === 'GET' ? await GET(route) : await POST(route, fill(e.probe.body, ctx));
+        assert.strictEqual(r.status, 200, e.method + ' ' + route + ' answered ' + r.status + ': ' + r.text.slice(0, 120));
+        if (r.body && r.body.error) assert.fail(route + ' refused the probe: ' + r.body.error);
+        const bad = shapeProblems(r.body, e.reply, route);
+        if (e.path === 'api/state') {
+          const k = contract.state_keys;
+          bad.push(...shapeProblems(r.body, k.required, 'state'));
+          for (const [group, shape] of Object.entries(k.nested_required)) bad.push(...shapeProblems(r.body[group], shape, 'state.' + group));
+        }
+        assert.ok(!bad.length, bad.join('\n       '));
+        for (const [name, from] of Object.entries((e.probe && e.probe.capture) || {})) {
+          ctx[name] = dig(r.body, from);
+          assert.ok(ctx[name] !== undefined, route + ' did not carry "' + from + '" for the routes after it');
+        }
+      },
+    });
+  }
+  return list;
+}
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {
+  const argv = process.argv.slice(2);
+  const ci = argv.indexOf('--class');
+  const onlyClass = ci >= 0 ? argv[ci + 1] : null;
+  if (ci >= 0 && !['a', 'b', 'c'].includes(onlyClass)) throw new Error('--class takes a, b or c');
+  if (onlyClass && onlyClass !== 'a') throw new Error('only --class a has checks: b and c are what a node may refuse, and there is nothing to run against them');
+  const external = (process.env.DESK_URL || '').replace(/\/+$/, '');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'artnet-test-'));
   process.env.DATA_DIR = dir;
 
-  const child = spawn(process.execPath, [path.join(__dirname, '..', 'standalone.js')], {
+  const child = external ? null : spawn(process.execPath, [path.join(__dirname, '..', 'standalone.js')], {
     // ARTNET_OFFLINE matters as much as the rest: without it the test server broadcasts
     // its universes at 40 Hz to the same address a real rig is listening on, and the
     // fixtures visibly flicker through the test run.
@@ -1750,7 +1917,7 @@ async function main() {
   });
 
   let log = '';
-  const port = await new Promise((resolve, reject) => {
+  const port = external ? 0 : await new Promise((resolve, reject) => {
     const bail = setTimeout(() => reject(new Error('server did not start in 10s:\n' + log)), 10000);
     child.stdout.on('data', (c) => {
       log += c;
@@ -1760,20 +1927,25 @@ async function main() {
     child.stderr.on('data', (c) => { log += c; });
     child.on('exit', (code) => { clearTimeout(bail); reject(new Error('server exited (' + code + '):\n' + log)); });
   });
-  base = 'http://127.0.0.1:' + port;
+  base = external || 'http://127.0.0.1:' + port;
+  const run = onlyClass ? contractChecks(onlyClass) : tests;
+  if (external) console.log('  against ' + external + (onlyClass ? ' — class ' + onlyClass + ' of api-contract.json v' + contract.contract_version : ''));
 
   try {
-    for (const t of tests) {
+    for (const t of run) {
       // Park the desk before each test rather than tidying up after. A test that fails
       // partway through never reaches its own cleanup, and a master left at half would
-      // then fail every test after it for the wrong reason.
-      await POST('/api/master', { master: 255, blackout: false });
-      await POST('/api/raw', { clear: true });
+      // then fail every test after it for the wrong reason. The contract run leaves the
+      // desk's own master and held channels alone: it may be a node that is live.
+      if (!onlyClass) {
+        await POST('/api/master', { master: 255, blackout: false });
+        await POST('/api/raw', { clear: true });
+      }
       try { await t.fn(); console.log('  ok   ' + t.name); }
       catch (e) { failures++; console.log('  FAIL ' + t.name + '\n       ' + e.message); }
     }
   } finally {
-    child.kill();
+    if (child) child.kill();
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
   }
 

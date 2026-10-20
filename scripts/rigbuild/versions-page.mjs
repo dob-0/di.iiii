@@ -16,7 +16,7 @@ import { VERSIONS_FILE } from './versions.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-const amd = (n) => (n == null ? '—' : `${Math.round(n).toLocaleString('en').replace(/,/g, ' ')} AMD`)
+const amd = (n) => (n == null ? 'price: private' : `${Math.round(n).toLocaleString('en').replace(/,/g, ' ')} AMD`)
 const kw = (w) => `${(w / 1000).toFixed(1)} kW`
 
 const CSS = `
@@ -66,7 +66,7 @@ const main = () => {
     const views = String(args.views || 'opening,crane').split(',')
     const viewWords = { opening: 'the opening view — the dance floor, 18 m out, looking at the booth', crane: 'from the crane, photo 032\'s camera' }
 
-    const best = (v) => v.cost.options.find((o) => o.id === v.cost.best)
+    const best = (v) => v.cost.options.find((o) => o.id === v.cost.best) || { perDay: null, label: 'not priced' }
     const alc = (v) => v.cost.options.find((o) => o.id === 'a-la-carte')
     const outdoor = (v) => v.cost.options.find((o) => o.id === 'outdoor-full')
     const lampsOf = (v) => v.lines.filter((l) => !['EXT-HAZER'].includes(l.code))
@@ -77,7 +77,7 @@ const main = () => {
         ['lamps', (v) => `${v.fixtures} hung · ${v.real} real lights in the room`],
         ['à la carte', (v) => `${amd(alc(v).perDay)} / day · ${amd(alc(v).byDays[2])} for 2 days`],
         ['cheapest', (v) => `${amd(best(v).perDay)} / day — ${best(v).label}`],
-        ['outdoor pkg', (v) => `205 000 AMD covers ${outdoor(v).perDay === 205000 ? 'all of it' : `part; + ${amd(outdoor(v).perDay - 205000)} à la carte`}; unused: ${outdoor(v).unused.map((u) => `${u.code} ×${u.n}`).join(', ') || 'none'}`],
+        ['outdoor pkg', (v) => `${amd(outdoor(v).packages[0]?.rate)} covers ${outdoor(v).perDay != null && outdoor(v).perDay === outdoor(v).packages[0]?.rate ? 'all of it' : `part; + ${amd(outdoor(v).perDay != null && outdoor(v).packages[0]?.rate != null ? outdoor(v).perDay - outdoor(v).packages[0].rate : null)} à la carte`}; unused: ${outdoor(v).unused.map((u) => `${u.code} ×${u.n}`).join(', ') || 'none'}`],
         ['power', (v) => `${kw(v.power.watts)} datasheet max · ≥ ${v.power.minCircuitsByLoad} × 16 A circuits by load`],
         ['universes', (v) => `${v.universes.length} (${v.universes.map((u) => `U${u.universe} ${u.channels} ch`).join(', ')}) for the ${v.patch.patched} patched; mode owed: ${owedOf(v) || 'none'}`],
         ['if PARs 8ch', (v) => { const owed = Object.values(v.patch.modeOwed || {}).reduce((a, b) => a + b, 0); const ch = v.patch.channels + owed * 8; return `${Math.ceil(ch / 512)} universes, ${ch} ch — ASSUMED 8 ch per lamp whose mode is owed (${owed}); a planning figure until the rental house gives the modes` }],
@@ -116,7 +116,7 @@ ${views.map((view) => `<div class="lookname">${esc(viewWords[view] || view)}</di
 <div class="grid">
 ${versions.map((v) => `<div class="col"><h3>${esc(v.title)}</h3>
 <table><tr><th>code</th><th>what</th><th class="n">qty</th><th>from</th><th class="n">rate/day</th></tr>
-${v.lines.map((l) => `<tr><td>${esc(l.code)}</td><td>${esc(l.label)}</td><td class="n">${l.ordered}</td><td>${esc(l.from === 'other' ? 'other supplier' : 'rental house')}</td><td class="n">${l.rate == null ? 'owed' : amd(l.rate).replace(' AMD', '')}</td></tr>`).join('')}
+${v.lines.map((l) => `<tr><td>${esc(l.code)}</td><td>${esc(l.label)}</td><td class="n">${l.ordered}</td><td>${esc(l.from === 'other' ? 'other supplier' : 'rental house')}</td><td class="n">${l.rate == null ? 'private' : amd(l.rate).replace(' AMD', '')}</td></tr>`).join('')}
 </table>
 <p class="mono dim">cost options, per day (1 day / 2 days by the day rule):</p>
 <table>${v.cost.options.map((o) => `<tr><td>${esc(o.label)}${o.id === v.cost.best ? ' ◀' : ''}</td><td class="n">${amd(o.perDay)}</td><td class="n">${amd(o.byDays[2])}</td></tr>`).join('')}</table>

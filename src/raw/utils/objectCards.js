@@ -1,6 +1,7 @@
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
 import { walkEntityTree } from '../../project/entityTree.js'
-import { CARD_WIDTH } from './cardGeometry.js'
+import { CARD_WIDTH, TOP_PICTURE_HEIGHT } from './cardGeometry.js'
+import { objectPreviewNode } from '../components/cardPreview/objectPreviewNode.js'
 
 // THINGS, AS THE NODES CANVAS SEES THEM.
 //
@@ -47,9 +48,12 @@ export const OBJECT_CARD_COLOR = '#c8a2ff'
 // A thing card's box. Height matches a one-row node card (cardGeometry.js:
 // header 44 + one row 22 + foot 8), so the two kinds line up on the grid.
 export const THING_CARD_HEIGHT = 74
+// A thing that has a node twin (a box, a sphere...) draws itself under its
+// header, the same picture slot a node's card has (cardGeometry.js).
+export const THING_CARD_PREVIEW_HEIGHT = THING_CARD_HEIGHT + TOP_PICTURE_HEIGHT + 4
 // How far a grouped thing's card steps in from its group's.
 export const THING_INDENT = 24
-const ROW = THING_CARD_HEIGHT + 18
+const ROW_GAP = 18
 const COLUMN_GAP = 40
 
 /**
@@ -87,9 +91,13 @@ export function buildObjectCards(entities = [], { nodes = [], perRow = 4, gap = 
     let rowTop = 0
     for (let start = 0; start < blocks.length; start += perRow) {
         const row = blocks.slice(start, start + perRow)
+        const blockHeights = []
         row.forEach((block, columnIndex) => {
-            block.forEach(({ entity, depth, parentId }, index) => {
+            let top = rowTop
+            block.forEach(({ entity, depth, parentId }) => {
                 const holds = childCount.get(entity.id) || 0
+                const previewNode = objectPreviewNode(entity)
+                const height = previewNode ? THING_CARD_PREVIEW_HEIGHT : THING_CARD_HEIGHT
                 cards.push({
                     // Namespaced so a thing's id can never be mistaken for a
                     // node's by any caller that holds both — the two kinds mint
@@ -103,11 +111,15 @@ export function buildObjectCards(entities = [], { nodes = [], perRow = 4, gap = 
                     holds,
                     familyColor: OBJECT_CARD_COLOR,
                     graphX: columnIndex * column + depth * THING_INDENT,
-                    graphY: rowTop + index * ROW
+                    graphY: top,
+                    height,
+                    previewNode
                 })
+                top += height + ROW_GAP
             })
+            blockHeights.push(top - rowTop)
         })
-        rowTop += Math.max(...row.map((block) => block.length)) * ROW + COLUMN_GAP
+        rowTop += Math.max(...blockHeights) + COLUMN_GAP
     }
 
     // Does any node stand on the band where it is? `heightOf` is the node
@@ -138,7 +150,7 @@ export function thingBandBounds(cards = []) {
         minX: Math.min(...cards.map((card) => card.graphX)) - BAND_MARGIN,
         minY: Math.min(...cards.map((card) => card.graphY)) - BAND_MARGIN,
         maxX: Math.max(...cards.map((card) => card.graphX + CARD_WIDTH)) + BAND_MARGIN,
-        maxY: Math.max(...cards.map((card) => card.graphY + THING_CARD_HEIGHT)) + BAND_MARGIN
+        maxY: Math.max(...cards.map((card) => card.graphY + (card.height || THING_CARD_HEIGHT))) + BAND_MARGIN
     }
 }
 

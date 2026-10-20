@@ -8,14 +8,12 @@ import { generateId } from '../shared/projectSchema.js'
 import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
 import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
-import { typeById } from './fixtureTypes.js'
 import { pieceOf } from './pieces.js'
 import { plotModel, titleTotals } from './plotModel.js'
-import { nextUnit, trussRuns } from './plotGeometry.js'
-import { createOps, deleteOps, lampEntity, pieceEntity, ridersOfIds } from './plotEdits.js'
+import { trussRuns } from './plotGeometry.js'
 import { HEIGHT_STEPS, snapWords, stepHeight, turn } from './buildAim.js'
-import { cycleSlot, fullWords, hotbarSlots, slotOfKey } from './hotbar.js'
-import { arrangeSlots, pinAt } from './inventory.js'
+import { cycleSlot, slotOfKey } from './hotbar.js'
+import { useHotbar } from './useHotbar.js'
 import { useEquipment } from './useEquipment.js'
 import { InventoryPanel } from './Inventory.jsx'
 import { buildEquipmentPath } from './equipmentRouting.js'
@@ -31,6 +29,8 @@ import { useDeskState } from './deskState.js'
 import { NO_DESK_SENTENCE } from './rigToolAccess.js'
 import { Inspector } from './PlotSurface.jsx'
 import BuildScene from './BuildScene.jsx'
+import BuildHotbar from './BuildHotbar.jsx'
+import { placeOpsFor, removeOpsFor } from './buildActions.js'
 import './plot.css'
 import './build.css'
 
@@ -191,12 +191,8 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     // The hotbar is filled FROM the inventory (RIG_BUILD.md §13): a tile dragged onto a
     // slot, or "to hotbar" on its card. The arrangement is this person's, kept in this
     // browser (a convenience, not the show's data); unarranged, the default order.
-    const pinKey = `rigbuild.hotbar.${projectId}`
-    const [pinned, setPinned] = useState(() => { try { return JSON.parse(window.localStorage.getItem(pinKey) || '[]') } catch { return [] } })
-    const { slots: allSlots } = useMemo(() => hotbarSlots({ entities, library }), [entities, library])
-    const slots = useMemo(() => arrangeSlots(allSlots, pinned), [allSlots, pinned])
+    const { slots, slotIndex, setSlotIndex, pinToHotbar: pin } = useHotbar({ projectId, entities, library })
     const [inventory, setInventory] = useState(false)
-    const [slotIndex, setSlotIndex] = useState(0)
     const slot = building && !crew ? slots[Math.min(slotIndex, slots.length - 1)] || null : null
     const [yaw, setYaw] = useState(0)
     const [heights, setHeights] = useState(() => Object.fromEntries(Object.entries(HEIGHT_STEPS).map(([k, v]) => [k, v.start])))
@@ -232,46 +228,22 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const place = useCallback(async () => {
         if (!slot) return
         const p = aimRef.current.place
-        if (!p?.ok) { setStatus(p?.reason || 'aim at the floor, a truss, a tower or a deck'); return }
-        if (slot.full) { setStatus(fullWords(slot)); return }
-        if (slot.kind === 'lamp') {
-            const type = typeById(library, slot.type)
-            if (!type) return
-            const target = p.to?.id ? entities.find((e) => e.id === p.to.id) : null
-            const position = target?.name || (p.hung ? 'truss' : 'floor')
-            const lamp = lampEntity({ id: generateId('entity'), type, mount: p.position, hung: p.hung, position, unit: nextUnit(entities, position), entities })
-            edit(createOps([lamp]), `${type.code} placed · ${snapWords(p, model.pieces)}${type.modesOwed ? ' · mode owed, not patched' : ' · auto-patch follows'}`)
-            choose(lamp.id, { open: false })
-            return
-        }
-        // A truss that continues another takes its name — the same run, the same position.
-        const target = p.to?.id ? entities.find((e) => e.id === p.to.id) : null
-        const name = pieceOf(slot.kind).category === 'truss' && target && pieceOf(target.components?.piece?.kind)?.category === 'truss' ? target.name : ''
         try {
-            const assetId = await ensureAsset(p.kind)
-            const piece = pieceEntity({ id: generateId('entity'), kind: p.kind, position: p.position, yaw: p.yaw, height: p.height, assetId, name })
-            edit(createOps([piece]), `${pieceOf(p.kind).label} placed · ${snapWords(p, model.pieces)}`)
-            choose(piece.id, { open: false })
+            const assetId = slot.kind !== 'lamp' && p?.ok && !slot.full ? await ensureAsset(p.kind) : null
+            const done = placeOpsFor({ slot, place: p, library, entities, newId: () => generateId('entity'), pieces: model.pieces, assetId })
+            if (!done.ops.length) { setStatus(done.message); return }
+            edit(done.ops, done.message)
+            choose(done.id, { open: false })
         } catch (err) {
             setStatus(`could not place: ${err?.message || err}`)
         }
     }, [slot, library, entities, edit, ensureAsset, model.pieces, choose])
 
     const remove = useCallback(() => {
-        const { lampId, pieceId } = aimRef.current
-        if (lampId) {
-            const lamp = model.lampById.get(lampId)
-            edit(deleteOps([lampId]), `removed ${lamp?.code || 'a lamp'}${lamp?.index ? ` #${lamp.index}` : ''}`)
-            if (chosenId === lampId) choose(null)
-            return
-        }
-        if (pieceId) {
-            const riders = ridersOfIds(entities, [pieceId], library)
-            const piece = model.pieces.find((x) => x.id === pieceId)
-            edit(deleteOps([pieceId, ...riders]), `removed ${piece ? pieceOf(piece.kind).label : 'a piece'}${riders.length ? ` and the ${riders.length} lamps on it` : ''}`)
-            return
-        }
-        setStatus('aim at a piece or a lamp to remove it')
+        const done = removeOpsFor({ aim: aimRef.current, model, entities, library })
+        if (!done.ops.length) { setStatus(done.message); return }
+        edit(done.ops, done.message)
+        if (chosenId === done.id) choose(null)
     }, [model, entities, library, edit, chosenId, choose])
 
     const inspectAimed = useCallback(() => {
@@ -311,15 +283,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         window.addEventListener('keydown', hold, true)
         return () => window.removeEventListener('keydown', hold, true)
     }, [inventory, openInventory])
-    const pinToHotbar = useCallback((tile, at) => {
-        if (!tile.hotbarId) return
-        const next = pinAt(pinned, tile.hotbarId, at ?? (slotIndex < slots.length ? slotIndex : null), allSlots.map((x) => x.id))
-        setPinned(next)
-        try { window.localStorage.setItem(pinKey, JSON.stringify(next)) } catch { /* a private window keeps it for the visit */ }
-        const i = next.indexOf(tile.hotbarId)
-        if (i >= 0) setSlotIndex(i)
-        setStatus(`${tile.code} in the hotbar, key ${i === 9 ? 0 : i + 1}`)
-    }, [pinned, slotIndex, slots.length, allSlots, pinKey])
+    const pinToHotbar = useCallback((tile, at) => { const words = pin(tile, at); if (words) setStatus(words) }, [pin])
 
     // --- keys and the mouse ---------------------------------------------------------
     const wrapRef = useRef(null)
@@ -345,7 +309,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [building, crew, slots.length, rotate, raise, undo, redo, inspectAimed, sheetOpen, inventory, openInventory, legend, closeLegend])
+    }, [building, crew, slots.length, rotate, raise, undo, redo, inspectAimed, sheetOpen, inventory, openInventory, legend, closeLegend, setSlotIndex])
 
     useEffect(() => {
         const el = wrapRef.current
@@ -423,7 +387,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
             el.removeEventListener('wheel', onWheel)
             document.removeEventListener('pointerlockchange', onLock)
         }
-    }, [building, crew, place, remove, inspectAimed, slots.length])
+    }, [building, crew, place, remove, inspectAimed, slots.length, setSlotIndex])
 
     // --- tags -------------------------------------------------------------------------
     // A lamp whose mode is owed has nothing to say yet (§10.2): only the aimed or the
@@ -447,10 +411,19 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const runOf = useCallback((id) => runs.find((r) => r.ids.includes(id)) || null, [runs])
     const chosenLamp = chosenId ? model.lampById.get(chosenId) : null
     const aimedLamp = aim.lampId ? model.lampById.get(aim.lampId) : null
-    // A phone has no room for the project's name beside the exit (at 844 × 390 it wrapped
-    // the exit button under the build switch): the mode alone.
     const mode = crew ? 'crew' : building ? 'build' : 'walk'
-    const title = phone ? mode : `${projectDocument?.projectMeta?.title || projectId} · ${mode}`
+    // The bar above already names the project, and a phone has no room for it beside the exit
+    // (at 844 × 390 it wrapped the exit button under the build switch): the room's header says
+    // the mode alone, so the long name does not run across the truss.
+    const title = mode
+    // The tab says which show this is, like the other rig pages (the index.html default names
+    // the platform, not the show).
+    const projectTitle = projectDocument?.projectMeta?.title || projectId
+    useEffect(() => {
+        const prev = document.title
+        document.title = `${crew ? 'Crew' : 'Build'} — ${projectTitle}`
+        return () => { document.title = prev }
+    }, [crew, projectTitle])
     const hint = building && !crew
         ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/Z · up/down &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
         : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
@@ -540,22 +513,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                             {selectedIds.length && !sheetOpen ? <button type="button" className="rigbuild-exact" onClick={() => setSheetOpen(true)}>exact values</button> : null}
                         </p>
                     ) : null}
-                    <ol className="rigbuild-hotbar" aria-label="Hotbar">
-                        {slots.map((s, i) => (
-                            <li key={s.id}>
-                                <button
-                                    type="button"
-                                    className={`rigbuild-slot${i === slotIndex ? ' is-on' : ''}${s.full ? ' is-full' : ''}${s.modeOwed ? ' is-owed' : ''}`}
-                                    aria-pressed={i === slotIndex}
-                                    onClick={() => setSlotIndex(i)}
-                                >
-                                    {s.key ? <span className="rigbuild-slot__key">{s.key}</span> : null}
-                                    <span className="rigbuild-slot__label rigplot-mono">{s.label}</span>
-                                    <span className="rigbuild-slot__count rigplot-mono">{s.ordered != null ? `${s.placed} / ${s.ordered}` : s.words}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ol>
+                    <BuildHotbar slots={slots} index={slotIndex} onPick={setSlotIndex} />
                 </section>
             ) : null}
 

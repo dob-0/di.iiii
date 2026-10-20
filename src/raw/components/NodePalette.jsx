@@ -9,6 +9,15 @@ const PALETTE_WIDTH = 280
 const PALETTE_MAX_HEIGHT = 280
 const PALETTE_OFFSET = 12
 
+// Four cards have a neighbour doing a nearby job. The row says how it differs
+// and names the other, so nobody has to place both to find out.
+const PALETTE_NOTES = {
+    'source.webcam': 'The camera of this browser. For a camera on any machine, Camera In.',
+    'top.camera': 'A camera on any machine, picked on the Desk. For this browser’s own, Webcam.',
+    'media.video': 'A file standing in the scene. For footage as a picture, Clip In.',
+    'top.clip': 'Footage for the picture operators. To stand it in the scene, Video.'
+}
+
 const toDefinitionShim = (type) => {
     if (!type) return null
     const defaults = { ...(type.defaultValues || {}) }
@@ -99,7 +108,7 @@ export default function NodePalette({
     const nodeEntries = listNodeTypes({ query })
         .map(toDefinitionShim)
         .filter(Boolean)
-        .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, definition }))
+        .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, note: PALETTE_NOTES[definition.id] || '', definition }))
 
     const q = query.trim().toLowerCase()
     const thingEntries = onCreateThing
@@ -296,7 +305,7 @@ export default function NodePalette({
                                 ) : (
                                 <button
                                     type="button"
-                                    className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}${entry.kind === 'node' && entry.definition.authoringOnly ? ' is-shell' : ''}`}
+                                    className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}${entry.kind === 'node' && entry.definition.authoringOnly ? ' is-shell' : ''}${entry.note ? ' has-note' : ''}`}
                                     style={entry.kind === 'node'
                                         ? { '--family-color': NODE_FAMILIES.find((f) => f.id === entry.definition.family)?.color || 'transparent' }
                                         : entry.kind === 'thing' ? { '--family-color': OBJECT_CARD_COLOR } : undefined}
@@ -338,6 +347,7 @@ export default function NodePalette({
                                             local dev
                                         </span>
                                     )}
+                                    {entry.note ? <span className="raw-node-palette-item-note">{entry.note}</span> : null}
                                 </button>
                                 )}
                             </li>

@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -654,7 +654,7 @@ describe('project contracts', () => {
         expect(payload.error).not.toContain(server.dataRoot)
     })
 
-    it('repairs non-main project documents whose embedded space drifts back to main', async () => {
+    it('repairs non-main project documents whose embedded space drifts back to main (answer at once, disk on the next save)', async () => {
         const server = await startServer()
 
         const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
@@ -692,8 +692,56 @@ describe('project contracts', () => {
         expect(payload.document.projectMeta.id).toBe('gallery-project')
         expect(payload.document.projectMeta.spaceId).toBe('gallery')
 
+        // The GET answers with the repair but writes nothing (a read that wrote
+        // back raced saves -- audit 2026-10-09 F3); the next save, under the
+        // project's write lock, puts the repair on disk.
+        expect(JSON.parse(await readFile(documentPath, 'utf8')).projectMeta.spaceId).toBe('main')
+        const saveResponse = await fetch(`${server.baseUrl}/api/projects/gallery-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'e1', type: 'box' } } }] })
+        })
+        expect(saveResponse.status).toBe(200)
+
         const repaired = JSON.parse(await readFile(documentPath, 'utf8'))
         expect(repaired.projectMeta.spaceId).toBe('gallery')
+    })
+
+    // Audit 2026-10-09 F3, through the wire: GET /document is a read. It leaves
+    // document.json byte-for-byte, and a section this build does not know
+    // survives the GET and the next save (serverXR/src/projectRead.test.js
+    // holds the store half, with the read-vs-save race).
+    it('GET /document writes nothing, and a field this build does not know survives the next save', async () => {
+        const server = await startServer()
+        expect((await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Newer Data', slug: 'newer-data' })
+        })).status).toBe(201)
+        const documentPath = path.join(server.dataRoot, 'spaces', 'main', 'projects', 'newer-data', 'document.json')
+        const onDisk = JSON.parse(await readFile(documentPath, 'utf8'))
+        onDisk.timelineState = { cues: [{ id: 'cue-1', at: 12.5 }] }
+        onDisk.entities.push({ id: 'from-newer', type: 'box', futureField: { keep: true } })
+        delete onDisk.showState
+        await writeFile(documentPath, JSON.stringify(onDisk))
+        const bytesBefore = await readFile(documentPath)
+        const mtimeBefore = (await stat(documentPath)).mtimeMs
+
+        const read = await (await fetch(`${server.baseUrl}/api/projects/newer-data/document`)).json()
+        expect(read.document.timelineState).toEqual({ cues: [{ id: 'cue-1', at: 12.5 }] })
+        expect((await readFile(documentPath)).equals(bytesBefore)).toBe(true)
+        expect((await stat(documentPath)).mtimeMs).toBe(mtimeBefore)
+
+        const saved = await fetch(`${server.baseUrl}/api/projects/newer-data/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'added', type: 'sphere' } } }] })
+        })
+        expect(saved.status).toBe(200)
+        const after = JSON.parse(await readFile(documentPath, 'utf8'))
+        expect(after.timelineState).toEqual({ cues: [{ id: 'cue-1', at: 12.5 }] })
+        expect(after.entities.find(e => e.id === 'from-newer').futureField).toEqual({ keep: true })
+        expect(after.entities.some(e => e.id === 'added')).toBe(true)
     })
 
     // Regression test for audit finding #16: a client retry (e.g. the
@@ -855,13 +903,45 @@ describe('project contracts', () => {
         expect(first['bare-one'].layers).toEqual({})
         // A window (the outliner) is neither a thing nor a connection.
         expect(first['held-one'].layers).toEqual({
-            objects: 2, things: 2, lamps: 1, joinedLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
+            objects: 2, things: 2, lamps: 1, joinedLamps: 1, stageLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
         })
         // Asked again from the cache: the same answer, and still nothing written.
         const second = await list()
         expect(second['held-one'].layers).toEqual(first['held-one'].layers)
         expect(second['held-one'].documentVersion).toBe(newVersion)
         expect(await readFile(documentPath, 'utf8')).toBe(before)
+    })
+
+    // P1 (2026-10-13): the card said "empty" over 133 files because the count
+    // never read document.assets. The list now counts the files, the pictures
+    // and the videos, and a picture's file is not counted twice.
+    it('the project list counts files and media, so a project that holds files is not empty', async () => {
+        const server = await startServer()
+        const created = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Files', slug: 'files-one', source: 'studio-v3' })
+        })
+        expect(created.status).toBe(201)
+        const asset = (id, size) => ({ type: 'upsertAsset', payload: { asset: { id, name: `${id}.bin`, mimeType: 'application/octet-stream', size } } })
+        const submit = await fetch(`${server.baseUrl}/api/projects/files-one/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [
+                    asset('pic-1', 1048576),
+                    asset('doc-1', 2097152),
+                    asset('doc-2', 1048576),
+                    { type: 'createEntity', payload: { entity: { id: 'pic', type: 'image', name: 'Pic', components: { media: { assetId: 'pic-1' } } } } }
+                ]
+            })
+        })
+        expect(submit.status).toBe(200)
+        const response = await fetch(`${server.baseUrl}/api/spaces/main/projects`)
+        const { projects } = await response.json()
+        const held = projects.find((project) => project.id === 'files-one')
+        expect(held.layers).toEqual({ objects: 1, things: 1, images: 1, files: 2, fileBytes: 4194304 })
     })
 
     it('names the collision when a project title/slug collides with one in a different space', async () => {
@@ -1170,6 +1250,31 @@ describe('the trash has scope, same as everything else', () => {
             headers: withAuth(EDITOR_TOKEN)
         })
         expect(allowedRestore.status).toBe(200)
+    })
+
+    // A follow reads the other machine's trash with its per-space sync key
+    // (follow/follower.js refreshStreams) — that key, and only for its own space.
+    it('lets a sync key read the trash of its own space only', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'keyed-space')
+        await createSpace(server, 'other-space')
+        const own = await createAndTrash(server, 'keyed-space', 'Keyed')
+        const other = await createAndTrash(server, 'other-space', 'Other')
+        const minted = await fetch(`${server.baseUrl}/api/spaces/keyed-space/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ label: 'follows keyed-space' })
+        })
+        expect(minted.status).toBe(201)
+        const key = withAuth((await minted.json()).token)
+
+        const read = await fetch(`${server.baseUrl}/api/trash?space=keyed-space`, { headers: key })
+        expect(read.status).toBe(200)
+        expect((await read.json()).projects.map(p => p.id)).toEqual([own.id])
+
+        expect((await fetch(`${server.baseUrl}/api/trash?space=other-space`, { headers: key })).status).toBe(403)
+        const unscoped = await (await fetch(`${server.baseUrl}/api/trash`, { headers: key })).json()
+        expect(unscoped.projects.map(p => p.id)).not.toContain(other.id)
     })
 
     it('shows an admin every space\'s trash', async () => {

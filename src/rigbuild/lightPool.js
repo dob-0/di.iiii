@@ -35,6 +35,7 @@
 // so the count never changes.
 
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
+import { lampIsFitted } from '../objectComponents/spotBeam.js'
 
 export const POOL_ID_PREFIX = 'rig-pool-'
 export const POOL_MAX_SLOTS = 12 // rig-lib.mjs SHADOW_SAFE_REAL_LIGHTS
@@ -211,7 +212,10 @@ export const applyLightPool = (entities, state, now, options = {}) => {
                 light: { ...light, intensity: Math.round(num(light.intensity) * envelope * 100) / 100 },
                 beam: { visible: false, ...(Number(src?.components?.beam?.strobeHz) > 0 ? { strobeHz: Number(src.components.beam.strobeHz) } : {}) },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
-                lightPool: { slot: k, lamp, envelope: Math.round(envelope * 1000) / 1000 }
+                // `fitted`: the light is a rig lamp's (spotBeam.js lampIsFitted), so the renderer fits its half-beam `angle`
+                // into three's cone as it does for the lamp itself. NOT a copy of `components.fixture`: the lamps' bodies, the
+                // patch and the haze machines would count the slot as a second lamp (known-fixes 2026-10-09).
+                lightPool: { slot: k, lamp, envelope: Math.round(envelope * 1000) / 1000, fitted: lampIsFitted(src?.components) }
             }
         })
     })

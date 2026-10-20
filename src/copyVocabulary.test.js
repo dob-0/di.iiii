@@ -83,6 +83,10 @@ const BANNED = [
     // (`cpanel-staging`) is dropped as code before this runs. An address inside a sentence ("open staging.di-studio.xyz") is a hit, on
     // purpose: copy names dev.diiii.xyz. A string that is ONLY the address reads
     // as code and is dropped, like any other dotted token.
+    // Retired 2026-10-15: the room's render quality is Quality, Low / High. `Lite` alone (capital L, whole word) is a hit;
+    // `Full` is too common an English word to ban alone, so only the pair `Full / Lite` (either order) is. The code keys
+    // 'lite' / 'full' and ?quality=lite|full stay as aliases and are lower case, so they never trip this.
+    { word: 'Lite', pattern: /\bLite\b|\bFull\s*\/\s*Lite\b/, use: 'Low / High (the room\'s Quality)' },
     { word: 'staging', pattern: /\bstaging\b/i, use: 'the dev tier (dev.diiii.xyz)' }
 ]
 
@@ -106,6 +110,7 @@ const COPY_FILES = [
     'src/index.html',
     'src/Menu.jsx',
     'src/RootApp.jsx',
+    'src/pages/shoot/ShootPage.jsx',
     'src/SpaceSurfaceApp.jsx',
     'src/SpacesPanel.jsx',
     'src/ViewPanel.jsx',
@@ -127,6 +132,8 @@ const COPY_FILES = [
     'src/hooks/useStatusItems.js',
     'src/landing/LandingPage.jsx',
     'src/landing/LocalHome.jsx',
+    'src/pages/DeviceLoginPage.jsx',
+    'src/landing/GuestAddressPanel.jsx',
     'src/pages/PrivacyPage.jsx',
     'src/pages/TermsPage.jsx',
     'src/project/components/JamSheet.jsx',
@@ -144,6 +151,7 @@ const COPY_FILES = [
     'src/raw/components/CreatePanelWindow.jsx',
     'src/raw/components/DesktopWindow.jsx',
     'src/raw/components/KeeperPanelWindow.jsx',
+    'src/raw/components/LaserOutPanelWindow.jsx',
     'src/raw/components/NodePalette.jsx',
     'src/raw/components/OutlinerPanelWindow.jsx',
     'src/raw/components/RawEditor.jsx',

@@ -8,6 +8,7 @@ import { useState } from 'react'
 // studio.css before adding this import, not because the flag keeps it out.
 import '../../raw/styles/raw.css'
 import RawGraphSurface from '../../raw/components/RawGraphSurface.jsx'
+import { getNodeType } from '../../project/nodeRegistry.js'
 
 // Read-only: no onCreateEdge/onDeleteEdge/onDeleteNode/onMoveNode/onEnterNode
 // passed to RawGraphSurface, so nothing here can mutate the document. This
@@ -33,7 +34,7 @@ export default function StudioGraphSurface({ document }) {
             {selectedNode && (
                 <div className="ssgs-node-readout">
                     <strong>{selectedNode.label}</strong>
-                    <span>{selectedNode.typeId}</span>
+                    <span>{getNodeType(selectedNode.typeId)?.label || 'Node'}</span>
                 </div>
             )}
         </div>

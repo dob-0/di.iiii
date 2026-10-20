@@ -14,12 +14,14 @@ const install = () => {
     const pending = []
     const stamps = []
     let frames = 0
+    let firstAt = null
     let latest = []
     const probe = {
         frame(entities) {
             frames += 1
             latest = entities || []
             const now = performance.now()
+            if (firstAt == null) firstAt = now
             stamps.push(now)
             while (stamps.length && now - stamps[0] > 1000) stamps.shift()
             if (!pending.length) return
@@ -49,7 +51,14 @@ const install = () => {
         driven() {
             return latest.filter((e) => e?.components?.rigDmx).map((e) => ({ id: e.id, index: e.components.fixture?.index ?? null, type: e.components.fixture?.type || null, ...e.components.rigDmx }))
         },
-        fps: () => stamps.length,
+        // null until a whole second has been drawn (the first reading said "room 1 fps" while
+        // the room was still loading), and pruned on read, so a stalled room reads 0, not its
+        // last good second
+        fps: () => {
+            const now = performance.now()
+            while (stamps.length && now - stamps[0] > 1000) stamps.shift()
+            return firstAt != null && now - firstAt >= 1000 ? stamps.length : null
+        },
         frames: () => frames
     }
     return probe

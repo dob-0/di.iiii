@@ -27,6 +27,22 @@ describe('machine hub peers', () => {
         expect(hub.listPeers(SPACE).map(peer => peer.peerId)).toEqual(['tab-1'])
     })
 
+    // 2026-10-02: a viewer asked asuz's kiosk (project `wall`) for project
+    // `test`'s camera. A tab now says which projects it runs and whether it can
+    // open a camera, and both survive the relay to the other machine.
+    it('carries which projects a tab runs and whether it can open a camera, through both relays', () => {
+        const hub = createMachineHub()
+        const said = hub.hello(SPACE, { peerId: 'kiosk', role: 'runner', projects: ['test', 'test', '', 7, 'wall'], capture: true, machine: HERE }).peer
+        expect(said).toMatchObject({ projects: ['test', 'wall'], capture: true })
+        expect(hub.hello(SPACE, { peerId: 'old-tab', role: 'runner', machine: HERE }).peer).toMatchObject({ projects: null, capture: null })
+        expect(hub.hello(SPACE, { peerId: 'odd-tab', projects: 'test', capture: 'yes', machine: HERE }).peer).toMatchObject({ projects: null, capture: null })
+
+        const host = createMachineHub()
+        host.recordRemotePeers(SPACE, viaFollower(HERE.id), hub.localPeers(SPACE).map(peer => ({ ...peer, machineId: HERE.id })))
+        const kiosk = host.listPeers(SPACE).find(peer => peer.peerId === 'kiosk')
+        expect(kiosk).toMatchObject({ projects: ['test', 'wall'], capture: true })
+    })
+
     it('forgets a peer not seen for 30s, and its mailbox with it', () => {
         const time = clock()
         const hub = createMachineHub({ now: time.now })

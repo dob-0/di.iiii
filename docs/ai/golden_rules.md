@@ -588,6 +588,16 @@ the registry is not one of the three.
 local build — the backstop that needs no list to be right), `src/timeline/`,
 `src/raw/director/`, `docs/deploy/DI_CLI.md`.
 
+### The scene is the page
+
+**Rule:** Every panel of a view page starts closed; one small control opens it; what a viewer opens is remembered for that viewer only (`localStorage`, always in try/catch). Nothing covers the scene at first load, on a phone too.
+
+**Why:** The owner opened /moxir/v2-9 for the first time (2026-10-13): the versions row, the SHOW chip with its PREVIEW row open, the scene chips and list, ten scene bricks, the scene bar, Walk/Fly, Quality (then called Lite) and Edit in Studio were all on the picture at once, and none of it could be managed from the Studio. Two earlier defaults ("open by default so scenes are selectable") each added a panel and none removed one.
+
+**How:** `useRememberedOpen(key)` (`src/utils/rememberedOpen.js`) is the only way a panel decides whether it is open; no `useState(true)` for a panel. Chips, panels and bricks take their look from `src/rigbuild/chromeStyle.js` (base.css tokens, 2 px, the Studio's type scale). What a visitor may have at all is the author's choice, stored with the views (`presentationState.visitorChrome`, per production in `productionViews.visitorChrome`; `src/shared/visitorChrome.js`), set in the Studio under Project > "What visitors see". Edit in Studio shows only to a session that can edit in that space. A new control on the view page gets a part in `VISITOR_PARTS` and a test that it starts closed.
+
+**Files:** `src/utils/rememberedOpen.js`, `src/shared/visitorChrome.js`, `src/rigbuild/{chromeStyle,SceneBar,DisplayChip,RoomLookFollower,RoomFavourites,RigVersionSwitch}`, `src/studio/components/{ScenePicker,StudioShellPanels}.jsx`, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md` (7).
+
 ---
 
 ## Context / Credit Awareness
@@ -894,6 +904,14 @@ const stop = async () => {
 **How:** If a linked project genuinely needs both a Studio-editable copy and a repo mirror (e.g. for git history or CI/Pages), the fix is a real pull command — `GET` the space document content and write it back to the repo file — not a convention to "just remember not to sync." Until that exists, keep the set of Studio-authoritative projects small and explicit (documented per-repo, e.g. `br_id_ge-ops/AGENTS.md`), and treat any push-sync script as scoped to repo-authoritative projects only.
 
 **Files:** `scripts/space-sync.mjs` (push-only, no pull), `br_id_ge-ops/scripts/sync-ops.sh`, `br_id_ge-ops/AGENTS.md` (per-project authority list).
+
+### WebGL shaders on Windows: bound big loops with a uniform, never a constant
+
+**Rule:** In a GLSL shader, any loop that runs more than a handful of times — or sits inside another loop — takes its bound from a uniform (`for (int i = 0; i < uSamples; i++)`), not a `#define` or a literal.
+
+**Why:** Chrome on Windows runs WebGL through ANGLE on Direct3D 11, which UNROLLS constant-bound loops. Nested, they multiply into an HLSL program too large to build: the link fails with an EMPTY info log and the stall loses the WebGL context (beamAirMaterial.js, 2026-10-01 — 12 samples × 12 haze jets × prism × honeycomb). Nothing in a unit test or on a Mac/Linux GPU shows it.
+
+**How to verify:** open the room in Chrome on Windows on the real GPU (Playwright `channel: 'chrome'`, `--use-angle=d3d11 --force_high_performance_gpu`) and read the console for `VALIDATE_STATUS false`. Guard for the beams: beamAir.test.js "no large constant-bound loop in the beam shader".
 
 ### 3D/spatial labels need a backdrop plate, and fixed UI chrome needs its neighbor's footprint reserved — neither gets overlap avoidance for free
 

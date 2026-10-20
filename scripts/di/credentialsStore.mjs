@@ -12,6 +12,7 @@
 // convention di-spaces' lib uses, so callers only ever append /api/….
 import fs from 'node:fs'
 import path from 'node:path'
+import { writeFileAtomicSync } from './atomicWrite.mjs'
 import { paths } from './paths.mjs'
 
 export const readCredentials = (home) => {
@@ -26,8 +27,20 @@ export const readCredentials = (home) => {
 
 export const readLink = (home, spaceId) => readCredentials(home)?.links?.[spaceId] || null
 
+// readCredentials degrades an unreadable file to "nothing linked", and the write below would then save that nothing over
+// it — taking every other space's key with it (a key is shown once; the host cannot hand it back). Keep what was there.
+const keepUnreadable = (file) => {
+    let raw
+    try { raw = fs.readFileSync(file, 'utf8') } catch { return }
+    if (!raw.trim()) return
+    try { JSON.parse(raw); return } catch { /* unreadable: keep a copy */ }
+    const copy = `${file}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`
+    try { fs.copyFileSync(file, copy); fs.chmodSync(copy, 0o600) } catch { /* the original stays until the write replaces it */ }
+}
+
 export const writeLink = (home, spaceId, { remote, key }) => {
     const file = paths(home).credentials
+    keepUnreadable(file)
     const current = readCredentials(home)
     const next = {
         ...current,
@@ -37,9 +50,8 @@ export const writeLink = (home, spaceId, { remote, key }) => {
         }
     }
     fs.mkdirSync(path.dirname(file), { recursive: true })
-    fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n', { mode: 0o600 })
-    // writeFileSync's mode only applies on create — an existing file keeps
-    // whatever it had, so tighten explicitly every time
-    fs.chmodSync(file, 0o600)
+    // 0600 on every rewrite (a plain write's mode only applies on create, so an old 0644 file kept its mode), and
+    // atomic: a freeze half-way through must leave the previous keys whole.
+    writeFileAtomicSync(file, JSON.stringify(next, null, 2) + '\n', { mode: 0o600 })
     return next.links[spaceId]
 }

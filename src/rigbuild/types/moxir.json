@@ -8,14 +8,412 @@
       "code": "UP-B380F",
       "identified": "EXACT",
       "identifiedNote": "EXACT",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-B380F",
       "modelledOn": null,
       "product": "UPlight UP-B380F, IP65 380 W beam moving head (outdoor)",
+      "makerModel": "IP65 380W Beam",
+      "manual": {
+        "what": "the printed \"MOVEHEAD FIXTURE USER MANUAL\" with the unit, ch. 3 Channel description, pp. 13-15 (LIST-1, 16 ch)",
+        "url": null,
+        "photos": [
+          "docs/moxir/devices/photos/b380f-manual-p13-ch1-9.jpg",
+          "docs/moxir/devices/photos/b380f-manual-p14-ch9-10.jpg",
+          "docs/moxir/devices/photos/b380f-manual-p15-ch10-16.jpg"
+        ],
+        "date": "photographed 2026-10-16 16:22",
+        "read": "photographed by the owner 2026-10-16 16:22 (di.bo inbox 2026-10-16, photo-1093…1101), read 2026-10-16 16:3x, values verbatim",
+        "basis": "APPROVED",
+        "archived_pdf": {
+          "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+          "file": "~/Downloads/moxir/devices/380-IP-BEAM.pdf",
+          "reason": "approved 2026-10-15 from a product page; NOT the unit's chart (pan ch 10 there, ch 1 in the printed manual) — archive.PDF-380-IP-BEAM"
+        }
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-b380f.json",
+        "modes": {
+          "16": "APPROVED"
+        }
+      },
       "category": "moving-head",
       "modes": [
         {
           "name": "16ch",
+          "footprint": 16,
+          "channels": [
+            {
+              "role": "pan",
+              "label": "Pan (0-540°)",
+              "default": 128
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (0-270°)",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine",
+              "default": 0
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine",
+              "default": 0
+            },
+            {
+              "role": "speed",
+              "label": "Pan/tilt speed (fast to slow)"
+            },
+            {
+              "role": "frost",
+              "label": "Frost (0-127 none, 128-191 colourful, 192-255 frost)",
+              "cap": {
+                "frost": {
+                  "from": 192,
+                  "to": 255,
+                  "basis": "MANUAL (printed, 2026-10-16): 192-255 insert frost; 128-191 is a colour filter, not frost"
+                }
+              }
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (0-3 dark, 4-103 pulse, 104-107 open, 108-207 fade, 208-212 open, 213-251 random, 252-255 open)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 3,
+                    "open": false
+                  },
+                  {
+                    "from": 104,
+                    "to": 107,
+                    "open": true
+                  },
+                  {
+                    "from": 208,
+                    "to": 212,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "color",
+              "label": "Colour wheel (0-4 white, 10-14 colour 1 … 130-134 colour 13, 5-wide splits between, 140-200 rotate fwd, 201-255 rev)",
+              "default": 0,
+              "cap": {
+                "wheel": [
+                  {
+                    "from": 0,
+                    "to": 4,
+                    "name": "open",
+                    "colour": "#ffffff"
+                  },
+                  {
+                    "from": 5,
+                    "to": 9,
+                    "half": [
+                      0,
+                      1
+                    ]
+                  },
+                  {
+                    "from": 10,
+                    "to": 14,
+                    "name": "red",
+                    "colour": "#ff2a0a"
+                  },
+                  {
+                    "from": 15,
+                    "to": 19,
+                    "half": [
+                      1,
+                      2
+                    ]
+                  },
+                  {
+                    "from": 20,
+                    "to": 24,
+                    "name": "green",
+                    "colour": "#00d12a"
+                  },
+                  {
+                    "from": 25,
+                    "to": 29,
+                    "half": [
+                      2,
+                      3
+                    ]
+                  },
+                  {
+                    "from": 30,
+                    "to": 34,
+                    "name": "blue",
+                    "colour": "#1f3cff"
+                  },
+                  {
+                    "from": 35,
+                    "to": 39,
+                    "half": [
+                      3,
+                      4
+                    ]
+                  },
+                  {
+                    "from": 40,
+                    "to": 44,
+                    "name": "yellow",
+                    "colour": "#ffe000"
+                  },
+                  {
+                    "from": 45,
+                    "to": 49,
+                    "half": [
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "from": 50,
+                    "to": 54,
+                    "name": "magenta",
+                    "colour": "#ff2fc8"
+                  },
+                  {
+                    "from": 55,
+                    "to": 59,
+                    "half": [
+                      5,
+                      6
+                    ]
+                  },
+                  {
+                    "from": 60,
+                    "to": 64,
+                    "name": "white (unsure)"
+                  },
+                  {
+                    "from": 65,
+                    "to": 69,
+                    "half": [
+                      6,
+                      7
+                    ]
+                  },
+                  {
+                    "from": 70,
+                    "to": 74,
+                    "name": "amber",
+                    "colour": "#ffb000"
+                  },
+                  {
+                    "from": 75,
+                    "to": 79,
+                    "half": [
+                      7,
+                      8
+                    ]
+                  },
+                  {
+                    "from": 80,
+                    "to": 84,
+                    "name": "lavender (unsure)"
+                  },
+                  {
+                    "from": 85,
+                    "to": 89,
+                    "half": [
+                      8,
+                      9
+                    ]
+                  },
+                  {
+                    "from": 90,
+                    "to": 94,
+                    "name": "lime",
+                    "colour": "#8cff3a"
+                  },
+                  {
+                    "from": 95,
+                    "to": 99,
+                    "half": [
+                      9,
+                      10
+                    ]
+                  },
+                  {
+                    "from": 100,
+                    "to": 104,
+                    "name": "orange",
+                    "colour": "#ff7a00"
+                  },
+                  {
+                    "from": 105,
+                    "to": 109,
+                    "half": [
+                      10,
+                      11
+                    ]
+                  },
+                  {
+                    "from": 110,
+                    "to": 114,
+                    "name": "red-orange",
+                    "colour": "#ff5a1e"
+                  },
+                  {
+                    "from": 115,
+                    "to": 119,
+                    "half": [
+                      11,
+                      12
+                    ]
+                  },
+                  {
+                    "from": 120,
+                    "to": 124,
+                    "name": "warm white",
+                    "colour": "#fff0c0"
+                  },
+                  {
+                    "from": 125,
+                    "to": 129,
+                    "half": [
+                      12,
+                      13
+                    ]
+                  },
+                  {
+                    "from": 130,
+                    "to": 134,
+                    "name": "light blue",
+                    "colour": "#a8d8ff"
+                  },
+                  {
+                    "from": 135,
+                    "to": 139,
+                    "half": [
+                      13,
+                      0
+                    ]
+                  },
+                  {
+                    "from": 140,
+                    "to": 200,
+                    "spin": "forward"
+                  },
+                  {
+                    "from": 201,
+                    "to": 255,
+                    "spin": "reverse"
+                  }
+                ]
+              }
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo (0-4 white, 5-9 gobo 1 … 85-89 gobo 17, 90-128 rotate rev, 129-131 stop, 132-170 rotate fwd, 171-255 shake gobo 1-17)",
+              "cap": {
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 89,
+                  "count": 17,
+                  "basis": "MANUAL (printed, 2026-10-16): 5-wide slots"
+                },
+                "goboShake": {
+                  "from": 171,
+                  "basis": "MANUAL (printed, 2026-10-16): 171-255 shake gobo 1-17"
+                }
+              }
+            },
+            {
+              "role": "prism",
+              "label": "Prism 1 (0-127 none, 128-255 in)",
+              "cap": {
+                "prism": true,
+                "prismIn": {
+                  "from": 128,
+                  "facets": 16,
+                  "basis": "MANUAL (printed, 2026-10-16): 128-255 insert prism 1; 16 facets from the spec (fixtures.json)"
+                }
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "index": {
+                    "from": 0,
+                    "to": 127
+                  },
+                  "basis": "MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse"
+                }
+              }
+            },
+            {
+              "role": "aux1",
+              "label": "Prism 2 (0-127 none, 128-255 in)",
+              "cap": {
+                "prism2": {
+                  "kind": "honeycomb",
+                  "in": {
+                    "from": 128
+                  },
+                  "basis": "MANUAL (printed, 2026-10-16): 128-255 insert prism 2"
+                }
+              }
+            },
+            {
+              "role": "aux2",
+              "label": "Prism 2 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "index": {
+                    "from": 0,
+                    "to": 127
+                  },
+                  "basis": "MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse"
+                }
+              }
+            },
+            {
+              "role": "focus",
+              "label": "Focus (far to near)"
+            },
+            {
+              "role": "control",
+              "label": "Reset (0-99 none; 100-105 lamp off, 200-205 lamp on, 210-215 reset XY, 220-235 reset effects, 240-255 reset all — always 0)",
+              "default": 0
+            }
+          ],
+          "channelsSource": {
+            "fixture": "U-Plus UP-B380F, the printed \"MOVEHEAD FIXTURE USER MANUAL\" with the unit (ch. 3 Channel table, pp. 13-15), photographed by the owner 2026-10-16",
+            "url": null,
+            "licence": null,
+            "basis": "APPROVED"
+          },
+          "src": "A",
+          "basis": "EXACT"
+        },
+        {
+          "name": "walk-2026-10-09",
           "footprint": 16,
           "channels": [
             {
@@ -44,7 +442,12 @@
             },
             {
               "role": "frost",
-              "label": "Frost"
+              "label": "Frost",
+              "cap": {
+                "frost": {
+                  "basis": "ASSUMED — linear, 0 clear … 255 full; the chart states no curve"
+                }
+              }
             },
             {
               "role": "strobe",
@@ -78,27 +481,63 @@
               "role": "gobo",
               "label": "Gobo (5-89 gobo 1-17, 171+ shake)",
               "cap": {
-                "gobo": true
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 89,
+                  "count": 17,
+                  "basis": "TESTED range; slots DERIVED"
+                },
+                "goboShake": {
+                  "from": 171,
+                  "basis": "TESTED"
+                }
               }
             },
             {
               "role": "prism",
               "label": "Prism 1 insert (128+ in)",
               "cap": {
-                "prism": true
+                "prism": true,
+                "prismIn": {
+                  "from": 128,
+                  "facets": 16,
+                  "basis": "TESTED threshold"
+                }
               }
             },
             {
               "role": "rotation",
-              "label": "Prism 1 rotation"
+              "label": "Prism 1 rotation",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+                }
+              }
             },
             {
               "role": "aux1",
-              "label": "Prism 2"
+              "label": "Prism 2",
+              "cap": {
+                "prism2": {
+                  "kind": "honeycomb",
+                  "in": {
+                    "from": 128
+                  },
+                  "basis": "ASSUMED — prism 1's threshold"
+                }
+              }
             },
             {
               "role": "aux2",
-              "label": "Prism 2 rotation"
+              "label": "Prism 2 rotation",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+                }
+              }
             },
             {
               "role": "focus",
@@ -114,10 +553,159 @@
             "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
             "url": null,
             "licence": null,
-            "basis": "TESTED"
+            "basis": "ARCHIVED"
           },
           "src": "A",
-          "basis": "EXACT"
+          "basis": "ARCHIVED",
+          "archived": true,
+          "reason": "the desk profile walked on Sevan units 2026-10-09 (ch 1-10). The printed manual with the unit (owner 2026-10-16) has this SAME order and is the default with the manual's value ranges; the walk stays for the record (its caps were ASSUMED where the manual now states them)"
+        },
+        {
+          "name": "pdf-380-ip-beam-2026-10-15",
+          "footprint": 16,
+          "channels": [
+            {
+              "role": "color",
+              "label": "Colour wheel (0 white, 10-14 colour 1 … 130-134 colour 13, 140+ rotate)",
+              "default": 0
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (0 close, 1-4 open, 51-240 slow to fast, 252-255 open)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 0,
+                    "open": false
+                  },
+                  {
+                    "from": 1,
+                    "to": 4,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo (0-4 white, 5-69 gobo 1-13, 191+ shake)",
+              "cap": {
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 69,
+                  "count": 13,
+                  "basis": "APPROVED chart: 5-wide slots stated"
+                },
+                "goboShake": {
+                  "from": 191,
+                  "basis": "APPROVED chart"
+                }
+              }
+            },
+            {
+              "role": "prism",
+              "label": "Prism (0-63 none, 64 prism 1, 128 prism 2, 192 both)",
+              "cap": {
+                "prism": true,
+                "prismIn": {
+                  "from": 64,
+                  "facets": 16,
+                  "basis": "APPROVED chart for the thresholds; which prism is 8 or 16 facets is ASSUMED"
+                }
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation (0-127 angle, 128+ spin)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "basis": "APPROVED chart; read as an index 0…255 → 0…360° (0-127 = 0-400°)"
+                }
+              }
+            },
+            {
+              "role": "aux1",
+              "label": "Prism 2 rotation (0-127 angle, 128+ spin)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "basis": "APPROVED chart; read as an index 0…255 → 0…360°"
+                }
+              }
+            },
+            {
+              "role": "frost",
+              "label": "Frost (0-127 none, 128-191 frost, 192-255 colourful)",
+              "cap": {
+                "frost": {
+                  "from": 128,
+                  "to": 191,
+                  "basis": "APPROVED chart: an insert, not a curve"
+                }
+              }
+            },
+            {
+              "role": "focus",
+              "label": "Focus"
+            },
+            {
+              "role": "pan",
+              "label": "Pan",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine",
+              "default": 0
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine",
+              "default": 0
+            },
+            {
+              "role": "speed",
+              "label": "Pan/tilt speed"
+            },
+            {
+              "role": "control",
+              "label": "Reset (26-76 effects, 77-127 XY, 128+ all; always 0)",
+              "default": 0
+            },
+            {
+              "role": "lamp",
+              "label": "Lamp (10-100 off, 101-255 on; the desk never sends it, 0)",
+              "default": 0
+            }
+          ],
+          "channelsSource": {
+            "fixture": "U-Plus IP65 380W Beam, PDF manual \"380 IP BEAM\" (upluslighting.com 2024-01) — ARCHIVED 2026-10-16",
+            "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+            "licence": null,
+            "basis": "ARCHIVED"
+          },
+          "src": "A",
+          "basis": "ARCHIVED",
+          "archived": true,
+          "reason": "the downloaded U-Plus \"380 IP BEAM\" PDF chart (pan ch 10, colour first), approved 2026-10-15 from a product page; NOT the unit's chart — the printed manual with the unit (owner 2026-10-16) has pan on ch 1. Kept so a desk that holds this profile still decodes"
         },
         {
           "name": "16ch-assumed",
@@ -471,6 +1059,7 @@
         "basis": "EXACT",
         "note": "A-CN gives rated 450 W; the higher figure (A) is kept for power planning"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 23,
         "src": "A",
@@ -509,6 +1098,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "maker's claim, not an independent measurement"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/beam380.glb",
         "sidecar": "scripts/place/fixtures/glb/beam380.json",
@@ -536,6 +1127,18 @@
         "A2": {
           "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
           "what": "UPlight UP-B380F, second store page"
+        },
+        "B380F-MANUAL-PRINT": {
+          "url": null,
+          "what": "The printed \"MOVEHEAD FIXTURE USER MANUAL\" shipped with the rental units themselves (UP-B380F; cover not photographed; the owner: \"the beam real chart\"), pp. 13-15 channel table, photographed by the owner 2026-10-16 16:22 and read the same hour. Photos: docs/moxir/devices/photos/b380f-manual-p13…p15.jpg"
+        },
+        "NEREID": {
+          "url": "https://electromarket.co.uk/beamz-pro-nereid380b-outdoor-weatherproof-moving-head-beam-light-380w",
+          "what": "BeamZ Pro Nereid380B, 380 W IP65 beam, 1 deg; 209,000 lx @ 7 m from the beamZ 152.040B listing (manuals.plus), via a search snippet — the low end of the 380 W class bracket"
+        },
+        "OSRAM380": {
+          "url": "https://www.osram.com/ecat/",
+          "what": "Osram eCat, SIRIUS HRI 380 W S PRO (ZMP_4061881): 20,000 lm, 7700 K, Ra 85, 70 V 5 A, 2500 h — values as quoted by a web search 2026-10-09; the product page answered HTTP 500 on a direct fetch, so UNVERIFIED at source. The lamp class of the UP-B380F (\"350XL/380\"); its make is not confirmed"
         },
         "SHEHDS-GALAXYJET": {
           "url": "https://shehds.com/products/galaxyjet-beam-380w-19r-moving-head-lights-display-stage-effect-lighting-for-dj-disco-stage-performance-stage-concert-wedding",
@@ -884,6 +1487,7 @@
         "src": "B",
         "basis": "EXACT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 13.5,
         "src": "B",
@@ -926,6 +1530,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "a 250 W LED spot, not a beam/spot/wash hybrid; the UP-250BSW zooms 10-30 deg"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/bsw250.glb",
         "sidecar": "scripts/place/fixtures/glb/bsw250.json",
@@ -1175,6 +1781,7 @@
         "basis": "EXACT",
         "note": "C3 says 300 W"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 15,
         "src": "OFL-K10",
@@ -1218,6 +1825,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "reseller claim, likely all colours at full"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/beeEye.glb",
         "sidecar": "scripts/place/fixtures/glb/beeEye.json",
@@ -1263,10 +1872,26 @@
       "code": "UP-PL5403",
       "identified": "EXACT",
       "identifiedNote": "EXACT",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-PL5403",
       "modelledOn": null,
       "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
+      "makerModel": "IP PAR-54X3",
+      "manual": {
+        "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+        "product_page": "https://www.upluslighting.com/product/543w-rgbw-led-par-light-for-outdoor/",
+        "date": "2024-01 (upload path; PDF created 2023-08-07)",
+        "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
+        "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
+        "basis": "APPROVED"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-pl5403.json",
+        "modes": {
+          "4": "APPROVED",
+          "8": "APPROVED"
+        }
+      },
       "category": "par",
       "modes": [
         {
@@ -1299,11 +1924,13 @@
             },
             {
               "role": "aux1",
-              "label": "Ch 7 (unused in the tested map)"
+              "label": "Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)",
+              "default": 0
             },
             {
               "role": "aux2",
-              "label": "Ch 8 (unused in the tested map)"
+              "label": "Function speed (0; never sent)",
+              "default": 0
             }
           ],
           "channelsSource": {
@@ -1441,6 +2068,12 @@
         "basis": "EXACT",
         "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
       },
+      "supply_w": {
+        "value": 200,
+        "src": "D-CN",
+        "basis": "EXACT",
+        "note": "the mains draw the maker states beside the 162 W rating (switch-mode supply with PFC): circuits and power totals are planned on it (audit A-05, 2026-10-05: 16 PARs on C6 = 3200 W at supply, over the 2944 W planning limit, though 2592 W at the rating)"
+      },
       "weight_kg": {
         "value": 8,
         "src": "D",
@@ -1472,6 +2105,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "no brand datasheet with lux for a 54 x 3 W PAR found (3 searches)"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/par.glb",
         "sidecar": "scripts/place/fixtures/glb/par.json",
@@ -1499,6 +2134,10 @@
         "D-CN": {
           "url": "https://www.uplight.com.cn/pd48298011.html",
           "what": "UPlight UP-PL5403 on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
+        },
+        "SEVAN": {
+          "url": null,
+          "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
         }
       },
       "manifest": {
@@ -1513,10 +2152,26 @@
       "code": "UP-LA40WF",
       "identified": "EXACT",
       "identifiedNote": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-LA40WF",
       "modelledOn": null,
       "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
+      "makerModel": "IP-LL40 (manual IP-LL30)",
+      "manual": {
+        "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+        "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+        "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+        "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+        "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+        "basis": "APPROVED"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-la40wf.json",
+        "modes": {
+          "19": "APPROVED",
+          "32": "APPROVED"
+        }
+      },
       "category": "laser",
       "modes": [
         {
@@ -1525,63 +2180,136 @@
           "channels": [
             {
               "role": "dimmer",
-              "label": "Ch 1 output (named dimmer so master/blackout reach it)"
+              "label": "Ch 1 output (named dimmer so master/blackout reach it)",
+              "default": 0
             },
             {
               "role": "c2",
-              "label": "Mode (25 auto, 75 voice, 250 manual graphics)"
+              "label": "Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, built-in graphics 200-255 by the PDF, 250-255 by the printed manual; static beam 250 — inside both)",
+              "default": 250
             },
             {
               "role": "c3",
-              "label": "Graphic select"
+              "label": "Graphic select (one graphic per two values; static beam 0 = graphic 1)",
+              "default": 0
             },
             {
               "role": "c4",
-              "label": "Display mode"
+              "label": "Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 0)",
+              "default": 0
             },
             {
               "role": "c5",
-              "label": "Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)"
+              "label": "Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)",
+              "default": 8,
+              "cap": {
+                "laserColour": [
+                  {
+                    "from": 0,
+                    "to": 16,
+                    "colour": "#ffffff",
+                    "name": "white"
+                  },
+                  {
+                    "from": 17,
+                    "to": 33,
+                    "colour": "#ff0000",
+                    "name": "red"
+                  },
+                  {
+                    "from": 34,
+                    "to": 50,
+                    "colour": "#00ff00",
+                    "name": "green"
+                  },
+                  {
+                    "from": 51,
+                    "to": 67,
+                    "colour": "#0000ff",
+                    "name": "blue"
+                  },
+                  {
+                    "from": 68,
+                    "to": 84,
+                    "colour": "#ffff00",
+                    "name": "yellow"
+                  },
+                  {
+                    "from": 85,
+                    "to": 101,
+                    "colour": "#ff00ff",
+                    "name": "purple"
+                  },
+                  {
+                    "from": 102,
+                    "to": 118,
+                    "colour": "#00ffff",
+                    "name": "cyan"
+                  }
+                ]
+              }
             },
             {
               "role": "c6",
-              "label": "X position (64 centre)"
+              "label": "X position (0-125 by hand, 64 centre)",
+              "default": 64,
+              "cap": {
+                "aim": {
+                  "axis": "x",
+                  "from": 0,
+                  "to": 125,
+                  "centre": 64,
+                  "halfDeg": 18.5,
+                  "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+                }
+              }
             },
             {
               "role": "c7",
-              "label": "Y position (64 centre)"
+              "label": "Y position (0-125 by hand, 64 centre)",
+              "default": 64,
+              "cap": {
+                "aim": {
+                  "axis": "y",
+                  "from": 0,
+                  "to": 125,
+                  "centre": 64,
+                  "halfDeg": 18.5,
+                  "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+                }
+              }
             },
             {
               "role": "c8",
-              "label": "Ch 8"
+              "label": "Zoom (0-10 none, 11-87 by hand, 88-150 zoom, 151-200 zoom out, 201-255 loop)"
             },
             {
               "role": "c9",
-              "label": "Ch 9"
+              "label": "X rotation (0 none, 1-128 by hand, 129-255 auto)"
             },
             {
               "role": "c10",
-              "label": "Ch 10"
+              "label": "Y rotation (0 none, 1-128 by hand, 129-255 auto)"
             },
             {
               "role": "c11",
-              "label": "Centre rotation (150 slow clockwise)"
+              "label": "Centre rotation (0 none, 1-128 by hand, 129-192 clockwise, 193-255 counter-clockwise; 150 = slow clockwise, tested)"
             },
             {
               "role": "c12",
-              "label": "Ch 12"
+              "label": "Gradual painting (0-10 none, 10-74 by hand, 75-104 grow, 105-144 fade, 145-184 loop fade, 185-224 / 225-255 end-to-end draw)"
             },
             {
               "role": "c13",
-              "label": "Wave 1"
+              "label": "X wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)"
             },
             {
               "role": "c14",
-              "label": "Wave 2"
+              "label": "Y wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)"
             },
             {
               "role": "c15",
-              "label": "Strobe"
+              "label": "Strobe (0-10 none, 11-199 auto slow to fast, 200-255 by sound)"
             },
             {
               "role": "c16",
@@ -1597,7 +2325,7 @@
             },
             {
               "role": "c19",
-              "label": "Ch 19"
+              "label": "Out-of-bounds (0-49 rebound, 50-99 to a line, 100-149 blanking, 150-255 pass through)"
             },
             {
               "role": "c20",
@@ -1737,6 +2465,7 @@
         "src": "BLUESEA",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 35,
         "src": "BLUESEA",
@@ -1767,6 +2496,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed)."
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/laser.glb",
         "sidecar": "scripts/place/fixtures/glb/laser.json",
@@ -1859,6 +2590,7 @@
         "src": "MAGICFX",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 4.2,
         "src": "MAGICFX",
@@ -1884,6 +2616,8 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/co2.glb",
         "sidecar": "scripts/place/fixtures/glb/co2.json",
@@ -1955,6 +2689,7 @@
         "basis": "EQUIVALENT",
         "note": "the code's '600' suggests a 600 W generic unit"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 8.5,
         "src": "SHOWVEN",
@@ -1981,6 +2716,8 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": 40,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/spark.glb",
         "sidecar": "scripts/place/fixtures/glb/spark.json",
@@ -2014,10 +2751,16 @@
       "code": "UP-YZ31P",
       "identified": "EQUIVALENT",
       "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT (wattage unknown)",
-      "maker": null,
+      "maker": "U-Plus Lighting",
       "model": null,
       "modelledOn": "Antari Z-1500 III fog machine",
       "product": "equivalent: Antari Z-1500 III fog machine",
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-yz31p.json",
+        "modes": {
+          "1": "ASSUMED"
+        }
+      },
       "category": "smoke-machine",
       "modes": [
         {
@@ -2067,6 +2810,7 @@
         "src": "ANTARI",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 13.3,
         "src": "ANTARI",
@@ -2092,6 +2836,12 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": {
+        "value": 150,
+        "src": "ANTARI",
+        "basis": "EQUIVALENT"
+      },
+      "nozzle_d_mm": 50,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/smoke.glb",
         "sidecar": "scripts/place/fixtures/glb/smoke.json",
@@ -2221,6 +2971,7 @@
         "basis": "EQUIVALENT",
         "note": "maximum; 663 W typical"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 7.8,
         "src": "MARTIN-A3K",
@@ -2252,6 +3003,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "flux from the maker; the angle ASSUMED (see specs.beam_deg), so the candela is a planning figure"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/strobe.glb",
         "sidecar": "scripts/place/fixtures/glb/strobe.json",
@@ -2420,6 +3173,7 @@
         "basis": "EQUIVALENT",
         "note": "at 230 V"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 8.7,
         "src": "CHAUVET-STRIKE4",
@@ -2449,6 +3203,8 @@
         "photometrySrc": "CHAUVET-STRIKE4",
         "photometryBasis": "EQUIVALENT"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/blinder.glb",
         "sidecar": "scripts/place/fixtures/glb/blinder.json",
@@ -2538,6 +3294,7 @@
         "src": "ANTARI-HZ1000",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 74.6,
         "src": "ANTARI-HZ1000",
@@ -2563,6 +3320,13 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": {
+        "value": 2.2,
+        "src": "ANTARI-HZ1000",
+        "basis": "EQUIVALENT",
+        "note": "at 100 % output"
+      },
+      "nozzle_d_mm": 70,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/hazer.glb",
         "sidecar": "scripts/place/fixtures/glb/hazer.json",
@@ -2669,6 +3433,7 @@
         "basis": "EXACT",
         "note": "rated 180 W (200 W light source)"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 5.1,
         "src": "E",
@@ -2699,6 +3464,8 @@
         "photometryBasis": "ASSUMED",
         "note": "no maker (UPlight, FOS) publishes a lux or lumen figure for this class. ASSUMED 9,000 lm out of the fixture: a 200 W white COB at ~100–130 lm/W (package) through a PAR reflector at ~40–45 % optical efficiency — an estimate, to be replaced by a measurement or the rental unit's report (OWED). By I = F / Ω it gives ≈ 18,800 cd on axis at 45° (the PL5403's equivalent-sourced figure: 11,000 cd at 25°)."
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/cob200.glb",
         "sidecar": "scripts/place/fixtures/glb/cob200.json",
@@ -2723,6 +3490,164 @@
       "manifest": {
         "file": "scripts/place/fixtures/fixtures.json",
         "kind": "cob200",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
+    },
+    {
+      "id": "ext-lc-ultra-mk2",
+      "code": "EXT-LC-ULTRA-MK2",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT (Wicked Lasers LaserCube Ultra MK2, from the maker's page and manual) — from another supplier: the owner's own cubes, not a line on the rental house's list (owner 2026-10-04)",
+      "maker": null,
+      "model": "EXT-LC-ULTRA-MK2",
+      "modelledOn": null,
+      "product": "Wicked Lasers LaserCube Ultra MK2, 10 W RGB laser projector (455 / 525 / 638 nm), AT-40S galvos 35k pps @ 7°; Ethernet RJ45 100 Mbps and WiFi, DMX in/out, Art-Net, ILDA, SD card, CubeOS stand-alone",
+      "category": "laser",
+      "modes": [
+        {
+          "name": "16ch",
+          "footprint": 16,
+          "channels": [
+            {
+              "role": "c1",
+              "label": "Access mode (0-31 blackout, 33-95 basic 4 ch, 97-159 standard 8, 161-223 extended 12, 225-255 full 16)"
+            },
+            {
+              "role": "c2",
+              "label": "Page (9 pages of 48 cues)"
+            },
+            {
+              "role": "c3",
+              "label": "Cue select (0-31 blackout, then cues 1-48)"
+            },
+            {
+              "role": "c4",
+              "label": "Speed (0-15 100 %, 17-31 pause, 33… 25 % … 128 100 % … 255 200 %)"
+            },
+            {
+              "role": "dimmer",
+              "label": "Fader (named dimmer so master/blackout reach it)"
+            },
+            {
+              "role": "c6",
+              "label": "Scale (zero … full size)"
+            },
+            {
+              "role": "c7",
+              "label": "X size (0 −full, 128 zero, 255 +full)"
+            },
+            {
+              "role": "c8",
+              "label": "Y size (0 −full, 128 zero, 255 +full)"
+            },
+            {
+              "role": "c9",
+              "label": "Rotation (0 … 360°)"
+            },
+            {
+              "role": "c10",
+              "label": "X position (128 centre)",
+              "default": 128
+            },
+            {
+              "role": "c11",
+              "label": "Y position (128 centre)",
+              "default": 128
+            },
+            {
+              "role": "c12",
+              "label": "Reserved"
+            },
+            {
+              "role": "c13",
+              "label": "Scan rate (0-31 default 35K pps, 33-223 6K-29K, 225+ 30K)"
+            },
+            {
+              "role": "c14",
+              "label": "Reserved"
+            },
+            {
+              "role": "c15",
+              "label": "Recolour (0-31 off, 33-223 hue sweep, 225+ white)"
+            },
+            {
+              "role": "c16",
+              "label": "Reserved"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Wicked Lasers LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, DMX/Art-Net channel layout)",
+            "url": "https://www.laseros.com/manual-mk2.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "src": "LASEROS-MK2",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "16ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": null,
+      "supply_w": null,
+      "weight_kg": {
+        "value": 3.7,
+        "src": "LASEROS-MK2",
+        "basis": "EXACT"
+      },
+      "size_mm": {
+        "value": [
+          155,
+          150,
+          155
+        ],
+        "src": "LASEROS-MK2",
+        "basis": "EXACT",
+        "order": "published 155 x 150 x 155 mm"
+      },
+      "pan_tilt_deg": null,
+      "ip": null,
+      "optics": {
+        "beam_deg": null,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": "LASEROS-MK2",
+        "photometryBasis": "EXACT",
+        "note": "a laser is not a lamp with a candela figure: 10 W optical, 4 mm beam, 1 mrad (LASEROS-MK2), scanned into shapes. Its drawn beam's air brightness is set by hand (the rig's airFixed)."
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/lasercube.glb",
+        "sidecar": "scripts/place/fixtures/glb/lasercube.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.11,
+        "lensY": 0.214,
+        "sizeAtHome_mm": {
+          "width_x": 255,
+          "depth_z": 155,
+          "height_y": 214
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "LASEROS-MK2": {
+          "url": "https://www.laseros.com/lasercube-models/",
+          "what": "Wicked Lasers, LaserCube Ultra MK2: the maker's specs page, and its ULTRA MK2 Guide v1.2 (https://www.laseros.com/manual-mk2.pdf): specifications, connections, and the DMX/Art-Net default fixture channel layout (pp. 57-59). Accessed 2026-10-04"
+        },
+        "LASEROS-MK2-MANUAL-V1": {
+          "file": "/mnt/data/backups/lasercube-mk2-sd-2026-09-10/ULTRA_MK2 Full Manual v1-0.pdf",
+          "sha256_16": "055b6761e13250f1",
+          "what": "LaserCube Ultra MK2 Full Manual v1.0 (89 pp), from the SD card of the owner's own cubes (backup 2026-09-10), pp. 11-12: the '7.5 Ultra Mk2' (7500 mW: blue 455 nm 4000, green 525 nm 2000, red 638 nm 1500 mW) and the 2.5 W variant. No beam diameter or divergence line. Read with pdftotext 2026-10-09"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "lasercube",
         "writtenAt": "2026-09-28",
         "accessed": "2026-09-28"
       }

@@ -177,7 +177,8 @@ export const checkCode = () => {
   // repo-state.mjs deliberately never fetches on its own — see its header
   // comment — so calling getState() here, right after the fetches above, is
   // what makes its branch-position numbers fresh instead of stale-by-design.
-  const state = getState()
+  // Only this checkout: the check reads nothing about the others (see getState).
+  const state = getState({ currentOnly: true })
 
   const currentWorktree = (state.worktrees || []).find((wt) => wt.path === state.currentPath)
 

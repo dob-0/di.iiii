@@ -12,6 +12,8 @@
 // about where a head is turned.
 
 import { plotData } from './sheet.js'
+import { lensGlowOf } from './lensMaterial.js'
+import { typeById } from './fixtureTypes.js'
 
 export { hasRigLamps } from './hasRigLamps.js'
 
@@ -44,7 +46,18 @@ export const rigBodyLamps = (entities = [], library) => {
             mount: l.mount,
             hung: l.hung,
             beam: l.beam,
-            colour: lensColour(e.components?.light?.color || '#ffffff', e.components?.rigShown?.level)
+            colour: lensColour(e.components?.light?.color || '#ffffff', e.components?.rigShown?.level),
+            // the lens as a source (lensMaterial.js): its luminance down the beam and the
+            // beam's own profile off it — from the light the lamp is drawn with now
+            glow: lensGlowOf({
+                intensity: e.components?.light?.intensity,
+                aperture: e.components?.beam?.aperture,
+                angle: e.components?.light?.angle,
+                penumbra: e.components?.light?.penumbra,
+                // a laser's lens never flares here: lasers stay dark in the room (laser gate)
+                on: e.components?.beam?.visible !== false && Number(e.components?.rigShown?.level ?? 1) > 0
+                    && typeById(library, e.components.fixture.type)?.category !== 'laser'
+            })
         }
     })
 }

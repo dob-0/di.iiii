@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { StructurePanel } from './StudioShellPanels.jsx'
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 
 const entities = [
     { id: 'visible', type: 'box', name: 'Visible', components: { runtime: { visible: true, locked: false } } },
@@ -97,5 +98,31 @@ describe('StructurePanel rename and runtime toggles', () => {
         renderFull()
         expect(screen.getByRole('button', { name: 'Show' })).toHaveAttribute('aria-pressed', 'true')
         expect(screen.getByRole('button', { name: 'Unlock' })).toHaveAttribute('aria-pressed', 'true')
+    })
+})
+
+describe('StructurePanel markup (P17)', () => {
+    it('never nests a button inside a button, and the row still selects by click and keyboard', () => {
+        const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const onSelectEntity = vi.fn()
+        const { container } = render(
+            <StructurePanel entities={entities} selectedEntityId="visible" selectedEntityIds={['visible']} onSelectEntity={onSelectEntity} onToggleSelectEntity={() => {}} onToggleEntityVisible={() => {}} onToggleEntityLocked={() => {}} />
+        )
+        expect(container.querySelector('button button')).toBeNull()
+        expect(err.mock.calls.some((c) => String(c[0]).includes('validateDOMNesting') || String(c.join(' ')).includes('descendant of <button>'))).toBe(false)
+        err.mockRestore()
+        const row = screen.getByText('Locked').closest('.spa-item')
+        fireEvent.click(row)
+        fireEvent.keyDown(row, { key: 'Enter' })
+        expect(onSelectEntity).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe('formatNumberDisplay (P10)', () => {
+    it('rounds only what is shown', () => {
+        expect(formatNumberDisplay(0.5844327123)).toBe('0.5844')
+        expect(formatNumberDisplay(2)).toBe('2')
+        expect(formatNumberDisplay(-1.50004)).toBe('-1.5')
+        expect(formatNumberDisplay('')).toBe('')
     })
 })

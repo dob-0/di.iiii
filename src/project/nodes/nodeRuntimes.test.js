@@ -770,3 +770,127 @@ describe('device.midi.out status', () => {
         expect(evaluateNodeOutput(target, 'status', context)).toBe('Sending to 2 devices')
     })
 })
+
+describe('device.laser.out status', () => {
+    it('reads the panel report from the live side channel, empty when unmounted', () => {
+        const doc = { nodes: [node('lo', 'device.laser.out')], edges: [] }
+        expect(evalPort(doc, 'lo', 'status')).toBe('')
+        const live = new Map([['lo:status', 'Armed: 6 cubes, 6 connected']])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(doc.nodes[0], 'status', context)).toBe('Armed: 6 cubes, 6 connected')
+    })
+})
+
+describe('laser.shape frame', () => {
+    const frameAt = (values, now = 0) => {
+        const doc = { nodes: [node('ls', 'laser.shape', values)], edges: [] }
+        return evaluateNodeOutput(doc.nodes[0], 'frame', createNodeGraphContext(doc, { now }))
+    }
+    it('is a laser frame with a drawn circle by default', () => {
+        const frame = frameAt({})
+        expect(frame.kind).toBe('laser')
+        expect(frame.points.length).toBe(120)
+        expect(frame.points[0].length).toBe(5)
+    })
+    it('takes colour and level from its ports', () => {
+        const [, , r, g, b] = frameAt({ colour: '#ff0000', level: 0.5 }).points[0]
+        expect([r, g, b]).toEqual([0.5, 0, 0])
+    })
+    it('spins with the document clock', () => {
+        // height 0: the shape at the field's centre, so the turn alone moves the point
+        const still = frameAt({ shape: 'line', size: 1, spin: 0.25, height: 0 }, 0).points[0]
+        const turned = frameAt({ shape: 'line', size: 1, spin: 0.25, height: 0 }, 1000).points[0]
+        expect(still[0]).toBeCloseTo(-1, 6)
+        expect(turned[0]).toBeCloseTo(0, 6)
+        expect(turned[1]).toBeCloseTo(-1, 6)
+    })
+    it('sits up the field by default (height 0.5): nothing in the half the server blanks', () => {
+        const ys = frameAt({ shape: 'circle', size: 0.5 }).points.map((p) => p[1])
+        expect(Math.min(...ys)).toBeGreaterThanOrEqual(-1e-9)
+    })
+})
+
+describe('view.text — what the note says, on a wire', () => {
+    it('gives its own content', () => {
+        const doc = { nodes: [node('t', 'view.text', { content: 'Bar · 23:00' })], edges: [] }
+        expect(evalPort(doc, 't', 'text')).toBe('Bar · 23:00')
+    })
+
+    it('passes on a wired string, not the typed one', () => {
+        const doc = {
+            nodes: [node('s', 'value.string', { value: 'from the wire' }), node('t', 'view.text', { content: 'typed' })],
+            edges: [edge('s', 'out', 't', 'content')]
+        }
+        expect(evalPort(doc, 't', 'text')).toBe('from the wire')
+    })
+
+    it('feeds a Scene title (the owner\'s case: Text OUT → something)', () => {
+        const doc = {
+            nodes: [node('t', 'view.text', { content: 'NOPA x MOCT' }), node('w', 'universe.world')],
+            edges: [edge('t', 'text', 'w', 'title')]
+        }
+        expect(evalPort(doc, 'w', 'title')).toBe('NOPA x MOCT')
+    })
+})
+
+describe('view.list — rows and count, in reading order', () => {
+    const values = {
+        groups: ['Bar', 'Studio'],
+        items: [
+            { id: 'a', text: 'projector', group: 'Studio' },
+            { id: 'b', text: 'laptop', group: 'Bar' },
+            { id: 'c', text: '   ', group: 'Bar' },
+            { id: 'd', text: 'haze', group: 'Gone' },
+            { id: 'e', text: 'projector', group: 'Bar' },
+        ]
+    }
+
+    it('reads group by group, skips empty rows, keeps rows of a removed group last', () => {
+        const doc = { nodes: [node('l', 'view.list', values)], edges: [] }
+        expect(evalPort(doc, 'l', 'text')).toBe('laptop\nprojector\nprojector\nhaze')
+        expect(evalPort(doc, 'l', 'count')).toBe(4)
+    })
+
+    it('an empty list carries an empty string and 0', () => {
+        const doc = { nodes: [node('l', 'view.list')], edges: [] }
+        expect(evalPort(doc, 'l', 'text')).toBe('')
+        expect(evalPort(doc, 'l', 'count')).toBe(0)
+    })
+})
+
+describe('universe.world Picture — the Scene, seen', () => {
+    it('carries what the live window published, and null where nothing draws it', () => {
+        const world = node('w', 'universe.world')
+        const picture = { isTexture: true }
+        const drawn = createNodeGraphContext({ nodes: [world], edges: [] }, { liveOutputs: new Map([['w:picture', picture]]) })
+        expect(evaluateNodeOutput(world, 'picture', drawn)).toBe(picture)
+        expect(evalPort({ nodes: [world], edges: [] }, 'w', 'picture')).toBeNull()
+    })
+
+    it('a Picture wire into an Image is a legal texture → texture wire', () => {
+        const out = getNodeType('universe.world').outputs.find((port) => port.id === 'picture')
+        const into = getNodeType('view.image').inputs.find((port) => port.id === 'src')
+        expect(out.type).toBe('texture')
+        expect(into.type).toBe(out.type)
+    })
+})
+
+describe('number → vector, converted at the link', () => {
+    it('a Number into a Cube\'s Size fills x, y and z', () => {
+        const doc = {
+            nodes: [node('n', 'value.number', { value: 2 }), node('c', 'geom.cube')],
+            edges: [edge('n', 'out', 'c', 'size')]
+        }
+        const context = createNodeGraphContext(doc)
+        const cube = doc.nodes[1]
+        expect(evaluateNodeOutput(cube, 'geometry', context).size).toEqual([2, 2, 2])
+    })
+
+    it('a number into a Number socket stays a number', () => {
+        const doc = {
+            nodes: [node('n', 'value.number', { value: 0.3 }), node('c', 'geom.cube')],
+            edges: [edge('n', 'out', 'c', 'opacity')]
+        }
+        expect(evaluateNodeOutput(doc.nodes[1], 'geometry', createNodeGraphContext(doc)).size).toEqual([1, 1, 1])
+    })
+})

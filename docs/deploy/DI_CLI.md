@@ -31,9 +31,13 @@ di spaces      what is in this di.iiii
 
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
+di channel     which channel this install follows: stable (releases) or dev (what dev.diiii.xyz serves)
+di autoupdate  on | off | status — keep it on its channel every 15 minutes (Linux)
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
 di ndi get     video in and out over the network — OBS, Resolume, a projector
+di login       sign in once from the terminal — then di and Claude act as you
+di whoami      who this terminal is signed in as · di logout ends it
 di help        the rest
 ```
 
@@ -346,6 +350,40 @@ What it does and does not change:
   over plain http is not one; `--lan` opens the page to a headset's browser but
   not the XR session. That gap is separate and unsolved.
 
+### `di service install` — systemd keeps it up (Linux)
+
+Without it, `di up` starts the server detached and walks away: if the process
+dies — a crash, an out-of-memory kill, a `pkill -f` aimed at some other dev
+server (that killed the installed di on aylmo three times in September 2026) —
+nothing notices and nothing starts it again. `di service install` hands the
+server to systemd:
+
+```
+di service install            # writes ~/.config/systemd/user/di-server.service, enables it
+di service                    # the unit, its main pid, how often it was restarted
+di service remove             # undo exactly that; a running server comes back unsupervised
+```
+
+- **The server IS the unit's main process** (`Type=exec`), so systemd sees it
+  die. `Restart=always`, not `on-failure`: SIGTERM — what `kill` and `pkill`
+  send — is a clean exit to `on-failure`, which would not restart the very
+  kill this exists for. `systemctl stop` (what `di down` does) is never
+  restarted by systemd under either. `RestartSec=2`, backing off to 60 s
+  (`RestartSteps`/`RestartMaxDelaySec`, systemd ≥ 254); ten starts in five
+  minutes and systemd gives up and `di status` says so — `di up` tries again.
+- **The unit names `~/.di/current`, never a version.** `di update` stops the
+  unit, flips `current`, starts it: the same unit runs the new build.
+- **`di up / down / status / logs / update` drive the unit** once it is
+  installed. `di logs` reads the journal (`journalctl --user -u di-server`).
+- **The environment is the same one the detached start uses** (one
+  `serverEnv()`), written to `~/.di/run/server.env` (0600). `--lan` and
+  `--guests` go to `$XDG_RUNTIME_DIR/di-server.start.env`: a crash-restart keeps
+  them, a reboot forgets them — `--lan` is still per start.
+- **A user unit runs while you are logged in**, like any login item. To have it
+  from boot without a login: `loginctl enable-linger $USER`.
+- **Not covered:** macOS (launchd `KeepAlive`) and Windows are unchanged — the
+  detached start, as before; a docker install is not covered either.
+
 `npm run selfhost` still exists and is unchanged — that is the developer path,
 for someone who wants the source and the dev stack.
 
@@ -355,6 +393,25 @@ for someone who wants the source and the dev stack.
 installs dependencies and health-checks it **on a scratch port** before stopping
 anything. `current` flips last. Any failure leaves you exactly where you were
 and says so. `di update --rollback` returns to `previous`.
+
+### Channels and automatic updates
+
+- `di update --channel stable` (the default) installs the newest published release.
+- `di update --channel dev` installs the dev-channel build of the commit **dev.diiii.xyz is serving right now**
+  (read from its `/serverXR/api/health`), so this install never runs ahead of or behind the hub. If CI has not
+  published that commit yet it says so; run it again in a few minutes. The checksum is verified before anything is
+  unpacked.
+- No GitHub account is needed, ever: installs download public release files anonymously.
+- `di channel dev` remembers the channel; `di channel` shows it.
+- `di autoupdate on` installs a systemd **user** timer (Linux) that runs the update every 15 minutes. It skips and
+  logs while the CPU package is above 85 C. `di autoupdate status` (and `di status`) show last check, last update and
+  last error; the log is `~/.di/logs/autoupdate.log`, one line per run. `di autoupdate off` removes it.
+  To run with nobody logged in: `loginctl enable-linger $USER`.
+- On a running di an automatic update restarts it, like `di update` does. Keep a show on `stable`, or `autoupdate off`.
+- Windows and macOS: not built. The equivalent is a Task Scheduler task or a LaunchAgent running
+  `di autoupdate run` every 15 minutes.
+
+Why and the limits: `docs/architecture/decisions/2026-10-05-release-channels.md`.
 
 ### What an update actually risks
 
@@ -538,6 +595,35 @@ looked nothing like a real install — see below.
   PATH line in `.zshrc` is missing from exactly the shell an artist opens next.
   Pick the rc file from `$SHELL`, not from which files happen to exist —
   `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
+
+## Signing in from the terminal
+
+`di login` signs this machine in once, so `di` and the agents started from it
+(`di mcp`, Claude) act as the person in their own spaces — no trip to the
+browser for every space. Method and wire format: `docs/architecture/CLI_LOGIN.md`
+(the OAuth device flow, RFC 8628, the one `gh auth login` uses).
+
+```
+di login                        sign in to dev.diiii.xyz: the terminal shows a code, you type it in the browser you are signed in with
+di login --tier prod            another di.iiii of ours   (--to https://example.org for any other)
+di whoami                       who this terminal is signed in as, and when the login would end
+di logout                       end it on the host and remove it here
+di mcp --tier dev               hand dev.diiii.xyz to an agent, as that person
+```
+
+- Kept in `~/.config/di/credentials.json` (folder 0700, file 0600, written
+  atomically) — the file the SDK already reads: an entry per tier (`dev`, `prod`,
+  `local`), and one per origin for any other host. `DI_TOKEN` still wins, for CI.
+  The token is never printed and never put in an argument.
+- A terminal login can read and edit the person's spaces and projects. It cannot
+  publish or delete a space, mint access, or change who owns or edits one: those
+  stay in the browser.
+- It ends when the person ends it (the list at `/device` on that di.iiii, or
+  `di logout`), or after 90 days unused (a year at most). Signing out of the
+  browser does not end it.
+- Plain http to an address that is not yours is refused unless `--insecure`.
+- Not seen yet on any machine but the one it was built on. Windows file
+  permissions for the token file are untested.
 
 ## Handing it to an agent
 

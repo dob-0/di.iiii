@@ -434,9 +434,17 @@ function createDesk(opts = {}) {
     // (sanitizeLayer drops them): a fade in progress does not survive a restart.
     const before = layer.lookId;
     layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    // The beat the replaced look keeps through the crossfade: its own firedAt (lookMotion.js motionFrame blends the two
+    // looks' level motion over fadeMs, the old on its beat, the new on this one). In memory only, like fromLookId.
+    layer.fromFiredAt = before && before !== look.id ? (Number.isFinite(layer.firedAt) ? layer.firedAt : null) : (before === look.id ? layer.fromFiredAt || null : null);
     layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
     layer.firedAt = Date.now();
     layer.lookId = look.id;
+    // Who put it here, kept in memory only (sanitizeLayer drops it): nowOnDesk() reads it.
+    // firedFor pins the claim to this look, so a layer later pointed elsewhere by hand never
+    // inherits a stale "cue". (MOXIR UI audit, 2026-10-01)
+    layer.firedBy = body.by === 'cue' ? 'cue' : 'manual';
+    layer.firedFor = look.id;
     layer.on = true;
     // The cue layer is the show's playback, and a cue says what each lamp it names IS:
     // intensity LTP, as a console's cue list (ETC Eos: cue lists LTP by default, subs
@@ -458,7 +466,7 @@ function createDesk(opts = {}) {
     fire: (cue) => {
       const look = state.looks.find((l) => l.id === cue.lookId);
       if (!look) return false;
-      fireLook(look, { layerId: CUE_LAYER, fadeMs: cue.fade * 1000 });
+      fireLook(look, { layerId: CUE_LAYER, fadeMs: cue.fade * 1000, by: 'cue' });
       return true;
     },
     save: () => save(),
@@ -466,6 +474,28 @@ function createDesk(opts = {}) {
   });
   // Set once a show load has resumed the cue list, so boot does not resume it twice.
   let resumed = false;
+
+  // ONE NOW FOR THE DESK: what is on the cue layer and who put it there. A page used to
+  // work this out from the cue list alone and said "Nothing fired" while a look fired by
+  // hand was lit. source is 'cue' when the cue runner fired the look now on the layer,
+  // 'manual' for anything else; `cue` is where the list stands (null with no list), so a
+  // hand-fired look can still say where GO resumes. null when nothing is on.
+  // (MOXIR UI audit, 2026-10-01)
+  function nowOnDesk() {
+    const layer = state.layers.find((l) => l.id === CUE_LAYER);
+    if (!layer || !layer.on || !(layer.level > 0) || !layer.lookId) return null;
+    const look = state.looks.find((l) => l.id === layer.lookId);
+    const brief = cueRunner.brief();
+    // After a restart the in-memory claim is gone; the list's own place still tells.
+    const placed = brief && brief.index >= 0 && (state.cues.list[brief.index] || {}).lookId === layer.lookId;
+    const byCue = layer.firedFor === layer.lookId ? layer.firedBy === 'cue' : !!placed;
+    return {
+      lookId: layer.lookId,
+      name: look ? look.name : layer.lookId,
+      source: byCue ? 'cue' : 'manual',
+      cue: brief ? { index: brief.index, n: brief.n, running: brief.running, loop: brief.loop } : null,
+    };
+  }
 
   // ---- more than one device at once -----------------------------------------
   // Each extra send owns a driver instance of its own, keyed by the send's id. They are
@@ -501,12 +531,14 @@ function createDesk(opts = {}) {
   // The driver for one extra send, built or rebuilt when what it points at changes.
   function extraDriver(send) {
     const held = extraDrivers.get(send.id);
-    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority].join('|');
+    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority, send.universes.join()].join('|');
     if (held && held.sig !== sig) { held.drv.close(); extraDrivers.delete(send.id); }
     const again = extraDrivers.get(send.id);
     if (again) return again.drv;
     let drv = null;
-    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline });
+    // A widget carries ONE line: the universe it was told to (sendExtras sends that one). Built without it, the
+    // widget kept its default 0 and refused every other universe as unreachable — a U2 widget sent nothing (MOXIR 2026-10-17).
+    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline, universe: send.universes.length ? send.universes[0] : 0 });
     else if (send.driver === 'sacn') drv = new SACN({ offline, targets: send.targets, priority: send.priority, sourceName: 'di.iiii lighting desk' });
     // Art-Net needs no instance: one socket carries every destination, so an extra
     // Art-Net send is a list of addresses to also send each frame to, nothing more.
@@ -1045,6 +1077,7 @@ function createDesk(opts = {}) {
   function publicState(withScenes = true) {
     const patched = new Set(state.fixtures.map((f) => f.id));
     return Object.assign({}, state, {
+      now: nowOnDesk(),
       // How much of each scene still exists. Recall skips fixtures that have been unpatched,
       // so a scene saved against a rig that has since been repatched recalls silently and
       // does nothing at all — which reads as a broken button. The counts let the interface
@@ -1485,6 +1518,7 @@ function createDesk(opts = {}) {
       json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
     },
     'POST /api/cues/stop': (req, res) => json(res, { ...cueRunner.stop(), cues: cueRunner.full() }),
+    'POST /api/cues/autoplay': (req, res, body) => json(res, { ...cueRunner.setAutoplay(body.autoplay === true), cues: cueRunner.full() }),
     'POST /api/cues/loop': (req, res, body) => json(res, { ...cueRunner.setLoop(body.loop === true), cues: cueRunner.full() }),
 
     'POST /api/master': (req, res, body) => {
@@ -2365,6 +2399,11 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // The cue runner itself, for a caller in this process that drives the list on a
+    // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
+    // /api/cues routes call, so there is still ONE clock.
+    cueRunner,
+    hasLook: (id) => state.looks.some((l) => l.id === id),
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

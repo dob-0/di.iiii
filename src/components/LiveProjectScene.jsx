@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
+import Canvas from './GuardedCanvas.jsx'
 import { Grid, OrbitControls, Text, Billboard } from '@react-three/drei'
 import { TROIKA_FONT_URL } from '../project/viewport/troikaFont.js'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
@@ -19,6 +20,7 @@ import {
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 import { ensureGuestSession } from '../services/guestSession.js'
 import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
+import { outputRenderSettings } from '../project/viewport/outputMode.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
 import TorusObject from '../objectComponents/TorusObject.jsx'
@@ -31,6 +33,7 @@ import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
 import SpotLightObject from '../objectComponents/SpotLightObject.jsx'
+import { lampIsFitted } from '../objectComponents/spotBeam.js'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import useRoomSound from '../hooks/useRoomSound.js'
 import { roomHasSound } from '../utils/roomSound.js'
@@ -54,6 +57,7 @@ import {
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { dragLookDelta, wheelIntent, gestureDolly, clampPitch } from './walkInput.js'
 import { hasRigLamps } from '../rigbuild/hasRigLamps.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
@@ -64,6 +68,9 @@ import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
+import { isSteelEntity } from '../objectComponents/steelOccluder.js'
+import { isArchitectureEntity } from '../project/viewport/smartView/smartViewGeometry.js'
+import LoadingScreen from './LoadingScreen.jsx'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../rigbuild/RigBodies.jsx'))
@@ -90,6 +97,9 @@ const VIEW_ORBIT_DRIFT_SPEED = 0.35
 const tmpVec = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
 const tmpDir = new THREE.Vector3()
+// an architecture entity's group (objectComponents/beamReach.js finds the building by it)
+const BUILDING_TAG = Object.freeze({ svBuilding: true })
+const STEEL_TAG = Object.freeze({ svSteel: true })
 
 // Fly mode's altitude keys. A caller that needs Q and E for something else (the
 // rig builder's hand raises and lowers with them) passes its own set.
@@ -252,7 +262,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={lampIsFitted(entity.components)} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}
@@ -369,7 +379,8 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
 
     const children = childMap?.get(entity.id) || []
     return (
-        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale}>
+        // the building is tagged: a beam stops at it (objectComponents/beamReach.js)
+        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale} userData={isArchitectureEntity(entity) ? BUILDING_TAG : isSteelEntity(entity) ? STEEL_TAG : undefined}>
             {/* An enabled link makes the object itself clickable
                 (src/project/viewport/EntityLink.jsx); without one this
                 renders EntityVisual exactly as before. */}
@@ -452,7 +463,7 @@ function AmbientField({ center }) {
     )
 }
 
-// Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
+// Free-roam walk: WASD + arrows move/turn; desktop drags to look (no pointer lock);
 // mobile uses touch outside the joystick zone for look.
 // Where a walker stands when the space authored no arrival at all. Pure and
 // exported so the choice is testable without mounting a canvas.
@@ -464,7 +475,16 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
+// A touch-first device: a coarse primary pointer, or a touch screen with no fine
+// pointer anywhere (some phone browsers / emulations report `pointer: fine` while
+// still delivering touch only). A touch laptop with a mouse stays on drag-look.
+export const detectTouchDevice = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    if (window.matchMedia('(pointer: coarse)').matches) return true
+    return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
+}
+
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true, walkLook = 'lock' }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -521,9 +541,9 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         // element instead whenever AR is active.
         const el = (isArActive && arTouchElRef?.current) || gl.domElement
         const player = playerRef.current
-        const isTouch = isArActive || window.matchMedia('(pointer: coarse)').matches
+        const isTouch = isArActive || detectTouchDevice()
 
-        if (!isTouch) {
+        if (!isTouch && walkLook === 'lock') {
             // Desktop: pointer lock
             const onLockChange = () => {
                 // deadLockMoves/lockEngagedAt reset lives in onMouseMove now
@@ -716,6 +736,72 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                 document.removeEventListener('pointerlockchange', onLockChange)
                 document.removeEventListener('mousemove', onMouseMove)
             }
+        } else if (!isTouch) {
+            // Desktop and touchpad: ONE look mode, drag (Sketchfab Help "Navigation").
+            // No pointer lock: the pointer is never taken from the page, so Esc has
+            // nothing to release. Capture keeps the drag alive off the canvas.
+            let dragging = null
+            const onPointerDown = (e) => {
+                if (e.button !== 0) return
+                try { el.setPointerCapture(e.pointerId) } catch { /* pointer already gone */ }
+                dragging = { id: e.pointerId, last: e.clientX === 0 && e.clientY === 0 ? null : { x: e.clientX, y: e.clientY } }
+                el.style.cursor = 'grabbing'
+            }
+            const onPointerMove = (e) => {
+                if (!dragging || dragging.id !== e.pointerId) return
+                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
+                const d = dragLookDelta(dragging.last, e)
+                dragging.last = d.next
+                player.yaw += d.dYaw
+                player.pitch = clampPitch(player.pitch + d.dPitch, pitchLimit)
+            }
+            const onPointerUp = (e) => {
+                if (dragging && e && e.pointerId !== undefined && dragging.id !== e.pointerId) return
+                dragging = null
+                el.style.cursor = 'grab'
+            }
+            // Two-finger scroll: deltaY dollies, deltaX turns. Pinch (ctrlKey) zooms.
+            // Never the page: not passive, so the scroll, browser zoom and the
+            // horizontal back-swipe are cancelled here.
+            const onWheel = (e) => {
+                const w = wheelIntent(e, { dolly: wheelDollyRef_.current })
+                if (w.preventDefault && e.cancelable) e.preventDefault()
+                player.yaw += w.dYaw
+                wheelDollyRef.current += w.dolly
+            }
+            // Safari reports a touchpad pinch as gesture events, not ctrl-wheel.
+            let gestureScale = 0
+            const onGestureStart = (e) => { e.preventDefault(); gestureScale = e.scale || 1 }
+            const onGestureChange = (e) => {
+                e.preventDefault()
+                if (wheelDollyRef_.current) wheelDollyRef.current += gestureDolly(gestureScale, e.scale)
+                gestureScale = e.scale || gestureScale
+            }
+            const onGestureEnd = (e) => { e.preventDefault(); gestureScale = 0 }
+            el.style.cursor = 'grab'
+            el.style.touchAction = 'none'
+            el.addEventListener('pointerdown', onPointerDown)
+            el.addEventListener('pointermove', onPointerMove)
+            el.addEventListener('pointerup', onPointerUp)
+            el.addEventListener('pointercancel', onPointerUp)
+            el.addEventListener('wheel', onWheel, { passive: false })
+            el.addEventListener('gesturestart', onGestureStart)
+            el.addEventListener('gesturechange', onGestureChange)
+            el.addEventListener('gestureend', onGestureEnd)
+            window.addEventListener('blur', onPointerUp)
+            return () => {
+                el.style.cursor = ''
+                el.style.touchAction = ''
+                el.removeEventListener('pointerdown', onPointerDown)
+                el.removeEventListener('pointermove', onPointerMove)
+                el.removeEventListener('pointerup', onPointerUp)
+                el.removeEventListener('pointercancel', onPointerUp)
+                el.removeEventListener('wheel', onWheel)
+                el.removeEventListener('gesturestart', onGestureStart)
+                el.removeEventListener('gesturechange', onGestureChange)
+                el.removeEventListener('gestureend', onGestureEnd)
+                window.removeEventListener('blur', onPointerUp)
+            }
         } else {
             // Mobile: floating joystick on the left half (spawns at touch point,
             // no fixed dead zone), right half is always look.
@@ -730,7 +816,15 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                 if (joyThumbRef?.current) joyThumbRef.current.style.transform = 'translate(0,0)'
             }
             const hideJoy = () => {
-                if (joyVisRef?.current) joyVisRef.current.style.opacity = '0'
+                // Back to the resting ring (bottom-left, faint) so a touch screen always
+                // shows where the move control lives, not only while a thumb is on it.
+                if (joyVisRef?.current) {
+                    const o = joyVisRef.current.style
+                    o.left = ''
+                    o.top = ''
+                    o.bottom = ''
+                    o.opacity = ''
+                }
                 if (joystickRef) { joystickRef.current.x = 0; joystickRef.current.y = 0 }
             }
             const updateJoy = (tx, ty) => {
@@ -790,7 +884,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                 el.removeEventListener('touchcancel', onTouchEnd)
             }
         }
-    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
+    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef, walkLook])
 
     useFrame((frameState, delta) => {
         const player = playerRef.current
@@ -884,7 +978,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             player.z = dollied.z
         }
         if (fly && vert !== 0) {
-            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
+            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, FLY_MIN_ALTITUDE, 60)
         }
         if (!fly) {
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
@@ -939,6 +1033,9 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
 // slow and `dwell` long. The visitor always wins: the first yaw change we did
 // not make ourselves (mouse-look, thumbstick turn) hands the view over for good.
 const TOUR_YAW_EPSILON = 0.01
+// Fly never dips under the floor: below y=0 the eye is inside the ground and the
+// whole frame is one flat fill.
+const FLY_MIN_ALTITUDE = 0.25
 function RingTour({ playerRef, config }) {
     const startedAt = useRef(null)
     const surrendered = useRef(false)
@@ -1504,6 +1601,14 @@ export default function LiveProjectScene({
     cameraPoseRef = null,
     onExit = null,
     exitLabel = '← Exit',
+    // `topClear`: what the host page's own top chrome covers (CSS length). The header
+    // starts below it, so the exit button and title are not cut under a top bar.
+    topClear = null,
+    // `entitiesOverride`: the entities to draw instead of the loaded document's — the
+    // room as a desk look poses it (PublicProjectSceneSurface). Null: the document's own.
+    entitiesOverride = null,
+    // output mode (project/viewport/outputMode.js): the walk drawn light enough for a phone
+    outputMode = false,
     title = '',
     // --- Four optional seams, added for the jam surface (JamSurface.jsx).
     // Every one of them defaults to exactly what this component did before,
@@ -1546,9 +1651,13 @@ export default function LiveProjectScene({
     // `wheelDolly`: the scroll wheel dollies the walker. The builder's wheel scrolls
     // its hotbar instead, so a wheel turn must not also walk the builder forward.
     wheelDolly = true,
-    // `walkHint`: the locked-walk hint line's words, replacing "WASD · move …" — a
+    // `walkHint`: the walk hint line's words, replacing "WASD · move …" — a
     // surface that adds keys has to be able to say them in the same place.
-    walkHint = null
+    walkHint = null,
+    // `walkLook`: how the mouse looks. 'lock' (default) is the pointer lock: crosshair,
+    // Esc releases it and the next Esc opens the inspector (/build, Jam). 'drag' is
+    // the view page's one walk: drag to look, never a pointer lock.
+    walkLook = 'lock'
 }) {
     const fetched = useLiveProjectDocument(providedDocument ? null : projectId)
     const doc = providedDocument || fetched.doc
@@ -1557,7 +1666,8 @@ export default function LiveProjectScene({
     const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
-    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    const locking = walkLook === 'lock'
+    const [isMobile] = useState(detectTouchDevice)
     // First-visit movement hint: fades on a timer, but dismiss immediately on the
     // first interaction so the ghost-joystick demo never overlaps the real joystick.
     const [showMoveHint, setShowMoveHint] = useState(true)
@@ -1677,7 +1787,26 @@ export default function LiveProjectScene({
         return () => window.removeEventListener('keydown', onKey)
     }, [walking, showModeControls])
 
-    const entities = useMemo(() => doc?.entities || [], [doc?.entities])
+    // Esc is always a way out. With walkLook 'drag' nothing holds the pointer, so the first
+    // Esc lands here. With 'lock' the browser keeps the first Esc for itself (it releases the
+    // lock and sends the page nothing); the next one lands here and returns to the previous
+    // mode, same as the exit button.
+    const onExitRef = useRef(onExit)
+    onExitRef.current = onExit
+    const lockChangedAtRef = useRef(0)
+    useEffect(() => { lockChangedAtRef.current = performance.now() }, [isLocked])
+    useEffect(() => {
+        if (!walking || !exitLabel) return undefined
+        const onKey = (e) => {
+            if (e.key !== 'Escape' || e.repeat || isTypingTarget(e.target)) return
+            if (locking && performance.now() - lockChangedAtRef.current < 300) return
+            onExitRef.current?.()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [walking, exitLabel, locking])
+
+    const entities = useMemo(() => entitiesOverride || doc?.entities || [], [entitiesOverride, doc?.entities])
     // Legacy-imported projects store assets with an empty `url` field (the
     // registry that fills it in -- registerAssetSources -- only ever runs
     // inside the Studio editor's useAssetRestore hook, never here). Fall back
@@ -1744,17 +1873,25 @@ export default function LiveProjectScene({
     }, [entities])
 
     // Start a little south of the entrance gate (if any), facing into the space.
+    // Once per entry and per gate position: `entities` is a new array on every
+    // document edit (a show scene change writes the lamps), so keying on the
+    // gateEntity object put the walker back at the gate every few seconds --
+    // "walk / fly is stuck" (room page, 2026-10-15).
+    const gateArrivalRef = useRef(null)
+    const gatePos = gateEntity?.components?.transform?.position
+    const gateKey = Array.isArray(gatePos) ? `${gateEntity.id}|${gatePos[0]}|${gatePos[2]}` : null
     useEffect(() => {
-        if (!interactive) return
-        if (!gateEntity) return
-        const pos = gateEntity.components?.transform?.position
-        if (!Array.isArray(pos)) return
+        if (!interactive) { gateArrivalRef.current = null; return }
+        if (!gateKey) return
+        if (gateArrivalRef.current === gateKey) return
+        gateArrivalRef.current = gateKey
+        const pos = gatePos
         // Mutate in place for the same reason as the spawn effect above:
         // replacing playerRef.current orphans Walker's mount-time look
         // closure (mouse/touch-look silently dead), and a plain object
         // literal would also drop altY.
         Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
-    }, [gateEntity, interactive])
+    }, [gateKey, gatePos, interactive])
 
     // Neither a gate nor an authored spawn: stand where the WORK is, not at the
     // world origin. A space whose content happens to sit away from 0,0 dropped
@@ -1803,7 +1940,11 @@ export default function LiveProjectScene({
     // top of the authored range — this is a first-person camera in continuous
     // motion, and a phone that renders it at 2x drops frames where the arrival
     // still frame would not.
-    const renderSettings = doc?.renderSettings || {}
+    const savedRenderSettings = doc?.renderSettings
+    const renderSettings = useMemo(
+        () => (outputMode ? outputRenderSettings(savedRenderSettings) : (savedRenderSettings || {})),
+        [outputMode, savedRenderSettings]
+    )
     // Shadows from the room: off unless this space asked for them. Walk mode
     // and the arrival frame read the same switch (shadowCasting.js).
     const shadowCasting = resolveShadowCasting(renderSettings)
@@ -1841,7 +1982,8 @@ export default function LiveProjectScene({
                 {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
-                shadows={renderSettings.shadows !== false}
+                // three r185 dropped PCFSoftShadowMap (it warns, then draws PCFShadowMap): ask for that directly
+                shadows={renderSettings.shadows !== false ? 'percentage' : false}
                 gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
@@ -1902,7 +2044,10 @@ export default function LiveProjectScene({
                         infiniteGrid
                     />
                 )}
-                <AmbientField center={center} />
+                {/* a room with a physical haze (renderSettings.atmosphere.haze) has real air: the
+                    decorative motes read as white snow under its exposure (×3.5, auto up to ×3), and one
+                    in front of the eye drew as a big white square (MOXIR walk audit, 2026-10-02) */}
+                {renderSettings?.atmosphere?.haze ? null : <AmbientField center={center} />}
                 {showEntities && rootEntities.map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
                         <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
@@ -1928,6 +2073,7 @@ export default function LiveProjectScene({
                         joyThumbRef={joyThumbRef}
                         vertTouchRef={vertTouchRef}
                         onLockChange={setIsLocked}
+                        walkLook={walkLook}
                         flyMode={flyMode}
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
@@ -2047,11 +2193,11 @@ export default function LiveProjectScene({
                                 </button>
                             </div>
                         ) : (
-                            <div className="live-scene-loading-ring" />
+                            <LoadingScreen variant="inline" label="Loading the room" text="loading the room" waitingFor="the scene file" />
                         )}
                     </div>
 
-                    <header className="live-scene-chrome">
+                    <header className="live-scene-chrome" style={topClear ? { top: topClear } : undefined}>
                         {/* exitLabel={null}: the surface gives the way out itself (the rig's
                             bar over view A), so the room does not draw a second one. */}
                         {exitLabel ? (
@@ -2087,22 +2233,27 @@ export default function LiveProjectScene({
                         </span>
                     </header>
 
-                    {walking && !isMobile && !isLocked && (
+                    {walking && !isMobile && locking && !isLocked && (
                         <p className="live-scene-hint live-scene-hint--lock">
                             Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
                         </p>
                     )}
-                    {walking && !isMobile && isLocked && walkHint ? (
+                    {walking && !isMobile && (!locking || isLocked) && walkHint ? (
                         <p className="live-scene-hint">{walkHint}</p>
                     ) : null}
-                    {walking && !isMobile && isLocked && !walkHint && (
+                    {walking && !isMobile && (!locking || isLocked) && !walkHint && (
                         <p className="live-scene-hint">
-                            WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
+                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
-                            &nbsp;·&nbsp; ESC · release
+                            {locking ? <>&nbsp;·&nbsp; ESC · release</> : exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>
                     )}
-                    {walking && showMoveHint && (isMobile || !isLocked) && (
+                    {walking && isMobile && !showMoveHint && (
+                        <p className="live-scene-hint live-scene-hint--touch">
+                            Left thumb · move &nbsp;·&nbsp; Right thumb · look
+                        </p>
+                    )}
+                    {walking && showMoveHint && (isMobile || !locking || !isLocked) && (
                         <MoveHintVisual isMobile={isMobile} />
                     )}
                 </>

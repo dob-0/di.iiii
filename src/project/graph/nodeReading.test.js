@@ -160,8 +160,14 @@ describe('doorways', () => {
         // Read from the registry, not spelled out: node labels are being
         // renamed in a parallel pass and this test is about which ANSWER comes
         // from where, not about what the ports are called this week.
+        // Picture (2026-10-02) is the Scene SEEN — given by the window that
+        // draws it (ScenePictureFeed), the webcam Frame's kind, not by code.
+        const byWindow = new Set(['picture'])
+        const outputs = getNodeType('universe.world').outputs
         expect(reading.worksItOut.byCode)
-            .toEqual(getNodeType('universe.world').outputs.map((port) => port.label))
+            .toEqual(outputs.filter((port) => !byWindow.has(port.id)).map((port) => port.label))
+        expect(reading.worksItOut.byWindow)
+            .toEqual(outputs.filter((port) => byWindow.has(port.id)).map((port) => port.label))
         expect(reading.worksItOut.byDoor).toEqual(['Beat'])
     })
 

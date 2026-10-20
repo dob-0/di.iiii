@@ -7,6 +7,33 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // "Back <left>" simply loses its label everywhere, silently.
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Framed — the visualiser's desk half (RIG_BUILD.md §18): the ways out (di.iiii, ← project,
+// Studio / Nodes / Projection) are the visualiser's own, not this pane's. Marked before the
+// first render so style.css never paints them: on a phone the pane is ~240 px and those
+// rows took all of it (MOXIR UI audit, 2026-10-01). A cross-origin parent throws: framed.
+(() => {
+  let framed = false;
+  try { framed = window.self !== window.top; } catch (e) { framed = true; }
+  if (framed) document.documentElement.classList.add('is-framed');
+})();
+// The top bar wraps to a different height on every width (a phone's is ~260px), and the Touch
+// cue bar pins just under it: the bar's real height, kept in --topbar-h for style.css.
+addEventListener('DOMContentLoaded', () => {
+  const tb = document.querySelector('.topbar');
+  if (!tb) return;
+  const set = () => document.documentElement.style.setProperty('--topbar-h', Math.round(tb.getBoundingClientRect().height) + 'px');
+  set();
+  if (window.ResizeObserver) new ResizeObserver(set).observe(tb);
+  else addEventListener('resize', set);
+});
+// Its one door out: the same desk in a window of its own, on Setup.
+if (document.documentElement.classList.contains('is-framed')) {
+  addEventListener('DOMContentLoaded', () => {
+    const a = document.getElementById('fullDesk');
+    if (a) { a.href = location.pathname + location.search + '#setup'; a.hidden = false; }
+  });
+}
+
 let S = null;                  // last full state from the server
 let DMX = {};                  // live buffers, polled fast
 // The fan styles, in the order ../fan.js defines them (tests/test-wiring.js keeps the two equal).
@@ -183,12 +210,28 @@ function say(text, bad) {
 // A single dropped fetch — a lid closing, a wifi blip — is not an offline server, and a
 // banner that latches on forever trains you to ignore the banner.
 let pollFails = 0;
+
+// What this desk can do. `S.caps` may be absent: that is the full desk.
+const cap = (name) => window.deskCaps.cap(S && S.caps, name, window.isSecureContext);
+function applyCaps() {
+  $$('[data-cap]').forEach((el) => el.classList.toggle('capoff', !cap(el.dataset.cap)));
+  // A hidden page must not stay the open one: a bookmark to #midi on a desk without MIDI.
+  const open = document.querySelector('.page.is-active');
+  if (open && open.classList.contains('capoff')) { location.hash = 'setup'; showPage('setup'); }
+}
+// A state the page cannot draw is said on its own line and never counts as the desk being
+// offline; the last good state stays on screen until a drawable one arrives.
+function renderNote(text) {
+  const n = $('#renderNote');
+  n.hidden = !text;
+  n.textContent = text || '';
+}
 async function pullState() {
   try {
     const reply = await fetch('api/state');
     const next = await reply.json();
-    if (pollFails >= 2) say('back in touch with the desk');
-    pollFails = 0;
+    // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
+    const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
     // drawn rather than drawing the other show under this space's name.
     if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
@@ -208,23 +251,40 @@ async function pullState() {
       // desk's pre-drag level and the fader jumps out from under the finger.
       if (S.layers) next.layers = S.layers;
     }
+    const lastGood = S;
     S = next;
-    // Selection is pruned against what actually exists. With the desk open on two clients
-    // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
-    // stayed correct because selectedFixtures() filters, but the header counted fixtures
-    // that were not there, which is a status line lying.
-    if (!busy && sel.size) {
-      const alive = new Set(S.fixtures.map((f) => f.id));
-      for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+    try {
+      // Selection is pruned against what actually exists. With the desk open on two clients
+      // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
+      // stayed correct because selectedFixtures() filters, but the header counted fixtures
+      // that were not there, which is a status line lying.
+      if (!busy && sel.size) {
+        const alive = new Set(S.fixtures.map((f) => f.id));
+        for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+      }
+      // start with everything selected, so the faders do something the moment you open it
+      if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
+      renderAll(busy);
+    } catch (e) {
+      // The desk answered; this page cannot draw what it said. Not a network failure: the
+      // counter stays as it was, the last good state stays on screen, and the page says why.
+      S = lastGood;
+      pollFails = window.deskCaps.nextFails(pollFails, 'render');
+      renderNote(window.deskCaps.unreadable(e, next));
+      console.error('renderAll threw on the desk\'s state:', e);
+      return;
     }
-    // start with everything selected, so the faders do something the moment you open it
-    if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
     DMX = next.dmx || DMX;
-    renderAll(busy);
+    pollFails = window.deskCaps.nextFails(pollFails, 'drawn');
+    renderNote('');
+    if (wasOffline) say('back in touch with the desk');
+    applyCaps();
+    dmxFeed.setAllowed(streamWanted());
   } catch (e) {
     // Latch only after it has really gone, and then keep saying it until it comes back:
     // this one does NOT expire, because a desk that is not answering is not a passing note.
-    if (++pollFails >= 2) {
+    pollFails = window.deskCaps.nextFails(pollFails, 'network');
+    if (pollFails >= 2) {
       clearTimeout(sayTimer);
       const s = $('#statusStrip');
       s.hidden = false;
@@ -234,16 +294,27 @@ async function pullState() {
   }
 }
 
-async function pullDmx() {
-  if (document.hidden || !S) return;
-  try {
-    DMX = (await (await fetch('api/dmx')).json()).dmx;
-    paintStage();
-    paintSelList();
-    syncAttr();
-    if (page === 'fader') syncFaders();
-  } catch (e) { /* the slow poll reports it */ }
+// The live DMX comes from the desk's pushed stream when it offers one (`caps.stream`, absent =
+// the full desk, which has it), and from this 10 Hz poll when it does not or the stream goes
+// quiet; dmxfeed.js holds that rule. Either way the same painters run on the same DMX object.
+async function fetchDmx() {
+  if (document.hidden || !S) return null;
+  try { return (await (await fetch('api/dmx')).json()).dmx || null; } catch (e) { return null; }   // the slow poll reports it
 }
+function paintDmx(dmx) {
+  DMX = dmx;
+  paintStage();
+  paintSelList();
+  syncAttr();
+  if (page === 'fader') syncFaders();
+}
+const dmxFeed = window.dmxFeed.createFeed({
+  open: (url) => new EventSource(url),
+  poll: fetchDmx,
+  onUpdate: paintDmx,
+});
+// Is the stream on? Needs the page to have EventSource and the desk not to have said no.
+const streamWanted = () => typeof EventSource === 'function' && !!S && cap('stream');
 
 /* =============== colour =============== */
 
@@ -1745,7 +1816,7 @@ function syncFaders() {
     : 'nothing held — every fader is following the fixtures';
   if (document.activeElement !== $('#fMaster')) $('#fMaster').value = S.master;
   $('#fMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
-  $('#fBlackout').classList.toggle('on', S.blackout);
+  paintBlackout(S.blackout, ['#fBlackout']);
 }
 
 /* =============== limits panel (SETUP) =============== */
@@ -2086,7 +2157,7 @@ function buildTouch() {
   if (tf && document.activeElement !== tf && tf.value !== sceneFilter) tf.value = sceneFilter;
   if (document.activeElement !== $('#tMaster')) $('#tMaster').value = S.master;
   $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
-  $('#tBlackout').classList.toggle('on', S.blackout);
+  paintBlackout(S.blackout, ['#tBlackout']);
   buildTouchLooks();
   paintTouchCues();
   buildTouchStrip();
@@ -2105,17 +2176,48 @@ function activeLookId() {
   const l = layersOf().find((x) => x.id === TOUCH_LOOK_LAYER);
   return l && l.on && l.level > 0 && l.lookId ? l.lookId : '';
 }
+// Does a look light anything on what is patched NOW? Only a room's rig looks (`rig-…`,
+// show-loop.mjs) are judged: they carry their DMX values per fixture. A look made on the
+// desk may be an effect with no stored values, so it is never called dark. A fixture lights
+// when its dimmer is up, or — without a dimmer — any colour emitter is. (MOXIR UI audit,
+// 2026-10-01: a look whose lamps were not on the desk fired into a black room, no word.)
+const EMITTER_ROLE = /^(r|g|b|w|red|green|blue|white|amber|uv|cw|ww)$/;
+function lookHealth(l) {
+  if (!l || !String(l.id).startsWith('rig-')) return { dead: false };
+  const patched = new Set(((S && S.fixtures) || []).map((f) => f.id));
+  const vals = (l.steps && l.steps[0] && l.steps[0].values) || {};
+  const ids = Object.keys(vals).filter((id) => patched.has(id));
+  if (!ids.length) return { dead: true, why: 'nothing patched' };
+  const lit = ids.filter((id) => {
+    const v = vals[id] || {};
+    if (v.dimmer != null) return Number(v.dimmer) > 0;
+    return Object.keys(v).some((k) => EMITTER_ROLE.test(k) && Number(v[k]) > 0);
+  }).length;
+  return lit ? { dead: false, lit } : { dead: true, why: 'lights nothing here' };
+}
+// The set's own looks kept on a ground version are titled "… · hung rig" (versions file):
+// they were made for the hung movers, so they sit in a group of their own, after this
+// version's looks — never mixed in beside a ground look of the same name.
+const HUNG_RIG = /·\s*hung rig$/;
 function buildTouchLooks() {
   const sec = $('#tLooks');
   const wrap = $('#touchLooks');
   const looks = looksOf();
   sec.hidden = !looks.length;
   if (!looks.length) { delete wrap.dataset.sig; return; }
-  const sig = looks.map((l) => l.id + '\u0001' + l.name).join('|');
+  const sig = looks.map((l) => l.id + '\u0001' + l.name + '\u0001' + (lookHealth(l).dead ? 1 : 0)).join('|');
   if (wrap.dataset.sig !== sig) {
     wrap.dataset.sig = sig;
-    wrap.innerHTML = looks.map((l) =>
-      `<button class="tbtn lookbtn" data-look="${esc(l.id)}"><span>${esc(l.name)}</span><i class="tnote"></i></button>`).join('');
+    const tile = (l) => {
+      const h = lookHealth(l);
+      const name = l.name.replace(HUNG_RIG, '').trim();
+      return `<button class="tbtn lookbtn${h.dead ? ' dead' : ''}" data-look="${esc(l.id)}"${h.dead ? ` data-why="${esc(h.why)}" title="${esc(l.name)} — ${esc(h.why)}"` : ''}>`
+        + `<span>${esc(name)}</span><i class="tnote">${h.dead ? esc(h.why) : ''}</i></button>`;
+    };
+    const own = looks.filter((l) => !HUNG_RIG.test(l.name));
+    const hung = looks.filter((l) => HUNG_RIG.test(l.name));
+    wrap.innerHTML = own.map(tile).join('')
+      + (hung.length ? `<div class="bankhead">made for the hung rig</div>` + hung.map(tile).join('') : '');
     delete wrap.dataset.active;
   }
   const act = activeLookId();
@@ -2125,7 +2227,8 @@ function buildTouchLooks() {
       const on = !!act && b.dataset.look === act;
       b.classList.toggle('active', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      b.querySelector('.tnote').textContent = on ? 'on now' : '';
+      // a dark look keeps its reason when it is not the one on (lookHealth)
+      b.querySelector('.tnote').textContent = on ? 'on now' : (b.dataset.why || '');
     }
   }
 }
@@ -2147,22 +2250,33 @@ $('#touchLooks').addEventListener('click', async (e) => {
   pullState();
 });
 
+// The cue bar's headline, from the desk's one NOW (state.now) rather than the cue list alone:
+// a look fired by hand is on whatever the list says, and "Nothing fired" beside a lit look
+// was the lie. (MOXIR UI audit, 2026-10-01)
+function touchHeadline() {
+  const n = S && S.now;
+  if (!n) return S && 'now' in S ? `Nothing on · ${CUES.n} cues` : (CUES.index >= 0 ? `Cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}` : `${CUES.n} cues`);
+  const c = n.cue;
+  if (n.source === 'cue' && c) return `${n.name} · cue ${c.index + 1} of ${c.n} · ${c.running ? 'running' : 'stopped'}`;
+  if (!c) return `${n.name} · fired by hand`;
+  const at = c.index + 1 < c.n ? c.index + 2 : (c.loop ? 1 : 0);
+  return `${n.name} · fired by hand · ${at ? `GO resumes at cue ${at}` : 'end of the cue list'}`;
+}
 function paintTouchCues() {
   const bar = $('#tCueBar');
   bar.hidden = !CUES || !CUES.n;
   if (bar.hidden) return;
   const list = Array.isArray(CUES.list) ? CUES.list : [];
-  $('#tCueNow').textContent = CUES.index >= 0
-    ? `Cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}`
-    : `Nothing fired · ${CUES.n} cues`;
+  $('#tCueNow').textContent = touchHeadline();
   const ni = CUES.index + 1 < CUES.n ? CUES.index + 1 : (CUES.loop ? 0 : -1);
   const next = ni >= 0 && list[ni] ? `next ${ni + 1} ${list[ni].name}` : 'last cue';
   const clock = CUES.running ? (CUES.nextInMs != null ? 'auto in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
   const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
   $('#tCueNext').textContent = `${next} · ${clock}${missing}`;
   $('#tCueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
-  $('#tCueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
-  $('#tCueLoop').classList.toggle('accent', !!CUES.loop);
+  // A switch, not an action: the state is the outline (.toggle.on), the title keeps the word.
+  $('#tCueLoop').title = (CUES.loop ? 'Loop on' : 'Loop off') + ' — after the last cue, cue 1 again';
+  $('#tCueLoop').classList.toggle('on', !!CUES.loop);
   $('#tCueStop').disabled = !CUES.running;
   $('#tCueBack').disabled = CUES.index <= 0;
 }
@@ -4067,6 +4181,10 @@ function renderAll(busy) {
   const whose = S.show && S.show.space && window.deskShow ? window.deskShow.whose(S.show) + ' · ' : '';
   $('#showName').textContent = `— ${whose}${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
   paintShow(S.show);
+  // Go steps the desk's SCENES, so with none it would press and do nothing: hide it then.
+  // (MOXIR UI audit, 2026-10-01)
+  $('#goBtn').hidden = !S.scenes.length;
+  paintControlScenes();
 
   // A channel held on the Fader page overrides the fixtures everywhere, so a scene or a
   // colour fader can appear to do nothing. Say so on every page, not just the one that
@@ -4101,7 +4219,7 @@ function renderAll(busy) {
 
   // Blackout is now in the top bar too, so it is reachable and visible from every page —
   // including Setup, which had no blackout control and no way to tell the rig was in one.
-  $('#topBlackout').classList.toggle('on', S.blackout);
+  paintBlackout(S.blackout, ['#topBlackout']);
 
   // Output liveness, always on screen. A rig whose frames have stopped arriving falls back
   // to its built-in auto programs and runs a show nobody asked for, and until now the only
@@ -4119,12 +4237,13 @@ function renderAll(busy) {
   }
   if (page === 'setup' && !IN && st.input) { IN = st.input; paintInput(); }
   const wp = $('#wirePill');
+  wp.classList.toggle('off', !S.output.enabled);
   if (!S.output.enabled) {
     // The loudest thing this pill can say. A desk that is patched, cued and running
     // while the wire switch is off looks completely healthy from every other reading on
     // the page — and inside di.iiii that is the state it starts in.
     wp.hidden = false;
-    wp.classList.add('stale');
+    wp.classList.add('stale', 'off');
     wp.textContent = 'output off';
     wp.title = 'Nothing is leaving this machine. Open Output and switch it on.';
   } else if (S.output.driver === 'enttec' && st.serial) {
@@ -4172,7 +4291,7 @@ function renderAll(busy) {
     safeBuild('buildAttr', buildAttr);
     if (document.activeElement !== $('#master')) $('#master').value = S.master;
     $('#masterOut').textContent = Math.round(S.master / 255 * 100) + '%';
-    $('#blackout').classList.toggle('on', S.blackout);
+    paintBlackout(S.blackout, ['#blackout']);
     if (document.activeElement !== $('#chaseHold')) $('#chaseHold').value = (S.chase.holdMs / 1000).toFixed(1);
     if (document.activeElement !== $('#chaseFade')) $('#chaseFade').value = (S.chase.fadeMs / 1000).toFixed(1);
     $('#chaseToggle').textContent = S.chase.enabled ? 'Stop' : 'Start';
@@ -5026,24 +5145,39 @@ $('#tMaster').addEventListener('input', (e) => {
 // second later — but a Blackout that goes red on a request that never arrived is the desk
 // telling her the rig is dark while it is at full. So this one waits for the answer and
 // puts itself back if it did not get one.
+// One place that paints the blackout buttons, so the label and the fill never disagree and
+// every copy (header, Touch strip, Fader, Control, the framed visualiser) says the same
+// thing: ON reads as a state to release, not just a different fill (MOXIR UI audit).
+const BLACKOUT_ALL = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
+const BLACKOUT_LABEL = { on: 'Blackout ON · tap to release', off: 'Blackout' };
+function paintBlackout(on, sels = BLACKOUT_ALL) {
+  sels.forEach((s) => {
+    const el = $(s);
+    if (!el) return;
+    el.classList.toggle('on', !!on);
+    el.textContent = on ? BLACKOUT_LABEL.on : BLACKOUT_LABEL.off;
+    el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
 let blackoutPending = false;
 const toggleBlackout = async () => {
   if (blackoutPending) return;   // two fast presses computed the same `want` and sent it twice
   blackoutPending = true;
   const want = !S.blackout;
-  const pills = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
-  pills.forEach((s) => { const el = $(s); if (el) { el.classList.toggle('on', want); el.classList.add('pending'); } });
+  const pills = BLACKOUT_ALL;
+  paintBlackout(want);
+  pills.forEach((s) => { const el = $(s); if (el) el.classList.add('pending'); });
   const r = await post('api/master', { blackout: want });
   blackoutPending = false;
   pills.forEach((s) => { const el = $(s); if (el) el.classList.remove('pending'); });
   if (r && r.error) {
     // Put the button back where it was and say so where she is looking, on any page.
-    pills.forEach((s) => { const el = $(s); if (el) el.classList.toggle('on', S.blackout); });
+    paintBlackout(S.blackout);
     say(`blackout did not reach the desk — ${r.error}`, true);
     return;
   }
   S.blackout = want;
-  pills.forEach((s) => { const el = $(s); if (el) el.classList.toggle('on', S.blackout); });
+  paintBlackout(S.blackout);
 };
 $('#blackout').addEventListener('click', toggleBlackout);
 $('#topBlackout').addEventListener('click', toggleBlackout);
@@ -5320,20 +5454,39 @@ $('#snap').addEventListener('change', (e) => {
   say(snapTo === 'off' ? 'presses land immediately' : `presses land on the next ${snapTo}`);
 });
 
-// tap tempo
+// Tap tempo maths, pure so test-tap.js can run it. A tempo needs at least 3 taps (2
+// intervals); a gap under 250 ms is a double tap and restarts the run, one over 3 s is a
+// pause and does too; a result at the input's ends (20 / 300) is a mistake to say, not a
+// tempo to save. (MOXIR UI audit, 2026-10-01: two taps 200 ms apart saved 300 BPM.)
+function tapTempo(timesMs) {
+  let run = [];
+  let tooFast = false;
+  for (const t of timesMs) {
+    const gap = run.length ? t - run[run.length - 1] : Infinity;
+    if (gap < 250) { tooFast = true; run = [t]; }
+    else if (gap > 3000) run = [t];
+    else run.push(t);
+  }
+  if (run.length < 3) {
+    return tooFast ? { reject: 'taps too close together — tap the beat again' } : { reject: 'keep tapping — a tempo needs 3 taps', quiet: true };
+  }
+  const bpm = Math.round(60000 / ((run[run.length - 1] - run[0]) / (run.length - 1)));
+  if (bpm >= 300 || bpm <= 20) return { reject: `${bpm} BPM is off the scale — not saved` };
+  return { bpm };
+}
 let taps = [];
 $('#tapBtn').addEventListener('click', () => {
   const now = Date.now();
-  taps = taps.filter((t) => now - t < 3000); taps.push(now);
+  taps.push(now); taps = taps.slice(-8);
   // A tap says two things and the desk only ever heard one of them: how fast, and WHERE.
   // The anchor goes with every tap, so the beat grid starts under the finger — that is
   // what makes a wave begin on the downbeat and a quantised press land in the track
   // rather than at the right speed in the wrong place.
   post('api/fx', { epoch: now });
-  if (taps.length > 1) {
-    $('#bpm').value = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
-    $('#bpm').dispatchEvent(new Event('change'));
-  }
+  const t = tapTempo(taps);
+  if (t.reject) { if (!t.quiet) say(t.reject, true); return; }
+  $('#bpm').value = t.bpm;
+  $('#bpm').dispatchEvent(new Event('change'));
 });
 // One tempo for the desk. The chase and the effects both run off this field, so tapping a
 // tempo moves everything that is beat-driven rather than leaving the two silently at
@@ -6049,7 +6202,194 @@ $('#inPill').addEventListener('click', () => {
   $('#inDetails').open = true; pullInput();
 });
 $('#inDetails').addEventListener('toggle', () => { if ($('#inDetails').open) pullInput(); });
-setInterval(pullInput, 1000);
+
+/* =============== THIS NODE: a hardware node's own settings (caps.node) =============== */
+// Shown only when the state says caps.node: true. Every control calls the node's own console
+// route as its README documents it: POST with X-Vizzz-Console: 1, numbers in the query, a
+// form body for wifi/set and node/set. Facts come from GET status on the same one-second
+// tick as the Input panel (Setup only, tab visible); there is no timer of its own.
+// api-contract.json `node_routes` lists every path here; lint:api-contract holds it.
+const ND = { st: null, manifest: null, peers: null, nets: null, scanPending: false, armed: null, tick: 0, manifestAsked: false };
+async function nodeGet(path) {
+  const r = await fetch(path, { cache: 'no-store' });
+  if (!r.ok) throw new Error(path + ' answered ' + r.status);
+  return r.json();
+}
+async function nodePost(path, args, form) {
+  touchedAt = Date.now();
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(args || {})) if (v !== undefined && v !== null) q.set(k, String(v));
+  const init = { method: 'POST', headers: { 'X-Vizzz-Console': '1' } };
+  let url = path;
+  if (form) { init.headers['content-type'] = 'application/x-www-form-urlencoded'; init.body = q.toString(); }
+  else if ([...q.keys()].length) url += '?' + q.toString();
+  try {
+    const r = await fetch(url, init);
+    if (r.ok) return { ok: true };
+    const text = await r.text();
+    let why = text;
+    try { const j = JSON.parse(text); why = j.error + (j.arg ? ' (' + j.arg + (j.min != null ? ' ' + j.min + '-' + j.max : '') + ')' : ''); } catch (e) { /* plain text */ }
+    return { error: why || 'answered ' + r.status };
+  } catch (e) { return { error: String(e) }; }
+}
+// Every press says what happened; a refusal says the node's own reason.
+async function nodeDo(path, what, args, form) {
+  const r = await nodePost(path, args, form);
+  if (r.error) say(what + ': ' + r.error, true); else say(what);
+  pullNode(true);
+  return r;
+}
+// Two presses for anything that restarts the node, erases it, or narrows where light goes.
+function nodeArm(btn, armedText, fire) {
+  const step = window.deskCaps.confirmStep(ND.armed, btn.id, Date.now());
+  ND.armed = step.armed;
+  paintArmed();
+  if (step.fire) { fire(); return; }
+  btn.dataset.armedText = armedText;
+  paintArmed();
+}
+function paintArmed() {
+  const live = window.deskCaps.stillArmed(ND.armed, Date.now()) ? ND.armed.key : null;
+  if (!live) ND.armed = null;
+  $$('#ndDetails .sq[data-label]').forEach((b) => {
+    const on = b.id === live;
+    b.classList.toggle('armed', on);
+    b.textContent = on ? b.dataset.armedText : b.dataset.label;
+  });
+}
+$$('#ndDetails .sq').forEach((b) => { b.dataset.label = b.textContent; });
+// Any other press inside the fold disarms (capture phase: it runs before the button's own handler).
+$('#ndDetails').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (ND.armed && (!b || b.id !== ND.armed.key)) { ND.armed = null; paintArmed(); }
+}, true);
+
+async function pullNode(force) {
+  if (!cap('node') || document.hidden || page !== 'setup') return;
+  const open = $('#ndDetails').open;
+  try { ND.st = await nodeGet('status'); } catch (e) { ND.st = null; }
+  if (open && (force || ND.tick % 5 === 0)) { try { ND.peers = await nodeGet('peers'); } catch (e) { /* the table keeps its last answer */ } }
+  if (open && !ND.manifestAsked) { ND.manifestAsked = true; try { ND.manifest = await nodeGet('node/manifest'); } catch (e) { ND.manifestAsked = false; } }
+  if (ND.scanPending) pullScan();
+  ND.tick++;
+  paintNode();
+}
+async function pullScan() {
+  try {
+    const j = await nodeGet('wifi/scan');
+    ND.scanPending = !!j.scanning;
+    ND.nets = j.networks || [];
+    $('#ndScanNote').textContent = ND.scanPending ? 'scanning…' : ND.nets.length + ' found';
+  } catch (e) { ND.scanPending = false; $('#ndScanNote').textContent = 'scan failed: ' + e.message; }
+  paintNets();
+}
+function paintNets() {
+  const nets = ND.nets || [];
+  $('#ndNets').innerHTML = nets.map((n) => `<button class="ndrow" data-nd-ssid="${esc(n.ssid)}"><span class="grow">${esc(n.ssid)}</span><span class="muted">${n.enc ? 'password' : 'open'}</span><span class="muted">${n.rssi} dBm</span></button>`).join('');
+}
+const nd = (v, unit) => (v === null || v === undefined ? 'not reported' : v + (unit || ''));
+function setIfIdle(el, v) { if (document.activeElement !== el && v !== null && v !== undefined) el.value = v; }
+function paintNode() {
+  const D = window.deskCaps;
+  const f = ND.st ? D.nodeFacts(ND.st, ND.manifest) : null;
+  $('#ndSummary').textContent = f ? D.nodeSummary(f) : 'not reached: no answer from status';
+  $('#ndLamp').className = 'inlamp' + (!f ? ' error' : f.live.artnet || f.live.sacn || f.live.usb ? ' live' : '');
+  paintArmed();
+  if (!f) return;
+  $('#ndAddr').innerHTML = [
+    `access point <b>${esc(f.apIp || 'off')}</b>${f.apName ? ' · ' + esc(f.apName) : ''}${f.apClients !== null ? ' · ' + f.apClients + ' connected' : ''}`,
+    f.staOn ? `Wi-Fi <b>${esc(f.staIp || '')}</b> on ${esc(f.staSsid || '?')}${f.staRssi !== null ? ' · ' + f.staRssi + ' dBm' : ''}`
+      : `Wi-Fi ${esc(f.wl)}${f.staSsid ? ' (' + esc(f.staSsid) + ')' : ''}`,
+  ].join('<br>');
+  setIfIdle($('#ndNetMode'), f.netMode);
+  setIfIdle($('#ndMode'), f.sourceMode);
+  if (f.fallback !== null) $('#ndFallback').checked = f.fallback;
+  const lamp = (name, on) => `<span><i class="inlamp${on ? ' live' : ''}"></i>${name} ${on === null ? 'not reported' : on ? 'live' : 'quiet'}</span>`;
+  $('#ndLive').innerHTML = lamp('Art-Net', f.live.artnet) + lamp('sACN', f.live.sacn) + lamp('USB', f.live.usb);
+  setIfIdle($('#ndArtNet'), f.art.net); setIfIdle($('#ndArtSub'), f.art.subnet); setIfIdle($('#ndArtUni'), f.art.uni);
+  $('#ndArtNote').textContent = f.art.uni15 === null ? '' : `port-address ${f.art.uni15} · sACN universe ${f.art.uni15 + 1} · Art-Net out ${f.artOut ? 'on' : 'off'} → ${f.artOutTarget || 'broadcast'}`;
+  const peers = (ND.peers && ND.peers.peers) || [];
+  const sel = $('#ndPeerTarget');
+  const want = f.artOutTarget && f.artOutTarget !== 'broadcast' ? f.artOutTarget : '';
+  const sig = JSON.stringify([peers.map((p) => p.ip + p.name), want]);
+  if (sel.dataset.sig !== sig && document.activeElement !== sel) {
+    sel.dataset.sig = sig;
+    const ips = new Set(peers.map((p) => p.ip));
+    sel.innerHTML = '<option value="">every node (broadcast)</option>'
+      + peers.map((p) => `<option value="${esc(p.ip)}">only ${esc(p.name || p.ip)} · ${esc(p.ip)}</option>`).join('')
+      + (want && !ips.has(want) ? `<option value="${esc(want)}">only ${esc(want)}</option>` : '');
+    sel.value = want;
+  }
+  const burn = $('#ndBurn');
+  burn.dataset.label = f.burnSafe ? 'Burn-safe is ON' : 'Burn-safe is OFF';
+  if (!burn.classList.contains('armed')) burn.textContent = burn.dataset.label;
+  burn.classList.toggle('on', !!f.burnSafe);
+  $('#ndBurnNums').textContent = `ceiling ${nd(f.ceiling)} of 255 · slew ${nd(f.slew)} per frame`;
+  $('#ndPeerCount').textContent = ND.peers ? peers.length + (peers.length === 1 ? ' peer' : ' peers') : (f.peerCount !== null ? f.peerCount + ' peers' : '');
+  $('#ndPeers').innerHTML = peers.map((p) => `<div class="ndrow"><span class="grow">${esc(p.name || '?')}</span><span>${esc(p.ip)}</span><span class="muted">univ ${esc(p.uni)}</span><span class="muted">${ageWords(p.age)}</span></div>`).join('');
+  setIfIdle($('#ndName'), f.name); setIfIdle($('#ndApSsid'), f.apName);
+  const kb = (b) => (b === null ? 'not reported' : Math.round(b / 1024) + ' KB');
+  $('#ndHealth').innerHTML = `firmware ${esc(nd(f.fw))}<br>free memory ${kb(f.heapFree)} · largest block ${kb(f.heapMaxBlock)}<br>uptime ${f.uptimeS === null ? 'not reported by this node' : ageWords(f.uptimeS * 1000).replace(' ago', '')}`;
+}
+
+$('#ndDetails').addEventListener('toggle', () => { if ($('#ndDetails').open) pullNode(true); });
+$('#ndNetModeSet').addEventListener('click', (e) => {
+  const m = +$('#ndNetMode').value;
+  nodeArm(e.currentTarget, 'Restart as ' + window.deskCaps.NET_MODES[m] + '?', () => nodeDo('netmode/set', 'Wi-Fi mode set: the node restarts', { m }));
+});
+$('#ndScan').addEventListener('click', () => { ND.scanPending = true; $('#ndScanNote').textContent = 'scanning…'; pullScan(); });
+$('#ndNets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-nd-ssid]');
+  if (!b) return;
+  $('#ndSsid').value = b.dataset.ndSsid; $('#ndPass').focus();
+});
+$('#ndJoin').addEventListener('click', async () => {
+  const ssid = $('#ndSsid').value;
+  const pass = $('#ndPass').value;
+  if (!ssid) { say('Join: type or pick a network name', true); return; }
+  if (pass && (pass.length < 8 || pass.length > 63)) { say('Join: a Wi-Fi password is 8 to 63 characters, or empty for an open network', true); return; }
+  const r = await nodeDo('wifi/set', 'Joining ' + ssid + ': the address shows here when it is joined', { ssid, pass }, true);
+  if (!r.error) $('#ndPass').value = '';
+});
+$('#ndForget').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Forget the saved network?', () => nodeDo('wifi/forget', 'Saved Wi-Fi network forgotten')));
+$('#ndMode').addEventListener('change', (e) => nodeDo('mode/set', 'Source: ' + window.deskCaps.SOURCE_MODES[+e.target.value], { m: +e.target.value }));
+$('#ndFallback').addEventListener('change', (e) => nodeDo('mode/fallback', 'Fallback to web ' + (e.target.checked ? 'on' : 'off'), { en: e.target.checked ? 1 : 0 }));
+$('#ndArtSet').addEventListener('click', () => {
+  const v = (id, hi) => { const n = Math.round(+$(id).value); return n >= 0 && n <= hi ? n : null; };
+  const net = v('#ndArtNet', 127); const subnet = v('#ndArtSub', 15); const uni = v('#ndArtUni', 15);
+  if (net === null || subnet === null || uni === null) { say('Art-Net: net 0-127, subnet 0-15, universe 0-15', true); return; }
+  nodeDo('artnet/set', `Art-Net port-address ${net}:${subnet}:${uni}`, { net, subnet, uni });
+});
+$('#ndPeerSet').addEventListener('click', (e) => {
+  const ip = $('#ndPeerTarget').value;
+  if (!ip) { nodeDo('artout/peer', 'Art-Net out: every node (broadcast)', { ip: '' }); return; }
+  nodeArm(e.currentTarget, 'Send only to ' + ip + '?', () => nodeDo('artout/peer', 'Art-Net out: only ' + ip, { ip }));
+});
+$('#ndBurn').addEventListener('click', () => {
+  const f = ND.st ? window.deskCaps.nodeFacts(ND.st) : null;
+  const on = !(f && f.burnSafe);
+  nodeDo('safety/set', 'Burn-safe ' + (on ? 'on' : 'off'), { burn: on ? 1 : 0 });
+});
+$('#ndPanic').addEventListener('click', () => nodeDo('panic', 'Panic: master 0, black, FX and cues off, web only'));
+$('#ndDiscover').addEventListener('click', async () => {
+  await nodePost('announce');
+  try { ND.peers = await nodeGet('peers'); } catch (e) { say('Discover: ' + e.message, true); }
+  paintNode();
+});
+$('#ndNameSet').addEventListener('click', () => {
+  const name = $('#ndName').value.trim();
+  const apSsid = $('#ndApSsid').value.trim();
+  const apPass = $('#ndApPass').value;
+  if (!name || !apSsid) { say('Name and access point need a name each', true); return; }
+  if (apPass && (apPass.length < 8 || apPass.length > 63)) { say('An access point password is 8 to 63 characters', true); return; }
+  const args = { name, ap_ssid: apSsid };
+  if (apPass) args.ap_pass = apPass;
+  nodeDo('node/set', 'Saved: ' + name, args, true).then((r) => { if (!r.error) $('#ndApPass').value = ''; });
+});
+$('#ndReboot').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Restart now?', () => nodeDo('reboot', 'Restarting: this page reconnects when the node is back')));
+$('#ndFactory').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Erase everything? Press again', () => nodeDo('factory-reset', 'Factory reset: every setting erased, the node restarts')));
+
+setInterval(() => { pullInput(); pullNode(); }, 1000);
 
 showPage(location.hash.slice(1));
 // The slow poll reschedules itself after each answer instead of firing on a fixed
@@ -6062,23 +6402,40 @@ showPage(location.hash.slice(1));
   Promise.resolve(pullState()).then(next, next);
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
-setInterval(pullDmx, 100);
+dmxFeed.start();
+document.addEventListener('visibilitychange', () => { if (document.hidden) dmxFeed.pause(); else dmxFeed.resume(); });
 
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:
 // GO, back, stop and the loop switch go to the same routes the cards page uses.
+// No desk scenes (a show of looks and cues): the Scenes and Chase panes are empty with three
+// primary buttons, so they give way to one muted line. A bare desk with nothing at all keeps
+// them: that is where the first scene is saved. (MOXIR UI audit, 2026-10-01)
+function paintControlScenes() {
+  if (!S || !Array.isArray(S.scenes)) return;
+  const none = !S.scenes.length && (looksOf().length > 0 || !!(CUES && CUES.n));
+  $('#ctlScenes').hidden = none;
+  $('#ctlChase').hidden = none;
+  // The scene detail beside them stays: the top row is a fixed grid with its splitters as
+  // items, and hiding one pane shifted every later pane into the wrong column (Layers and
+  // Master drew blank — seen 2026-10-01).
+  $('#ctlNoScenes').hidden = !none;
+}
 function paintCues() {
+  paintControlScenes();
   paintTouchCues();
   const strip = $('#cueStrip');
   strip.hidden = !CUES || !CUES.n;
   if (strip.hidden) return;
-  const cue = CUES.index >= 0 ? (CUES.index + 1) + '/' + CUES.n + ' ' + (CUES.name || '') : 'nothing fired · ' + CUES.n + ' cues';
-  const clock = CUES.running ? (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
+  // The same NOW the Touch bar reads (touchHeadline, from the desk's state.now): this strip
+  // said "nothing fired" beside a look lit by hand. The clock only while the list runs.
+  const clock = CUES.running ? ' · ' + (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : '';
   const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
-  $('#cueWhere').textContent = cue + ' · ' + clock + missing;
+  $('#cueWhere').textContent = touchHeadline() + clock + missing;
+  // A switch, not an action: styled as the Touch bar's Loop (.toggle), never GO's fill.
   $('#cueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
-  $('#cueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
-  $('#cueLoop').classList.toggle('accent', !!CUES.loop);
+  $('#cueLoop').classList.toggle('on', !!CUES.loop);
+  $('#cueLoop').title = 'Loop ' + (CUES.loop ? 'on' : 'off') + ' — after the last cue, cue 1 again';
   $('#cueStop').disabled = !CUES.running;
   $('#cueBack').disabled = CUES.index <= 0;
 }

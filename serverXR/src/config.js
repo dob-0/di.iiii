@@ -381,14 +381,25 @@ const config = {
     // di.bo proves who someone is (Telegram delivered a message to them) and
     // asks us for a one-time link. `loginSecret` is what lets it ask — it is a
     // shared secret with the bot and NOTHING else, deliberately not the admin
-    // API token, so a compromised bot cannot also write spaces.
+    // API token, so a compromised bot cannot act as the platform. It can act as
+    // any Telegram-bound PERSON, within their own access (sign-in links, and
+    // the act tokens of docs/architecture/TELEGRAM_ACT_TOKEN.md).
     //
     // botUsername is advertised so a client can offer "open di.bo" without
     // hardcoding the bot's name; empty just means the button names no bot.
     telegram: {
       loginSecret: (process.env.TELEGRAM_LOGIN_SECRET || '').trim(),
       botUsername: (process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''),
-      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim())
+      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim()),
+      // How long a di.bo act token lives (POST /api/auth/telegram/act-token).
+      // Minutes, 15 by default; telegramActTokenStore clamps it to 1..60 so a
+      // typo in an env file can never mint a day-long key.
+      actTokenTtlMs: (Number(process.env.TELEGRAM_ACT_TOKEN_TTL_MINUTES) || 15) * 60 * 1000,
+      // Who acts through di.bo at which tier (actTokenTier.js): comma-separated
+      // Telegram ids. Anyone not listed — and everyone, when both are unset —
+      // is a member. A tier never reaches past the account's own role.
+      actTokenRootIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ROOT_TELEGRAM_IDS),
+      actTokenAdminIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ADMIN_TELEGRAM_IDS)
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset
@@ -416,6 +427,43 @@ const config = {
     // or Reject — three days by default: someone has to open the file's
     // summary and think, which an hour does not allow.
     proposalTtlMs: Number(process.env.CONTENT_PROPOSAL_TTL_MS || 3 * 24 * 60 * 60 * 1000)
+  },
+  // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
+  // Without a provider a domain can still be saved, but nothing switches it on
+  // except an admin; the settings page says so.
+  customDomains: {
+    // Who switches a domain on: 'cloudflare' (Cloudflare for SaaS) or 'caddy'
+    // (Caddy's on-demand TLS, on a machine with its own public IP). Unset keeps
+    // the first behaviour: Cloudflare when the three values below are set.
+    // domainService.chooseDomainProvider() decides, and says why when it can't.
+    provider: (process.env.DOMAINS_PROVIDER || '').trim().toLowerCase(),
+    // Where editing lives. An editor path opened on a space's domain goes here.
+    platformOrigin: (process.env.PLATFORM_ORIGIN || '').trim().replace(/\/+$/, '') ||
+      (authHubConfig.url ? new URL(authHubConfig.url).origin : 'https://diiii.xyz'),
+    cloudflare: {
+      zoneId: (process.env.CLOUDFLARE_SAAS_ZONE_ID || '').trim(),
+      // SSL and Certificates: Edit on the platform zone, nothing else.
+      apiToken: (process.env.CLOUDFLARE_SAAS_API_TOKEN || '').trim(),
+      // The name a domain's CNAME points at (domains.diiii.xyz).
+      cnameTarget: (process.env.CLOUDFLARE_SAAS_CNAME_TARGET || '').trim().toLowerCase()
+    },
+    caddy: {
+      // The name a domain's CNAME points at (domains.diiii.xyz), resolving to
+      // this machine.
+      publicTarget: (process.env.DOMAINS_PUBLIC_TARGET || '').trim().toLowerCase().replace(/\.$/, ''),
+      // The A/AAAA addresses a domain's root may point at, comma-separated.
+      publicIps: String(process.env.DOMAINS_PUBLIC_IPS || '').split(',').map((ip) => ip.trim()).filter(Boolean)
+    },
+    // Our own names; no space may claim one or anything under it.
+    platformSuffixes: [
+      'diiii.xyz', 'di-studio.xyz', 'thedi.studio', 'localhost',
+      ...String(process.env.PLATFORM_HOSTNAMES || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+    ],
+    // 100 hostnames are included in Cloudflare's Free plan; stay under it.
+    max: Number(process.env.DOMAINS_MAX) || 90,
+    maxPerSpace: Number(process.env.DOMAINS_PER_SPACE) || 3,
+    pendingTtlMs: Number(process.env.DOMAINS_PENDING_TTL_MS) || 7 * 24 * 60 * 60 * 1000,
+    sweepMs: Number(process.env.DOMAINS_SWEEP_MS) || 2 * 60 * 1000
   }
 }
 

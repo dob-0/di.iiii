@@ -66,3 +66,42 @@ describe('the seams the jam surface uses stay optional', () => {
         expect(guarded.length).toBeGreaterThanOrEqual(2)
     })
 })
+
+describe('walk look: the view page drags, /build and Jam still lock', () => {
+    const read = async (rel) => {
+        const { readFileSync } = await import('node:fs')
+        return readFileSync(new URL(rel, import.meta.url), 'utf8')
+    }
+
+    it('the view page asks for the drag look, one walk, and never a pointer lock', async () => {
+        const viewer = await read('../project/components/PublicProjectViewer.jsx')
+        const surface = await read('../project/components/PublicProjectSceneSurface.jsx')
+        expect(viewer).toMatch(/<PublicProjectSceneSurface[\s\S]*?walkLook="drag"/)
+        expect(surface).toMatch(/walkLook=\{walkLook\}/)
+        const scene = await read('./LiveProjectScene.jsx')
+        // the drag branch is the one reachable for 'drag': no lock request outside the 'lock' branch
+        const lockAt = scene.indexOf("if (!isTouch && walkLook === 'lock')")
+        const dragAt = scene.indexOf('} else if (!isTouch) {')
+        expect(lockAt).toBeGreaterThan(-1)
+        expect(dragAt).toBeGreaterThan(lockAt)
+        const dragBranch = scene.slice(dragAt, scene.indexOf('// Mobile: floating joystick'))
+        expect(dragBranch).not.toMatch(/requestPointerLock|pointerlockchange|exitPointerLock/)
+        expect(dragBranch).toMatch(/passive: false/)
+    })
+
+    it('/build and Jam do not opt out: the default look is the pointer lock', async () => {
+        const scene = await read('./LiveProjectScene.jsx')
+        expect(scene).toMatch(/walkLook = 'lock'/)
+        expect(scene.slice(0, scene.indexOf("} else if (!isTouch) {"))).toMatch(/requestPointerLock/)
+        for (const rel of ['../rigbuild/BuildSurface.jsx', '../project/components/JamSurface.jsx']) {
+            expect(await read(rel)).not.toMatch(/walkLook/)
+        }
+    })
+
+    it('with the lock, Esc still opens the inspector one press after the browser releases it', async () => {
+        const scene = await read('./LiveProjectScene.jsx')
+        expect(scene).toMatch(/if \(locking && performance\.now\(\) - lockChangedAtRef\.current < 300\) return/)
+        expect(scene).toMatch(/onLockChange=\{setIsLocked\}/)
+        expect(scene).toMatch(/ESC · release/)
+    })
+})

@@ -152,7 +152,7 @@ const SUMMARY = {
 
 // The desk is a local server nobody is running in CI, so it is faked at the
 // same fetch boundary the vizzz rig is: GETs answer, POSTs are recorded.
-const fakeDesk = ({ summaryStatus = 200, scenes = [{ id: 's1', name: 'Red' }], recallOk = true } = {}) => {
+const fakeDesk = ({ summaryStatus = 200, scenes = [{ id: 's1', name: 'Red' }], recallOk = true, looks = [] } = {}) => {
     const posts = []
     // A real Response carries headers, and the desk answers JSON. The client now checks
     // that, because a hosted di.iiii answers 200 with its own index.html for an address
@@ -171,6 +171,9 @@ const fakeDesk = ({ summaryStatus = 200, scenes = [{ id: 's1', name: 'Red' }], r
         }
         if (address.endsWith('/scenes/summary')) {
             return jsonBody({ scenes: typeof scenes === 'function' ? scenes() : scenes })
+        }
+        if (address.endsWith('/fireable')) {
+            return jsonBody({ looks, scenes: typeof scenes === 'function' ? scenes() : scenes })
         }
         if (address.endsWith('/summary')) {
             if (summaryStatus !== 200) return { ok: false, status: summaryStatus }
@@ -210,6 +213,43 @@ describe('DmxOutPanelWindow — the lighting desk', () => {
         const { fetchImpl } = fakeDesk({ summaryStatus: 403 })
         render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
         await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', expect.stringMatching(/DI_ALLOW_LAN_DEVICES=1/)))
+    })
+
+    // Seen by the node check (2026-10-02): with no server behind /light the
+    // window read "Desk: 0 fixtures, 0 scenes - output OFF", the same words as a
+    // desk that is running with an empty rig.
+    it('says the desk is not running when /light/api/summary cannot be reached', async () => {
+        const onStatus = vi.fn()
+        const fetchImpl = vi.fn(async () => { throw new TypeError('Failed to fetch') })
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith(
+            'dmx-1', expect.stringMatching(/not running on this machine.*di up/)
+        ))
+        expect(onStatus).not.toHaveBeenCalledWith('dmx-1', expect.stringMatching(/Desk: 0 fixtures/))
+    })
+
+    it('does not read a JSON answer that is not a desk summary as an empty running desk', async () => {
+        const onStatus = vi.fn()
+        const fetchImpl = vi.fn(async () => ({
+            ok: true, status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => ({}),
+        }))
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', expect.stringMatching(/not running on this machine/)))
+        expect(onStatus).not.toHaveBeenCalledWith('dmx-1', expect.stringMatching(/Desk: 0 fixtures/))
+    })
+
+    it('still says "0 fixtures" for a desk that really is running with an empty rig', async () => {
+        const onStatus = vi.fn()
+        const body = { ...SUMMARY, fixtures: 0, scenes: 0, activeScene: null, activeSceneName: null, fx: { enabled: false } }
+        const fetchImpl = vi.fn(async () => ({
+            ok: true, status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => body,
+        }))
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', 'Desk: 0 fixtures, 0 scenes · output OFF'))
     })
 
     it('offers the way in — a link to the desk itself', async () => {
@@ -276,6 +316,28 @@ describe('DmxOutPanelWindow — the lighting desk', () => {
         view.rerender(desk({ node: node(), values: { scene: 'Warm' }, fetchImpl }))
         await waitFor(() => expect(posts.some((p) => p.body.id === 's9')).toBe(true))
         expect(posts.filter((p) => p.url === `${API}/scenes/recall`)).toHaveLength(2)
+    })
+
+    it("fires the PROJECT's look a word names when no scene on the desk carries it", async () => {
+        // The Cards page puts a project's looks on the desk as looks (`rig-<look>`), not scenes;
+        // a wire saying "peak" reached nothing before 2026-10-13.
+        const { fetchImpl, posts } = fakeDesk({
+            scenes: [{ id: 's1', name: 'Red' }],
+            recallOk: (body) => body.id === 's1',
+            looks: [{ id: 'rig-the-wall', name: 'The wall' }, { id: 'rig-peak', name: 'Peak' }],
+        })
+        const view = render(desk({ node: node(), values: {}, fetchImpl }))
+        await waitFor(() => expect(fetchImpl.mock.calls.some(([url]) => String(url) === `${API}/scenes/summary`)).toBe(true))
+        view.rerender(desk({ node: node(), values: { scene: 'peak' }, fetchImpl }))
+        await waitFor(() => expect(posts.some((p) => p.url === `${API}/looks/fire` && p.body.id === 'rig-peak')).toBe(true))
+        view.rerender(desk({ node: node(), values: { scene: 'The wall' }, fetchImpl }))
+        await waitFor(() => expect(posts.some((p) => p.url === `${API}/looks/fire` && p.body.id === 'rig-the-wall')).toBe(true))
+        // A scene still wins, and an unknown word fires no look.
+        view.rerender(desk({ node: node(), values: { scene: 'Red' }, fetchImpl }))
+        await waitFor(() => expect(posts.some((p) => p.url === `${API}/scenes/recall` && p.body.id === 's1')).toBe(true))
+        view.rerender(desk({ node: node(), values: { scene: 'nothing here' }, fetchImpl }))
+        await waitFor(() => expect(fetchImpl.mock.calls.filter(([url]) => String(url) === `${API}/fireable`)).toHaveLength(3))
+        expect(posts.filter((p) => p.url === `${API}/looks/fire`)).toHaveLength(2)
     })
 
     it('leaves a graph authored before the desk existed on its vizzz node', async () => {

@@ -3,6 +3,7 @@ import {
     DESK_ABSENT_TEXT,
     DESK_COMMANDS,
     DESK_FORBIDDEN_TEXT,
+    DESK_NOT_RUNNING_TEXT,
     DESK_STATUS,
     RIG_KINDS,
     RIG_STATUS,
@@ -12,10 +13,12 @@ import {
     deskHomeUrl,
     deskStatusText,
     isRigBlocked,
+    readDeskLooks,
     readDeskScenes,
     readDeskSummary,
     readRigStatus,
     resolveRigKind,
+    resolveLookId,
     resolveSceneId,
     rigBaseUrl,
     sendDeskCommand,
@@ -134,7 +137,7 @@ export default function DmxOutPanelWindow({
             if (desk.status === DESK_STATUS.FORBIDDEN) return DESK_FORBIDDEN_TEXT
             if (desk.status === DESK_STATUS.ANSWERING) return deskStatusText(desk.summary)
             if (desk.status === DESK_STATUS.CHECKING) return 'Looking for the lighting desk…'
-            return 'The lighting desk is not answering'
+            return DESK_NOT_RUNNING_TEXT
         }
         if (rig.status === RIG_STATUS.UNSET) return 'No rig named'
         if (rig.status === RIG_STATUS.BLOCKED) return 'A https page cannot reach a http rig — open the local editor'
@@ -243,10 +246,22 @@ export default function DmxOutPanelWindow({
             // A name this panel had not seen: re-read the library and try once
             // more, so a scene saved after the node mounted still fires.
             const fresh = await readDeskScenes(deskBase, { fetchImpl: fetchRef.current })
-            if (cancelled || !fresh.ok) return
-            setScenes(fresh.scenes)
-            const retry = resolveSceneId(fresh.scenes, wanted)
-            if (retry !== id) sendDeskCommand(deskBase, DESK_COMMANDS.recall(retry), { fetchImpl: fetchRef.current })
+            if (cancelled) return
+            if (fresh.ok) {
+                setScenes(fresh.scenes)
+                const retry = resolveSceneId(fresh.scenes, wanted)
+                if (retry !== id) {
+                    sendDeskCommand(deskBase, DESK_COMMANDS.recall(retry), { fetchImpl: fetchRef.current })
+                    return
+                }
+            }
+            // Not a scene: one of the PROJECT's looks ("the wall", "peak"), which the Cards page
+            // puts on the desk as looks, not scenes. Before 2026-10-13 a wire naming one fired
+            // nothing and said nothing — the graph could not reach the looks it was drawn with.
+            const library = await readDeskLooks(deskBase, { fetchImpl: fetchRef.current })
+            if (cancelled || !library.ok) return
+            const lookId = resolveLookId(library.looks, wanted)
+            if (lookId) sendDeskCommand(deskBase, DESK_COMMANDS.fire(lookId), { fetchImpl: fetchRef.current })
         }
         recall()
         return () => { cancelled = true }

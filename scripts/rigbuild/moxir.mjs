@@ -73,7 +73,7 @@ export const moxirDocument = ({ rig, hall, library }) => {
             components: {
                 ...entity.components,
                 // the halo names its own position per group (src/rigbuild/looks.js namedPositionKey)
-                fixture: { type: type.id, position: group.mount === 'halo' ? words(`halo-${group.id}`) : words(group.mount), unit: Number(m[2]), ...(group.orient === 'hung' ? { hung: true } : {}), ...(offDmx.has(type.code) ? { dmx: false } : {}) }
+                fixture: { type: type.id, position: group.mount === 'halo' ? words(`halo-${group.id}`) : group.named ? words(`named-${group.id}`) : words(group.mount), unit: Number(m[2]), ...(group.orient === 'hung' ? { hung: true } : {}), ...(offDmx.has(type.code) ? { dmx: false } : {}) }
             }
         })
     }

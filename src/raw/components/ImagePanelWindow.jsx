@@ -6,7 +6,7 @@ const getImageAssetFromNode = (node, assetMap = new Map()) => {
     return assetMap.get(assetId) || null
 }
 
-export default function ImagePanelWindow({ node, values = null, assetMap }) {
+export default function ImagePanelWindow({ node, values = null, assetMap, sourceWired = false }) {
     const sourceNode = values ? { ...node, values } : node
     const wired = sourceNode?.values?.src
     const alt = sourceNode.values?.title || node.label || 'Image'
@@ -23,9 +23,12 @@ export default function ImagePanelWindow({ node, values = null, assetMap }) {
     const src = asset?.url || ''
 
     if (!src) {
+        // Wired but empty is not "no image selected": the person chose a source
+        // and it is sending nothing yet (a Scene gives its Picture only while
+        // its window is open — ScenePictureFeed.jsx). Saying so is the fix.
         return (
             <div className="raw-window-stack raw-image-panel raw-image-panel-empty">
-                <p>No image selected yet.</p>
+                <p>{sourceWired ? 'Wired to Source — no picture is arriving yet.' : 'No image selected yet.'}</p>
             </div>
         )
     }

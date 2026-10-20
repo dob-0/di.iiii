@@ -4,30 +4,152 @@
 // physically (beamAir.js) or as the old flat cone, without a prop threaded through
 // both renderers' entity switches. Keyed by the WebGLRenderer: two Canvases on one
 // page (the visualiser's room beside another view) never share air.
+//
+// The haze FIELD (hazeField.js) is put together here from two halves that arrive from
+// two places: the settings (atmosphere.haze, from RenderSettingsEffect) and the
+// machines (the room's hazers and fog machines, from RigBodies, which has the rig's
+// type library). Their sum is written into the renderer's shared haze uniforms
+// (hazeUniforms.js); a beam never re-renders for it.
 import { useSyncExternalStore } from 'react'
+import { buildHazeField, hazeSettingsOf, sameHazeField } from './hazeField.js'
+import { beerLambertFog } from './beerLambertFog.js'
+import { hazeUniformsFor, writeHazeUniforms } from './hazeUniforms.js'
 
 const stores = new WeakMap()
 const storeOf = (gl) => {
     if (!gl) return null
     let store = stores.get(gl)
     if (!store) {
-        store = { value: null, listeners: new Set() }
+        store = { value: null, machines: [], field: null, listeners: new Set(), fieldListeners: new Set() }
         stores.set(gl, store)
     }
     return store
 }
 
-const same = (a, b) => a === b || (a && b && a.scattering === b.scattering && a.anisotropy === b.anisotropy)
+const same = (a, b) =>
+    a === b ||
+    (a && b && a.scattering === b.scattering && a.anisotropy === b.anisotropy && JSON.stringify(a.haze ?? null) === JSON.stringify(b.haze ?? null))
+
+const refreshField = (gl, store) => {
+    const field = store.value ? buildHazeField(hazeSettingsOf(store.value), store.machines) : null
+    const changed = !sameHazeField(field, store.field)
+    if (changed) store.field = field
+    writeHazeUniforms(hazeUniformsFor(gl), store.value, store.field)
+    if (changed) for (const listener of store.fieldListeners) listener(store.field)
+}
 
 /** Set the air for this renderer (null = no atmosphere: the old cones). */
 export const setAtmosphere = (gl, atmosphere) => {
     const store = storeOf(gl)
     if (!store || same(store.value, atmosphere)) return
     store.value = atmosphere || null
+    refreshField(gl, store)
     for (const listener of store.listeners) listener()
+    // the surfaces' fog follows the air even when no field changed (a uniform haze edited)
+    for (const listener of store.fieldListeners) listener(store.field)
+}
+
+/** The room's hazers and fog machines (hazeField.js hazeMachinesOf), for this renderer. */
+export const setHazeMachines = (gl, machines) => {
+    const store = storeOf(gl)
+    if (!store) return
+    store.machines = Array.isArray(machines) ? machines : []
+    refreshField(gl, store)
 }
 
 export const getAtmosphere = (gl) => storeOf(gl)?.value || null
+
+/**
+ * Real bloom is drawing this renderer's frames (HdrBloom.jsx): the beams' glare veil,
+ * which only stood in for it, steps aside. Off again in a headset, where bloom cannot run.
+ */
+const bloomAllowed = new WeakMap()
+/** The frame-rate governor (qualityGovernor.js) lets bloom run, or not, on this renderer. */
+export const setBloomAllowed = (gl, allowed) => { if (gl) bloomAllowed.set(gl, Boolean(allowed)) }
+export const isBloomAllowed = (gl) => (gl ? bloomAllowed.get(gl) !== false : true)
+
+const cameraOutside = new WeakMap()
+/**
+ * SmartView says when the camera stands outside the building (a cutaway: Top, Side, an orbit from
+ * beyond a wall). Bloom is the eye's glow IN the hall; from outside it turned a beam aimed at the cut
+ * roof into a white blob over the whole plan (2026-10-02, /moxir Top and Side), so it rests there.
+ */
+export const setCameraOutside = (gl, outside) => { if (gl) cameraOutside.set(gl, Boolean(outside)) }
+export const isCameraOutside = (gl) => (gl ? cameraOutside.get(gl) === true : false)
+
+const beamMeshes = new WeakMap()
+/** A beam's core hull, for its reflection in the floor (beamMirror.js). Returns the unregister. */
+export const registerBeamMesh = (gl, mesh) => {
+    if (!gl || !mesh) return () => {}
+    let set = beamMeshes.get(gl)
+    if (!set) { set = new Set(); beamMeshes.set(gl, set) }
+    set.add(mesh)
+    return () => set.delete(mesh)
+}
+export const beamMeshesOf = (gl) => beamMeshes.get(gl) || new Set()
+
+const glareMeshes = new WeakMap()
+/** A beam's glare hull, shown only while the room is drawn without bloom. Returns the unregister. */
+export const registerGlareMesh = (gl, mesh) => {
+    if (!gl || !mesh) return () => {}
+    let set = glareMeshes.get(gl)
+    if (!set) { set = new Set(); glareMeshes.set(gl, set) }
+    set.add(mesh)
+    mesh.visible = hazeUniformsFor(gl).uGlareOn.value > 0.5
+    return () => set.delete(mesh)
+}
+
+const bloomActive = new WeakMap()
+const glareHeld = new WeakMap()
+const applyGlare = (gl) => {
+    const u = hazeUniformsFor(gl).uGlareOn
+    const value = gl && (bloomActive.get(gl) || glareHeld.get(gl)) ? 0 : 1
+    if (u.value === value) return
+    u.value = value
+    // not drawn at all while bloom runs: 64 wide hulls rasterised only to discard cost fill
+    for (const mesh of glareMeshes.get(gl) || []) mesh.visible = value > 0.5
+}
+
+export const setBloomActive = (gl, active) => {
+    if (!gl) return
+    bloomActive.set(gl, Boolean(active))
+    applyGlare(gl)
+}
+
+/**
+ * Hold the glare veil off whatever bloom does: the measurement mode
+ * (src/project/viewport/measure/) reads the room with no eye model drawn into it.
+ */
+export const holdGlareVeil = (gl, held) => {
+    if (!gl) return
+    glareHeld.set(gl, Boolean(held))
+    applyGlare(gl)
+}
+
+/** The field the beams draw now (null: one uniform haze). */
+export const getHazeField = (gl) => storeOf(gl)?.field || null
+
+/** Be told when the field changes (a machine turned up, the settings edited). Returns the unsubscribe. */
+export const subscribeHazeField = (gl, listener) => {
+    const store = storeOf(gl)
+    if (!store) return () => {}
+    store.fieldListeners.add(listener)
+    return () => store.fieldListeners.delete(listener)
+}
+
+/**
+ * The fog's resting distances: Beer–Lambert at the σ the beams' transmittance uses — the field's fill
+ * when the room works its haze out from its machines, else the room's one scattering — encoded for the
+ * patched fog chunk (beerLambertFog.js: far < near), or `fallback` (as authored) in a room with no air.
+ * Whoever moves the fog at run time — SmartView stands it back by the camera's distance outside the
+ * building — adds its offset to THIS (to near and far alike), so the haze then starts at the building.
+ */
+export const hazeFogBase = (gl, fallback = null) => {
+    const store = storeOf(gl)
+    const sigma = store?.field ? store.field.fill : store?.value?.scattering
+    if (!store?.value || !(sigma > 0)) return store?.value && store?.field ? { near: 0, far: 1e5 } : fallback
+    return beerLambertFog(Math.min(sigma, 1), 0)
+}
 
 export function useAtmosphere(gl) {
     return useSyncExternalStore(
@@ -39,5 +161,35 @@ export function useAtmosphere(gl) {
         },
         () => getAtmosphere(gl),
         () => getAtmosphere(gl)
+    )
+}
+
+// THE SCHEMATIC LOOK (render Tech, src/shared/renderPlan.js; decision 2026-10-15-studio-tech-show-render.md): every beam a plain
+// flat cone in its own colour, every laser a plain line to its first surface — no air, no additive glow. RenderSettingsEffect
+// writes it from `renderSettings.look === 'schematic'` (a render-time copy; the document never holds it); every beam reads it.
+const schematicStores = new WeakMap()
+const schematicOf = (gl) => {
+    if (!gl) return null
+    let store = schematicStores.get(gl)
+    if (!store) { store = { value: false, listeners: new Set() }; schematicStores.set(gl, store) }
+    return store
+}
+export const setSchematic = (gl, on) => {
+    const store = schematicOf(gl)
+    if (!store || store.value === Boolean(on)) return
+    store.value = Boolean(on)
+    for (const listener of store.listeners) listener()
+}
+export const isSchematic = (gl) => schematicOf(gl)?.value === true
+export function useSchematic(gl) {
+    return useSyncExternalStore(
+        (listener) => {
+            const store = schematicOf(gl)
+            if (!store) return () => {}
+            store.listeners.add(listener)
+            return () => store.listeners.delete(listener)
+        },
+        () => isSchematic(gl),
+        () => isSchematic(gl)
     )
 }

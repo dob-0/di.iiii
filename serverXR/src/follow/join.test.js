@@ -105,7 +105,7 @@ describe('joining', () => {
         const result = await joinSpace({ address: '192.168.1.9:3000', code: 'amber desk nine river', send: host.send, ...deps })
         expect(result).toMatchObject({ ok: true, spaceId: 'moxir', hostName: 'ponyo' })
         expect(made).toEqual([{ spaceId: 'moxir', label: 'MOXIR' }])
-        expect(written).toEqual([{ dir: '/data', spaceId: 'moxir', entry: { remote: 'http://192.168.1.9:3000/serverXR', token: 'dii_sync_abc.def', label: 'ponyo' } }])
+        expect(written).toEqual([{ dir: '/data', spaceId: 'moxir', entry: { remote: 'http://192.168.1.9:3000/serverXR', token: 'dii_sync_abc.def', label: 'ponyo', start: 'replay' } }])
         const redeem = host.calls.find((call) => call.url.endsWith('/redeem'))
         expect(redeem.body).toEqual({ code: 'amber desk nine river', machine: { id: ME.id, name: ME.name } })
     })
