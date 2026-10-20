@@ -20,7 +20,11 @@ Limits, stated: the rest axis only (a look may aim a unit elsewhere at show time
 boxes, not the hall's triangles; no space frame lattice, columns or cranes; glazing ends a beam here although light would
 transmit it (an outside-exposure check must treat it as an opening); the cone's spread is not cast (the axis only). A lamp
 whose origin lies inside a slab is at distance 0 from it (reported with inside_slab, not skipped, never fixed: move the lamp); one
-standing ON a face and aimed away from the slab does not meet it. `--fix` writes beam.length = the first-hit
+standing ON a face and aimed away from the slab does not meet it. A lamp AT floor level (y = 0) aiming below the horizontal meets the
+floor at 0 m: reported (on_floor), never fixed, never read as open sky. A lamp whose origin lies outside the hall (outside the box
+that holds every slab, floor to the highest top: a box, not the hall's outline) is reported as a leak row with outside_hall true:
+counted in `leaks` (exit 1, the CLI contract keeps one count), never fixed, first_hit null when its ray meets nothing. A lamp
+meant to stand outside needs the owner's word first; the check does not know one. `--fix` writes beam.length = the first-hit
 distance for each leak, lasers too (ops on the project; back it up first).
 
     python3 scripts/place/physics_check.py --api http://127.0.0.1:4337/serverXR --project moxir-v2-9 \
@@ -88,11 +92,26 @@ def ray_box(p, d, lo, hi):
     return None if s is None else s[0]
 
 
+def hall_extent(shell):
+    """(lo, hi): the box that holds every slab of the shell in x and z, floor (y = 0) to the highest slab top in y. A lamp outside it
+    is not in the hall. A box, not the hall's outline: stated in the module doc."""
+    lo = [min(b[1][i] for b in shell) for i in range(3)]; hi = [max(b[2][i] for b in shell) for i in range(3)]
+    lo[1] = FLOOR_Y
+    return lo, hi
+
+
+def outside_hall(p, shell):
+    """True when the lamp's origin lies outside hall_extent(shell). A lamp inside a slab is inside this box (it has its own flag)."""
+    lo, hi = hall_extent(shell)
+    return any(p[i] < lo[i] - FACE_EPS or p[i] > hi[i] + FACE_EPS for i in range(3))
+
+
 def first_surface_through(p, d, shell):
     """(distance, surface, depth) of the first thing the ray meets: the floor (depth inf, a plane), or a dims.shell slab; depth is the
     length of the ray inside that slab, entry face to far face (shell = shell_of(dims))."""
     hits = []
-    if d[1] < -1e-9 and p[1] > FLOOR_Y: hits.append(((FLOOR_Y - p[1]) / d[1], 'floor', math.inf))
+    if d[1] < -1e-9 and p[1] > FLOOR_Y - FACE_EPS:   # a lamp AT floor level aiming down meets the floor at 0 m: never open sky
+        hits.append((max(0.0, (FLOOR_Y - p[1]) / d[1]), 'floor', math.inf))
     for name, lo, hi in shell:
         s = ray_span(p, d, lo, hi)
         if s is not None: hits.append((s[0], name, s[1] - s[0]))
@@ -107,8 +126,9 @@ def first_surface(p, d, shell):
 def fix_ops(leaks, stamp):
     """One updateComponent op per leak, lasers included: a laser line is a beam too, and 'stops at the first surface' has no exception.
     A project with no leak gets no ops (the route answers 400 'No operations provided.' to an empty batch).
-    A lamp INSIDE a slab (first hit 0) gets none: length 0 would hide the beam, the lamp has to be moved."""
-    leaks = [l for l in leaks if l['first_hit'] > 0]
+    A lamp INSIDE a slab, ON the floor aiming down (first hit 0) or OUTSIDE the hall gets none: length 0 would hide the beam, and the
+    fault is the lamp's place, not the beam's length: the lamp has to be moved."""
+    leaks = [l for l in leaks if not l.get('outside_hall') and l['first_hit'] is not None and l['first_hit'] > 0]
     return [{'type': 'updateComponent', 'payload': {'entityId': l['id'], 'component': 'beam', 'patch': {'length': round(l['first_hit'], 2)}},
              'opId': f'physics-fix-{stamp}-{i}', 'clientId': 'physics-check'} for i, l in enumerate(leaks)]
 
@@ -130,12 +150,19 @@ def main(argv=None):
         if drawn <= 0: continue
         t = c.get('transform') or {}; p = t.get('position') or [0, 0, 0]; d = axis_of(t.get('rotation') or [0, 0, 0])
         L, name, depth = first_surface_through(p, d, shell); checked += 1
+        if outside_hall(p, shell):
+            # the lamp stands outside the building (2026-10-20 review): what its ray meets from there says nothing about the hall, and 'open
+            # sky' must not read as 'no leak'. Reported as a leak row (counted, exit 1, never fixed); first_hit is what it meets, None = nothing.
+            fin = math.isfinite(L)
+            leaks.append({'id': e['id'], 'drawn': round(drawn, 2), 'first_hit': round(L, 2) if fin else None, 'surface': name,
+                          'over_m': round(drawn - L, 2) if fin else None, 'laser': bool(beam.get('laser')), 'outside_hall': True})
+            continue
         # the overshoot allowed is --tol, but never more than the slab is thick: past its far face the beam is outside the building
         if drawn > L + min(a.tol, depth):
             leaks.append({'id': e['id'], 'drawn': round(drawn, 2), 'first_hit': round(L, 2), 'surface': name, 'over_m': round(drawn - L, 2), 'laser': bool(beam.get('laser'))})
-            if L <= 0: leaks[-1]['inside_slab'] = True
+            if L <= 0: leaks[-1]['on_floor' if name == 'floor' else 'inside_slab'] = True
     print(json.dumps({'project': a.project, 'version': raw.get('version'), 'beams_checked': checked, 'leaks': len(leaks)}))
-    for l in sorted(leaks, key=lambda l: -l['over_m'])[:40]: print(' ', json.dumps(l))
+    for l in sorted(leaks, key=lambda l: -(math.inf if l['over_m'] is None else l['over_m']))[:40]: print(' ', json.dumps(l))
     if a.fix and leaks:
         ops = fix_ops(leaks, int(time.time() * 1000))
         req = urllib.request.Request(f'{a.api}/api/projects/{a.project}/ops', data=json.dumps({'baseVersion': raw['version'], 'ops': ops}).encode(),

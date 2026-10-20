@@ -128,6 +128,60 @@ class FaceAndThickness(unittest.TestCase):
         self.assertEqual(pc.fix_ops([leak], 1), [])
 
 
+class LampStandsOutsideOrOnTheFloor(unittest.TestCase):
+    """Review findings (LOW) on PR #1046: (a) a lamp whose origin is outside the hall is reported, not read as 'open sky = no leak';
+    (b) a lamp ON the floor aiming below the horizontal meets the floor at 0 m (reported), never open sky."""
+    def setUp(self): self.shell = pc.shell_of(FIXTURE)
+
+    def test_extent_is_the_shell_box_floor_to_top(self):
+        lo, hi = pc.hall_extent(self.shell)
+        self.assertEqual((lo, hi), ([-10.3, 0.0, -10.3], [10.3, 14.2, 10.3]))
+
+    def test_outside_hall(self):
+        for p in ([20, 1, 0], [0, 1, 11], [0, 15, 0], [0, -1, 0], [-10.4, 1, 0]):
+            self.assertTrue(pc.outside_hall(p, self.shell), p)
+        for p in ([0, 1, 0], [5, 9, 5], [0, 0, 0], [10.2, 5, 0]):   # in the room, on the floor, inside a wall slab (that one is inside_slab)
+            self.assertFalse(pc.outside_hall(p, self.shell), p)
+
+    def test_a_lamp_outside_the_walls_is_a_row_and_exit_1_even_when_its_beam_is_short(self):
+        rc, out = run_main(FIXTURE, [lamp('in', [0, 1, 0], FLIP, 5.0), lamp('out', [20, 1, 0], FLIP, 5.0)])
+        s = json.loads(out[0]); self.assertEqual((rc, s['beams_checked'], s['leaks']), (1, 2, 1))
+        row = json.loads(out[1])
+        self.assertEqual((row['id'], row['outside_hall']), ('out', True)); self.assertIsNone(row['first_hit']); self.assertIsNone(row['over_m'])
+
+    def test_a_lamp_outside_is_never_fixed(self):
+        rc, out = run_main(FIXTURE, [lamp('out', [20, 1, 0], [0, 0, 0], 5.0)])   # aims down at the ground outside: the floor plane is under it too
+        row = json.loads(out[1]); self.assertTrue(row['outside_hall'])
+        self.assertEqual(pc.fix_ops([row], 1), [])
+
+    def test_output_is_strict_json_for_every_row(self):
+        rc, out = run_main(FIXTURE, [lamp('out', [20, 1, 0], FLIP, 5.0)])
+        for line in out: json.loads(line, parse_constant=lambda c: self.fail('non-JSON constant ' + c))
+
+    def test_a_lamp_in_the_room_is_not_flagged(self):
+        rc, out = run_main(FIXTURE, [lamp('a', [0, 1, 0], FLIP, 13.0)])
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+    def test_a_lamp_at_floor_level_aiming_down_meets_the_floor_at_zero(self):
+        for y in (0.0, 5e-7, -5e-7):
+            L, name = pc.first_surface([0, y, 0], [0.0, -1.0, 0.0], self.shell)
+            self.assertEqual((round(L, 6), name), (0.0, 'floor'), y)
+
+    def test_a_lamp_at_floor_level_aiming_along_or_up_does_not_meet_the_floor(self):
+        L, name = pc.first_surface([0, 0, 0], [1.0, 0.0, 0.0], self.shell); self.assertIn('wall-e', name)
+        L, name = pc.first_surface([0, 0, 0], UP, self.shell); self.assertIn('lantern-roof', name)   # up through the opening
+
+    def test_a_floor_lamp_aiming_below_the_horizontal_is_reported_never_fixed(self):
+        rc, out = run_main(FIXTURE, [lamp('f', [0, 0, 0], [0, 0, 0], 3.0)])   # rest axis straight down, drawn 3 m under the floor
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (1, 1))
+        row = json.loads(out[1]); self.assertEqual((row['surface'], row['first_hit']), ('floor', 0.0)); self.assertTrue(row.get('on_floor'))
+        self.assertNotIn('inside_slab', row); self.assertEqual(pc.fix_ops([row], 1), [])
+
+    def test_a_floor_lamp_aiming_sideways_with_a_beam_is_no_leak(self):
+        rc, out = run_main(FIXTURE, [lamp('f', [0, 0, 0], [0, 0, math.pi / 2], 10.0)])   # along +X to the east wall at 10
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+
 class Refusals(unittest.TestCase):
     def test_no_shell_is_refused_loudly(self):
         for dims in ({}, {'shell': []}, {'truss_top_h_m': 13.3, 'ridge_h_m': 16.5, 'lantern_w_m': 12.0}):

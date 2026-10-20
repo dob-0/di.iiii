@@ -63,10 +63,10 @@ show), hits as their lit share in the drive. Tempo inside a step is NOT visible 
 
 CHECKS (fail = exit 1, nothing written): schema; every point inside the line's field (|x|,|y| <= 1) and the cube's field
 (|Y|,|P| <= fieldHalfDeg, ±18.5 ASSUMED, fixtures.json); no lit ray below the horizontal (the lowest point is the cube, over the
-hand rule); every ray's first surface (hand_planes_first_surface, the legacy planes: walls, floor, roof deck, lantern glazing) plus the bay's
+hand rule); every ray's first surface (physics_check.first_surface over the hall record's dims.shell: the model's own wall, deck, lantern and glazing slabs, plus the floor) plus the bay's
 column lines (|x| = span/2 below the truss bottom) and the near crane (height at its z >= 9.2 m, the rig's crossing rule): a ray
-must end on the roof deck, an end wall at >= 9.0 m, or a side wall — never the glazing (light would leave the building), the
-columns, the crane or the floor; flashes <= 3 per second (WCAG 2.x); the room's frame caps; the real cube's point budget
+must end on the roof deck, an end wall at >= 9.0 m, or a side wall — never the glazing (the lantern's or the long walls' ribbon: light would
+leave the building), open sky (a gate or door opening), the columns, the crane or the floor. A hall record WITHOUT dims.shell is refused (exit 2); flashes <= 3 per second (WCAG 2.x); the room's frame caps; the real cube's point budget
 (ASSUMED 30 kpps at >= 30 Hz refresh = 1000 points a frame; dwell 12 + blank 6 points a beam, 4 points a degree of path).
 """
 import argparse, datetime, importlib.util, json, math, os, sys
@@ -79,7 +79,7 @@ LEVEL_CAP = 0.16                 # the show desk's laser fader cap, measured 202
 # --officer-checked "<sign-off>" the HALL rules below stop failing a scene and are written down as waivers instead, in the
 # plan, the summary and the rig (who signed, which rule, how often). What stays a failure whatever is signed: the cube's
 # own field (±FIELD_HALF_DEG, hardware), a ray behind its line, the flash rate (WCAG) and the point budget (the buffer).
-HALL_RULES = ('below the horizontal', 'floor', 'column line (bay edge)', 'lantern glazing', 'entry wall', 'near crane crossing')
+HALL_RULES = ('below the horizontal', 'floor', 'column line (bay edge)', 'lantern glazing', 'wall glazing', 'open sky', 'entry wall', 'near crane crossing')
 OFFICER = {'signoff': None, 'waived': {}}
 
 
@@ -91,6 +91,7 @@ CUBE_PPS, MIN_REFRESH_HZ = 30000, 30  # ASSUMED (laserEngine.js dacRate example;
 DWELL_PTS, BLANK_PTS, PTS_PER_DEG = 12, 6, 4
 MAX_BEAMS, MAX_SEGMENTS = 48, 24   # per cube: 48 x (12 + 6) = 864 points, inside the 1000-point frame
 CRANE_CLEAR_M, CRANE_HALF_Z = 9.2, 1.45   # rig lasers.arithmetic (crossing >= 9.2 m); girders 2 x 0.7 + gap 1.5 (hall dims)
+OPEN_SKY_M = 120.0              # where a ray that meets nothing is drawn to (it fails as 'open sky' either way)
 ENTRY_MIN_M = 9.0                # rig: entry wall >= 9.0 m (over the 6 m door)
 SUBSAMPLES = 6                   # positions per room frame for a moving pattern
 PATTERNS = ('comb', 'net', 'fan', 'fan-sweep', 'single-scan', 'tunnel', 'sky')
@@ -114,29 +115,33 @@ def _physics():
 
 PHYS = _physics()
 
-# LEGACY, OWED (2026-10-20): the hall planes physics_check.py used to copy by hand, kept HERE unchanged so this design tool's
-# output does not move under it. physics_check.py now reads dims.shell (one source); this tool's labels ('entry wall', 'floor',
-# 'lantern ...') and its dims-only fixtures still lean on the hand planes. Moving it to the shell is a ledger row (known-fixes
-# 2026-10-20: "physics_check.py had hand-copied planes"); the planes differ from the model (back wall -53.6 vs -53.8, deck 13.3
-# vs 13.35, a lantern the whole length over |x| <= 6 where the model has two lanterns with a 12 m deck gap and a gate opening).
-HAND_WEST_X, HAND_EAST_X, HAND_WALL_Z, HAND_BACK_Z = -36.4, 60.4, 53.8, -53.6
-
-
-def hand_planes_first_surface(p, d, dims):
-    deck = float(dims['truss_top_h_m']); ridge = float(dims['ridge_h_m']); half_lantern = float(dims['lantern_w_m']) / 2
-    hits = []
-    for name, axis, val in (('east wall', 0, HAND_EAST_X), ('west wall', 0, HAND_WEST_X), ('entry wall', 2, HAND_WALL_Z),
-                            ('back wall', 2, HAND_BACK_Z), ('floor', 1, 0.0)):
-        if abs(d[axis]) > 1e-9:
-            t = (val - p[axis]) / d[axis]
-            if t > 1e-6: hits.append((t, name))
-    if d[1] > 1e-9:  # upward: the deck, or the lantern glazing where the beam meets the deck inside the lantern band
-        t = (deck - p[1]) / d[1]; x_at = p[0] + d[0] * t
-        if abs(x_at) <= half_lantern:
-            hits.append(((ridge - p[1]) / d[1], 'lantern glazing (ridge)'))
-        else:
-            hits.append((t, 'roof deck'))
-    return min(hits)
+def rule_label(name):
+    """The hall rules in this file speak in surfaces ('roof deck', 'entry wall', 'lantern glazing' ...); physics_check names a slab
+    '<surface> [<id>]' (hall_shell.py's own words) and the floor 'floor'. Returns (label, known): an unclassified slab is not guessed, it fails."""
+    if name == 'floor':
+        return 'floor', True
+    if name.startswith('none'):
+        return 'open sky', True
+    surface, _, rest = name.partition(' [')
+    sid = rest.rstrip(']')
+    if surface.startswith('deck'):
+        return 'roof deck', True
+    if surface == 'lantern roof':
+        return 'lantern glazing (roof)', True
+    if surface == 'lantern glazing':
+        return 'lantern glazing (side)', True
+    if surface == 'lantern kerb':                         # the curb round the lantern opening: solid in the model, but see end_of
+        return 'lantern glazing (kerb)', True
+    side = next((w for w in ('west', 'east') if w in sid), None)
+    if surface.startswith('long wall glazing') and side:
+        return f'wall glazing ({side})', True
+    if surface.startswith('long wall') and side:
+        return f'{side} wall', True
+    if surface.startswith('end wall'):
+        end = next((w for w in ('entry', 'far') if w in sid), None)
+        if end:
+            return ('entry wall' if end == 'entry' else 'back wall'), True
+    return name, False
 
 
 # ---- vectors and three.js Euler XYZ ---------------------------------------------------------------------------------------
@@ -413,9 +418,12 @@ def drive_at(laser, t):
 
 
 # ---- the physics ----------------------------------------------------------------------------------------------------------
-def end_of(p, d, dims):
-    """First surface of a lit ray: (distance, label, end point, ok, why)."""
-    t, label = hand_planes_first_surface(p, d, dims)
+def end_of(p, d, dims, shell):
+    """First surface of a lit ray: (distance, label, end point, ok, why). shell = PHYS.shell_of(dims), parsed once per run."""
+    t, name = PHYS.first_surface(p, d, shell)
+    label, known = rule_label(name)
+    if not math.isfinite(t):
+        t = OPEN_SKY_M                                   # no surface: the ray is drawn to a far point, and fails below ('open sky')
     half_span = float(dims['span_m']) / 2
     truss_bottom = float(dims['truss_bottom_h_m'])
     # the bay's column lines: crossing |x| = span/2 below the truss bottom
@@ -430,8 +438,18 @@ def end_of(p, d, dims):
         ok, why = False, 'below the horizontal'
     if label in ('floor', 'column line (bay edge)'):
         ok, why = False, label
-    if label.startswith('lantern'):
-        ok, why = False, 'lantern glazing: the light would leave the building'
+    if label.startswith('lantern glazing'):
+        # the old planes failed every ray in the lantern band, glazing or not. The shell's kerb (0.2 m x 0.5 m, validated: false) is a solid
+        # the ray would end on, yet it is NOT cleared as a stop here: failing closed keeps the safety check as strict as before until the
+        # model is measured and the officer says so (findings in the PR: how many rays end on the kerb).
+        ok, why = False, ('lantern glazing: the light would leave the building' if 'kerb' not in label else
+                          'lantern glazing (kerb): the ray ends on the lantern kerb, a solid in the unvalidated model; not cleared as a stop')
+    if label.startswith('wall glazing'):
+        ok, why = False, 'wall glazing: the light would leave the building'
+    if label == 'open sky':
+        ok, why = False, 'open sky: the light leaves the building (a gate or door opening, or no surface)'
+    if not known:
+        ok, why = False, f'unclassified shell surface {name!r}: add it to rule_label'
     if label == 'entry wall' and end[1] < ENTRY_MIN_M:
         ok, why = False, f'entry wall at {end[1]:.2f} m < {ENTRY_MIN_M}'
     return t, label, end, ok, why
@@ -481,6 +499,7 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
     group = kind['groups'][laser[kind['group_key']]]
     rays_at = kind['rays']
     fails, ends, rays_out, max_field, max_line_field = [], {}, [], 0.0, 0.0
+    shell = PHYS.shell_of(dims)                             # dims.shell, once (refuses a hall record without one)
     waived = {}                                             # hall rules waived under the officer's sign-off: rule → rays
     budget = {}
     for cube in cubes:
@@ -500,7 +519,7 @@ def scene_plan(scene, cubes, dims, crane_z, samples=24, kind=CUBE_SET):
                     if fp is None:
                         fails.append(f"{cube['id']} line {beam['id']}: ray behind the line"); continue
                     max_line_field = max(max_line_field, abs(fp[0]), abs(fp[1]))
-                    t, label, end, ok, why = end_of(cube['p'], dd, dims)
+                    t, label, end, ok, why = end_of(cube['p'], dd, dims, shell)
                     cok, ch = crane_ok(cube['p'], dd, t, crane_z)
                     if not cok:
                         ok, why = False, f'near crane crossing at {ch:.2f} m < {CRANE_CLEAR_M}'
@@ -679,6 +698,7 @@ def main(argv=None):
     if a.level_cap is not None:
         LEVEL_CAP = max(0.01, min(1.0, float(a.level_cap)))
     S = json.load(open(a.scenes)); rig = json.load(open(a.rig)); dims = json.load(open(a.hall))['dims']
+    PHYS.shell_of(dims)                                      # a hall record without dims.shell is refused here (exit 2), before anything is checked
     scenes = S['scenes'] if isinstance(S, dict) else S
     errors = [m for s in scenes for m in validate_laser(s.get('laser'), s.get('id', '?'))]
     errors += [m for s in scenes for m in validate_line(s.get('laser_lines'), s.get('id', '?'))]

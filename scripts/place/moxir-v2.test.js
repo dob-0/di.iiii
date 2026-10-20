@@ -72,7 +72,10 @@ describe('epic-build: a rig file carries its own cues', () => {
         expect(reachOf({ type: 'up-b380f', throw_m: 300 })).toBe(MISS_REACH_CAP)
     })
     it('with the hall: the first hall surface along the lamp\'s rest axis (PHYSICS FIRST)', () => {
-        const dims = { truss_top_h_m: 13.3, ridge_h_m: 16.5, lantern_w_m: 12 }
+        // a deck at 13.3 with an opening over |x| <= 6 and a lantern roof at 16.5 over it: the slabs hall-reach.mjs reads (dims.shell)
+        const slab = (id, surface, x, y, z) => ({ id, surface, x_m: x, y_m: y, z_m: z })
+        const dims = { shell: [slab('deck-w', 'deck', [-40, -6], [13.3, 13.45], [-50, 50]), slab('deck-e', 'deck', [6, 40], [13.3, 13.45], [-50, 50]),
+            slab('lantern-roof', 'lantern roof', [-6, 6], [16.5, 16.6], [-50, 50])] }
         // straight up from 5 m, off the lantern band: the deck at 13.3; inside it: the glazing at 16.5
         expect(reachOf({ type: 'up-b380f', p: [20, 5, 0], r: [Math.PI, 0, 0], throw_m: null }, dims)).toBeCloseTo(8.3, 3)
         expect(reachOf({ type: 'up-b380f', p: [0, 5, 0], r: [Math.PI, 0, 0] }, dims)).toBeCloseTo(11.5, 3)

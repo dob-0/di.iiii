@@ -1004,9 +1004,12 @@ v2.11 97 beams, 0 -> 4 leaks (the same four: rig-beam-planes-03/04, rig-par-cut-
 lengths run 3.2 m / 26.8 m through the closed deck); 33 / 50 lamps changed first-hit distance, each explained (deck +0.05 m / dy for 61,
 second lantern 4, lantern roof -0.1 m / dy, 2 lamps outside the hall: open sky). Proof table: `docs/ai/sessions/fix-physics-check-reads-shell-2026-10-20.md`.
 Guard: `scripts/place/physics_check_test.py` (17 cases: slab stop, lantern opening, refusal, `main()` output, the reference rig drawn to
-its first surfaces = 0 leaks) and `scripts/place/physics-check.test.js`. OWED (ledger rows): `scripts/rigbuild/hall-reach.mjs`
-(epic-build writes `beam.length` with the same hand planes: it is where the 4 stored lengths came from) and
-`scripts/place/laser_frames.py` (now holds the old planes as `hand_planes_first_surface`, labelled legacy, unchanged output) move to `dims.shell`.
+its first surfaces = 0 leaks) and `scripts/place/physics-check.test.js`. MOVED in the same PR (update 2026-10-20): `scripts/rigbuild/hall-reach.mjs`
+(epic-build's `beam.length`: where the 4 stored lengths came from) and `scripts/place/laser_frames.py` read the same `dims.shell`; neither keeps a hand plane
+(guards: `scripts/rigbuild/hall-reach.test.js` incl. parity with `physics_check.py` on 600 rays of the real shell; `laser-frames-py.test.js` shell cases).
+Measured: epic rig 106 fixtures, 72 first hits moved, 28 were longer than the model (largest 5.45 m); v2.11 energy rig 67 fixtures, 52 moved, 17 longer (laser40-1: 86 m written,
+59.2 m the model allows); laser_frames on the v2.11 energy rig + the 50 scenes of 10-17: 99 888 rays, 65 736 changed end or verdict, 947 ok -> fail, 5 632 fail -> ok (the closed deck gap), frames identical.
+Also: a lamp OUTSIDE the hall is a leak row (`outside_hall`, counted, exit 1, never fixed) and a lamp at floor level aiming down meets the floor at 0 m (`on_floor`), not open sky.
 
 ## show-checkpoint: token and restore guards (2026-10-20)
 
