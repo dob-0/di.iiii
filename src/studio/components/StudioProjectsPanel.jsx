@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createProject, deleteProject, listProjects, updateProject } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // The Projects window: hop between the space's projects and do light
 // management (new / rename / delete) without leaving the editor for the hub.
@@ -109,7 +110,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         <div className="spp-root">
             <div className="spp-list">
                 {projects === null ? (
-                    <div className="spp-status">Loading projects…</div>
+                    <div className="spp-status"><LoadingScreen variant="inline" label="Loading projects" text="loading projects" /></div>
                 ) : projects.length === 0 ? (
                     <div className="spp-status">No projects in this space yet.</div>
                 ) : (

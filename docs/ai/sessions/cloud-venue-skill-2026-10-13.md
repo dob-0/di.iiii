@@ -24,3 +24,7 @@ Cloud agent, scheduled. Docs only: seven `.claude/skills/` files, no code, no be
   are MOXIR-pinned; a second venue would need its own.
 - **Next:** the owner reads the seven skills and says whether the step split (esp. render vs integrate) is how he works;
   then a dry run of steps 1–2 on the MOXIR plan to prove the commands as written.
+
+## 2026-10-20 — update onto dev: one source
+
+dev gained `docs/ai/skills/venue-to-show.md` (14 steps, traps, standing choices). To keep ONE source the seven skills became 8-line pointers and their script usage moved, once, into that file's section 6 (net +192 lines there, the skills 274 -> 56 lines). The other option (skills as source, venue-to-show pointing in) would have moved the 93-line process text and its step-check into seven files. CURRENT.md is dev's copy. check-agent-docs and check-doc-paths pass.

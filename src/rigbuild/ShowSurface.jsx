@@ -4,6 +4,7 @@ import { SIGN_IN_SEGMENT, buildAppSpacePath, buildVanityProjectPath } from '../u
 import { buildCardsPath } from './cardsRouting.js'
 import { CHOOSERS, ShowError, chooseCue, choosersLabel, cleanName, durationWords, isLiveScene, liveOf, sceneButtons, setAutoplay, setChoosers, swatchWords, youWords } from './showApi.js'
 import './show.css'
+import LoadingScreen from '../components/LoadingScreen.jsx'
 
 // THE SHOW PAGE (simple buttons, 2026-10-09)
 //
@@ -147,7 +148,7 @@ export default function ShowSurface({ spaceId, projectId }) {
             </main>
         )
     }
-    if (!data) return <main className="show-page" aria-busy="true"><p className="show-empty">Loading the show…</p></main>
+    if (!data) return <main className="show-page" aria-busy="true"><LoadingScreen variant="inline" label="Loading the show" text="loading the show" /></main>
 
     const operator = data.you.who === 'operator'
     // One short line, only when a press would do nothing, and why.

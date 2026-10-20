@@ -8,14 +8,412 @@
       "code": "UP-B380F",
       "identified": "EXACT",
       "identifiedNote": "EXACT",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-B380F",
       "modelledOn": null,
       "product": "UPlight UP-B380F, IP65 380 W beam moving head (outdoor)",
+      "makerModel": "IP65 380W Beam",
+      "manual": {
+        "what": "the printed \"MOVEHEAD FIXTURE USER MANUAL\" with the unit, ch. 3 Channel description, pp. 13-15 (LIST-1, 16 ch)",
+        "url": null,
+        "photos": [
+          "docs/moxir/devices/photos/b380f-manual-p13-ch1-9.jpg",
+          "docs/moxir/devices/photos/b380f-manual-p14-ch9-10.jpg",
+          "docs/moxir/devices/photos/b380f-manual-p15-ch10-16.jpg"
+        ],
+        "date": "photographed 2026-10-16 16:22",
+        "read": "photographed by the owner 2026-10-16 16:22 (di.bo inbox 2026-10-16, photo-1093…1101), read 2026-10-16 16:3x, values verbatim",
+        "basis": "APPROVED",
+        "archived_pdf": {
+          "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+          "file": "~/Downloads/moxir/devices/380-IP-BEAM.pdf",
+          "reason": "approved 2026-10-15 from a product page; NOT the unit's chart (pan ch 10 there, ch 1 in the printed manual) — archive.PDF-380-IP-BEAM"
+        }
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-b380f.json",
+        "modes": {
+          "16": "APPROVED"
+        }
+      },
       "category": "moving-head",
       "modes": [
         {
           "name": "16ch",
+          "footprint": 16,
+          "channels": [
+            {
+              "role": "pan",
+              "label": "Pan (0-540°)",
+              "default": 128
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (0-270°)",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine",
+              "default": 0
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine",
+              "default": 0
+            },
+            {
+              "role": "speed",
+              "label": "Pan/tilt speed (fast to slow)"
+            },
+            {
+              "role": "frost",
+              "label": "Frost (0-127 none, 128-191 colourful, 192-255 frost)",
+              "cap": {
+                "frost": {
+                  "from": 192,
+                  "to": 255,
+                  "basis": "MANUAL (printed, 2026-10-16): 192-255 insert frost; 128-191 is a colour filter, not frost"
+                }
+              }
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (0-3 dark, 4-103 pulse, 104-107 open, 108-207 fade, 208-212 open, 213-251 random, 252-255 open)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 3,
+                    "open": false
+                  },
+                  {
+                    "from": 104,
+                    "to": 107,
+                    "open": true
+                  },
+                  {
+                    "from": 208,
+                    "to": 212,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "color",
+              "label": "Colour wheel (0-4 white, 10-14 colour 1 … 130-134 colour 13, 5-wide splits between, 140-200 rotate fwd, 201-255 rev)",
+              "default": 0,
+              "cap": {
+                "wheel": [
+                  {
+                    "from": 0,
+                    "to": 4,
+                    "name": "open",
+                    "colour": "#ffffff"
+                  },
+                  {
+                    "from": 5,
+                    "to": 9,
+                    "half": [
+                      0,
+                      1
+                    ]
+                  },
+                  {
+                    "from": 10,
+                    "to": 14,
+                    "name": "red",
+                    "colour": "#ff2a0a"
+                  },
+                  {
+                    "from": 15,
+                    "to": 19,
+                    "half": [
+                      1,
+                      2
+                    ]
+                  },
+                  {
+                    "from": 20,
+                    "to": 24,
+                    "name": "green",
+                    "colour": "#00d12a"
+                  },
+                  {
+                    "from": 25,
+                    "to": 29,
+                    "half": [
+                      2,
+                      3
+                    ]
+                  },
+                  {
+                    "from": 30,
+                    "to": 34,
+                    "name": "blue",
+                    "colour": "#1f3cff"
+                  },
+                  {
+                    "from": 35,
+                    "to": 39,
+                    "half": [
+                      3,
+                      4
+                    ]
+                  },
+                  {
+                    "from": 40,
+                    "to": 44,
+                    "name": "yellow",
+                    "colour": "#ffe000"
+                  },
+                  {
+                    "from": 45,
+                    "to": 49,
+                    "half": [
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "from": 50,
+                    "to": 54,
+                    "name": "magenta",
+                    "colour": "#ff2fc8"
+                  },
+                  {
+                    "from": 55,
+                    "to": 59,
+                    "half": [
+                      5,
+                      6
+                    ]
+                  },
+                  {
+                    "from": 60,
+                    "to": 64,
+                    "name": "white (unsure)"
+                  },
+                  {
+                    "from": 65,
+                    "to": 69,
+                    "half": [
+                      6,
+                      7
+                    ]
+                  },
+                  {
+                    "from": 70,
+                    "to": 74,
+                    "name": "amber",
+                    "colour": "#ffb000"
+                  },
+                  {
+                    "from": 75,
+                    "to": 79,
+                    "half": [
+                      7,
+                      8
+                    ]
+                  },
+                  {
+                    "from": 80,
+                    "to": 84,
+                    "name": "lavender (unsure)"
+                  },
+                  {
+                    "from": 85,
+                    "to": 89,
+                    "half": [
+                      8,
+                      9
+                    ]
+                  },
+                  {
+                    "from": 90,
+                    "to": 94,
+                    "name": "lime",
+                    "colour": "#8cff3a"
+                  },
+                  {
+                    "from": 95,
+                    "to": 99,
+                    "half": [
+                      9,
+                      10
+                    ]
+                  },
+                  {
+                    "from": 100,
+                    "to": 104,
+                    "name": "orange",
+                    "colour": "#ff7a00"
+                  },
+                  {
+                    "from": 105,
+                    "to": 109,
+                    "half": [
+                      10,
+                      11
+                    ]
+                  },
+                  {
+                    "from": 110,
+                    "to": 114,
+                    "name": "red-orange",
+                    "colour": "#ff5a1e"
+                  },
+                  {
+                    "from": 115,
+                    "to": 119,
+                    "half": [
+                      11,
+                      12
+                    ]
+                  },
+                  {
+                    "from": 120,
+                    "to": 124,
+                    "name": "warm white",
+                    "colour": "#fff0c0"
+                  },
+                  {
+                    "from": 125,
+                    "to": 129,
+                    "half": [
+                      12,
+                      13
+                    ]
+                  },
+                  {
+                    "from": 130,
+                    "to": 134,
+                    "name": "light blue",
+                    "colour": "#a8d8ff"
+                  },
+                  {
+                    "from": 135,
+                    "to": 139,
+                    "half": [
+                      13,
+                      0
+                    ]
+                  },
+                  {
+                    "from": 140,
+                    "to": 200,
+                    "spin": "forward"
+                  },
+                  {
+                    "from": 201,
+                    "to": 255,
+                    "spin": "reverse"
+                  }
+                ]
+              }
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo (0-4 white, 5-9 gobo 1 … 85-89 gobo 17, 90-128 rotate rev, 129-131 stop, 132-170 rotate fwd, 171-255 shake gobo 1-17)",
+              "cap": {
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 89,
+                  "count": 17,
+                  "basis": "MANUAL (printed, 2026-10-16): 5-wide slots"
+                },
+                "goboShake": {
+                  "from": 171,
+                  "basis": "MANUAL (printed, 2026-10-16): 171-255 shake gobo 1-17"
+                }
+              }
+            },
+            {
+              "role": "prism",
+              "label": "Prism 1 (0-127 none, 128-255 in)",
+              "cap": {
+                "prism": true,
+                "prismIn": {
+                  "from": 128,
+                  "facets": 16,
+                  "basis": "MANUAL (printed, 2026-10-16): 128-255 insert prism 1; 16 facets from the spec (fixtures.json)"
+                }
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "index": {
+                    "from": 0,
+                    "to": 127
+                  },
+                  "basis": "MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse"
+                }
+              }
+            },
+            {
+              "role": "aux1",
+              "label": "Prism 2 (0-127 none, 128-255 in)",
+              "cap": {
+                "prism2": {
+                  "kind": "honeycomb",
+                  "in": {
+                    "from": 128
+                  },
+                  "basis": "MANUAL (printed, 2026-10-16): 128-255 insert prism 2"
+                }
+              }
+            },
+            {
+              "role": "aux2",
+              "label": "Prism 2 rotation (0-127 = 0-360°, 128-190 fwd, 191-192 stop, 193-255 rev)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "index": {
+                    "from": 0,
+                    "to": 127
+                  },
+                  "basis": "MANUAL (printed, 2026-10-16): 0-127 is an index 0…360°; 128-190 spin forward, 191-192 stop, 193-255 spin reverse"
+                }
+              }
+            },
+            {
+              "role": "focus",
+              "label": "Focus (far to near)"
+            },
+            {
+              "role": "control",
+              "label": "Reset (0-99 none; 100-105 lamp off, 200-205 lamp on, 210-215 reset XY, 220-235 reset effects, 240-255 reset all — always 0)",
+              "default": 0
+            }
+          ],
+          "channelsSource": {
+            "fixture": "U-Plus UP-B380F, the printed \"MOVEHEAD FIXTURE USER MANUAL\" with the unit (ch. 3 Channel table, pp. 13-15), photographed by the owner 2026-10-16",
+            "url": null,
+            "licence": null,
+            "basis": "APPROVED"
+          },
+          "src": "A",
+          "basis": "EXACT"
+        },
+        {
+          "name": "walk-2026-10-09",
           "footprint": 16,
           "channels": [
             {
@@ -155,10 +553,159 @@
             "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
             "url": null,
             "licence": null,
-            "basis": "TESTED"
+            "basis": "ARCHIVED"
           },
           "src": "A",
-          "basis": "EXACT"
+          "basis": "ARCHIVED",
+          "archived": true,
+          "reason": "the desk profile walked on Sevan units 2026-10-09 (ch 1-10). The printed manual with the unit (owner 2026-10-16) has this SAME order and is the default with the manual's value ranges; the walk stays for the record (its caps were ASSUMED where the manual now states them)"
+        },
+        {
+          "name": "pdf-380-ip-beam-2026-10-15",
+          "footprint": 16,
+          "channels": [
+            {
+              "role": "color",
+              "label": "Colour wheel (0 white, 10-14 colour 1 … 130-134 colour 13, 140+ rotate)",
+              "default": 0
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (0 close, 1-4 open, 51-240 slow to fast, 252-255 open)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 0,
+                    "open": false
+                  },
+                  {
+                    "from": 1,
+                    "to": 4,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo (0-4 white, 5-69 gobo 1-13, 191+ shake)",
+              "cap": {
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 69,
+                  "count": 13,
+                  "basis": "APPROVED chart: 5-wide slots stated"
+                },
+                "goboShake": {
+                  "from": 191,
+                  "basis": "APPROVED chart"
+                }
+              }
+            },
+            {
+              "role": "prism",
+              "label": "Prism (0-63 none, 64 prism 1, 128 prism 2, 192 both)",
+              "cap": {
+                "prism": true,
+                "prismIn": {
+                  "from": 64,
+                  "facets": 16,
+                  "basis": "APPROVED chart for the thresholds; which prism is 8 or 16 facets is ASSUMED"
+                }
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation (0-127 angle, 128+ spin)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "basis": "APPROVED chart; read as an index 0…255 → 0…360° (0-127 = 0-400°)"
+                }
+              }
+            },
+            {
+              "role": "aux1",
+              "label": "Prism 2 rotation (0-127 angle, 128+ spin)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "basis": "APPROVED chart; read as an index 0…255 → 0…360°"
+                }
+              }
+            },
+            {
+              "role": "frost",
+              "label": "Frost (0-127 none, 128-191 frost, 192-255 colourful)",
+              "cap": {
+                "frost": {
+                  "from": 128,
+                  "to": 191,
+                  "basis": "APPROVED chart: an insert, not a curve"
+                }
+              }
+            },
+            {
+              "role": "focus",
+              "label": "Focus"
+            },
+            {
+              "role": "pan",
+              "label": "Pan",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine",
+              "default": 0
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine",
+              "default": 0
+            },
+            {
+              "role": "speed",
+              "label": "Pan/tilt speed"
+            },
+            {
+              "role": "control",
+              "label": "Reset (26-76 effects, 77-127 XY, 128+ all; always 0)",
+              "default": 0
+            },
+            {
+              "role": "lamp",
+              "label": "Lamp (10-100 off, 101-255 on; the desk never sends it, 0)",
+              "default": 0
+            }
+          ],
+          "channelsSource": {
+            "fixture": "U-Plus IP65 380W Beam, PDF manual \"380 IP BEAM\" (upluslighting.com 2024-01) — ARCHIVED 2026-10-16",
+            "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+            "licence": null,
+            "basis": "ARCHIVED"
+          },
+          "src": "A",
+          "basis": "ARCHIVED",
+          "archived": true,
+          "reason": "the downloaded U-Plus \"380 IP BEAM\" PDF chart (pan ch 10, colour first), approved 2026-10-15 from a product page; NOT the unit's chart — the printed manual with the unit (owner 2026-10-16) has pan on ch 1. Kept so a desk that holds this profile still decodes"
         },
         {
           "name": "16ch-assumed",
@@ -581,6 +1128,10 @@
           "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
           "what": "UPlight UP-B380F, second store page"
         },
+        "B380F-MANUAL-PRINT": {
+          "url": null,
+          "what": "The printed \"MOVEHEAD FIXTURE USER MANUAL\" shipped with the rental units themselves (UP-B380F; cover not photographed; the owner: \"the beam real chart\"), pp. 13-15 channel table, photographed by the owner 2026-10-16 16:22 and read the same hour. Photos: docs/moxir/devices/photos/b380f-manual-p13…p15.jpg"
+        },
         "NEREID": {
           "url": "https://electromarket.co.uk/beamz-pro-nereid380b-outdoor-weatherproof-moving-head-beam-light-380w",
           "what": "BeamZ Pro Nereid380B, 380 W IP65 beam, 1 deg; 209,000 lx @ 7 m from the beamZ 152.040B listing (manuals.plus), via a search snippet — the low end of the 380 W class bracket"
@@ -588,10 +1139,6 @@
         "OSRAM380": {
           "url": "https://www.osram.com/ecat/",
           "what": "Osram eCat, SIRIUS HRI 380 W S PRO (ZMP_4061881): 20,000 lm, 7700 K, Ra 85, 70 V 5 A, 2500 h — values as quoted by a web search 2026-10-09; the product page answered HTTP 500 on a direct fetch, so UNVERIFIED at source. The lamp class of the UP-B380F (\"350XL/380\"); its make is not confirmed"
-        },
-        "SEVAN": {
-          "url": null,
-          "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
         },
         "SHEHDS-GALAXYJET": {
           "url": "https://shehds.com/products/galaxyjet-beam-380w-19r-moving-head-lights-display-stage-effect-lighting-for-dj-disco-stage-performance-stage-concert-wedding",
@@ -1325,10 +1872,26 @@
       "code": "UP-PL5403",
       "identified": "EXACT",
       "identifiedNote": "EXACT",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-PL5403",
       "modelledOn": null,
       "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
+      "makerModel": "IP PAR-54X3",
+      "manual": {
+        "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+        "product_page": "https://www.upluslighting.com/product/543w-rgbw-led-par-light-for-outdoor/",
+        "date": "2024-01 (upload path; PDF created 2023-08-07)",
+        "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
+        "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
+        "basis": "APPROVED"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-pl5403.json",
+        "modes": {
+          "4": "APPROVED",
+          "8": "APPROVED"
+        }
+      },
       "category": "par",
       "modes": [
         {
@@ -1361,11 +1924,13 @@
             },
             {
               "role": "aux1",
-              "label": "Ch 7 (unused in the tested map)"
+              "label": "Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)",
+              "default": 0
             },
             {
               "role": "aux2",
-              "label": "Ch 8 (unused in the tested map)"
+              "label": "Function speed (0; never sent)",
+              "default": 0
             }
           ],
           "channelsSource": {
@@ -1587,10 +2152,26 @@
       "code": "UP-LA40WF",
       "identified": "EXACT",
       "identifiedNote": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
-      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "maker": "U-Plus Lighting",
       "model": "UP-LA40WF",
       "modelledOn": null,
       "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
+      "makerModel": "IP-LL40 (manual IP-LL30)",
+      "manual": {
+        "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+        "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+        "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+        "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+        "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+        "basis": "APPROVED"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-la40wf.json",
+        "modes": {
+          "19": "APPROVED",
+          "32": "APPROVED"
+        }
+      },
       "category": "laser",
       "modes": [
         {
@@ -1599,63 +2180,136 @@
           "channels": [
             {
               "role": "dimmer",
-              "label": "Ch 1 output (named dimmer so master/blackout reach it)"
+              "label": "Ch 1 output (named dimmer so master/blackout reach it)",
+              "default": 0
             },
             {
               "role": "c2",
-              "label": "Mode (25 auto, 75 voice, 250 manual graphics)"
+              "label": "Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, built-in graphics 200-255 by the PDF, 250-255 by the printed manual; static beam 250 — inside both)",
+              "default": 250
             },
             {
               "role": "c3",
-              "label": "Graphic select"
+              "label": "Graphic select (one graphic per two values; static beam 0 = graphic 1)",
+              "default": 0
             },
             {
               "role": "c4",
-              "label": "Display mode"
+              "label": "Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 0)",
+              "default": 0
             },
             {
               "role": "c5",
-              "label": "Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)"
+              "label": "Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)",
+              "default": 8,
+              "cap": {
+                "laserColour": [
+                  {
+                    "from": 0,
+                    "to": 16,
+                    "colour": "#ffffff",
+                    "name": "white"
+                  },
+                  {
+                    "from": 17,
+                    "to": 33,
+                    "colour": "#ff0000",
+                    "name": "red"
+                  },
+                  {
+                    "from": 34,
+                    "to": 50,
+                    "colour": "#00ff00",
+                    "name": "green"
+                  },
+                  {
+                    "from": 51,
+                    "to": 67,
+                    "colour": "#0000ff",
+                    "name": "blue"
+                  },
+                  {
+                    "from": 68,
+                    "to": 84,
+                    "colour": "#ffff00",
+                    "name": "yellow"
+                  },
+                  {
+                    "from": 85,
+                    "to": 101,
+                    "colour": "#ff00ff",
+                    "name": "purple"
+                  },
+                  {
+                    "from": 102,
+                    "to": 118,
+                    "colour": "#00ffff",
+                    "name": "cyan"
+                  }
+                ]
+              }
             },
             {
               "role": "c6",
-              "label": "X position (64 centre)"
+              "label": "X position (0-125 by hand, 64 centre)",
+              "default": 64,
+              "cap": {
+                "aim": {
+                  "axis": "x",
+                  "from": 0,
+                  "to": 125,
+                  "centre": 64,
+                  "halfDeg": 18.5,
+                  "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+                }
+              }
             },
             {
               "role": "c7",
-              "label": "Y position (64 centre)"
+              "label": "Y position (0-125 by hand, 64 centre)",
+              "default": 64,
+              "cap": {
+                "aim": {
+                  "axis": "y",
+                  "from": 0,
+                  "to": 125,
+                  "centre": 64,
+                  "halfDeg": 18.5,
+                  "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+                }
+              }
             },
             {
               "role": "c8",
-              "label": "Ch 8"
+              "label": "Zoom (0-10 none, 11-87 by hand, 88-150 zoom, 151-200 zoom out, 201-255 loop)"
             },
             {
               "role": "c9",
-              "label": "Ch 9"
+              "label": "X rotation (0 none, 1-128 by hand, 129-255 auto)"
             },
             {
               "role": "c10",
-              "label": "Ch 10"
+              "label": "Y rotation (0 none, 1-128 by hand, 129-255 auto)"
             },
             {
               "role": "c11",
-              "label": "Centre rotation (150 slow clockwise)"
+              "label": "Centre rotation (0 none, 1-128 by hand, 129-192 clockwise, 193-255 counter-clockwise; 150 = slow clockwise, tested)"
             },
             {
               "role": "c12",
-              "label": "Ch 12"
+              "label": "Gradual painting (0-10 none, 10-74 by hand, 75-104 grow, 105-144 fade, 145-184 loop fade, 185-224 / 225-255 end-to-end draw)"
             },
             {
               "role": "c13",
-              "label": "Wave 1"
+              "label": "X wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)"
             },
             {
               "role": "c14",
-              "label": "Wave 2"
+              "label": "Y wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)"
             },
             {
               "role": "c15",
-              "label": "Strobe"
+              "label": "Strobe (0-10 none, 11-199 auto slow to fast, 200-255 by sound)"
             },
             {
               "role": "c16",
@@ -1671,7 +2325,7 @@
             },
             {
               "role": "c19",
-              "label": "Ch 19"
+              "label": "Out-of-bounds (0-49 rebound, 50-99 to a line, 100-149 blanking, 150-255 pass through)"
             },
             {
               "role": "c20",
@@ -2097,10 +2751,16 @@
       "code": "UP-YZ31P",
       "identified": "EQUIVALENT",
       "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT (wattage unknown)",
-      "maker": null,
+      "maker": "U-Plus Lighting",
       "model": null,
       "modelledOn": "Antari Z-1500 III fog machine",
       "product": "equivalent: Antari Z-1500 III fog machine",
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/up-yz31p.json",
+        "modes": {
+          "1": "ASSUMED"
+        }
+      },
       "category": "smoke-machine",
       "modes": [
         {

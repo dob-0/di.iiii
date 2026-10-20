@@ -6,9 +6,11 @@ import {
     deskApiBase,
     deskHomeUrl,
     deskStatusText,
+    readDeskLooks,
     readDeskScenes,
     readDeskSummary,
     resolveRigKind,
+    resolveLookId,
     resolveSceneId,
     sendDeskCommand,
     isRigBlocked,
@@ -271,5 +273,28 @@ describe('deskStatusText', () => {
             fixtures: 4, scenes: 9, blackout: true, activeScene: 's3', fading: true,
             chase: { enabled: true, index: 2, count: 6 }, output: { enabled: true, connected: true },
         })).toBe('Desk: 4 fixtures, 9 scenes · blackout · s3 (fading) · chase 3/6 · output on')
+    })
+})
+
+describe('the project looks on the desk', () => {
+    it('names a look by desk id, by the project look id, or by its title — never guesses', () => {
+        const looks = [{ id: 'rig-the-wall', name: 'The wall' }, { id: 'rig-peak', name: 'Peak' }, { id: 'warm', name: 'Warm wash' }]
+        expect(resolveLookId(looks, 'rig-peak')).toBe('rig-peak')
+        expect(resolveLookId(looks, 'peak')).toBe('rig-peak')
+        expect(resolveLookId(looks, '  the WALL ')).toBe('rig-the-wall')
+        expect(resolveLookId(looks, 'warm')).toBe('warm')
+        expect(resolveLookId(looks, 'nothing')).toBe('')
+        expect(resolveLookId(null, 'peak')).toBe('')
+        expect(resolveLookId(looks, '')).toBe('')
+        expect(DESK_COMMANDS.fire('rig-peak')).toEqual({ path: '/looks/fire', body: { id: 'rig-peak' } })
+    })
+
+    it('reads the looks from the one fireable list, and an HTML answer is no desk', async () => {
+        const json = { get: () => 'application/json' }
+        const ok = vi.fn(async () => ({ ok: true, headers: json, json: async () => ({ looks: [{ id: 'rig-peak' }], scenes: [] }) }))
+        await expect(readDeskLooks('http://x/light/api', { fetchImpl: ok })).resolves.toEqual({ ok: true, looks: [{ id: 'rig-peak' }] })
+        expect(ok).toHaveBeenCalledWith('http://x/light/api/fireable', expect.anything())
+        const page = vi.fn(async () => ({ ok: true, headers: { get: () => 'text/html' }, json: async () => ({}) }))
+        await expect(readDeskLooks('http://x/light/api', { fetchImpl: page })).resolves.toEqual({ ok: false, looks: [] })
     })
 })

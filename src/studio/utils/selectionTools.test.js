@@ -1,5 +1,8 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
-import { boxModeFor, hallEntityIds, isPickableEntity, lockOps, mergeSelection, normalizeRect, pickInRect } from './selectionTools.js'
+import { boxModeFor, hallEntityIds, isPickableEntity, lockOps, mergeSelection, movableEntities, normalizeRect, pickInRect } from './selectionTools.js'
 
 const lamp = (id, extra = {}) => ({ id, type: 'spotLight', name: id, components: { light: {}, ...extra } })
 const ents = [
@@ -46,5 +49,20 @@ describe('box select', () => {
         expect(boxModeFor({ shiftKey: true })).toBe('add')
         expect(boxModeFor({ ctrlKey: true })).toBe('remove')
         expect(boxModeFor({})).toBe('set')
+    })
+})
+
+// Walked 2026-10-13: Objects window → select Lamp B → Hide → G, move, click: the hidden lamp moved 0.54 m unseen.
+describe('movableEntities — what G/R/S may move', () => {
+    const shown = { id: 'a', components: { runtime: { visible: true, locked: false } } }
+    const hidden = { id: 'b', components: { runtime: { visible: false, locked: false } } }
+    const locked = { id: 'c', components: { runtime: { visible: true, locked: true } } }
+    it('keeps shown, unlocked objects and drops hidden and locked ones', () => {
+        expect(movableEntities([shown, hidden, locked]).map((e) => e.id)).toEqual(['a'])
+        expect(movableEntities(null)).toEqual([])
+    })
+    it('the Studio viewport hands ModalTransform only movable entities', () => {
+        const src = fs.readFileSync(path.join(cwd(), 'src/studio/components/StudioViewport.jsx'), 'utf8')
+        expect(src).toMatch(/selectedEntities=\{movableEntities\(selectedEntities\)\}/)
     })
 })

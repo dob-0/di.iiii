@@ -7,6 +7,7 @@
 // port here (DI_LOCAL_NAME_PORT); in an install it is :80.
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import http from 'node:http'
+import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
@@ -24,7 +25,7 @@ const SPA_MARKER = '<div id="root"></div><!-- one address fixture -->'
 const cleanups = []
 afterEach(async () => { for (const c of cleanups.splice(0).reverse()) await c() })
 
-const start = async (extraEnv) => {
+const startOnce = async (extraEnv, { doorPort: forcedDoorPort } = {}) => {
     const base = await mkdtemp(path.join(os.tmpdir(), 'dii-one-address-'))
     // under a dot directory, like ~/.di (the hidden-directory trap)
     const client = path.join(base, '.di', 'current', 'dist')
@@ -32,7 +33,7 @@ const start = async (extraEnv) => {
     await writeFile(path.join(client, 'index.html'), SPA_MARKER)
     const data = path.join(base, 'data')
     await mkdir(data)
-    const doorPort = await getFreePort()
+    const doorPort = forcedDoorPort ?? await getFreePort()
     const { child, port, logs } = await spawnServerUntilReady({
         entry: SERVER_ENTRY,
         cwd: base,
@@ -43,13 +44,31 @@ const start = async (extraEnv) => {
             DI_RIG: '0', DI_LOCAL_NAME_PORT: String(doorPort), ...extraEnv
         }
     })
-    cleanups.push(async () => {
+    const cleanup = async () => {
         if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise((r) => { child.once('exit', r); setTimeout(r, 3000) }) }
         await rm(base, { recursive: true, force: true })
-    })
+    }
+    cleanups.push(cleanup)
     // logs() is the helper's record of stdout + stderr from the first byte. A listener added here, after
     // the ready line, missed the door's "answers here" whenever both arrived in one chunk (CI, 2026-10-13).
-    return { port, doorPort, log: () => logs() }
+    return { port, doorPort, log: () => logs(), stop: cleanup }
+}
+
+// The door's port is picked and released before the server starts, so a later pick can take it first:
+// spawnServerUntilReady picks the main server's port the same way, and another test's server may too.
+// The door then stands aside on 127.0.0.1, still says "answers here" for ::1, and the test's requests
+// (sent to 127.0.0.1) reach the other server — CI 2026-10-13 after #893: 200 where 421 was due.
+// Start again on a new door port, as the helper does for its own EADDRINUSE; after 3 tries the test
+// runs as it is and fails loudly.
+const heldOnTestAddress = (log) => /127\.0\.0\.1:\d+ standing aside/.test(log)
+const start = async (extraEnv, { firstDoorPort } = {}) => {
+    for (let attempt = 1; ; attempt += 1) {
+        const s = await startOnce(extraEnv, { doorPort: attempt === 1 ? firstDoorPort : undefined })
+        if (!extraEnv?.DI_LOCAL_NAME) return s
+        const settled = await waitFor(() => /answers here|standing aside/.test(s.log()))
+        if ((settled && s.port !== s.doorPort && !heldOnTestAddress(s.log())) || attempt >= 3) return s
+        await s.stop()
+    }
 }
 
 const get = (port, host, p) => new Promise((resolve, reject) => {
@@ -95,6 +114,18 @@ describe('one server, two doors', () => {
             client.once('connect_error', (e) => resolve(e.message))
         })
         expect(connected).toBe(true)
+    })
+
+    it('a door port another program holds is never used: the setup starts again on a new one (CI 2026-10-13)', async () => {
+        const holder = net.createServer()
+        await new Promise((resolve) => holder.listen(0, '127.0.0.1', resolve))
+        cleanups.push(() => new Promise((resolve) => holder.close(resolve)))
+        const held = holder.address().port
+        const s = await start({ DI_LOCAL_NAME: 'diiii.localhost' }, { firstDoorPort: held })
+        expect(s.doorPort).not.toBe(held)
+        expect(heldOnTestAddress(s.log()), `the door still stands aside on 127.0.0.1; the server said:\n${s.log().slice(-1200)}`).toBe(false)
+        const viaDoor = await get(s.doorPort, 'rebound.example', '/serverXR/api/config')
+        expect(viaDoor.status).toBe(421)
     })
 
     it('without DI_LOCAL_NAME there is no door at all (test servers, rig members, scratch copies)', async () => {
