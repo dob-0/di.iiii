@@ -4343,7 +4343,13 @@
    the way home — a link wearing the same ambient clothes. */
 .raw-surface-wordmark {
     position: fixed;
-    bottom: 18px;
+    /* 24px of target (WCAG 2.5.8): the bare text was 33x17, measured at
+       820x1180 (audit 2026-10-21 NR-04). 14px + the 3.5px the extra height
+       centres around keeps the letters where they sat at bottom 18px. */
+    bottom: 14px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
     /* Bottom-left, beside the zoom cluster. At bottom-centre it was drawn over
        the cards (Bar, Studio, owner 2026-10-05); under them it vanished behind
        the opaque canvas. The corner is the one place no fit puts a card. */

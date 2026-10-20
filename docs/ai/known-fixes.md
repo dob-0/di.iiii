@@ -31,6 +31,10 @@ Symptom: `followIntegration.test.js` failed 1 run in 10 with `Server exited earl
 Cause: 17 test files asked the OS for a free port, closed the probe, and only then started the server on that number; vitest runs files in parallel, so a sibling could take the number in between. Most files then polled `/api/health`, which a SIBLING's server could answer (wrong instance, odd 401s).
 Fix: every test that starts a serverXR child goes through `serverXR/src/testSupport/spawnServer.mjs` `spawnServerUntilReady` (waits for the child's own listen line, retries a lost race on a new port; `port:` pins one for a restart of the same install). In-process servers listen on port 0 and read `address().port`. Guard: `testSupport/noPickedPort.test.js` fails on any test file that picks a port by hand. Side effect found: the child is now ready sooner, so `gracefulShutdown.test.js` walked the data folder while `follows.lock.guard` vanished (ENOENT); its `findDb` now looks again.
 
+## The node canvas's corner wordmark was a 33x17 px link (Raw, 2026-10-21)
+
+Cause: `.raw-surface-wordmark` (the way home in the canvas corner) was bare text above 640 px wide; axe `target-size` in Chromium at 820x1180 (a tablet, touch) measured 33x17, under WCAG 2.5.8's 24 px. The phone rule already gave it 44. Fix: the base rule is `inline-flex`, `min-height: 24px`, `bottom` 18 → 14 px so the letters stay put. Guard: `src/raw/rawChrome.test.js` "the corner wordmark is a real target". Audit NR-04.
+
 ## A sideways touchpad swipe stepped a focused number field down (Raw, 2026-10-21)
 
 Cause: `ScrubNumberInput`'s wheel handler took `deltaY < 0 ? up : down`, so a wheel with `deltaY: 0` (a touchpad's sideways swipe, dozens of events per swipe) stepped the focused value down once per event and swallowed the scroll. Fix: a wheel with no `deltaY` is ignored and not prevented. Guard: `ScrubNumberInput.test.jsx` "a sideways wheel (deltaY 0)". Audit NR-03.

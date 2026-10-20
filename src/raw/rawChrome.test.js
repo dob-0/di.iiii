@@ -108,3 +108,14 @@ describe('the zoom strip (row 6, §3.8)', () => {
         expect(css).toMatch(/@media \(pointer: coarse\) \{[^@]*\.raw-zoom-step,[^@]*\.raw-graph-zoom-value \{ display: none; \}/)
     })
 })
+
+describe('the corner wordmark is a real target (audit 2026-10-21 NR-04)', () => {
+    // Measured in Chromium at 820x1180: the bare text was 33x17, under 2.5.8's
+    // 24px; axe target-size, serious. The phone rule (≤640px) already gave it 44.
+    const raw = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'styles/raw.css'), 'utf8')
+    it('declares at least 24px of height outside the phone rule', () => {
+        const base = raw.match(/\n\.raw-surface-wordmark \{([^}]*)\}/)[1]
+        expect(base).toMatch(/min-height: 24px;/)
+        expect(base).toMatch(/display: inline-flex;/)
+    })
+})
