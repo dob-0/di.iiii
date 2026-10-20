@@ -278,5 +278,40 @@ class RealHall(unittest.TestCase):
         self.assertEqual(L, math.inf)
 
 
+class FixModeWithUnfixableRows(unittest.TestCase):
+    """Review finding (MEDIUM) on PR #1046: --fix posted an empty batch (route answers 400) when the only leak was unfixable, and
+    returned 0 while an unfixable row (outside_hall, inside_slab, on_floor) remained."""
+    def run_fix(self, ents):
+        posts = []
+        real = pc.urllib.request.urlopen
+        class Resp(io.BytesIO): pass
+        def fake(req, timeout=None):
+            if isinstance(req, str) or not req.data: return real(req, timeout=timeout)
+            posts.append(json.loads(req.data)); return Resp(b'{"ok": true, "newVersion": 8}')
+        pc.urllib.request.urlopen = fake
+        try: rc, out = run_main(FIXTURE, ents, '--fix')
+        finally: pc.urllib.request.urlopen = real
+        return rc, out, posts
+
+    def test_only_an_unfixable_leak_posts_nothing_and_exits_1(self):
+        rc, out, posts = self.run_fix([lamp('out', [20, 1, 0], [0, 0, 0], 5.0)])
+        self.assertEqual(posts, [])
+        self.assertEqual(rc, 1)
+
+    def test_a_fixable_leak_with_an_unfixable_row_posts_the_fixable_one_and_still_exits_1(self):
+        rc, out, posts = self.run_fix([lamp('out', [20, 1, 0], [0, 0, 0], 5.0), lamp('a', [5, 1, 0], FLIP, 12.0)])
+        self.assertEqual(len(posts), 1)
+        self.assertEqual([o['payload']['entityId'] for o in posts[0]['ops']], ['a'])
+        self.assertEqual(rc, 1)
+
+    def test_only_fixable_leaks_post_and_exit_0(self):
+        rc, out, posts = self.run_fix([lamp('a', [5, 1, 0], FLIP, 12.0)])
+        self.assertEqual((len(posts), rc), (1, 0))
+
+    def test_an_inside_slab_row_remains_unfixed_and_exits_1(self):
+        rc, out, posts = self.run_fix([lamp('in', [5, 10.05, 0], FLIP, 3.0)])
+        self.assertEqual((posts, rc), ([], 1))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -25,7 +25,8 @@ floor at 0 m: reported (on_floor), never fixed, never read as open sky. A lamp w
 that holds every slab, floor to the highest top: a box, not the hall's outline) is reported as a leak row with outside_hall true:
 counted in `leaks` (exit 1, the CLI contract keeps one count), never fixed, first_hit null when its ray meets nothing. A lamp
 meant to stand outside needs the owner's word first; the check does not know one. `--fix` writes beam.length = the first-hit
-distance for each leak, lasers too (ops on the project; back it up first).
+distance for each fixable leak, lasers too (ops on the project; back it up first); nothing fixable = nothing posted. Exit 1 while any
+row remains, with --fix too: the rows only a moved lamp can mend (outside_hall, inside_slab, on_floor).
 
     python3 scripts/place/physics_check.py --api http://127.0.0.1:4337/serverXR --project moxir-v2-9 \
         --hall scripts/place/rigs/moxir-hall-2026-10-11-v11-show-park-far41.hall.json [--fix]
@@ -123,12 +124,17 @@ def first_surface(p, d, shell):
     return first_surface_through(p, d, shell)[:2]
 
 
+def fixable(l):
+    """A leak row the beam length can mend: not outside the hall, and a first surface in front of the lamp (first_hit > 0)."""
+    return not l.get('outside_hall') and l['first_hit'] is not None and l['first_hit'] > 0
+
+
 def fix_ops(leaks, stamp):
     """One updateComponent op per leak, lasers included: a laser line is a beam too, and 'stops at the first surface' has no exception.
     A project with no leak gets no ops (the route answers 400 'No operations provided.' to an empty batch).
     A lamp INSIDE a slab, ON the floor aiming down (first hit 0) or OUTSIDE the hall gets none: length 0 would hide the beam, and the
     fault is the lamp's place, not the beam's length: the lamp has to be moved."""
-    leaks = [l for l in leaks if not l.get('outside_hall') and l['first_hit'] is not None and l['first_hit'] > 0]
+    leaks = [l for l in leaks if fixable(l)]
     return [{'type': 'updateComponent', 'payload': {'entityId': l['id'], 'component': 'beam', 'patch': {'length': round(l['first_hit'], 2)}},
              'opId': f'physics-fix-{stamp}-{i}', 'clientId': 'physics-check'} for i, l in enumerate(leaks)]
 
@@ -163,12 +169,15 @@ def main(argv=None):
             if L <= 0: leaks[-1]['on_floor' if name == 'floor' else 'inside_slab'] = True
     print(json.dumps({'project': a.project, 'version': raw.get('version'), 'beams_checked': checked, 'leaks': len(leaks)}))
     for l in sorted(leaks, key=lambda l: -(math.inf if l['over_m'] is None else l['over_m']))[:40]: print(' ', json.dumps(l))
-    if a.fix and leaks:
-        ops = fix_ops(leaks, int(time.time() * 1000))
+    ops = fix_ops(leaks, int(time.time() * 1000)) if a.fix else []
+    if ops:   # an empty batch is answered 400 'No operations provided.': nothing fixable = nothing posted
         req = urllib.request.Request(f'{a.api}/api/projects/{a.project}/ops', data=json.dumps({'baseVersion': raw['version'], 'ops': ops}).encode(),
                                      headers={'Content-Type': 'application/json', 'Authorization': 'Bearer dummy'})
         out = json.load(urllib.request.urlopen(req, timeout=60)); print('fixed', len(ops), 'beams:', out.get('ok'), out.get('newVersion'))
-    return 1 if leaks and not a.fix else 0
+    # exit 1 while any row stays: with --fix only the rows the beam length cannot mend (outside_hall, inside_slab, on_floor) remain
+    remaining = [l for l in leaks if not (a.fix and fixable(l))]
+    if a.fix and remaining: print('not fixed (move the lamp):', len(remaining), 'rows', file=sys.stderr)
+    return 1 if remaining else 0
 
 
 if __name__ == '__main__':
