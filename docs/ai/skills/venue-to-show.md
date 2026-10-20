@@ -91,3 +91,195 @@ views · N811.10 one generator · N800.1 read-back · N767 guard · N717 stories
 `scripts/place` with a test and fixing this table.
 
 Migrated (feat/migrate-scenes-2026-10-15): N811.1 `scenes50.py` → `scripts/place/scenes_build.py` (spec → scenes file + check; the colour audit stays with N811.2) · N811.3 → `scenes_outside_rule.py` · N811.4 → `laser_design.py` + `rigs/moxir-laser-design-2026-10-15.json`; test `scripts/place/scenes-tools.test.js`.
+
+## 6. Script usage for the place steps (appendix, 2026-10-13, PR #902)
+
+Commands quoted from each script's own header; none was re-run when written (UNVERIFIED). The `venue*` Claude Code skills under `.claude/skills/` are thin entry points to this file; this is their only copy of the text. The six place steps below are the older numbering (P1 paint plan … P6 review) and map onto steps 1-3, 6, 10-12 above.
+
+### Rules that hold on every place step
+
+- **The hall comes first.** Steps 1–6 assume a `hall.json` from `scripts/place/hall.py`
+  (or a scan through `place.mjs`). That is `scripts/place/README.md`, not this skill set.
+- **Back the space up before anything writes to it** (README, step 0):
+  `node scripts/space-bundle.mjs export <space> --data-root <data> --out <dir>/<space>.space-bundle.tar.gz`.
+- **Scratch before the owner's project.** Render/measure runs against a scratch stack
+  (`epic-build.mjs` refuses any host but localhost / 127.0.0.1). Writing into the venue's
+  real project (step 5) is the owner's word, every time.
+- **Measured, not claimed.** A value nobody taped is ASSUMED/ESTIMATED in the rig file,
+  and stays so on every page. A render is not a photometric measure of the hall
+  (`frame_luma.py` says so of itself).
+- **GPU frames on the real card only**, under `di-test-browser run`, with `timeout`;
+  every page-opening script uses `close-on-signal.cjs` (known-fixes: tabs left drawing).
+- Python scripts run with `python3 -I` (they say so; the step skills quote every command that way);
+  most take `--repo .` and `--check` for numbers-only JSON.
+
+### P1 Step 1 — paint_plan (`scripts/place/paint_plan.py`)
+
+Draws only what is fixed (columns, permanent objects with heights, glazed lanterns),
+the stage as built and a 6 m grid; no fixtures, no beams. Oriented as the dance floor
+sees it: stage at the top, entry at the bottom, house left on the LEFT.
+
+```bash
+python3 -I scripts/place/paint_plan.py --hall <hall.json> --stage <stage-line.json> --out plan.png [--ppm 40]
+### P1   --full          the whole building, wall to wall (default: the nave only)
+### P1   --lasers <aerial json>   draw the free crane where the show parks it, the cubes and their lines
+### P1   --views <rig json>       mark the rig's eye-height views as audience view points
+### P1   --quiet-lamps   pendant lamps as small marks
+### P1   --title / --key  the line(s) that say what to paint
+```
+
+MOXIR inputs: `scripts/place/rigs/moxir-hall-*.hall.json`, `scripts/place/rigs/moxir-stage-line-2026-10-07.json`.
+
+#### Hand-off
+
+- The pixel ↔ hall mapping is written into the PNG's text chunk (`di-plan-map`); step 2 reads it.
+- **Keep the exact file the owner opens.** Step 2 diffs his painted copy against it;
+  a regenerated plan is only a fallback (`paint_zones.py` notes the drawing changed by
+  1038 px once).
+- The owner paints closed loops, one colour per meaning, in GIMP, and writes what each
+  colour is. Ask for the colour → meaning list with the painted file.
+
+### P2 Step 2 — read_paint (`scripts/place/read_paint.py`)
+
+His strokes = pixels that differ from the clean plan; per colour, a closed loop's
+inside is an area; written in hall metres as 1 m cells using the plan's own
+`di-plan-map` chunk.
+
+```bash
+python3 -I scripts/place/read_paint.py --plan clean.png --painted his.png \
+    --colour 'hot=224,64,0=hot zone' --colour 'use=0,224,64=we can use this area' \
+    --out zones.json --picture my-reading.png
+### P2   [--min-m2 15] [--work-ppm 5] [--close-px 3]
+```
+
+- `--colour id=R,G,B=name` — the names are HIS words; words painted on the plan are not read.
+- Limits (the script's own): an open loop is not an area (the `--picture` shows it);
+  colours closer than ~70 RGB merge; it stops if the painted picture is not the plan's size.
+- **Show the owner `--picture`** before anything uses the zones: it is the reading, he confirms it.
+- Commit the result as `scripts/place/rigs/<venue>-zones-<date>.json`
+  (MOXIR: `moxir-v2-zones-2026-10-09.json`).
+
+Older reader, 2026-10-08: `scripts/place/paint_zones.py --painted … --clean … --out zones.json [--overlay zones.png]`
+(threshold diff; `--regenerate` when the clean plan was lost). `read_paint.py` is the one step 3 consumes.
+
+### P3 Step 3 — layout (a rig file in `scripts/place/rigs/`)
+
+The output of this step is always a **rig file** — the format `rig.mjs` and
+`epic-build.mjs --rig` read. Pictures and numbers only; nothing is written to a project here.
+
+| need | script (usage from its header) |
+|---|---|
+| where can a beam head stand and run clear | `python3 -I scripts/place/occlusion_sky.py --repo . --out <dir>/occlusion` · `--check [--quick]` |
+| layouts of the fixed kit, placed and aimed by the occlusion numbers | `python3 -I scripts/place/moxir_v2.py --repo . [--out <dir>]` · `--check` |
+| spread over the painted hot zone, placed from audience eyes | `python3 -I scripts/place/moxir_v2_spread.py build --repo . [--out <dir>] [--placement <dir>/placement.json]` (placement in `moxir_v2_eyes.py`; search ~25 min on one core, `--placement` reuses it) |
+| one rig from two (owned by mount) | `python3 -I scripts/place/moxir_v2_compose.py --repo . <ground rig> <cranes rig>` — also writes the patch, prints the sha256 of the rig built twice |
+| re-place symmetric about the DJ axis | `python3 -I -B scripts/place/moxir_v2_symmetry.py --repo . [--src …] [--out …] [--check-only]` |
+
+Earlier passes (beta v0.9, 2026-10-08) kept for history: `design_paint.py`,
+`epic_placement.py`, `lasers_v2.py`, `occlusion.py`.
+
+#### Rules
+
+- The zones are input, not decoration: every unit's place is checked against them
+  (MOXIR: units outside the hot zone 27 → 0, PROGRESS 2026-10-09).
+- Lasers are the laser session's table, used as given; a laser aim is never invented here.
+- A new layout is a new dated rig file; the old one stays as the labelled old version.
+- Safety geometry is shared (`scripts/rigbuild/safety.mjs`): geometry only — a rigger
+  signs the rigging, a laser safety officer signs the lasers.
+- Run the step's tests: `npx vitest run scripts/place scripts/rigbuild`.
+
+
+MOXIR is this step's worked case: its production-named scripts are owed a move into di.iiii features (see the index `venue`, "MOXIR is the worked case").
+
+### P4 Step 4 — render (measure)
+
+"Too dark" is a measurement, not an impression (`scripts/rigbuild/luma.mjs`).
+
+#### 4a — the rig into a scratch project
+
+```bash
+di-dev up <tree> --api scratch
+node scripts/rigbuild/epic-build.mjs --api http://127.0.0.1:<port>/serverXR --project <scratch copy> \
+    --token-file <dummy env> --rig scripts/place/rigs/<rig>.json [--out <dir>] --apply
+```
+Refuses any host but localhost / 127.0.0.1. Never dev, prod or the owner's own di.
+
+#### 4b — measure (browser's copy only; nothing written to a server)
+
+| measure | command |
+|---|---|
+| frames per job (layout × haze × look × view), measurement mode, one EV100 | `timeout 600 di-test-browser run scripts/place/moxir-v2-true-frames.cjs --plan <plan.json> --out <dir> [--only …]` (plan from `moxir_v2_true.py plan` / `moxir_v2_spread.py plan`) |
+| lux on the stage (the scene's own probe) | `timeout 600 di-test-browser run scripts/place/moxir-v2-probe.cjs --plan <probe-plan.json> --out <probe.json>` |
+| mean luminance + white-out share per frame | `python3 -I scripts/place/frame_luma.py <frames dir> > luma.json` |
+| luma + fps cue by cue, as a visitor | `node scripts/rigbuild/look-probe.mjs …` (RIG_BUILD §20) |
+| named views + fps + draw calls | `node scripts/place/rig-look.mjs --gpu --base <base> --space <s> --project <p> --hall <hall.json> --rig <rig> --out <dir> --tag <t> [--views …]` |
+| the still to judge the show by (Cycles, GPU) | `blender -b -P scripts/place/moxir_render.py -- --hall <hall-show.glb> --doc <document.json> --out <png> [--look peak] [--view floor\|entrance\|dj\|outside] [--samples 128] [--haze 0.015]` |
+
+#### Rules
+
+- Real GPU only: the probe and rig-look refuse a software renderer (headless Chrome
+  gets SwiftShader — README "Things that have already gone wrong").
+- Always under `timeout`, and the script uses `close-on-signal.cjs`, or a killed run
+  leaves a tab drawing the scene.
+- State the exposure (EV100, scene scale) next to every number; numbers from
+  different exposures are not compared.
+- Open the frames and look at them. A number with no frame looked at is not a result.
+- Known open item: the scene squares a look's level (intensity = nominal × level²;
+  PROGRESS 2026-10-09) — owed to the viewport, not corrected here.
+
+
+MOXIR is this step's worked case: its production-named scripts are owed a move into di.iiii features (see the index `venue`, "MOXIR is the worked case").
+
+### P5 Step 5 — integrate
+
+This is the first step that writes outside a scratch stack. **The owner's word
+first**, and the space backed up first:
+
+```bash
+node scripts/space-bundle.mjs export <space> --data-root <data> --out <backup dir>/<space>.space-bundle.tar.gz
+```
+
+| what | command |
+|---|---|
+| hang the rig in the hall's project, as ops | `node scripts/place/rig.mjs --rig scripts/place/rigs/<rig>.json --hall <work>/hall.json --project <hall project> [--api …] [--real budget\|all\|none]` |
+| take it down again | `node scripts/place/rig.mjs --project <hall project> --remove` |
+| the show copy of the hall (no planning floor tape) | `node scripts/place/hall-show.mjs --in hall.glb --out hall-show.glb --api <base>/serverXR --project <show project> --token-file ~/.di/di.env` |
+| a corrected hall into projects already built | `scripts/rigbuild/swap-hall.mjs`, then `realism.mjs` and `work-light.mjs` (README "Putting a corrected hall into the rooms") |
+| two rigs into one before hanging | `scripts/place/moxir_v2_compose.py` (see `venue-layout`) |
+| the crew's patch table (md/html/csv) | `node scripts/rigbuild/patch-table.mjs …` from the rig's patch file (`rigs/*-patch-*.json`) |
+
+#### Rules
+
+- `rig.mjs` only touches entities whose id starts `rig-` (plus the night and the
+  shadow switch); a re-run deletes those first. Undo the whole hall: import the backup
+  bundle (`space-bundle.mjs import … --force`).
+- Its default `--api` is `https://local.thedi.studio/serverXR` — the owner's own di.
+  Say which tier you write to, every time.
+- Patch checks are tests: `npx vitest run src/rigbuild scripts/rigbuild`
+  (MOXIR: `src/rigbuild/moxirV2Patch.test.js`).
+- After writing, step 4's `rig-look.mjs` against the real project, frames looked at.
+
+
+### P6 Step 6 — review
+
+The owner decides; this step makes the decision readable. Every number on the
+page comes from steps 3–4's JSON — the page itself is layout only.
+
+| page | command |
+|---|---|
+| layouts side by side + contact sheet | `python3 -I scripts/place/moxir_v2_page.py --dir <dir>` (reads `v2-layouts.json`, `occlusion/occlusion-sky.json`, `frames/<layout>-<look>-<view>.png`) |
+| the spread / true-look pages | `python3 -I scripts/place/moxir_v2_spread.py page --repo . --out <dir>` · `moxir_v2_true.py page --repo . --out <dir>` |
+| look-probe runs side by side (before / after) | `node scripts/rigbuild/look-compare.mjs --out <dir>/compare.html --run "before=…/probe.json" --run "after=…/probe.json" [--refs …]` |
+| render beside and over the photograph | `python3 -I scripts/place/compose.py --photo <photo.jpg> --render <shot.png> --out <composite.png> [--side-only]` |
+| one-page site sheet (plan from rig + hall json) | `python3 -I -B scripts/place/moxir_site_sheet.py [--pdf PATH]` |
+
+#### What the review hands back
+
+- The advice, with the numbers that carry it (e.g. "layout B, 10 PARs on the cut", PROGRESS 2026-10-09).
+- **Owed**: every value still ASSUMED, every sign-off not given (rigger, laser safety
+  officer, the venue's OK), every open owner's call — listed, not buried.
+- The owner's answer goes back in as input: a repaint → step 1/2, a re-place → step 3.
+- Record it in the branch's session note (`docs/ai/sessions/<branch>.md`), not CURRENT.md.
+
+MOXIR is this step's worked case: its production-named scripts are owed a move into di.iiii features (see the index `venue`, "MOXIR is the worked case").
+
