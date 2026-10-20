@@ -240,7 +240,7 @@ async function pullState() {
     const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
     const first = !S;
     if (busy) {
-      next.fixtures = S.fixtures; next.master = S.master; next.raw = S.raw;
+      next.fixtures = S.fixtures; next.master = S.master; next.raw = S.raw; next.rawOwners = S.rawOwners;
       // The LFO and audio panels edit these optimistically the same way the faders do —
       // without this a poll landing mid-drag snaps a slider back to its pre-edit value.
       if (S.lfos) next.lfos = S.lfos;
@@ -1667,6 +1667,26 @@ function syncAttr(force) {
 let fUni = 0;
 let faderCells = [];             // cached per-fader refs; 512 querySelectors at 10Hz is waste
 
+// Who holds a manual channel (the desk's holds.js). This interface is "owner"; a script or
+// another session holds under its own tag, and a release from here never reaches those
+// unless she says so.
+const heldBy = (key) => (S && S.rawOwners && S.rawOwners[key]) || 'owner';
+const holdersText = (kept) => Object.entries(kept).map(([who, n]) => `${n} by ${who}`).join(', ');
+// After a release of her own: if somebody else still holds channels there, name them and ask
+// before letting go of theirs too — that is the explicit release-all.
+async function offerReleaseOthers(replies, universes) {
+  const kept = {};
+  for (const r of replies) for (const [who, n] of Object.entries((r && r.kept) || {})) kept[who] = (kept[who] || 0) + n;
+  if (!Object.keys(kept).length) return;
+  const where = `universe${universes.length === 1 ? '' : 's'} ${universes.map((u) => u + 1).join(', ')}`;
+  if (!confirm(`Still held on ${where}: ${holdersText(kept)}.\n\nThose are not yours. Release them too?`)) {
+    say(`released yours; still held on ${where}: ${holdersText(kept)}`);
+    return;
+  }
+  await Promise.all(universes.map((u) => post('api/raw', { clear: true, all: true, universe: u })));
+  say(`released every hold on ${where}`);
+}
+
 // Channel writes are batched: dragging a fader fires input events far faster than the
 // server's debounced save, and one request per event would race it.
 const rawPending = new Map();
@@ -1675,7 +1695,7 @@ let lastRawFlush = 0;
 function queueRaw(universe, channel, value) {
   const key = `${universe}:${channel}`;
   rawPending.set(key, { universe, channel, value });
-  if (value == null) delete S.raw[key]; else S.raw[key] = value;
+  if (value == null) { if (heldBy(key) === 'owner') delete S.raw[key]; } else { S.raw[key] = value; if (S.rawOwners) S.rawOwners[key] = 'owner'; }
   touchedAt = Date.now();
   // Same leading-edge shape as queueFixture, same reason.
   const flushRaw = () => {
@@ -1711,6 +1731,7 @@ async function setAllFaders(value) {
   for (let ch = 1; ch <= 512; ch++) {
     channels.push({ universe: fUni, channel: ch, value });
     S.raw[`${fUni}:${ch}`] = value;
+    if (S.rawOwners) S.rawOwners[`${fUni}:${ch}`] = 'owner';
   }
   syncFaders();
   await post('api/raw', { channels });
@@ -1802,6 +1823,13 @@ function syncFaders() {
     const wire = buf[c.ch - 1] || 0;
     const isHeld = held != null;
     if (isHeld !== c.held) { c.el.classList.toggle('over', isHeld); c.held = isHeld; }
+    // A channel somebody else holds says whose it is, so a fader that will not let go explains itself.
+    const by = isHeld ? heldBy(`${fUni}:${c.ch}`) : 'owner';
+    if (by !== c.by) {
+      if (c.tip == null) c.tip = c.el.title;
+      c.el.title = by === 'owner' ? c.tip : `${c.tip} · held by ${by}`;
+      c.by = by;
+    }
     // an untouched fader follows what the fixtures are doing; grab it and it takes over
     const want = isHeld ? held : wire;
     if (document.activeElement !== c.input && +c.input.value !== want) c.input.value = want;
@@ -5224,9 +5252,10 @@ $('#fJump').addEventListener('change', (e) => {
 $('#fReleaseAll').addEventListener('click', () => {
   // scoped to the universe on screen — silently wiping holds on universes she cannot see
   // would be a nasty surprise on a big rig
-  for (const k of Object.keys(S.raw)) if (k.startsWith(fUni + ':')) delete S.raw[k];
+  for (const k of Object.keys(S.raw)) if (k.startsWith(fUni + ':') && heldBy(k) === 'owner') delete S.raw[k];
   syncFaders();
-  post('api/raw', { clear: true, universe: fUni }).then(pullState);
+  const u = fUni;
+  post('api/raw', { clear: true, universe: u }).then((r) => offerReleaseOthers([r], [u])).then(pullState);
 });
 $('#fAllZero').addEventListener('click', () => setAllFaders(0));
 // Every channel in the universe to full is a whiteout with no undo, and on a universe of
@@ -5979,9 +6008,10 @@ $('#tReleaseHeld').addEventListener('click', () => {
   if (!S) return;
   const unis = [...new Set(Object.keys(S.raw).map((k) => +k.split(':')[0]))];
   if (!unis.length) return;
-  for (const k of Object.keys(S.raw)) delete S.raw[k];
-  Promise.all(unis.map((u) => post('api/raw', { clear: true, universe: u }))).then(pullState);
+  for (const k of Object.keys(S.raw)) if (heldBy(k) === 'owner') delete S.raw[k];
   say(`released held channels on universe${unis.length === 1 ? '' : 's'} ${unis.map((u) => u + 1).join(', ')}`);
+  Promise.all(unis.map((u) => post('api/raw', { clear: true, universe: u })))
+    .then((replies) => offerReleaseOthers(replies, unis)).then(pullState);
 });
 
 function buildTouchStrip() {

@@ -23,4 +23,9 @@ P=moxir-v2-11, S=<session scratchpad>. Their usage was measured on 2026-10-17.
 releases them for everyone: on 2026-10-17 the beam chat released U2.137-200 "to hand the lasers over" and blanked both 40 W
 in the middle of the owner's shape check with the laser chat (their fader had been working all along).
 Before a release: `ledger-open` + `ListAgents` for any chat on that fixture, read the channels back, and release only channels
-whose value is still the one you set. Owed: per-owner holds on the desk (or a compare-and-release in the tools).
+whose value is still the one you set.
+Since 2026-10-20 holds are OWNED (`serverXR/src/lighting/holds.js`): send `owner: '<your session or tool id>'` with every
+`/api/raw` write. A release (`value: -1`, `{clear:true}`) then lets go of your own channels only and the reply names who still
+holds the rest (`kept`, `refused`); `GET /light/api/raw` lists every hold with its holder. No `owner` = `"owner"`, the tag the
+desk's own faders use — so an untagged chat still shares a tag with the owner's faders: always tag. `{clear:true, all:true}` is
+the explicit release-all; never send it on a live rig without asking.

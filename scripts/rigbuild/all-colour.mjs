@@ -31,7 +31,7 @@ const post = (path, body) => fetch(`${desk}/${path}`, { method: 'POST', headers:
 
 if (args.release) {
     const held = fs.existsSync(heldFile) ? JSON.parse(fs.readFileSync(heldFile, 'utf8')) : []
-    await post('raw', { channels: held.map((c) => ({ ...c, value: -1 })) })
+    await post('raw', { owner: 'all-colour', channels: held.map((c) => ({ ...c, value: -1 })) })
     fs.rmSync(heldFile, { force: true })
     say(`released ${held.length} channels — the show has the lamps again`)
     process.exit(0)
@@ -68,7 +68,7 @@ for (const l of lamps) {
     l.mode.channels.forEach((ch, i) => { if (out[ch.role] != null && !/^(pan|tilt|panFine|tiltFine)$/.test(ch.role)) held.push({ universe: l.universe, channel: l.address + i, value: out[ch.role] }) })
     const key = `${l.type?.id || '?'} ${l.mode.name || ''}`; (byType[key] ||= { n: 0, sample: out }).n++
 }
-await post('raw', { channels: held })
+await post('raw', { owner: 'all-colour', channels: held })
 fs.writeFileSync(heldFile, JSON.stringify(held.map(({ universe, channel }) => ({ universe, channel }))))
 say(`${colour} at ${Math.round(level * 100)} % on ${lamps.length} lamps (${taken.size} addresses), ${held.length} channels held`)
 for (const [k, v] of Object.entries(byType)) say(`  ${k.padEnd(22)} ×${v.n}  ${JSON.stringify(v.sample)}`)

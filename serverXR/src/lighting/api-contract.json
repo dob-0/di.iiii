@@ -51,6 +51,7 @@
     "optional": {
       "top": [
         "activeScene",
+        "rawOwners",
         "looks",
         "sets",
         "audioCfg",

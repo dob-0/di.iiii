@@ -6,6 +6,7 @@ const { lfoApply, isGenericChannels } = require('./lfo');
 const { layerValues, kindAllows } = require('./looks');
 const { headsFrame, headsPose } = require('./headMotion');
 const { motionFrame } = require('./lookMotion');
+const { recallHolds } = require('./holds');
 
 // Roles that step, never fade (snapMask).
 const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
@@ -619,14 +620,16 @@ class Engine {
     };
   }
 
-  recallScene(scene, fadeMs) {
+  // `owner` is the hand recalling it (holds.js): the scene's holds replace that hand's own
+  // and nobody else's. The chase and the interface recall as "owner".
+  recallScene(scene, fadeMs, owner) {
     if (!scene) return false;
     this.startFade(fadeMs != null ? fadeMs : scene.fadeMs);
     for (const sf of scene.fixtures) {
       const f = this.state.fixtures.find((x) => x.id === sf.id);
       if (f) { f.on = sf.on !== false; Object.assign(f.values, sf.values); }
     }
-    this.state.raw = { ...scene.raw };
+    recallHolds(this.state, scene.raw, owner);
     // A scene that knows its FX brings it along; an old scene without one leaves the
     // running effect alone, so recalling it never yanks a live effect out from under the rig.
     // The TEMPO is the one field a scene never brings: bpm belongs to the operator (Tap /

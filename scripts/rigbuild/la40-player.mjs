@@ -39,7 +39,7 @@ if (GRAPHICS.some((g) => NEVER.has(g) || dot(g))) throw new Error('a forbidden g
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }
 
 const raw = async (channels) => {
-    const r = await fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channels }) })
+    const r = await fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ owner: 'la40-player', channels }) })
     if (!r.ok) throw new Error(`raw ${r.status} ${await r.text()}`)
 }
 const frame = (on, g, c) => units.flatMap((base) => (on ? [255, 250, g, 0, c, 64, 64] : [0, 0, 0, 0, 0, 64, 64]).map((value, i) => ({ universe, channel: base + i, value })))

@@ -21,6 +21,18 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## One session's "release my holds" put out the operator's laser — the desk's held layer had no owners
+
+On 2026-10-17 one agent released the desk channels it thought were its own (`POST /light/api/raw`,
+`value: -1`) and blanked two lasers the operator was setting from their own faders: the held (raw)
+layer was one value map for every session, so any release reached everybody's, and `{clear:true}`
+emptied it whole. Fixed 2026-10-20 (`serverXR/src/lighting/holds.js`): every held channel carries an
+owner tag (`state.rawOwners`, the caller's `owner`, none = `"owner"`); a release, a clear and a scene
+recall touch the caller's own holds only, and say who still holds the rest (`kept`, `refused`);
+`{clear:true, all:true}` is the explicit release-all; `GET /light/api/raw` lists every hold with its
+holder. Untagged callers all share `"owner"` with the desk's own faders, so a session must tag.
+Guards: `serverXR/src/lighting/tests/test-holds.js`, and the hold checks in `tests/test-http.js`.
+
 ## A public space showed every project in it — privacy was per space only
 
 Before 2026-09-29 the only visibility was `spaces.is_public`; a public space exposed every
