@@ -1036,6 +1036,7 @@
    253
   ],
   "safety": {
+  "dotValueRanges": [[146, 165], [185, 187]],
    "points": "single dots and blobs (about 146-165, 185-187): all 40 W in one spot — never toward people; only for an aim test on a surface",
    "basis": "physics, not the owner's list"
   },

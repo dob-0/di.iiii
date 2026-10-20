@@ -54,7 +54,9 @@ ap.add_argument('--tent', type=float, default=30.0, help='side washes: deg in fr
 a = ap.parse_args(); a.out = a.out or {'crane': 'scripts/place/rigs/moxir-v2-8-2026-10-13.json', 'columns': 'scripts/place/rigs/moxir-v2-8-columns-try-2026-10-13.json', 'matrix': 'scripts/place/rigs/moxir-v2-8-matrix-2026-10-13.json'}[a.lasers]; sys.path.insert(0, f'{a.repo}/scripts/place'); import moxir_v2_symmetry as sym
 rig = json.load(open(f'{a.repo}/{a.src}')); X0 = sym.X0
 WEST_X, EAST_X, WALL_Z, BACK_Z, ROOF_Y = -36.4, 60.4, 53.8, -53.6, 10.3
-HAND_RULE_Y, ENTRY_MIN, NEAR_Z, NEAR_MIN = 5.4, 9.0, 3.2, 9.2
+import laser_rules  # the hand rule's one home: laser-distance.mjs
+HAND_RULE_Y = laser_rules.HAND_RULE_M
+ENTRY_MIN, NEAR_Z, NEAR_MIN = 9.0, 3.2, 9.2
 COL_X, COL_FACE = 12.0, 0.5                        # column rows x ±12 (hall record), bracket 0.5 m off the face toward the floor
 PARK = {'x': (-12.0, 12.0), 'z': (-2.0, 7.0), 'y': (2.5, 10.8)}   # ground_rules.crane_park: no beam through it
 SIDE_X = 8.2

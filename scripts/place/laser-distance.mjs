@@ -9,6 +9,11 @@ import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 // it is a floor for the picture, NOT a safety assessment.
 export const LASER_MIN_HEIGHT_M = 3
 
+// The owner's stricter "hand rule" (2026-10-12, moxir_v2_7_lines.py): the 3 m is counted from a raised hand, so the
+// lowest beam point over any standing area is LASER_MIN_HEIGHT_M + a hand raised to LASER_HAND_REACH_M. Derived, never retyped.
+export const LASER_HAND_REACH_M = 2.4
+export const LASER_HAND_RULE_M = LASER_MIN_HEIGHT_M + LASER_HAND_REACH_M
+
 // Every laser model, not only the rental `laser`: the LaserCube (2026-10-04) got its own model kind,
 // and the laser rules — no beam downward, none under the minimum height, none into crane steel —
 // silently stopped applying to it (audit follow-up, 2026-10-05).
