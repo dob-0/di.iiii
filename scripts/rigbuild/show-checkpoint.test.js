@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildManifest, copySlug, countDocument, deskBase, parseArgs, planRestore, restoreText, runRestore, stamp, takeCheckpoint } from './show-checkpoint.mjs'
+import { tokenFileFor, buildManifest, copySlug, countDocument, deskBase, parseArgs, planRestore, restoreText, runRestore, stamp, takeCheckpoint } from './show-checkpoint.mjs'
 
 const doc = { entities: [{ id: 'rig-show', components: { rigLooks: { looks: [{}, {}] } } }, { id: 'a', components: { fixture: {} } }, { id: 'b' }] }
 const fakeClient = (calls, { docOk = true } = {}) => ({
@@ -66,5 +66,23 @@ describe('show-checkpoint', () => {
         expect(fs.existsSync(out)).toBe(false)
         expect(calls).toEqual([])
         await expect(takeCheckpoint({ project: 'p', noCopy: true, include: [], api: 'http://x/serverXR' }, { client: fakeClient([], { docOk: false }), log: () => {} })).rejects.toThrow(/document fetch failed/)
+    })
+    it('uses the default token file only for the default api', () => {
+        expect(tokenFileFor('http://diiii.localhost/serverXR', undefined)).toBe('~/.di/di.env')
+        expect(tokenFileFor('http://other/serverXR', 'f.env')).toBe('f.env')
+        expect(() => tokenFileFor('http://ckpt.diiii.localhost/serverXR', undefined)).toThrow(/--token-file/)
+        expect(parseArgs(['--project', 'p', '--no-copy']).tokenFile).toBeUndefined()
+    })
+    it('refuses a restore over a newer version unless --force-overwrite', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-'))
+        await takeCheckpoint({ project: 'p', space: 's', api: 'http://x/serverXR', include: [], noCopy: true, out: dir }, { client: fakeClient([]), fetchFn: async () => ({ ok: true, status: 200, text: async () => '{}' }), now: when, log: () => {} })
+        const calls = []
+        const newer = { get: async () => ({ ok: true, status: 200, body: { version: 9, document: { entities: [1, 2, 3, 4, 5] } } }), put: async (r, b) => { calls.push(r); return { ok: true, status: 200 } } }
+        await expect(runRestore({ restore: dir, yes: true }, { client: newer, log: () => {} })).rejects.toThrow(/v9 \(5 entities now\).*v7 \(3 entities\)/s)
+        expect(calls).toEqual([])
+        await runRestore({ restore: dir, yes: true, forceOverwrite: true }, { client: newer, log: () => {} })
+        expect(calls).toHaveLength(1)
+        expect(restoreText({ manifest: JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8')), dir })).toContain('--force-overwrite')
+        fs.rmSync(dir, { recursive: true })
     })
 })

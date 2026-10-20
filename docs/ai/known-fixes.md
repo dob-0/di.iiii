@@ -987,3 +987,9 @@ applied later inside the key lock with no re-check; `keyMoveWidensAccess` put `e
 Fix (2026-10-20): inside `withKeyLock`, both key trash and key move re-read the project and answer 409 `project_moved` when
 its space is no longer the one the request was made for; the counting error is logged and the 403 carries a fixed text.
 Guard: `serverXR/src/syncKeyMoveRace.test.js` (3 cases). Measured: 2 of 3 failed on origin/dev, 3/3 after, 10 of 10 runs.
+
+## show-checkpoint: token and restore guards (2026-10-20)
+
+- The default token `~/.di/di.env` is used only when `--api` is the default (`http://diiii.localhost/serverXR`). Any other api (save, or the manifest's api on restore) without `--token-file` is refused before any network call, naming `--token-file`.
+- `--restore --yes` reads the project's current version first. If it is newer than the checkpoint's, it refuses and prints both versions and entity counts (what would be lost); `--force-overwrite` is the only way through. RESTORE.md says both.
+- Before: 6 tests; the real run (PR #1037) had sent the owner's token to a scratch server and could overwrite newer work. After: 8 tests.
