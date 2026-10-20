@@ -10,7 +10,9 @@ wall or the roof: a LEAK. The overshoot allowed is never more than the thickness
 THE SURFACES COME FROM ONE SOURCE (2026-10-20, owner rule "Physics first" 2: a stored number that only fits an old state is a
 bug): the hall record's `dims.shell`, the wall, deck, lantern and glazing slabs scripts/place/hall_shell.py takes from the
 model the room draws (every corner a vertex of that GLB). Each slab is a box; the beam is cast against its faces (slab method,
-from inside or outside). The floor is the one surface the shell does not carry: the plane y = 0 of the hall frame. A hall
+from inside or outside). The floor is the one surface the shell does not carry: the plane y = 0 of the hall frame, BOUNDED to the hall's
+footprint (the shell's x, z extent): beyond it y = 0 is the GROUND the hall stands on, which still stops a beam ('ground outside (through <opening>)':
+a beam out of a gate and down is not drawn underground; open sky is a ray that does not go down). A hall
 record WITHOUT dims.shell is refused (exit 2), never checked against copied planes: run hall_shell.py --write first.
 Before this the walls (x -36.4 / 60.4, z 53.8 / -53.6), the deck (truss_top_h_m) and a lantern roof (ridge_h_m over |x| <= 6,
 the whole length) were copied by hand into this file; they differed from the model (back wall 0.2 m, deck 0.05 m, lantern roof
@@ -31,7 +33,7 @@ row remains, with --fix too: the rows only a moved lamp can mend (outside_hall, 
     python3 scripts/place/physics_check.py --api http://127.0.0.1:4337/serverXR --project moxir-v2-9 \
         --hall scripts/place/rigs/moxir-hall-2026-10-11-v11-show-park-far41.hall.json [--fix]
 """
-import argparse, json, math, sys, time, urllib.request
+import argparse, json, math, re, sys, time, urllib.request
 
 FLOOR_Y = 0.0   # the hall frame's floor; dims.shell carries walls, deck, lanterns and glazing, not the floor
 
@@ -107,16 +109,62 @@ def outside_hall(p, shell):
     return any(p[i] < lo[i] - FACE_EPS or p[i] > hi[i] + FACE_EPS for i in range(3))
 
 
+def on_footprint(q, lo, hi):
+    """True when the point q (x, z) lies on or inside the hall's footprint: the shell's x, z extent (lo, hi = hall_extent(shell))."""
+    return all(lo[i] - FACE_EPS <= q[i] <= hi[i] + FACE_EPS for i in (0, 2))
+
+
+def opening_of(p, d, shell):
+    """Name the opening a ray that meets nothing left the hall through, or None (the origin is outside the hall: no 'through').
+    The ray leaves the box that holds the shell (hall_extent) at one face; the slab group that touches that face nearest the exit
+    point names the wall ('end-wall-entry': a slab id without its trailing -number); the top face is 'the roof'; a face no slab touches is the
+    hall's edge on that side. A ray only gets here when nothing stopped it, so the exit point lies in a gap of the shell."""
+    lo, hi = hall_extent(shell)
+    if outside_hall(p, shell): return None
+    t, face = math.inf, None
+    for i in range(3):
+        if abs(d[i]) < 1e-12: continue
+        if d[i] > 0: ti, side = (hi[i] - p[i]) / d[i], 1
+        elif i == 1: continue                                  # downward: the floor is the bottom, never a way out
+        else: ti, side = (lo[i] - p[i]) / d[i], 0
+        if ti < t: t, face = ti, (i, side)
+    if face is None: return None
+    i, side = face
+    if i == 1: return 'the roof'
+    q = [p[k] + t * d[k] for k in range(3)]
+    edge = (hi if side else lo)[i]
+    def gap(b):                                                # how far the exit point is from the slab box
+        return math.sqrt(sum(max(b[1][k] - q[k], q[k] - b[2][k], 0.0) ** 2 for k in range(3)))
+    touching = [b for b in shell if abs((b[2] if side else b[1])[i] - edge) <= FACE_EPS]
+    if not touching: return 'the %s edge of the hall' % ('xyz'[i] + ('+' if side else '-'))
+    near = min(touching, key=gap)[0]                           # '<surface> [<id>]'
+    sid = near[near.index('[') + 1:-1] if '[' in near else near
+    return re.sub(r'-\d+$', '', sid) + ' opening'
+
+
 def first_surface_through(p, d, shell):
-    """(distance, surface, depth) of the first thing the ray meets: the floor (depth inf, a plane), or a dims.shell slab; depth is the
-    length of the ray inside that slab, entry face to far face (shell = shell_of(dims))."""
+    """(distance, surface, depth) of the first thing the ray meets: the floor, or a dims.shell slab; depth is the length of the ray
+    inside that slab, entry face to far face (shell = shell_of(dims)). THE FLOOR IS THE HALL'S FOOTPRINT, not the infinite plane y = 0
+    (2026-10-20 review, owner rule "Physics first" 1: light leaves a hall only through an opening, and outside it there is no hall floor):
+    a ray that meets y = 0 beyond the footprint ends on 'ground outside (through <opening>)' (review of #1050: not open sky, a beam out of a gate
+    was drawn underground and green); only a ray that is not going down meets nothing, and ends in 'open sky (through <opening>)' when it left through a
+    gap of the shell, plain 'none (open sky)' when it started outside the hall."""
     hits = []
+    lo, hi = hall_extent(shell)
     if d[1] < -1e-9 and p[1] > FLOOR_Y - FACE_EPS:   # a lamp AT floor level aiming down meets the floor at 0 m: never open sky
-        hits.append((max(0.0, (FLOOR_Y - p[1]) / d[1]), 'floor', math.inf))
-    for name, lo, hi in shell:
-        s = ray_span(p, d, lo, hi)
+        tf = max(0.0, (FLOOR_Y - p[1]) / d[1])
+        if on_footprint([p[k] + tf * d[k] for k in range(3)], lo, hi): hits.append((tf, 'floor', math.inf))
+        else:
+            # beyond the footprint y = 0 is the GROUND the hall stands on (review of #1050: a beam out of a gate and down was drawn underground, green):
+            # it stops the beam like the floor does, named by the opening it left through
+            through = opening_of(p, d, shell)
+            hits.append((tf, 'ground outside' if through is None else 'ground outside (through %s)' % through, math.inf))
+    for name, lo_b, hi_b in shell:
+        s = ray_span(p, d, lo_b, hi_b)
         if s is not None: hits.append((s[0], name, s[1] - s[0]))
-    return min(hits) if hits else (math.inf, 'none (open sky)', math.inf)
+    if hits: return min(hits)
+    through = opening_of(p, d, shell)
+    return (math.inf, 'none (open sky)' if through is None else 'open sky (through %s)' % through, math.inf)
 
 
 def first_surface(p, d, shell):
@@ -151,10 +199,18 @@ def main(argv=None):
     for e in ents:
         if e.get('type') != 'spotLight': continue
         c = e.get('components') or {}; beam = c.get('beam') or {}; light = c.get('light') or {}
-        if beam.get('visible') is False: continue
-        drawn = float(beam.get('length') or 0) or float(light.get('distance') or 0)
-        if drawn <= 0: continue
+        drawn = 0.0 if beam.get('visible') is False else float(beam.get('length') or 0) or float(light.get('distance') or 0)
         t = c.get('transform') or {}; p = t.get('position') or [0, 0, 0]; d = axis_of(t.get('rotation') or [0, 0, 0])
+        if drawn <= 0:
+            # no beam is drawn (hidden, or 0 m: epic-build writes {visible: false} for a lamp with no air to throw into): the beam cannot leak, but
+            # WHERE THE LAMP STANDS does not depend on it (review of #1050: the fault was said once in a build log, then every check was green).
+            # Only the 0 m result is a row here: inside a slab or on the floor aiming down; never fixed, the lamp has to be moved.
+            if not outside_hall(p, shell):
+                L, name, depth = first_surface_through(p, d, shell)
+                if L <= 0:
+                    leaks.append({'id': e['id'], 'drawn': 0.0, 'first_hit': round(L, 2), 'surface': name, 'over_m': 0.0, 'laser': bool(beam.get('laser')),
+                                  'on_floor' if name == 'floor' else 'inside_slab': True, 'hidden': True})
+            continue
         L, name, depth = first_surface_through(p, d, shell); checked += 1
         if outside_hall(p, shell):
             # the lamp stands outside the building (2026-10-20 review): what its ray meets from there says nothing about the hall, and 'open
