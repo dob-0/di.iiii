@@ -1,12 +1,11 @@
 // @vitest-environment node
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from '../testSupport/spawnServer.mjs'
 
 // Two real installs, the way two machines share a room: the HOST has auth on
 // and hands out a per-space sync key; the FOLLOWER has a follows.json entry
@@ -23,24 +22,13 @@ const SPACE = 'shared-room'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const getFreePort = async () => new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.on('error', reject)
-    probe.listen(0, '127.0.0.1', () => {
-        const { port } = probe.address()
-        probe.close(error => (error ? reject(error) : resolve(port)))
-    })
-})
-
 const startServer = async ({ name, requireAuth = false, beforeStart = null }) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-machines-cwd-'))
     const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-machines-data-'))
-    const port = await getFreePort()
     if (beforeStart) await beforeStart(dataRoot)
 
     const env = {
         ...process.env,
-        PORT: String(port),
         NODE_ENV: 'test',
         APP_BASE_PATH: '/serverXR',
         DATA_ROOT: dataRoot,
@@ -54,23 +42,9 @@ const startServer = async ({ name, requireAuth = false, beforeStart = null }) =>
     delete env.UPLOADS_DIR
     delete env.DI_LOCAL
 
-    const child = spawn(process.execPath, [SERVER_ENTRY], { cwd: sandboxCwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-    let output = ''
-    child.stdout.on('data', chunk => { output += chunk.toString() })
-    child.stderr.on('data', chunk => { output += chunk.toString() })
+    const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd: sandboxCwd, env: env })
 
     const baseUrl = `http://127.0.0.1:${port}/serverXR`
-    const deadline = Date.now() + 15000
-    while (true) {
-        if (child.exitCode !== null) throw new Error(`Server exited early.\n${output}`)
-        if (Date.now() > deadline) throw new Error(`Server did not become healthy in time.\n${output}`)
-        try {
-            if ((await fetch(`${baseUrl}/api/health`)).ok) break
-        } catch {
-            // retry until the deadline
-        }
-        await wait(150)
-    }
 
     const stop = async () => {
         if (child.exitCode === null) {
@@ -84,7 +58,7 @@ const startServer = async ({ name, requireAuth = false, beforeStart = null }) =>
         await rm(sandboxCwd, { recursive: true, force: true })
         await rm(dataRoot, { recursive: true, force: true })
     }
-    return { baseUrl, logs: () => output, stop }
+    return { baseUrl, logs: readLogs, stop }
 }
 
 const api = async (server, method, route, { body = null, token = API_TOKEN } = {}) => {

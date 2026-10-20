@@ -46,13 +46,16 @@ const waitForReady = (child, state, readyTimeoutMs) => new Promise((resolve, rej
     check()
 })
 
-export const spawnServerUntilReady = async ({ entry, cwd, env, readyTimeoutMs = 15000 }) => {
+// `port` pins the port (a restart of the SAME install must come back on the same one): then nothing is picked and
+// nothing is retried -- a pinned port that is taken is the caller's to hear about.
+// `nodeArgs` go before the entry (`--require preload.cjs`).
+export const spawnServerUntilReady = async ({ entry, cwd, env, nodeArgs = [], port: pinnedPort = null, readyTimeoutMs = 15000 }) => {
     const state = { stdout: '', stderr: '', logs: () => `STDOUT:\n${state.stdout}\nSTDERR:\n${state.stderr}` }
     for (let attempt = 1; ; attempt += 1) {
-        const port = await getFreePort()
+        const port = pinnedPort || await getFreePort()
         state.stdout = ''
         state.stderr = ''
-        const child = spawn(process.execPath, [entry], {
+        const child = spawn(process.execPath, [...nodeArgs, entry], {
             cwd,
             env: { ...env, PORT: String(port) },
             stdio: ['ignore', 'pipe', 'pipe']
@@ -67,7 +70,7 @@ export const spawnServerUntilReady = async ({ entry, cwd, env, readyTimeoutMs = 
             // would ever stop it — it outlived the test run (an orphan serverXR seen running for 22 minutes), and the retry
             // below would start the next one beside it.
             stopChild(child)
-            if (attempt < 3 && /EADDRINUSE/.test(`${state.stdout}${state.stderr}`)) continue
+            if (!pinnedPort && attempt < 5 && /EADDRINUSE/.test(`${state.stdout}${state.stderr}`)) continue
             throw error
         }
     }

@@ -21,6 +21,12 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A test server died with "EADDRINUSE" on a port the test had just picked (serverXR tests, 2026-10-20)
+
+Symptom: `followIntegration.test.js` failed 1 run in 10 with `Server exited early ... listen EADDRINUSE: address already in use 0.0.0.0:42421`.
+Cause: 17 test files asked the OS for a free port, closed the probe, and only then started the server on that number; vitest runs files in parallel, so a sibling could take the number in between. Most files then polled `/api/health`, which a SIBLING's server could answer (wrong instance, odd 401s).
+Fix: every test that starts a serverXR child goes through `serverXR/src/testSupport/spawnServer.mjs` `spawnServerUntilReady` (waits for the child's own listen line, retries a lost race on a new port; `port:` pins one for a restart of the same install). In-process servers listen on port 0 and read `address().port`. Guard: `testSupport/noPickedPort.test.js` fails on any test file that picks a port by hand. Side effect found: the child is now ready sooner, so `gracefulShutdown.test.js` walked the data folder while `follows.lock.guard` vanished (ENOENT); its `findDb` now looks again.
+
 ## A new node's card window opened over its own node (Raw, 2026-10-20)
 
 Cause: the graph surface published its screen origin only on pan/zoom/resize, but the surface moves (~57 px) when the first node lands, so every world window rendered off its card by the stale origin. Fix: `RawGraphSurface` re-measures on ResizeObserver and one frame after a pan. Guard: `src/raw/components/RawGraphSurface.origin.test.jsx`. Note: `docs/ai/sessions/fix-raw-card-window-placement-2026-10-20.md`.
