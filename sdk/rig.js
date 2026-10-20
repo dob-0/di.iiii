@@ -29,16 +29,18 @@ export const rigModules = async () => {
         throw new Error(`the rig tools need a di.iiii checkout (scripts/rigbuild/ is not under ${ROOT}) — an install does not carry the rig sources`)
     }
     const at = (p) => import(new URL(`../${p}`, import.meta.url).href)
-    const [versions, rigLib, glb, library, ground, aim, archive] = await Promise.all([
+    const [versions, rigLib, glb, library, ground, aim, archive, safety, laserDistance] = await Promise.all([
         at('scripts/rigbuild/versions.mjs'),
         at('scripts/place/rig-lib.mjs'),
         at('scripts/place/fixtures-glb.mjs'),
         at('scripts/rigbuild/library.mjs'),
         at('scripts/rigbuild/ground-movers.mjs'),
         at('src/project/viewport/spotLightAim.js'),
-        at('scripts/production/archive-versions.mjs')
+        at('scripts/production/archive-versions.mjs'),
+        at('scripts/rigbuild/safety.mjs'),
+        at('scripts/place/laser-distance.mjs')
     ])
-    mods = { versions, rigLib, glb, library, ground, aim, archive }
+    mods = { versions, rigLib, glb, library, ground, aim, archive, safety, laserDistance }
     return mods
 }
 
@@ -155,10 +157,38 @@ const hallPath = (file) => {
     return file
 }
 
+// What is still not a check, and the data it lacks. The tie-off / inside-hall / laser-lantern GEOMETRY checks are real
+// (scripts/rigbuild/safety.mjs); a tie-off's strength is not: tieoffs carry only prose ("2 t LC ratchet strap"), no
+// structured rating, and no anchor member's capacity exists in the committed halls.
 const UNAVAILABLE = {
-    tieoffClash: 'the tie-off / crane-cab check is a test-local function in PR #772 (fix/moxir-audit-safety-2026-10-05, tieoff-clash.test.js), not on dev — owed: export it to a module when #772 lands, then wire it here',
-    insideHall: 'the inside-the-walls check is test-local in PR #772 (insideHall.test.js), not on dev — owed as above',
-    laserLantern: 'the lasers-clear-the-roof-lanterns check is test-local in PR #772 (laserLantern.test.js), not on dev — owed as above'
+    tieoffRating: 'no structured load rating: a tie-off holds a prose `what` ("2 t LC ratchet strap, EN 12195-2") and the halls hold no capacity for the column or member it anchors to — owed: a `rated_kg` on each tie-off and a capacity per anchor, from the rigger'
+}
+
+/** The three hall-geometry checks of one built version (scripts/rigbuild/safety.mjs, audit 2026-10-05, PR #772). */
+const hallChecks = ({ rig, hall, built, safety, laserLamps }) => {
+    const g = hall.geometry || {}
+    const cabs = safety.cabBoxes(hall).length
+    const tieoffs = rig.truss?.rigging?.tieoffs || []
+    const clashes = safety.tieoffCabClashes(rig, hall)
+    const tieoffClash = !tieoffs.length ? { status: 'n/a', why: 'this version hangs no tie-offs' }
+        : !cabs ? { status: 'n/a', why: 'the hall names no crane cab' }
+            : { status: clashes.length ? 'fail' : 'pass', tieoffs: tieoffs.length, cabs, clashing: clashes }
+    const wallKeys = safety.hallMissing(g, ['end_wall_inner_y_m', 'far_wall_z_m', 'walls_x_m'])
+    const placed = built.fixtures.map((f) => {
+        const m = f.parts.Base || Object.values(f.parts)[0]
+        return { id: f.id, pos: [m.elements[12], m.elements[13], m.elements[14]] }
+    })
+    const outside = wallKeys.length ? null : safety.outsideHallLines(placed, g)
+    const insideHall = wallKeys.length ? { status: 'unavailable', why: `the hall lacks ${wallKeys.join(', ')}` }
+        : { status: outside.length ? 'fail' : 'pass', checked: placed.length, outside }
+    const roofKeys = safety.hallMissing(g, ['deck_m', 'lanterns'])
+    const laserLantern = roofKeys.length ? { status: 'unavailable', why: `the hall lacks ${roofKeys.join(', ')}` }
+        : !laserLamps.length ? { status: 'n/a', why: 'this version has no laser lamp' }
+            : (() => {
+                const failing = safety.lanternFailures(laserLamps, g)
+                return { status: failing.length ? 'fail' : 'pass', beamsChecked: laserLamps.length, spread_m: safety.LANTERN_BEAM_SPREAD_M, failing }
+            })()
+    return { tieoffClash, insideHall, laserLantern }
 }
 
 /**
@@ -166,11 +196,13 @@ const UNAVAILABLE = {
  * freshness = versions.mjs --check (the generated files match their source);
  * per version: bridle limit (bridle-limit.test.js), every look built with nothing
  * refused / clashing / unreachable and every laser ≥ LASER_MIN_HEIGHT_M and rising
- * (versions.test.js), and the ground-mover policy where the version opts in
+ * (versions.test.js), the three hall-geometry checks of safety.mjs (tie-offs clear the crane cabs, everything inside the
+ * walls, laser beams land on solid deck and not together), and the ground-mover policy where the version opts in
  * (ground-movers.mjs groundPolicyViolations).
  */
 export const rigCheck = async ({ production, version, hall: hallFile } = {}) => {
-    const { versions, rigLib, glb, library, ground, aim } = await rigModules()
+    const { versions, rigLib, glb, library, ground, aim, safety, laserDistance } = await rigModules()
+    const { laserLampsOf } = laserDistance
     const { set, file, spec } = resolveProduction(production)
     const started = Date.now()
     const out = { production: set, checks: {}, versions: {}, unavailable: UNAVAILABLE }
@@ -214,6 +246,9 @@ export const rigCheck = async ({ production, version, hall: hallFile } = {}) => 
                 if (y < rigLib.LASER_MIN_HEIGHT_M || !rising) laserFails.push({ look, id: e.id, y_m: r1(y), rising })
             }
         }
+        const built = rigLib.buildRig(rig, hall, { geometry, manifest })
+        const laserLamps = laserLampsOf(built.entities, rig, rigLib.RIG_PREFIX).map((e) => ({ id: e.id, from: e.components.transform.position, dir: aim.spotAimDirection(e.components.transform.rotation) }))
+        const hallResult = hallChecks({ rig, hall, built, safety, laserLamps })
         const policy = ground.groundPolicyViolations({ rig, hall, library: lib, builds, stage })
         const bridle = bridleOf(rigLib, rig, hall)
         const v = {
@@ -225,7 +260,8 @@ export const rigCheck = async ({ production, version, hall: hallFile } = {}) => 
                 ? { status: policy.length ? 'fail' : 'pass', violations: policy }
                 : { status: 'n/a', why: 'this version does not opt into policy.movingFixtures.ground_only' }
         }
-        v.status = [v.bridle, v.looks, v.lasers, v.groundPolicy].some((c) => c.status === 'fail') ? 'fail' : 'pass'
+        Object.assign(v, hallResult)
+        v.status = [v.bridle, v.looks, v.lasers, v.groundPolicy, ...Object.values(hallResult)].some((c) => c.status === 'fail') ? 'fail' : 'pass'
         if (v.status === 'fail') failed++
         out.versions[id] = v
     }
