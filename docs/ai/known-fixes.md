@@ -21,6 +21,14 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Site, wiki, sign-in and admin: what the 2026-10-21 sweep fixed
+
+Measured in Chromium by `scripts/audit/site-wiki-admin.cjs` (axe-core WCAG 2.2 AA, Tab walk, target sizes, touchpad wheel/pinch); audit `docs/ai/audits/2026-10-21-site-wiki-admin.md`.
+
+| Symptom | Root cause | Fix | Guard |
+|---|---|---|---|
+| Tab into the sign-in form and nothing on screen changes: the focused field looks exactly like the other one | MUI `InputBase` paints no focus state, and the field's `sx` gave it none (border 0.3-alpha cyan both ways, outline none, no shadow, read from `getComputedStyle`) | `&.Mui-focused` gets the accent border and a 2 px accent outline | `src/components/PasswordSignIn.test.jsx` |
+
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 
 Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.
