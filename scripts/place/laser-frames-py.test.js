@@ -19,7 +19,17 @@ const rig = {
         laser: { beams: [{ id: `${i + 1}a`, r: [R[0], 0, -0.01] }, { id: `${i + 1}b`, r: [R[0], 0, 0.01] }] }
     }))
 }
-const hall = { dims: { span_m: 24, truss_bottom_h_m: 10.8, truss_top_h_m: 13.3, ridge_h_m: 16.5, lantern_w_m: 12 } }
+// the hall record's dims (heights for the column lines) and its dims.shell (laser_frames.py reads the surfaces from it, 2026-10-20): a deck at 13.3
+// with the lantern opening |x| <= 6 and a lantern roof at 16.4 over it, glazed lantern sides, long walls at x -36.4 / 60.4 and end walls at z +-53.8
+const slab = (id, surface, x, y, z) => ({ id, surface, x_m: x, y_m: y, z_m: z })
+const shell = [
+    slab('deck-up-1', 'deck (deck)', [-36.4, -6], [13.35, 13.5], [-53.8, 53.8]), slab('deck-up-2', 'deck (deck)', [6, 60.4], [13.35, 13.5], [-53.8, 53.8]),
+    slab('lantern-up-1', 'lantern roof', [-6.1, 6.1], [16.4, 16.5], [-53.8, 53.8]),
+    slab('lantern-west-1', 'lantern glazing', [-6.1, -5.9], [13.5, 16.4], [-53.8, 53.8]), slab('lantern-east-1', 'lantern glazing', [5.9, 6.1], [13.5, 16.4], [-53.8, 53.8]),
+    slab('long-wall-west-1', 'long wall (block)', [-36.6, -36.4], [0, 13.5], [-53.8, 53.8]), slab('long-wall-east-1', 'long wall (block)', [60.4, 60.6], [0, 13.5], [-53.8, 53.8]),
+    slab('end-wall-entry-1', 'end wall (block)', [-36.6, 60.6], [0, 13.5], [53.8, 54.0]), slab('end-wall-far-1', 'end wall (block)', [-36.6, 60.6], [0, 13.5], [-54.0, -53.8])
+]
+const hall = { dims: { span_m: 24, truss_bottom_h_m: 10.8, truss_top_h_m: 13.3, ridge_h_m: 16.5, lantern_w_m: 12, shell } }
 const base = { cubes: 'all', colour: '#00ff00', level: 0.16, tempo: { clock: 'master', bpm: 120, beats: 8 }, phase: 'mirror', pitch_deg: 0, yaw_deg: 0, spread_deg: 0, amplitude_deg: 0, breathe: null, hits: null }
 const scenes = (laser) => ({ scenes: [{ id: 'a', cue: { fade_s: 2, hold_s: 30 }, laser }, { id: 'b', cue: { fade_s: 2, hold_s: 30 }, laser: null }] })
 
@@ -170,4 +180,53 @@ describe.skipIf(!hasPython)('laser_frames.py: beams, segments, keyframes (2026-1
         expect(run({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, beams: 0 }).summary.schema_errors.join(' ')).toMatch(/beams/)
         expect(run({ ...base, pattern: 'sky', pitch_deg: 4, yaw_deg: 9, spread_deg: 2, segments: 1 }).summary.schema_errors.join(' ')).toMatch(/segments/)
     })
+})
+
+describe.skipIf(!hasPython)('laser_frames.py: surfaces from dims.shell (2026-10-20, no hand-copied planes)', () => {
+    const runWith = (laser, hallRec, extra = []) => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-shell-'))
+        const f = (n, o) => { const p = path.join(dir, n); fs.writeFileSync(p, JSON.stringify(o)); return p }
+        const r = spawnSync('python3', ['-I', path.join(here, 'laser_frames.py'), '--scenes', f('s.json', scenes(laser)), '--rig', f('r.json', rig),
+            '--hall', f('h.json', hallRec), '--check', '--plan-out', path.join(dir, 'plan.json'), ...extra], { encoding: 'utf8' })
+        const plan = fs.existsSync(path.join(dir, 'plan.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'plan.json'), 'utf8')) : null
+        fs.rmSync(dir, { recursive: true, force: true })
+        return { status: r.status, stdout: r.stdout, stderr: r.stderr, plan }
+    }
+    it('REFUSES a hall record without dims.shell: exit 2, says what to run, checks nothing', () => {
+        const r = runWith({ ...base, pattern: 'comb' }, { dims: { span_m: 24, truss_bottom_h_m: 10.8, truss_top_h_m: 13.3, ridge_h_m: 16.5, lantern_w_m: 12 } })
+        expect(r.status).toBe(2)
+        expect(r.stderr).toMatch(/no dims\.shell/)
+        expect(r.stderr).toMatch(/hall_shell\.py/)
+        expect(r.stdout).toBe('')
+    })
+    it('a fan inside the lantern band ends on the lantern roof, labelled and failing', () => {
+        const { plan } = runWith({ ...base, pattern: 'fan', pitch_deg: 8, yaw_deg: 0, spread_deg: 2 }, hall)
+        const ends = plan.scenes[0].ends
+        expect(Object.keys(ends)).toEqual(['lantern glazing (roof)'])
+        expect(plan.scenes[0].fail_count).toBeGreaterThan(0)
+    })
+    it('a ray off the lantern band ends on the roof deck at the model\'s deck underside (13.35, not the copied 13.3)', () => {
+        const { plan } = runWith({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2 }, hall)
+        expect(Object.keys(plan.scenes[0].ends)).toEqual(['roof deck'])
+        expect(plan.scenes[0].ends['roof deck'].height_m[0]).toBeGreaterThanOrEqual(13.34)
+        expect(plan.scenes[0].fail_count).toBe(0)
+    })
+    it('a ray through the gap in the end wall (a door opening) is open sky and fails', () => {
+        const noEnd = { dims: { ...hall.dims, shell: shell.filter((m) => !m.id.startsWith('end-wall')) } }
+        const { plan } = runWith({ ...base, pattern: 'comb' }, noEnd)   // the comb runs along the hall to the end wall; none there: nothing to stop it
+        expect(Object.keys(plan.scenes[0].ends)).toContain('open sky')
+        expect(JSON.stringify(plan.scenes[0].fails)).toContain('open sky')
+    })
+    it('a slab the rules do not know fails, never passes silently', () => {
+        const odd = { dims: { ...hall.dims, shell: [...shell.filter((m) => !m.id.startsWith('deck')), slab('deck-up-1', 'mystery cladding', [-36.4, 60.4], [13.35, 13.5], [-53.8, 53.8])] } }
+        const { plan } = runWith({ ...base, pattern: 'fan', pitch_deg: 4, yaw_deg: 9, spread_deg: 2 }, odd)
+        expect(JSON.stringify(plan.scenes[0].fails)).toContain('unclassified shell surface')
+    })
+    it('the lantern kerb fails closed (not cleared as a stop) and names itself', () => {
+        const kerb = { dims: { ...hall.dims, shell: shell.map((m) => (m.id === 'lantern-up-1' ? { ...m, surface: 'lantern kerb' } : m)) } }   // what the ray ends on is a kerb slab
+        const { plan } = runWith({ ...base, pattern: 'fan', pitch_deg: 8, yaw_deg: 0, spread_deg: 2 }, kerb)
+        expect(Object.keys(plan.scenes[0].ends)).toEqual(['lantern glazing (kerb)'])
+        expect(JSON.stringify(plan.scenes[0].fails)).toMatch(/lantern glazing \(kerb\)/)
+    })
+
 })

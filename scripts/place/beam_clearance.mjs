@@ -1,6 +1,6 @@
 // beam_clearance.mjs — does a lamp's beam reach the roof, or does the building's steel stop it on the way? (2026-10-14)
 // Owner, on the moving heads put on a roof-frame line: "you put the beams with the line of the arc and will block — make a bit
-// right or left". physics_check.py tests the hall record's planes (walls, floor, deck, lantern); this casts against the hall's
+// right or left". physics_check.py tests the hall record's dims.shell slabs (walls, deck, lanterns, glazing) and the floor; this casts against the hall's
 // REAL model (the project's hall GLB: frame, girders, cranes, columns): each lamp's axis + 8 rim rays at its half-angle.
 //
 //   node scripts/place/beam_clearance.mjs --glb <hall.glb> --doc <document.json> [--type <fixture type>] [--ids a,b,c]

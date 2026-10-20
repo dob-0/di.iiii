@@ -18,7 +18,9 @@
 # (optional hall record dims.shell = [{id, x_m, y_m, z_m}] boxes for walls and roof). Only the part of the line BEFORE that
 # surface is measured; a wall between the source and the zone means the zone is not reached. A hall record with no
 # dims.shell has no modelled walls or roof: the result says shell_modelled false and stays UNVALIDATED, and the line is then
-# measured to its stored end, which is the longer, more conservative stretch. Hanging envelopes (lamps) never shorten a line:
+# measured to its stored end, which is the longer, more conservative stretch. dims.shell is written from the hall's own
+# model by hall_shell.py (2026-10-20). Each row says what the line meets first (first_surface) and whether a wall or roof
+# stops it before the zone (blocked_before_zone). --lamps measures a lamp list (hall reference) along each lamp's rest axis. Hanging envelopes (lamps) never shorten a line:
 # a lamp scatters, so a strike is only flagged.
 # STANDARD: none validated. 3 m is read from laser-distance.mjs (the repo's one source); IEC TR 60825-3 / ILDA / HSG95 are named
 # in the repo's notes with clause numbers UNVERIFIED. This is a geometry check, NOT a safety assessment (LSO sign-off owed).
@@ -26,7 +28,7 @@
 # Also reported, informational: whether a line passes through a HANGING massing envelope (pendant lamps) anywhere on
 # its length. Envelopes are boxes from dims.massing, not the lamp geometry: a strike here is a flag, not a measurement.
 #
-# Usage: python3 laser_margin.py --rig R --hall H [--json] [--step 0.05]
+# Usage: python3 laser_margin.py --rig R --hall H [--json] [--step 0.05] [--lamps hall-reference.json]
 import argparse, json, math, os, sys
 
 import numpy as np
@@ -178,6 +180,7 @@ def measure(rig, hall, step=0.05):
     zone = hall['dims']['zones']['dance']['used']
     S, H, Stop, shell_modelled = surfaces(hall, rig, zone)
     fan = {t['beam']: t.get('half_fan_deg', 0.0) for t in rig.get('lasers', {}).get('tubes', [])}
+    shell_ids = {m.get('id', 'shell') for m in hall['dims'].get('shell', [])}
     out = []
     for f in rig['fixtures']:
         if 'laser' not in f or f.get('status') != 'used':
@@ -192,9 +195,14 @@ def measure(rig, hall, step=0.05):
             d = b - a
             L = float(np.linalg.norm(d))
             hit = H.cast(a, d / L, tmin=0.0, tmax=L) if H.n_tris else (None,) * 4
+            end, met = stop_at_first_surface(a, b, Stop)   # what the line meets first (None = it reaches its stored end)
             row = {'line': bm['id'], 'fixture': f['id'], 'type': f['type'], 'from': [float(v) for v in a],
                    'to': [float(v) for v in b], 'half_fan_deg': hf, 'crosses_zone': nom is not None,
-                   'hanging_strike': None if hit[0] is None else {'solid': hit[1], 't_m': round(hit[0], 3)}}
+                   'hanging_strike': None if hit[0] is None else {'solid': hit[1], 't_m': round(hit[0], 3)},
+                   'first_surface': None if met is None else {'solid': met, 'shell': met in shell_ids,
+                                                               't_m': round(float(np.linalg.norm(end - a)), 3),
+                                                               'at': [round(float(v), 3) for v in end]},
+                   'blocked_before_zone': nom is None and clip_xz(a, b, zone) is not None}
             if nom is not None:
                 row.update({'lowest_m': round(nom['height_m'], 3), 'lowest_at': nom['at'], 'over': nom['over'],
                             'in_zone_m': nom['in_zone_m'], 'analytic_floor_only_m': nom['analytic_floor_only_m'],
@@ -213,7 +221,29 @@ def measure(rig, hall, step=0.05):
                         'pass_3m': sum(1 for r in crossing if r['pass_3m']),
                         'worst': worst and {k: worst[k] for k in ('line', 'fixture', 'lowest_m', 'lowest_at', 'over', 'margin_m')},
                         'worst_tilted': worst_t and {k: worst_t[k] for k in ('line', 'fixture', 'lowest_tilted_m', 'margin_tilted_m', 'half_fan_deg')},
-                        'hanging_strikes': sorted({r['line'] for r in out if r['hanging_strike']})}}
+                        'hanging_strikes': sorted({r['line'] for r in out if r['hanging_strike']}),
+                        'stopped_by_shell': sorted(r['line'] for r in out if r['first_surface'] and r['first_surface']['shell']),
+                        'blocked_before_zone': sorted(r['line'] for r in out if r['blocked_before_zone'])}}
+
+
+def lamp_fixtures(lamps, rig, reach_m=500.0):
+    """Laser lines from a lamp list (a hall reference: lamps with id, type, position, rotation), for the hall's FINAL
+    placement rather than a design rig. A lamp is a laser when the rig has a fixture of its type with a laser block.
+    Its beam leaves along its rest axis (physics_check.axis_of: the entity's local -Y, three.js Euler XYZ, the rule the
+    room draws beams by) and, since a lamp list stores no end, runs reach_m and stops at the first surface: the hall's
+    floor, ground solids and dims.shell (main refuses a lamp list without a shell). No half-fan: the lamp ids are not
+    the rig's tube beams, so the tilted pass equals the nominal one."""
+    from physics_check import axis_of
+    kinds = {f['type'] for f in rig['fixtures'] if 'laser' in f}
+    out = []
+    for lamp in lamps['lamps']:
+        if lamp.get('type') not in kinds:
+            continue
+        p = np.array(lamp['position'], float)
+        to = p + np.array(axis_of(lamp.get('rotation') or [0, 0, 0]), float) * reach_m
+        out.append({'id': lamp['id'], 'type': lamp['type'], 'status': 'used', 'p': [float(v) for v in p],
+                    'laser': {'beams': [{'id': lamp['id'], 'to': [float(v) for v in to]}]}})
+    return out
 
 
 def table(R):
@@ -236,8 +266,16 @@ def main():
     ap.add_argument('--hall', required=True)
     ap.add_argument('--step', type=float, default=0.05)
     ap.add_argument('--json', action='store_true')
+    ap.add_argument('--lamps', help='a lamp list (hall reference): measure ITS lasers (rest axis to the first surface); '
+                                    'solids and laser types still come from --rig')
     a = ap.parse_args()
-    R = measure(json.load(open(a.rig)), json.load(open(a.hall)), a.step)
+    rig, hall = json.load(open(a.rig)), json.load(open(a.hall))
+    if a.lamps:
+        if not hall['dims'].get('shell'):
+            sys.exit('laser_margin: --lamps needs the hall record\'s dims.shell (a lamp list stores no line end; the '
+                     'first wall or roof is the end). See hall_shell.py.')
+        rig = dict(rig, fixtures=lamp_fixtures(json.load(open(a.lamps)), rig))
+    R = measure(rig, hall, a.step)
     if a.json:
         print(json.dumps(R, indent=1))
         return
@@ -247,6 +285,8 @@ def main():
     print('worst nominal: %s' % json.dumps(s['worst']))
     print('worst tilted:  %s' % json.dumps(s['worst_tilted']))
     print('hanging-envelope strikes (flag, not measured): %s' % (', '.join(s['hanging_strikes']) or 'none'))
+    print('shell modelled: %s; lines ending on a wall or roof slab: %d; blocked before the zone: %s' % (
+        R['shell_modelled'], len(s['stopped_by_shell']), ', '.join(s['blocked_before_zone']) or 'none'))
 
 
 if __name__ == '__main__':

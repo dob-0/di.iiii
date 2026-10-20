@@ -13,7 +13,7 @@
 #   the plot before: rigs/moxir-lights-beta-mix-2026-10-07.json (commit c33b3d4b)
 #   the plot after:  rigs/moxir-lights-beta-mix-2026-10-08-blocking.json (this pass's fixes)
 #   the rig's own solids and today's fixtures: rigs/moxir-beta-v0.9-lights-2026-10-07.json (scratch doc v61)
-#   beam angles: src/rigbuild/types/moxir.json optics (UP-PL5403 15 deg, UP-B380F 1.8 deg: borrowed EQUIVALENT
+#   beam angles: src/rigbuild/types/library/ optics (UP-PL5403 15 deg, UP-B380F 1.8 deg: borrowed EQUIVALENT
 #     datasheets, named there); LaserCube Ultra MK2 1 mrad (maker's spec, EXACT)
 #
 # METHOD (what is measured, and how)
