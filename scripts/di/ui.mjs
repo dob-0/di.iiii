@@ -253,6 +253,7 @@ export const ui = {
             denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
             'local-space': 'this install could not make room for it — is di.iiii running here?',
             itself: 'that address is this di.iiii — a space cannot follow itself.',
+            'remote-differs': 'that space is already followed from another remote, with an edit key, and no --key was given — nothing was changed. pass the new remote\'s key: --key dii_sync_…',
             cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
             'manage-cleartext': 'that is a MANAGE key, and a manage key is sent only over https (or to this machine) — on any network, --insecure or not. use the https address, or ask for an ordinary key.',
             corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
@@ -265,6 +266,12 @@ export const ui = {
             : message
     },
 
+    followKeptKey: () => 'kept the stored edit key — no --key was given, and the remote is the same.',
+    followRemoteDiffers: (spaceId, stored, base) =>
+        `${spaceId} is followed from ${stored}, with an edit key; ${base} is another remote, and no --key was given — nothing was changed.\n` +
+        `to follow it from ${base}, pass that remote's key: --key dii_sync_… (or --key - to read it from stdin).`,
+    followNotFollowed: (spaceId) =>
+        `${spaceId} is not followed here, so there is no remote to take — say where from: --from https://…`,
     followBothDirections: () => '--take-host and --take-mine answer opposite questions — say one of them.',
     followBothStarts: () => '--from-now and --replay are opposite starts — say one of them.',
 
@@ -564,7 +571,8 @@ export const ui = {
         '  --take-mine     the same, the other way: this copy becomes the host\'s. Restore point',
         '                  taken on the host first; used once, then cleared',
         '                  (with neither, a difference where this copy is ahead is REFUSED and',
-        `                  shown in ${CMD} follows)`,
+        `                  shown in ${CMD} follows). On a space already followed, either one`,
+        `                  alone is enough: ${CMD} follow SPACE --take-mine uses that follow's address and key`,
         '  --insecure      allow a key to travel over plain http to a public address (http to',
         '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
