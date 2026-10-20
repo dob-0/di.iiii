@@ -1067,3 +1067,12 @@ Fix: (1) beyond the footprint y = 0 is the ground the hall stands on: `ground ou
 rule `floor`, as before #1050); open sky is a ray that does not go down; the lamp above has reach 8 m and the beam is a fixable leak again; (2) for a beam not drawn (hidden or 0 m) `physics_check` still casts the lamp,
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
+
+## `di update` on the dev channel failed on any 429 from the hub's edge, and the error did not say who answered (2026-10-21)
+
+Symptom: `could not read the hub's health (https://dev.diiii.xyz: 429)`. Measured on one install 10-19..10-21: 5 of 12 update runs failed with 429, four in a row 23:30-00:16 +04;
+manual probes with curl and Node fetch returned 200. serverXR's own limiters (`createRateLimiter` in `serverXR/src/index.js`) are route-specific and none covers `/api/health`, so the 429
+most likely comes from the edge in front of the hub (not proven: the old line carried no header to tell). Fix: `hubCommit` (`scripts/di/channels.mjs`) retries on 429 and 503 only:
+Retry-After (seconds or HTTP date) when given, else 2 s, 4 s, 8 s; at most 3 retries, at most 30 s of waiting in all; the per-request timeout is unchanged. When it still fails the one error
+line names status, `server`, `cf-ray`, `retry-after`, the retry count and the first 120 characters of the body. A 500 and every other status fail at once, as before.
+Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (6 cases, injected `fetchImpl` and `sleep`; all 6 fail on the old code).
