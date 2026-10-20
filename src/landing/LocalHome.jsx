@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import './localHome.css'
 import SpaceHub from '../studio/components/SpaceHub.jsx'
+import JoinMachine from '../sync/JoinMachine.jsx'
 import StudioThemeProvider from '../studio/StudioThemeProvider.jsx'
 import { listServerSpaces } from '../services/serverSpaces.js'
 import GuestAddressPanel from './GuestAddressPanel.jsx'
@@ -27,6 +28,7 @@ const JOIN_HASH = '#join'
  */
 export default function LocalHome() {
     const [count, setCount] = useState(null)
+    const [joining, setJoining] = useState(false)
     const [joinOpen, setJoinOpen] = useState(() => typeof window !== 'undefined' && window.location.hash === JOIN_HASH)
 
     useEffect(() => {
@@ -65,9 +67,16 @@ export default function LocalHome() {
                     <a href="/studio">Studio</a>
                     <a href="/raw">Nodes</a>
                     <a href="/wiki">Wiki</a>
+                    {/* The other half of "Invite a machine": four words from another di.iiii. */}
+                    <button type="button" className="lh-join" aria-expanded={joining} onClick={() => setJoining((open) => !open)}>Join</button>
                     <a href="/?tour=1">What is di.iiii?</a>
                 </span>
             </div>
+            {joining && (
+                <div className="sjoin-wrap">
+                    <JoinMachine onClose={() => setJoining(false)} />
+                </div>
+            )}
             {joinOpen && (
                 <div id="lh-guest">
                     <GuestAddressPanel onClose={() => setJoinOpen(false)} />

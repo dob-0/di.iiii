@@ -341,7 +341,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // with the room's, and both have nothing to do with the other machine's.
     const cursors = new Map(Object.entries(resume?.cursors || {}))
     let streams = [sceneStream(local.spaceId)]
-    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null, converged: 0, lastConvergeAt: null, resumed: Boolean(resume) }
+    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null, converged: 0, lastConvergeAt: null, convergedAt: [], resumed: Boolean(resume), hostAnswering: null, hostRefused: false, lastAnswerAt: null, latencyMs: null }
+    // What the interface's sync light reads (src/sync/syncLight.js). The host
+    // "answered" when a request to it came back at all, and "how fast" is the
+    // round trip of the small project-list read each tick makes — never a
+    // parked read, whose duration is the room's quiet and not the wire.
+    let answered = { at: null, latencyMs: null, down: false }
     // Per stream: has each side moved since the copies were last compared?
     // Copies can only disagree after BOTH sides edited (followConverge.js), so
     // a stream is compared once it is quiet again after both moved — and once
@@ -429,14 +434,21 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
+        const askedAt = Date.now()
         const readHere = () => Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
             request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address })
         ])
         let [[here, hereTrash], [there, thereTrash]] = await Promise.all([readHere(), Promise.all([
-            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
+                .then((answer) => { answer.tookMs = Date.now() - askedAt; return answer }),
             request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
         ])])
+        // Any HTTP answer is the host being there; a 401/403 is a host that
+        // answers and refuses, which the next reads say in words. Only silence
+        // is "not answering".
+        if (there.status > 0) answered = { at: Date.now(), latencyMs: there.ok ? there.tookMs : answered.latencyMs, down: false }
+        else answered = { ...answered, down: true }
         // The other side answered: files waiting out its silence (assets.js)
         // go on this tick, not at the end of a wait of up to five minutes.
         if (there.ok) chase.noteAnswered()
@@ -971,7 +983,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // failure of the follow: it will exist on the next pass.
         if (!theirs.reachable) {
             if (theirs.status === 404) return { moved: false, skipped: true }
-            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})` }
+            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})`, hostDown: !theirs.status, hostRefused: theirs.status === 401 || theirs.status === 403 }
         }
         if (!ours.reachable) {
             if (ours.status === 404) return { moved: false, skipped: true }
@@ -1086,6 +1098,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         let failed = null
         let converged = 0
         let convergeRefused = null
+        let hostDown = false
+        let hostRefused = false
 
         // What `di follows` shows. Built before the room's read parks as well as
         // after it: that read can hold the tick for twenty seconds, and a
@@ -1106,6 +1120,17 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 converged: started.converged + converged,
                 lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
                 resumed: started.resumed,
+                // When each clash happened (last 100), so the interface can say
+                // "clashes today" by ITS calendar day; held in memory.
+                convergedAt: converged
+                    ? [...(started.convergedAt || []), ...Array(converged).fill(Date.now())].slice(-100)
+                    : (started.convergedAt || []),
+                // What the sync light reads (src/sync/syncLight.js): the host
+                // answered, or was silent; answered-and-refused is a revoked key.
+                hostAnswering: !(hostDown || answered.down),
+                hostRefused,
+                lastAnswerAt: hostDown || answered.down ? started.lastAnswerAt : Date.now(),
+                latencyMs: answered.latencyMs,
                 settings: { carried: settingsCarried, notes: settingsNotes },
                 projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort() },
                 slugs: { carried: slugsCarried, notes: slugNotes },
@@ -1142,6 +1167,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             carriedIn += result.carriedIn || 0
             carriedOut += result.carriedOut || 0
             failed = failed || result.failed
+            hostDown = hostDown || Boolean(result.hostDown)
+            hostRefused = hostRefused || Boolean(result.hostRefused)
             if (result.converged) converged += 1
             convergeRefused = convergeRefused || result.convergeRefused || null
         }
