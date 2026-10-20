@@ -1,15 +1,12 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { assignCircuits, circuitLimitW } from './sheet.js'
 import { powerOf, typeById } from './fixtureTypes.js'
+import { loadLibrary } from '../../scripts/rigbuild/library.mjs'
 
 // Audit A-05 (2026-10-05): circuits were planned on a LED PAR's 162 W rating, so the 16 column PARs of
 // Known · full shared C6 — 2592 W rated, but 3200 W at the 200 W supply the maker states, over the
 // 2944 W planning limit of a 16 A / 230 V circuit at 80 %. Planning now uses the supply power.
-const here = path.dirname(fileURLToPath(import.meta.url))
-const library = JSON.parse(fs.readFileSync(path.join(here, 'types/moxir.json'), 'utf8'))
+const library = loadLibrary()
 const par = (i) => ({ id: `par-${i}`, type: 'spotLight', components: { fixture: { type: 'up-pl5403', position: 'column', index: i } } })
 
 describe('circuits are planned on the mains draw', () => {

@@ -35,11 +35,11 @@ import { mat4, vec3 } from 'gl-matrix'
 
 import { parseArgs, die, say } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
+import { loadLibrary } from './library.mjs'
 import { fileURLToPath } from 'node:url'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const FIXTURES = path.join(REPO, 'scripts/place/fixtures/fixtures.json')
-const TYPES = path.join(REPO, 'src/rigbuild/types/moxir.json')
 
 /** A lamp type's lens radius in metres, from the fixture manifest; null when it has none. */
 export const apertureByType = (types, fixtures) => {
@@ -191,7 +191,7 @@ const main = async () => {
     say(`hall ${hallAsset.slice(0, 12)}…: ${enclosure.area_m2} m² of envelope (${enclosure.surface_m2} m² of triangles), mean reflectance ${enclosure.reflectance}; emissive switched off: ${off.join(', ') || 'none'}`)
 
     // 2. The undo, before anything is written.
-    const types = JSON.parse(fs.readFileSync(TYPES, 'utf8'))
+    const types = loadLibrary()
     const fixtures = JSON.parse(fs.readFileSync(FIXTURES, 'utf8'))
     const apertures = apertureByType(types, fixtures)
     const lamps = doc.entities.filter((e) => e.type === 'spotLight' && e.components?.beam && apertures[e.components?.fixture?.type])

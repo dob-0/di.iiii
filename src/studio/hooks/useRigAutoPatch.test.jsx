@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useRigAutoPatch } from './useRigAutoPatch.js'
-import library from '../../rigbuild/types/moxir.json'
+import { TYPE_LIBRARY as library } from '../../rigbuild/types/index.js'
 
 const mirrorOf = (present) => ({ getSnapshot: () => ({ present }), subscribe: () => () => {}, probe: vi.fn(async () => present), watch: vi.fn(() => () => {}) })
 const lamp = (id, fixture) => ({ id, type: 'spotLight', components: { fixture } })
