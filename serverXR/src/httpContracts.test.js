@@ -395,6 +395,21 @@ describe('server write contracts', () => {
             allowedSpaces: ['role-space']
         })
 
+        // The open-a-file exemption must not depend on the query string.
+        const deniedViaQuery = await fetch(`${server.baseUrl}/api/spaces/other-space/projects?x=/api/spaces/bundle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            },
+            body: JSON.stringify({ title: 'Query Project', slug: 'query-project', source: 'studio-v3' })
+        })
+        expect(deniedViaQuery.status).toBe(403)
+        await expect(deniedViaQuery.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'other-space'
+        })
+
         const deniedOtherProjectWrite = await fetch(`${server.baseUrl}/api/projects/${otherProject.id}`, {
             method: 'PATCH',
             headers: {
