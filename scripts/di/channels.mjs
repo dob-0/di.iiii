@@ -22,6 +22,7 @@
  */
 
 import process from 'node:process'
+import { withUserAgent } from './userAgent.mjs'
 
 export const REPO = 'dob-0/di.iiii'
 export const CHANNELS = ['dev', 'stable']
@@ -99,7 +100,7 @@ export const hubCommit = async ({ hub = DEFAULT_HUB, fetchImpl = fetch, timeoutM
     let retries = 0
     let waited = 0
     for (;;) {
-        response = await timed(fetchImpl, url, { headers: { Accept: 'application/json' } }, timeoutMs)
+        response = await timed(fetchImpl, url, { headers: withUserAgent({ Accept: 'application/json' }) }, timeoutMs)
         if (response.ok || !RETRY_STATUSES.has(response.status) || retries >= HEALTH_BACKOFF_MS.length) break
         const asked = retryAfterMs(header(response, 'retry-after'), now())
         const wait = Math.min(asked ?? HEALTH_BACKOFF_MS[retries], HEALTH_WAIT_CAP_MS - waited)

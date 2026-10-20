@@ -1076,3 +1076,15 @@ most likely comes from the edge in front of the hub (not proven: the old line ca
 Retry-After (seconds or HTTP date) when given, else 2 s, 4 s, 8 s; at most 3 retries, at most 30 s of waiting in all; the per-request timeout is unchanged. When it still fails the one error
 line names status, `server`, `cf-ray`, `retry-after`, the retry count and the first 120 characters of the body. A 500 and every other status fail at once, as before.
 Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (6 cases, injected `fetchImpl` and `sleep`; all 6 fail on the old code).
+
+## di.iiii's own requests to another di.iiii were counted there as an anonymous program (30 API reads a minute, not 300) (2026-10-21)
+
+Symptom: seen 2026-10-20 on one install: 204 files a follow did not carry, and the auto-update failing with 429. The visitor bouncer (`createVisitorBouncer`, `serverXR/src/appVisitors.js`)
+gives a program with no session, API token or sync key, whose User-Agent carries no contact in parentheses, 30 API reads a minute per address; an identified app gets 300. serverXR's
+outbound requests go through `httpClient.js` (node:http), which sends NO User-Agent (`(no user-agent)`, anonymous); the CLI's go through Node's fetch (`node`, anonymous); `follow/join.js`
+sent `di.iiii-join/1`, which has no contact and is anonymous too. Fix: one helper per side — `serverXR/src/diUserAgent.js` and `scripts/di/userAgent.mjs` — builds
+`di.iiii/<release version or dev> (+https://diiii.xyz/for-apps)`, which `classifyUserAgent` reads as `{ kind: 'app', name: 'di.iiii' }`. serverXR: `httpClient` adds it to every
+request that does not name its own User-Agent (follower, file chase, machine links, rig hello, join; GitHub's `di.iiii-space-sync` keeps its own). CLI: `hubCommit` (auto-update),
+`fetchJson`/`resolveRemoteBase` (`di sync`, `di link`), `share.mjs` request and the address-pinned request (`di follow`'s checks, invites), `login.mjs` (`di login`). Credentials are untouched.
+Guards: `serverXR/src/diUserAgent.test.js` (10 cases: real classifier, real sockets, the real recorder+bouncer in express — 40 reads with the header all 200, 40 as `node` give 30 × 200 and
+10 × 429) and `scripts/di/userAgent.test.js` (8) plus one case in `scripts/di/login.test.js`; 9 cases fail with the source changes reverted.
