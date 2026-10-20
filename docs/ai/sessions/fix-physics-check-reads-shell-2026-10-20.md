@@ -30,7 +30,7 @@
   lantern roof; beam beside it stops on the deck; floor; beam from outside meets the wall it stands behind; origin inside a slab = 0 m; refusal without shell and a
   malformed slab; `main()` output format and the leak row; the real hall: gap deck 12.35, lantern roof 15.4, span-1 lantern, east wall 60.4, ribbon glazing 60.52, back
   wall 53.8, the far gate = open sky; the reference rig's 44 lamps drawn to their first surfaces = 0 leaks, and +1 m each = all leak, on both hall records) and
-  `scripts/place/physics-check.test.js` (runs them in the node suite; CLI refusal exit 2). Ran: python place suite OK; vitest `../scripts/place ../scripts/rigbuild`
+  `scripts/place/physics-check.test.js` (runs them in the node suite; CLI refusal exit 2). Ran: python place suite OK (28 after the review round); vitest `../scripts/place ../scripts/rigbuild`
   103 files 1720 passed (2 expected fail, as before); `hall-shell`, `laser-margin`, `laser-frames-py`, `scenes-tools` pass unchanged.
 - **Limits:** rest axis only; slab boxes, not triangles (no space frame lattice, columns, cranes); glazing ends a beam although light would transmit; a beam through a
   shell opening (the far gate, the entry gate) ends in open sky and is never a leak (an outside-exposure check is separate); a lamp outside the hall is not reported
@@ -41,3 +41,10 @@
   hall lean on them). Both move to `dims.shell` in their own PR with their own before/after.
 - **Cost / method:** 1 worktree `../di.iiii-phys`; ~45 tool rounds; two vitest runs of ~140 s each behind `di-cool`. Method: ray against axis-aligned boxes, slab method (Kay &
   Kajiya 1986; Williams et al. 2005 for the zero-direction case).
+- **Review round (2 findings, both real, fixed with tests that failed first: 8 of the 11 new cases failed before):** (1) a lamp ON a slab face (within 1 um) and aimed away got first hit 0
+  (`ray_box` accepted t0 = t1 = 0): a false leak, and `--fix` would have written `beam.length` 0 (hidden beam); 13.35 m up, [-20,13.35,0] aimed down gave 0.0, 1 mm lower gave 13.349
+  (floor). Now an on-face origin hits only if the ray goes INTO the slab; one aimed away or along the face does not meet it. A lamp deeper inside a slab is still reported (first hit 0,
+  `inside_slab: true`) but `fix_ops` skips it: length 0 would hide the beam, the lamp has to be moved. (2) `--tol` 0.5 m is thicker than every slab (deck 0.15, walls and lantern roof 0.30,
+  glazing 0.06 / 0.04), so a beam could end outside the building within tol. The allowed overshoot is now `min(--tol, depth through the slab hit)`; a beam ending past the slab's
+  far face is a leak. The three issue inputs now read LEAK (deck 12.35 + 0.45, lantern roof 15.4 + 0.45, ribbon glazing 10.52 + 0.45). Live documents unchanged: both projects
+  still 4 leaks (79 / 97 beams), no new leak, 0 of 176 lamps on or in a slab. Limit: the floor is a plane with no thickness, so the overshoot below it is still `--tol`.

@@ -71,6 +71,63 @@ class Surfaces(unittest.TestCase):
         self.assertIsNone(pc.ray_box([0, 20, 0], EAST, [-1, 0, -1], [1, 5, 1]))
 
 
+class FaceAndThickness(unittest.TestCase):
+    """Review findings on PR #1046: (1) a lamp ON a slab face aiming away is not inside it; (2) a beam that ends beyond the far face
+    of the slab it hits has passed through it, whatever --tol says (the slabs are 0.04 .. 0.30 m, --tol is 0.5 m)."""
+    def setUp(self): self.shell = pc.shell_of(FIXTURE)
+
+    def test_a_lamp_flush_on_the_deck_underside_aiming_down_sees_the_floor(self):
+        L, name = pc.first_surface([5, 10, 0], [0.0, -1.0, 0.0], self.shell)
+        self.assertAlmostEqual(L, 10.0); self.assertEqual(name, 'floor')
+        L, name = pc.first_surface([5, 9.999, 0], [0.0, -1.0, 0.0], self.shell)   # one mm lower: the same room, the same answer
+        self.assertAlmostEqual(L, 9.999, places=3); self.assertEqual(name, 'floor')
+
+    def test_a_lamp_on_the_deck_top_aiming_up_does_not_hit_the_deck(self):
+        L, name = pc.first_surface([5, 10.1, 0], UP, self.shell)
+        self.assertEqual(name, 'none (open sky)'); self.assertEqual(L, math.inf)
+
+    def test_a_lamp_on_a_wall_inner_face_aiming_into_the_hall_sees_the_far_wall(self):
+        L, name = pc.first_surface([10, 5, 0], [-1.0, 0.0, 0.0], self.shell)
+        self.assertAlmostEqual(L, 20.0); self.assertIn('wall-w', name)
+
+    def test_a_lamp_on_the_face_aiming_INTO_the_slab_hits_it_at_zero(self):
+        L, name = pc.first_surface([5, 10, 0], UP, self.shell)
+        self.assertEqual(L, 0.0); self.assertIn('deck-2', name)
+
+    def test_a_ray_grazing_along_a_face_is_not_a_hit(self):
+        L, name = pc.first_surface([5, 10, -20], [0.0, 0.0, 1.0], self.shell)   # along the deck underside, from outside the room
+        self.assertNotIn('deck', name)
+
+    def test_the_depth_through_the_slab_comes_with_the_hit(self):
+        L, name, depth = pc.first_surface_through([5, 1, 0], UP, self.shell)
+        self.assertAlmostEqual(L, 9.0); self.assertAlmostEqual(depth, 0.1)
+        L, name, depth = pc.first_surface_through([0, 3, 0], [0.0, -1.0, 0.0], self.shell)
+        self.assertEqual(depth, math.inf)                                       # the floor is a plane, no far face
+
+    def test_a_beam_ending_above_the_deck_top_is_a_leak_though_inside_tol(self):
+        # deck underside 9 m up, 0.1 m thick: drawn 9.45 ends 0.35 m above the top face (y 10.1) -- within the old 0.5 m tol, outside the slab
+        rc, out = run_main(FIXTURE, [lamp('a', [5, 1, 0], FLIP, 9.45)])
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (1, 1))
+
+    def test_a_beam_ending_inside_the_slab_within_tol_is_still_not_a_leak(self):
+        rc, out = run_main(FIXTURE, [lamp('a', [5, 1, 0], FLIP, 9.05)])
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+    def test_a_beam_ending_past_the_wall_outer_face_is_a_leak(self):
+        rc, out = run_main(FIXTURE, [lamp('a', [0, 5, 0], [0, 0, math.pi / 2], 10.45)])   # rotation z = +90 deg turns -Y to +X; wall 10..10.3
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (1, 1))
+
+    def test_a_lamp_flush_on_the_deck_aiming_down_is_no_leak_when_drawn_to_the_floor(self):
+        rc, out = run_main(FIXTURE, [lamp('a', [5, 10, 0], [0, 0, 0], 10.0)])
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+    def test_a_lamp_inside_a_slab_is_reported_but_never_fixed_to_length_zero(self):
+        rc, out = run_main(FIXTURE, [lamp('in', [5, 10.05, 0], FLIP, 3.0)])
+        self.assertEqual(json.loads(out[0])['leaks'], 1)
+        leak = json.loads(out[1]); self.assertEqual(leak['first_hit'], 0.0)
+        self.assertEqual(pc.fix_ops([leak], 1), [])
+
+
 class Refusals(unittest.TestCase):
     def test_no_shell_is_refused_loudly(self):
         for dims in ({}, {'shell': []}, {'truss_top_h_m': 13.3, 'ridge_h_m': 16.5, 'lantern_w_m': 12.0}):

@@ -4,7 +4,8 @@
 For every spot-light entity of a project document whose beam is drawn, the beam's REST axis (the entity's local −Y, three.js
 Euler XYZ) is cast against the building as the hall record gives it, and the drawn length (beam.length, else light.distance)
 is compared with the distance to the first surface. A beam drawn longer than that by more than --tol metres passes through a
-wall or the roof: a LEAK.
+wall or the roof: a LEAK. The overshoot allowed is never more than the thickness of the slab hit (deck 0.15 m, glazing 0.04 m ...,
+--tol is 0.5 m): a beam that ends past the slab's far face is outside the building, whatever --tol says.
 
 THE SURFACES COME FROM ONE SOURCE (2026-10-20, owner rule "Physics first" 2: a stored number that only fits an old state is a
 bug): the hall record's `dims.shell`, the wall, deck, lantern and glazing slabs scripts/place/hall_shell.py takes from the
@@ -18,7 +19,8 @@ the whole length) were copied by hand into this file; they differed from the mod
 Limits, stated: the rest axis only (a look may aim a unit elsewhere at show time — the room clips at runtime for that); slab
 boxes, not the hall's triangles; no space frame lattice, columns or cranes; glazing ends a beam here although light would
 transmit it (an outside-exposure check must treat it as an opening); the cone's spread is not cast (the axis only). A lamp
-whose origin lies inside a slab is at distance 0 from it (reported, not skipped). `--fix` writes beam.length = the first-hit
+whose origin lies inside a slab is at distance 0 from it (reported with inside_slab, not skipped, never fixed: move the lamp); one
+standing ON a face and aimed away from the slab does not meet it. `--fix` writes beam.length = the first-hit
 distance for each leak, lasers too (ops on the project; back it up first).
 
     python3 scripts/place/physics_check.py --api http://127.0.0.1:4337/serverXR --project moxir-v2-9 \
@@ -58,8 +60,12 @@ def shell_of(dims):
     return boxes
 
 
-def ray_box(p, d, lo, hi):
-    """Distance along the unit ray p + t d to where it enters the box (0.0 if p is inside it), or None (misses / box behind)."""
+FACE_EPS = 1e-6   # m: an origin this close to a face is ON it (a lamp mounted flush); coordinates are stored as plain decimals
+
+
+def ray_span(p, d, lo, hi):
+    """(t_in, t_out): where the unit ray p + t d is inside the box, t >= 0; None if it misses, the box is behind, or the ray only
+    leaves / grazes a face it starts on (a lamp mounted flush on a slab and aimed away from it is not inside that slab)."""
     t0, t1 = 0.0, math.inf
     for i in range(3):
         if abs(d[i]) < 1e-12:
@@ -69,22 +75,40 @@ def ray_box(p, d, lo, hi):
         if a > b: a, b = b, a
         t0, t1 = max(t0, a), min(t1, b)
         if t0 > t1: return None
-    return t0
+    if t0 <= 0.0:                                   # the origin is in the box or on its surface
+        margin = lambda q: min(min(q[i] - lo[i], hi[i] - q[i]) for i in range(3))
+        if margin(p) <= FACE_EPS:                   # on a face: a hit only if the ray goes INTO the slab, not along or away from it
+            if margin([p[i] + 1e-3 * d[i] for i in range(3)]) <= FACE_EPS: return None
+    return t0, t1
+
+
+def ray_box(p, d, lo, hi):
+    """Distance along the unit ray p + t d to where it enters the box (0.0 if p is inside it), or None (misses / box behind / leaves a face)."""
+    s = ray_span(p, d, lo, hi)
+    return None if s is None else s[0]
+
+
+def first_surface_through(p, d, shell):
+    """(distance, surface, depth) of the first thing the ray meets: the floor (depth inf, a plane), or a dims.shell slab; depth is the
+    length of the ray inside that slab, entry face to far face (shell = shell_of(dims))."""
+    hits = []
+    if d[1] < -1e-9 and p[1] > FLOOR_Y: hits.append(((FLOOR_Y - p[1]) / d[1], 'floor', math.inf))
+    for name, lo, hi in shell:
+        s = ray_span(p, d, lo, hi)
+        if s is not None: hits.append((s[0], name, s[1] - s[0]))
+    return min(hits) if hits else (math.inf, 'none (open sky)', math.inf)
 
 
 def first_surface(p, d, shell):
     """(distance, surface) of the first thing the ray p + t d meets: the floor, or a dims.shell slab (shell = shell_of(dims))."""
-    hits = []
-    if d[1] < -1e-9 and p[1] > FLOOR_Y: hits.append(((FLOOR_Y - p[1]) / d[1], 'floor'))
-    for name, lo, hi in shell:
-        t = ray_box(p, d, lo, hi)
-        if t is not None: hits.append((t, name))
-    return min(hits) if hits else (math.inf, 'none (open sky)')
+    return first_surface_through(p, d, shell)[:2]
 
 
 def fix_ops(leaks, stamp):
     """One updateComponent op per leak, lasers included: a laser line is a beam too, and 'stops at the first surface' has no exception.
-    A project with no leak gets no ops (the route answers 400 'No operations provided.' to an empty batch)."""
+    A project with no leak gets no ops (the route answers 400 'No operations provided.' to an empty batch).
+    A lamp INSIDE a slab (first hit 0) gets none: length 0 would hide the beam, the lamp has to be moved."""
+    leaks = [l for l in leaks if l['first_hit'] > 0]
     return [{'type': 'updateComponent', 'payload': {'entityId': l['id'], 'component': 'beam', 'patch': {'length': round(l['first_hit'], 2)}},
              'opId': f'physics-fix-{stamp}-{i}', 'clientId': 'physics-check'} for i, l in enumerate(leaks)]
 
@@ -105,9 +129,11 @@ def main(argv=None):
         drawn = float(beam.get('length') or 0) or float(light.get('distance') or 0)
         if drawn <= 0: continue
         t = c.get('transform') or {}; p = t.get('position') or [0, 0, 0]; d = axis_of(t.get('rotation') or [0, 0, 0])
-        L, name = first_surface(p, d, shell); checked += 1
-        if drawn > L + a.tol:
+        L, name, depth = first_surface_through(p, d, shell); checked += 1
+        # the overshoot allowed is --tol, but never more than the slab is thick: past its far face the beam is outside the building
+        if drawn > L + min(a.tol, depth):
             leaks.append({'id': e['id'], 'drawn': round(drawn, 2), 'first_hit': round(L, 2), 'surface': name, 'over_m': round(drawn - L, 2), 'laser': bool(beam.get('laser'))})
+            if L <= 0: leaks[-1]['inside_slab'] = True
     print(json.dumps({'project': a.project, 'version': raw.get('version'), 'beams_checked': checked, 'leaks': len(leaks)}))
     for l in sorted(leaks, key=lambda l: -l['over_m'])[:40]: print(' ', json.dumps(l))
     if a.fix and leaks:
