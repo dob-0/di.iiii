@@ -92,6 +92,8 @@ export const FAMILY_BY_TYPE = {
     'laser.shape': 'make',
     'laser.trace': 'make',
     'laser.merge': 'make',
+    'laser.file': 'bring-in',
+    'laser.text': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -2234,6 +2236,66 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'frame', type: 'laser', label: 'Frame' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Laser Phase 9 (design 2026-10-14 §5): a file and a string as laser paths. Pure functions of the
+    // bytes and the text (nodes/laser.file, nodes/laser.text).
+    // An ILDA file (formats 0/1/4/5) or SVG path data -> laser paths. `src` is an assetId, as Model's.
+    'laser.file': {
+        id: 'laser.file',
+        label: 'Laser File',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'file', 'ilda', 'ild', 'svg', 'path', 'import', 'drawing', 'logo', 'asset', 'lasercube'],
+        inputs: [
+            { id: 'src',       type: 'string', label: 'File',      default: '' },
+            // Which frame of an ILDA file (from 0, wraps); with Speed above 0 it plays from here.
+            { id: 'frame',     type: 'number', label: 'Frame',     default: 0, step: 1 },
+            // Frames a second; 0 holds the chosen frame.
+            { id: 'fps',       type: 'number', label: 'Speed',     default: 0, step: 1 },
+            // 1 = as the ILDA file says, or an SVG fitted into 80 % of the field.
+            { id: 'size',      type: 'number', label: 'Size',      default: 1 },
+            // Added to y; the server blanks everything below the cube's own aim (keep-in zone).
+            { id: 'height',    type: 'number', label: 'Height',    default: 0 },
+            // Unwired, the file's own colours; wired, one colour for all.
+            { id: 'colour',    type: 'color',  label: 'Colour' },
+            { id: 'level',     type: 'number', label: 'Level',     default: 1 },
+            // The largest distance from an SVG curve to its chords, in field units (the field is 2 wide).
+            { id: 'tolerance', type: 'number', label: 'Tolerance', default: 0.002, step: 0.001 },
+        ],
+        outputs: [
+            { id: 'frame',  type: 'laser',  label: 'Frame' },
+            { id: 'frames', type: 'number', label: 'Frames' },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // A string -> single-stroke Hershey text (Roman Simplex, ASCII 32-126) as laser paths.
+    'laser.text': {
+        id: 'laser.text',
+        label: 'Laser Text',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'text', 'word', 'letters', 'type', 'font', 'hershey', 'write', 'lasercube'],
+        inputs: [
+            { id: 'text',   type: 'string', label: 'Text',   default: 'di' },
+            // A capital's height in field units (the field is 2 tall); brought down if the text would not fit.
+            { id: 'size',   type: 'number', label: 'Size',   default: 0.2 },
+            // Where the text's middle sits up the field; 0.5 keeps it above the keep-in zone, as Laser does.
+            { id: 'height', type: 'number', label: 'Height', default: 0.5 },
+            { id: 'colour', type: 'color',  label: 'Colour', default: '#00ff40' },
+            { id: 'level',  type: 'number', label: 'Level',  default: 1 },
+        ],
+        outputs: [
+            { id: 'frame',  type: 'laser',  label: 'Frame' },
+            { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {},
         render: 'hidden',

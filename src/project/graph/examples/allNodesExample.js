@@ -77,6 +77,10 @@ export const PASS_THROUGH_PORTS = [
         why: 'merges the laser paths that arrive; with nothing wired it carries nothing, like the shape Merge'
     },
     {
+        port: 'laser.file.frame',
+        why: 'draws the file it is given; with no file chosen it carries nothing — an empty file is not a blank frame'
+    },
+    {
         port: 'logic.route.out',
         why: 'in its Gate operation — the one it is born in — it passes through what arrives while open; bare or closed it carries nothing, because a closed gate is an unplugged wire, not a zero'
     }
@@ -208,6 +212,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('laserOut', 'device.laser.out', { label: 'Laser Out', col: 4, row: 17 })
     add('laserTrace', 'laser.trace', { label: 'Laser Trace', col: 4, row: 18 })
     add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
+    add('laserFile', 'laser.file', { label: 'Laser File', col: 4, row: 20 })
+    add('laserText', 'laser.text', { label: 'Laser Text', col: 4, row: 21 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 

@@ -1870,6 +1870,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'laser-file-text-nodes',
+        category: 'Editing',
+        title: 'Laser File and Laser Text — draw a file or a word with the LaserCubes',
+        summary: 'Laser File draws an ILDA show file or an SVG drawing; Laser Text writes a word in a single-stroke font. Both wire into Laser Out like Laser Trace.',
+        body: [
+            'Laser File takes a file from the project: an ILDA file (.ild — formats 0, 1, 4 and 5, the ones laser shows are traded in) or an SVG drawing. It reads the file itself to tell which it is. An ILDA file draws as its author made it, in its own colours and order; Frame picks which frame, and Speed above 0 plays the frames that many a second. An SVG is fitted into most of the field, every path in its stroke colour (green where it has none); its curves and arcs become short straight lines no farther than Tolerance from the true curve. Only <path> shapes are read: rectangles, circles, text and transforms in the file are counted on Status, not drawn.',
+            'Laser Text writes Text in the Hershey Roman Simplex font, one stroke per line of each letter, the way engraving machines and plotters write. Size is a capital letter\'s height; Height is where the text sits up the field (0.5 keeps it above the half the cube blanks). Letters outside plain ASCII draw as ?, and text too big for the field is made smaller to fit — Status says so.',
+            'Both send at most 2000 points, the most a frame carries; a bigger file is thinned evenly and Status says how many points were cut. A file that is not an ILDA or SVG, or is cut short, is refused and Status names why. ILDA files cannot be uploaded to a project yet (the server only takes known file types; .ild is owed). Neither node has been seen on the real cubes yet.',
+            'The Hershey fonts were originally created by Dr. A. V. Hershey while working at the U. S. National Bureau of Standards. The format of the font data was originally created by James Hurt, Cognition, Inc.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'ilda', 'svg', 'file', 'text', 'hershey', 'font', 'import'],
+        updated: '2026-10-20'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
