@@ -118,7 +118,7 @@ PHYS = _physics()
 def rule_label(name):
     """The hall rules in this file speak in surfaces ('roof deck', 'entry wall', 'lantern glazing' ...); physics_check names a slab
     '<surface> [<id>]' (hall_shell.py's own words) and the floor 'floor'. Returns (label, known): an unclassified slab is not guessed, it fails."""
-    if name == 'floor':
+    if name == 'floor' or name.startswith('ground outside'):   # 'ground outside (through <opening>)': y = 0 beyond the footprint (physics_check.first_surface)
         return 'floor', True
     if name.startswith('none') or name.startswith('open sky'):   # 'none (open sky)', 'open sky (through <opening>)' (physics_check.first_surface)
         return 'open sky', True

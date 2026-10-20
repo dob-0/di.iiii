@@ -229,11 +229,11 @@ describe.skipIf(!hasPython)('laser_frames.py: surfaces from dims.shell (2026-10-
         expect(JSON.stringify(plan.scenes[0].fails)).toMatch(/lantern glazing \(kerb\)/)
     })
 
-    it('a ray that left by a gate and ends in "open sky (through <opening>)" is the rule "open sky" (physics_check bounds the floor to the hall)', () => {
+    it('a ray that left by a gate and ends in "open sky (through <opening>)" is the rule "open sky"; one that fell on the ground outside is the rule "floor"', () => {
         const py = 'import importlib.util, json, sys\nspec = importlib.util.spec_from_file_location("lf", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n' +
-            'print(json.dumps([m.rule_label(n) for n in ("open sky (through end-wall-entry opening)", "none (open sky)", "floor")]))'
+            'print(json.dumps([m.rule_label(n) for n in ("open sky (through end-wall-entry opening)", "none (open sky)", "floor", "ground outside (through end-wall-entry opening)", "ground outside")]))'
         const r = spawnSync('python3', ['-I', '-c', py, path.join(here, 'laser_frames.py')], { encoding: 'utf8' })
         expect(r.status, r.stderr).toBe(0)
-        expect(JSON.parse(r.stdout)).toEqual([['open sky', true], ['open sky', true], ['floor', true]])
+        expect(JSON.parse(r.stdout)).toEqual([['open sky', true], ['open sky', true], ['floor', true], ['floor', true], ['floor', true]])
     })
 })

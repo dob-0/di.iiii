@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { HALL_FILE, hallDimsOf, hallFirstHit, hallFirstSurface, lampFirstHit, lampFirstSurface, shellOf } from './hall-reach.mjs'
@@ -57,15 +58,16 @@ describe('hall-reach.mjs reads dims.shell', () => {
         expect(lampFirstHit({ p: [0, 9, 0], r: [0, 0, 0] }, FIXTURE)).toBeCloseTo(9, 9)
         expect(lampFirstHit({}, FIXTURE)).toBeNull()
     })
-    it('the floor is the hall footprint: a ray out of a gate meets no floor outside the hall, it is open sky through the opening', () => {
+    it('the floor is the hall footprint, the ground outside stops a ray that left by a gate and fell (never underground, never open sky); only a ray not going down is open sky', () => {
         const unit = (v) => { const n = Math.hypot(...v); return v.map((c) => c / n) }
         const s = (p, d) => { const r = hallFirstSurface(p, d, GATED); return [r.t, r.name] }
-        expect(s([0, 2, 0], unit([0, -0.1, 1]))).toEqual([Infinity, 'open sky (through wall-n opening)']) // the old plane: floor at z = 20, 20 m outside
+        const g = s([0, 2, 0], unit([0, -0.1, 1])) // y = 1 at the gate, y = 0 at z = 20 outside the footprint: the ground stops it (review of #1050: it was open sky, drawn underground)
+        expect(g[0]).toBeCloseTo(20 * Math.sqrt(1.01), 9); expect(g[1]).toBe('ground outside (through wall-n opening)')
         expect(s([0, 1, 0], [0, 0, 1])).toEqual([Infinity, 'open sky (through wall-n opening)'])
-        expect(hallFirstHit([0, 2, 0], unit([0, -0.1, 1]), GATED)).toBeNull()
+        expect(hallFirstHit([0, 2, 0], unit([0, -0.1, 1]), GATED)).toBeCloseTo(20 * Math.sqrt(1.01), 9)
         expect(s([0, 3, 0], unit([0, -1, 1]))[1]).toBe('floor') // lands at z = 3, inside
         expect(s([0, 1, 9], unit([0, -1, 0.5]))[1]).toBe('floor') // z = 9.5, inside
-        expect(s([20, 1, 0], DOWN)).toEqual([Infinity, 'none (open sky)']) // a lamp outside aiming at the ground outside
+        expect(s([20, 1, 0], DOWN)).toEqual([1, 'ground outside']) // a lamp outside aiming at the ground outside
         expect(s([0, 2, 20], unit([0, -0.1, -1]))[1]).toBe('floor') // in at the gate, floor inside
         const noRoof = { shell: GATED.shell.filter((m) => !['deck', 'lantern roof'].includes(m.surface)) }
         expect(hallFirstSurface([0, 1, 0], UP, noRoof).name).toBe('open sky (through the roof)')
@@ -84,6 +86,17 @@ describe('hall-reach.mjs reads dims.shell', () => {
         expect(mod.HALL_WALLS).toBeUndefined()
         const code = fs.readFileSync(path.join(repo, 'scripts/rigbuild/hall-reach.mjs'), 'utf8').split('\n').filter((l) => !l.startsWith('//')).join('\n')
         expect(code).not.toMatch(/-36\.4|60\.4|53\.8|-53\.6|truss_top_h_m|ridge_h_m|lantern_w_m|westX|eastX|entryZ|backZ/)   // no hand-copied plane or dims height is left
+    })
+})
+
+describe('epic-build reachOf: a lamp aimed out of a gate and down ends on the ground outside, not 16 m under it (review of #1050)', () => {
+    // the real v13 hall: a lamp at (0, 4, 50) tilted -60 deg about x aims (0, -0.5, 0.866); the entry gate (|x| < 3, y < 6, z 53.8) lets it out, y = 0 is 8 m on
+    const dims = hallDimsOf(HALL_FILE, repo)
+    it('reachOf is the 8 m to the ground, not the type\'s 40 m or 24 m (a beam that ended 16 m / 8 m underground)', () => {
+        const at = { p: [0, 4, 50], r: [-Math.PI / 3, 0, 0] }
+        expect(lampFirstSurface(at, dims).name).toMatch(/^ground outside \(through end-wall-entry/)
+        expect(reachOf({ type: 'up-b380f', ...at }, dims)).toBeCloseTo(8, 2)
+        expect(reachOf({ type: 'up-pl5403', ...at }, dims)).toBeCloseTo(8, 2)
     })
 })
 
@@ -113,6 +126,27 @@ describe('epic-build reachOf: a first hit of 0 m is a result, never the type\'s 
         expect(beam(1)).toMatchObject({ visible: false }); expect(beam(1).length).toBeUndefined()
         expect(beam(2)).toMatchObject({ visible: true }); expect(beam(2).length).toBeCloseTo(9, 3)
         expect(report).toEqual([{ id: 'lamp-0', why: 'inside_slab', surface: expect.stringContaining('deck-1') }, { id: 'lamp-1', why: 'on_floor', surface: 'floor' }])
+    })
+})
+
+describe.skipIf(!hasPython)('epic-build -> physics_check: a lamp epic-build could not give a beam is still a row (review of #1050)', () => {
+    const dims = hallDimsOf(HALL_FILE, repo)
+    it('a lamp inside the entry wall and one on the floor aiming down are written as hidden 0 m beams, and physics_check says inside_slab / on_floor, exit 1', () => {
+        const rig = { solids: [], fixtures: [
+            { id: 'inwall', type: 'up-b380f', part: 'wash', status: 'new', colour: '#ffffff', angle_rad: 0.2, circuit: '', p: [10, 3, 53.95], r: [0, 0, 0] },
+            { id: 'onfloor', type: 'up-b380f', part: 'wash', status: 'new', colour: '#ffffff', angle_rad: 0.2, circuit: '', p: [10, 0, 20], r: [0, 0, 0] }] }
+        const ents = v1Entities(rig, { hall: dims })
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'physics-lows-'))
+        try {
+            fs.mkdirSync(path.join(dir, 'api/projects/p'), { recursive: true })
+            fs.writeFileSync(path.join(dir, 'api/projects/p/document'), JSON.stringify({ version: 1, document: { entities: ents.map((e) => ({ id: e.id, type: e.type, components: e.components })) } }))
+            const r = spawnSync('python3', ['-I', path.join(repo, 'scripts/place/physics_check.py'), '--api', `file://${dir}`, '--project', 'p', '--hall', path.join(repo, HALL_FILE)], { encoding: 'utf8' })
+            expect(r.status, r.stdout + r.stderr).toBe(1)
+            const rows = r.stdout.trim().split('\n').slice(1).map((l) => JSON.parse(l))
+            expect(rows.map((x) => x.id).sort()).toEqual(['inwall', 'onfloor'])
+            expect(rows.find((x) => x.id === 'inwall').inside_slab).toBe(true)
+            expect(rows.find((x) => x.id === 'onfloor').on_floor).toBe(true)
+        } finally { fs.rmSync(dir, { recursive: true, force: true }) }
     })
 })
 

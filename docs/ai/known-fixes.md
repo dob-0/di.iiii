@@ -1032,3 +1032,14 @@ rays from all 280 origins and compares distance and surface name; a tie goes to 
 through `physics_check.py`: leaks 4 -> 4 and 6 -> 6, rows identical, 0 lamps changed; the 44 lamps of the hall reference 10-17: 0 changed; epic-build reach of the epic and v2.11 energy rigs (96 / 60 lamps): 0 changed, 0 lamps at 0 m;
 `laser_frames.py` on the v2.11 energy rig + the 50 scenes (99 888 rays): 384 rays move (372 `floor` and 12 `column line` -> `open sky`, all through the entry gate, all fail before and after; the stored frames are identical).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `hall-reach.test.js` (gate, 0 m, parity). Session note: `docs/ai/sessions/fix-hall-shell-lows-2026-10-20.md`.
+
+## A beam out of a gate and down was drawn underground; a lamp with a hidden 0 m beam was skipped by physics_check (2026-10-20, review of #1050)
+
+Symptom (two MEDIUM findings of the review of PR #1050): (1) with the floor bounded to the footprint, a ray that left through a gate and fell met nothing, was `open sky`, and epic-build
+drew it to the type's throw: on the v13 hall a lamp at (0, 4, 50) tilted -60 deg (axis (0, -0.5, 0.866), out of the entry gate) had a reach of 40 m (up-b380f) and 24 m (up-pl5403) and ended 16 m and 8 m
+below grade, and `physics_check` read `L = inf` as no leak (on dev: 8 m, a fixable leak); (2) epic-build writes a lamp inside a slab or on the floor aiming down as `beam { visible: false }` with no length, and
+`physics_check` skipped every `visible: false` beam, so `inside_slab` / `on_floor` was said once in a build log and every later check printed `leaks: 0`, exit 0 (on dev: a row, exit 1).
+Fix: (1) beyond the footprint y = 0 is the ground the hall stands on: `ground outside (through <opening>)` stops the ray (python and node, same name; `laser_frames.rule_label` reads it as the
+rule `floor`, as before #1050); open sky is a ray that does not go down; the lamp above has reach 8 m and the beam is a fixable leak again; (2) for a beam not drawn (hidden or 0 m) `physics_check` still casts the lamp,
+and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
+Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).

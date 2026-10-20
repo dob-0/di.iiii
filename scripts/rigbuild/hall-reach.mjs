@@ -5,7 +5,7 @@
 //
 // ONE SOURCE (2026-10-20, owner rule "Physics first" 2): the building is the hall record's `dims.shell`, the wall, deck, lantern
 // and glazing slabs scripts/place/hall_shell.py takes from the model the room draws (every corner a vertex of that GLB), plus
-// the floor y = 0 the shell does not carry, bounded to the hall's footprint (the shell's x, z extent). This file used to copy the walls (-36.4 / 60.4, 53.8 / -53.6), the deck
+// the floor y = 0 the shell does not carry, bounded to the hall's footprint (the shell's x, z extent; beyond it y = 0 is the ground outside, which still stops a beam). This file used to copy the walls (-36.4 / 60.4, 53.8 / -53.6), the deck
 // (truss_top_h_m) and a lantern roof (ridge_h_m over |x| <= 6, the whole length) by hand, the same hand planes physics_check.py
 // had: on the owner's final reference rig they wrote four lamps and laser 42 longer than the model lets them go (the 12 m
 // closed deck gap between the lantern segments) and had no second lantern. The rules are those of scripts/place/physics_check.py
@@ -108,9 +108,10 @@ const openingOf = (p, d, shell, ext) => {
 /**
  * The first hall surface along a ray (p, unit d), with its name as physics_check.py first_surface gives it: { t, name, depth }.
  * t in metres, 0 for a lamp inside a slab or on the floor aiming down, Infinity when it meets nothing. The name is the floor, a slab
- * ('<surface> [<id>]'), 'open sky (through <opening>)' (the ray left through a gap of the shell) or 'none (open sky)' (it started outside
- * the hall). THE FLOOR IS THE HALL'S FOOTPRINT, not the infinite plane y = 0: a ray that would meet y = 0 beyond the shell's x, z extent
- * meets nothing (2026-10-20 review). Throws for a dims without a shell (shellOf).
+ * ('<surface> [<id>]'), 'ground outside (through <opening>)' (it left through a gap and fell on the ground), 'open sky (through <opening>)' (it left through
+ * a gap and does not go down) or 'none (open sky)' (it started outside the hall and does not go down). THE FLOOR IS THE HALL'S FOOTPRINT, not the infinite plane y = 0: a ray that would meet y = 0 beyond the shell's x, z extent
+ * ends on 'ground outside (through <opening>)' (2026-10-20 reviews: not 'floor' 250 m out, and not open sky, which let it be drawn underground).
+ * Open sky is only a ray that is not going down. Throws for a dims without a shell (shellOf).
  */
 export const hallFirstSurface = (p, d, dims) => {
     const shell = shellOf(dims)
@@ -121,6 +122,10 @@ export const hallFirstSurface = (p, d, dims) => {
     if (d[1] < -1e-9 && p[1] > FLOOR_Y - FACE_EPS) {
         const tf = Math.max(0, (FLOOR_Y - p[1]) / d[1])
         if (insideFootprint(p.map((v, k) => v + tf * d[k]), ext)) take(tf, 'floor', Infinity)
+        else { // beyond the footprint y = 0 is the GROUND the hall stands on (review of #1050): it stops the beam like the floor, never open sky
+            const through = openingOf(p, d, shell, ext)
+            take(tf, through == null ? 'ground outside' : `ground outside (through ${through})`, Infinity)
+        }
     }
     for (const { name, lo, hi } of shell) {
         const s = raySpan(p, d, lo, hi)

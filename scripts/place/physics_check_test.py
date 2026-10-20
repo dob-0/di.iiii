@@ -279,7 +279,8 @@ class RealHall(unittest.TestCase):
         self.assertEqual(name, 'open sky (through end-wall-far opening)')
         n = math.sqrt(1 + 0.0025)                                               # a ray down through the entry gate (6 x 6 m at z +54): at z 54 it is 3.3 m up; the old plane's floor was 120 m on
         L, name = pc.first_surface([0.0, 6.0, 0.0], [0.0, -0.05 / n, 1 / n], shell)
-        self.assertEqual((L, name), (math.inf, 'open sky (through end-wall-entry opening)'))
+        self.assertEqual(name, 'ground outside (through end-wall-entry opening)')   # the ground outside the gate stops it: y = 0 at 6 / 0.05 * n m
+        self.assertAlmostEqual(L, 6.0 * n / 0.05, places=6)
 
 
 class FixModeWithUnfixableRows(unittest.TestCase):
@@ -329,13 +330,14 @@ def unit(v):
 
 class FloorIsTheHallFloor(unittest.TestCase):
     """Review finding (LOW 1) on PR #1046: the floor was the infinite plane y = 0, so a ray leaving through a gate was labelled
-    'floor' 160-250 m outside the hall. The floor is the hall's footprint (the shell's x, z extent); outside it a ray that left through an
-    opening ends in 'open sky (through <opening>)'."""
+    'floor' 160-250 m outside the hall. Review of #1050 (medium): the footprint-bounded floor then let it fall below grade as 'open sky',
+    drawn 16 m underground and green in physics_check. The hall stands on grade: outside the footprint y = 0 is the ground, named
+    'ground outside (through <opening>)', and it STOPS the beam like the floor does; only a ray that does not go down is open sky."""
     def setUp(self): self.shell = pc.shell_of(GATED)
 
-    def test_a_ray_leaving_by_the_gate_and_falling_does_not_hit_a_floor_outside_the_hall(self):
-        L, name = pc.first_surface([0, 2, 0], unit([0, -0.1, 1]), self.shell)   # y = 1 at the gate (z 10), the old plane: floor at z = 20, 20 m outside
-        self.assertEqual(L, math.inf); self.assertEqual(name, 'open sky (through wall-n opening)')
+    def test_a_ray_leaving_by_the_gate_and_falling_ends_on_the_ground_outside_not_in_open_sky(self):
+        L, name = pc.first_surface([0, 2, 0], unit([0, -0.1, 1]), self.shell)   # y = 1 at the gate (z 10); y = 0 at z = 20, outside the footprint
+        self.assertAlmostEqual(L, 20 * math.sqrt(1.01), places=6); self.assertEqual(name, 'ground outside (through wall-n opening)')
 
     def test_a_ray_through_the_gate_level_is_open_sky_through_it(self):
         L, name = pc.first_surface([0, 1, 0], [0.0, 0.0, 1.0], self.shell)
@@ -349,9 +351,9 @@ class FloorIsTheHallFloor(unittest.TestCase):
         L, name = pc.first_surface([0, 1, 9.0], unit([0, -1, 0.5]), self.shell)   # lands at z = 9.5 < 10, the wall's inner face
         self.assertEqual(name, 'floor')
 
-    def test_a_ray_from_outside_the_hall_has_no_floor_under_the_ground_outside(self):
+    def test_a_ray_from_outside_the_hall_ends_on_the_ground_outside(self):
         L, name = pc.first_surface([20, 1, 0], DOWN, self.shell)                  # a lamp outside the walls aiming at the ground outside
-        self.assertEqual((L, name), (math.inf, 'none (open sky)'))
+        self.assertEqual((L, name), (1.0, 'ground outside'))
         L, name = pc.first_surface([20, 1, 0], unit([-1, -0.01, 0]), self.shell)  # from outside into the hall: the wall it stands behind
         self.assertIn('wall-e', name)
 
@@ -364,15 +366,55 @@ class FloorIsTheHallFloor(unittest.TestCase):
         L, name = pc.first_surface([0, 1, 0], UP, shell)
         self.assertEqual((L, name), (math.inf, 'open sky (through the roof)'))
 
-    def test_a_beam_drawn_out_of_the_gate_is_no_leak(self):
+    def test_a_beam_drawn_out_of_the_gate_into_the_ground_is_a_leak_and_fixable(self):
         rot = [-(math.pi / 2 - math.atan(0.1)), 0, 0]                             # rest axis (0, -0.1, 1)/|.|: out of the gate, falling
         d = pc.axis_of(rot); self.assertAlmostEqual(d[1] / d[2], -0.1)
-        rc, out = run_main(GATED, [lamp('g', [0, 2, 0], rot, 40.0)])              # the old plane: 'floor' 20 m out, so 40 m drawn was a leak
+        rc, out = run_main(GATED, [lamp('g', [0, 2, 0], rot, 40.0)])              # ground at 20.1 m: 40 m drawn is 19.9 m underground (review of #1050: it was green)
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (1, 1))
+        row = json.loads(out[1]); self.assertEqual(row['surface'], 'ground outside (through wall-n opening)'); self.assertAlmostEqual(row['first_hit'], 20.1, places=2)
+        self.assertEqual(len(pc.fix_ops([row], 1)), 1)                            # the length mends it
+        rc, out = run_main(GATED, [lamp('g', [0, 2, 0], rot, 20.1)])               # drawn to the ground: no leak
         self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
 
-    def test_a_lamp_outside_aiming_down_has_no_first_hit_in_its_row(self):
+    def test_a_lamp_outside_aiming_down_meets_the_ground_outside_in_its_row(self):
         rc, out = run_main(GATED, [lamp('out', [20, 1, 0], [0, 0, 0], 5.0)])
-        row = json.loads(out[1]); self.assertTrue(row['outside_hall']); self.assertIsNone(row['first_hit'])
+        row = json.loads(out[1]); self.assertTrue(row['outside_hall']); self.assertEqual((row['first_hit'], row['surface']), (1.0, 'ground outside'))
+        self.assertEqual(pc.fix_ops([row], 1), [])                                # an outside lamp is never fixed: it has to be moved
+
+
+def hidden(i, pos, rot, **beam):
+    e = lamp(i, pos, rot, 0.0); e['components']['beam'] = {'visible': False, **beam}; return e
+
+
+class HiddenBeamStillChecksTheLamp(unittest.TestCase):
+    """Review of #1050 (medium): epic-build writes a lamp inside a slab or on the floor aiming down as beam {visible: false} (reach 0); physics_check
+    skipped every hidden beam, so the fault was said once in a build log and then every check was green. Where the lamp stands does not
+    depend on the beam being drawn: a 0 m first hit is a row (inside_slab / on_floor), counted, exit 1, never fixed."""
+    def test_a_hidden_lamp_inside_a_slab_is_a_row_and_exit_1(self):
+        rc, out = run_main(FIXTURE, [hidden('inwall', [10.1, 5, 0], [0, 0, 0])])         # inside wall-e (x 10..10.3)
+        self.assertEqual(rc, 1); self.assertEqual(json.loads(out[0])['leaks'], 1)
+        row = json.loads(out[1]); self.assertEqual(row['id'], 'inwall'); self.assertTrue(row.get('inside_slab')); self.assertEqual(row['first_hit'], 0.0)
+        self.assertEqual(pc.fix_ops([row], 1), [])
+
+    def test_a_hidden_lamp_on_the_floor_aiming_down_is_a_row(self):
+        rc, out = run_main(FIXTURE, [hidden('onfloor', [5, 0, 0], [0, 0, 0])])
+        self.assertEqual(rc, 1); row = json.loads(out[1]); self.assertTrue(row.get('on_floor')); self.assertNotIn('inside_slab', row)
+
+    def test_a_hidden_lamp_in_the_air_is_no_row(self):
+        rc, out = run_main(FIXTURE, [hidden('fine', [5, 5, 0], [0, 0, 0])])
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+    def test_a_zero_length_visible_beam_with_no_light_distance_is_also_checked(self):
+        e = lamp('z', [10.1, 5, 0], [0, 0, 0], 0.0)
+        rc, out = run_main(FIXTURE, [e]); self.assertEqual((rc, json.loads(out[0])['leaks']), (1, 1))
+
+    def test_a_hidden_lamp_outside_the_hall_is_not_a_row(self):                      # only the 0 m result is checked for a beam not drawn
+        rc, out = run_main(FIXTURE, [hidden('out', [30, 5, 0], [0, 0, 0])])
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+    def test_a_visible_leak_row_is_unchanged_and_not_doubled(self):
+        rc, out = run_main(FIXTURE, [lamp('a', [10.1, 5, 0], [0, 0, 0], 5.0)])
+        self.assertEqual(json.loads(out[0])['leaks'], 1)
 
 
 if __name__ == '__main__':
