@@ -988,6 +988,29 @@ Fix (2026-10-20): inside `withKeyLock`, both key trash and key move re-read the 
 its space is no longer the one the request was made for; the counting error is logged and the 403 carries a fixed text.
 Guard: `serverXR/src/syncKeyMoveRace.test.js` (3 cases). Measured: 2 of 3 failed on origin/dev, 3/3 after, 10 of 10 runs.
 
+
+## physics_check.py tested beams against planes copied by hand, not the hall the room draws
+
+Symptom (found 2026-10-20 while writing hall_shell.py, PR #1044): `physics_check.py` reported 0 leaks on the owner's final
+reference rig (moxir-scenes-v2-0 v526) and on moxir-v2-11 (v928), while the model has surfaces the file did not: back wall -53.8
+(file: -53.6), deck 13.35 (13.3), lantern roof underside 16.4 (ridge 16.5), TWO lanterns (spans 0 and 1, x 18..30; file: one, |x| <= 6)
+and a 12 m closed deck gap between the lantern segments of each span (file: lantern the whole length). Cause: the walls,
+`truss_top_h_m` and `ridge_h_m` were copied into the file (`WEST_X, EAST_X, WALL_Z, BACK_Z`; `first_surface(p, d, dims)`), a stored
+number that only fitted the state it was copied from (owner rule "Physics first" 2). Fix (2026-10-20): `physics_check.py` reads the
+hall record's `dims.shell` (the 65 slabs of `hall_shell.py`, every corner a vertex of the GLB the room draws), casts each beam against
+the slab boxes (slab method, from inside or outside); the floor y = 0 is the one plane kept; a hall with no `dims.shell` is refused
+(exit 2, says to run `hall_shell.py --write`). Measured on the real documents, before -> after: reference rig 79 beams, 0 -> 4 leaks;
+v2.11 97 beams, 0 -> 4 leaks (the same four: rig-beam-planes-03/04, rig-par-cut-09 and laser 42 stand in the deck gap, their stored
+lengths run 3.2 m / 26.8 m through the closed deck); 33 / 50 lamps changed first-hit distance, each explained (deck +0.05 m / dy for 61,
+second lantern 4, lantern roof -0.1 m / dy, 2 lamps outside the hall: open sky). Proof table: `docs/ai/sessions/fix-physics-check-reads-shell-2026-10-20.md`.
+Guard: `scripts/place/physics_check_test.py` (17 cases: slab stop, lantern opening, refusal, `main()` output, the reference rig drawn to
+its first surfaces = 0 leaks) and `scripts/place/physics-check.test.js`. MOVED in the same PR (update 2026-10-20): `scripts/rigbuild/hall-reach.mjs`
+(epic-build's `beam.length`: where the 4 stored lengths came from) and `scripts/place/laser_frames.py` read the same `dims.shell`; neither keeps a hand plane
+(guards: `scripts/rigbuild/hall-reach.test.js` incl. parity with `physics_check.py` on 600 rays of the real shell; `laser-frames-py.test.js` shell cases).
+Measured: epic rig 106 fixtures, 72 first hits moved, 28 were longer than the model (largest 5.45 m); v2.11 energy rig 67 fixtures, 52 moved, 17 longer (laser40-1: 86 m written,
+59.2 m the model allows); laser_frames on the v2.11 energy rig + the 50 scenes of 10-17: 99 888 rays, 65 736 changed end or verdict, 947 ok -> fail, 5 632 fail -> ok (the closed deck gap), frames identical.
+Also: a lamp OUTSIDE the hall is a leak row (`outside_hall`, counted, exit 1, never fixed) and a lamp at floor level aiming down meets the floor at 0 m (`on_floor`), not open sky.
+
 ## show-checkpoint: token and restore guards (2026-10-20)
 
 - The default token `~/.di/di.env` is used only when `--api` is the default (`http://diiii.localhost/serverXR`). Any other api (save, or the manifest's api on restore) without `--token-file` is refused before any network call, naming `--token-file`.
