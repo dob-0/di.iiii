@@ -386,6 +386,12 @@ export default function RawGraphSurface({
     const pendingWireRef = useRef(null)
     const pointersRef = useRef(new Map())
     const pinchRef = useRef(null)
+    // A touch on a card selects on release, not on the press: the press may be
+    // the first finger of a pinch, and a selection raises the settings sheet
+    // over half a phone (audit 2026-10-21 NR-08). Cleared when a pinch begins.
+    const touchSelectRef = useRef(null)
+    const onSelectNodeRef = useRef(onSelectNode)
+    onSelectNodeRef.current = onSelectNode
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
     const hasFitRef = useRef(false)
     const lastFitViewportRef = useRef(null)
@@ -950,6 +956,7 @@ export default function RawGraphSurface({
             setIsPanning(false)
             setIsPanMoving(false)
             setDraggingNodeId(null)
+            touchSelectRef.current = null
             pendingWireRef.current = null
             setPendingWire(null)
         }
@@ -1407,6 +1414,8 @@ export default function RawGraphSurface({
             if (final && start && (final.x !== start.graphX || final.y !== start.graphY)) {
                 onMoveNode?.(draggingNodeId, final.x, final.y)
             }
+            if (touchSelectRef.current === draggingNodeId) onSelectNodeRef.current?.(draggingNodeId)
+            touchSelectRef.current = null
             setDragPos(null)
             setDraggingNodeId(null)
         }
@@ -2000,7 +2009,8 @@ export default function RawGraphSurface({
                                         y: point.y - node.graphY
                                     }
                                     dragPanRef.current = { x: event.clientX, y: event.clientY, live: false, last: 0 }
-                                    onSelectNode?.(node.id)
+                                    if (event.pointerType === 'touch') touchSelectRef.current = node.id
+                                    else onSelectNode?.(node.id)
                                     setIsPanning(false)
                                     setDraggingNodeId(node.id)
                                     event.currentTarget.setPointerCapture(event.pointerId)

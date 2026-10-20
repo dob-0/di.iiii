@@ -1321,3 +1321,38 @@ describe('moving a card without dragging (WCAG 2.1.1, 2.5.7)', () => {
         expect(onMoveNode).toHaveBeenLastCalledWith('b', 300, 10)
     })
 })
+
+describe('a pinch never selects (audit 2026-10-21 NR-08)', () => {
+    // Measured at 390x844 in Chromium: a pinch whose first finger landed on a
+    // card selected it on the press, and the settings sheet rose over half
+    // the phone. A touch selects on release, and only if no pinch began.
+    const setup = () => {
+        const onSelectNode = vi.fn()
+        const a = makeNode('value.color', { id: 'a', graphX: 0, graphY: 0 })
+        const utils = render(<RawGraphSurface nodes={[a]} edges={[]} initialZoom={1} onSelectNode={onSelectNode} />)
+        utils.container.querySelector('[data-card-id="a"]').setPointerCapture = () => {}
+        const card = utils.container.querySelector('[data-card-id="a"] .raw-graph-node-header')
+        return { ...utils, onSelectNode, card, surface: utils.container.querySelector('.raw-graph-surface') }
+    }
+
+    it('a two-finger pinch that starts on a card leaves the selection alone', () => {
+        const { onSelectNode, card, surface } = setup()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        fireEvent.pointerDown(surface, { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 100 })
+        fireEvent.pointerMove(window, { pointerId: 2, pointerType: 'touch', clientX: 340, clientY: 100 })
+        fireEvent.pointerUp(window, { pointerId: 1 })
+        fireEvent.pointerUp(window, { pointerId: 2 })
+        expect(onSelectNode).not.toHaveBeenCalled()
+    })
+
+    it('one finger on a card still selects it, on release; a mouse selects on press', () => {
+        const { onSelectNode, card } = setup()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        expect(onSelectNode).not.toHaveBeenCalled()
+        fireEvent.pointerUp(window, { pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        expect(onSelectNode).toHaveBeenCalledWith('a')
+        onSelectNode.mockClear()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 40, clientY: 20 })
+        expect(onSelectNode).toHaveBeenCalledWith('a')
+    })
+})
