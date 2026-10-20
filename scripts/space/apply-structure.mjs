@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 // Apply a space's structure file (shelves, order, titles, who sees what) through the API.
 // Nothing is deleted. A backup of every project's title, shelf and visibility is written first,
-// and `--undo BACKUP` puts them back. Dry run unless --apply.
+// and `--undo BACKUP` puts them back (relinked pages: the server's space history keeps each page before the replace). Dry run unless --apply.
 //   node scripts/space/apply-structure.mjs STRUCTURE.json --api URL [--apply] [--backup FILE]
 //   node scripts/space/apply-structure.mjs --undo BACKUP.json --api URL [--apply]
 import fs from 'node:fs'
+import { relinkHtml, userAgent } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
 const apply = args.includes('--apply')
 const api = (flag('--api') || '').replace(/\/$/, '')
 if (!api) { console.error('--api URL is required (e.g. http://<tree>.diiii.localhost/serverXR)'); process.exit(2) }
-const headers = { 'content-type': 'application/json', 'user-agent': 'di-apply-structure/1.0' }
+const headers = { 'content-type': 'application/json', 'user-agent': userAgent('di-apply-structure') }
 if (process.env.DI_TOKEN) headers.authorization = `Bearer ${process.env.DI_TOKEN}`
 
 async function call(method, path, body) {
@@ -79,6 +80,23 @@ for (const [id, title] of Object.entries(s.titles || {})) {
 for (const id of s.private || []) {
   if (before.projects.find((p) => p.id === id).visibility === 'private') continue
   await step(`private ${id}`, () => call('PATCH', `/api/projects/${id}`, { visibility: 'private' }))
+}
+// Links inside code pages that point at a project this structure hides, repointed (e.g. a back button).
+// Every project is read once and written once; the link is repointed in href AND window.open, also inside a combined page.
+const relinks = Object.entries(s.relink || {})
+if (relinks.length) {
+  for (const p of before.projects) {
+    const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
+    let html = doc.presentationState?.codeHtml
+    if (!html) continue
+    const notes = []
+    for (const [from, to] of relinks) {
+      const r = relinkHtml(html, from, to)
+      if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html }
+    }
+    if (!notes.length) continue
+    await step(`relink ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, { ...doc, presentationState: { ...doc.presentationState, codeHtml: html } }))
+  }
 }
 if (s.order) await step('order', () => call('PUT', `/api/spaces/${s.space}/projects/order`, { ids: [...s.order, ...unplaced] }))
 if (s.shelves) {

@@ -1,11 +1,75 @@
 {
   "space": "dilijan",
-  "note": "Owner 2026-10-21 (N1103.3): one door, the kids' worlds, the wall, camp tools kept private. Armenian titles owe a native read.",
-  "order": ["dilijan-home", "welcome", "mushroom-house", "orange-room", "dilijan-drive", "the-yard", "tsaghkanots", "anahit-vachagan", "aircanvas", "elevation", "wall-board", "wall-drive", "wall-mushroom", "wall-air", "remote-orange", "camp", "worlds", "console", "desk", "room-1", "room-2", "room-3", "room-4", "room-5"],
+  "note": "Owner 2026-10-21 (N1103.3): one door, the kids' worlds, the wall, camp tools kept private. Armenian titles owe a native read. N1104: Aren's AirCanvas, yard and wall are ONE world in the project the-yard (spaces/dilijan/combine-aren.json, scripts/space/combine-pages.mjs); aircanvas and elevation are kept as originals on their own shelf (aircanvas stays public: the wall board names it; elevation stays private).",
+  "order": [
+    "dilijan-home",
+    "welcome",
+    "mushroom-house",
+    "orange-room",
+    "dilijan-drive",
+    "the-yard",
+    "tsaghkanots",
+    "anahit-vachagan",
+    "wall-board",
+    "wall-drive",
+    "wall-mushroom",
+    "wall-air",
+    "remote-orange",
+    "aircanvas",
+    "elevation",
+    "camp",
+    "worlds",
+    "console",
+    "desk",
+    "room-1",
+    "room-2",
+    "room-3",
+    "room-4",
+    "room-5"
+  ],
   "shelves": [
-    { "label": "Աշխարհները · The worlds", "projects": ["mushroom-house", "orange-room", "dilijan-drive", "the-yard", "tsaghkanots", "anahit-vachagan", "aircanvas"] },
-    { "label": "Պատը · The wall", "projects": ["elevation", "wall-board", "wall-drive", "wall-mushroom", "wall-air", "remote-orange"] },
-    { "label": "Ճամբարի գործիքներ · Camp tools", "projects": ["camp", "worlds", "console", "desk", "room-1", "room-2", "room-3", "room-4", "room-5"] }
+    {
+      "label": "Աշխարհները · The worlds",
+      "projects": [
+        "mushroom-house",
+        "orange-room",
+        "dilijan-drive",
+        "the-yard",
+        "tsaghkanots",
+        "anahit-vachagan"
+      ]
+    },
+    {
+      "label": "Պատը · The wall",
+      "projects": [
+        "wall-board",
+        "wall-drive",
+        "wall-mushroom",
+        "wall-air",
+        "remote-orange"
+      ]
+    },
+    {
+      "label": "Ճամբարի գործիքներ · Camp tools",
+      "projects": [
+        "camp",
+        "worlds",
+        "console",
+        "desk",
+        "room-1",
+        "room-2",
+        "room-3",
+        "room-4",
+        "room-5"
+      ]
+    },
+    {
+      "label": "Kept originals (parts of a world)",
+      "projects": [
+        "aircanvas",
+        "elevation"
+      ]
+    }
   ],
   "titles": {
     "dilijan-home": "Դիլիջան · Dilijan",
@@ -13,7 +77,7 @@
     "mushroom-house": "Սունկ տուն · Mushroom house",
     "orange-room": "Նարնջագույն սենյակ · Orange room",
     "dilijan-drive": "Դիլիջան Դրայվ · Dilijan Drive",
-    "the-yard": "Բակը · The yard",
+    "the-yard": "Արեն · Aren",
     "tsaghkanots": "Ծաղկանոց · Flower garden",
     "anahit-vachagan": "Անահիտ և Վաչագան · Anahit and Vachagan",
     "aircanvas": "AirCanvas · Air canvas",
@@ -24,5 +88,21 @@
     "wall-air": "AirCanvas · Wall canvas",
     "remote-orange": "Հեռակառավարիչ · Orange room remote"
   },
-  "private": ["camp", "worlds", "console", "desk", "room-1", "room-2", "room-3", "room-4", "room-5"]
+  "private": [
+    "elevation",
+    "camp",
+    "worlds",
+    "console",
+    "desk",
+    "room-1",
+    "room-2",
+    "room-3",
+    "room-4",
+    "room-5"
+  ],
+  "relink": {
+    "/dilijan/worlds": "/dilijan#works",
+    "/dilijan/aircanvas": "/dilijan/the-yard",
+    "/dilijan/elevation": "/dilijan/the-yard"
+  }
 }
