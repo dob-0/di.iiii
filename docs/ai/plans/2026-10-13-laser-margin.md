@@ -138,3 +138,12 @@ npx vitest run scripts/place/laser-margin.test.js # 3 tests: a hand-checked synt
 
 Until all four sign, `laserSignedOff` stays false and the desk holds every laser channel at 0. di's measurement is an
 input to this sheet; it does not sign anything.
+
+
+## Reconciled with dev (2026-10-20)
+- The 3 m figure is read from `scripts/place/laser-distance.mjs` (`LASER_MIN_HEIGHT_M`, dev's one source, #900); the script has no second copy and fails loudly if the export moves. `--rig` and `--hall` are now required (no production file name as a default).
+- First surface: a beam is measured only up to the first floor, ground solid or `dims.shell` slab it meets. A hall record with no `dims.shell` reports `shell_modelled: false` and stays UNVALIDATED (the line is then measured to its stored end, the longer and more conservative stretch). The MOXIR hall record has no `dims.shell` yet: owed, so walls and roof are not checked for it.
+- A sample with nothing below it now fails the line instead of being skipped.
+- Standard: none validated. IEC TR 60825-3, HSG95 and ILDA are named in repo notes with clause numbers unverified; this is a geometry check, not a safety assessment.
+- `physics_check.py` checks lamps and beams of a rig against the hall GLB and does not apply to this tool's synthetic fixtures; not run.
+- Safety tool: not used in a show until the owner has looked.

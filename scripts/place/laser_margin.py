@@ -14,10 +14,19 @@
 # pendant lamps, hanging at 9.5-10.6 m, overlap the zone in plan), so the massing boxes + floor give the same surfaces.
 # The triangles here are built from the same hall record the GLB was built from; the caster is occlusion_lib's.
 #
+# FIRST SURFACE (physics first): a beam stops where it first meets the floor, a ground-standing solid or a shell slab
+# (optional hall record dims.shell = [{id, x_m, y_m, z_m}] boxes for walls and roof). Only the part of the line BEFORE that
+# surface is measured; a wall between the source and the zone means the zone is not reached. A hall record with no
+# dims.shell has no modelled walls or roof: the result says shell_modelled false and stays UNVALIDATED, and the line is then
+# measured to its stored end, which is the longer, more conservative stretch. Hanging envelopes (lamps) never shorten a line:
+# a lamp scatters, so a strike is only flagged.
+# STANDARD: none validated. 3 m is read from laser-distance.mjs (the repo's one source); IEC TR 60825-3 / ILDA / HSG95 are named
+# in the repo's notes with clause numbers UNVERIFIED. This is a geometry check, NOT a safety assessment (LSO sign-off owed).
+#
 # Also reported, informational: whether a line passes through a HANGING massing envelope (pendant lamps) anywhere on
 # its length. Envelopes are boxes from dims.massing, not the lamp geometry: a strike here is a flag, not a measurement.
 #
-# Usage: python3 laser_margin.py [--rig R] [--hall H] [--json] [--step 0.05]
+# Usage: python3 laser_margin.py --rig R --hall H [--json] [--step 0.05]
 import argparse, json, math, os, sys
 
 import numpy as np
@@ -26,13 +35,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from occlusion_lib import Obstacles  # noqa: E402
 
-RIG = os.path.join(HERE, 'rigs', 'moxir-v2-8-matrix-2026-10-13.json')
-HALL = os.path.join(HERE, 'rigs', 'moxir-hall-2026-10-11-v11-show-park-far41.hall.json')
-SEPARATION_M = 3.0
-SEPARATION = ('3.0 m vertical above any surface an audience member may stand on. Quoted source: Ariz. Admin. Code '
+
+
+def _separation_from_dev():
+    # ONE source for the 3 m rule: dev's shared module (scripts/place/laser-distance.mjs), never a second copy of the number.
+    # Fails loudly if the export moves, so the margin and the build cannot drift apart.
+    import re
+    src = open(os.path.join(HERE, 'laser-distance.mjs')).read()
+    m = re.search(r'export\s+const\s+LASER_MIN_HEIGHT_M\s*=\s*([0-9.]+)', src)
+    if not m:
+        raise SystemExit('laser_margin: LASER_MIN_HEIGHT_M not found in laser-distance.mjs')
+    return float(m.group(1))
+
+
+SEPARATION_M = _separation_from_dev()
+SEPARATION = ('%.1f m vertical above any surface an audience member may stand on. Quoted source: Ariz. Admin. Code '
               'R9-7-1441(L) ("at any point less than three meters above any surface upon which an individual in the '
               'audience is permitted to stand"), the US FDA/CDRH laser-show variance figure. IEC TR 60825-3 / HSE '
-              'HS(G)95 / ILDA give the same 3 m in the repo\'s notes: clause numbers UNVERIFIED (not quoted).')
+              'HS(G)95 / ILDA give the same 3 m in the repo\'s notes: clause numbers UNVERIFIED (not quoted).' % SEPARATION_M)
 HAND_RULE_M = 5.4   # the owner's stricter rule (moxir_v2_7_lines.py: 3 m counted from a raised hand at 2.4 m)
 OUTSIDE = 'rig-out-'
 
@@ -97,7 +117,21 @@ def surfaces(hall, rig, zone):
         sx, sy, sz = s['s']   # rig primitives: p is the middle of the base (lights_beta_options.Box anchor 'base')
         t = box_tris([-sx / 2, 0, -sz / 2], [sx / 2, sy, sz / 2], euler_xyz(s.get('r', [0, 0, 0])), np.array(s['p'], float))
         standing.append((s['id'], 'rig solid', t))
-    return make_obstacles(standing), make_obstacles(hanging)
+    shell = [(m.get('id', 'shell'), 'shell', box_tris([m['x_m'][0], m['y_m'][0], m['z_m'][0]], [m['x_m'][1], m['y_m'][1], m['z_m'][1]]))
+             for m in D.get('shell', [])]
+    return make_obstacles(standing), make_obstacles(hanging), make_obstacles(standing + shell), bool(shell)
+
+
+def stop_at_first_surface(a, b, Stop):
+    """b' = where the beam a->b first meets a standing surface or shell slab (b itself if none); and what it met."""
+    d = b - a
+    L = float(np.linalg.norm(d))
+    if L < 1e-12:
+        return b, None
+    t, name, _, _ = Stop.cast(a, d / L, tmin=1e-6, tmax=L)
+    if t is None:
+        return b, None
+    return a + d / L * t, name
 
 
 def clip_xz(a, b, zone):
@@ -123,7 +157,8 @@ def tilt_down(a, b, deg):
     return a + L * np.array([d[0] / h * math.cos(el), math.sin(el), d[2] / h * math.cos(el)])
 
 
-def lowest_over_zone(a, b, zone, S, step):
+def lowest_over_zone(a, b, zone, S, step, Stop):
+    b, _ = stop_at_first_surface(a, b, Stop)
     iv = clip_xz(a, b, zone)
     if iv is None:
         return None
@@ -139,6 +174,9 @@ def lowest_over_zone(a, b, zone, S, step):
             continue
         if best is None or h < best['height_m']:
             best = {'height_m': h, 'at': [round(float(v), 3) for v in q], 'over': name}
+    if best is None:
+        # nothing under a sample = unmeasured: report the floor-only figure and FAIL it rather than skip it
+        best = {'height_m': -1e9, 'at': [round(float(v), 3) for v in (a + t0 * (b - a))], 'over': 'nothing below'}
     best['in_zone_m'] = round(float((t1 - t0) * L), 3)
     best['analytic_floor_only_m'] = round(float(min(a[1] + t0 * (b[1] - a[1]), a[1] + t1 * (b[1] - a[1]))), 3)
     return best
@@ -146,7 +184,7 @@ def lowest_over_zone(a, b, zone, S, step):
 
 def measure(rig, hall, step=0.05):
     zone = hall['dims']['zones']['dance']['used']
-    S, H = surfaces(hall, rig, zone)
+    S, H, Stop, shell_modelled = surfaces(hall, rig, zone)
     fan = {t['beam']: t.get('half_fan_deg', 0.0) for t in rig.get('lasers', {}).get('tubes', [])}
     out = []
     for f in rig['fixtures']:
@@ -156,9 +194,9 @@ def measure(rig, hall, step=0.05):
             if bm.get('off'):
                 continue
             a, b = np.array(f['p'], float), np.array(bm['to'], float)
-            nom = lowest_over_zone(a, b, zone, S, step)
+            nom = lowest_over_zone(a, b, zone, S, step, Stop)
             hf = float(fan.get(bm['id'], 0.0))
-            tol = lowest_over_zone(a, tilt_down(a, b, hf), zone, S, step) if hf > 0 else nom
+            tol = lowest_over_zone(a, tilt_down(a, b, hf), zone, S, step, Stop) if hf > 0 else nom
             d = b - a
             L = float(np.linalg.norm(d))
             hit = H.cast(a, d / L, tmin=0.0, tmax=L) if H.n_tris else (None,) * 4
@@ -177,7 +215,7 @@ def measure(rig, hall, step=0.05):
     crossing = [r for r in out if r['crosses_zone']]
     worst = min(crossing, key=lambda r: r['lowest_m']) if crossing else None
     worst_t = min(crossing, key=lambda r: r['lowest_tilted_m']) if crossing else None
-    return {'zone': zone, 'separation_m': SEPARATION_M, 'separation_source': SEPARATION, 'hand_rule_m': HAND_RULE_M,
+    return {'shell_modelled': shell_modelled, 'validated': False, 'zone': zone, 'separation_m': SEPARATION_M, 'separation_source': SEPARATION, 'hand_rule_m': HAND_RULE_M,
             'lines': out,
             'summary': {'lines': len(out), 'crossing_zone': len(crossing),
                         'pass_3m': sum(1 for r in crossing if r['pass_3m']),
@@ -202,8 +240,8 @@ def table(R):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--rig', default=RIG)
-    ap.add_argument('--hall', default=HALL)
+    ap.add_argument('--rig', required=True)
+    ap.add_argument('--hall', required=True)
     ap.add_argument('--step', type=float, default=0.05)
     ap.add_argument('--json', action='store_true')
     a = ap.parse_args()
