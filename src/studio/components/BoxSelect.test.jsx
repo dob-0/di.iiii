@@ -53,6 +53,34 @@ describe('BoxSelect modifiers', () => {
     })
 })
 
+// N581 (2026-10-15): B arms ONE box from any mode. A click without a drag used to leave it
+// armed, so the next left drag — minutes later, in Navigate — drew a box instead of orbiting.
+describe('BoxSelect armed by B', () => {
+    let select
+    beforeEach(() => { select = vi.fn() })
+    afterEach(() => { cleanup() })
+    const mount = () => render(<BoxSelect active={false} entities={entities} selectedEntityIds={[]} onSelectEntities={select} />)
+    const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, code: `Key${k.toUpperCase()}`, bubbles: true }))
+
+    it('B then a drag draws one box', () => {
+        mount()
+        key('b')
+        drag()
+        expect(select).toHaveBeenCalledTimes(1)
+        drag()
+        expect(select).toHaveBeenCalledTimes(1)
+    })
+
+    it('B then a click (no drag) ends the box; the next drag is the camera\'s', () => {
+        mount()
+        key('b')
+        fire(host, 'pointerdown', { clientX: 10, clientY: 10 })
+        fire(window, 'pointerup', { clientX: 11, clientY: 10 })
+        drag()
+        expect(select).not.toHaveBeenCalled()
+    })
+})
+
 describe('BoxSelect leaves the middle button to the navigation (Shift pans, Ctrl zooms, plain orbits)', () => {
     afterEach(() => { cleanup() })
     it('a Shift+middle press keeps the pan the navigation chose; a left press parks the left button and gives it back', () => {
