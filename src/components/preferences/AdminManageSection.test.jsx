@@ -199,4 +199,18 @@ describe('AdminManageSection', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
         }
     })
+
+    // Audit 2026-10-21 A2 (axe `nested-interactive`, serious ×4 in Chromium): the
+    // caret was a role=button inside the row's button, and it was the only way to
+    // close a space — a keyboard could open one and never close it again.
+    it('opens and closes a space from the row itself, with no button inside a button', async () => {
+        const { container } = render(<AdminManageSection />)
+        const row = (await screen.findByText('Demo')).closest('button')
+        expect(row.getAttribute('aria-expanded')).toBe('false')
+        fireEvent.click(row)
+        await waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('true'))
+        fireEvent.click(row)
+        expect(row.getAttribute('aria-expanded')).toBe('false')
+        expect((await axe.run(container, { runOnly: ['nested-interactive'] })).violations).toEqual([])
+    })
 })
