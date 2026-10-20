@@ -6,7 +6,9 @@
  *
  *   node scripts/rigbuild/cue-wire-check.mjs --project <id> [--api http://diiii.localhost/serverXR] [--token-file ~/.di/di.env]
  *        [--desk http://diiii.localhost/light/api] [--cues 0-49|14,41] [--seconds 3] [--hz 20] [--nodes ip,ip]
- *        [--json out.json] [--dry-run] [--no-restore] [--follow [--follow-minutes N]]
+ *        [--json out.json] [--dry-run] [--no-restore] [--follow [--follow-minutes N]] [--channels] [--node-follow]
+ *   --channels     also compare every lamp's static channels (all but the dimmer) on the desk's output with the cue's look (read-only)
+ *   --node-follow  also measure that each node's buffer follows the desk's (differing channels vs the closest of the last 12 desk reads)
  *   --follow  measure each picked cue when the desk's own runner plays it (no GO, nothing posted): the show keeps playing for
  *             the people watching it; one loop of the show and two minutes by default.
  *
@@ -34,6 +36,7 @@ import { typeById } from '../../src/rigbuild/fixtureTypes.js'
 import { rigLooksOf, lookPoses, posedEntities, deskLookId } from '../../src/rigbuild/looks.js'
 import { motionOf, motionPlan, motionFrame, djCentre } from '../../src/rigbuild/lookMotion.js'
 import { NO_MOTION } from '../../src/rigbuild/deskLookValues.js'
+import { staticChannelDiffs, roleMapOf, nodeFollowStats, followLine } from './wire-channels.mjs'
 
 export const MOVE_THRESHOLD = 20   // a dimmer swing (0-255) above this is "moving", on the wire and in the expectation alike
 
@@ -214,6 +217,8 @@ export const main = async (argv = process.argv.slice(2)) => {
     const dry = args['dry-run'] === true
     const restore = args['no-restore'] !== true && args.follow !== true   // --follow never posts, so it has nothing to put back
     const follow = args.follow === true
+    const wantChannels = args.channels === true
+    const wantFollow = args['node-follow'] === true
     if (follow && args['dry-run']) die('--follow reads the wire while the show plays: drop --dry-run')
     const nodeIps = args.nodes === true || args.nodes === undefined ? null : String(args.nodes).split(',').map((s) => s.trim()).filter(Boolean)
 
@@ -280,9 +285,14 @@ export const main = async (argv = process.argv.slice(2)) => {
             const before = await layerLook()
             const deskSeries = new Map(exp.lamps.map((l) => [l.entityId, []]))
             const nodeSeries = new Map(exp.lamps.map((l) => [l.entityId, []]))
+            const deskRaw = []
+            const nodeRaw = nodes.map(() => [])
+            let lastDesk = null
             const t0 = Date.now()
             for (let tick = 0; Date.now() - t0 < seconds * 1000; tick++) {
                 const [d, ...n] = await Promise.all([getJson(`${desk}/dmx`).catch(() => null), ...nodes.map((nd) => getJson(`http://${nd.ip}/api/dmx`).catch(() => null))])
+                lastDesk = d?.dmx || lastDesk
+                if (wantFollow) { deskRaw.push(d?.dmx || null); nodes.forEach((nd, k) => nodeRaw[k].push(n[k] ? Object.values(n[k].dmx || {})[0] || null : null)) }
                 for (const l of exp.lamps) {
                     const buf = d?.dmx?.[String(l.universe - 1)]
                     if (buf) deskSeries.get(l.entityId).push(buf[l.index] ?? 0)
@@ -303,12 +313,32 @@ export const main = async (argv = process.argv.slice(2)) => {
             // lamps on a universe no node carries were never read there: they stay "unread" and do not fail the cue
             const wires = { desk: compareLamps(exp.lamps, dm) }
             if (nm) wires.node = compareLamps(exp.lamps.filter((_, k) => nm[k].lit !== null), nm.filter((m) => m.lit !== null))
+            const extra = {}
+            if (wantChannels) {
+                const look = ((await getJson(`${desk}/looks`).catch(() => null))?.looks || []).find((l) => l.id === cue.lookId)
+                const values = look?.steps?.[0]?.values
+                if (!values || !lastDesk) say(`      channels: no stored values for look ${cue.lookId} (or no wire read): not compared`)
+                else {
+                    const c = staticChannelDiffs({ fixtures: state.fixtures || [], profiles: state.profiles, values, dmx: lastDesk })
+                    extra.channels = c
+                    say(`      channels: ${c.bad.length} of ${c.lamps} lamps have a static channel off (${c.compared} compared)`)
+                    for (const b of c.bad.slice(0, 14)) say(`        U${b.universe + 1}.${b.address} ${b.name.padEnd(20)} ${b.diffs.join(' ')}`)
+                }
+            }
+            if (wantFollow) {
+                extra.follow = {}
+                nodes.forEach((nd, k) => {
+                    const st = nodeFollowStats({ deskReads: deskRaw.map((x) => x?.[String(nd.universe)] || null), nodeReads: nodeRaw[k], roleAt: roleMapOf(state.fixtures, state.profiles)[nd.universe] || {} })
+                    extra.follow[nd.ip] = st
+                    say(`      ${followLine(`node ${nd.ip} (U${nd.universe + 1})`, st)}`)
+                })
+            }
             const line = cueLine(i, exp, wires)
             say(line)
             const ok = line.endsWith(' OK')
             if (ok) okCount++
             for (const [label, w] of Object.entries(wires)) for (const m of w.mismatches.slice(0, 12)) say(`      ${label} ${m.entityId} (${m.kind}): expected lit ${m.expected.lit} move ${m.expected.moving} · measured lit ${m.measured.lit} move ${m.measured.moving} range ${m.measured.range.join('-')}`)
-            results.push({ index: i, cue: { id: cue.id, name: cue.name, lookId: cue.lookId, fade: cue.fade }, motion: exp.motion, expected: exp.lamps, desk: { ...wires.desk, series: undefined }, node: wires.node || null, ok })
+            results.push({ index: i, cue: { id: cue.id, name: cue.name, lookId: cue.lookId, fade: cue.fade }, motion: exp.motion, expected: exp.lamps, desk: { ...wires.desk, series: undefined }, node: wires.node || null, ...extra, ok })
     }
     try {
         if (follow) {
