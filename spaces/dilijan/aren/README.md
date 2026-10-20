@@ -27,7 +27,11 @@ measured cloud by `register.py` (yaw search with an FFT shift, then trimmed ICP;
 |---|---|---|---|---|---|
 | courtyard | main | 0° (359.98) | 1.4 cm | 3.0 cm | 96 % |
 | wall | wall_right | 229.77° | 2.2 cm | 4.7 cm | 92 % |
-| cabin | near wall_mid | 1.02° | 4.7 cm | 26.7 cm | 52 % |
+| cabin | none | - | (best 4.7 cm) | (26.7 cm) | (52 %) |
+
+The cabin is NOT in the yard's scan: no pose fits its shape (above) or its photo (a colour-aware search over 360° and the 24 best
+shifts: best r = 0.26, 15 % of it within 4 cm). It is shown only in Պատը, arriving the way the wall page brings it in;
+the yard keeps its own part there, wall_mid (from the yard page's mesh and photo).
 
 The courtyard sits at the same place in both pages' frames (shift 0.4 mm, 0.844 m, -2.2 mm), so the one view puts the wall
 page's frame on it: the courtyard never moves, and the wall and the cabin step out to its side.
@@ -39,7 +43,7 @@ page's frame on it: the courtyard never moves, and the wall and the cabin step o
 - **From the wall:** the fragments as the surfaces in BOTH arrangements (4x the photo pixels on the two walls, where the red
   chalk is; 76 k faces instead of 181 k), the five looks, the row layout, the contact shadow, pinch and inertia, the adaptive
   resolution and idle frame skipping.
-- **New, to make it one:** the switch Բակը · The yard / Պատը · The wall. The wall and the cabin rise 2.2 m (above the
+- **New, to make it one:** the switch Բակը · The yard / Պատը · The wall. The wall rises 2.2 m (above the
   courtyard's walls, 1.69 m), travel, turn and land in the row; the camera swings round above the yard, never through it.
   In the yard the cycle runs as before; a picked look holds until R or a double click.
 - **Left out:** the yard's own mesh and its three JPEGs (the same surfaces with blurrier photos; 2.2 MB); the second arrival
@@ -50,8 +54,11 @@ page's frame on it: the courtyard never moves, and the wall and the cabin step o
 
 ## Limits
 
-- The cabin's place in the yard is approximate: half of it lies within 5 cm of the cloud, the rest up to ~27 cm off or not
-  in the yard scan at all. Two ICP starts end 7° and 0.4 m apart. Its best fit is used.
+- Photos, fixed 2026-10-21 after the owner's look ("all textures in not the right place"): the wall page decoded its
+  photos with flipY=false; measured against the cloud's own colours, flipY=true is right (courtyard r 0.89, wall 0.65;
+  the yard page's own parts 0.71-0.84) and flipY=false gives r about 0, so every face showed another part of the atlas.
+  The ORIGINAL wall page (elevation) has the same fault; the yard page was right (its 09-28 note). Not the cause, tested:
+  a swapped photo (each fits only its own fragment), a re-encoded or resized atlas (served bytes hash to their ids).
 - Measured on the agent screen only (Chromium, RTX 3080): 60 fps in both arrangements at 1440x900 and 390x844. Not seen on
   a real phone or headset.
 
