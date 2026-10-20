@@ -1067,3 +1067,9 @@ Fix: (1) beyond the footprint y = 0 is the ground the hall stands on: `ground ou
 rule `floor`, as before #1050); open sky is a ray that does not go down; the lamp above has reach 8 m and the beam is a fixable leak again; (2) for a beam not drawn (hidden or 0 m) `physics_check` still casts the lamp,
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
+
+## Self-update installed an https release with no checksums.txt unchecked (2026-10-21, bug-sweep 2026-10-07 §C)
+
+- Symptom: `stageVersion` (`scripts/di/install.mjs`) downloaded, unpacked and `npm ci`'d an https release whose GitHub release had no `checksums.txt` asset; `latestRelease()` set `checksumsUrl: null` and the check was skipped.
+- Fix: a release whose url is not `file:` and has no `checksumsUrl` throws before any download or extract: "release <version> has no checksums.txt, so it cannot be verified — refusing to install it". `file:` installs (`di update --from`) and the mismatch / "does not mention this artifact" refusals are unchanged. Signing, attestations and automatic rollback stay the owner's call.
+- Guard: `scripts/di/stageVersion.test.js` (4 tests; the refusal test fails on dev because dev calls `fetch`).
