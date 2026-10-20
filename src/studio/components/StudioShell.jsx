@@ -25,7 +25,7 @@ import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
 import { UI_TOGGLE_EVENT, requestWalk, useWalkMode } from '../navigation/useWalkNavigation.js'
 import { isJamProject, loadJamAllTools, saveAllTools, saveJamAllTools, useAllTools } from '../utils/jamMode.js'
-import { hallEntityIds, isLockedEntity } from '../utils/selectionTools.js'
+import { hallEntityIds, isLockedEntity, selectionCanMove } from '../utils/selectionTools.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
@@ -474,7 +474,10 @@ export default function StudioShell({
                     // unreachable. All-axes stays available inside
                     // ModalTransform's own capture handler, where it belongs.
                     const axis = e.key.toLowerCase()
-                    if (selectedEntityIds.length > 0 && onStartTransform) {
+                    // Only a selection that can MOVE arms the modal: a locked selection
+                    // never mounts the operator, and an op nobody cancels kills every
+                    // shortcut (N581, 2026-10-15).
+                    if (selectionCanMove(entities, selectedEntityIds) && onStartTransform) {
                         // Arm the V1 modal using the current gizmo mode + this axis
                         onStartTransform(viewportGizmoMode, axis)
                     } else {
