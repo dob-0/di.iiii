@@ -9,27 +9,17 @@
 // Spec of the stop: serverXR/src/laser/laserEngine.js (rule 8), index.js (stopLasersThenExit).
 import dgram from 'node:dgram'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ENTRY = path.join(HERE, 'index.js')
 const CMD_PORT = 45457
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const getFreePort = () => new Promise((resolve, reject) => {
-  const probe = net.createServer()
-  probe.on('error', reject)
-  probe.listen(0, '127.0.0.1', () => {
-    const { port } = probe.address()
-    probe.close((error) => (error ? reject(error) : resolve(port)))
-  })
-})
-
 // The stand-in cube: records what reaches its command port.
 const fakeCube = () => new Promise((resolve, reject) => {
   const heard = []
@@ -47,15 +37,11 @@ const bootWithOneCube = async () => {
   const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-laser-down-data-'))
   await mkdir(path.join(dataRoot, 'laser'), { recursive: true })
   await writeFile(path.join(dataRoot, 'laser', 'laser.json'), JSON.stringify({ cubes: [{ id: 'cube-1', ip: '127.0.0.1' }] }))
-  const port = await getFreePort()
-  const env = { ...process.env, PORT: String(port), DATA_ROOT: dataRoot, DI_LOCAL: '1', DI_LASER_TEST_LOOPBACK: '1', AUTH_SESSION_SECRET: 'laser-down-secret' }
+  const env = { ...process.env, DATA_ROOT: dataRoot, DI_LOCAL: '1', DI_LASER_TEST_LOOPBACK: '1', AUTH_SESSION_SECRET: 'laser-down-secret' }
   delete env.NODE_ENV
   delete env.SPACES_DIR
   delete env.UPLOADS_DIR
-  const child = spawn(process.execPath, [SERVER_ENTRY], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-  let logs = ''
-  child.stdout.on('data', (chunk) => { logs += chunk.toString() })
-  child.stderr.on('data', (chunk) => { logs += chunk.toString() })
+  const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env })
   const exited = new Promise((resolve) => child.once('exit', (code, signal) => resolve({ code, signal })))
   cleanups.push(async () => {
     if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
@@ -63,14 +49,7 @@ const bootWithOneCube = async () => {
     await rm(dataRoot, { recursive: true, force: true })
   })
   const base = `http://127.0.0.1:${port}`
-  const deadline = Date.now() + 25000
-  for (;;) {
-    if (child.exitCode !== null) throw new Error(`the server exited while booting (code ${child.exitCode})\n${logs}`)
-    try { if ((await fetch(`${base}/api/health`)).ok) break } catch { /* not up yet */ }
-    if (Date.now() > deadline) throw new Error(`the server never became healthy\n${logs}`)
-    await wait(200)
-  }
-  return { child, base, exited, logs: () => logs }
+  return { child, base, exited, logs: readLogs }
 }
 
 describe('the lasers when serverXR goes down', () => {

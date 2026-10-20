@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { spawn } from 'node:child_process'
 import http from 'node:http'
 import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
@@ -11,6 +10,7 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from '../testSupport/spawnServer.mjs'
 
 const require = createRequire(import.meta.url)
 const { side, startFollowing, startCursorAt } = require('./follower.js')
@@ -38,29 +38,6 @@ const SPACE = 'shared-room'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const getFreePort = async () => new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.on('error', reject)
-    probe.listen(0, '127.0.0.1', () => {
-        const { port } = probe.address()
-        probe.close(error => (error ? reject(error) : resolve(port)))
-    })
-})
-
-const waitForHealth = async ({ url, child, getLogs }) => {
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) throw new Error(`Server exited early.\n${getLogs()}`)
-        try {
-            const response = await fetch(url)
-            if (response.ok) return
-        } catch {
-            // retry until the deadline
-        }
-        await wait(150)
-    }
-    throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
-}
 
 /**
  * One install. `port` and `dataRoot` can be handed back in, which is how the
@@ -70,11 +47,8 @@ const waitForHealth = async ({ url, child, getLogs }) => {
 const startServer = async ({ port = null, dataRoot = null, requireAuth = false } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-cwd-'))
     const sandboxDataRoot = dataRoot || await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
-    const listenPort = port || await getFreePort()
-
     const childEnv = {
         ...process.env,
-        PORT: String(listenPort),
         NODE_ENV: 'test',
         APP_BASE_PATH: '/serverXR',
         DATA_ROOT: sandboxDataRoot,
@@ -87,15 +61,8 @@ const startServer = async ({ port = null, dataRoot = null, requireAuth = false }
     delete childEnv.SPACES_DIR
     delete childEnv.UPLOADS_DIR
 
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
-        cwd: sandboxCwd,
-        env: childEnv,
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
-
-    let output = ''
-    child.stdout.on('data', chunk => { output += chunk.toString() })
-    child.stderr.on('data', chunk => { output += chunk.toString() })
+    // The child says it is listening on a port nobody else held at that moment; a lost race is retried on a new port (testSupport/spawnServer.mjs).
+    const { child, port: listenPort, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd: sandboxCwd, env: childEnv, port })
 
     const baseUrl = `http://127.0.0.1:${listenPort}/serverXR`
     const stop = async ({ keepData = false } = {}) => {
@@ -114,8 +81,7 @@ const startServer = async ({ port = null, dataRoot = null, requireAuth = false }
         if (!keepData) await rm(sandboxDataRoot, { recursive: true, force: true })
     }
 
-    await waitForHealth({ url: `${baseUrl}/api/health`, child, getLogs: () => output })
-    return { baseUrl, port: listenPort, dataRoot: sandboxDataRoot, logs: () => output, stop }
+    return { baseUrl, port: listenPort, dataRoot: sandboxDataRoot, logs: readLogs, stop }
 }
 
 const authHeaders = {

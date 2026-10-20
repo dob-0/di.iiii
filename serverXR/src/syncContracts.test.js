@@ -13,13 +13,12 @@
 // destruction was in the wiring between a route, an injected store function and
 // SQLite, and every layer in isolation behaved correctly.
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, rm, writeFile, mkdir, readFile } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 // Same budget as bundleContracts: spawn + listen + first request can cross
 // vitest's 5s default on a loaded machine with nothing actually wrong.
@@ -33,16 +32,6 @@ const tempDirs = []
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const getFreePort = async () => new Promise((resolve, reject) => {
-    const server = net.createServer()
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-        const address = server.address()
-        const port = typeof address === 'object' && address ? address.port : 0
-        server.close((error) => (error ? reject(error) : resolve(port)))
-    })
-})
-
 const makeTempDir = async (prefix) => {
     const dir = await mkdtemp(path.join(os.tmpdir(), prefix))
     tempDirs.push(dir)
@@ -52,12 +41,8 @@ const makeTempDir = async (prefix) => {
 const startServer = async (extraEnv = {}) => {
     const dataRoot = await makeTempDir('dii-sync-data-')
     const sandboxCwd = await makeTempDir('dii-sync-cwd-')
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
-        cwd: sandboxCwd,
-        env: {
+    const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd: sandboxCwd, env: {
             ...process.env,
-            PORT: String(port),
             NODE_ENV: 'test',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: dataRoot,
@@ -65,14 +50,8 @@ const startServer = async (extraEnv = {}) => {
             REQUIRE_AUTH: '',
             CORS_ORIGINS: '*',
             ...extraEnv
-        },
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
+        } })
 
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString() })
 
     let exited = false
     child.once('exit', () => { exited = true })
@@ -92,17 +71,8 @@ const startServer = async (extraEnv = {}) => {
         }
     }
 
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) throw new Error(`Server exited early.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`)
-        try {
-            const response = await fetch(`${baseUrl}/api/health`)
-            if (response.ok) break
-        } catch { /* retry */ }
-        await wait(200)
-    }
 
-    const handle = { baseUrl, dataRoot, stop, logs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}` }
+    const handle = { baseUrl, dataRoot, stop, logs: readLogs }
     activeServers.push(handle)
     return handle
 }

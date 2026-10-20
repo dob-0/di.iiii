@@ -7,15 +7,15 @@
 // untouched, Reject writes nothing, and a space that moved on refuses.
 
 import crypto from 'node:crypto'
-import { execFile, spawn } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import http from 'node:http'
 import { mkdtemp, rm } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 vi.setConfig({ testTimeout: 90_000, hookTimeout: 40_000 })
 
@@ -28,15 +28,6 @@ const SECRET = 'proposal-contract-secret'
 const cleanups = []
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getFreePort = () => new Promise((resolve, reject) => {
-    const server = net.createServer()
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-        const { port } = server.address()
-        server.close(() => resolve(port))
-    })
-})
-
 const makeTempDir = async (prefix) => {
     const dir = await mkdtemp(path.join(os.tmpdir(), prefix))
     cleanups.push(() => rm(dir, { recursive: true, force: true }))
@@ -44,15 +35,7 @@ const makeTempDir = async (prefix) => {
 }
 
 const startServer = async (dataRoot, extraEnv = {}) => {
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
-        cwd: await makeTempDir('dii-proposal-cwd-'),
-        env: { ...process.env, PORT: String(port), NODE_ENV: 'test', APP_BASE_PATH: '/serverXR', DATA_ROOT: dataRoot, API_TOKEN: 'test-token', REQUIRE_AUTH: '', CORS_ORIGINS: '*', ...extraEnv },
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
-    let logs = ''
-    child.stdout.on('data', (c) => { logs += c })
-    child.stderr.on('data', (c) => { logs += c })
+    const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd: await makeTempDir('dii-proposal-cwd-'), env: { ...process.env, NODE_ENV: 'test', APP_BASE_PATH: '/serverXR', DATA_ROOT: dataRoot, API_TOKEN: 'test-token', REQUIRE_AUTH: '', CORS_ORIGINS: '*', ...extraEnv } })
     let exited = false
     child.once('exit', () => { exited = true })
     const stop = async () => {
@@ -63,13 +46,7 @@ const startServer = async (dataRoot, extraEnv = {}) => {
     }
     cleanups.push(stop)
     const baseUrl = `http://127.0.0.1:${port}/serverXR`
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (exited) throw new Error(`server exited early\n${logs}`)
-        try { if ((await fetch(`${baseUrl}/api/health`)).ok) return { baseUrl, stop, logs: () => logs } } catch { /* retry */ }
-        await wait(200)
-    }
-    throw new Error(`server not healthy\n${logs}`)
+    return { baseUrl, stop, logs: readLogs }
 }
 
 // The inner bot, as far as di.iiii can tell: it takes POST /approvals and says 200.
@@ -84,8 +61,8 @@ const startFakeBot = async () => {
             res.end('{"ok":true}')
         })
     })
-    const port = await getFreePort()
-    await new Promise((r) => server.listen(port, '127.0.0.1', r))
+    await new Promise((r) => server.listen(0, '127.0.0.1', r))
+    const { port } = server.address()
     cleanups.push(() => new Promise((r) => server.close(r)))
     return { url: `http://127.0.0.1:${port}`, received }
 }
