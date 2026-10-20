@@ -89,6 +89,9 @@ const LOD_HYSTERESIS = 0.02
 
 export const LOD_TIERS = ['block', 'header', 'summary', 'full']
 
+// Arrow key → the direction a selected card moves (audit 2026-10-21 NR-05).
+const CARD_NUDGE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+
 /**
  * Which detail tier a card renders at. Pure, exported for tests.
  * `previous` applies hysteresis so a gesture sitting on a boundary is stable.
@@ -1684,6 +1687,14 @@ export default function RawGraphSurface({
             if (matchesKeyId(event, 'leave') && onLeaveScope) return act(() => onLeaveScope())
             if (matchesKeyId(event, 'rename') && selected && onRenameNode) return act(() => onRenameNode(selected))
             if (matchesKeyId(event, 'keys') && onShowKeys) return act(() => onShowKeys())
+            // The way to place a card without a drag (WCAG 2.1.1, 2.5.7;
+            // audit 2026-10-21 NR-05): 10 graph px a press, Shift ×5.
+            const arrow = CARD_NUDGE[event.key]
+            if (arrow && selected && onMoveNode && !event.metaKey && !event.ctrlKey && !event.altKey) {
+                const node = nodeById.get(selected)
+                const by = event.shiftKey ? 50 : 10
+                return act(() => onMoveNode(selected, (Number(node.graphX) || 0) + arrow[0] * by, (Number(node.graphY) || 0) + arrow[1] * by))
+            }
         }
         if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return
         const rect = event.currentTarget.getBoundingClientRect()

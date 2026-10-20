@@ -1289,3 +1289,23 @@ describe('the canvas in the accessibility tree', () => {
         expect(onDoubleClick).toHaveBeenCalledTimes(1)
     })
 })
+
+describe('moving a card without dragging (WCAG 2.1.1, 2.5.7)', () => {
+    // A card moved by a drag only; no key and no single pointer could place
+    // it (audit 2026-10-21 NR-05). Arrow keys on the canvas move the
+    // selected card 10 graph px, Shift ×5, one move op per press.
+    it('arrow keys move the selected card; Shift moves it 50; nothing selected moves nothing', () => {
+        const onMoveNode = vi.fn()
+        const card = makeNode('value.color', { id: 'c', graphX: 100, graphY: 40 })
+        const { container, rerender } = render(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        fireEvent.keyDown(surface, { key: 'ArrowRight' })
+        expect(onMoveNode).not.toHaveBeenCalled()
+        rerender(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} selectedNodeId="c" />)
+        fireEvent.keyDown(surface, { key: 'ArrowRight' })
+        expect(onMoveNode).toHaveBeenLastCalledWith('c', 110, 40)
+        fireEvent.keyDown(container.querySelector('.raw-graph-node-card'), { key: 'ArrowUp', shiftKey: true })
+        expect(onMoveNode).toHaveBeenLastCalledWith('c', 100, -10)
+        expect(onMoveNode).toHaveBeenCalledTimes(2)
+    })
+})
