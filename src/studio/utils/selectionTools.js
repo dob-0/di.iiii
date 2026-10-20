@@ -14,6 +14,13 @@ export const isHiddenEntity = (entity) => entity?.components?.runtime?.visible =
 /** Entities a click or a box may pick: shown and not locked. */
 export const isPickableEntity = (entity) => Boolean(entity) && !isLockedEntity(entity) && !isHiddenEntity(entity)
 
+/** What G/R/S may move out of a selection: shown and not locked. A hidden object stays selected after
+ *  the Objects window hides it (walked 2026-10-13: G then moved it unseen); a locked one never moves. */
+export const movableEntities = (entities = [], ids = null) => {
+    const wanted = ids ? new Set(ids) : null
+    return (entities || []).filter((entity) => isPickableEntity(entity) && (!wanted || wanted.has(entity.id)))
+}
+
 // The rig build's outside and shell boxes (scripts/rigbuild: rig-out-ground, rig-out-road-*,
 // rig-shell-*) are the building's surroundings, not rig.
 const HALL_ID = /^rig-(out|shell)-/
@@ -32,12 +39,6 @@ export const lockOps = (entities = [], ids = [], locked = true) => {
             type: 'updateComponent',
             payload: { entityId: entity.id, component: 'runtime', patch: { locked: Boolean(locked) } }
         }))
-}
-
-/** Of a selection, what a transform (G/R/S, X/Y/Z, the gizmo) may move: selected, and not locked. */
-export const movableEntities = (entities = [], ids = []) => {
-    const wanted = new Set(ids || [])
-    return (entities || []).filter((entity) => wanted.has(entity.id) && !isLockedEntity(entity))
 }
 
 /** True when a selection has anything a transform may move. An id the list does not know

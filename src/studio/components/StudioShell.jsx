@@ -23,6 +23,7 @@ import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
+import { UI_TOGGLE_EVENT, requestWalk, useWalkMode } from '../navigation/useWalkNavigation.js'
 import { isJamProject, loadJamAllTools, saveAllTools, saveJamAllTools, useAllTools } from '../utils/jamMode.js'
 import { hallEntityIds, isLockedEntity, selectionCanMove } from '../utils/selectionTools.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
@@ -38,6 +39,7 @@ import {
     StructurePanel,
     TimelinePanel,
 } from './StudioShellPanels.jsx'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -94,6 +96,7 @@ const PANEL_ID_MIGRATION = {
 const migratePanelIds = (ids) => (Array.isArray(ids) ? ids.map((id) => PANEL_ID_MIGRATION[id] || id) : ids)
 
 export default function StudioShell({
+    walkBuild = null,
     document,
     // What each layer of the project holds and which are open, from
     // src/project/useProjectLayers.js — null until the real document is here.
@@ -153,8 +156,11 @@ export default function StudioShell({
     onClearLiveProject,
     onMakeSpacePublic,
     onSaveCurrentCamera,
+    views,
+    lightEnv,
     onCopyShareLink,
     onViewLive,
+    previewUrl,
     onExportProject,
     exportStatus,
     onImportProjectFile,
@@ -178,6 +184,9 @@ export default function StudioShell({
     cues = [],
     liveCueId = null,
     onFireCue = null,
+    // The scene editor's two doors (ScenePicker): changes as ops through the Studio's own history, and the desk's GO on a scene.
+    onSceneOps = null,
+    onPlayScene = null,
     // Nodes' things in the room, and which room Studio stands in — the whole
     // room, or the inside of a Geo (StudioEditor; null on the open jam).
     // geoSwitcher: { geos, currentGeoId, onOpenGeo, onNewGeo }
@@ -195,6 +204,13 @@ export default function StudioShell({
     // Blender's Select Box tool (owner 2026-10-12): in Edit, a left drag draws a box and
     // selects what is inside; the Tools row's "Select" button turns it on, Navigate off.
     const [viewportSelectTool, setViewportSelectTool] = useState(false)
+    // Walk / Fly in the cluster (owner, 2026-10-13): the controller lives in the canvas, the buttons only ask it.
+    const walkMode = useWalkMode()
+    useEffect(() => {
+        const toggle = () => setUiHidden((v) => !v)
+        globalThis.document.addEventListener(UI_TOGGLE_EVENT, toggle)
+        return () => globalThis.document.removeEventListener(UI_TOGGLE_EVENT, toggle)
+    }, [])
     const setEditModeFromTools = useCallback((mode) => {
         if (mode === 'navigate') setViewportSelectTool(false)
         if (mode === 'select') {
@@ -205,6 +221,7 @@ export default function StudioShell({
         setViewportEditMode(mode)
     }, [])
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
+    const [viewportGizmoSpace, setViewportGizmoSpace] = useState('world')
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
@@ -433,7 +450,8 @@ export default function StudioShell({
             // gizmo mode + chosen axis (mouse delta moves on that axis immediately).
             // ModalTransform's capture listener owns X/Y/Z once a session is running.
             // T toggles gizmo visibility.
-            if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            // Alt+G/R/S are Clear Location/Rotation/Scale (StudioEditor) — never a grab.
+            if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'
@@ -441,6 +459,10 @@ export default function StudioShell({
                 if (modeForKey) {
                     e.preventDefault()
                     selectGizmoMode(modeForKey)
+                    // Blender: G / R / S with a selection start the transform at once — the mouse moves it,
+                    // X / Y / Z constrain, click or Enter confirm, Esc cancels (ModalTransform.jsx). No handle
+                    // to find, so it works with the Select tool on (owner 2026-10-13: "in Select I can't move").
+                    if (selectedEntityIds.length > 0 && onStartTransform && !transformOp) onStartTransform(modeForKey, null)
                 } else if (['x', 'y', 'z'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
@@ -557,7 +579,8 @@ export default function StudioShell({
     )
 
     const viewportShared = {
-        document,
+        // a Try in the Light environment section draws the viewport with another version's light; nothing is written
+        document: lightEnv?.previewDocument || document,
         selectedEntityId,
         selectedEntityIds,
         onSelectEntity: handleSelectEntity,
@@ -570,6 +593,7 @@ export default function StudioShell({
         boxSelect: viewportSelectTool && viewportEditMode === 'edit',
         onSelectEntities,
         gizmoMode: viewportGizmoMode,
+        gizmoSpace: viewportGizmoSpace,
         gizmoAxis: viewportGizmoAxis,
         gizmoVisible: viewportGizmoVisible,
         transformOp,
@@ -583,6 +607,8 @@ export default function StudioShell({
         onCloseHelp: () => setShowHelp(false),
         rigMirror: rigMirror.on,
         graphRoom,
+        onSceneOps,
+        onPlayScene,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -684,7 +710,7 @@ export default function StudioShell({
         ),
         world: (
             <>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} views={views} lightEnv={lightEnv} />
             </>
         )
     }
@@ -700,7 +726,7 @@ export default function StudioShell({
             />
 
             {loading && (
-                <div className="sfp-overlay-card">Loading project…</div>
+                <LoadingScreen variant="cover" label="Loading project" text="loading the project" waitingFor="the project file" />
             )}
             {loadError && (
                 <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>
@@ -782,11 +808,16 @@ export default function StudioShell({
                         projectName={document?.projectMeta?.title || document?.projectMeta?.id || ''}
                         onViewLive={onViewLive}
                         canViewLive={Boolean(liveProjectState?.isLiveProject)}
+                        previewUrl={previewUrl}
                         editMode={viewportEditMode}
                         onSetEditMode={setEditModeFromTools}
                         selectTool={viewportSelectTool && viewportEditMode === 'edit'}
+                        walkMode={walkMode}
+                        onWalk={requestWalk}
                         gizmoMode={viewportGizmoMode}
                         onSetGizmoMode={selectGizmoMode}
+                        gizmoSpace={viewportGizmoSpace}
+                        onSetGizmoSpace={setViewportGizmoSpace}
                         openPanels={open}
                         onTogglePanel={handleTogglePanel}
                         onFullscreen={handleFullscreen}
@@ -912,7 +943,9 @@ export default function StudioShell({
                 </>
             )}
 
-            {uiHidden && (
+            {walkBuild ? walkBuild(uiHidden) : null}
+
+            {uiHidden && !walkMode && (
                 <button className="sfp-show-ui-btn" onClick={() => setUiHidden(false)} title="Show UI (H)">
                     ≡
                 </button>

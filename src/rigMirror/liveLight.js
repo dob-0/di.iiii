@@ -91,9 +91,11 @@ export function useLiveFixture(index, { mirror } = {}) {
     return fixture
 }
 
-export function useLiveLightEntity(entity, { mirror } = {}) {
-    const fixture = useLiveFixture(fixtureIndexOf(entity), { mirror })
-    return liveLightEntity(entity, fixture)
+// `enabled: false` = the room is lit by something that is not the desk (the Studio's Work light,
+// src/rigbuild/workLight.js): the lamp draws as handed and the store is not watched for it.
+export function useLiveLightEntity(entity, { mirror, enabled = true } = {}) {
+    const fixture = useLiveFixture(enabled ? fixtureIndexOf(entity) : null, { mirror })
+    return enabled ? liveLightEntity(entity, fixture) : entity
 }
 
 export default useLiveLightEntity

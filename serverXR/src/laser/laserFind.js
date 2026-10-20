@@ -79,6 +79,19 @@ const cubeAddressProblem = (ip) => {
 }
 
 /**
+ * Why `ip` cannot be typed into a Laser Out, or null when it can: one unicast host
+ * (cubeAddressProblem) AND in private space (RFC 1918) — a cube is never on the public internet,
+ * and a typo must not send the info question to a stranger. 127.0.0.x only under the test flag.
+ */
+const outAddressProblem = (ip) => {
+    const problem = cubeAddressProblem(ip)
+    if (problem) return problem
+    if (String(ip).startsWith('127.')) return null
+    if (!isPrivateIPv4(ip)) return `${ip} is not a private address (10…, 172.16–31…, 192.168…): a cube is on the local network`
+    return null
+}
+
+/**
  * Every local IPv4 /24 this machine holds in PRIVATE space (RFC 1918: 10/8, 172.16/12, 192.168/16).
  * Everything else is left out and listed in `skipped` (review round 2, 2026-10-14): the Tailscale/
  * CGNAT range 100.64/10 (on aylmo that was 254 packets to tailnet peers), link-local 169.254/16,
@@ -167,7 +180,7 @@ const sweep = ({
         if (!info) return
         // Where the answer came from is the address to drive; the cube's own idea of its IP is kept beside it.
         const key = info.serial || rinfo.address
-        found.set(key, {
+        const entry = {
             serial: info.serial,
             ip: rinfo.address,
             reportedIp: info.ip,
@@ -177,7 +190,10 @@ const sweep = ({
             temperature: info.temperature,
             connectionType: info.connectionType,
             maxDacRate: info.maxDacRate
-        })
+        }
+        // The whole answer, for a Laser Out's address check (the engine arms on it); not in the JSON.
+        Object.defineProperty(entry, 'info', { value: info, enumerable: false })
+        found.set(key, entry)
     })
     socket.bind(0, () => {
         const question = proto.getFullInfo()
@@ -219,4 +235,4 @@ const findCubes = async ({ interfaces, targets, ...rest } = {}) => {
     return { ...out, networks: networks.map((n) => `${n.prefix}.0/24 (${n.name})`), skipped: skippedOf(networks) }
 }
 
-module.exports = { findCubes, sweep, localNetworks, sweepTargets, isIPv4, isPrivateIPv4, networkKind, cubeAddressProblem, explain, SWEEP_WAIT_MS }
+module.exports = { findCubes, sweep, outAddressProblem, localNetworks, sweepTargets, isIPv4, isPrivateIPv4, networkKind, cubeAddressProblem, explain, SWEEP_WAIT_MS }

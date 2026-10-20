@@ -7,6 +7,7 @@ import {
     getGithubAppInfo,
     listGithubRepos
 } from '../../services/serverSpaces.js'
+import LoadingScreen from '../LoadingScreen.jsx'
 
 // Connect a space to a GitHub repo. Pushes to the repo auto-sync the space via
 // the di.iiii GitHub App (serverXR /api/github/webhook). One link per space.
@@ -99,7 +100,7 @@ export default function GithubSyncSection({ space, projects }) {
 
     return (
         <ModuleSection title="GitHub sync" subtitle="Connect a repo — pushes auto-update this space">
-            {link === undefined && <div className="preferences-empty">Loading…</div>}
+            {link === undefined && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading" text="loading" /></div>}
 
             {link === 'denied' && (
                 <div className="preferences-empty">Sign in as the space owner or an admin to manage GitHub sync.</div>

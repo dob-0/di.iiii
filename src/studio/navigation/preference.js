@@ -3,13 +3,13 @@
 // private window or blocked storage must still give the default.
 import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_NAVIGATION_PRESET, normalizeNavigationPreset } from './mappings.js'
-import { normalizeSpeedSetting, normalizeTurnSetting } from './freeMove.js'
+import { DEFAULT_TURN, normalizeSpeedSetting, normalizeTurnSetting } from './freeMove.js'
 import { DEFAULT_MOVE_ID, normalizeMoveId } from './moves.js'
 
 export const NAVIGATION_STORAGE_KEY = 'di.studio.navigation'
 export const ORBIT_SELECTION_STORAGE_KEY = 'di.studio.navigation.orbitSelection'
 export const NAVIGATION_CHANGE_EVENT = 'di:studio-navigation-change'
-// The standard move's settings (freeMove.js): speed ('auto' or metres per wheel notch) and turning ('point' or 'place').
+// The standard move's settings (freeMove.js): speed ('auto' or metres per wheel notch) and turning ('place', the default, or 'point').
 export const SPEED_STORAGE_KEY = 'di.studio.navigation.speed'
 export const TURN_STORAGE_KEY = 'di.studio.navigation.turn'
 // Which named move (moves.js) this device uses; Move 1 until it chooses. With one move the engine does not read it
@@ -73,7 +73,7 @@ export function getTurnPreference() {
     try {
         return normalizeTurnSetting(storage()?.getItem(TURN_STORAGE_KEY))
     } catch {
-        return 'point'
+        return DEFAULT_TURN
     }
 }
 
@@ -111,7 +111,7 @@ export function setSpeedPreference(value) {
     return next
 }
 
-// Returns the value actually in effect (junk -> 'point').
+// Returns the value actually in effect (junk -> DEFAULT_TURN, 'place').
 export function setTurnPreference(value) {
     const next = normalizeTurnSetting(value)
     try {

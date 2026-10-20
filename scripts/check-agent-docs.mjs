@@ -9,7 +9,7 @@ import {
   repoRoot,
   toLf
 } from './sync-agent-docs.mjs'
-import { isFoldBranch, isFoldNotesBranch, isNoiseBranch } from './repo-state-lib.mjs'
+import { CURRENT_MD_RECAP_PATHSPECS, isFoldBranch, isFoldNotesBranch, isNoiseBranch } from './repo-state-lib.mjs'
 
 const normalizePath = (value) => value.split(path.sep).join('/')
 
@@ -192,11 +192,11 @@ const collectCurrentMdFreshnessErrors = () => {
     if (!lastCode) return []
     const depth = execFileSync('git', ['rev-list', '--count', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim()
     if (Number(depth) < 10) return []
-    const lastRecap = execFileSync('git', ['log', '-1', '--format=%cs', '--', 'CURRENT.md'], { cwd: repoRoot, encoding: 'utf8' }).trim()
+    const lastRecap = execFileSync('git', ['log', '-1', '--format=%cs', '--', ...CURRENT_MD_RECAP_PATHSPECS], { cwd: repoRoot, encoding: 'utf8' }).trim()
     if (!lastRecap) return []
     const gapDays = Math.floor((new Date(lastCode) - new Date(lastRecap)) / 86_400_000)
     if (gapDays > CURRENT_MD_GRACE_DAYS) {
-      return [`CURRENT.md freshness: code last changed ${lastCode} but CURRENT.md was last recapped ${lastRecap} (${gapDays} days behind, grace ${CURRENT_MD_GRACE_DAYS}). Run /recap.`]
+      return [`CURRENT.md freshness: code last changed ${lastCode} but CURRENT.md was last recapped ${lastRecap} (CURRENT.md or a session note) (${gapDays} days behind, grace ${CURRENT_MD_GRACE_DAYS}). Add this branch's note in docs/ai/sessions/ (see its README).`]
     }
   } catch {
     return []
