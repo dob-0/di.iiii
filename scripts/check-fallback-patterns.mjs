@@ -26,6 +26,9 @@ const scanRoot = path.join(repoRoot, 'serverXR/src')
 // [file, line-content-substring] pairs already reviewed and confirmed safe.
 // A match here is suppressed; anything else trips the check.
 const ALLOWLIST = [
+  // join.js: the space id the host's join-code peek answered. '' is not used as a
+  // value: the very next line refuses with 'invalid-code' when it is empty.
+  ['join.js', "const spaceId = String(peek.payload?.spaceId || '')"],
   // OAuth token-response `scope` string — not an identity/access-scope value,
   // just the space-delimited permissions string Google returns; '' is a
   // correct empty-permissions default, not a fallback masking a real scope.
