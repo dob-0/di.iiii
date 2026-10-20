@@ -36,7 +36,7 @@ const main = async () => {
     if (!Array.isArray(list)) die(`no desk profile "${profile}"`)
     const fixtures = state.fixtures.filter((f) => f.profile === profile && (args.universe == null || f.universe === Number(args.universe)))
     if (!fixtures.length) die(`no fixture with profile "${profile}"`)
-    const raw = (channels) => fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channels }) })
+    const raw = (channels) => fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ owner: 'wheel-walk', channels }) })
     const cells = (role, value) => fixtures.map((f) => ({ universe: f.universe, channel: channelOf(list, role, f.address), value })).filter((c) => c.channel)
     const roles = ['dimmer', 'strobe', 'color', 'gobo', 'prism', 'aux1', 'frost']
     const release = () => raw(roles.flatMap((r) => cells(r, -1)))

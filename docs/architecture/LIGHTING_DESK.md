@@ -128,9 +128,14 @@ to the desk with the list. Tests: `tests/test-cues.js` (in `lighting.test.js`).
   gzipped when accepted).
 - `GET /light/api/scenes/summary` — `{scenes:[{id,name,fadeMs,live,missing}]}`.
 - `POST /light/api/scenes/recall {id, fadeMs?}`, `POST /light/api/master {master 0..255,
-  blackout}`, `POST /light/api/raw {universe, channel, value}`, `POST /light/api/fx`,
+  blackout}`, `POST /light/api/raw {universe, channel, value, owner?}`, `POST /light/api/fx`,
   `POST /light/api/lfos`, `POST /light/api/scenes/replace` — the full surface is the
   routes table in `desk.js`.
+- Manual holds are **owned** (`holds.js`): every held channel carries the caller's
+  `owner` tag (none = `"owner"`, the desk's own interface). A release (`value: -1`,
+  `{clear:true}`, a scene recall) lets go of the caller's own holds only; the reply says
+  who still holds the rest (`kept`, `refused`). `{clear:true, all:true}` releases
+  everybody's. `GET /light/api/raw` and `state.rawOwners` show who holds each channel.
 - The Raw graph's **DMX Out** node drives the desk (rig `desk`) or a vizzz box on the
   LAN (rig `vizzz`). A map **cue** can carry a desk scene and fires it when played.
 - `GET/POST /light/api/midi` — controller mappings, saved with the show.

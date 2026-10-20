@@ -755,6 +755,72 @@ check('clearing one universe does not catch a similarly numbered one', async () 
   await POST('/api/raw', { clear: true });
 });
 
+check("a session releasing its holds leaves the operator's on (2026-10-17)", async () => {
+  await POST('/api/raw', { clear: true, all: true });
+  // The operator's faders (the interface sends no owner) and a session's own channels.
+  await POST('/api/raw', { channels: [{ universe: 47, channel: 137, value: 200 }, { universe: 47, channel: 138, value: 64 }] });
+  await POST('/api/raw', { owner: 'beam-chat', channels: [{ universe: 47, channel: 10, value: 255 }] });
+  const st = (await GET('/api/state')).body;
+  assert.strictEqual(st.rawOwners['47:137'], 'owner', 'the state says who holds each channel');
+  assert.strictEqual(st.rawOwners['47:10'], 'beam-chat');
+
+  // Per channel: releasing somebody else's hold is refused, and the reply says whose it is.
+  let { body } = await POST('/api/raw', { owner: 'beam-chat', channels: [{ universe: 47, channel: 137, value: -1 }] });
+  assert.deepStrictEqual(body.refused, { owner: 1 });
+  assert.strictEqual(body.raw['47:137'], 200, 'the operator\'s channel is still held');
+
+  // Clear: only the caller's own.
+  body = (await POST('/api/raw', { owner: 'beam-chat', clear: true })).body;
+  assert.strictEqual(body.released, 1);
+  assert.deepStrictEqual(body.kept, { owner: 2 });
+  await settle();
+  assert.strictEqual(await wire(47, 137), 200, 'the laser setting stays on the wire');
+  assert.strictEqual(await wire(47, 10), 0, "the session's own channel let go");
+
+  const list = (await GET('/api/raw')).body;
+  assert.deepStrictEqual(list.holders, { owner: 2 });
+  assert.ok(list.holds.some((h) => h.key === '47:137' && h.value === 200 && h.owner === 'owner'));
+
+  // An old untagged clear releases "owner" holds — and no longer a tagged session's.
+  await POST('/api/raw', { owner: 'la40-player', channels: [{ universe: 47, channel: 20, value: 9 }] });
+  body = (await POST('/api/raw', { clear: true })).body;
+  assert.deepStrictEqual(body.raw, { '47:20': 9 });
+  assert.deepStrictEqual(body.kept, { 'la40-player': 1 });
+
+  // Release-all is the explicit word.
+  body = (await POST('/api/raw', { clear: true, all: true })).body;
+  assert.deepStrictEqual(body.raw, {});
+});
+
+check('a bad owner tag is refused, not taken as the operator', async () => {
+  await POST('/api/raw', { channels: [{ universe: 48, channel: 1, value: 50 }] });
+  const { status, body } = await POST('/api/raw', { owner: 'no spaces allowed', clear: true });
+  assert.strictEqual(status, 400, body && body.error);
+  assert.strictEqual((await GET('/api/state')).body.raw['48:1'], 50);
+  await POST('/api/raw', { clear: true });
+});
+
+check("a recall replaces the recalling hand's holds and keeps a session's", async () => {
+  await POST('/api/raw', { clear: true, all: true });
+  const scene = (await POST('/api/scenes/save', { name: 'No holds', fadeMs: 0 })).body.scene;
+  await POST('/api/raw', { channels: [{ universe: 49, channel: 1, value: 10 }] });
+  await POST('/api/raw', { owner: 'aim-test', channels: [{ universe: 49, channel: 2, value: 20 }] });
+  const { body } = await POST('/api/scenes/recall', { id: scene.id, fadeMs: 0 });
+  assert.strictEqual(body.releasedHolds, 1, "the operator's hold went with the recall");
+  const st = (await GET('/api/state')).body;
+  assert.deepStrictEqual(st.raw, { '49:2': 20 }, "the session's hold stayed");
+  await POST('/api/raw', { clear: true, all: true });
+  await POST('/api/scenes/remove', { id: scene.id });
+});
+
+check('hold owners survive a reload of the show file', async () => {
+  await POST('/api/raw', { owner: 'wheel-walk', channels: [{ universe: 50, channel: 3, value: 33 }] });
+  await sleep(700);   // save() debounces at 400ms
+  const disk = JSON.parse(fs.readFileSync(path.join(process.env.DATA_DIR, 'show.json'), 'utf8'));
+  assert.strictEqual(disk.rawOwners['50:3'], 'wheel-walk');
+  await POST('/api/raw', { owner: 'wheel-walk', clear: true });
+});
+
 check('a fader bank survives a reload of the show file', async () => {
   await POST('/api/raw', { channels: [{ universe: 43, channel: 5, value: 111 }] });
   await sleep(700);   // save() debounces at 400ms

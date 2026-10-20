@@ -31,7 +31,7 @@ const E = withFixtureOverlay((await c.get(`/api/projects/${project}/document`)).
 const library = libraryWithShow(loadLibrary(), E)
 const rig = (await (await fetch(`${desk}/api/rig?project=${encodeURIComponent(project)}`)).json()).fixtures
 const state = await (await fetch(`${desk}/api/state`)).json()
-const raw = (channels) => fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channels }) })
+const raw = (channels) => fetch(`${desk}/api/raw`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ owner: 'aim-test', channels }) })
 const lamps = ids.map((id) => {
     const f = rig.find((x) => x.key === `${project}:${id}`) || die(`${id} is not on the desk`)
     const e = E.find((x) => x.id === id); const fx = e.components.fixture
