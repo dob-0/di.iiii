@@ -204,4 +204,19 @@ describe('GET /api/resolve/:space — the old space root forwards to its front d
         expect(space.space?.publishedProjectId ?? space.publishedProjectId ?? null).toBeNull()
         expect((await resolveRoot('alpha', ADMIN)).status).toBe(404)
     })
+
+    it('a new space made under a purged space\'s name never had a move: nothing to forward', async () => {
+        // A space id is its name, and a purge frees the name (spaceTrashContracts).
+        // delta's front door leaves for gallery, delta is trashed and purged, and
+        // a NEW delta is made: the old move must not send the new space's address on.
+        await ok(await send('POST', '/api/spaces', ADMIN, { label: 'delta', slug: 'delta' }), 201)
+        await ok(await send('POST', '/api/spaces/delta/projects', ADMIN, { title: 'Delta door', slug: 'delta-door' }), 201)
+        await ok(await send('PATCH', '/api/spaces/delta', ADMIN, { publishedProjectId: 'delta-door' }))
+        await ok(await send('POST', '/api/projects/delta-door/move', ADMIN, { toSpace: 'gallery', unpublish: true }))
+        expect((await resolveRoot('delta', ADMIN)).status).toBe(200)
+        await ok(await send('DELETE', '/api/spaces/delta', ADMIN))
+        await ok(await send('DELETE', '/api/spaces/delta/purge', ADMIN))
+        await ok(await send('POST', '/api/spaces', ADMIN, { label: 'delta', slug: 'delta' }), 201)
+        expect((await resolveRoot('delta', ADMIN)).status).toBe(404)
+    })
 })

@@ -173,4 +173,17 @@ describe('the space root forward (project_moves.forwards_space_root)', () => {
     w.db.prepare("UPDATE spaces SET published_project_id = NULL WHERE id = 'src'").run()
     expect(findSpaceRootMove('src')).toBeNull()
   })
+
+  it('a space deleted for good forwards nothing, so a new space of that name starts clean', async () => {
+    const w = world()
+    w.project('src', 'p1')
+    w.db.prepare("UPDATE spaces SET published_project_id = 'p1' WHERE id = 'src'").run()
+    await mv(w, { unpublish: true })
+    // The Trash is a soft delete (an UPDATE): the forward waits for a restore.
+    w.db.prepare("UPDATE spaces SET deleted_at = ? WHERE id = 'src'").run(Date.now())
+    expect(flag(w)).toBe(1)
+    w.db.prepare("DELETE FROM spaces WHERE id = 'src'").run()
+    expect(flag(w)).toBe(0)
+    expect(findSpaceRootMove('src')).toBeNull()
+  })
 })

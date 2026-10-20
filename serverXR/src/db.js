@@ -738,6 +738,16 @@ function initDb(dbPath) {
     BEGIN
       UPDATE project_moves SET forwards_space_root = 0 WHERE from_space = NEW.id AND forwards_space_root = 1;
     END`)
+  // A space row deleted for good (purge, the stale sweep, a sandbox re-homed)
+  // forwards nothing. A space id is its name and a purge frees the name, so a
+  // NEW space made under it never had a move and must not inherit the old
+  // space's forward (project_moves has no foreign key to spaces). A soft delete
+  // (the Trash) is an UPDATE and keeps the forward for a restore.
+  db.exec(`CREATE TRIGGER IF NOT EXISTS project_moves_space_root_gone
+    AFTER DELETE ON spaces
+    BEGIN
+      UPDATE project_moves SET forwards_space_root = 0 WHERE from_space = OLD.id AND forwards_space_root = 1;
+    END`)
   // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
   // `state` replaces the only archive the platform had: five titles with
   // "[archived]" typed in front of them, which filtered nothing.

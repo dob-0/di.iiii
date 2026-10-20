@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
+import { setHostSpace } from './utils/hostSpace.js'
 
 const mockUseAuthSession = vi.fn(() => ({
     requireAuth: false,
@@ -495,6 +496,22 @@ describe('RootApp space root forward', () => {
 
         expect(await screen.findByText('space-surface-app:editor:old-space')).toBeInTheDocument()
         expect(window.location.pathname).toBe('/old-space/p/kept')
+    })
+
+    it('on the space\'s own domain the space opens as before: another space has no address there', async () => {
+        // `/` on the domain IS the space. /new-space/p/old-door stays domain-relative
+        // and reads back as a project slug of the host space (spaceRouting withHostSpace).
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        setHostSpace({ id: 'old-space', slug: 'old-space', platformOrigin: 'https://diiii.xyz' })
+        try {
+            window.history.pushState({}, '', '/')
+            render(<RootApp />)
+
+            expect(await screen.findByText('space-surface-app:editor:old-space')).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/')
+        } finally {
+            setHostSpace(null)
+        }
     })
 })
 
