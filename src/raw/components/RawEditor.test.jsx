@@ -1994,3 +1994,13 @@ describe('RawEditor: one bar (audit row 5)', () => {
         expect(screen.getByRole('region', { name: 'Help' })).toBeTruthy()
     })
 })
+
+// The section that takes dropped files is the canvas, and is named as the
+// canvas region (it was a nameless section with drop handlers, 2026-10-21).
+describe('RawEditor canvas region', () => {
+    it('the drop surface is a region named Canvas, holding the graph', () => {
+        render(<RawEditor localStorageKey="test-canvas-region" />)
+        const region = screen.getByRole('region', { name: 'Canvas' })
+        expect(region.classList.contains('raw-surface-shell')).toBe(true)
+    })
+})
