@@ -1068,14 +1068,18 @@ rule `floor`, as before #1050); open sky is a ray that does not go down; the lam
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
 
-## `di update` on the dev channel failed on any 429 from the hub's edge, and the error did not say who answered (2026-10-21)
+## `di update` on the dev channel failed on any 429 from the hub, and the error did not say who answered (2026-10-21)
 
 Symptom: `could not read the hub's health (https://dev.diiii.xyz: 429)`. Measured on one install 10-19..10-21: 5 of 12 update runs failed with 429, four in a row 23:30-00:16 +04;
-manual probes with curl and Node fetch returned 200. serverXR's own limiters (`createRateLimiter` in `serverXR/src/index.js`) are route-specific and none covers `/api/health`, so the 429
-most likely comes from the edge in front of the hub (not proven: the old line carried no header to tell). Fix: `hubCommit` (`scripts/di/channels.mjs`) retries on 429 and 503 only:
-Retry-After (seconds or HTTP date) when given, else 2 s, 4 s, 8 s; at most 3 retries, at most 30 s of waiting in all; the per-request timeout is unchanged. When it still fails the one error
-line names status, `server`, `cf-ray`, `retry-after`, the retry count and the first 120 characters of the body. A 500 and every other status fail at once, as before.
-Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (6 cases, injected `fetchImpl` and `sleep`; all 6 fail on the old code).
+manual probes with curl and Node fetch returned 200. Cause (code reading plus a measurement on a test copy; live proof still owed): serverXR's visitor bouncer
+(`createVisitorBouncer`, `serverXR/src/appVisitors.js`, mounted in `serverXR/src/index.js`) gives a program with no session, API token or sync key and a User-Agent without a contact
+in parentheses (Node's default `node`) the anonymous read allowance — 30 API reads a minute per address, against 300 for an identified app — shared with every other unnamed program
+from that address. The health read sent no User-Agent of its own. Fix: (d) the health read sends `User-Agent: di/<installed version> (+https://diiii.xyz/for-apps)`, which `classifyUserAgent`
+counts as an app; (a) `hubCommit` retries on 429 and 503 only: Retry-After (seconds or HTTP date) when given, else 2 s, 4 s, 8 s; at most 3 retries, at most 30 s of waiting in all; the per-request
+timeout is unchanged; (b) when it still fails the one error line names status, `server`, `x-powered-by`, `cf-ray`, `retry-after`, the retry count and the first 120 characters of the body
+(behind Cloudflare `server: cloudflare` and `cf-ray` come on every answer, serverXR's own included, measured on dev 2026-10-21; `x-powered-by: Express` and serverXR's JSON body mark an answer from serverXR). A 500 and every other status fail at once, as before.
+scripts/di has no shared request helper; the other hub requests in `scripts/di` still send Node's default User-Agent.
+Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (7 cases, injected `fetchImpl` and `sleep`) and "di names itself to the hub…" (2 cases, one runs serverXR's own `classifyUserAgent`); all 9 fail on the old code.
 
 ## di.iiii's own requests to another di.iiii were counted there as an anonymous program (30 API reads a minute, not 300) (2026-10-21)
 
@@ -1089,3 +1093,4 @@ request that does not name its own User-Agent (follower, file chase, machine lin
 Guards: `serverXR/src/diUserAgent.test.js` (10 cases: real classifier, real sockets, the real recorder+bouncer in express — 40 reads with the header all 200, 40 as `node` give 30 × 200 and
 10 × 429) and `scripts/di/userAgent.test.js` (8) plus one case in `scripts/di/login.test.js`; 9 cases fail with the source changes reverted. `scripts/di/move.test.js` checks the header on
 `di move --from` (fails on the old `cli.mjs`: it sent `node`).
+The health read's own name from #1053 (`di/<installed version>`) is now `di.iiii/<installed version>` via `diUserAgent`, so a hub's guest book has one name for one program.

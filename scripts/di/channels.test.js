@@ -10,8 +10,9 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { parseArgs } from './args.mjs'
-import { devRelease, hubCommit, hubUrl, isChannel, retryAfterMs } from './channels.mjs'
+import { devRelease, hubCommit, hubUrl, isChannel, retryAfterMs, userAgent } from './channels.mjs'
 import { stageVersion } from './install.mjs'
+import { classifyUserAgent } from '../../serverXR/src/appVisitors.js'
 
 const SHA_A = 'a'.repeat(8) + 'b'.repeat(32)
 const SHA_B = 'c'.repeat(8) + 'd'.repeat(32)
@@ -131,12 +132,31 @@ describe('the health read waits out a 429 or 503 and says who answered when it g
         await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([r, r, r, r]), sleep: async () => {} }))
             .rejects.toThrow("could not read the hub's health (https://h: 503; retry-after 1; after 3 retries; no body)")
     })
+    it('names x-powered-by, which marks serverXR behind Cloudflare (server and cf-ray come on every answer)', async () => {
+        const bounced = { status: 429, headers: { server: 'cloudflare', 'x-powered-by': 'Express', 'cf-ray': 'a4db4dc48bf9d94c-EVN', 'retry-after': '1' }, body: '{"error":"Too many requests from this address by an unidentified program — retry in 1s."}' }
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([bounced, bounced, bounced, bounced]), sleep: async () => {} }))
+            .rejects.toThrow('(https://h: 429; server cloudflare; x-powered-by Express; cf-ray a4db4dc48bf9d94c-EVN; retry-after 1; after 3 retries; body "{\\"error\\":\\"Too many requests from this address by an unidentified program')
+    })
     it('does not retry a 500', async () => {
         const calls = []; const slept = []
         await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([{ status: 500, body: 'boom' }], calls), sleep: async (ms) => { slept.push(ms) } }))
             .rejects.toThrow("could not read the hub's health (https://h: 500; body \"boom\")")
         expect(calls).toHaveLength(1)
         expect(slept).toEqual([])
+    })
+})
+
+describe('di names itself to the hub, so the bouncer counts it as an identified app', () => {
+    it('sends a User-Agent with its version and a contact on the health read', async () => {
+        const seen = []
+        const fetchImpl = async (url, init) => { seen.push(init.headers['User-Agent']); return { ok: true, status: 200, json: async () => ({ release: { gitCommit: SHA_A } }) } }
+        await devRelease({ hub: 'https://h', installed: `0.4.16-dev.${'a'.repeat(8)}`, fetchImpl })
+        expect(seen).toEqual(['di.iiii/0.4.16-dev.aaaaaaaa (+https://diiii.xyz/for-apps)'])
+    })
+    it('is classified as an app by serverXR, where Node\'s default is anonymous', () => {
+        expect(classifyUserAgent(userAgent('0.4.16'))).toMatchObject({ kind: 'app', name: 'di.iiii', contact: 'https://diiii.xyz/for-apps' })
+        expect(classifyUserAgent(userAgent(null))).toMatchObject({ kind: 'app', name: 'di.iiii' })
+        expect(classifyUserAgent('node').kind).toBe('anonymous')
     })
 })
 
