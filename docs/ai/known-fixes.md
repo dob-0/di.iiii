@@ -21,6 +21,10 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
+
+Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.
+
 ## A new node's card window opened over its own node (Raw, 2026-10-20)
 
 Cause: the graph surface published its screen origin only on pan/zoom/resize, but the surface moves (~57 px) when the first node lands, so every world window rendered off its card by the stale origin. Fix: `RawGraphSurface` re-measures on ResizeObserver and one frame after a pan. Guard: `src/raw/components/RawGraphSurface.origin.test.jsx`. Note: `docs/ai/sessions/fix-raw-card-window-placement-2026-10-20.md`.
