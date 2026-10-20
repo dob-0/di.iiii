@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../place/common.mjs'
 import { buildRig } from '../place/rig-lib.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
-import { atHeight, inLantern } from './safety.mjs'
+import { atHeight, inLantern, lanternFailures } from './safety.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
@@ -36,5 +36,19 @@ describe('lasers clear the roof lanterns', () => {
         for (let i = 0; i < hits.length; i += 1) for (let j = i + 1; j < hits.length; j += 1) {
             expect(Math.hypot(hits[i].at[0] - hits[j].at[0], hits[i].at[2] - hits[j].at[2]), `${hits[i].id} / ${hits[j].id}`).toBeGreaterThan(1)
         }
+    })
+})
+
+describe('lanternFailures (the shared rule)', () => {
+    const g = { deck_m: 10, lanterns: [{ x_m: [-1, 1], z_m: [-1, 1] }] }
+    const up = [0, 1, 0]
+    it('passes beams that land on solid deck, spread out', () => {
+        expect(lanternFailures([{ id: 'a', from: [5, 4, 5], dir: up }, { id: 'b', from: [8, 4, 5], dir: up }], g)).toEqual([])
+    })
+    it('can fail: a beam straight up into a lantern, one that never rises, two converging', () => {
+        const f = lanternFailures([{ id: 'in', from: [0, 4, 0], dir: up }, { id: 'flat', from: [5, 4, 5], dir: [1, 0, 0] }, { id: 'c1', from: [5, 4, 5], dir: up }, { id: 'c2', from: [5.5, 4, 5], dir: up }], g)
+        expect(f.join('|')).toMatch(/in: lands in a roof lantern/)
+        expect(f.join('|')).toMatch(/flat: never rises/)
+        expect(f.join('|')).toMatch(/c1 \/ c2: land 0.50 m apart/)
     })
 })
