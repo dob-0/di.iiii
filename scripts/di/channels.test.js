@@ -10,8 +10,9 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { parseArgs } from './args.mjs'
-import { devRelease, hubCommit, hubUrl, isChannel, retryAfterMs } from './channels.mjs'
+import { devRelease, hubCommit, hubUrl, isChannel, retryAfterMs, userAgent } from './channels.mjs'
 import { stageVersion } from './install.mjs'
+import { classifyUserAgent } from '../../serverXR/src/appVisitors.js'
 
 const SHA_A = 'a'.repeat(8) + 'b'.repeat(32)
 const SHA_B = 'c'.repeat(8) + 'd'.repeat(32)
@@ -137,6 +138,20 @@ describe('the health read waits out a 429 or 503 and says who answered when it g
             .rejects.toThrow("could not read the hub's health (https://h: 500; body \"boom\")")
         expect(calls).toHaveLength(1)
         expect(slept).toEqual([])
+    })
+})
+
+describe('di names itself to the hub, so the bouncer counts it as an identified app', () => {
+    it('sends a User-Agent with its version and a contact on the health read', async () => {
+        const seen = []
+        const fetchImpl = async (url, init) => { seen.push(init.headers['User-Agent']); return { ok: true, status: 200, json: async () => ({ release: { gitCommit: SHA_A } }) } }
+        await devRelease({ hub: 'https://h', installed: `0.4.16-dev.${'a'.repeat(8)}`, fetchImpl })
+        expect(seen).toEqual(['di/0.4.16-dev.aaaaaaaa (+https://diiii.xyz/for-apps)'])
+    })
+    it('is classified as an app by serverXR, where Node\'s default is anonymous', () => {
+        expect(classifyUserAgent(userAgent('0.4.16'))).toMatchObject({ kind: 'app', name: 'di', contact: 'https://diiii.xyz/for-apps' })
+        expect(classifyUserAgent(userAgent(null))).toMatchObject({ kind: 'app', name: 'di' })
+        expect(classifyUserAgent('node').kind).toBe('anonymous')
     })
 })
 

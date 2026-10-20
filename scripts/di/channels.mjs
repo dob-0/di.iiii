@@ -46,14 +46,23 @@ const timed = async (fetchImpl, url, init, timeoutMs) => {
     }
 }
 
-// The hub sits behind an edge that answers 429 now and then (5 of 12 update
-// runs on one install, 2026-10-19..21, while curl and fetch by hand got 200);
-// serverXR's own limiters do not cover /api/health. 429 and 503 are "try
-// again later", so the health read waits and asks again; anything else fails
-// at once.
+// The hub answered the update check 429 now and then (5 of 12 runs on one
+// install, 2026-10-19..21). serverXR's visitor bouncer (appVisitors.js) gives a
+// program that does not say who it is a small read allowance, shared with every
+// other unnamed program from the same address — so di names itself (below), and
+// still treats 429 and 503 as "try again later": it waits and asks again;
+// anything else fails at once.
 const RETRY_STATUSES = new Set([429, 503])
 export const HEALTH_BACKOFF_MS = [2000, 4000, 8000]
 export const HEALTH_WAIT_CAP_MS = 30000
+
+/**
+ * How di names itself to a hub: a product token and a contact in parentheses,
+ * which is what serverXR/src/appVisitors.js `classifyUserAgent` counts as an
+ * identified app (Node's default `node` is counted as anonymous).
+ */
+export const userAgent = (version) =>
+    `di/${String(version || '').trim().replace(/[^A-Za-z0-9._+-]/g, '') || 'unknown'} (+https://diiii.xyz/for-apps)`
 
 const realSleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -93,13 +102,13 @@ const healthFailure = async (hub, response, retries) => {
  * On 429/503 it waits (Retry-After, else 2 s, 4 s, 8 s) and asks again, at
  * most 3 times and 30 s of waiting in all; `timeoutMs` is per request.
  */
-export const hubCommit = async ({ hub = DEFAULT_HUB, fetchImpl = fetch, timeoutMs = 0, sleep = realSleep, now = Date.now } = {}) => {
+export const hubCommit = async ({ hub = DEFAULT_HUB, version = null, fetchImpl = fetch, timeoutMs = 0, sleep = realSleep, now = Date.now } = {}) => {
     const url = `${hub}/serverXR/api/health`
     let response
     let retries = 0
     let waited = 0
     for (;;) {
-        response = await timed(fetchImpl, url, { headers: { Accept: 'application/json' } }, timeoutMs)
+        response = await timed(fetchImpl, url, { headers: { Accept: 'application/json', 'User-Agent': userAgent(version) } }, timeoutMs)
         if (response.ok || !RETRY_STATUSES.has(response.status) || retries >= HEALTH_BACKOFF_MS.length) break
         const asked = retryAfterMs(header(response, 'retry-after'), now())
         const wait = Math.min(asked ?? HEALTH_BACKOFF_MS[retries], HEALTH_WAIT_CAP_MS - waited)
@@ -153,7 +162,7 @@ export const releaseFromChecksums = async ({ commit, fetchImpl = fetch, timeoutM
  * Returns `{ release }`, `{ current: true }` or `{ release: null, pending }`.
  */
 export const devRelease = async ({ hub = DEFAULT_HUB, installed = null, fetchImpl = fetch, timeoutMs = 0, sleep = realSleep } = {}) => {
-    const commit = await hubCommit({ hub, fetchImpl, timeoutMs, sleep })
+    const commit = await hubCommit({ hub, version: installed, fetchImpl, timeoutMs, sleep })
     const sha8 = commit.slice(0, 8)
     if (installed && String(installed).endsWith(`-dev.${sha8}`)) return { current: true, commit }
     const release = await releaseFromChecksums({ commit, fetchImpl, timeoutMs })
