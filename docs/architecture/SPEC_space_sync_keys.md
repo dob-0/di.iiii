@@ -214,8 +214,10 @@ space is this one)`, and the move adds the checks in item 4 (`keyMoveWidensAcces
   is taken from the JSON body (`alsoSyncKey`) and deleted from the body at once, so nothing downstream can echo or
   log it (review L4: proxies redact `Authorization`, not custom headers — the earlier `X-Di-Sync-Key-Also` header is
   no longer read). It must itself be a `manage` key; it is kept apart (`alsoSyncKey`) and is not added to `spaces`,
-  so it grants no read, write or editor right. A second key that does not resolve makes the request
-  unauthenticated (fail closed).
+  so it grants no read, write or editor right. A second key that does not resolve (unknown, revoked, expired) or is
+  the bearer itself makes the request unauthenticated (401, fail closed). One that resolves but is only an `edit` key
+  is a valid key without the scope: it reaches the move route with its scope, and the route answers 403
+  `sync_key_needs_both` — the same answer as an `edit` key as the bearer (2026-10-20).
 - The four routes call `canManageProjectsState` where they called `isSpaceOwnerOrAdminState`. Nothing else does.
 
 ### 13.4 Who can mint one (T3 holds)
@@ -305,7 +307,7 @@ It answers with what it did and what it did not, and why; each step is written t
 | T8 | Two `manage` keys of the same owner leak together (a follower's follows.json holds one per followed space) | Projects moved between those two spaces (≤ 10 an hour), only where nobody new gains access (§13.2 item 4). The undo of either key moves them back. A key of **another** owner never pairs with it (review C1: an account anyone can register cannot be the second key). |
 | T9 | A `manage` key used to publish or expose | Making a project public, the space's own settings and `unpublish` stay owner-or-admin. A key's move is refused into the communal open space (whatever its kind) or any `GUEST_SPACES` entry; into a space open to visitors (unless the project is private or the source is open too); into a space shared with an account or a static token the source is not shared with; into one with invite links or other keys out; and whenever the audience cannot be counted (fail closed). |
 | T10 | A key or a token mints a `manage` key, or upgrades itself | Mint needs a session stamped `via:'signin'` by a sign-in door, carried through every re-issue, with a real account — or the owner at the machine (§13.4). Bearer tokens, sync keys and sessions made from a token are refused. **Requires `AUTH_SESSION_SECRET` set apart from the API tokens**; otherwise session mints are switched off and the server warns at startup. The scope is fixed at mint; no route changes it. |
-| T11 | A second key smuggled in to widen a request | `alsoSyncKey` is read only on the move route, only behind a sync key, must itself be a valid `manage` key of the same owner, and is not added to the editor scope. A bad one fails the request closed. It travels in the body, not a header a proxy might log. |
+| T11 | A second key smuggled in to widen a request | `alsoSyncKey` is read only on the move route, only behind a sync key, must itself be a valid `manage` key of the same owner, and is not added to the editor scope. A bad one fails the request closed (401 if it does not resolve, 403 if it is only an `edit` key). It travels in the body, not a header a proxy might log. |
 | T12 | Mass trash or log flooding through many requests | Host-side counts per key under a per-key lock (§13.5), from the persistent log; refusals capped so they cannot hide done actions or grow the table (§13.6); the follower's own 5-per-pass and never-empty guards on top. |
 | T13 | A manage key sent over plain http and sniffed | Refused by the client before it is sent, on any network (§13.4); the follower checks the address pin, not only the URL's name (review R2-D). |
 | T14 | A lying (or intercepted) host makes the follower take back its own trash | The follower believes a trash made on the host only once the host's trash lists it (SPEC_follow.md). |

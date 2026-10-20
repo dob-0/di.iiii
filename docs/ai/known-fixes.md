@@ -943,3 +943,18 @@ If you add a wildcard route, add that check with it.
 ## A stopped follow still applied the edit its parked read came back with
 
 `follower.js` `stop()` only set a flag; a read parked on the other di.iiii (up to 20 s) was not aborted, and when the host's next edit ended the park the pass wrote it here even though the follow was stopped — "a stopped follow changes nothing more" was true only between reads. Seen when the project-life carry (#800) was merged onto dev: "agrees on the host's value when both sides change the same field" got a 409 on 4 of 4 full-file runs (the follower already held the host's op). **Fix:** `stop()` aborts the parked read, and a pass that comes back from the read after `stop()` returns without writing. Guard: that same test in `serverXR/src/follow/followIntegration.test.js` (4/4 full-file runs green after, 0/4 before).
+
+## A valid edit key as the second key of a move answered 401, not 403
+
+Symptom: `POST /api/projects/:id/move` with a manage key as the bearer and an `edit` key of the target space as
+`alsoSyncKey` answered `401 Unauthorized` ("sign in again"), while an `edit` key as the bearer answered 403. The key
+was valid; it only lacked the `manage` scope. Cause: `getAuthState` (serverXR/src/index.js) failed the whole request
+when the second key's scope was not `manage`, before the route could judge it. Fix (PR #811, 2026-10-20): only a
+second key that does not resolve, or is the bearer itself, fails the request (401); an `edit` one rides on with its
+scope and the move route's `managesTo` check answers 403 `sync_key_needs_both`. Nothing moves either way.
+Guard: `serverXR/src/syncKeyManage.test.js` "the manage scope is opt-in, and the server checks it on every manage
+action" (3 cases: opt-in only on `manage: true`; every edit/manage mix on a move is 403; a revoked manage key is 401
+on trash, hide and move). Measured: 2 of 21 failed before the fix, 21/21 after; with the server's scope check
+removed (`canManageProjectsState` reading `spaces` instead of `manageSpaces`) 2 of 21 fail, so the check is held on
+the server, not in a UI.
+

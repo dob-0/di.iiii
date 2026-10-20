@@ -984,7 +984,12 @@ const getAuthState = (req, res = null) => {
       if (isMove && req.body && typeof req.body === 'object') delete req.body.alsoSyncKey
       if (alsoRaw) {
         const also = resolveSyncKey(alsoRaw)
-        if (!also || also.scope !== 'manage' || also.keyId === sk.keyId) {
+        // A second key that does not resolve (unknown, revoked, expired) or is
+        // the bearer itself fails the request: 401. One that resolves but is
+        // only an edit key is a real credential without the scope: it rides on
+        // with its scope, and the move route answers 403 (a 401 here would say
+        // "sign in again" to a key that is valid; #811 finish, 2026-10-20).
+        if (!also || also.keyId === sk.keyId) {
           return buildAuthState({ authenticated: false, type: 'sync-key', reason: 'second-key' })
         }
         alsoSyncKey = { keyId: also.keyId, label: also.label || '', spaceId: also.spaceId, scope: also.scope, ownerUserId: also.ownerUserId || null }

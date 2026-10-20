@@ -38,7 +38,7 @@ const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({
     session: { subject: 'owner-under-test', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0, via: 'signin' }
 }).value}`
 
-const call = async (route, { method = 'GET', body = null, token = null, cookie = null, also = null } = {}) => {
+const call = async (route, { method = 'GET', body = null, token = null, cookie = null, also = null, from = null } = {}) => {
     // The second key of a move rides in the body (review L4), never a header.
     const sent = also ? { ...(body || {}), alsoSyncKey: also } : body
     const response = await fetch(`${server.baseUrl}${route}`, {
@@ -47,7 +47,9 @@ const call = async (route, { method = 'GET', body = null, token = null, cookie =
             Accept: 'application/json',
             ...(sent ? { 'Content-Type': 'application/json' } : {}),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(cookie ? { Cookie: cookie } : {})
+            ...(cookie ? { Cookie: cookie } : {}),
+            // The host's per-address limits key on this (rateLimit.js clientKey).
+            ...(from ? { 'X-Forwarded-For': from } : {})
         },
         ...(sent ? { body: JSON.stringify(sent) } : {})
     })
@@ -56,10 +58,10 @@ const call = async (route, { method = 'GET', body = null, token = null, cookie =
 const asAdmin = (route, options = {}) => call(route, { ...options, token: ADMIN_TOKEN })
 const asOwner = (route, options = {}) => call(route, { ...options, cookie: ownerCookie })
 
-const mint = async (spaceId, { manage = false, by = 'owner', label = null } = {}) => {
+const mint = async (spaceId, { manage = false, by = 'owner', label = null, from = null } = {}) => {
     const route = `/api/spaces/${spaceId}/sync-keys`
     const body = { label: label || `${manage ? 'manage' : 'edit'} ${spaceId}`, ...(manage ? { manage: true } : {}) }
-    return by === 'owner' ? asOwner(route, { method: 'POST', body }) : call(route, { method: 'POST', body, token: by })
+    return by === 'owner' ? asOwner(route, { method: 'POST', body, from }) : call(route, { method: 'POST', body, token: by, from })
 }
 const tokenOf = (answer) => {
     expect(answer.status).toBe(201)
@@ -279,7 +281,8 @@ describe('a manage key, on its one space only', () => {
         expect(viaHeader.status).toBe(403)
         // An edit key of the other space is not enough — and a bad second key fails the request closed.
         const editTo = await mint('move-to')
-        expect((await call(`/api/projects/${project.id}/move`, { method: 'POST', token: keyFrom, also: editTo.payload.token, body: { toSpace: 'move-to' } })).status).toBe(401)
+        // A valid key without the scope is a 403; one that does not resolve is a 401.
+        expect((await call(`/api/projects/${project.id}/move`, { method: 'POST', token: keyFrom, also: editTo.payload.token, body: { toSpace: 'move-to' } })).status).toBe(403)
         expect((await call(`/api/projects/${project.id}/move`, { method: 'POST', token: keyFrom, also: 'dii_sync_mnothing.wrong', body: { toSpace: 'move-to' } })).status).toBe(401)
         // That edit key is one more holder who would newly see the project: refused, until it is taken back.
         const widened = await call(`/api/projects/${project.id}/move`, { method: 'POST', token: keyFrom, also: keyTo, body: { toSpace: 'move-to' } })
@@ -427,5 +430,56 @@ describe('the host limits each key, and the owner undoes it all in one action', 
         // The key is dead.
         expect((await call('/api/sync-keys/self', { token: key })).status).toBe(404)
         expect((await call(`/api/projects/${hidden.id}`, { method: 'DELETE', token: key })).status).toBe(401)
+    })
+})
+
+// The scope is opt-in and checked by the server on every manage action
+// (PR #811 finish, 2026-10-20). Every request below goes straight to the HTTP
+// API, as a leaked key would: no UI stands in front of it.
+describe('the manage scope is opt-in, and the server checks it on every manage action', () => {
+    // Its own address: the rest of this file already spends most of the
+    // 30 mints per 10 minutes one address may make (index.js syncKeyMintLimiter).
+    const from = '198.51.100.81'
+    it('only `manage: true` (the JSON boolean) mints a manage key; anything else stays edit', async () => {
+        for (const body of [{ manage: 'true' }, { manage: 1 }, { manage: 'yes' }, { scope: 'manage' }, {}]) {
+            const answer = await asOwner('/api/spaces/space-a/sync-keys', { method: 'POST', from, body: { label: 'opt-in check', ...body } })
+            expect(answer.status, JSON.stringify(body)).toBe(201)
+            expect(answer.payload.key.scope, JSON.stringify(body)).toBe('edit')
+            expect(answer.payload.limits ?? null).toBe(null)
+        }
+    })
+
+    it('a move needs a MANAGE key of both spaces: an edit key on either side is a 403, and nothing moves', async () => {
+        const manageA = tokenOf(await mint('space-a', { manage: true, from }))
+        const manageB = tokenOf(await mint('space-b', { manage: true, from }))
+        const editA = tokenOf(await mint('space-a', { from }))
+        const editB = tokenOf(await mint('space-b', { from }))
+        const project = await makeProject('space-a', 'mixed-scope-move')
+        const tries = [
+            { token: editA, also: manageB },
+            { token: manageA, also: editB },
+            { token: editA, also: editB }
+        ]
+        for (const [index, { token, also }] of tries.entries()) {
+            const answer = await call(`/api/projects/${project.id}/move`, { method: 'POST', token, also, body: { toSpace: 'space-b' } })
+            expect(answer.status, `try ${index}: ${JSON.stringify(answer.payload)}`).toBe(403)
+            expect(answer.payload?.code).toBe('sync_key_needs_both')
+        }
+        expect(await liveIn('space-a', project.id)).toBeTruthy()
+        expect(await liveIn('space-b', project.id)).toBe(null)
+    })
+
+    it('a revoked manage key loses every manage action at once (401), and nothing changes', async () => {
+        const minted = await mint('space-a', { manage: true, from })
+        const key = tokenOf(minted)
+        const manageB = tokenOf(await mint('space-b', { manage: true, from }))
+        const project = await makeProject('space-a', 'revoked-key-target')
+        expect((await asOwner(`/api/spaces/space-a/sync-keys/${minted.payload.key.id}`, { method: 'DELETE' })).status).toBe(200)
+        expect((await call(`/api/projects/${project.id}`, { method: 'DELETE', token: key })).status).toBe(401)
+        expect((await call(`/api/projects/${project.id}`, { method: 'PATCH', token: key, body: { visibility: 'private' } })).status).toBe(401)
+        expect((await call(`/api/projects/${project.id}/move`, { method: 'POST', token: key, also: manageB, body: { toSpace: 'space-b' } })).status).toBe(401)
+        const row = await liveIn('space-a', project.id)
+        expect(row).toBeTruthy()
+        expect(row.visibility ?? 'public').not.toBe('private')
     })
 })

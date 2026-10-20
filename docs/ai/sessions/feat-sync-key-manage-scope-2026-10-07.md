@@ -27,3 +27,19 @@
   fail closed; R2-B positive `via:'signin'` stamp + one re-issue helper; R2-C session mints off when the cookie key
   is a token (startup warning); R2-D follower reads the address pin. Key suites incl. the reviewer's round-2 file:
   32/32. The full batch was stopped by the session for low memory and is owed.
+
+## 2026-10-20 — #811 brought onto dev and finished
+
+- Base changed from #800's branch to `dev` (#800 merged today as c2134fbf, squashed). Merged origin/dev; every
+  conflicted file was resolved as dev's version plus #811's own delta (d80dc543..1473a83c) applied 3-way, then the
+  hunks by hand (follower.js `slugs` + `key`, ui.mjs `followKeyLines` beside the one-address lines, projectRoutes.js
+  dev's file lock for writes + #811's per-key lock, the move kept in-process). CURRENT.md is dev's.
+- Review status: round 1 (C1, H1, M1, M2, lows) and round 2 (R2-A..D) fixed in the branch; the round-3 review was
+  started 10-07 and never written. Re-checked today on the merged code: the scope is opt-in (`manage: true` only),
+  default `edit` in the store and the database column, checked on the server for trash, hide and move.
+- Found and fixed: an `edit` key as the move's second key answered 401 instead of 403 (known-fixes row). Three
+  contract cases added to syncKeyManage.test.js, on their own client address because the suite already spends the
+  mint limit of one address (30 per 10 minutes).
+- Evidence: new cases 2/21 failing before the fix, 21/21 after; scope check removed on the server -> 2 fail; same-owner
+  check removed -> 1 fails; the reviewer's round-1 file on the pre-fix head 712aff84: 6 fail (C1: "move answered 200").
+
