@@ -313,7 +313,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // Saved only when it changed — a follow that cannot reach the other side
     // writes nothing — and never after stop(), so a stopped follow leaves its
     // directory alone.
-    const lifeKey = () => JSON.stringify([projectBase, trashedBoth, departed])
+    // An empty base is the same as none yet: seeding it is not a change to save.
+    const lifeKey = () => JSON.stringify([projectBase || {}, trashedBoth, departed])
     let lastSaved = JSON.stringify(Object.fromEntries(cursors)) + seen.size + [...seeded].join() + lifeKey()
     const save = () => {
         if (!onSave || stopped) return
