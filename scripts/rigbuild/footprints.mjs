@@ -19,7 +19,8 @@
  *     rig-lib's `surfaceHit` stops a beam at — and, because they are real steel, the columns (hall column
  *     grid), the cranes (`craneSolids`) and the rig's own deck, table and truss boxes. Planes are marched every
  *     0.1 m from 0.3 m like `surfaceHit` and refined by bisection; boxes are exact (slab method). Nothing within
- *     the class's `reach_m`: "open air".
+ *     the class's `reach_m`: "open air". A lamp standing OUTSIDE the hall's open volume takes the building hit
+ *     from hall-reach.mjs (the record's dims.shell, required; a ray entering through an opening is not modelled).
  *   - Spot diameter D = 2 * d * tan(beam / 2) (cone geometry). On a slanted surface the spot is an ellipse whose
  *     long axis is D / cos(incidence) (the small-beam approximation the owner named); when incidence + beam/2 >=
  *     90 deg the cone's edge never meets the surface (an open conic) and no ellipse is claimed.
@@ -44,6 +45,7 @@ import { RIG_PREFIX, buildRig, candelaAt, craneSolids } from '../place/rig-lib.m
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
+import { hallFirstSurface, shellOf } from './hall-reach.mjs'
 import { loadLibrary } from './library.mjs'
 import { VERSIONS_FILE, rigFileOf } from './versions.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
@@ -194,7 +196,28 @@ export const makeBuilding = (hall) => {
         }
         return best
     }
-    return { inside, describe }
+    /**
+     * A lamp OUTSIDE the open volume (`inside(from)`: beyond a wall, above the roof, at or under the floor): the march above
+     * would stop at its first step. The building hit is hall-reach's instead (ONE SOURCE, owner 2026-10-13/20): the record's
+     * dims.shell slabs, the floor and the ground beyond the footprint; null when it meets nothing within maxReach. A record
+     * without dims.shell is refused with hall-reach's reason. A ray that would enter the hall through an opening is not modelled.
+     */
+    const outsideHit = (from, d, maxReach) => {
+        let hit
+        try {
+            hit = hallFirstSurface(from, d, hall.dims)
+        } catch (error) {
+            throw new Error(`footprints.mjs: the lamp at ${from.map((v) => v.toFixed(2)).join(', ')} stands outside the hall's open volume; ${error.message}`)
+        }
+        if (!(hit.t <= maxReach)) return null
+        if (hit.name === 'floor') return { cls: 'floor', detail: 'floor', normal: [0, 1, 0], t: hit.t }
+        if (hit.name.startsWith('ground outside')) return { cls: 'ground', detail: hit.name, normal: [0, 1, 0], t: hit.t }
+        const slab = shellOf(hall.dims).find((b) => b.name === hit.name)
+        const face = rayBox(from, d, { x: [slab.lo[0], slab.hi[0]], y: [slab.lo[1], slab.hi[1]], z: [slab.lo[2], slab.hi[2]] }, -Infinity)
+        const cls = /^(deck|lantern)/.test(slab.name) ? 'roof' : /wall/.test(slab.name) ? 'wall' : 'shell'
+        return { cls, detail: hit.name, normal: face.normal, t: hit.t }
+    }
+    return { inside, describe, outsideHit }
 }
 
 /** The hall's own solids beyond the skin: the massing boxes, the column grid, the cranes. */
@@ -230,14 +253,16 @@ export const rigSolids = (entities) => entities.filter((e) => e.type === 'box' &
 
 /**
  * The first thing a ray meets within `maxReach`: { hit: class, detail, throw, normal, point } or { hit: 'open air' }.
- * Planes: marched from 0.3 m every 0.1 m (rig-lib `surfaceHit`), refined by bisection; boxes: exact.
+ * Planes: marched from 0.3 m every 0.1 m (rig-lib `surfaceHit`), refined by bisection; boxes: exact. An origin outside the open
+ * volume takes the building hit from hall-reach (`outsideHit`) instead of the march.
  */
 export const castRay = (from, dir, { building, solids = [], maxReach = 80 }) => {
     const d = unit(dir)
     const at = (t) => [from[0] + d[0] * t, from[1] + d[1] * t, from[2] + d[2] * t]
-    let best = null
+    const outside = building.inside(from)
+    let best = outside ? building.outsideHit(from, d, maxReach) : null
     let lo = START_M - STEP_M
-    for (let k = Math.round(START_M / STEP_M); k * STEP_M <= maxReach + 1e-9; k += 1) {
+    for (let k = Math.round(START_M / STEP_M); !outside && k * STEP_M <= maxReach + 1e-9; k += 1) {
         const t = k * STEP_M
         if (building.inside(at(t))) {
             let a = lo
@@ -393,7 +418,7 @@ export const toCsv = (rows) => {
 const group3 = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 const fixed = (v, dp) => (v === null || v === undefined ? '—' : v.toFixed(dp))
 const luxText = (v) => (v === null || v === undefined ? '—' : v < 10 ? v.toFixed(2) : v < 100 ? v.toFixed(1) : group3(v))
-const SURFACE_WORDS = { floor: 'the floor', roof: 'the roof', wall: 'a wall', column: 'the columns', truss: 'the truss', crane: 'the crane', machine: 'the machinery', stage: 'the DJ riser', 'open air': 'open air' }
+const SURFACE_WORDS = { floor: 'the floor', roof: 'the roof', wall: 'a wall', column: 'the columns', truss: 'the truss', crane: 'the crane', machine: 'the machinery', stage: 'the DJ riser', ground: 'the ground outside', shell: 'the hall shell', 'open air': 'open air' }
 const range = (values, dp = 1) => {
     const lo = Math.min(...values)
     const hi = Math.max(...values)

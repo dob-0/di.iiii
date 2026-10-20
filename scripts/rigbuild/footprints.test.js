@@ -11,6 +11,7 @@ import { surfaceHit } from '../place/rig-lib.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { loadLibrary } from './library.mjs'
 import { VERSIONS_FILE, rigFileOf } from './versions.mjs'
+import { HALL_FILE, hallFirstHit, hallFirstSurface } from './hall-reach.mjs'
 import {
     THRESHOLDS, analyse, castRay, cosIncidence, ellipseMajor, eulerXYZ, flagsOf, footprint, hallSolids, illuminance, makeBuilding, rayBox, rayObb, spotDiameter, toCsv, wordsFor
 } from './footprints.mjs'
@@ -239,6 +240,51 @@ describe.each(['minimal-ground', 'full-ground'])('%s: every lamp of every look',
         expect(shaft.summary.lit).toBe(1)
         expect(wordsFor(shaft)).toMatch(/gs-one-shaft/)
         expect(wordsFor(shaft)).toMatch(/lux/)
+    })
+})
+
+// N525 (owner's physics rule, 2026-10-13): makeBuilding().inside is true for every point outside the open volume, so the march
+// met 'solid' at its first step (~0.2 m) for a lamp standing outside the hall. Such a lamp now takes hall-reach's hit on the
+// record's dims.shell: the throw is hall-reach's, to the metre's last bit.
+describe('a lamp outside the hall: the building hit is hall-reach\'s', () => {
+    const skin = read(HALL_FILE)
+    const skinBuilding = makeBuilding(skin)
+    const cases = [
+        { name: 'beyond the entry end, aimed down: the ground outside', from: [0, 5, 70], dir: [0, -1, 0], hit: 'ground', normal: [0, 1, 0], throwM: 5 },
+        { name: 'beyond the far end, aimed at the end wall: its outer face', from: [-20, 1, -70], dir: [0, 0, 1], hit: 'wall', normal: [0, 0, -1], throwM: 15.9 },
+        { name: 'above the roof, aimed down: the deck from above', from: [10, 30, 0], dir: [0, -1, 0], hit: 'roof', normal: [0, 1, 0], throwM: 16.5 }
+    ]
+    for (const c of cases) {
+        it(c.name, () => {
+            expect(skinBuilding.inside(c.from)).toBe(true) // the origin is outside the open volume
+            const cast = castRay(c.from, c.dir, { building: skinBuilding, solids: [], maxReach: 80 })
+            expect(cast.hit).toBe(c.hit)
+            expect(cast.detail).toBe(hallFirstSurface(c.from, c.dir, skin.dims).name)
+            expect(cast.throw).toBe(hallFirstHit(c.from, c.dir, skin.dims))
+            expect(cast.throw).toBeCloseTo(c.throwM, 9)
+            expect(cast.normal).toEqual(c.normal)
+            cast.point.forEach((v, i) => expect(v).toBeCloseTo(c.from[i] + c.dir[i] * c.throwM, 9))
+        })
+    }
+
+    it('aimed away into the sky: open air, as hall-reach meets nothing; beyond maxReach: open air too', () => {
+        expect(hallFirstHit([0, 5, 70], [0, 0, 1], skin.dims)).toBeNull()
+        expect(castRay([0, 5, 70], [0, 0, 1], { building: skinBuilding, solids: [], maxReach: 80 })).toEqual({ hit: 'open air', detail: '', throw: null, normal: null, point: null })
+        expect(castRay([10, 30, 0], [0, -1, 0], { building: skinBuilding, solids: [], maxReach: 16 }).hit).toBe('open air')
+    })
+
+    it('still meets the hall solids as before: a box nearer than the shell wins', () => {
+        const near = { id: 'post', cls: 'machine', detail: 'post', box: { x: [-21, -19], y: [0, 3], z: [-62, -60] } }
+        const cast = castRay([-20, 1, -70], [0, 0, 1], { building: skinBuilding, solids: [near], maxReach: 80 })
+        expect(cast).toMatchObject({ hit: 'machine', detail: 'post', normal: [0, 0, -1] })
+        expect(cast.throw).toBeCloseTo(8, 9)
+    })
+
+    it('a record without dims.shell is refused for an outside lamp, with the reason named; an inside lamp is unchanged', () => {
+        expect(() => castRay([0, 5, 40], [0, -1, 0], { building, solids, maxReach: 80 })).toThrow(/outside the hall's open volume; the hall record has no dims\.shell/)
+        const inner = castRay([0, 5, 0], [1, 0, 0], { building, solids: [], maxReach: 60 })
+        expect(inner).toMatchObject({ hit: 'wall', detail: 'side wall', normal: [-1, 0, 0] })
+        expect(inner.throw).toBeCloseTo(20, 6)
     })
 })
 

@@ -1067,3 +1067,15 @@ Fix: (1) beyond the footprint y = 0 is the ground the hall stands on: `ground ou
 rule `floor`, as before #1050); open sky is a ray that does not go down; the lamp above has reach 8 m and the beam is a fixable leak again; (2) for a beam not drawn (hidden or 0 m) `physics_check` still casts the lamp,
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
+
+## footprints.mjs gave a lamp standing outside the hall a 0.2 m throw (N525, 2026-10-21)
+
+Symptom: `makeBuilding().inside` is true for every point outside the hall's open volume (beyond a wall, above the roof, at or under the floor), so `castRay`
+for a lamp standing outside the hall met "solid" at its first 0.3 m step and bisected to about 0.2 m, whatever it was aimed at (on the v13 hall record:
+a lamp at (0, 5, 70) aimed down reported a 'wall' at about 0.2 m; hall-reach says the ground outside at 5 m).
+Fix: an origin outside the open volume takes the building hit from `hall-reach.mjs` `hallFirstSurface` (the record's dims.shell, the floor, the ground
+beyond the footprint): no new march, no copied planes; the hall solids are still met as before and the result has the same shape. A record without
+dims.shell is refused for an outside lamp with hall-reach's reason. Inside origins run the same march as before. Not modelled: a ray from outside that
+enters the hall through an opening.
+Guard: `scripts/rigbuild/footprints.test.js` "a lamp outside the hall" (6 cases on the v13 record: ground, end wall outer face, deck from above,
+open air, a nearer solid, the refusal), each throw equal to hall-reach's. Session note: `docs/ai/sessions/cloud-footprints-outside-lamps-2026-10-21.md`.
