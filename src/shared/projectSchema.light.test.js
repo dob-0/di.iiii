@@ -31,6 +31,14 @@ describe('the kit\'s light fields survive the schema, in the browser and on the 
             expect(beam.laser).toMatchObject({ mW: [2700, 1500, 1800], nm: [455, 525, 638], diameter_mm: 4, divergence_mrad: 1, sceneScale: 0.02, source: 'Guide v1.2' })
             // a bad frame point is dropped, never guessed
             expect(beam.laser.frame).toEqual([[0, 0.5, 0, 1, 0]])
+            // frames in time (N562): the period kept, an empty or bad frame dropped
+            const timed = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, laser: { ...lamp.components.beam.laser, frames: { period: 8, list: [[[0.2, 0, 1, 1, 1]], [], [['x']], [[-0.2, 0, 1, 1, 1]]] } } } } }] })
+            expect(timed.entities[0].components.beam.laser.frames).toEqual({ period: 8, list: [[[0.2, 0, 1, 1, 1]], [[-0.2, 0, 1, 1, 1]]] })
+            // keyframes that tween (2026-10-17): the flag survives normalisation, as true only
+            const tweened = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, laser: { ...lamp.components.beam.laser, frames: { period: 8, tween: true, list: [[[0.2, 0, 1, 1, 1]], [[-0.2, 0, 1, 1, 1]]] } } } } }] })
+            expect(tweened.entities[0].components.beam.laser.frames.tween).toBe(true)
+            const notTweened = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, laser: { ...lamp.components.beam.laser, frames: { period: 8, tween: 'yes', list: [[[0.2, 0, 1, 1, 1]]] } } } } }] })
+            expect(notTweened.entities[0].components.beam.laser.frames.tween).toBe(undefined)
             expect(doc.renderSettings.atmosphere.haze).toMatchObject({ model: 'nf-ff', volume_m3: 186890, calibrate: false, dries: false, nearField: { radius_m: 3, airSpeed_m_s: 0.1 }, source: 'UNVALIDATED estimate' })
             // a laser at a wavelength the cube does not have is not a laser
             const odd = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, laser: { mW: [1], nm: [532] } } } }] })

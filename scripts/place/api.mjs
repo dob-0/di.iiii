@@ -21,7 +21,7 @@ export const DEFAULT_API = 'https://local.thedi.studio/serverXR'
 
 const TOKEN_KEYS = ['ADMIN_API_TOKEN', 'API_TOKEN', 'DI_API_TOKEN']
 
-export const readToken = (tokenFile = null) => {
+export const readToken = (tokenFile = null, keys = TOKEN_KEYS) => {
     if (process.env.DI_API_TOKEN) return process.env.DI_API_TOKEN.trim()
     const files = [
         tokenFile ? String(tokenFile) : null,
@@ -35,7 +35,7 @@ export const readToken = (tokenFile = null) => {
         } catch {
             continue
         }
-        for (const key of TOKEN_KEYS) {
+        for (const key of keys) {
             const line = text.split('\n').find((entry) => entry.startsWith(`${key}=`))
             const value = line ? line.slice(key.length + 1).trim() : ''
             if (value) return value
@@ -107,6 +107,8 @@ export const makeClient = (api, token) => {
         patch: (route, body) => call('PATCH', route, body),
         put: (route, body) => call('PUT', route, body),
         del: (route) => call('DELETE', route),
+        /** True when the route answers a HEAD (an asset the target already holds). */
+        head: async (route) => (await fetch(`${api}${route}`, { method: 'HEAD', headers: auth })).ok,
         /** The bytes, not the JSON — for pulling footage back down. */
         bytes: async (route) => {
             const response = await fetch(`${api}${route}`, { headers: auth })

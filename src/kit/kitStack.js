@@ -73,7 +73,7 @@ const STACK = [
     { group: 'server', name: 'cors', npm: 'cors', server: true, licence: 'MIT', url: 'https://github.com/expressjs/cors', use: 'Which other sites may read the API.' },
     { group: 'server', name: 'morgan', npm: 'morgan', server: true, licence: 'MIT', url: 'https://github.com/expressjs/morgan', use: 'One line in the log per request.' },
     { group: 'server', name: 'dotenv', npm: 'dotenv', server: true, licence: 'BSD-2-Clause', url: 'https://github.com/motdotla/dotenv', use: 'Reads the server’s settings from a file.' },
-    { group: 'server', name: 'Model Context Protocol SDK', npm: '@modelcontextprotocol/server', server: true, licence: 'MIT', url: 'https://modelcontextprotocol.io', use: 'The agent door: four tools an assistant can call.' },
+    { group: 'server', name: 'Model Context Protocol SDK', npm: '@modelcontextprotocol/server', server: true, licence: 'Apache-2.0', url: 'https://modelcontextprotocol.io', use: 'The agent door: four tools an assistant can call.' },
     { group: 'server', name: 'zod', npm: 'zod', server: true, licence: 'MIT', url: 'https://zod.dev', use: 'Checks what an agent sends before it runs.' },
 
     // ── build ────────────────────────────────────────────────────────────

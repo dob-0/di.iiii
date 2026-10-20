@@ -69,6 +69,14 @@ export const PASS_THROUGH_PORTS = [
         why: 're-frames what arrives; with nothing wired it carries nothing — an empty transform is not a shape'
     },
     {
+        port: 'laser.trace.frame',
+        why: 'traces the shape that arrives; with no shape wired it carries nothing — an empty trace is not a blank frame'
+    },
+    {
+        port: 'laser.merge.frame',
+        why: 'merges the laser paths that arrive; with nothing wired it carries nothing, like the shape Merge'
+    },
+    {
         port: 'logic.route.out',
         why: 'in its Gate operation — the one it is born in — it passes through what arrives while open; bare or closed it carries nothing, because a closed gate is an unplugged wire, not a zero'
     }
@@ -198,6 +206,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('dmxOut', 'device.dmx.out', { label: 'DMX Out', col: 4, row: 15 })
     add('laser', 'laser.shape', { label: 'Laser', col: 4, row: 16 })
     add('laserOut', 'device.laser.out', { label: 'Laser Out', col: 4, row: 17 })
+    add('laserTrace', 'laser.trace', { label: 'Laser Trace', col: 4, row: 18 })
+    add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 

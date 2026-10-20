@@ -26,6 +26,7 @@ import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateTo
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { describeProjectLayers } from '../../project/layers.js'
 import '../styles/studio-hub.css'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 const formatRelativeDate = (iso) => {
     const d = new Date(iso || Date.now())
@@ -616,7 +617,8 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 </div>
 
                 {/* Status */}
-                {status && (
+                {status === 'loading...' && <LoadingScreen variant="inline" label="Loading" text="loading" />}
+                {status && status !== 'loading...' && (
                     <p className={`sh-status${status.includes('error') || status.includes('failed') ? ' sh-status-error' : ''}`}>
                         {status}
                     </p>
