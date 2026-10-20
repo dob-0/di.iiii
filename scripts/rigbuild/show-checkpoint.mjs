@@ -105,7 +105,7 @@ ${manifest.failures.length ? `Failures while taking it: ${manifest.failures.join
 
 Restore the project document (from a di.iiii tree; without --yes it only prints the plan):
 
-    node ${scriptPath} --restore ${dir} --yes
+    node ${scriptPath} --restore ${dir} --yes [--token-file <file>]   # same server as ${manifest.api}; default token ~/.di/di.env
 
 Side files and the desk's saved JSON are kept for reading; load the desk again with your show's own loader.
 `
@@ -175,7 +175,7 @@ export const runRestore = async (opts, { client, log = console.log } = {}) => {
     if (!opts.yes) { log('not sent: add --yes to do it'); return { sent: false, plan } }
     const saved = JSON.parse(fs.readFileSync(path.join(dir, plan.docFile), 'utf8'))
     const res = await client.put(plan.route, saved.document)
-    if (!res.ok) throw new Error(`restore failed: HTTP ${res.status}`)
+    if (!res.ok) throw new Error(`restore failed: HTTP ${res.status}${[401, 403, 404].includes(res.status) ? ` (the token or the api may be wrong: it was sent to ${plan.api}; pass --api and --token-file for that server)` : ''}`)
     log(`restored ${plan.project}: HTTP ${res.status}`)
     return { sent: true, plan }
 }

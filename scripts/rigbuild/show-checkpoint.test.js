@@ -35,6 +35,12 @@ describe('show-checkpoint', () => {
         expect(() => planRestore({}, [])).toThrow(/not a show checkpoint/)
         expect(restoreText({ manifest: m, dir: '/d' })).toContain('--restore /d --yes')
     })
+    it('says which api and token to check when a restore is refused', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-'))
+        await takeCheckpoint({ project: 'p', space: 's', api: 'http://x/serverXR', include: [], noCopy: true, out: dir }, { client: fakeClient([]), fetchFn: async () => ({ ok: true, text: async () => '{}' }), log: () => {} })
+        const refused = { get: async () => ({}), put: async () => ({ ok: false, status: 404 }) }
+        await expect(runRestore({ restore: dir, yes: true }, { client: refused, log: () => {} })).rejects.toThrow(/--token-file/)
+    })
     it('takes a checkpoint, records desk failures, and restores only with --yes', async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-'))
         const calls = []
