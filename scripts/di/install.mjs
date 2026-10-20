@@ -457,6 +457,8 @@ export const buildSchemaVersion = (versionDir) => {
  * update `--rollback` cannot undo on its own: it restores the app, and the
  * database has moved. Cheap — a local install's data is small, and the whole
  * artifact is 3 MB now.
+ *
+ * Taken AFTER the server has stopped (cmdUpdate), and safe even if it has not.
  */
 export const snapshotData = async ({ home, label }) => {
     const p = paths(home)
@@ -464,7 +466,41 @@ export const snapshotData = async ({ home, label }) => {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     const dir = path.join(p.snapshots, `${label}-${stamp}`)
     await fsp.mkdir(p.snapshots, { recursive: true })
-    await fsp.cp(p.data, dir, { recursive: true })
+    // A SQLite database in WAL mode is its main file PLUS -wal and -shm; copying the
+    // three one after another while a writer is awake can tear them. So the files are
+    // left out of the plain copy and each database is written whole with VACUUM INTO,
+    // one transaction's consistent view (https://sqlite.org/lang_vacuum.html#vacuuminto).
+    const isDbFile = (name) => /\.db(-wal|-shm)?$/.test(name)
+    const dbs = []
+    await fsp.cp(p.data, dir, {
+        recursive: true,
+        filter: (src) => {
+            if (fs.statSync(src).isDirectory() || !isDbFile(src)) return true
+            if (src.endsWith('.db')) dbs.push(src)
+            return false
+        }
+    })
+    for (const src of dbs) {
+        const dest = path.join(dir, path.relative(p.data, src))
+        try {
+            await fsp.mkdir(path.dirname(dest), { recursive: true })
+            const { DatabaseSync } = withoutExperimentalWarning(() => createRequire(import.meta.url)('node:sqlite'))
+            const db = new DatabaseSync(src)
+            try {
+                db.exec('PRAGMA busy_timeout = 5000')
+                db.prepare('VACUUM INTO ?').run(dest)
+            } finally {
+                db.close()
+            }
+        } catch {
+            // No node:sqlite, or a file that is not a database: keep the old behaviour
+            // for this file rather than leave the snapshot without it.
+            await fsp.rm(dest, { force: true })
+            for (const suffix of ['', '-wal', '-shm']) {
+                if (fs.existsSync(src + suffix)) await fsp.copyFile(src + suffix, dest + suffix)
+            }
+        }
+    }
     return dir
 }
 

@@ -134,6 +134,13 @@ export const restoreProject = async (projectId) => {
     return data.project
 }
 
+// Move a project into another space of this install (admin, or the owner of
+// both). The id never changes, so every link to it keeps working. A project that
+// is its space's front door answers 409 { code: 'is_published' } until the caller
+// passes { unpublish: true }.
+export const moveProject = async (projectId, toSpace, { unpublish = false } = {}) =>
+    apiFetch(`/api/projects/${projectId}/move`, { method: 'POST', body: { toSpace, ...(unpublish ? { unpublish: true } : {}) } })
+
 export const getProjectDocument = async (projectId) => {
     return apiFetch(`/api/projects/${projectId}/document`)
 }

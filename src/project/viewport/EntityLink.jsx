@@ -28,12 +28,13 @@ const scratchScale = new THREE.Vector3()
 function LinkNameplate({ label, contentRef, hovered }) {
     const plateRef = useRef(null)
     const revealRef = useRef(0)
-    useFrame((_, delta) => {
+    useFrame((frameState, delta) => {
         const plate = plateRef.current
         const content = contentRef.current
         if (!plate || !content) return
         const next = THREE.MathUtils.damp(revealRef.current, hovered ? 1 : 0, 10, delta)
         revealRef.current = next
+        if (Math.abs(next - (hovered ? 1 : 0)) > 0.01) frameState.invalidate() // on-demand loop: until settled
         plate.visible = next > 0.02
         if (!plate.visible || !plate.parent) return
         scratchBox.setFromObject(content)

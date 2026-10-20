@@ -28,8 +28,15 @@
 const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
     'wiki', 'privacy', 'terms', 'tools', 'for-apps',
+    // `/shoot/{key}` — a crew's shared shoot sheet. Checked on diiii.xyz and
+    // dev.diiii.xyz before reserving (2026-10-07): nothing answers to the word.
+    'shoot',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
     'spaces', 'projects', 'chat', 'login',
+    // `/device` — the browser half of `di login` (src/pages/DeviceLoginPage.jsx).
+    // Checked before reserving (2026-10-07): /serverXR/api/spaces/device and
+    // /serverXR/api/projects/device answer 404 on diiii.xyz and dev.diiii.xyz.
+    'device',
     // `/{space}/scan` — the phone collecting a place. Checked on all three
     // tiers before reserving (2026-09-22): nothing answers to the word.
     'scan',

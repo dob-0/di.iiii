@@ -4,6 +4,19 @@ import PropertyInspector from './PropertyInspector.jsx'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 
 describe('PropertyInspector', () => {
+    it('never prints an object value as [object Object] in a text field', () => {
+        const { container } = render(
+            <PropertyInspector
+                title="Out"
+                subtitle="x"
+                sections={[{ id: 'values', label: 'Ports', fields: [{ label: 'Any', path: ['any'], type: 'text', portType: 'any' }] }]}
+                values={{ values: { any: { paths: [] } } }}
+                onSectionChange={vi.fn()}
+            />
+        )
+        expect(container.querySelector('input[type="text"]').value).toBe('')
+    })
+
     it('renders a color field for a port-driven section and emits a merged values patch', () => {
         const onSectionChange = vi.fn()
         render(

@@ -264,6 +264,12 @@ describe('listNodeTypes', () => {
         expect(listNodeTypes({ query: 'chat' }).map(t => t.id)).toContain('agent')
     })
 
+    it('finds the keeper by what people call it — nobody searches "keeper" for a local model', () => {
+        for (const query of ['keeper', 'local llm', 'llama', 'llm', 'openai', 'ollama', 'offline']) {
+            expect(listNodeTypes({ query }).map(t => t.id), `query "${query}"`).toContain('agent.keeper')
+        }
+    })
+
     it('returns all nodes including web-only when runtime filter is any (no filter)', () => {
         const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true })
         expect(all.length).toBe(Object.keys(NODE_TYPES).length)

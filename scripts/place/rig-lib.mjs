@@ -13,13 +13,12 @@
 import { rotationFromPanTilt } from '../../src/project/viewport/spotLightAim.js'
 import { aimFixture } from './fixture-lib.mjs'
 import { DEFAULT_HAZE } from '../../src/objectComponents/spotBeam.js'
+import { LASER_FIXTURES, checkLaser, isLaserGroup } from './laser-distance.mjs'
 
 export const RIG_PREFIX = 'rig-'
-// A lamp whose laser path dips under this, anywhere over the floor, is refused.
-// 3 m is the vertical separation commonly required between an audience and a
-// show laser's beams (e.g. the US FDA laser-light-show variance conditions);
-// it is a floor for the picture, NOT a safety assessment.
-export const LASER_MIN_HEIGHT_M = 3
+// The laser audience-distance rules (>= 3 m up, never aimed down) live in laser-distance.mjs, the one
+// module the build and the tests share; re-exported here for the callers that import them from rig-lib.
+export { LASER_FIXTURES, LASER_MIN_HEIGHT_M, checkLaser } from './laser-distance.mjs'
 
 const round = (n, places = 3) => Math.round(n * 10 ** places) / 10 ** places
 const DEG = Math.PI / 180
@@ -78,7 +77,7 @@ export const trussSlopeOf = (rig) => (isCraneHung(rig) ? (Number(rig.truss.slope
 export const linePoint = (stage, u, face = 'axis') => {
     const th = stage.trussSlope || 0
     const t = stage.trussSection
-    const cx = stage.axis + u * Math.cos(th)
+    const cx = (stage.trussAxis ?? stage.axis) + u * Math.cos(th)
     const cy = stage.trussH - t / 2 + t / 2 / Math.cos(th) + u * Math.sin(th)
     const k = face === 'top' ? 1 : face === 'bottom' ? -1 : 0
     return [cx - k * (t / 2) * Math.sin(th), cy + k * (t / 2) * Math.cos(th), stage.trussZ]
@@ -152,6 +151,13 @@ export const stageFrame = (rig, hall) => {
             : backdrop?.face ?? 0
         back = wall + into * (s.gap_m ?? 1)
         front = back + into * s.depth_m
+        // `front_z_m`: the riser's front edge stated, not derived from the backdrop — the owner's stage line
+        // (2026-10-07, scripts/place/rigs/moxir-stage-line-2026-10-07.json). The backdrop stays as named.
+        if (s.front_z_m !== undefined) {
+            front = Number(s.front_z_m)
+            back = front - into * s.depth_m
+            wall = back - into * (s.gap_m ?? 1)
+        }
         trussZ = back + into * (truss.from_stage_back_m ?? 0)
     } else if (s.zone) {
         const zone = g.zones?.[s.zone]
@@ -185,9 +191,25 @@ export const stageFrame = (rig, hall) => {
     // the bridge's centre line; a crane more than 1 m from the performer is refused (move it).
     let crane = null
     if (isCraneHung(rig)) {
-        crane = craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        // `truss_behind_m`: the line is a BACKDROP (owner 2026-10-07: "the truss at the back of the DJ — where the DJ
+        // stage line finishes, the crane line there"): the bridge nearest a point that far behind the riser's back edge,
+        // and refused unless the line's plane stands at least that far behind it — nothing hung over the performer
+        const behind = s.truss_behind_m
+        // `truss_crane_z_m` (MOXIR v2 cranes, owner N463 2026-10-09: "light the dj not the full back half back"): the park is
+        // the design's own z, neither a backdrop `truss_behind_m` behind the riser nor over the DJ within 1 m. The hall
+        // record must hold a bridge there (within 5 cm): the design is checked by its own builder (moxir_v2_cranes.py)
+        const parked = s.truss_crane_z_m
+        crane = parked !== undefined
+            ? craneNearestStage(hall, { front: parked })
+            : behind !== undefined
+                ? craneNearestStage(hall, { front: back - into * behind })
+                : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
         const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
-        if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
+        if (parked !== undefined) {
+            if (!crane || Math.abs(crane.z_m - parked) > 0.05) throw new Error(`truss "crane-hung" at the design's park z ${parked}: the hall record's nearest bridge is at z ${crane?.z_m} — build the hall with that park (cranes_from_door_m)`)
+        } else if (behind !== undefined) {
+            if (!crane || into * (back - crane.z_m) < behind - 1e-6) throw new Error(`truss "crane-hung" behind the DJ: the nearest bridge (z ${crane?.z_m}) is not ${behind} m behind the riser's back edge (z ${back.toFixed(2)}) — park it further back`)
+        } else if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m
     }
     const halo = isHalo(rig)
@@ -196,6 +218,10 @@ export const stageFrame = (rig, hall) => {
     return {
         crane,
         halo,
+        // `truss_axis_x_m`: the x the hung line's u = 0 sits over, when it is not the booth's own axis (the stage
+        // line, 2026-10-07: the booth moved to x 2.445 as drawn, the cut stays on the nave axis — the crane cab
+        // at the bridge's right end leaves no room to slide it; scripts/rigbuild/stage-line.mjs)
+        trussAxis: s.truss_axis_x_m ?? axis,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
         trussSlope: trussSlopeOf(rig),
         // crane-x: the length of each arm and the junction's size across (null for a line)
@@ -483,8 +509,15 @@ const place = {
         .map((x) => ({ pos: [ctx.stage.axis + x, 0, ctx.stage.front + ctx.stage.into * 0.9], orient: 'floor', face: toAudience(ctx) })),
     'nave-columns': (n, ctx) => {
         const cols = audienceColumns(ctx.hall, ctx.stage)
+        // 1.2 m off the column toward the audience — unless that is past an end wall (the last column
+        // pair stands 0.5 m from it: hazer and smoke 04 sat at z 55.2 outside the 54.5 m wall, audit
+        // A-10, 2026-10-05); then on the column's stage side.
+        const g = ctx.hall.geometry || {}
+        const hi = (g.end_wall_inner_y_m ?? Infinity) - END_WALL_CLEAR_M
+        const lo = (g.far_wall_z_m ?? -Infinity) + END_WALL_CLEAR_M
+        const zOf = (c) => { const z = c.z + ctx.stage.into * 1.2; return z > hi || z < lo ? c.z - ctx.stage.into * 1.2 : z }
         return pickEven(n, cols.length).map((i) => cols[i])
-            .map((c) => ({ pos: [c.faceX - c.side * 1.0, 0, c.z + ctx.stage.into * 1.2], orient: 'floor', face: [-c.side, 0, 0] }))
+            .map((c) => ({ pos: [c.faceX - c.side * 1.0, 0, zOf(c)], orient: 'floor', face: [-c.side, 0, 0] }))
     }
 }
 
@@ -639,7 +672,23 @@ export const AIM_RULES = {
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
     // A laser up into the roof over the house — the only rule a laser may use
     // besides one that rises (checkLaser refuses anything else).
-    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
+    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] }),
+    // A laser up onto the SOLID roof deck just beside the lantern over the house, never into it: the
+    // lantern is an opening glazed as a skylight, and a class-4 beam through it may leave the building
+    // (audit A-03, 2026-10-05: laser-into-roof drew all six cubes to one point inside lantern 1). Each
+    // beam goes to its own side of the lantern, fanned by its place on the line, short of the columns.
+    'laser-beside-lantern': (slot, meta, ctx, p = {}) => {
+        const g = ctx.hall.geometry
+        const z = ctx.stage.front + ctx.stage.into * (p.a ?? 14)
+        const ax = axisOf(ctx)
+        const dx = slot.pos[0] - ax
+        const side = dx < 0 ? -1 : 1
+        const lantern = (g.lanterns || []).find((l) => z >= l.z_m[0] && z <= l.z_m[1] && ax >= l.x_m[0] && ax <= l.x_m[1])
+        const edge = lantern ? (side < 0 ? lantern.x_m[0] : lantern.x_m[1]) : ax
+        const inner = (g.column_inner_face_x_m ?? Infinity) - 0.5
+        const x = edge + side * ((p.clear_m ?? 1.5) + Math.abs(dx) * (p.x_spread ?? 0.6))
+        return { target: [Math.max(-inner, Math.min(inner, x)), g.deck_m ?? g.truss_top_centre_m, z] }
+    }
 }
 
 /**
@@ -692,17 +741,6 @@ export const surfaceHit = (from, dir, hall, maxReach = 80) => {
         if (ax >= nave && y >= aisleRoof) return round(t, 2)
     }
     return maxReach
-}
-
-/**
- * Refuse a laser aim that could cross the audience plane: it must rise (or
- * stay level) from where it is hung, and be hung at least LASER_MIN_HEIGHT_M
- * up — so every point of its path over the floor is at least that high.
- */
-export const checkLaser = (from, to) => {
-    if (from[1] < LASER_MIN_HEIGHT_M) return `hung at ${from[1].toFixed(2)} m, under ${LASER_MIN_HEIGHT_M} m`
-    if (to[1] < from[1]) return `aimed downward (${from[1].toFixed(2)} m -> ${to[1].toFixed(2)} m)`
-    return null
 }
 
 /**
@@ -801,8 +839,17 @@ export const realIndices = (group, count, budget, mode) => {
 
 const staticAnim = { mode: 'static', speed: 1, amplitude: 1 }
 
-/** A real lamp's light distance (its cutoff) for a beam that stops at `reach`: see buildRig. */
-export const lightDistance = (reach) => reach * 2
+/**
+ * A real lamp's light distance: 0, which three.js reads as NO cutoff — pure inverse square, as
+ * light is (three's lights_pars_begin getDistanceAttenuation: a `distance` > 0 multiplies by the
+ * window (1 − (d/cutoff)⁴)², Karis 2013 / Frostbite eq. 26, a game-engine shortcut, not physics).
+ * Until 2026-10-09 the cutoff was twice the throw (88 % of the light reached the aimed surface,
+ * none past 2×): the MOXIR simulation audit, §2.2. `reach` is kept for callers that pass it.
+ */
+export const lightDistance = (_reach) => 0
+/** How long a lamp's drawn beam is (`beam.length`): twice the throw for a real lamp, so the cone
+ * runs on behind the surface it lands on (the surface hides it); the throw for a beam-only lamp. */
+export const beamLength = (reach, isReal) => (isReal ? reach * 2 : reach)
 
 // Rigging steel is drawn MATTE. The room has no environment map, so a metal surface (metalness 0.8-0.9) has
 // nothing to reflect and renders almost black in a dark hall: the truss and its hangers vanished and "the
@@ -878,6 +925,25 @@ export const classPhotometry = (rig, manifest) => {
             air: cd === null ? null : cd * Math.tan((angle * DEG) / 2)
         }
     }
+    // A LASER LINE (class `laserLine`, the kit version 2026-10-09): drawn as a line source by the
+    // renderer (src/objectComponents/laserLine.js) from its diodes' radiant power, beam diameter and
+    // divergence, read from the manifest (lasercube.specs.variant_in_use, beam_diameter_mm,
+    // divergence_mrad — the maker's Guide v1.2). Flux is worked out in the renderer (683·V(λ)·P).
+    for (const [id, cls] of Object.entries(rig.classes)) {
+        if (!cls.laserLine) continue
+        const specs = manifest?.kinds?.[cls.fixture]?.specs || {}
+        const mw = specs.variant_in_use?.value
+        if (!mw) throw new Error(`class ${id}: laserLine needs ${cls.fixture}.specs.variant_in_use in the manifest`)
+        out[id].laser = {
+            mW: [455, 525, 638].map((nm) => Number(mw[`${nm}nm`]) || 0),
+            nm: [455, 525, 638],
+            diameter_mm: Number(specs.beam_diameter_mm?.value) || 4,
+            divergence_mrad: Number(specs.divergence_mrad?.value) || 1,
+            // the rig's one exposure number: lumens × this, as every lamp's candela × this
+            sceneScale: rig.photometry?.sceneScale ?? 1,
+            source: `${specs.variant_in_use.src} (${specs.variant_in_use.basis}): ${mw.name || ''} variant`
+        }
+    }
     // A laser's beam is millimetres wide and not a cone: it is given its air
     // brightness by hand (`airFixed`) and left out of the scale.
     const pool = Object.entries(out).filter(([id]) => rig.classes[id].airFixed === undefined).map(([, c]) => c.air || 0)
@@ -906,6 +972,8 @@ export const classPhotometry = (rig, manifest) => {
  */
 // Mounts on the building's columns mirror about the nave; everything else
 // about the stage's (the booth's) axis. A group may say `axis: 'nave' | 'booth'`.
+// A floor machine's centre stays this far inside an end wall (half a hazer's length and a hand's room).
+const END_WALL_CLEAR_M = 0.6
 const NAVE_MOUNTS = new Set(['column-bases', 'column-uplight', 'nave-columns', 'crane-bridge'])
 export const groupAxis = (group, stage) => {
     const which = group.axis || (NAVE_MOUNTS.has(group.mount) ? 'nave' : 'booth')
@@ -967,7 +1035,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
     const mid = linePoint(stage, stage.trussX, 'bottom')
     const line = box({
         id: `${RIG_PREFIX}truss-header`,
-        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${rig.truss.slope_deg}° up to house right, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
+        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${Math.abs(rig.truss.slope_deg)}° up to house ${rig.truss.slope_deg < 0 ? 'left' : 'right'}, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
         pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     })
     line.components.transform.rotation = [0, 0, round(stage.trussSlope, 9)]
@@ -1156,7 +1224,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const to = from.map((v, k) => v + dir[k] * reach)
             const label = `${group.id} #${i + 1}`
             if (!posed.reachable) summary.unreachable.push(`${label}: tilt ${posed.tilt} deg is past the head's travel`)
-            if (group.class === 'laser' || cls.fixture === 'laser') {
+            if (isLaserGroup(group, cls)) {
                 const why = checkLaser(from, to)
                 if (why) {
                     summary.refused.push(`${label}: ${why}`)
@@ -1168,7 +1236,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             if (hit !== null) {
                 const where = `${label}: beam runs into the crane parked at z ${hit} m`
                 // A laser into a steel girder is a reflection hazard: refused.
-                if (cls.fixture === 'laser') {
+                if (LASER_FIXTURES.has(cls.fixture)) {
                     summary.refused.push(where)
                     return
                 }
@@ -1181,7 +1249,8 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             // `solo` (an aim parameter): only the lamp of that rank — counted from the
             // left along x, the rank the rules use — keeps the group's level; the rest are out.
             const lampLevel = soloKeeps(spec, byX.indexOf(i)) ? level : 0
-            const isReal = real.has(i)
+            // a laser line is never a three.js lamp (laserLine.js draws it; a 1 mrad SpotLight lights a sub-pixel dot)
+            const isReal = real.has(i) && !op.laser
             if (isReal) groupReal += 1
             if (group.bake && !isReal && lampLevel > 0) {
                 const surface = washSurface(slot, aimed, from, to, half, ctx)
@@ -1203,21 +1272,23 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     light: {
                         color: colour,
                         intensity: round(op.intensity * lampLevel, 2),
-                        // One field is both the drawn cone's length and the
-                        // light's cutoff (three.js: (1 - (d/cutoff)^4)^2, zero AT
-                        // the cutoff). A real lamp cut at the surface it is aimed at
-                        // would put no light on it, so its cutoff is twice the
-                        // throw (88 % of the light at the surface); the cone runs on
-                        // behind that surface, where the surface hides it. A named
-                        // workaround: a separate beam length is OWED in the platform.
-                        distance: round(isReal ? lightDistance(reach) : reach, 2),
+                        // No cutoff (lightDistance: 0 = inverse square only). The drawn
+                        // beam's length is its own field, beam.length, below.
+                        distance: lightDistance(reach),
                         angle: round(half, 4),
                         penumbra: cls.penumbra,
                         decay: 2
                     },
                     // Level 0 keeps the cone (at haze 0, unseen) and `only`: a beam-only lamp
                     // whose beam were switched off would become a REAL light (beamCastsLight).
-                    beam: { visible: true, haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * lampLevel, 3), ...(isReal ? {} : { only: true }) },
+                    beam: {
+                        visible: true,
+                        haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * lampLevel, 3),
+                        length: round(beamLength(reach, isReal), 2),
+                        ...(isReal ? {} : { only: true }),
+                        // a laser drawn as a line source (laserLine.js): its diodes, beam and divergence
+                        ...(op.laser ? { laser: op.laser, only: true } : {})
+                    },
                     animation: staticAnim
                 }
             })
@@ -1528,7 +1599,21 @@ export const nightOps = (rig, { shadows, realLights = 0 } = {}) => {
         },
         {
             type: 'setRenderSettings',
-            payload: { patch: { shadows: true, shadowCasting: { enabled: casting, mapSize: rig.budget?.shadowMapSize || 1024 } } }
+            payload: {
+                patch: {
+                    shadows: true,
+                    shadowCasting: { enabled: casting, mapSize: rig.budget?.shadowMapSize || 1024 },
+                    // the room's air when the rig states one (versions file `atmosphere`, e.g. known-kit's haze from its
+                    // one smoke machine); the *Why notes stay in the rig file
+                    ...(rig.atmosphere ? { atmosphere: atmosphereOfRig(rig.atmosphere) } : {})
+                }
+            }
         }
     ]
+}
+
+/** The rig file's `atmosphere` as the document stores it: the numbers and the haze settings, not the notes. */
+export const atmosphereOfRig = (a) => {
+    const { anisotropyWhy, scatteringWhy, ...rest } = a || {}
+    return rest
 }

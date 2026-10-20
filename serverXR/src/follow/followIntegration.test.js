@@ -256,6 +256,31 @@ describe('a space that lives on two di.iiii at once', () => {
         expect(objectIds(await readScene(hosting))).toContain('chair')
     })
 
+    // A short name chosen on one machine reaches the other with no human in between
+    // (2026-10-08: the MOXIR links). Both directions, over the real wire.
+    it('carries a project short name set on either side to the other', async () => {
+        const listing = async (server) => (await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })).json()).projects || []
+        const slugOn = (server, id) => async () => (await listing(server)).find(row => row.id === id)?.slug || false
+        const make = (server, id) => fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: id, title: id }) })
+        const patch = (server, id, slug) => fetch(`${server.baseUrl}/api/projects/${id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ slug }) })
+
+        expect((await make(hosting, 'slug-proj-up')).status).toBeLessThan(300)
+        expect((await make(hosting, 'slug-proj-down')).status).toBeLessThan(300)
+        const arrived = (id) => async () => (await listing(following)).some(row => row.id === id)
+        await settle('the projects reaching the follower', arrived('slug-proj-up'))
+        await settle('the projects reaching the follower', arrived('slug-proj-down'))
+
+        // follower -> host
+        expect((await patch(following, 'slug-proj-up', 'brief-up')).status).toBe(200)
+        follower.wake()
+        expect(await settle('the follower short name reaching the host', slugOn(hosting, 'slug-proj-up'))).toBe('brief-up')
+
+        // host -> follower
+        expect((await patch(hosting, 'slug-proj-down', 'brief-down')).status).toBe(200)
+        follower.wake()
+        expect(await settle('the host short name reaching the follower', slugOn(following, 'slug-proj-down'))).toBe('brief-down')
+    }, 150_000)
+
     it('converges when both sides edit at the same version at the same moment', async () => {
         // Both write against the version they are looking at, which is the
         // same op history on both sides — the case a single-leader design
@@ -512,6 +537,13 @@ describe('a followed space stays one space', () => {
     })
     const objectNamed = (scene, id) => (scene?.scene?.objects || []).find(object => object.id === id)?.name
     const update = (id, name, opId) => ({ opId, type: 'updateObject', payload: { objectId: id, patch: { name } } })
+    // A refused write says why, with both servers' logs: a CI-only 409 here
+    // once read "expected 409 to be 200" and nothing else (2026-10-13).
+    const landed = (written, label) => expect(written.status, `${label}: ${JSON.stringify(written.payload)}
+--- hosting log ---
+${hosting.logs()}
+--- following log ---
+${following.logs()}`).toBe(200)
 
     beforeAll(async () => {
         hosting = await startServer()
@@ -534,8 +566,8 @@ describe('a followed space stays one space', () => {
         // they could not see each other. Each side then receives the other's
         // edit AFTER its own, so "last applied" is the other person's edit on
         // each machine — the two rooms would show different names for good.
-        expect((await writeOp(hosting, update('box', 'named on the host', 'op-name-host'))).status).toBe(200)
-        expect((await writeOp(following, update('box', 'named on the follower', 'op-name-follower'))).status).toBe(200)
+        landed(await writeOp(hosting, update('box', 'named on the host', 'op-name-host')), 'the host edit')
+        landed(await writeOp(following, update('box', 'named on the follower', 'op-name-follower')), 'the follower edit')
 
         // No saved cursors here, so this restart would start from now — and a
         // start from now by design carries nothing from the time apart. This
@@ -558,6 +590,52 @@ describe('a followed space stays one space', () => {
             expect(follower.state.converged).toBeGreaterThan(0)
         } finally {
             follower.stop()
+        }
+    })
+
+    // The race behind the CI-only 409 above (dev deploy run 38414913477): stop()
+    // used to leave the read parked on the host open, the host's next edit ended
+    // that park, and the STOPPED follow carried the edit into this install —
+    // moving its version between the test's read of it and its write. A proxy
+    // in front of the host counts the parked reads, so the test knows the park
+    // is out before it stops the follow instead of hoping it is.
+    it('a stopped follow carries nothing, even the edit that ends its parked read', async () => {
+        let parked = 0
+        const proxy = http.createServer((req, res) => {
+            const isPark = /[?&]wait=/.test(req.url)
+            if (isPark) parked += 1
+            let open = isPark
+            const done = () => { if (open) { open = false; parked -= 1 } }
+            // `res` closes when the answer is sent OR the follow hangs up on it.
+            res.on('close', () => { done(); upstream.destroy() })
+            const upstream = http.request({ host: '127.0.0.1', port: hosting.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                res.writeHead(answer.statusCode, answer.headers)
+                answer.pipe(res)
+            })
+            upstream.on('error', () => { done(); res.destroy() })
+            req.pipe(upstream)
+        })
+        await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve))
+        const viaProxy = `http://127.0.0.1:${proxy.address().port}/serverXR`
+        const follower = follow({ remote: side({ base: viaProxy, spaceId: SPACE, token: API_TOKEN }) })
+        try {
+            landed(await writeOp(hosting, addObject('stool', 'op-stool')), 'the stool')
+            await settle('the stool reaching the follower', hasOp(following, 'op-stool'))
+            await settle('the follow parked on the host', async () => parked > 0)
+
+            follower.stop()
+            landed(await writeOp(hosting, addObject('crate', 'op-after-stop')), 'the edit after stop')
+            await settle('the parked read ending', async () => parked === 0)
+            // Give a carry that should not happen every chance to land.
+            const deadline = Date.now() + 2000
+            while (Date.now() < deadline) {
+                expect(opIds(await readOps(following))).not.toContain('op-after-stop')
+                await wait(100)
+            }
+        } finally {
+            follower.stop()
+            proxy.closeAllConnections()
+            await new Promise(resolve => proxy.close(resolve))
         }
     })
 
@@ -1076,8 +1154,13 @@ describe('a follow starts from now and never silently erases work only the follo
         expect((await writeOp(hosting, addObject('h1', 'op-h1-then'), { spaceId: space })).status).toBe(200)
         const follower = open(space)
         try {
-            await settle('the first comparison', async () => follower.state.converged > 0)
-            expect(objectIds(await readScene(following, space))).toEqual(['h1'])
+            // The event that matters: this copy shows the host's. Which path got it
+            // there is not fixed: the first comparison writes the host's copy, but
+            // an op stamped in the same millisecond as the start is carried as an
+            // op instead (startCursorAt's `>=`, by design: dropping it would lose an
+            // edit made at the start; carrying it twice is dropped by its opId).
+            // Waiting on `converged > 0` failed whenever the op path won (#800).
+            await settle('this copy showing the host\'s', async () => objectIds(await readScene(following, space)).join() === 'h1')
             expect((await writeOp(following, addObject('late', 'op-late'), { spaceId: space })).status).toBe(200)
             follower.wake()
             await settle('the later edit reaching the host', hasOp(hosting, 'op-late', space))
@@ -1561,6 +1644,117 @@ describe('a follow never empties this copy, and keeps a project moved to a space
         // Never made again on the host's space.
         expect(await live(hosting, 'leaves')).toBe(null)
     })
+})
+
+// 2026-10-09, aylmo: the other di.iiii sat behind a Cloudflare tunnel that was
+// down, and every request was answered 530 for hours; the files went on being
+// asked about one by one, thousands of times a minute. Here a small server
+// stands where the tunnel's edge would, on the host's own port, and answers 530
+// to everything; then the host comes back on that port with its disk. The
+// chase's own first wait is set to a minute, so files crossing within seconds
+// of the host's return can only be the op loop telling it (noteAnswered).
+describe('a follow whose other side stops answering waits as one, and carries once it is back', () => {
+    let hosting = null
+    let following = null
+    let edge = null
+    let port = null
+    let dataRoot = null
+    const PIECE = 'hall'
+    const COUNT = 3
+    const bytesOf = (seed) => Buffer.from(Array.from({ length: 40_000 }, (_, i) => (i * seed + 11) % 256))
+    const files = []
+
+    const holds = async (server, id) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/assets/${id}/meta`, { headers: authHeaders })).status === 200
+    const heldCount = async (server) => (await Promise.all(files.map(file => holds(server, file.id)))).filter(Boolean).length
+
+    /** Answers 530 to everything, as Cloudflare does for a tunnel with nothing behind it (error 1033). */
+    const standInEdge = (onPort) => new Promise((resolve, reject) => {
+        const asks = []
+        const server = http.createServer((req, res) => {
+            asks.push(req.url)
+            req.resume()
+            res.writeHead(530, { 'Content-Type': 'text/html' })
+            res.end('<html><body>error code: 1033</body></html>')
+        })
+        server.on('error', reject)
+        server.listen(onPort, '127.0.0.1', () => resolve({ server, asks }))
+    })
+    const closeEdge = async () => {
+        if (!edge) return
+        edge.server.closeAllConnections()
+        await new Promise(resolve => edge.server.close(resolve))
+        edge = null
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        // The project and its files exist on the follower only, named in its document.
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        for (let n = 1; n <= COUNT; n += 1) {
+            const form = new FormData()
+            form.append('asset', new Blob([bytesOf(n * 13)], { type: 'video/mp4' }), `hall-${n}.mp4`)
+            const uploaded = await fetch(`${following.baseUrl}/api/projects/${PIECE}/assets`, { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form })
+            expect(uploaded.status).toBe(200)
+            files.push((await uploaded.json()).asset)
+        }
+        const document = { entities: [], nodes: [], assets: files.map(file => ({ ...file, url: '' })) }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { method: 'PUT', headers: authHeaders, body: JSON.stringify(document) })
+        expect(put.status).toBe(200)
+
+        // The host goes away, and something answers 530 in its place.
+        port = hosting.port
+        dataRoot = hosting.dataRoot
+        await hosting.stop({ keepData: true })
+        hosting = null
+        edge = await standInEdge(port)
+    })
+
+    afterAll(async () => {
+        await closeEdge()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('says so once, asks nothing more while it waits, downloads nothing — and carries every file on the op loop\'s first answer', async () => {
+        const lines = { warn: [], info: [] }
+        let downloads = 0
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: `http://127.0.0.1:${port}/serverXR`, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: (line) => lines.warn.push(line), info: (line) => lines.info.push(line) },
+            files: {
+                backoffMs: [200, 200, 200],
+                waitFirstMs: 60_000,
+                io: { request: httpRequest, upload: httpUploadFile, download: async (...args) => { downloads += 1; return httpDownloadToFile(...args) } }
+            }
+        })
+        // The chase's own asks: documents, files, and its one small question.
+        const chaseAsks = () => edge.asks.filter(url => /\/document$|\/assets\/|\/api\/health$/.test(url)).length
+        try {
+            await settle('the follower saying, once, that the other side is not answering', () => lines.warn.some(line => /not answering \(530\)/.test(line)), { timeout: 15_000 })
+            const askedWhenItSaidSo = chaseAsks()
+            await wait(4000)
+            expect(chaseAsks()).toBe(askedWhenItSaidSo)
+            expect(askedWhenItSaidSo).toBeLessThanOrEqual(3)
+            expect(downloads).toBe(0)
+
+            // Same port, same disk: the host is back.
+            await closeEdge()
+            hosting = await startServer({ port, dataRoot })
+            // The chase's own next ask is still most of a minute away.
+            await settle('every file on the host, well before the chase\'s own minute is up', async () => (await heldCount(hosting)) === COUNT, { timeout: 25_000 })
+            expect(lines.warn.filter(line => /not answering \(530\)/.test(line))).toHaveLength(1)
+            expect(lines.warn.filter(line => /could not be carried/.test(line))).toEqual([])
+            expect(lines.info.filter(line => /answers again/.test(line))).toHaveLength(1)
+        } finally {
+            follower.stop()
+        }
+    }, 60_000)
 })
 
 // SPEC_follow.md "With a manage key" / SPEC_space_sync_keys.md §13: a key the

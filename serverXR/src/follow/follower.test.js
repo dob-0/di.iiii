@@ -30,6 +30,21 @@ describe('carry — a refused write loses nothing', () => {
     })
 })
 
+describe('carry — a write the other side refuses with a server error', () => {
+    // 2026-10-02: every write into project `test` answered 500 and `di follows`
+    // said only "500" — no project, no side, no reason — for hours.
+    it('says which project, which side, and the server\'s own words — never a bare number', async () => {
+        const refused = async () => ({ ok: false, status: 500, payload: { error: 'Server error' } })
+        const result = await carry({ to, stream, ops: [{ opId: 'S1', version: 4, type: 'updateEntity' }], seen: new Set(), targetVersion: 3, send: refused, direction: 'in' })
+        expect(result.failed).not.toBe(500)
+        expect(typeof result.failed).toBe('string')
+        expect(result.failed).toMatch(/project p/)
+        expect(result.failed).toMatch(/this di\.iiii refused the other side's changes/)
+        expect(result.failed).toMatch(/HTTP 500: Server error/)
+        expect(result.stuck).toBe(true)
+    })
+})
+
 // A manage key never leaves this machine over plain http (review L2; owner
 // 2026-10-07: any network). Its id starts with 'm', so its text says so.
 describe('a manage key is sent only over https, or to this machine', () => {

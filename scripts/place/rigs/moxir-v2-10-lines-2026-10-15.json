@@ -1,0 +1,123 @@
+{
+ "wash_count": 40,
+ "origin": [
+  -5.2,
+  -7.5
+ ],
+ "lines": [
+  {
+   "name": "A",
+   "points": [
+    [
+     -12.3,
+     -14.0
+    ],
+    [
+     -22.5,
+     -23.4
+    ],
+    [
+     -32.7,
+     -32.7
+    ]
+   ],
+   "gap_m": 13.8,
+   "where": "crew zone behind the DJ, one chain from the home run"
+  },
+  {
+   "name": "B",
+   "points": [
+    [
+     -7.7,
+     -14.0
+    ],
+    [
+     -11.2,
+     -23.4
+    ],
+    [
+     -14.7,
+     -32.7
+    ]
+   ],
+   "gap_m": 10.0,
+   "where": "crew zone behind the DJ, one chain from the home run"
+  },
+  {
+   "name": "C",
+   "points": [
+    [
+     -1.7,
+     -14.0
+    ],
+    [
+     3.5,
+     -23.4
+    ],
+    [
+     8.6,
+     -32.7
+    ]
+   ],
+   "gap_m": 10.7,
+   "where": "crew zone behind the DJ, one chain from the home run"
+  },
+  {
+   "name": "D",
+   "points": [
+    [
+     3.9,
+     -10.9
+    ],
+    [
+     16.9,
+     -15.7
+    ],
+    [
+     29.9,
+     -20.6
+    ]
+   ],
+   "gap_m": 13.9,
+   "where": "crew zone behind the DJ, one chain from the home run"
+  },
+  {
+   "name": "L",
+   "points": [
+    [
+     -13.4,
+     12.0
+    ],
+    [
+     -13.4,
+     28.0
+    ],
+    [
+     -13.4,
+     44.0
+    ]
+   ],
+   "gap_m": 16.0,
+   "where": "left fenced strip along the dance floor (where the 7 stand today), chain from the DJ side"
+  },
+  {
+   "name": "R",
+   "points": [
+    [
+     3.0,
+     12.0
+    ],
+    [
+     3.0,
+     28.0
+    ],
+    [
+     3.0,
+     44.0
+    ]
+   ],
+   "gap_m": 16.0,
+   "where": "right fenced strip along the dance floor (where the 7 stand today), chain from the DJ side"
+  }
+ ]
+}

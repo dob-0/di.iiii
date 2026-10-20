@@ -23,7 +23,13 @@ export const getFreePort = () => new Promise((resolve, reject) => {
     })
 })
 
-const waitForReady = (child, state) => new Promise((resolve, reject) => {
+// A child that is still running. Only an exit ends one on its own; a server that never said it was listening has not exited.
+const stopChild = (child) => {
+    if (child.exitCode !== null || child.signalCode !== null) return
+    try { child.kill('SIGKILL') } catch { /* already gone */ }
+}
+
+const waitForReady = (child, state, readyTimeoutMs) => new Promise((resolve, reject) => {
     const cleanup = () => {
         clearTimeout(guard)
         child.stdout.off('data', check)
@@ -34,13 +40,13 @@ const waitForReady = (child, state) => new Promise((resolve, reject) => {
     }
     const onExit = () => { cleanup(); reject(new Error(`Server exited early.\n${state.logs()}`)) }
     // A failure guard, not a wait: a server that never binds is reported with its logs.
-    const guard = setTimeout(() => { cleanup(); reject(new Error(`Server did not become ready in time.\n${state.logs()}`)) }, 15000)
+    const guard = setTimeout(() => { cleanup(); reject(new Error(`Server did not become ready in time.\n${state.logs()}`)) }, readyTimeoutMs)
     child.stdout.on('data', check)
     child.once('exit', onExit)
     check()
 })
 
-export const spawnServerUntilReady = async ({ entry, cwd, env }) => {
+export const spawnServerUntilReady = async ({ entry, cwd, env, readyTimeoutMs = 15000 }) => {
     const state = { stdout: '', stderr: '', logs: () => `STDOUT:\n${state.stdout}\nSTDERR:\n${state.stderr}` }
     for (let attempt = 1; ; attempt += 1) {
         const port = await getFreePort()
@@ -54,9 +60,13 @@ export const spawnServerUntilReady = async ({ entry, cwd, env }) => {
         child.stdout.on('data', (chunk) => { state.stdout += chunk.toString() })
         child.stderr.on('data', (chunk) => { state.stderr += chunk.toString() })
         try {
-            await waitForReady(child, state)
+            await waitForReady(child, state, readyTimeoutMs)
             return { child, port, logs: state.logs }
         } catch (error) {
+            // The guard fired on a server that is still running: the caller gets an Error and no child handle, so nothing
+            // would ever stop it — it outlived the test run (an orphan serverXR seen running for 22 minutes), and the retry
+            // below would start the next one beside it.
+            stopChild(child)
             if (attempt < 3 && /EADDRINUSE/.test(`${state.stdout}${state.stderr}`)) continue
             throw error
         }

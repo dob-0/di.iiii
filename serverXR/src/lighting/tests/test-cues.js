@@ -60,7 +60,7 @@ check('sanitizeCues bounds the list and drops a cue with no look', () => {
 
 check('load + GO fires cue 1 and advances on its hold; /api/dmx carries fadeMs, since, from and the cue summary', async () => {
   for (const look of LOOKS) await d.POST('/api/looks/add', { look });
-  const r = await d.POST('/api/cues/load', { project: 'moxir-hall-minimal', list: list(0.08), loop: false });
+  const r = await d.POST('/api/cues/load', { project: 'moxir-hall-minimal', list: list(0.08), loop: false, autoplay: true });
   assert.strictEqual(r.status, 200);
   assert.strictEqual((await d.POST('/api/cues/go', {})).status, 200);
   let l = await onLayer(d);
@@ -91,9 +91,36 @@ check('loop off: stops after the last cue\'s hold, the look stays', async () => 
   assert.strictEqual(d.desk.state.cues.running, false);
 });
 
+check('a pressed scene HOLDS: no auto-advance, no countdown, no loop, even with a hold set', async () => {
+  await d.POST('/api/cues/load', { project: 'p', list: list(0.05), loop: false });
+  const r = await d.POST('/api/cues/go', { index: 1 });
+  assert.strictEqual(r.body.cues.autoplay, false, 'play in order is off by default');
+  assert.strictEqual(r.body.cues.nextInMs, null, 'no countdown');
+  await sleep(200);
+  const { body } = await d.GET('/api/cues');
+  assert.strictEqual(body.cues.index, 1, 'still on the scene that was pressed');
+  assert.strictEqual(body.cues.running, true);
+  assert.strictEqual((await onLayer(d)).lookId, 'rig-b');
+});
+
+check('play in order is one switch; the next press of a scene turns it off', async () => {
+  await d.POST('/api/cues/load', { project: 'p', list: list(0.05), loop: false });
+  await d.POST('/api/cues/go', { index: 0 });
+  const on = await d.POST('/api/cues/autoplay', { autoplay: true });
+  assert.strictEqual(on.body.cues.autoplay, true);
+  await sleep(80);
+  assert.strictEqual((await d.GET('/api/cues')).body.cues.index, 1, 'it plays on');
+  await d.POST('/api/cues/go', { index: 0 });
+  assert.strictEqual((await d.GET('/api/cues')).body.cues.autoplay, false, 'a press turned it off');
+  await sleep(120);
+  assert.strictEqual((await d.GET('/api/cues')).body.cues.index, 0, 'and the scene holds');
+  await d.POST('/api/cues/stop');
+});
+
 check('loop on: the last cue goes back to cue 1', async () => {
   await d.POST('/api/cues/load', { project: 'p', list: list(0.06), loop: true });
   await d.POST('/api/cues/go', { index: 2 });
+  await d.POST('/api/cues/autoplay', { autoplay: true });
   await sleep(90);
   const { body } = await d.GET('/api/cues');
   assert.strictEqual(body.cues.index, 0, 'wrapped to cue 1');
@@ -134,6 +161,7 @@ check('two clients pressing GO at once leave ONE clock: no double fire', async (
     if (layer && layer.firedAt !== last) { last = layer.firedAt; fires.push(layer.lookId); }
   }, 5);
   await Promise.all([d.POST('/api/cues/go', { index: 0 }), d.POST('/api/cues/go', { index: 0 })]);
+  await d.POST('/api/cues/autoplay', { autoplay: true });
   await sleep(350);
   clearInterval(watch);
   await d.POST('/api/cues/stop');
@@ -175,6 +203,7 @@ check('a cue whose look is not on the desk is noted, and the loop does not stall
   const withMissing = [list(0.05)[0], { id: 'gone', name: 'Gone', lookId: 'rig-gone', hold: 0.05, fade: 0 }, list(0.05)[1]];
   await d.POST('/api/cues/load', { project: 'p', list: withMissing, loop: true });
   await d.POST('/api/cues/go', { index: 0 });
+  await d.POST('/api/cues/autoplay', { autoplay: true });
   await sleep(75);
   const mid = await d.GET('/api/cues');
   assert.strictEqual(mid.body.cues.index, 1);
@@ -188,6 +217,7 @@ check('a cue whose look is not on the desk is noted, and the loop does not stall
 check('load with keepIndex keeps the running cue (a hold edited mid-show)', async () => {
   await d.POST('/api/cues/load', { project: 'p', list: list(5), loop: true });
   await d.POST('/api/cues/go', { index: 1 });
+  await d.POST('/api/cues/autoplay', { autoplay: true });
   const r = await d.POST('/api/cues/load', { project: 'p', list: list(4), loop: true, keepIndex: true });
   assert.strictEqual(r.body.kept, true);
   assert.strictEqual(r.body.cues.index, 1);
@@ -235,6 +265,7 @@ check('a cue look at dimmer 0 puts a lamp out though the fixture itself holds 25
 check('a desk restarted mid-show resumes the list where it was', async () => {
   await d.POST('/api/cues/load', { project: 'moxir-hall-minimal', list: list(0.08), loop: true });
   await d.POST('/api/cues/go', { index: 1 });
+  await d.POST('/api/cues/autoplay', { autoplay: true });
   await d.stop(); // close() saves the show
   d = await start(dir);
   const { body } = await d.GET('/api/cues');

@@ -8,7 +8,7 @@ vi.mock('./StudioViewportLayout.jsx', () => ({
 }))
 vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, children }) => <div data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
-    default: ({ gizmoMode }) => <output data-testid="gizmo-mode">{gizmoMode}</output>
+    default: ({ gizmoMode, previewUrl }) => <output data-testid="gizmo-mode" data-preview-url={previewUrl || ''}>{gizmoMode}</output>
 }))
 vi.mock('./StudioQuickInsert.jsx', () => ({ default: () => null }))
 vi.mock('./StudioInspector.jsx', () => ({ default: () => null }))
@@ -45,14 +45,28 @@ describe('StudioShell transform shortcuts', () => {
         ['g', 'translate'],
         ['r', 'rotate'],
         ['s', 'scale'],
-    ])('%s shows the drag-handle gizmo in the matching mode without arming the modal', (key, mode) => {
+    ])('%s with a selection picks the gizmo mode AND starts the transform at once (Blender grab)', (key, mode) => {
         const onStartTransform = vi.fn()
         renderShell({ selectedEntityIds: ['cube-1'], onStartTransform })
 
         fireEvent.keyDown(window, { key })
 
         expect(screen.getByTestId('gizmo-mode')).toHaveTextContent(mode)
-        // G/R/S only switch the gizmo mode — X/Y/Z arms the modal
+        // owner 2026-10-13: "in Select I can't move" — no handle to find, the mouse moves it from the key
+        expect(onStartTransform).toHaveBeenCalledWith(mode, null)
+    })
+
+    it.each([
+        ['g', 'translate'],
+        ['r', 'rotate'],
+        ['s', 'scale'],
+    ])('%s with nothing selected only picks the gizmo mode', (key, mode) => {
+        const onStartTransform = vi.fn()
+        renderShell({ selectedEntityIds: [], onStartTransform })
+
+        fireEvent.keyDown(window, { key })
+
+        expect(screen.getByTestId('gizmo-mode')).toHaveTextContent(mode)
         expect(onStartTransform).not.toHaveBeenCalled()
     })
 
@@ -139,6 +153,17 @@ describe('StudioShell mobile chrome', () => {
         renderShell({})
         expect(screen.queryByRole('navigation', { name: 'Studio windows' })).not.toBeInTheDocument()
         expect(screen.getByTestId('gizmo-mode')).toBeInTheDocument()
+    })
+})
+
+// The Preview button (owner 2026-10-13): the editor works out the project's VIEW address, the shell carries it.
+describe('StudioShell — the Preview address reaches the control cluster', () => {
+    it('hands previewUrl to the cluster, and nothing when the editor has none', () => {
+        const { unmount } = renderShell({ previewUrl: 'http://diiii.localhost/moxir/v2-9' })
+        expect(screen.getByTestId('gizmo-mode')).toHaveAttribute('data-preview-url', 'http://diiii.localhost/moxir/v2-9')
+        unmount()
+        renderShell({})
+        expect(screen.getByTestId('gizmo-mode')).toHaveAttribute('data-preview-url', '')
     })
 })
 
@@ -277,5 +302,32 @@ describe('StudioShell — a new project opens bare', () => {
         expect(wall()).toBeNull()
         act(() => saveAllTools(true))
         expect(wall()).not.toBeNull()
+    })
+})
+
+// N581 (2026-10-15): X/Y/Z armed the modal for ANY selection. With a selection that cannot
+// move (every object in it locked) the viewport never mounted the operator, nobody cancelled
+// the op, and every editor shortcut — Escape, A, Alt+A, Delete — stayed dead until a reload.
+describe('StudioShell transform shortcuts and a locked selection', () => {
+    const locked = { id: 'hall', name: 'hall', components: { runtime: { locked: true } } }
+    const free = { id: 'lamp', name: 'lamp', components: {} }
+
+    it('x on a selection that is entirely locked never arms the modal; it constrains the gizmo instead', () => {
+        const onStartTransform = vi.fn()
+        renderShell({ entities: [locked, free], selectedEntityIds: ['hall'], onStartTransform })
+
+        fireEvent.keyDown(window, { key: 'x' })
+
+        expect(onStartTransform).not.toHaveBeenCalled()
+        expect(screen.getByTestId('gizmo-axis')).toHaveTextContent('x')
+    })
+
+    it('x on a mixed selection arms the modal (the locked one stays where it is)', () => {
+        const onStartTransform = vi.fn()
+        renderShell({ entities: [locked, free], selectedEntityIds: ['hall', 'lamp'], onStartTransform })
+
+        fireEvent.keyDown(window, { key: 'x' })
+
+        expect(onStartTransform).toHaveBeenCalledWith('translate', 'x')
     })
 })

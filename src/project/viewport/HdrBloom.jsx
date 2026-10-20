@@ -8,7 +8,9 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { isBloomAllowed, isCameraOutside, setBloomActive } from '../../objectComponents/atmosphereStore.js'
 import { bloomOf } from './bloom.js'
+import { LaserOverPass, holdLasers, releaseLasers } from './laserOverBloom.js'
 import { AutoExposurePass, autoExposureOf } from './autoExposure.js'
+import { isMeasuring } from './measure/measureState.js'
 
 // THE ROOM IN HIGH DYNAMIC RANGE, WITH BLOOM (renderSettings.bloom, bloom.js).
 //
@@ -33,13 +35,13 @@ import { AutoExposurePass, autoExposureOf } from './autoExposure.js'
 export const BLOOM_MAX_DPR = 1.5
 
 export default function HdrBloom({ renderSettings }) {
-    const { gl, scene, size, viewport } = useThree()
+    const { gl, scene, size, viewport, camera, controls } = useThree()
     const bloom = bloomOf(renderSettings)
     // DEV ONLY, for a harness: window.__diRoom = { scene, gl, camera, passes, debug }. A probe
     // can hide things, swap materials or set debug.noGlow / debug.noExposure (the frame loop
     // honours them) to isolate an artefact. How the 2026-10-02 "dotted dome" was traced to
     // SmartView's occlusion fade after shadows, lights, beams and post were each ruled out.
-    if (import.meta.env.DEV && typeof window !== 'undefined') window.__diRoom = { scene, gl }
+    if (import.meta.env.DEV && typeof window !== 'undefined') window.__diRoom = { scene, gl, camera, controls }
     const passes = useMemo(() => {
         // half float: values above 1 survive to the bloom and the tone mapping; and a
         // stencil: the floor marks where it is the visible surface, for the reflections
@@ -54,14 +56,17 @@ export default function HdrBloom({ renderSettings }) {
         const glow = new UnrealBloomPass(new Vector2(256, 256), 0.03, 0.4, 1)
         // the camera's adaptation (autoExposure.js): after the glow, before the exposure
         const exposure = new AutoExposurePass()
+        // the lasers, drawn over the glow, not into it (laserOverBloom.js): thin lines stay lines
+        const lasers = new LaserOverPass()
         composer.addPass(render)
         composer.addPass(glow)
+        composer.addPass(lasers)
         composer.addPass(exposure)
         composer.addPass(new OutputPass())
         // the edges, on the tone-mapped picture (SMAA wants display values, not HDR)
         const smaa = new SMAAPass()
         composer.addPass(smaa)
-        return { composer, render, glow, exposure, smaa, target }
+        return { composer, render, glow, lasers, exposure, smaa, target }
     }, [gl, scene])
     useEffect(() => {
         // A phone at DPR 3 would carry a half-float, multisampled 1170×2532 buffer plus
@@ -93,20 +98,30 @@ export default function HdrBloom({ renderSettings }) {
         // HDR path here tone-mapped each beam on its own (overlaps clipped white), put the
         // fog after the exposure, and recompiled every lit material mid-measurement.
         const dbg = (import.meta.env.DEV && window.__diRoom?.debug) || {}
-        const glow = isBloomAllowed(gl) && !isCameraOutside(gl) && !dbg.noGlow // no eye in the hall to glow from outside (SmartView)
+        // the measurement mode (measure/MeasurementMode.jsx): no glow and no auto exposure, so
+        // the picture is the room at one stated EV100 (its veil is held off in atmosphereStore)
+        const measuring = isMeasuring(gl)
+        const glow = isBloomAllowed(gl) && !isCameraOutside(gl) && !dbg.noGlow && !measuring // no eye in the hall to glow from outside (SmartView)
         passes.glow.enabled = glow
         setBloomActive(gl, glow)
         passes.render.camera = state.camera
         if (import.meta.env.DEV && window.__diRoom) Object.assign(window.__diRoom, { camera: state.camera, passes })
         const auto = autoExposureOf(renderSettings)
-        passes.exposure.enabled = Boolean(auto) && !dbg.noExposure
+        passes.exposure.enabled = Boolean(auto) && !dbg.noExposure && !measuring
         if (auto) Object.assign(passes.exposure, auto)
         passes.glow.strength = bloom.strength
         passes.glow.radius = bloom.radius
         // the threshold is said in the screen's terms (1 = what the exposure makes
         // white-ish); the buffer holds the light before the exposure
         passes.glow.threshold = bloom.threshold / Math.max(gl.toneMappingExposure || 1, 1e-3)
-        passes.composer.render(delta)
+        passes.lasers.camera = state.camera
+        passes.lasers.held = holdLasers(scene)
+        try {
+            passes.composer.render(delta)
+        } finally {
+            releaseLasers(passes.lasers.held)
+            passes.lasers.held = []
+        }
     }, 1)
     return null
 }

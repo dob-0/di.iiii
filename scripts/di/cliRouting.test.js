@@ -164,6 +164,47 @@ describe('the keeper command', () => {
     })
 })
 
+// `di login` writes a token into ~/.config/di. A typo must not: routing is held to the
+// bar of the keeper and the stage — a bare word, an unknown flag or --help changes nothing.
+describe('the login commands', () => {
+    it('are commands, and the usage names them', () => {
+        for (const name of ['login', 'logout', 'whoami']) expect(typeof COMMANDS[name], name).toBe('function')
+        const help = di(emptyHome(), ['help']).out
+        expect(help).toContain('di login')
+        expect(help).toContain('di whoami')
+    })
+
+    it('read --tier, --label and --base as values', () => {
+        expect(parseArgs(['login', '--tier', 'prod', '--label', 'my laptop', '--no-open']).flags)
+            .toEqual({ tier: 'prod', label: 'my laptop', 'no-open': true })
+        expect(parseArgs(['mcp', '--base', 'https://example.org/serverXR']).flags).toEqual({ base: 'https://example.org/serverXR' })
+    })
+
+    it('say what they do on --help, writing nothing and asking no one', () => {
+        const home = emptyHome()
+        const result = di(home, ['login', '--help'])
+        expect(result.code).toBe(0)
+        expect(result.out).toContain('sign in once on this machine')
+        expect(fs.existsSync(path.join(home, '.config'))).toBe(false)
+    })
+
+    it('whoami and logout with no login stored say so and leave no file behind', () => {
+        const home = emptyHome()
+        const env = { HOME: home, USERPROFILE: home }
+        const run = (args) => spawnSync(process.execPath, [CLI, ...args], {
+            encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'],
+            env: { ...process.env, DI_HOME: home, DI_NO_COLOR: '1', DI_TOKEN: '', ...env }
+        })
+        const who = run(['whoami', '--to', 'http://127.0.0.1:9'])
+        expect(who.status).toBe(1)
+        expect(who.stdout).toContain('not signed in to 127.0.0.1:9')
+        const out = run(['logout', '--to', 'http://127.0.0.1:9'])
+        expect(out.status).toBe(0)
+        expect(out.stdout).toContain('nothing to do')
+        expect(fs.existsSync(path.join(home, '.config'))).toBe(false)
+    })
+})
+
 describe('reached through the shim', () => {
     it('runs when invoked through the `current` symlink, as the shim does', () => {
         // Node reports the main module by its real path; the shim names it

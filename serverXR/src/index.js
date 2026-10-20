@@ -1,5 +1,7 @@
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local') })
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
+// After dotenv, so a DATA_ROOT in .env counts; before config.js reads it.
+require('./dataRootGuard').enforceDataRoot()
 const express = require('express')
 // Before any router exists: the catalogue walks the live routes, and Express 5
 // only keeps a sub-router's mount path if it is recorded as it is mounted.
@@ -15,7 +17,9 @@ const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
-const { initDb, getDb, SCHEMA_VERSION } = require('./db')
+const { initDb, getDb, getStartupReport, SCHEMA_VERSION } = require('./db')
+const { installShutdown, createInflight } = require('./gracefulShutdown')
+const inflight = createInflight()
 const { migrateFromFilesystem } = require('./migrate')
 const logger = require('./logger')
 const {
@@ -42,6 +46,7 @@ const {
 const { config, buildCorsOriginHandler } = require('./config')
 const { createDiskWriteGuard } = require('./diskGuard')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
+const { withProjectWriteLock } = require('./projectWrite')
 const { initializeSocket } = require('./socketHandlers')
 const { initializeMesh } = require('./meshHub')
 const { attachLiveAiRelay } = require('./liveAi/relay')
@@ -75,6 +80,8 @@ const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const { registerEstateRoutes } = require('./routes/estateRoutes')
 const { registerTrackRoutes } = require('./routes/trackRoutes')
+const { registerShootRoutes } = require('./routes/shootRoutes')
+const { registerShowRoutes } = require('./routes/showRoutes')
 const { registerAppVisitorRoutes } = require('./routes/appVisitorRoutes')
 const { createVisitorRecorder, createVisitorBouncer } = require('./appVisitors')
 const { createGuestBook } = require('./appVisitorStore')
@@ -88,6 +95,12 @@ const {
   getUserTokenVersion,
   bumpUserTokenVersion
 } = require('./userStore')
+const { resolveActToken, PREFIX: actTokenPrefix } = require('./telegramActTokenStore')
+const { createActTokenGate } = require('./actTokenGate')
+const { resolveCliToken, pruneCliLogin, TOKEN_PREFIX: cliTokenPrefix } = require('./cliLoginStore')
+const { createCliTokenGate } = require('./cliTokenGate')
+const { registerCliLoginRoutes } = require('./routes/cliLoginRoutes')
+const { tierFor, capForTier } = require('./actTokenTier')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const syncKeyActions = require('./syncKeyActions')
 // Said once, where the operator reads the log (review R2-C).
@@ -110,10 +123,12 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
 const domainStore = require('./domainStore')
 const { createCloudflareSaas } = require('./cloudflareSaas')
-const { createDomainService } = require('./domainService')
+const { createDomainService, chooseDomainProvider } = require('./domainService')
+const { createDnsCheck } = require('./domainDns')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerLaserRoutes } = require('./routes/laserRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -121,6 +136,8 @@ const { registerPlaceRoutes } = require('./routes/placeRoutes')
 // actually are, which is what the place lane has to copy footage out of.
 const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
+const { certificateNames, registerGuestAddressRoute } = require('./guestAddress')
+const { startLocalName } = require('./localName')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
 const { registerMachineRoutes } = require('./machines/routes')
@@ -128,6 +145,7 @@ const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
 const { createSpaceStore } = require('./spaceStore')
+const { createSceneWriter } = require('./sceneWrite')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultScene: BLANK_SCENE,
@@ -224,12 +242,23 @@ const ALLOWED_EXTENSIONS = new Set([
 const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
-  appendOpsHistory,
   archiveIdleAccountSandboxes,
+  commitSceneOps,
+  healOrphanSpaceOps,
+  readSceneVersion,
   buildMeta,
   collectSceneAssetRefs,
   countSpacesOwnedBy,
   deleteSpace,
+  trashSpace,
+  protectedReason,
+  restoreSpace,
+  listTrashedSpaces,
+  loadTrashedSpaceMeta,
+  spaceFootprint,
+  purgeTrashedSpace,
+  purgeSpaceTrash,
+  SPACE_TRASH_TTL_MS,
   ensureDefaultSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
@@ -266,6 +295,8 @@ const {
   defaultTtlMs: DEFAULT_TTL_MS,
   sandboxTtlMs: config.sandboxTtlMs,
   accountSandboxTtlMs: config.accountSandboxTtlMs,
+  // Read each sweep, so `di follow` / `di unfollow` count without a restart.
+  keptSpaceIds: () => Object.keys(require('./follow/followStore').readFollows(config.directories.dataDir)),
   blankScene: BLANK_SCENE
 })
 
@@ -332,11 +363,14 @@ async function initStorage() {
     .then((removed) => { if (removed.length) logger.info(`[uploads] removed ${removed.length} stale temp file(s)`) })
     .catch(() => {})
   initDb(DB_PATH)
+  const { archivedTitlesMoved } = getStartupReport()
+  if (archivedTitlesMoved) logger.info(`[db] ${archivedTitlesMoved} project title(s) wearing "[archived]" moved to state archived`)
   configStore.init(SPACES_DIR)
   await migrateFromFilesystem(SPACES_DIR)
 }
 
 const app = express()
+app.use(inflight.middleware)
 // req.ip is the real client behind a proxy on this machine — see proxyTrust.js.
 app.set('trust proxy', TRUST_PROXY)
 const startedAt = Date.now()
@@ -511,6 +545,18 @@ const lighting = registerLightingRoutes(app, {
   listen: describeListenNow
 })
 
+// The lasers (serverXR/src/laser) at /laser — MOXIR's LaserCubes driven from the Nodes editor: the
+// desk's twin (built on first use, local-only, 404 hosted), and DISARMED at every start.
+const lasers = registerLaserRoutes(app, {
+  dataDir: config.directories.dataDir,
+  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])],
+  // The show player reads a project's document the way the project API does (laser/laserShow.js).
+  loadDocument: async (projectId) => {
+    const project = await resolveProjectContext(projectId)
+    return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
+  }
+})
+
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
 // built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
 // NDI runtime (installed by the person, never shipped) and koffi (an optional
@@ -521,11 +567,21 @@ const ndi = registerNdiRoutes(app, {
   mountPaths: [...new Set(['/ndi', `${config.mountPath || ''}/ndi`.replace(/\/+/g, '/')])],
   log: (line) => logger.info(line)
 })
-// index.js has no shutdown path of its own (a signal simply ends the process), so the
-// lighting desk's close() is not wired anywhere either. The NDI child does not depend
-// on one: it exits by itself when its IPC channel closes — a kill -9 of the server
-// included. This hook only makes an orderly process.exit() prompt about it.
+// The NDI child does not depend on an orderly stop: it exits by itself when its IPC
+// channel closes — a kill -9 of the server included. This hook only makes an orderly
+// process.exit() prompt about it. SIGTERM/SIGINT are handled by gracefulShutdown.js
+// (installed once the server listens); the sweeps' timers are collected here.
+const shutdownTimers = []
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
+// Going down: every cube blanked and its output switched off twice, then the socket closed
+// (laserEngine.js shutdown). That is the FIRST step of the orderly stop (gracefulShutdown.js
+// `before`, installed once the server listens): SIGTERM / SIGINT wait for those messages to
+// leave (≤ 250 ms), then the server drains and the database closes, and the process exits 0.
+// Two SIGTERM handlers (one re-raising the signal) killed the process mid-stop — 2026-10-12.
+// The 'exit' hook is a last try only: nothing asynchronous — a UDP send — is sure to leave
+// from it. A kill -9 or a pulled cable cannot be caught here; the cube's firmware is then the last word.
+const stopLasers = () => (lasers.hasEngine() ? lasers.close() : undefined)
+process.once('exit', () => { try { lasers.close() } catch { /* going down anyway */ } })
 // The NDI autoscan: which sources are on the network right now, known before anyone
 // asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
 // a hosted tier. With no runtime it forks nothing — it records "no-runtime" and says so.
@@ -605,6 +661,28 @@ const router = express.Router()
 const guestBook = createGuestBook({ getDb, log: logger })
 router.use(createVisitorRecorder({ guestBook, log: logger }))
 router.use(express.static(PUBLIC_DIR, { setHeaders: allowNullOrigin }))
+
+// A di.bo act token is judged here, before any route — the auth routes below
+// included: refused routes (actTokenGate.js REFUSED_THROUGH_DI_BO) answer 403,
+// a dead token 401, every write is logged, and no session cookie leaves.
+// The functions it calls are defined further down; they run per request.
+router.use(createActTokenGate({
+  prefix: actTokenPrefix,
+  readToken: (req) => normalizeAuthToken(readAuthToken(req)),
+  resolveState: (req, token) => resolveActTokenState(req, token),
+  cookieName: config.authSession.cookieName,
+  logger
+}))
+
+// A terminal's own login (`di login`, docs/architecture/CLI_LOGIN.md) is judged the
+// same way, by its own gate (cliTokenGate.js): the di.bo refusals, nothing the
+// catalogue marks public, a dead token 401, no cookie out, every write logged.
+router.use(createCliTokenGate({
+  readToken: (req) => normalizeAuthToken(readAuthToken(req)),
+  resolveState: (req, token) => resolveCliTokenState(req, token),
+  cookieName: config.authSession.cookieName,
+  logger
+}))
 
 // `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
 // can toggle it, which is why it is a function and not a constant.
@@ -764,10 +842,110 @@ const refreshSessionCookieIfStale = (req, res, state) => {
   }
 }
 
+// di.bo acting as a person (telegramActTokenStore.js, actTokenGate.js). The
+// token names an account; the state is built from that account's row exactly
+// as a session's is — role, spaces and unrestricted read fresh from the DB,
+// and the same token_version check a cookie gets, so signing out everywhere
+// ends it too. The one addition is the marker: `actor: 'di.bo'`.
+// Memoised per request: the gate and the auth-state middleware both ask.
+const actTokenStates = new WeakMap()
+const resolveActTokenState = (req, token) => {
+  if (actTokenStates.has(req)) return actTokenStates.get(req)
+  let state = null
+  const claim = resolveActToken(token)
+  if (claim) {
+    const current = lookupSessionTokenVersion(claim.userId)
+    const fresh = Number.isFinite(current) && current === claim.tokenVersion
+      ? getFreshDbIdentity(claim.userId)
+      : null
+    if (fresh && fresh.dbRole) {
+      // The tier (actTokenTier.js) only ever lowers what the account has.
+      const tg = config.oauth?.telegram || {}
+      const actTier = tierFor(claim.telegramId, { rootIds: tg.actTokenRootIds, adminIds: tg.actTokenAdminIds })
+      const reach = capForTier(actTier, { role: fresh.dbRole, isUnrestricted: fresh.dbUnrestricted })
+      state = {
+        ...buildAuthState({
+          authenticated: true,
+          type: 'session',
+          role: reach.role,
+          subject: claim.userId,
+          label: claim.label,
+          spaces: fresh.dbSpaces,
+          isUnrestricted: reach.isUnrestricted,
+          session: { subject: claim.userId, expiresAt: claim.expiresAt, tokenVersion: claim.tokenVersion }
+        }),
+        actor: 'di.bo',
+        actTokenId: claim.tokenId,
+        actTier
+      }
+    }
+  }
+  actTokenStates.set(req, state)
+  return state
+}
+
+// A terminal's own login (cliLoginStore.js): the person's state, built from
+// their account row exactly as a session's is — role, spaces and unrestricted
+// read fresh — and capped like a di.bo member. It is NOT checked against the
+// account's token_version: a browser sign-out must not end a terminal login
+// (docs/architecture/CLI_LOGIN.md). It ends by revoke, by disuse, or when the
+// account is gone. Memoised per request, as the act token's state is.
+const cliTokenStates = new WeakMap()
+const resolveCliTokenState = (req, token) => {
+  if (cliTokenStates.has(req)) return cliTokenStates.get(req)
+  let state = null
+  const claim = resolveCliToken(token)
+  if (claim) {
+    const fresh = getFreshDbIdentity(claim.userId)
+    if (fresh && fresh.dbRole) {
+      const reach = capForTier('member', { role: fresh.dbRole, isUnrestricted: fresh.dbUnrestricted })
+      let person = null
+      try { person = findUserById(claim.userId) } catch { /* the name is a label, not the grant */ }
+      state = {
+        ...buildAuthState({
+          authenticated: true,
+          type: 'session',
+          role: reach.role,
+          subject: claim.userId,
+          label: String(person?.display_name || person?.email || claim.userId).trim().slice(0, 120),
+          spaces: fresh.dbSpaces,
+          isUnrestricted: reach.isUnrestricted,
+          session: { subject: claim.userId, expiresAt: claim.expiresAt }
+        }),
+        actor: 'di.cli',
+        cliTokenId: claim.tokenId,
+        cliTokenLabel: claim.label,
+        cliTokenExpiresAt: claim.expiresAt
+      }
+    }
+  }
+  cliTokenStates.set(req, state)
+  return state
+}
+
+// A request that carries someone else's errand token — di.bo's or a terminal's:
+// on a `di up` install loopback must not turn it into the owner.
+const carriesActToken = (req) => {
+  const token = normalizeAuthToken(readAuthToken(req))
+  return Boolean(token) && (token.startsWith(actTokenPrefix) || token.startsWith(cliTokenPrefix))
+}
+
 // The one route that reads a second sync key (§13.3).
 const MOVE_ROUTE = /\/api\/projects\/[^/?]+\/move\/?(?:\?|$)/
 
 const getAuthState = (req, res = null) => {
+  // A di.bo token wins over anything else the request carries: a request that
+  // says it is di.bo's errand is judged as one, never as the cookie beside it.
+  const bearer = normalizeAuthToken(readAuthToken(req))
+  if (bearer && bearer.startsWith(actTokenPrefix)) {
+    return resolveActTokenState(req, bearer)
+      || buildAuthState({ authenticated: false, type: 'act-token', reason: 'act-token' })
+  }
+  // A terminal's login wins over the cookie beside it for the same reason.
+  if (bearer && bearer.startsWith(cliTokenPrefix)) {
+    return resolveCliTokenState(req, bearer)
+      || buildAuthState({ authenticated: false, type: 'cli-token', reason: 'cli-token' })
+  }
   const sessionState = readAuthSession(req)
   if (sessionState.authenticated) {
     if (res) refreshSessionCookieIfStale(req, res, sessionState)
@@ -847,7 +1025,9 @@ const getAuthState = (req, res = null) => {
 // `di up` puts no proxy in front of itself. Everyone on the network arrives as
 // a guest, which is the entire point of the mode.
 const getPublicAuthState = (req, res = null) => {
-  if (config.requireAuth && isOwnerAtTheMachine(req)) {
+  // Not for a di.bo token: on a `di up` install with di.bo on the same machine,
+  // loopback would otherwise turn the person's errand into the owner's.
+  if (config.requireAuth && isOwnerAtTheMachine(req) && !carriesActToken(req)) {
     return buildAuthState({
       authenticated: true,
       type: 'session',
@@ -904,7 +1084,9 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   if (!user || !Array.isArray(user.spaces) || user.spaces.includes(spaceId)) return
   const nextSpaces = [...user.spaces, spaceId]
   try { setUserSpacesNow(userId, nextSpaces) } catch { return }
-  if (req.authState?.type === 'session' && config.auth.sessionSecret) {
+  // Not for di.bo's errand: its request holds a short token, not a cookie,
+  // and re-issuing one here would hand the bot a 12-hour browser session.
+  if (req.authState?.type === 'session' && !req.authState.actor && config.auth.sessionSecret) {
     try {
       const session = reissueSessionValue(req.authState.session, {
         session: {
@@ -1038,13 +1220,17 @@ const promoteGuestSandbox = async (priorState, userId) => {
     await moveSpace(fromId, toId, { label: 'Sandbox', permanent: true })
     // Project documents carry their spaceId in projectMeta — repoint them so
     // clients loading the moved projects see a consistent home.
+    // A read answers with the right spaceId already (it is filled in from the
+    // database) but never writes, so the file on disk is checked as it is and
+    // rewritten under the project's write lock, like any save.
     for (const project of fromProjects) {
       try {
-        const doc = await readProjectDocument(SPACES_DIR, toId, project.id)
-        if (doc?.projectMeta?.spaceId && doc.projectMeta.spaceId !== toId) {
-          await writeProjectDocument(SPACES_DIR, toId, project.id, {
-            ...doc,
-            projectMeta: { ...doc.projectMeta, spaceId: toId }
+        const { documentPath } = getProjectPaths(SPACES_DIR, toId, project.id)
+        const onDisk = await readJson(documentPath, null)
+        if (onDisk?.projectMeta?.spaceId && onDisk.projectMeta.spaceId !== toId) {
+          await withProjectWriteLock({ spacesDir: SPACES_DIR, spaceId: toId, projectId: project.id, log: logger }, async () => {
+            const doc = await readProjectDocument(SPACES_DIR, toId, project.id)
+            await writeProjectDocument(SPACES_DIR, toId, project.id, doc)
           })
         }
       } catch { /* best-effort — a stale embedded spaceId is cosmetic */ }
@@ -1188,6 +1374,32 @@ registerAuthRoutes(router, {
   onSessionUpgrade: (req, user) => promoteGuestSandbox(readAuthSession(req), user.id),
   // Read-only, for the Telegram bot's "what can I open" answer.
   listSpaces
+})
+
+// Signing in from a terminal (docs/architecture/CLI_LOGIN.md): a terminal asks for a
+// code, a person in a browser answers it, the terminal is handed a login.
+// Answers are limited per address AND per account, so neither many accounts
+// from one place nor one account from many places can sweep the code space.
+// Where there are no accounts (a `di up` install, or auth off) it is not offered.
+const cliStartLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10, name: 'terminal sign-in codes' })
+const cliPollLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 1200, name: 'terminal sign-in polls' })
+const cliAnswerByAddress = createRateLimiter({ windowMs: 60_000, max: 10, name: 'terminal sign-in answers' })
+const cliAnswerByAccount = createRateLimiter({
+  windowMs: 60_000,
+  max: 10,
+  name: 'terminal sign-in answers',
+  keyFn: (req) => `account:${getPublicAuthState(req)?.subject || 'anon'}`,
+  scope: 'for this account'
+})
+registerCliLoginRoutes(router, {
+  logger,
+  getAuthState: (req) => req.authState || getPublicAuthState(req),
+  findUserById,
+  clientKey,
+  isAvailable: () => Boolean(config.requireAuth) && !isLocalInstall(),
+  startLimiter: cliStartLimiter,
+  pollLimiter: cliPollLimiter,
+  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount]
 })
 
 router.get('/api/auth/session', async (req, res, next) => {
@@ -1538,6 +1750,23 @@ const requireSpaceOwnerOrAdminWrite = async (req, res, next) => {
   }
 }
 
+// Same gate for a space that is in the trash: restore and purge name a space
+// loadSpaceMeta no longer sees, so the owner is read from the trashed row.
+const requireTrashedSpaceOwnerOrAdminWrite = async (req, res, next) => {
+  if (!config.requireAuth) return next()
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId) || req.params.spaceId
+    const meta = await loadTrashedSpaceMeta(spaceId)
+    if (!meta) return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
+    if (!isSpaceOwnerOrAdminState(req.authState || {}, meta)) {
+      return res.status(403).json({ error: 'Only the space owner or an admin can manage this space.' })
+    }
+    return next()
+  } catch (error) {
+    return next(error)
+  }
+}
+
 // Unlike requireWriteRole, this applies to every method including GET/HEAD —
 // for admin-only resources (like user management) that have no public read path.
 const requireAdminAlways = (req, res, next) => {
@@ -1641,6 +1870,14 @@ async function currentlyOwnerOrAdmin(spaceId, actorType, actorSubject) {
 }
 approvalGate.registerReauthorizer('spaces.patch', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
 approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
+// A purge names a space that is already in the trash, which loadSpaceMeta no
+// longer sees — the owner is re-read from the trashed row.
+approvalGate.registerReauthorizer('spaces.purge', async (args, subject, actorType) => {
+  if (hasRequiredAuthRole(currentRoleForActor(actorType, subject), 'admin')) return true
+  if (actorType !== 'session') return false
+  const meta = await loadTrashedSpaceMeta(args?.spaceId).catch(() => null)
+  return Boolean(meta?.ownerUserId) && meta.ownerUserId === subject
+})
 
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
@@ -1843,9 +2080,12 @@ router.param('spaceId', createSpaceIdParam({ normalizeSpaceId, spaceExists, find
 // *management* (PATCH/DELETE below) is owner-or-admin, enforced by
 // requireSpaceOwnerOrAdminWrite on the routes themselves.
 // The one route under /api/spaces/:spaceId whose segment is not a space: the
-// import route in routes/spaceRoutes.js. Matched on the whole path, ending
-// there, so /api/spaces/bundle/scene (a space called "bundle") never matches.
-const OPEN_A_FILE_PATH = /\/api\/spaces\/bundle\/?(?:\?|$)/
+// import route in routes/spaceRoutes.js. Matched on this router's own parsed
+// path — the :spaceId segment is "bundle" and nothing follows it — so
+// /api/spaces/bundle/scene (a space called "bundle") never matches. Not on
+// req.originalUrl, which also carries the query string.
+const isOpenAFile = (req) =>
+  req.method === 'POST' && req.params.spaceId === 'bundle' && (req.path === '/' || req.path === '')
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
   // POST /api/spaces/bundle is "open a file", which CREATES a space — it names
   // no existing one, exactly like POST /api/spaces. Read as a space id,
@@ -1854,7 +2094,7 @@ router.use('/api/spaces/:spaceId', async (req, res, next) => {
   // route checks who may create for itself. Only this one method and exact
   // path: GET/PATCH/DELETE on a space that happens to be called "bundle" keep
   // their scope check.
-  if (req.method === 'POST' && OPEN_A_FILE_PATH.test(req.originalUrl || '')) {
+  if (isOpenAFile(req)) {
     return next()
   }
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
@@ -1973,6 +2213,45 @@ registerTrackRoutes(router, {
   requireAdminAlways
 })
 
+// The shoot sheet (/shoot/{key}): a crew's shared plan, opened by a link and
+// never by a login, so it must sit ahead of the /api auth gates below. The key
+// in the path is the credential — see shootRoutes.js for why, and why only
+// listed keys answer. A phone polls every few seconds, hence the roomy read cap.
+registerShootRoutes(router, {
+  dataDir: config.directories.dataDir,
+  readJson,
+  writeJson,
+  readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'shoot sheet reads' }),
+  writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 600, name: 'shoot sheet edits' }),
+  fileLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 120, name: 'shoot sheet photos' })
+})
+
+// The show page (/{space}/show/{project}): everyone in a space sees the live cue and,
+// as the operator allows, chooses one. Ahead of the /api role gates below on purpose —
+// a guest may choose once the operator opens it to guests, which the blanket write gate
+// would refuse — so its handlers make the read decision requireReadRole makes, then their
+// own (routes/showRoutes.js, show/showRemote.js). Every phone in the room polls it once
+// a second, hence the read cap: 1 Hz for ten minutes is 600.
+registerShowRoutes(router, {
+  dataDir: config.directories.dataDir,
+  readJson,
+  writeJson,
+  requireAuth: () => config.requireAuth,
+  normalizeSpaceId,
+  loadSpaceMeta,
+  findProjectById: (id) => findProjectById(SPACES_DIR, id),
+  findProjectBySlug,
+  canSeeProject,
+  canAccessSpace,
+  hasRequiredAuthRole,
+  isOwnerOrAdmin: (state, meta) => isSpaceOwnerOrAdminState(state, meta),
+  hasLocalRuntime,
+  lighting,
+  readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'show page reads' }),
+  writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 240, name: 'show page choices' }),
+  log: (line) => logger.info(line)
+})
+
 // Shared with registerSpaceRoutes below (same instance, not just the same
 // factory) so an inscription write and a normal /ops write to the same space
 // serialize against each other instead of two independent lock maps letting
@@ -1981,6 +2260,16 @@ registerTrackRoutes(router, {
 // spaceRoutes registers after it -- reordering either would change who needs
 // auth for what.
 const sharedSpaceOpsLock = createKeyedLock()
+// Every scene write — POST /ops, whole-scene replaces, inscriptions — goes
+// through this: the shared lock above plus the data folder's cross-process
+// lock, and one write that a crash at any point leaves whole (sceneWrite.js).
+const sceneWriter = createSceneWriter({
+  getSpacePaths,
+  commitSceneOps,
+  readSceneVersion,
+  inProcessLock: sharedSpaceOpsLock,
+  log: logger
+})
 
 // Public, unauthenticated, append-only: space inscriptions (the br_id_ge
 // portal write path). Registered before the gates like open-call submissions;
@@ -2017,7 +2306,6 @@ registerOgRoutes(router, {
 })
 
 registerInscriptionRoutes(router, {
-  appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
@@ -2030,9 +2318,8 @@ registerInscriptionRoutes(router, {
   maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeSpaceId,
   readJson,
-  withSpaceOpsLock: sharedSpaceOpsLock,
-  upsertSpaceMeta,
-  writeJson,
+  withSpaceOpsLock: sceneWriter.withSceneWriteLock,
+  commitSceneWrite: sceneWriter.commitSceneWrite,
   // Shared with di.bo. Unset on both sides = the tunnel does not exist; unset
   // here alone = the mint 404s and no link is ever handed out, which is the
   // safe direction to fail in.
@@ -2171,10 +2458,20 @@ router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
 
 // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
 // The service is built once and shared with the sweep at startup.
+const domainProvider = chooseDomainProvider(config.customDomains)
+if (domainProvider.problem) logger.warn(`[domains] ${domainProvider.problem}; domains are saved but nothing switches them on`)
+else if (domainProvider.name) logger.info(`[domains] ${domainProvider.name} switches custom domains on`)
 const customDomains = createDomainService({
-  cloudflare: createCloudflareSaas(config.customDomains.cloudflare),
+  cloudflare: domainProvider.name === 'cloudflare' ? createCloudflareSaas(config.customDomains.cloudflare) : null,
+  dns: domainProvider.name === 'caddy'
+    ? createDnsCheck({ target: config.customDomains.caddy.publicTarget, ips: config.customDomains.caddy.publicIps })
+    : null,
   // The CNAME target is ours too: a space must not claim domains.diiii.xyz.
-  platformSuffixes: [...config.customDomains.platformSuffixes, config.customDomains.cloudflare.cnameTarget].filter(Boolean),
+  platformSuffixes: [
+    ...config.customDomains.platformSuffixes,
+    config.customDomains.cloudflare.cnameTarget,
+    config.customDomains.caddy.publicTarget
+  ].filter(Boolean),
   maxDomains: config.customDomains.max,
   maxPerSpace: config.customDomains.maxPerSpace,
   pendingTtlMs: config.customDomains.pendingTtlMs,
@@ -2191,7 +2488,8 @@ registerDomainRoutes(router, {
 })
 
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
-  appendOpsHistory,
+  findPrimaryHostForSpace: domainStore.findPrimaryActiveHostForSpace,
+  mapPrimaryHosts: domainStore.mapPrimaryActiveHosts,
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
@@ -2200,10 +2498,21 @@ const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceR
   collectSceneAssetRefs,
   config,
   countSpacesOwnedBy,
-  withSpaceOpsLock: sharedSpaceOpsLock,
+  withSpaceOpsLock: sceneWriter.withSceneWriteLock,
+  commitSceneWrite: sceneWriter.commitSceneWrite,
   spaceLimit: config.freeSpaceLimit,
   grantSpaceToSessionUser,
   deleteSpace,
+  trashSpace,
+  protectedReason,
+  spaceTrashTtlMs: SPACE_TRASH_TTL_MS,
+  restoreSpace,
+  listTrashedSpaces,
+  loadTrashedSpaceMeta,
+  spaceFootprint,
+  purgeTrashedSpace,
+  isSpaceOwnerOrAdminState,
+  requireTrashedSpaceOwnerOrAdminWrite,
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
@@ -2891,6 +3200,17 @@ registerConfigRoutes(router, {
   machine: thisMachine
 })
 
+// The place address for devices without di (serverXR/src/guestAddress.js):
+// the certificate this server actually serves, set once https is up below.
+// null until then, and null for good on an install that serves plain http.
+let servedCertificate = null
+registerGuestAddressRoute(router, {
+  getCertificate: () => servedCertificate,
+  port: config.port,
+  listen: describeListenNow,
+  requireAuth: config.requireAuth
+})
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -2926,6 +3246,14 @@ if (CLIENT_DIR) {
       // the same answer nginx gives.
       if (error) next()
     })
+  })
+
+  // A hashed asset that is not on disk is a real 404 that nothing may cache: the
+  // file usually exists a moment later (a deploy in flight), and a cached miss
+  // would outlive it. Never the SPA, never a long-lived cache header.
+  app.use('/assets', (req, res) => {
+    res.set('Cache-Control', 'no-store')
+    res.status(404).type('text/plain').send('Not found')
   })
 
   app.get(/.*/, (req, res, next) => {
@@ -3013,6 +3341,33 @@ const snapshotOpenSpace = async () => {
 
 initStorage()
   .then(async () => {
+    // A project left with ops above its version (two servers on one data
+    // folder, 2026-10-02) took no write ever again — each one a 500. Healed
+    // here, before anything can write, and said in the log per project
+    // (projectStore.js, "Ops beyond the version"). Then any document a
+    // stopped write committed but never put in place (projectWrite.js).
+    try {
+      const healed = require('./projectStore').healOrphanProjectOps({ log: logger })
+      if (healed.length) logger.warn(`[projects] healed ${healed.length} project(s) at startup — their stray ops are in project_ops_quarantine`)
+      const recovered = await require('./projectWrite').recoverAllStagedDocuments({
+        spacesDir: SPACES_DIR,
+        projects: getDb().prepare('SELECT id, space_id AS spaceId FROM projects').all(),
+        log: logger
+      })
+      if (recovered) logger.warn(`[projects] finished ${recovered} write(s) a stopped server left half done`)
+    } catch (error) {
+      logger.error(`[projects] startup heal failed — the server starts anyway, writes heal each project as they come: ${error?.message || error}`)
+    }
+    try {
+      // The same for scenes: ops above a space's scene version, then any scene
+      // a stopped write committed but never put in place (sceneWrite.js).
+      const healedSpaces = healOrphanSpaceOps({ log: logger })
+      if (healedSpaces.length) logger.warn(`[spaces] healed ${healedSpaces.length} space(s) at startup — their stray ops are in space_ops_quarantine`)
+      const recoveredScenes = await sceneWriter.recoverAllStagedScenes(getDb().prepare('SELECT id FROM spaces').all().map(row => row.id))
+      if (recoveredScenes) logger.warn(`[spaces] finished ${recoveredScenes} scene write(s) a stopped server left half done`)
+    } catch (error) {
+      logger.error(`[spaces] startup heal failed — the server starts anyway, writes heal each space as they come: ${error?.message || error}`)
+    }
     await ensureDefaultSpace()
     await ensureOpenSpace()
     // A decision can land, then the process dies before executing it. Catch
@@ -3025,33 +3380,46 @@ initStorage()
     // Buffered guest-book counts land every 30s; the timer is unref'd, so it
     // never holds the process open.
     guestBook.start()
-    pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
+    // The sweep deletes for good: say which spaces it took.
+    const pruneAndSay = () => pruneSpaces()
+      .then((removed) => { if (removed.length) logger.info(`[spaces] removed ${removed.length} space(s) idle past their time: ${removed.join(', ')}`) })
+      .catch((error) => logger.warn('Failed to prune spaces', error))
+    pruneAndSay()
     // Spent and expired Telegram sign-in tokens. They are already worthless —
     // consumed_at is what makes them so — this only stops the table growing
     // one row per sign-in forever. Rides the space sweep rather than running
     // on every mint, so a room full of people signing in at once pays nothing.
     const { pruneLoginTokens } = require('./telegramLoginStore')
+    const { pruneActTokens } = require('./telegramActTokenStore')
     const sweep = () => {
-      pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
+      pruneAndSay()
       try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
+      // di.bo's act tokens, expired or revoked: same reasoning, same sweep.
+      try { pruneActTokens() } catch (error) { logger.warn('Failed to prune act tokens', error) }
+      // Terminal sign-in codes and ended terminal logins: same sweep.
+      try { pruneCliLogin() } catch (error) { logger.warn('Failed to prune terminal logins', error) }
       // The trash. Deleting marks the row and leaves the bytes; this is the
       // only path that removes them, and only after TRASH_TTL_MS. Rides the
       // same half-hour sweep — a deletion is not urgent, and its whole value
       // is the delay.
-      purgeTrash(SPACES_DIR)
+      purgeSpaceTrash()
+        .then((purged) => { if (purged.length) logger.info(`[trash] purged ${purged.length} space(s) past the 30-day hold`) })
+        .catch((error) => logger.warn('Failed to purge the space trash', error))
+            purgeTrash(SPACES_DIR)
         .then((purged) => { if (purged.length) logger.info(`[trash] purged ${purged.length} project(s) past the 30-day hold`) })
         .catch((error) => logger.warn('Failed to purge the trash', error))
     }
-    setInterval(sweep, 1000 * 60 * 30)
+    shutdownTimers.push(setInterval(sweep, 1000 * 60 * 30))
     // Domains waiting on DNS or a certificate switch on by themselves, and a
     // domain nobody pointed at us is dropped after a week. Nothing to do when
-    // the platform is not connected to Cloudflare.
+    // no provider (Cloudflare or Caddy) is configured.
     if (customDomains.connected) {
       const sweepDomains = () => customDomains.sweep()
         .then((done) => { if (done.activated || done.dropped) logger.info(`[domains] sweep: ${JSON.stringify(done)}`) })
         .catch((error) => logger.warn('Failed to check custom domains', error))
       sweepDomains()
-      setInterval(sweepDomains, config.customDomains.sweepMs).unref()
+      shutdownTimers.push(setInterval(sweepDomains, config.customDomains.sweepMs))
+      shutdownTimers.at(-1).unref()
     }
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
@@ -3061,12 +3429,12 @@ initStorage()
     // exist yet when a restore asked for it -- the 404 the contract test used to
     // poll around). Failure is logged and never blocks the boot.
     await snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
-    setInterval(() => {
+    shutdownTimers.push(setInterval(() => {
       snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
       // Long-idle account sandboxes fold down to a snapshot (revived on
       // return by ensureOwnSandbox) so permanent sandboxes never pile up.
       archiveIdleAccountSandboxes().catch((error) => logger.warn('Failed to archive idle sandboxes', error))
-    }, 1000 * 60 * 60 * 24)
+    }, 1000 * 60 * 60 * 24))
 
     // A padlock on a machine in a room.
     //
@@ -3085,6 +3453,7 @@ initStorage()
       ? https.createServer({ cert: tlsFiles.cert, key: tlsFiles.key }, app)
       : http.createServer(app)
     if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
+    servedCertificate = tlsFiles ? certificateNames(tlsFiles.cert) : null
 
     initializeSocket(httpServer, {
       ...config,
@@ -3113,7 +3482,24 @@ initStorage()
     // Spaces this install follows on another di.iiii (serverXR/src/follow).
     // Started after listen, never before: a follower reaches this server over
     // its own HTTP routes, so there has to be a server to reach.
+    //
+    // ONE server per data folder carries them (follow/lease.js): a second
+    // server on the same folder — the installed di beside a dev stack — runs
+    // no follower and no machine link, says which server does, and takes over
+    // when that one stops. Two followers into one database is what broke
+    // project `test` on 2026-10-02.
+    const followLease = require('./follow/lease').createFollowLease({
+      dataDir: config.directories.dataDir,
+      port: PORT,
+      log: logger
+    })
+    require('./follow').setFollowLease(followLease)
+    const stopCarrying = () => {
+      try { require('./follow').stopFollows() } catch { /* nothing running */ }
+      try { require('./machines/link').stopMachineLinks() } catch { /* nothing running */ }
+    }
     const startFollowsWhenUp = () => {
+      if (!followLease.held) return
       try {
         const { startFollows } = require('./follow')
         startFollows({
@@ -3153,7 +3539,16 @@ initStorage()
     }
 
     httpServer.listen(PORT, config.host, () => {
-      startFollowsWhenUp()
+      // The first beat decides; later beats refresh it, or take over from a
+      // holder that stopped (onGain), or step down if another server took it
+      // (onLose). startFollowsWhenUp does nothing on a server not holding it.
+      followLease.start({ onGain: startFollowsWhenUp, onLose: stopCarrying })
+        .catch((error) => logger.warn(`[follow] lease not started: ${error?.message || error}`))
+      process.once('exit', () => followLease.stop())
+      // The one local address: http://diiii.localhost/ on loopback :80, a door
+      // into this same server (serverXR/src/localName.js). Personal installs
+      // only; stands aside by name when :80 is taken or not allowed.
+      startLocalName({ mainServer: httpServer, log: (line) => logger.info(line) })
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
       // it, and two seconds is well inside what the CLI promises.
@@ -3166,6 +3561,15 @@ initStorage()
         deployEnv: releaseInfo.deployEnv
       })
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
+      installShutdown({
+        server: httpServer,
+        before: stopLasers,
+        inflight,
+        timers: shutdownTimers,
+        checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),
+        closeDb: () => require('./db').closeDb(),
+        logger
+      })
     })
   })
   .catch((error) => {

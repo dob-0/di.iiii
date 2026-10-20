@@ -99,6 +99,15 @@ function CameraSection({ node, report, onPatchValues }) {
         )
     }
 
+    if (camera.blocked) {
+        return (
+            <section className="raw-top-inside-section">
+                <h3>Camera</h3>
+                <p className="raw-top-inside-error" role="status">{camera.error}</p>
+            </section>
+        )
+    }
+
     const caps = camera.capabilities || {}
     const settings = camera.settings || {}
     const resolutions = isRange(caps.width) && isRange(caps.height)

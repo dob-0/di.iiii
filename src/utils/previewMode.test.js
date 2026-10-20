@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isPreviewRequest, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE, signalPreviewReady, signalPreviewStub, watchPreviewPaint } from './previewMode.js'
+import { capturePreviewPoster, enablePreviewPosterBuffer, isPreviewRequest, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE, signalPreviewReady, signalPreviewStub, watchPreviewPaint } from './previewMode.js'
 
 const originalSearch = window.location.search
 
@@ -96,5 +96,26 @@ describe('watchPreviewPaint', () => {
 
         await runFrames()
         expect(postMessage).not.toHaveBeenCalled()
+    })
+})
+
+describe('preview poster', () => {
+    it('forces preserveDrawingBuffer on webgl contexts only, once', () => {
+        const calls = []
+        class FakeCanvas { getContext(type, attrs) { calls.push([type, attrs]); return {} } }
+        const win = { HTMLCanvasElement: FakeCanvas }
+        expect(enablePreviewPosterBuffer(win)).toBe(true)
+        expect(enablePreviewPosterBuffer(win)).toBe(false)
+        const c = new FakeCanvas()
+        c.getContext('webgl2', { antialias: true })
+        c.getContext('2d')
+        expect(calls[0][1]).toEqual({ antialias: true, preserveDrawingBuffer: true })
+        expect(calls[1][1]).toBeUndefined()
+    })
+
+    it('returns null when there is no canvas to take a still of', () => {
+        expect(capturePreviewPoster(document)).toBeNull()
+        document.body.innerHTML = '<canvas width="4" height="4"></canvas>'
+        expect(capturePreviewPoster(document)).toBeNull()
     })
 })
