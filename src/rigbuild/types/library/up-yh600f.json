@@ -1,0 +1,115 @@
+{
+  "id": "up-yh600f",
+  "code": "UP-YH600F",
+  "identified": "EQUIVALENT",
+  "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT",
+  "maker": null,
+  "model": null,
+  "modelledOn": "Showven Sparkular (cold spark machine)",
+  "product": "equivalent: Showven Sparkular (cold spark machine)",
+  "category": "spark-machine",
+  "modes": [
+    {
+      "name": "2ch",
+      "footprint": 2,
+      "channels": [
+        {
+          "role": "Fountain",
+          "label": "Fountain height"
+        },
+        {
+          "role": "Control",
+          "label": "Control"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Showven Sparkular (BT01)",
+        "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/showven/sparkular.json",
+        "licence": "MIT (Open Fixture Library)",
+        "basis": "EQUIVALENT"
+      },
+      "src": "SHOWVEN",
+      "basis": "EQUIVALENT"
+    }
+  ],
+  "defaultMode": "2ch",
+  "modesOwed": false,
+  "assumedMode": null,
+  "power_w": {
+    "value": 500,
+    "src": "SHOWVEN",
+    "basis": "EQUIVALENT",
+    "note": "the code's '600' suggests a 600 W generic unit"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 8.5,
+    "src": "SHOWVEN",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      200,
+      218,
+      305
+    ],
+    "src": "SHOWVEN",
+    "basis": "EQUIVALENT",
+    "order": "W x D x H",
+    "note": "OFL-SPARKULAR gives 200 x 215 x 285 (W x H x D)"
+  },
+  "pan_tilt_deg": null,
+  "ip": null,
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": 40,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/spark.glb",
+    "sidecar": "scripts/place/fixtures/glb/spark.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.314,
+    "sizeAtHome_mm": {
+      "width_x": 200,
+      "depth_z": 218,
+      "height_y": 314
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "SHOWVEN": {
+      "url": "https://www.showven.cn/product/sparkular/",
+      "what": "Showven Sparkular (the original cold-spark machine) — equivalent for UP-YH600F"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "spark",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "equivalent",
+    "date": "2026-09-28",
+    "sources": [
+      "SHOWVEN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 0,
+      "equivalent": 5,
+      "assumed": 0,
+      "unknown": 0
+    }
+  }
+}

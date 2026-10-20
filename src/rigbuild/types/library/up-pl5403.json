@@ -1,0 +1,298 @@
+{
+  "id": "up-pl5403",
+  "code": "UP-PL5403",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT",
+  "maker": "U-Plus Lighting",
+  "model": "UP-PL5403",
+  "modelledOn": null,
+  "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
+  "makerModel": "IP PAR-54X3",
+  "manual": {
+    "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+    "product_page": "https://www.upluslighting.com/product/543w-rgbw-led-par-light-for-outdoor/",
+    "date": "2024-01 (upload path; PDF created 2023-08-07)",
+    "file": "~/Downloads/moxir/devices/IP-PAR-54X3.pdf",
+    "read": "2026-10-15, pdftotext p.6 \"4.DMX Channels\"",
+    "basis": "APPROVED"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/up-pl5403.json",
+    "modes": {
+      "4": "APPROVED",
+      "8": "APPROVED"
+    }
+  },
+  "category": "par",
+  "modes": [
+    {
+      "name": "8ch",
+      "footprint": 8,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "w",
+          "label": "White"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe"
+        },
+        {
+          "role": "aux1",
+          "label": "Function choice (0 = channels 1-7 control; 51-255 built-in programs, never sent)",
+          "default": 0
+        },
+        {
+          "role": "aux2",
+          "label": "Function speed (0; never sent)",
+          "default": 0
+        }
+      ],
+      "channelsSource": {
+        "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+        "url": null,
+        "licence": null,
+        "basis": "TESTED"
+      },
+      "src": "D-CN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "8ch-assumed",
+      "footprint": 8,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Total dimmer"
+        },
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "w",
+          "label": "White",
+          "default": 0
+        },
+        {
+          "role": "strobe",
+          "label": "Total strobe",
+          "default": 0,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 0,
+                "open": true
+              },
+              {
+                "from": 1,
+                "to": 255,
+                "strobe": [
+                  1,
+                  20
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "role": "control",
+          "label": "Function choice"
+        },
+        {
+          "role": "speed",
+          "label": "Function speed"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "searched 2026-09-29: the maker lists ONE mode, 8 channels (uplight.com.cn pd48298011, \"8通道模式\"), and publishes no order. The UPlus body differs (298×282×157 mm 5 kg vs 290×230×260 mm 5.9 kg / 310×310×330 mm 8 kg) — a generic RGBW-PAR stand-in only",
+        "fixture": "UPlus Lighting \"IP PAR-54X3\" (54 × 3 W RGBW, 25°, IP65)",
+        "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+        "title": "\"IP PAR-54X3\" user manual",
+        "pages": "6",
+        "sha256": "66619bec1668b4424b2338520db23e7543ae5bccfcc537cebda0beb4be7243a6",
+        "accessed": "2026-09-29",
+        "fill": [
+          "strobe \"slow to fast\" rates are not printed: 1–255 drawn as 1–20 Hz, 0 = no strobe (ASSUMED)",
+          "CH7 function 0–50 = the channels drive the light; the built-in programs above 50 are not drawn"
+        ]
+      },
+      "assumed": "ASSUMED from UPlus IP PAR-54X3 manual p.6 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    },
+    {
+      "name": "4ch-assumed",
+      "footprint": 4,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "w",
+          "label": "White",
+          "default": 0
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "searched 2026-09-29: the maker lists ONE mode, 8 channels (uplight.com.cn pd48298011, \"8通道模式\"), and publishes no order. The UPlus body differs (298×282×157 mm 5 kg vs 290×230×260 mm 5.9 kg / 310×310×330 mm 8 kg) — a generic RGBW-PAR stand-in only",
+        "fixture": "UPlus Lighting \"IP PAR-54X3\" (54 × 3 W RGBW, 25°, IP65)",
+        "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+        "title": "\"IP PAR-54X3\" user manual",
+        "pages": "6",
+        "sha256": "66619bec1668b4424b2338520db23e7543ae5bccfcc537cebda0beb4be7243a6",
+        "accessed": "2026-09-29",
+        "fill": [
+          "strobe \"slow to fast\" rates are not printed: 1–255 drawn as 1–20 Hz, 0 = no strobe (ASSUMED)",
+          "CH7 function 0–50 = the channels drive the light; the built-in programs above 50 are not drawn"
+        ]
+      },
+      "assumed": "ASSUMED from UPlus IP PAR-54X3 manual p.6 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "8ch",
+  "modesOwed": false,
+  "assumedMode": "8ch-assumed",
+  "power_w": {
+    "value": 162,
+    "src": "D-CN",
+    "basis": "EXACT",
+    "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
+  },
+  "supply_w": {
+    "value": 200,
+    "src": "D-CN",
+    "basis": "EXACT",
+    "note": "the mains draw the maker states beside the 162 W rating (switch-mode supply with PFC): circuits and power totals are planned on it (audit A-05, 2026-10-05: 16 PARs on C6 = 3200 W at supply, over the 2944 W planning limit, though 2592 W at the rating)"
+  },
+  "weight_kg": {
+    "value": 8,
+    "src": "D",
+    "basis": "EXACT"
+  },
+  "size_mm": {
+    "value": [
+      310,
+      310,
+      330
+    ],
+    "src": "D",
+    "basis": "EXACT",
+    "note": "D-CN gives 290 x 230 x 260 mm, 5.9 kg (the English page 310 x 310 x 330, 8 kg) — the rental unit decides"
+  },
+  "pan_tilt_deg": null,
+  "ip": {
+    "value": "IP65",
+    "src": "D",
+    "basis": "EXACT",
+    "note": "D-CN also IP65"
+  },
+  "optics": {
+    "beam_deg": 15,
+    "zoom_deg": null,
+    "lux": 11000,
+    "at_m": 1,
+    "photometrySrc": "COLORFUL-54X3",
+    "photometryBasis": "EQUIVALENT",
+    "note": "no brand datasheet with lux for a 54 x 3 W PAR found (3 searches)"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/par.glb",
+    "sidecar": "scripts/place/fixtures/glb/par.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0,
+    "tiltY": 0.205,
+    "lensY": 0.31,
+    "sizeAtHome_mm": {
+      "width_x": 344,
+      "depth_z": 283,
+      "height_y": 321
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "COLORFUL-54X3": {
+      "url": "https://www.colorfulstagelights.com/products_23/46.html",
+      "what": "Colorful Stage Lighting DMX 54x3W IP65 RGBW outdoor PAR — photometric equivalent for UP-PL5403"
+    },
+    "D": {
+      "url": "https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html",
+      "what": "UPlight UP-PL5403, maker's site"
+    },
+    "D-CN": {
+      "url": "https://www.uplight.com.cn/pd48298011.html",
+      "what": "UPlight UP-PL5403 on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
+    },
+    "SEVAN": {
+      "url": null,
+      "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "par",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-09-29",
+    "sources": [
+      "COLORFUL-54X3",
+      "D",
+      "D-CN",
+      "SEVAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 1,
+      "datasheet": 6,
+      "equivalent": 1,
+      "assumed": 4,
+      "unknown": 0
+    }
+  }
+}
