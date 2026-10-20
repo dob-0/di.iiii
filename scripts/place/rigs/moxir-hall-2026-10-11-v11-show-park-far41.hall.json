@@ -1204,6 +1204,2153 @@
     "crane_trolley_x_m": [
       7.6,
       7.6
+    ],
+    "shell": [
+      {
+        "id": "lantern-west-1",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": -5.9,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -6.1,
+          -5.9
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-2",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": -5.98,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -6.02,
+          -5.98
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-1",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": 5.9,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          5.9,
+          6.1
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-2",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": 5.98,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          5.98,
+          6.02
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-1",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": 46.8,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          46.8,
+          47.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-2",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": 46.88,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          46.88,
+          46.92
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-1",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": 6.1,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          5.9,
+          6.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-2",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": 6.02,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          5.98,
+          6.02
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-up-1",
+        "surface": "lantern roof",
+        "plane": {
+          "axis": "y",
+          "at_m": 16.4,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          -6.3,
+          6.3
+        ],
+        "y_m": [
+          16.4,
+          16.7
+        ],
+        "z_m": [
+          5.7,
+          47.2
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-3",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": -5.9,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -6.1,
+          -5.9
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-4",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": -5.98,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -6.02,
+          -5.98
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-3",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": 5.9,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          5.9,
+          6.1
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-4",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": 5.98,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          5.98,
+          6.02
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-3",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": -6.1,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -6.1,
+          -5.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-4",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": -6.02,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -6.02,
+          -5.98
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-3",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": -46.8,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -47.0,
+          -46.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-4",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": -46.88,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -46.92,
+          -46.88
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-up-2",
+        "surface": "lantern roof",
+        "plane": {
+          "axis": "y",
+          "at_m": 16.4,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          -6.3,
+          6.3
+        ],
+        "y_m": [
+          16.4,
+          16.7
+        ],
+        "z_m": [
+          -47.2,
+          -5.7
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-5",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": 18.1,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          17.9,
+          18.1
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-6",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": 18.02,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          17.98,
+          18.02
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-5",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": 29.9,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          29.9,
+          30.1
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-6",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": 29.98,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          29.98,
+          30.02
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          6.0,
+          46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-5",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": 46.8,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          46.8,
+          47.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-6",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": 46.88,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          46.88,
+          46.92
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-5",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": 6.1,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          5.9,
+          6.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-6",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": 6.02,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          5.98,
+          6.02
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-up-3",
+        "surface": "lantern roof",
+        "plane": {
+          "axis": "y",
+          "at_m": 16.4,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          17.7,
+          30.3
+        ],
+        "y_m": [
+          16.4,
+          16.7
+        ],
+        "z_m": [
+          5.7,
+          47.2
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-7",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": 18.1,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          17.9,
+          18.1
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-west-8",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": 18.02,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          17.98,
+          18.02
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-7",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "x",
+          "at_m": 29.9,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          29.9,
+          30.1
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-east-8",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "x",
+          "at_m": 29.98,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          29.98,
+          30.02
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -46.9,
+          -6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-7",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": -6.1,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -6.1,
+          -5.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-entry-8",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": -6.02,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -6.02,
+          -5.98
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-7",
+        "surface": "lantern kerb",
+        "plane": {
+          "axis": "z",
+          "at_m": -46.8,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.5,
+          14.0
+        ],
+        "z_m": [
+          -47.0,
+          -46.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-far-8",
+        "surface": "lantern glazing",
+        "plane": {
+          "axis": "z",
+          "at_m": -46.88,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          14.0,
+          16.4
+        ],
+        "z_m": [
+          -46.92,
+          -46.88
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "lantern-up-4",
+        "surface": "lantern roof",
+        "plane": {
+          "axis": "y",
+          "at_m": 16.4,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          17.7,
+          30.3
+        ],
+        "y_m": [
+          16.4,
+          16.7
+        ],
+        "z_m": [
+          -47.2,
+          -5.7
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-1",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -6.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-2",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          46.9,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-3",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -6.0,
+          6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-4",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          -6.0,
+          6.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -54.1,
+          -46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-5",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          6.0,
+          18.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-6",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          46.9,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-7",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -6.0,
+          6.0
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-8",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          18.0,
+          30.0
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -54.1,
+          -46.9
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "deck-up-9",
+        "surface": "deck (deck)",
+        "plane": {
+          "axis": "y",
+          "at_m": 13.35,
+          "inner_normal": [
+            0,
+            -1,
+            0
+          ]
+        },
+        "x_m": [
+          30.0,
+          60.7
+        ],
+        "y_m": [
+          13.35,
+          13.5
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-1",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.4,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -36.4
+        ],
+        "y_m": [
+          0.0,
+          1.8
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-2",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.4,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -36.4
+        ],
+        "y_m": [
+          3.6,
+          4.8
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-3",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.4,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -36.4
+        ],
+        "y_m": [
+          6.6,
+          8.4
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-4",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.4,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -36.4
+        ],
+        "y_m": [
+          10.6,
+          14.0
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-5",
+        "surface": "long wall glazing (glass ribbon band)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.52,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.58,
+          -36.52
+        ],
+        "y_m": [
+          1.8,
+          3.6
+        ],
+        "z_m": [
+          -53.8,
+          53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-6",
+        "surface": "long wall glazing (glass ribbon band)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.52,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.58,
+          -36.52
+        ],
+        "y_m": [
+          4.8,
+          6.6
+        ],
+        "z_m": [
+          -53.8,
+          53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-west-7",
+        "surface": "long wall glazing (glass ribbon band)",
+        "plane": {
+          "axis": "x",
+          "at_m": -36.52,
+          "inner_normal": [
+            1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          -36.58,
+          -36.52
+        ],
+        "y_m": [
+          8.4,
+          10.6
+        ],
+        "z_m": [
+          -53.8,
+          53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-1",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.4,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.4,
+          60.7
+        ],
+        "y_m": [
+          0.0,
+          1.8
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-2",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.4,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.4,
+          60.7
+        ],
+        "y_m": [
+          3.6,
+          4.8
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-3",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.4,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.4,
+          60.7
+        ],
+        "y_m": [
+          6.6,
+          8.4
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-4",
+        "surface": "long wall (block)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.4,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.4,
+          60.7
+        ],
+        "y_m": [
+          10.6,
+          14.0
+        ],
+        "z_m": [
+          -54.1,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-5",
+        "surface": "long wall glazing (glass ribbon band)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.52,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.52,
+          60.58
+        ],
+        "y_m": [
+          1.8,
+          3.6
+        ],
+        "z_m": [
+          -53.8,
+          53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-6",
+        "surface": "long wall glazing (glass ribbon band)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.52,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.52,
+          60.58
+        ],
+        "y_m": [
+          4.8,
+          6.6
+        ],
+        "z_m": [
+          -53.8,
+          53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "long-wall-east-7",
+        "surface": "long wall glazing (glass ribbon band)",
+        "plane": {
+          "axis": "x",
+          "at_m": 60.52,
+          "inner_normal": [
+            -1,
+            0,
+            0
+          ]
+        },
+        "x_m": [
+          60.52,
+          60.58
+        ],
+        "y_m": [
+          8.4,
+          10.6
+        ],
+        "z_m": [
+          -53.8,
+          53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "end-wall-entry-1",
+        "surface": "end wall (block)",
+        "plane": {
+          "axis": "z",
+          "at_m": 53.8,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -3.0
+        ],
+        "y_m": [
+          0.0,
+          6.0
+        ],
+        "z_m": [
+          53.8,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "end-wall-entry-2",
+        "surface": "end wall (block)",
+        "plane": {
+          "axis": "z",
+          "at_m": 53.8,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          3.0,
+          60.7
+        ],
+        "y_m": [
+          0.0,
+          6.0
+        ],
+        "z_m": [
+          53.8,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "end-wall-entry-3",
+        "surface": "end wall (block)",
+        "plane": {
+          "axis": "z",
+          "at_m": 53.8,
+          "inner_normal": [
+            0,
+            0,
+            -1
+          ]
+        },
+        "x_m": [
+          -36.7,
+          60.7
+        ],
+        "y_m": [
+          6.0,
+          14.0
+        ],
+        "z_m": [
+          53.8,
+          54.1
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "end-wall-far-1",
+        "surface": "end wall (block)",
+        "plane": {
+          "axis": "z",
+          "at_m": -53.8,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          -36.7,
+          -2.4
+        ],
+        "y_m": [
+          0.0,
+          5.4
+        ],
+        "z_m": [
+          -54.1,
+          -53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "end-wall-far-2",
+        "surface": "end wall (block)",
+        "plane": {
+          "axis": "z",
+          "at_m": -53.8,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          2.4,
+          60.7
+        ],
+        "y_m": [
+          0.0,
+          5.4
+        ],
+        "z_m": [
+          -54.1,
+          -53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      },
+      {
+        "id": "end-wall-far-3",
+        "surface": "end wall (block)",
+        "plane": {
+          "axis": "z",
+          "at_m": -53.8,
+          "inner_normal": [
+            0,
+            0,
+            1
+          ]
+        },
+        "x_m": [
+          -36.7,
+          60.7
+        ],
+        "y_m": [
+          5.4,
+          14.0
+        ],
+        "z_m": [
+          -54.1,
+          -53.8
+        ],
+        "method": "hall.py build() envelope box, recorded while build() runs on the record dims (hall_shell.py)",
+        "source": {
+          "file": "scripts/place/hall.py",
+          "commit": "cebf40c2",
+          "record_geometry": "identical"
+        },
+        "date": "2026-10-20",
+        "validated": false
+      }
     ]
   },
   "dimsOrigin": {
