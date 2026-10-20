@@ -190,6 +190,9 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             asNumber,
             asVec3,
             mix: mixValues,
+            // Another node's output inside this pass (cache and loop guard
+            // included): how an Oscillator reads the master clock it is not wired to.
+            output: (other, otherPort) => evaluateNodeOutput(other, otherPort, context, nextStack),
             context
         })
     }
