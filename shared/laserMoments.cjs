@@ -20,7 +20,7 @@
  *      one tap, firing one that is costs an eye.
  *
  * LASER_TYPE_IDS is the fixture library's `category: "laser"` set
- * (src/rigbuild/types/moxir.json). The server cannot read that file (an installed
+ * (src/rigbuild/types/library/). The server cannot read those files (an installed
  * di.iiii ships no src/), so the ids are listed here and laserMoments.test.js fails
  * the build the moment the library gains a laser this list does not name.
  *
