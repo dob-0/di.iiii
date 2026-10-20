@@ -16,10 +16,7 @@ UPlight rental units, the three planning types and the LaserCube — are the **s
 
 All of it is **generated** by `node scripts/rigbuild/types.mjs` from
 `scripts/place/fixtures/fixtures.json` (the manifest) — never edit a file here by hand;
-`src/rigbuild/fixtureTypes.test.js` regenerates and compares. `src/rigbuild/types/moxir.json`
-is the same library in one file under its old name; the app and many tests still read it
-(split of PR #914, part 1), so it stays written, identical in content, until the readers move
-(part 3). Delete it, and `ALIAS_FILE` in `types.mjs`, once nothing reads it.
+`src/rigbuild/fixtureTypes.test.js` regenerates and compares. The old one-file copy `types/moxir.json` is retired (split of PR #914, part 3); a test fails if anything reads it.
 
 Who reads what: the Studio's work tools (hotbar, plot, cards, patch sheet) read the whole
 library (`../index.js`); the room and the viewer load **only the types their project uses**

@@ -4,7 +4,7 @@ Method and data model: `docs/architecture/RIG_BUILD.md`. Code the views use: `sr
 
 | command | what it does |
 |---|---|
-| `node scripts/rigbuild/types.mjs [--check]` | regenerate `src/rigbuild/types/moxir.json` from `scripts/place/fixtures/fixtures.json` (never edit the JSON by hand) |
+| `node scripts/rigbuild/types.mjs [--check]` | regenerate `src/rigbuild/types/library/` (one file per type + index) from `scripts/place/fixtures/fixtures.json` (never edit the JSON by hand) |
 | `node scripts/rigbuild/pieces-glb.mjs [--check]` | regenerate the truss / tower / deck bodies in `scripts/rigbuild/pieces/` from `src/rigbuild/pieces.js` |
 | `node scripts/rigbuild/patch.mjs --project <id> [--group] [--repatch] [--dry-run]` | auto-patch a whole project on the desk at `<api origin>/light/` and write the answer back as ops |
 | `node scripts/rigbuild/patch.mjs --project <id> --exact` · `--unpatch` | the document's addresses ARE the patch: off the desk, back exactly there (refused + exit 1 on any clash, never "next free") · take a room's fixtures off the desk, document unchanged |

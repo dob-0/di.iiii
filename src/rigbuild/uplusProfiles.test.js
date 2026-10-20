@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { encodeDmx } from './dmxDecode.js'
-import TYPES from './types/moxir.json'
+import { TYPE_LIBRARY as TYPES } from './types/index.js'
 
 const type = (code) => TYPES.types.find((t) => t.code === code)
 const mode = (code, name) => type(code).modes.find((m) => m.name === name)

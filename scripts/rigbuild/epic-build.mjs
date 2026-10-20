@@ -62,7 +62,7 @@ import { runnerList } from './show-loop.mjs'
 import { atmosphereOfRig } from '../place/rig-lib.mjs'
 import { laserColourFlux, driveOfHex, laserOf, CUBE_NM } from '../../src/objectComponents/laserLine.js'
 import { laserFramesOf, MATRIX_N, FAN_DEG, FAN_PERIOD_S, FAN_STEPS } from './laser-frames.mjs'
-import { HALL_FILE, hallDimsOf, lampFirstHit } from './hall-reach.mjs'
+import { HALL_FILE, hallDimsOf, lampFirstHit, shellOf } from './hall-reach.mjs'
 import { MIN_REACH, MISS_REACH_CAP } from '../../src/objectComponents/beamReach.js'
 import { isSteelEntity, OCCLUDER_COMPONENT, STEEL_KIND } from '../../src/objectComponents/steelOccluder.js'
 
@@ -687,6 +687,7 @@ const main = async () => {
     const hallArg = String(args.hall || HALL_FILE)
     const hall = hallArg === 'none' ? null : hallDimsOf(hallArg, REPO_ROOT)
     if (hallArg !== 'none' && !hall) die(`no hall record at ${hallArg} (--hall none to write the types' reaches)`)
+    if (hall) { try { shellOf(hall) } catch (e) { die(`${hallArg}: ${e.message}`) } } // a hall without dims.shell is refused, never cast against copied planes
     const ents = v1Entities(rig, { hall })
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
     const cues = cuesOf(rig)
