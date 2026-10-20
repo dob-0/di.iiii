@@ -1074,6 +1074,17 @@ body.is-landing .account-btn-wrapper {
     pointer-events: none !important;
 }
 
+/* Until the visitor steps inside, the room behind the page is a picture, and a
+   wheel over it has to scroll the page. It sits in a position:fixed layer, so a
+   wheel that lands on the canvas chains to the document — which does not scroll —
+   instead of .lp-root: measured, 66 % of the first screen moved 0 px under a mouse
+   wheel or a touchpad's two-finger scroll. R3F sets pointer-events inline on its
+   canvas, hence !important. Inside (.lp-root--inside) the room is interactive. */
+.lp-root:not(.lp-root--inside) .lp-hero-bg,
+.lp-root:not(.lp-root--inside) .lp-hero-bg * {
+    pointer-events: none !important;
+}
+
 /* While the page is flying, its own ground has to get out of the way or the
    room never appears behind it. The 3D background is a child of .lp-hero and
    must keep painting, so this hides the page's surfaces and not the scene. */
