@@ -134,3 +134,9 @@
 /* In a page's header the line takes a row of its own under the title. */
 .rigplot-top:has(.rigplot-viewonly) { flex-wrap: wrap; }
 .rigplot-top .rigplot-viewonly { flex: 1 0 100%; padding: 2px 0 0; border: 0; background: transparent; }
+
+/* Zoom without a wheel or a second finger (WCAG 2.5.1, 2.1.1): + − fit at the plan's bottom left (the banner is top left, the scale bottom right); 44 px on touch. */
+.rigplot-zoom { position: absolute; left: 12px; bottom: 10px; display: flex; gap: 0; }
+.rigplot-zoom button { font: 13px var(--di-mono, monospace); min-width: 32px; min-height: 32px; padding: 0 8px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); border-radius: 2px; cursor: pointer; }
+.rigplot-zoom button + button { border-left: 0; }
+@media (pointer: coarse) { .rigplot-zoom button { min-width: 44px; min-height: 44px; } }

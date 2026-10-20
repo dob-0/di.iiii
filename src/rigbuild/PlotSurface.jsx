@@ -58,6 +58,7 @@ export const TOOLS = [
 export const VIEW_TOOLS = TOOLS.filter((t) => t.id === 'select' || t.id === 'measure')
 
 const r2 = (v) => Math.round(v * 100) / 100
+const ZOOM_STEP = 1.25
 const PHONE_QUERY = '(max-width: 760px), (max-height: 500px)'
 
 const useIsPhone = () => {
@@ -630,6 +631,17 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         if (pan) { setView([v[0] + pan[0] * u, v[1] + pan[1] * u, v[2], v[3]]); return }
         setView(zoomView(v, zoom, toPlan(event)))
     }
+    // Zoom without a wheel or a second finger (WCAG 2.5.1, 2.1.1): the buttons on the plan and + / - / 0.
+    const zoomBy = (factor) => setView(zoomView(v, factor, [v[0] + v[2] / 2, v[1] + v[3] / 2]))
+    const fit = () => setView(fitView(extent, box))
+    const zoomKeys = useRef(null)
+    zoomKeys.current = (key) => {
+        if (key === '+' || key === '=') zoomBy(ZOOM_STEP)
+        else if (key === '-' || key === '_') zoomBy(1 / ZOOM_STEP)
+        else if (key === '0') fit()
+        else return false
+        return true
+    }
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
@@ -643,6 +655,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         const onKey = (event) => {
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+            if (!event.ctrlKey && !event.metaKey && !event.altKey && zoomKeys.current(event.key)) { event.preventDefault(); return }
             if (readOnly) {
                 if (event.key === 'Escape') { setMeasure(null); setTool('select'); select([]) }
                 const t = VIEW_TOOLS.find((x) => x.key === event.key)
@@ -740,6 +753,11 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
             </svg>
             {!state.hasLoaded ? <p className="rigplot-loading">Reading the rig…</p> : null}
             {state.hasLoaded && !model.venue ? <p className="rigplot-banner">No venue plan in this project: the hall is not drawn. It comes from the hall the model was built from (scripts/rigbuild/load-plot.mjs).</p> : null}
+            <div className="rigplot-zoom" role="group" aria-label="Zoom">
+                <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
+                <button type="button" aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
+                <button type="button" aria-label="Fit the plan" title="Fit the plan (0)" onClick={fit}>fit</button>
+            </div>
             <ScaleBar u={u} />
         </div>
     )

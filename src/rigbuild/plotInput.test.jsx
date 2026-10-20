@@ -48,6 +48,25 @@ describe('the plot under a touchpad, a mouse and one pointer', () => {
         fireEvent.wheel(svg, { deltaY: 100, deltaMode: 0 })
         expect(box()[2]).toBeGreaterThan(pinched[2])
     })
+
+    it('zooms with buttons and with + / - / 0, no wheel and no second finger', async () => {
+        const { box } = await mountPlot()
+        const start = box()
+        fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+        const zoomed = box()
+        expect(zoomed[2]).toBeLessThan(start[2])
+        fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
+        expect(box()[2]).toBeGreaterThan(start[2])
+        fireEvent.click(screen.getByRole('button', { name: 'Fit the plan' }))
+        expect(box()[2]).toBeCloseTo(start[2], 6)
+        fireEvent.keyDown(window, { key: '+' })
+        expect(box()[2]).toBeLessThan(start[2])
+        fireEvent.keyDown(window, { key: '0' })
+        expect(box()[2]).toBeCloseTo(start[2], 6)
+        fireEvent.keyDown(window, { key: '-' })
+        expect(box()[2]).toBeGreaterThan(start[2])
+    })
 })
 
 describe('createPlanWheel — which gesture a wheel event is', () => {
