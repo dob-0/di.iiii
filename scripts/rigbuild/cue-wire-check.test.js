@@ -151,6 +151,7 @@ describe('what a node is', () => {
 const serve = (handler) => new Promise((ok) => { const s = http.createServer(handler); s.listen(0, '127.0.0.1', () => ok(s)) })
 const json = (res, body) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(body)) }
 
+let LOOK_VALUES = {}
 const fakeHall = async ({ moving }) => {
     const log = { posts: [], gets: [] }
     const ticks = { desk: 0, node: 0 }   // one count per wire: each is read once per sample, so each strobes on its own
@@ -179,9 +180,10 @@ const fakeHall = async ({ moving }) => {
         }
         log.gets.push(url)
         if (url === '/api/projects/p/document') return json(res, { document: { entities: ENTITIES } })
-        if (url === '/light/api/state') return json(res, { profiles: PROFILES, output: { targets: [] } })
+        if (url === '/light/api/state') return json(res, { profiles: PROFILES, output: { targets: [] }, fixtures: DESK_FIXTURES.map((f) => ({ ...f, universe: f.universe - 1, rigKey: f.key })) })
         if (url === '/light/api/rig') return json(res, { fixtures: DESK_FIXTURES })
         if (url === '/light/api/cues') return json(res, { cues })
+        if (url === '/light/api/looks') return json(res, { looks: [{ id: 'rig-hit', steps: [{ values: LOOK_VALUES }] }] })
         if (url === '/light/api/dmx') return json(res, { dmx: buffers('desk') })
         res.statusCode = 404; res.end('{}')
     })
@@ -206,6 +208,17 @@ describe('main, against a fake hall (no network beyond 127.0.0.1)', () => {
         expect(lines.join('\n')).toMatch(/node 127\.0\.0\.1:\d+: own buffer, desk universe 2/)
         expect(lines.join('\n')).toMatch(/cues OK 1\/1/)
         expect(hall.log.posts).toEqual(['/light/api/cues/go {"index":0}', '/light/api/cues/go {"index":1}'])
+    })
+    it('--channels names a lamp whose static channel is off the look; --node-follow measures the node against the desk', async () => {
+        hall = await fakeHall({ moving: true })
+        LOOK_VALUES = { d1: { r: 0, g: 0 }, d2: { r: 90 } }   // d2.r is 0 on the wire, the look says 90
+        const ok = await run(['--cues', '0', '--nodes', hall.node, '--channels', '--node-follow'])
+        expect(ok).toBe(1)
+        const out = lines.join('\n')
+        expect(out).toMatch(/channels: 1 of 2 lamps have a static channel off \(3 compared\)/)
+        expect(out).toMatch(/U1\.9 +w2 +r 90→0/)
+        expect(out).toMatch(/node 127\.0\.0\.1:\d+ \(U2\): \d+ reads, channels differing from the closest desk read: 0: \d+; worst 0/)
+        expect(hall.log.posts).toEqual(['/light/api/cues/go {"index":0}', '/light/api/cues/go {"index":1}'])   // still only GO + restore
     })
     it('says MISMATCH and names the lamps when the wire stays still, and still restores', async () => {
         hall = await fakeHall({ moving: false })
