@@ -3,8 +3,9 @@ import { DEFAULT_BEATS_PER_BAR, clockBeats, findMasterBeatNode, readDeskClock } 
 import { PULSE_WIDTH } from '../../../shared/waves.js'
 
 // A clock (TouchDesigner's Beat CHOP). Its tempo is its own BPM, or the /light
-// desk's when Tempo from says so and the desk answers (BeatFeed puts the
-// desk's reading on liveOutputs). Tap and Reset are handled by BeatFeed, which
+// desk's when Tempo from says so and the desk answers (BeatFeed reports the
+// desk's reading; readDeskClock picks it up). No output passes a live value
+// through. Tap and Reset are handled by BeatFeed, which
 // writes the tapped tempo into node.values (bpm, epoch) so every window agrees,
 // or forwards the tap to the desk. Here everything is a function of `now`.
 //
