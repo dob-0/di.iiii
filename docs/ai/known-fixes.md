@@ -21,6 +21,26 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## The rig pages under a touchpad, a keyboard and a finger (2026-10-21)
+
+Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 8 pages × 4 device rows; audit
+`docs/ai/audits/2026-10-21-rig-show-pages.md`). Symptoms and fixes, one commit each:
+- **The plot zoomed on a touchpad's two-finger scroll and dropped its sideways part.** `onWheel` read deltaY
+  only and always zoomed. `src/rigbuild/planWheel.js` tells the gesture from the event: ctrlKey = pinch
+  (zoom), a deltaX or a fractional pixel = touchpad (pan both axes), a whole-pixel notch or line mode =
+  mouse (zoom to the pointer); one meaning per gesture, deltaX always pans. Guard: `plotInput.test.jsx`.
+- **The plot could not zoom without a wheel or two fingers** (WCAG 2.5.1, 2.1.1): + − fit on the plan and
+  the keys + - 0. Guard: `plotInput.test.jsx`.
+- **Perform's strip menus ignored Escape and a press outside.** A window listener (not `document`: the
+  component's `document` prop is the project) closes the open menu and returns focus. Guard:
+  `PerformDesk.test.jsx`.
+- **The patch sheet's sideways-scrolling tables were out of keyboard reach on a phone** (axe
+  scrollable-region-focusable): `sheet.js` `wrap()` makes each box a named region with tabindex 0.
+  Guard: `PatchSheetSurface.test.jsx`. The same pattern is still in `scripts/rigbuild/patch-sheet.mjs`.
+- Smaller, same run: beat dots `role="img"` (axe aria-prohibited-attr), touch targets to 44 px on the plot
+  and 24 / 44 px in Perform (`touchTargets.test.js`), the visualiser title 2.89 → 5.28:1
+  (`visualiserContrast.test.js`), and a production name out of the Perform save box's placeholder.
+
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 
 Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.
