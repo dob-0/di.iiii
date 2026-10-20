@@ -66,7 +66,9 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
     const timers = new Set()
     const via = viaLink(link.base)
     const spacePath = `/api/spaces/${encodeURIComponent(link.spaceId)}`
-    const state = { synced: 0, delivered: 0, lastError: null }
+    // `host` is who answered: the host's own id and name, which it sends back
+    // on every sync — the sync light says "PONYO", not an address.
+    const state = { synced: 0, delivered: 0, lastError: null, host: null }
 
     hub.setLink(spaceId, link)
 
@@ -103,6 +105,7 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
                 if (answer.ok) {
                     hub.recordRemotePeers(spaceId, via, Array.isArray(answer.payload?.peers) ? answer.payload.peers : [])
                     state.synced += 1
+                    if (answer.payload?.machine?.id) state.host = { id: answer.payload.machine.id, name: answer.payload.machine.name || null }
                     state.lastError = null
                     delay = syncEveryMs
                 } else {
