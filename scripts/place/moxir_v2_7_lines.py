@@ -8,7 +8,7 @@ From the v2.6 rig (moxir_v2_5_gathered.py layout), only these change:
     the washes (z 10..46); each aimed up 60 deg and in toward the axis, so the audience stands in a corridor of light;
   * the six cubes keep their crane places; their lines are CROSSED (the leftmost cube aims right, the rightmost left) so lines from
     different cubes cross over the floor: a net, not a fan; four lines per cube (pans -27, -9, +9, +27 deg from the heading;
-    tilts low / +1.5 / low / +1.5). Rule: the lowest point over any standing area >= HAND_RULE_Y = 5.4 m (a raised hand at 2.4 m
+    tilts low / +1.5 / low / +1.5). Rule: the lowest point over any standing area >= HAND_RULE_Y (5.4 m, read from laser-distance.mjs) (a raised hand at 2.4 m
     + the 3 m separation of IEC TR 60825-3, owner 2026-10-12), the entry wall >= 9.0 m (door top 6 m + 3 m), the DJ crane crossing >= 9.2 m;
   * two UP-LA40WF (40 W, 1.3 mrad; fixtures.json kind 'laser', the rental units that ran at Sevan) on the back crane girder top at
     X0 +-5.0 m, each one straight line to ONE POINT above the door (x 0, y 9.8, z 53.8 — v2.3's point raised 0.17 m to clear the DJ crane rule).
@@ -24,7 +24,9 @@ ap.add_argument('--point', default='0,9.8,53.8', help='the point above the door;
 a = ap.parse_args(); sys.path.insert(0, f'{a.repo}/scripts/place'); import moxir_v2_symmetry as sym
 rig = json.load(open(f'{a.repo}/{a.src}')); X0 = sym.X0
 WEST_X, EAST_X, WALL_Z, BACK_Z, ROOF_Y = -36.15, 60.15, 53.8, -53.6, 10.3
-HAND_RULE_Y, ENTRY_MIN, NEAR_Z, NEAR_MIN = 5.4, 9.0, 3.2, 9.2
+import laser_rules  # the hand rule's one home: laser-distance.mjs
+HAND_RULE_Y = laser_rules.HAND_RULE_M
+ENTRY_MIN, NEAR_Z, NEAR_MIN = 9.0, 3.2, 9.2
 SIDE_X_OLD, SIDE_X, BEAM_Z = 14.0, 8.2, (13.0, 19.0, 25.0, 31.0, 37.0, 43.0)   # v2.7c (owner 2026-10-12 05:53: the machines on the +x side STAY) ->
 # both side lines move in to X0 +-8.2 (x -13.4 / +3.0): the right one clear of the blower, ducts, canopy, tank and gallery (x >= 3.6), the
 # left one mirrored for the symmetry round the DJ. Fenced strips as before (moxir_v2_5_gathered.py SIDE_PENS, 2.4 m wide).

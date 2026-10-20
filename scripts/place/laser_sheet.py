@@ -8,7 +8,9 @@ SITE.json (optional, the place's top plan): {"window": {"z0","z1","x0","x1","sca
 "notes_html" (the legend and limits), "refs": [[image, caption]]}. Nothing here names a production. Per scene: a top plan (SVG: the bay, the lantern band, the cranes, the six cubes, every ray to its first surface), colour,
 tempo, cube group, level, hits and the safety line, all read from the plan (computed by the same geometry as the frames).
 """
-import argparse, html, json
+import argparse, html, json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I does not add the script's folder
+from laser_rules import HAND_RULE_M
 
 Z0, Z1, X0, X1, S = -10.0, 10.0, -10.0, 10.0, 3.0      # plan window (m) and px per m: z → right (entry), x → up (east); set by set_window()
 SITE = {}
@@ -71,7 +73,7 @@ def safety_line(p):
         return 'dark'
     ends = '; '.join(f"{k} at {v['height_m'][0]}–{v['height_m'][1]} m ({v['rays']} ray samples)" for k, v in p['ends'].items())
     fl = f", {p['flash_hz']} hits/s (≤ 3)" if p['flash_hz'] else ''
-    return (f"ends on: {ends}. Every ray rises from the cubes at {p['lowest_m']} m (never below; hand rule 5.4 m){fl}; "
+    return (f"ends on: {ends}. Every ray rises from the cubes at {p['lowest_m']} m (never below; hand rule {HAND_RULE_M:g} m){fl}; "
             f"field {p['max_field_deg']}° of ±18.5°; {p['points_per_cube_frame']} of {p['points_cap']} points a cube frame; "
             f"check: {'PASS' if not p['fail_count'] else 'FAIL ' + str(p['fail_count'])}")
 

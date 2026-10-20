@@ -37,23 +37,15 @@ from occlusion_lib import Obstacles  # noqa: E402
 
 
 
-def _separation_from_dev():
-    # ONE source for the 3 m rule: dev's shared module (scripts/place/laser-distance.mjs), never a second copy of the number.
-    # Fails loudly if the export moves, so the margin and the build cannot drift apart.
-    import re
-    src = open(os.path.join(HERE, 'laser-distance.mjs')).read()
-    m = re.search(r'export\s+const\s+LASER_MIN_HEIGHT_M\s*=\s*([0-9.]+)', src)
-    if not m:
-        raise SystemExit('laser_margin: LASER_MIN_HEIGHT_M not found in laser-distance.mjs')
-    return float(m.group(1))
+import laser_rules  # noqa: E402  (the rules' one reader; see laser_rules.py)
 
 
-SEPARATION_M = _separation_from_dev()
+SEPARATION_M = laser_rules.MIN_HEIGHT_M
 SEPARATION = ('%.1f m vertical above any surface an audience member may stand on. Quoted source: Ariz. Admin. Code '
               'R9-7-1441(L) ("at any point less than three meters above any surface upon which an individual in the '
               'audience is permitted to stand"), the US FDA/CDRH laser-show variance figure. IEC TR 60825-3 / HSE '
               'HS(G)95 / ILDA give the same 3 m in the repo\'s notes: clause numbers UNVERIFIED (not quoted).' % SEPARATION_M)
-HAND_RULE_M = 5.4   # the owner's stricter rule (moxir_v2_7_lines.py: 3 m counted from a raised hand at 2.4 m)
+HAND_RULE_M = laser_rules.HAND_RULE_M   # the owner's stricter rule: 3 m counted from a raised hand at 2.4 m (both in laser-distance.mjs)
 OUTSIDE = 'rig-out-'
 
 
