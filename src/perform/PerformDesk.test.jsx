@@ -167,3 +167,27 @@ describe('Desk | Perform', () => {
         expect(container.innerHTML).toBe('')
     })
 })
+
+// Audit 2026-10-21 (docs/ai/audits/2026-10-21-rig-show-pages.md, row F1): a menu that only its own button
+// could close. Escape and a press outside close it (Nielsen 3, user control; WAI-ARIA APG menu button).
+describe('the strip menus close the way menus close', () => {
+    it('Escape closes the preset menu and puts focus back on its button', () => {
+        renderDesk()
+        const button = screen.getByRole('button', { name: /VJ/ })
+        fireEvent.click(button)
+        expect(screen.getByRole('menu', { name: 'Presets' })).toBeTruthy()
+        fireEvent.keyDown(screen.getByRole('menu', { name: 'Presets' }), { key: 'Escape' })
+        expect(screen.queryByRole('menu', { name: 'Presets' })).toBe(null)
+        expect(document.activeElement).toBe(button)
+    })
+
+    it('a press outside closes the window menu; a press inside does not', () => {
+        renderDesk()
+        fireEvent.click(screen.getByRole('button', { name: '+ window' }))
+        const menu = screen.getByRole('menu', { name: 'Add a window' })
+        fireEvent.pointerDown(menu)
+        expect(screen.getByRole('menu', { name: 'Add a window' })).toBeTruthy()
+        fireEvent.pointerDown(document.body)
+        expect(screen.queryByRole('menu', { name: 'Add a window' })).toBe(null)
+    })
+})
