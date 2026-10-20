@@ -1308,4 +1308,16 @@ describe('moving a card without dragging (WCAG 2.1.1, 2.5.7)', () => {
         expect(onMoveNode).toHaveBeenLastCalledWith('c', 100, -10)
         expect(onMoveNode).toHaveBeenCalledTimes(2)
     })
+
+    // In the editor, selecting sends focus to the settings column and Escape
+    // hands it back to the card with nothing selected (measured in Chromium:
+    // the selected-only rule moved nothing). The focused card is the one.
+    it('the focused card moves even with nothing selected', () => {
+        const onMoveNode = vi.fn()
+        const a = makeNode('value.color', { id: 'a', graphX: 0, graphY: 0 })
+        const b = makeNode('value.color', { id: 'b', graphX: 300, graphY: 0 })
+        const { container } = render(<RawGraphSurface nodes={[a, b]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} />)
+        fireEvent.keyDown(container.querySelector('[data-card-id="b"]'), { key: 'ArrowDown' })
+        expect(onMoveNode).toHaveBeenLastCalledWith('b', 300, 10)
+    })
 })

@@ -1688,12 +1688,17 @@ export default function RawGraphSurface({
             if (matchesKeyId(event, 'rename') && selected && onRenameNode) return act(() => onRenameNode(selected))
             if (matchesKeyId(event, 'keys') && onShowKeys) return act(() => onShowKeys())
             // The way to place a card without a drag (WCAG 2.1.1, 2.5.7;
-            // audit 2026-10-21 NR-05): 10 graph px a press, Shift ×5.
+            // audit 2026-10-21 NR-05): 10 graph px a press, Shift ×5. The
+            // card that has focus moves, else the selected one — selecting
+            // sends focus to the settings column, and Escape hands it back
+            // to the card with the selection cleared.
             const arrow = CARD_NUDGE[event.key]
-            if (arrow && selected && onMoveNode && !event.metaKey && !event.ctrlKey && !event.altKey) {
-                const node = nodeById.get(selected)
+            const focusedId = event.target?.closest?.('[data-card-id]')?.getAttribute('data-card-id')
+            const moving = focusedId && nodeById.has(focusedId) ? focusedId : selected
+            if (arrow && moving && onMoveNode && !event.metaKey && !event.ctrlKey && !event.altKey) {
+                const node = nodeById.get(moving)
                 const by = event.shiftKey ? 50 : 10
-                return act(() => onMoveNode(selected, (Number(node.graphX) || 0) + arrow[0] * by, (Number(node.graphY) || 0) + arrow[1] * by))
+                return act(() => onMoveNode(moving, (Number(node.graphX) || 0) + arrow[0] * by, (Number(node.graphY) || 0) + arrow[1] * by))
             }
         }
         if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return

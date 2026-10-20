@@ -61,7 +61,7 @@ describe('matchesCombo', () => {
 
 describe('nudge row (audit 2026-10-21 NR-05)', () => {
     it('the help sheet names the arrow keys as arrows', () => {
-        const row = helpKeyRows().find(([does]) => /Move the selected node/.test(does))
+        const row = helpKeyRows().find(([does]) => /Move the focused or selected node/.test(does))
         expect(row[1]).toBe('← · → · ↑ · ↓ — Drag the card')
     })
 })

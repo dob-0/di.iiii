@@ -33,7 +33,7 @@ Fix: every test that starts a serverXR child goes through `serverXR/src/testSupp
 
 ## A node card could be moved by a drag only (Raw, 2026-10-21)
 
-Cause: the only way to place a card was a pointer drag; no key and no single pointer moved it (WCAG 2.1.1, 2.5.7). Fix: with a card selected and the canvas (or the card) focused, the arrow keys move it 10 graph px a press, Shift 50, one `onMoveNode` per press; listed in the keys table (`src/raw/input/keymap.js` row `nudge`), so the help sheet shows it. Guards: `RawGraphSurface.test.jsx` "arrow keys move the selected card", `keymap.test.js` "nudge row". Audit NR-05. Still drag-only: drawing a wire (NR-06, OPEN, M).
+Cause: the only way to place a card was a pointer drag; no key and no single pointer moved it (WCAG 2.1.1, 2.5.7). Fix: the arrow keys move the focused card (else the selected one; selecting sends focus to the settings column, Escape hands it back to the card) 10 graph px a press, Shift 50, one `onMoveNode` per press; listed in the keys table (`src/raw/input/keymap.js` row `nudge`), so the help sheet shows it. Guards: `RawGraphSurface.test.jsx` "arrow keys move the selected card" and "the focused card moves", `keymap.test.js` "nudge row"; measured in Chromium by `scripts/audit/nodes-raw.cjs`. Audit NR-05. Still drag-only: drawing a wire (NR-06, OPEN, M).
 
 ## The node canvas's corner wordmark was a 33x17 px link (Raw, 2026-10-21)
 
