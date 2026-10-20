@@ -1,0 +1,137 @@
+{
+  "id": "ext-hazer",
+  "code": "EXT-HAZER",
+  "identified": "EQUIVALENT",
+  "identifiedNote": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+  "maker": null,
+  "model": null,
+  "modelledOn": "Antari HZ-1000 (alternatives on the versions' equipment lines: Look Solutions Unique 2.1, Smoke Factory Tour-Hazer II)",
+  "product": "equivalent: Antari HZ-1000 (alternatives on the versions' equipment lines: Look Solutions Unique 2.1, Smoke Factory Tour-Hazer II)",
+  "category": "hazer",
+  "modes": [
+    {
+      "name": "2ch",
+      "footprint": 2,
+      "channels": null,
+      "channelsSource": null,
+      "src": "ANTARI-HZ1000",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "2ch-assumed",
+      "footprint": 2,
+      "channels": [
+        {
+          "role": "aux1",
+          "label": "Haze output",
+          "cap": {
+            "haze": true
+          }
+        },
+        {
+          "role": "speed",
+          "label": "Fan"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "no hazer is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
+        "fixture": "Antari HZ-1000",
+        "url": "https://www.antari.com/usermanual/HZ/HZ-1000/HZ-1000.pdf",
+        "title": "HZ-1000 user manual",
+        "pages": "7 (printed 5)",
+        "accessed": "2026-09-29",
+        "fill": [
+          "haze is not drawn in the room yet; the channels are patched so the desk can drive a real unit"
+        ]
+      },
+      "assumed": "ASSUMED from Antari HZ-1000 manual p.7 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "2ch",
+  "modesOwed": false,
+  "assumedMode": "2ch-assumed",
+  "power_w": {
+    "value": 1150,
+    "src": "ANTARI-HZ1000",
+    "basis": "EQUIVALENT"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 74.6,
+    "src": "ANTARI-HZ1000",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      690,
+      510,
+      610
+    ],
+    "src": "ANTARI-HZ1000",
+    "basis": "EQUIVALENT",
+    "order": "L x W x H"
+  },
+  "pan_tilt_deg": null,
+  "ip": null,
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": {
+    "value": 2.2,
+    "src": "ANTARI-HZ1000",
+    "basis": "EQUIVALENT",
+    "note": "at 100 % output"
+  },
+  "nozzle_d_mm": 70,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/hazer.glb",
+    "sidecar": "scripts/place/fixtures/glb/hazer.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.235,
+    "sizeAtHome_mm": {
+      "width_x": 514,
+      "depth_z": 700,
+      "height_y": 614
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "ANTARI-HZ1000": {
+      "url": "https://www.antari.com/products/hz-1000/",
+      "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "hazer",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "equivalent",
+    "date": "2026-09-29",
+    "sources": [
+      "ANTARI-HZ1000"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 0,
+      "equivalent": 5,
+      "assumed": 2,
+      "unknown": 0
+    }
+  }
+}
