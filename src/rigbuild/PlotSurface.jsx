@@ -18,6 +18,7 @@ import {
     SHEETS, chooseScale, fitView, formatMetres, hitTest, inMarquee, layRun, nextUnit, rigExtent,
     sheetLayout, snapToGrid, zoomView
 } from './plotGeometry.js'
+import { createPlanWheel } from './planWheel.js'
 import {
     createOps, deleteOps, fixtureOps, heightOps, lampEntity, moveOps, pieceEntity, placeOps,
     renamePositionOps, ridersOfIds, rotateOps, runLengthOps
@@ -622,10 +623,12 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         if (d.mode === 'place') place(placementPose(at))
     }
 
+    // A touchpad's two-finger scroll pans (both axes), a pinch or a mouse notch zooms to the pointer (planWheel.js).
+    const [planWheel] = useState(createPlanWheel)
     const onWheel = (event) => {
-        const at = toPlan(event)
-        const factor = Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.0015))
-        setView(zoomView(v, factor, at))
+        const { zoom, pan } = planWheel(event, event.timeStamp)
+        if (pan) { setView([v[0] + pan[0] * u, v[1] + pan[1] * u, v[2], v[3]]); return }
+        setView(zoomView(v, zoom, toPlan(event)))
     }
     useEffect(() => {
         const el = svgRef.current
