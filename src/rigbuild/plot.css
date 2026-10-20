@@ -140,3 +140,7 @@
 .rigplot-zoom button { font: 13px var(--di-mono, monospace); min-width: 32px; min-height: 32px; padding: 0 8px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); border-radius: 2px; cursor: pointer; }
 .rigplot-zoom button + button { border-left: 0; }
 @media (pointer: coarse) { .rigplot-zoom button { min-width: 44px; min-height: 44px; } }
+/* A finger: the view toggle, the sheet's handle and the tool rail are 44 px high (audit row P3; 40 px measured). */
+@media (pointer: coarse) {
+    .rigplot-toggle button, .rigplot-sheet__handle, .rigplot-rail button { min-height: 44px; }
+}
