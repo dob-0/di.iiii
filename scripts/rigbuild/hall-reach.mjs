@@ -5,7 +5,7 @@
 //
 // ONE SOURCE (2026-10-20, owner rule "Physics first" 2): the building is the hall record's `dims.shell`, the wall, deck, lantern
 // and glazing slabs scripts/place/hall_shell.py takes from the model the room draws (every corner a vertex of that GLB), plus
-// the floor y = 0 the shell does not carry. This file used to copy the walls (-36.4 / 60.4, 53.8 / -53.6), the deck
+// the floor y = 0 the shell does not carry, bounded to the hall's footprint (the shell's x, z extent). This file used to copy the walls (-36.4 / 60.4, 53.8 / -53.6), the deck
 // (truss_top_h_m) and a lantern roof (ridge_h_m over |x| <= 6, the whole length) by hand, the same hand planes physics_check.py
 // had: on the owner's final reference rig they wrote four lamps and laser 42 longer than the model lets them go (the 12 m
 // closed deck gap between the lantern segments) and had no second lantern. The rules are those of scripts/place/physics_check.py
@@ -66,20 +66,91 @@ const raySpan = (p, d, lo, hi) => {
     return [t0, t1]
 }
 
+/** dims.shell as boxes with the footprint (x, z) and the top of the building: the box that holds every slab, the floor y = 0 at the bottom. */
+const extentOf = (shell) => {
+    const lo = [0, 1, 2].map((i) => Math.min(...shell.map((b) => b.lo[i])))
+    const hi = [0, 1, 2].map((i) => Math.max(...shell.map((b) => b.hi[i])))
+    lo[1] = FLOOR_Y
+    return { lo, hi }
+}
+const insideFootprint = (q, { lo, hi }) => [0, 2].every((i) => q[i] >= lo[i] - FACE_EPS && q[i] <= hi[i] + FACE_EPS)
+const outsideHall = (p, { lo, hi }) => [0, 1, 2].some((i) => p[i] < lo[i] - FACE_EPS || p[i] > hi[i] + FACE_EPS)
+
+/** The opening a ray that meets nothing left the hall through ('end-wall-entry opening', 'the roof'), or null when it started outside the hall.
+ * physics_check.py opening_of, line for line: the ray leaves the box that holds the shell at one face; the slab group touching that face
+ * nearest the exit point names the wall (its id without the trailing -number); the top face is the roof. */
+const openingOf = (p, d, shell, ext) => {
+    if (outsideHall(p, ext)) return null
+    let t = Infinity
+    let face = null
+    for (let i = 0; i < 3; i += 1) {
+        if (Math.abs(d[i]) < 1e-12) continue
+        let ti
+        let side
+        if (d[i] > 0) { ti = (ext.hi[i] - p[i]) / d[i]; side = 1 } else if (i === 1) continue // downward: the floor is the bottom, never a way out
+        else { ti = (ext.lo[i] - p[i]) / d[i]; side = 0 }
+        if (ti < t) { t = ti; face = [i, side] }
+    }
+    if (!face) return null
+    const [i, side] = face
+    if (i === 1) return 'the roof'
+    const q = p.map((v, k) => v + t * d[k])
+    const edge = (side ? ext.hi : ext.lo)[i]
+    const gap = (b) => Math.hypot(...[0, 1, 2].map((k) => Math.max(b.lo[k] - q[k], q[k] - b.hi[k], 0)))
+    const touching = shell.filter((b) => Math.abs((side ? b.hi : b.lo)[i] - edge) <= FACE_EPS)
+    if (touching.length === 0) return `the ${'xyz'[i]}${side ? '+' : '-'} edge of the hall`
+    let near = touching[0]
+    for (const b of touching) if (gap(b) < gap(near)) near = b
+    const sid = near.name.includes('[') ? near.name.slice(near.name.indexOf('[') + 1, -1) : near.name
+    return `${sid.replace(/-\d+$/, '')} opening`
+}
+
 /**
- * The first hall surface along a ray (p, unit d): the floor, or a dims.shell slab. Metres; 0 for a lamp inside a slab or on the
+ * The first hall surface along a ray (p, unit d), with its name as physics_check.py first_surface gives it: { t, name, depth }.
+ * t in metres, 0 for a lamp inside a slab or on the floor aiming down, Infinity when it meets nothing. The name is the floor, a slab
+ * ('<surface> [<id>]'), 'open sky (through <opening>)' (the ray left through a gap of the shell) or 'none (open sky)' (it started outside
+ * the hall). THE FLOOR IS THE HALL'S FOOTPRINT, not the infinite plane y = 0: a ray that would meet y = 0 beyond the shell's x, z extent
+ * meets nothing (2026-10-20 review). Throws for a dims without a shell (shellOf).
+ */
+export const hallFirstSurface = (p, d, dims) => {
+    const shell = shellOf(dims)
+    const ext = extentOf(shell)
+    let best = null
+    // two surfaces at the same distance (a ray into the corner of two walls): the one whose name sorts first, as physics_check.py's min() of (t, name)
+    const take = (t, name, depth) => { if (best == null || t < best.t || (t === best.t && name < best.name)) best = { t, name, depth } }
+    if (d[1] < -1e-9 && p[1] > FLOOR_Y - FACE_EPS) {
+        const tf = Math.max(0, (FLOOR_Y - p[1]) / d[1])
+        if (insideFootprint(p.map((v, k) => v + tf * d[k]), ext)) take(tf, 'floor', Infinity)
+    }
+    for (const { name, lo, hi } of shell) {
+        const s = raySpan(p, d, lo, hi)
+        if (s) take(s[0], name, s[1] - s[0])
+    }
+    if (best) return best
+    const through = openingOf(p, d, shell, ext)
+    return { t: Infinity, name: through == null ? 'none (open sky)' : `open sky (through ${through})`, depth: Infinity }
+}
+
+/**
+ * The first hall surface along a ray (p, unit d): the floor of the hall, or a dims.shell slab. Metres; 0 for a lamp inside a slab or on the
  * floor aiming down; null when it meets nothing (open sky). Throws for a dims without a shell (shellOf).
  */
 export const hallFirstHit = (p, d, dims) => {
     if (!dims) return null
-    let best = null
-    if (d[1] < -1e-9 && p[1] > FLOOR_Y - FACE_EPS) best = Math.max(0, (FLOOR_Y - p[1]) / d[1])
-    for (const { lo, hi } of shellOf(dims)) {
-        const s = raySpan(p, d, lo, hi)
-        if (s && (best == null || s[0] < best)) best = s[0]
-    }
-    return best
+    const { t } = hallFirstSurface(p, d, dims)
+    return Number.isFinite(t) ? t : null
 }
 
-/** A lamp's first hit along its rest axis (f.p, f.r: three.js Euler XYZ, a spot points down its local −Y). */
-export const lampFirstHit = (f, dims) => (Array.isArray(f?.p) ? hallFirstHit(f.p, spotAimDirection(f.r || [0, 0, 0]), dims) : null)
+/** A lamp's first surface along its rest axis (f.p, f.r: three.js Euler XYZ, a spot points down its local −Y): { t, name, depth, why? } or null
+ * (no hall, no position). A first hit of 0 m carries why: 'inside_slab' or 'on_floor', the words physics_check.py marks its rows with. */
+export const lampFirstSurface = (f, dims) => {
+    if (!dims || !Array.isArray(f?.p)) return null
+    const hit = hallFirstSurface(f.p, spotAimDirection(f.r || [0, 0, 0]), dims)
+    return hit.t === 0 ? { ...hit, why: hit.name === 'floor' ? 'on_floor' : 'inside_slab' } : hit
+}
+
+/** A lamp's first hit along its rest axis, metres (null: open sky or no hall). */
+export const lampFirstHit = (f, dims) => {
+    const hit = lampFirstSurface(f, dims)
+    return hit && Number.isFinite(hit.t) ? hit.t : null
+}

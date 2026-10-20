@@ -84,7 +84,7 @@ class FaceAndThickness(unittest.TestCase):
 
     def test_a_lamp_on_the_deck_top_aiming_up_does_not_hit_the_deck(self):
         L, name = pc.first_surface([5, 10.1, 0], UP, self.shell)
-        self.assertEqual(name, 'none (open sky)'); self.assertEqual(L, math.inf)
+        self.assertEqual(name, 'open sky (through the roof)'); self.assertEqual(L, math.inf)   # nothing over the deck here: out by the top
 
     def test_a_lamp_on_a_wall_inner_face_aiming_into_the_hall_sees_the_far_wall(self):
         L, name = pc.first_surface([10, 5, 0], [-1.0, 0.0, 0.0], self.shell)
@@ -276,6 +276,10 @@ class RealHall(unittest.TestCase):
         self.assertAlmostEqual(L, 53.8, places=3); self.assertIn('end wall', name)
         L, name = pc.first_surface([0.0, 3.0, 0.0], [0.0, 0.0, -1.0], shell)    # through the far gate (an opening in the shell): open sky
         self.assertEqual(L, math.inf)
+        self.assertEqual(name, 'open sky (through end-wall-far opening)')
+        n = math.sqrt(1 + 0.0025)                                               # a ray down through the entry gate (6 x 6 m at z +54): at z 54 it is 3.3 m up; the old plane's floor was 120 m on
+        L, name = pc.first_surface([0.0, 6.0, 0.0], [0.0, -0.05 / n, 1 / n], shell)
+        self.assertEqual((L, name), (math.inf, 'open sky (through end-wall-entry opening)'))
 
 
 class FixModeWithUnfixableRows(unittest.TestCase):
@@ -311,6 +315,64 @@ class FixModeWithUnfixableRows(unittest.TestCase):
     def test_an_inside_slab_row_remains_unfixed_and_exits_1(self):
         rc, out, posts = self.run_fix([lamp('in', [5, 10.05, 0], FLIP, 3.0)])
         self.assertEqual((posts, rc), ([], 1))
+
+# the same room with a gate in the north wall: x -1..1, y 0..3 (wall-n in three slabs)
+GATED = {'shell': [m for m in FIXTURE['shell'] if m['id'] != 'wall-n'] + [
+    slab('wall-n-1', 'end wall', [-10.3, -1], [0, 14], [10, 10.3]), slab('wall-n-2', 'end wall', [1, 10.3], [0, 14], [10, 10.3]),
+    slab('wall-n-3', 'end wall', [-1, 1], [3, 14], [10, 10.3])]}
+DOWN = [0.0, -1.0, 0.0]
+
+
+def unit(v):
+    n = math.sqrt(sum(c * c for c in v)); return [c / n for c in v]
+
+
+class FloorIsTheHallFloor(unittest.TestCase):
+    """Review finding (LOW 1) on PR #1046: the floor was the infinite plane y = 0, so a ray leaving through a gate was labelled
+    'floor' 160-250 m outside the hall. The floor is the hall's footprint (the shell's x, z extent); outside it a ray that left through an
+    opening ends in 'open sky (through <opening>)'."""
+    def setUp(self): self.shell = pc.shell_of(GATED)
+
+    def test_a_ray_leaving_by_the_gate_and_falling_does_not_hit_a_floor_outside_the_hall(self):
+        L, name = pc.first_surface([0, 2, 0], unit([0, -0.1, 1]), self.shell)   # y = 1 at the gate (z 10), the old plane: floor at z = 20, 20 m outside
+        self.assertEqual(L, math.inf); self.assertEqual(name, 'open sky (through wall-n opening)')
+
+    def test_a_ray_through_the_gate_level_is_open_sky_through_it(self):
+        L, name = pc.first_surface([0, 1, 0], [0.0, 0.0, 1.0], self.shell)
+        self.assertEqual((L, name), (math.inf, 'open sky (through wall-n opening)'))
+
+    def test_a_ray_that_meets_the_floor_inside_the_footprint_is_unchanged(self):
+        L, name = pc.first_surface([0, 3, 0], unit([0, -1, 1]), self.shell)      # floor at z = 3, inside
+        self.assertAlmostEqual(L, 3 * math.sqrt(2)); self.assertEqual(name, 'floor')
+
+    def test_a_ray_that_lands_just_inside_the_footprint_edge_is_floor(self):
+        L, name = pc.first_surface([0, 1, 9.0], unit([0, -1, 0.5]), self.shell)   # lands at z = 9.5 < 10, the wall's inner face
+        self.assertEqual(name, 'floor')
+
+    def test_a_ray_from_outside_the_hall_has_no_floor_under_the_ground_outside(self):
+        L, name = pc.first_surface([20, 1, 0], DOWN, self.shell)                  # a lamp outside the walls aiming at the ground outside
+        self.assertEqual((L, name), (math.inf, 'none (open sky)'))
+        L, name = pc.first_surface([20, 1, 0], unit([-1, -0.01, 0]), self.shell)  # from outside into the hall: the wall it stands behind
+        self.assertIn('wall-e', name)
+
+    def test_a_ray_through_the_gate_from_outside_into_the_hall_meets_the_floor_inside(self):
+        L, name = pc.first_surface([0, 2, 20], unit([0, -0.1, -1]), self.shell)   # in at the gate, down to the floor 20 m on: inside the footprint
+        self.assertEqual(name, 'floor'); self.assertAlmostEqual(L, 20 * math.sqrt(1.01), places=6)
+
+    def test_a_ray_leaving_through_the_top_is_open_sky_through_the_roof(self):
+        shell = pc.shell_of({'shell': [m for m in GATED['shell'] if m['surface'] not in ('deck', 'lantern roof')]})
+        L, name = pc.first_surface([0, 1, 0], UP, shell)
+        self.assertEqual((L, name), (math.inf, 'open sky (through the roof)'))
+
+    def test_a_beam_drawn_out_of_the_gate_is_no_leak(self):
+        rot = [-(math.pi / 2 - math.atan(0.1)), 0, 0]                             # rest axis (0, -0.1, 1)/|.|: out of the gate, falling
+        d = pc.axis_of(rot); self.assertAlmostEqual(d[1] / d[2], -0.1)
+        rc, out = run_main(GATED, [lamp('g', [0, 2, 0], rot, 40.0)])              # the old plane: 'floor' 20 m out, so 40 m drawn was a leak
+        self.assertEqual((rc, json.loads(out[0])['leaks']), (0, 0))
+
+    def test_a_lamp_outside_aiming_down_has_no_first_hit_in_its_row(self):
+        rc, out = run_main(GATED, [lamp('out', [20, 1, 0], [0, 0, 0], 5.0)])
+        row = json.loads(out[1]); self.assertTrue(row['outside_hall']); self.assertIsNone(row['first_hit'])
 
 
 if __name__ == '__main__':

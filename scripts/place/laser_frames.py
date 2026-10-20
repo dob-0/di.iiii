@@ -120,7 +120,7 @@ def rule_label(name):
     '<surface> [<id>]' (hall_shell.py's own words) and the floor 'floor'. Returns (label, known): an unclassified slab is not guessed, it fails."""
     if name == 'floor':
         return 'floor', True
-    if name.startswith('none'):
+    if name.startswith('none') or name.startswith('open sky'):   # 'none (open sky)', 'open sky (through <opening>)' (physics_check.first_surface)
         return 'open sky', True
     surface, _, rest = name.partition(' [')
     sid = rest.rstrip(']')

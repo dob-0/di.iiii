@@ -1016,3 +1016,19 @@ Also: a lamp OUTSIDE the hall is a leak row (`outside_hall`, counted, exit 1, ne
 - The default token `~/.di/di.env` is used only when `--api` is the default (`http://diiii.localhost/serverXR`). Any other api (save, or the manifest's api on restore) without `--token-file` is refused before any network call, naming `--token-file`.
 - `--restore --yes` reads the project's current version first. If it is newer than the checkpoint's, it refuses and prints both versions and entity counts (what would be lost); `--force-overwrite` is the only way through. RESTORE.md says both.
 - Before: 6 tests; the real run (PR #1037) had sent the owner's token to a scratch server and could overwrite newer work. After: 8 tests.
+
+## The hall floor was an infinite plane, a beam through a gate ended on "floor" 250 m outside; reach 0 m was written as the type's throw (2026-10-20)
+
+Symptom (the three LOW findings of the Opus review of PR #1046): (1) `FLOOR_Y` in `physics_check.first_surface_through` and `hall-reach.mjs` was the plane
+y = 0 without edges, so a ray leaving through the entry or far gate and falling met "floor" 160-250 m outside the hall (laser rays: 240-297 m); (2) epic-build's
+`reachOf` kept a first hit only when `> 0`, so a lamp inside a slab or on the floor aiming down (first hit 0 m) got `throw_m` or the type's 24-40 m as `beam.length`, a beam
+drawn through the slab or floor (and `beam.length` 0 cannot be written: the schema drops it and the room then draws its 60 m default); (3) the hall-reach parity test said
+"600 rays" but ran 240 distinct rays from 40 of 280 origins and compared the distance only, so a tie between two slabs at one distance (a ray into a wall corner: node picked
+the east wall, python the entry wall) was invisible. Fix: (1) the floor is the hall's footprint (the shell's x, z extent); a ray with no first hit ends in `open sky (through <opening>)`,
+the opening named from the shell (`end-wall-entry opening`, `the roof`), plain `none (open sky)` when it started outside the hall; python and node give the same name
+(`hallFirstSurface`); (2) `reachOf` returns 0 for a first hit of 0 m, `v1Entities` writes `beam: { visible: false, haze }` with no length for that lamp and epic-build says
+`0 m: <id> inside_slab|on_floor (<surface>): its beam is not drawn; move the lamp` (physics_check's words; it never moves the lamp, never writes a length); (3) the test is 600 distinct
+rays from all 280 origins and compares distance and surface name; a tie goes to the name that sorts first, in both. Measured read-only, before -> after: reference rig v526 (79 beams) and v2.11 v928 (97)
+through `physics_check.py`: leaks 4 -> 4 and 6 -> 6, rows identical, 0 lamps changed; the 44 lamps of the hall reference 10-17: 0 changed; epic-build reach of the epic and v2.11 energy rigs (96 / 60 lamps): 0 changed, 0 lamps at 0 m;
+`laser_frames.py` on the v2.11 energy rig + the 50 scenes (99 888 rays): 384 rays move (372 `floor` and 12 `column line` -> `open sky`, all through the entry gate, all fail before and after; the stored frames are identical).
+Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `hall-reach.test.js` (gate, 0 m, parity). Session note: `docs/ai/sessions/fix-hall-shell-lows-2026-10-20.md`.
