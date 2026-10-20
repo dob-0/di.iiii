@@ -21,6 +21,10 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A new node's card window opened over its own node (Raw, 2026-10-20)
+
+Cause: the graph surface published its screen origin only on pan/zoom/resize, but the surface moves (~57 px) when the first node lands, so every world window rendered off its card by the stale origin. Fix: `RawGraphSurface` re-measures on ResizeObserver and one frame after a pan. Guard: `src/raw/components/RawGraphSurface.origin.test.jsx`. Note: `docs/ai/sessions/fix-raw-card-window-placement-2026-10-20.md`.
+
 ## A public space showed every project in it — privacy was per space only
 
 Before 2026-09-29 the only visibility was `spaces.is_public`; a public space exposed every
