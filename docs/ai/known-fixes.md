@@ -21,6 +21,11 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Three network rooms still named the studio `di.iiii XR studio_network` (spaces/network, 2026-10-20)
+
+Symptom: the ledger on `network/emilya-nikoghosyan`, `network/gevorg-grigoryan` and `network/syuzi-ginosyan` printed the employer as `di.iiii XR studio_network`, seven weeks after the descriptor was retired (2026-09-02) — a platform spelling plus a retired descriptor where the studio signs `di.i`.
+Cause: the pages are generated from `spaces/network/people.json`, and the retirement swept docs and UI but never the roster. Fix: the three `org` fields read `di.i`; `node spaces/network/build.mjs` regenerated the rooms (3 pages changed of 65). Guard: `scripts/retiredStudioNames.test.js` runs the owner's search (`studio_network|di\.ii XR|di\.i studio|di\.i ստուդիա`) over every tracked text file; dated logs are exempt by file, and each exempt line in a live file is an allowlist row that fails once it stops matching. Note: `docs/ai/sessions/cloud-brand-retired-names-2026-10-21.md`.
+
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 
 Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.
