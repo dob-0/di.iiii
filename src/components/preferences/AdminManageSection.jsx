@@ -435,6 +435,7 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     <input
                         className="preferences-input"
                         placeholder="Space name"
+                        aria-label="New space name"
                         value={draftSpace}
                         onChange={(e) => setDraftSpace(e.target.value)}
                     />
@@ -525,6 +526,7 @@ function SpaceDetail({
                             ref={(el) => el?.focus()}
                             value={editing.value}
                             placeholder={editing.type === 'space-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            aria-label={editing.type === 'space-slug' ? 'Public link' : 'Space name'}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />
@@ -586,6 +588,7 @@ function SpaceDetail({
                     <input
                         className="preferences-input"
                         placeholder="New project title"
+                        aria-label="New project title"
                         value={draftProject}
                         onChange={(e) => setDraftProject(e.target.value)}
                     />
@@ -699,6 +702,7 @@ function CommonsModerationSection() {
                 <input
                     className="preferences-input"
                     placeholder="Search shared assets"
+                    aria-label="Search shared assets"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
@@ -773,6 +777,7 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
                             ref={(el) => el?.focus()}
                             value={editing.value}
                             placeholder={editing.type === 'project-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            aria-label={editing.type === 'project-slug' ? 'Public link' : 'Project title'}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />

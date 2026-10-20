@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import axe from 'axe-core'
 
 vi.mock('../../services/serverSpaces.js', () => ({
     listServerSpaces: vi.fn(),
@@ -176,5 +177,26 @@ describe('AdminManageSection', () => {
         fireEvent.click((await screen.findAllByText('Studio'))[0])
 
         expect(await screen.findByText('/demo/artistplace')).toBeTruthy()
+    })
+
+    // Audit 2026-10-21 A1 (axe `label`, critical, measured in Chromium on /admin):
+    // the rename and public-link fields had no name — no label, no placeholder for
+    // a rename — so a screen reader announced "edit text" and nothing else.
+    it('names every field it opens, for space and project alike (axe label rule)', async () => {
+        const run = async (container) => (await axe.run(container, { runOnly: ['label'] })).violations
+        const { container } = render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        for (const edit of ['Rename', 'Edit public link']) {
+            fireEvent.click(await screen.findByRole('button', { name: edit }))
+            expect(await run(container)).toEqual([])
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        }
+        expect(screen.getByRole('button', { name: 'Rename' })).toBeTruthy()
+        fireEvent.click((await screen.findAllByText('First Project'))[0])
+        for (const edit of ['Rename', 'Edit public link']) {
+            fireEvent.click(await screen.findByRole('button', { name: edit }))
+            expect(await run(container)).toEqual([])
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        }
     })
 })
