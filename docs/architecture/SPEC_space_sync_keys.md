@@ -215,9 +215,22 @@ space is this one)`, and the move adds the checks in item 4 (`keyMoveWidensAcces
   log it (review L4: proxies redact `Authorization`, not custom headers — the earlier `X-Di-Sync-Key-Also` header is
   no longer read). It must itself be a `manage` key; it is kept apart (`alsoSyncKey`) and is not added to `spaces`,
   so it grants no read, write or editor right. A second key that does not resolve (unknown, revoked, expired) or is
-  the bearer itself makes the request unauthenticated (401, fail closed). One that resolves but is only an `edit` key
+  the bearer itself makes the request unauthenticated (401, fail closed). The project gate answers that 401 itself,
+  before it looks the project up, for every id — a private project, a public one, an id never made — with one body
+  (`index.js`, `/api/projects/:projectId` gate; review r3 I1, 2026-10-20). Before that fix a private project answered
+  404 and a public one 401, so a dead second key told which ids are private projects. One that resolves but is only an `edit` key
   is a valid key without the scope: it reaches the move route with its scope, and the route answers 403
   `sync_key_needs_both` — the same answer as an `edit` key as the bearer (2026-10-20).
+- **The move does not say whether the target space exists** (review r3 I2, 2026-10-20). Only an admin (who can list
+  every space) hears `404 target space "x" not found`. Anyone else — a sync key, an editor, the owner of the source
+  only — gets the refusal a space they may not use gets, word for word: a key `403 sync_key_needs_both`, a person
+  `403 "Only an admin, or the owner of both spaces…"`. A missing target is never theirs (no owner matches it, no key's
+  space is that id), so no other branch is reached. Limit: the route still reads the target's meta before it refuses,
+  so the two answers may differ in time by one file read; not measured, not padded.
+- **Route match (review r3 I4, note, no code).** `MOVE_ROUTE` (`index.js`) is case-sensitive; Express routing is not.
+  `POST /api/projects/:id/MOVE` reaches the move route, but the second key is not read and not removed from the body,
+  so the route sees no `alsoSyncKey` and answers 403 `sync_key_needs_both` — it fails closed. Nothing downstream reads
+  or logs `req.body.alsoSyncKey`; if something ever does, the regex must become case-insensitive (`/i`) first.
 - The four routes call `canManageProjectsState` where they called `isSpaceOwnerOrAdminState`. Nothing else does.
 
 ### 13.4 Who can mint one (T3 holds)
@@ -299,6 +312,26 @@ All rows older than 180 days are removed. The log never holds a secret: the key 
 It answers with what it did and what it did not, and why; each step is written to the log. A purged project
 (after 30 days) cannot come back; the 30 days are the window.
 
+**The undo works only inside the 30-day trash window (review r3 I5, 2026-10-20).** Precisely:
+- A trash is the soft delete. `projectStore.purgeTrash` removes the bytes of every project whose trash time is older
+  than `TRASH_TTL_MS` = 30 × 24 h; the server's half-hour sweep (`index.js`, "The trash") runs it, so a project is
+  gone between 30 days and 30 days + 30 minutes after the trash. Nothing else removes the bytes, and no key can reach
+  a purge route.
+- After that the key log still names the trash (its rows are kept 180 days), but the undo answers it under
+  `notUndone`: the project is no longer in the trash. **A leaked key that trashes work and is not noticed for 30
+  days loses that work for good.** The limits bound how much: 30 trashes a day per key (§13.5).
+- A move and a make-private have no such clock: the undo moves a project back, or shows it again, for as long as
+  the key's change is still the latest one on it (§13.7 above) and the log row exists (180 days).
+- What would close it, owed and not built: the owner seeing a key's trash soon (a notice when a key trashes, or the
+  key log on the space page), or a longer hold for trashes made by a key.
+
+**A key is a bearer secret, bound to nothing (review r3 I5, 2026-10-20).** Whoever holds the text of a key is the
+key, from any machine, address or network, until it expires (`manage` 90 days, `edit` one year) or is revoked. The
+server does not pin a key to the install it was minted for: no client certificate, no address list, no
+proof-of-possession. What bounds a leak is only: the scope (§13.2), the limits (§13.5), the log (§13.6), the undo
+above, and the client's refusal to send a manage key over plain http (§13.4). Binding a key to one install (for
+example a key pair made at `di follow` time, the server keeping the public half) is owed, not built (§13.10).
+
 ### 13.8 Threats added (as the code holds them)
 
 | # | Threat | Defence |
@@ -331,6 +364,16 @@ It answers with what it did and what it did not, and why; each step is written t
 | R2-C: H1 needs a separate cookie secret | session mints off when the cookie key is a token; startup warning; deploy config reported (§13.4) | config path; `manage_needs_session_secret` |
 | R2-D low: cleartext check read the URL, not the pin | the follower reads `remote.address` | `follower.test.js` "reads the address pin" |
 
+Round 3 (independent review of #811 after merge, 2026-10-20; L1 and L2 fixed in #1035):
+
+| finding | resolution | guard |
+|---|---|---|
+| I1: a dead second key answered 404 on a private project, 401 on a public one | the project gate answers 401 first, for every id, one body (§13.3) | `syncKeyManage.test.js` "I1: a dead second key answers 401…" (failed before: 404) |
+| I2: a move said whether a target space exists (404 before any auth check) | 404 only for an admin; everyone else gets the refusal word for word (§13.3) | `syncKeyManage.test.js` two "I2" tests (failed before: 404) |
+| I3: the #811 text and a follower comment named an `X-Di-Sync-Key-Also` header | comment and session note now say `alsoSyncKey` in the body; the spec already did. The #811 description itself still names the header (editing a merged PR's text was not done) | "the old header is not read at all" |
+| I4: `MOVE_ROUTE` is case-sensitive, Express is not | note only: `/MOVE` fails closed (403) (§13.3) | — |
+| I5: bearer key, no binding; a trash is purged after 30 days | note only: written precisely in §13.7; binding and a notice owed (§13.10) | — |
+
 ### 13.10 Open questions
 
 - The interface panel (§8, §13.4) is owed; until it lands, minting on a hosted di.iiii needs a signed-in session
@@ -338,6 +381,8 @@ It answers with what it did and what it did not, and why; each step is written t
   state carries `key.expiresAt` and `key.expiresSoon`).
 - `di invite --manage` prints the key to the terminal, the 10-05 leak path (review I5); writing it to a 0600 file or
   a pairing step is owed.
+- A key is bound to no install (review r3 I5, §13.7): binding it to the follower that holds it, and telling the owner
+  soon when a key trashes (the undo stops at the 30-day purge), are owed.
 - Many installs follow dev with their own keys; a destination space that other installs follow has other keys out,
   so a key-made move into it is refused and the owner moves it signed in. A per-holder identity for keys would let
   the server count those holders; owed if this proves too strict.

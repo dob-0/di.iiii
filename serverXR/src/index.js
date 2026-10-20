@@ -2170,6 +2170,14 @@ router.use('/api/collections/:collectionId', (req, res, next) => {
 
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
+    // A move whose second key does not resolve (§13.3, T11) carries a failed
+    // credential: 401 for every id, private, public or never made, and before
+    // the project is looked up. The private-project 404 below would otherwise
+    // win for a private project only, and the two answers together would say
+    // which ids are private projects (review r3 I1, 2026-10-20).
+    if (req.authState?.reason === 'second-key') {
+      return sendRoleError(res, 401, 'editor', req.authState.role)
+    }
     const project = await resolveProjectContext(req.params.projectId)
     // A private project is not there for anyone outside its space: every
     // route under /api/projects/:projectId (meta, document, ops, assets, asset

@@ -7,7 +7,7 @@
 - Built: `scope` column on `space_sync_keys` ('edit' default), `sync_key_actions` table (the key log),
   `syncKeyActions.js` (limits 10/h 30/d trash and move, 30/h 100/d private; counted from the log under a per-key
   lock), `canManageProjectsState` in index.js used by exactly the trash, private and move gates;
-  `X-Di-Sync-Key-Also` for a move (second manage key, not added to the editor scope). New routes:
+  the second manage key of a move (not added to the editor scope) — first an `X-Di-Sync-Key-Also` header, moved to the JSON body as `alsoSyncKey` by review L4; the header is not read (corrected 2026-10-20, review r3 I3). New routes:
   `GET /api/sync-keys/self`, `GET /api/spaces/:id/sync-keys/actions`, `POST /api/spaces/:id/sync-keys/:keyId/undo`.
   Follower: asks its key's scope every 10 min; `planProjects({ manageThere })` mirrors guards 1-3 the other way;
   base now keeps `visibility`; `moveThere` uses the other follow's key (index.js `sameHostSides`). CLI:
