@@ -56,3 +56,10 @@ describe('the Perform windows (audit row F4)', () => {
         expect(pxIn(css, ".perform-master-row input[type='range']", 'min-height', '@media (pointer: coarse)')).toBeGreaterThanOrEqual(44)
     })
 })
+
+describe('the plot side panel on a touch screen (audit row P4)', () => {
+    const css = read('./plot.css')
+    it.each(['.rigplot-seg button', '.rigplot-actions button', '.rigplot-title__links a', '.rigplot-title__links button', '.rigplot-typelist button'])('%s is at least 44 px high on a coarse pointer (36 px measured on a tablet)', (selector) => {
+        expect(pxIn(css, selector, 'min-height', '@media (pointer: coarse)')).toBeGreaterThanOrEqual(44)
+    })
+})

@@ -143,4 +143,6 @@
 /* A finger: the view toggle, the sheet's handle and the tool rail are 44 px high (audit row P3; 40 px measured). */
 @media (pointer: coarse) {
     .rigplot-toggle button, .rigplot-sheet__handle, .rigplot-rail button { min-height: 44px; }
+    /* the side panel's buttons and sheet links (audit row P4; 36 px measured on a tablet) */
+    .rigplot-seg button, .rigplot-actions button, .rigplot-title__links a, .rigplot-title__links button, .rigplot-typelist button { min-height: 44px; }
 }
