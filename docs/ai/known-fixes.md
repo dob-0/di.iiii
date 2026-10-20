@@ -59,6 +59,18 @@ resolves the server's source as `./src` when there is no `serverXR/` above it.
 ls /app/scripts/space-bundle.mjs`. A tool that is present but crashes prints its own
 sentence in the same log line.
 
+## A follow did not carry what happens TO a project: trash, rename, private, move (2026-10-07)
+
+Owed item 6a (owner's rule "dev and local stay one"). A project's row is not an op, so a follow never carried it: a
+project trashed on the host stayed live on the follower; a rename kept the old title; a project the host moved to
+another space made the follow fail on it every pass (its key cannot read the project in the new space: 403, said as
+"the other di.iiii is not answering"). Fix: `serverXR/src/follow/followProjects.js` keeps a base (the last agreed
+state, Unison's archive) to tell which side changed; `follower.js` carries through each install's own routes; the
+project routes wake the follow. A project the follow itself makes enters the base at once, or one made and trashed
+within one park (20 s) was never trashed on the other side. Guards: `followProjects.test.js`,
+`followIntegration.test.js` "a project's life crosses a follow" and "a follow never empties this copy" (they fail
+with the carry off). SPEC_follow.md "A project trashed, restored, renamed or moved".
+
 ## A write that dies half-way destroyed the file — the install's state files were plain `writeFile`
 
 `scripts/di/state.mjs` (`di.env`: session secret, admin token, port; `state.json`), `credentialsStore.mjs` (the sync keys — a key is shown once and the host cannot hand it back), `ledger.mjs` (sync baselines) and `serverXR/src/configStore.js` wrote with `writeFile`, which truncates the target first. A freeze, a power cut or a full disk between the truncate and the last byte leaves an empty or half file. Every reader degrades an unreadable file to "nothing" (the contract in `state.mjs`), and the next write then saved that nothing over the only copy: an empty `di.env` made `ensureGuestSecrets` mint NEW secrets (every guest signed out) and forgot the port; `writeLink` after an unreadable `credentials.json` dropped every other space's key. This laptop hard-locks, so it is not academic.
@@ -927,3 +939,7 @@ If you add a wildcard route, add that check with it.
 | 2026-10-15 | **Studio: a right-drag pan dropped the selection and closed the Inspector** (N581 sweep, real browser on Linux: right 10 px and 80 px drags, both tools, 1 → 0 selected; left drags kept it) | R3F 8 counts the `contextmenu` event as a click for `onPointerMissed`, and Linux browsers fire it on the right button's PRESS (Windows on its release), so the miss arrived with a 0 px delta at the start of every pan | `onPointerMissed` deselects only on a primary-button click or a tap (`isDeselectingMiss`); the contextmenu event and other buttons never do. Guard: `selectionTools.test.js`; browser table before/after in the N581 PR | `src/studio/components/StudioViewport.jsx`, `src/studio/utils/selectionTools.js` |
 | 2026-10-15 | **Studio: B then a click left the box armed, so the next left drag — minutes later, in Navigate — drew a box instead of orbiting** (N581 sweep) | `BoxSelect` cleared `armed` only after a completed drag, Escape, or a gizmo grab; a pointerup without a drag kept it | A click without a drag ends the armed box too, as Blender's does. Guard: `BoxSelect.test.jsx` "B then a click (no drag) ends the box" (red before: the following drag selected) | `src/studio/components/BoxSelect.jsx` |
 | 2026-10-15 | **Studio: after typing a value in an Inspector number field, Escape did not deselect and no shortcut worked** (N581 sweep) | Enter/Escape left the focus in the field, and every editor shortcut steps aside while a field has the focus (`isTypingTarget`) | Enter and Escape blur the number field (the value is already written on change); the next Escape deselects. Guard: `StudioInspector.test.jsx` "number field hands the focus back" | `src/studio/components/StudioInspector.jsx` |
+
+## A stopped follow still applied the edit its parked read came back with
+
+`follower.js` `stop()` only set a flag; a read parked on the other di.iiii (up to 20 s) was not aborted, and when the host's next edit ended the park the pass wrote it here even though the follow was stopped — "a stopped follow changes nothing more" was true only between reads. Seen when the project-life carry (#800) was merged onto dev: "agrees on the host's value when both sides change the same field" got a 409 on 4 of 4 full-file runs (the follower already held the host's op). **Fix:** `stop()` aborts the parked read, and a pass that comes back from the read after `stop()` returns without writing. Guard: that same test in `serverXR/src/follow/followIntegration.test.js` (4/4 full-file runs green after, 0/4 before).
