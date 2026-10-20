@@ -94,7 +94,13 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
             // First start: from now, unless the follow asked to replay (follower.js).
             start: entry.start === 'replay' ? 'replay' : 'now',
             direction: entry.direction || null,
-            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) }
+            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) },
+            // A project the host moved between two spaces moves here only when
+            // both are followed here from the same host (followProjects.js).
+            sameHostFollows: (other) => {
+                const theirs = readFollows(dataDir)[other]
+                return Boolean(theirs && other !== spaceId && running.has(other) && String(theirs.remote || '').replace(/\/$/, '') === String(entry.remote || '').replace(/\/$/, ''))
+            }
         }))
         startedWith.set(spaceId, entry.direction || null)
         startedKey.set(spaceId, entryKey(spaceId, entry))
